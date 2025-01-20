@@ -1,0 +1,6 @@
+{
+  "用户名不能为空": "Username cannot be empty",
+  "用户充值：%s" : "User recharge: %s",
+  "client_id不能为空": "client_id cannot be empty",
+  "账号 %s 被删除，请联系管理员":"Account %s has been deleted, please contact the administrator"
+}

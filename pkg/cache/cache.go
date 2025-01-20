@@ -1,0 +1,37 @@
+package cache
+
+import "time"
+
+// Cache 缓存接口
+type Cache interface {
+	Set(key string, value interface{}, expiration time.Duration) error
+	Get(key string) (interface{}, bool)
+	Del(keys ...string)
+}
+
+// CacheType 缓存类型
+type CacheType string
+
+const (
+	Redis   CacheType = "redis"
+	GoCache CacheType = "go-cache"
+)
+
+type Config struct {
+	Host     string
+	Port     int
+	Password string
+	DB       int
+}
+
+// NewCache 创建新的缓存实例
+func NewCache(cacheType CacheType, config Config) Cache {
+	switch cacheType {
+	case Redis:
+		return newRedisCache(config)
+	case GoCache:
+		return newGoCache(config) // ToDo 可能还是得换 sqlite或其他支持落盘的缓存引擎，否则离线版挂了的话，缓存就没有了
+	default:
+		return newRedisCache(config) // 默认使用redis-cache
+	}
+}

@@ -1,0 +1,48 @@
+package config
+
+type ServerConf struct {
+	Port string // 端口
+	Mode string // 模式：debug/release/test
+}
+
+type DatabaseConf struct {
+	Host          string
+	Port          int
+	User          string
+	Password      string
+	RootPassword  string
+	Database      string // 主数据库
+	TablePrefix   string // 表名前缀
+	SlowQueryTime int    // 慢查询阈值，单位秒
+}
+
+type RedisConf struct {
+	Host     string
+	Port     int
+	Password string
+	DB       int // 数据库(0~15)
+}
+
+type JWTConf struct {
+	Secret string // 密钥
+	Expire int    // 有效期，单位秒
+}
+
+type CaptchaConf struct {
+	CachePrefix string // 缓存前缀
+}
+
+type PgpConf struct {
+	CachePrefix     string // 缓存前缀
+	EncryptHeader   string // 请求头x-encrypt
+	ClientID        string // 请求头x-encrypt字段client_id
+	ClientPublicKey string // 请求头x-encrypt字段client_public_key
+}
+
+type LogConf struct {
+	Dir           string // 日志路径
+	Level         string // 日志级别：debug/info/warn/error
+	MaxSize       int    // 每个日志文件保存的最大尺寸 单位：M
+	MaxBackup     int    // 日志文件最大数量
+	CleanSchedule string // 定时清理日志
+}

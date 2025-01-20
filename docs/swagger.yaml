@@ -1,0 +1,118 @@
+basePath: /
+definitions:
+  dto.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  req.CashierLoginRequest:
+    properties:
+      code:
+        type: string
+      device_id:
+        type: string
+      device_ip:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - code
+    - device_id
+    - password
+    - username
+    type: object
+  resp.CashierLoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+host: 127.0.0.1:8081
+info:
+  contact: {}
+  description: 点餐系统服务端接口文档
+  title: jjjshop-server-go API
+  version: "1.0"
+paths:
+  /cashier/passport/login:
+    post:
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CashierLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CashierLoginResponse'
+              type: object
+      summary: 登录
+      tags:
+      - 收银端
+  /cashier/passport/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 退出登录
+      tags:
+      - 收银端
+  /passport/captcha:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取验证码
+      tags:
+      - 通用
+  /passport/server-public-key:
+    get:
+      parameters:
+      - description: 客户端Id
+        in: query
+        name: client_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取服务端公钥
+      tags:
+      - 通用
+securityDefinitions:
+  JwtToken:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
