@@ -108,7 +108,7 @@ const docTemplate = `{
             }
         },
         "/passport/server-public-key": {
-            "get": {
+            "post": {
                 "produces": [
                     "application/json"
                 ],
@@ -121,7 +121,24 @@ const docTemplate = `{
                         "type": "string",
                         "description": "客户端Id",
                         "name": "client_id",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "加密类型: pgp\\jsencrypt",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "获取公钥参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetServerPublicKeyRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -154,7 +171,7 @@ const docTemplate = `{
                 "code",
                 "device_id",
                 "password",
-                "username"
+                "user_name"
             ],
             "properties": {
                 "code": {
@@ -169,8 +186,27 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
-                "username": {
+                "user_name": {
                     "type": "string"
+                }
+            }
+        },
+        "req.GetServerPublicKeyRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "type"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "pgp",
+                        "jsencrypt"
+                    ]
                 }
             }
         },

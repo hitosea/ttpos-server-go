@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"jjjshop-server-go/app/constant"
 	"jjjshop-server-go/app/model"
 	"jjjshop-server-go/config"
 )
@@ -20,6 +21,7 @@ var (
 	once     sync.Once
 )
 
+// GetDBManager 获取数据库管理器，如果是离线版，则0和商家库是同一个数据库
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
@@ -36,7 +38,7 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	if err != nil {
 		log.Fatalf("Error connecting to database: %s", err)
 	}
-	m.dbs[0] = db
+	m.dbs[constant.DefaultDB] = db
 	// 根据 APP 表实例化数据库连接
 	var apps []model.App
 	if err := db.Find(&apps).Error; err != nil {

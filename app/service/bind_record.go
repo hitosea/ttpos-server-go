@@ -13,12 +13,14 @@ import (
 type BindRecordService struct {
 	bindRecordRepo *repository.BindRecordRepository
 	supplierRepo   *repository.SupplierRepository
+	settingSrv     *SettingService
 }
 
-func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.SupplierRepository) *BindRecordService {
+func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.SupplierRepository, settingSrv *SettingService) *BindRecordService {
 	return &BindRecordService{
 		bindRecordRepo: bindRecordRepo,
 		supplierRepo:   supplierRepo,
+		settingSrv:     settingSrv,
 	}
 }
 
@@ -84,10 +86,10 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		}
 	}
 
-	// 绑定品牌，如果自带打印，默认更新收银打印配置
-	if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
-
-	}
+	//// 绑定品牌，如果自带打印，默认更新收银打印配置
+	//if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
+	//	printerSettings := s.settingSrv.GetSupplierItem(constant.PRINTER, addReq.ShopSupplierId, 0)
+	//}
 
 	return nil
 }

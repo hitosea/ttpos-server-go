@@ -1,6 +1,8 @@
 package cashier
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"jjjshop-server-go/app/constant"
 
@@ -35,11 +37,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.HandleValidationError(c, err, loginRequest, req.CashierLoginRequestMessage)
 		return
 	}
+
+	cc, _ := json.Marshal(loginRequest)
+	fmt.Println("++++++")
+	fmt.Println(string(cc))
+	fmt.Println("++++++")
+
 	sign := c.GetHeader("X-Sign")
-	if sign == "" {
-		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
-		return
-	}
+	//if sign == "" {
+	//	helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
+	//	return
+	//}
 	token, err := h.cashierAuthService.Login(loginRequest.Username, loginRequest.Password, sign, loginRequest.Code)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)

@@ -1,5 +1,7 @@
 package model
 
+import "jjjshop-server-go/config"
+
 // BindRecord 商家设备绑定记录表
 type BindRecord struct {
 	Id               uint   `gorm:"column:id;type:int(11) unsigned;primary_key;AUTO_INCREMENT" json:"id"`
@@ -22,5 +24,5 @@ type BindRecord struct {
 }
 
 func (BindRecord) TableName() string {
-	return "shop_bind_record"
+	return config.Database.TablePrefix + "shop_bind_record"
 }

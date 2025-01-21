@@ -107,18 +107,6 @@ type OrderMethod struct {
 	IsTableOrder   string `json:"is_table_order"`
 }
 
-type Server struct {
-	IP   string `json:"ip"`
-	Port string `json:"port"`
-}
-
-type LanguageList struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-	I     int    `json:"i"`
-	Index string `json:"index"`
-}
-
 type Cashier struct {
 	Carousel               []interface{}  `json:"carousel"`
 	IsAutoSend             string         `json:"is_auto_send"`
@@ -132,7 +120,7 @@ type Cashier struct {
 	AutoLockScreen         string         `json:"auto_lock_screen"`
 	IsShowScanSoldOut      string         `json:"is_show_scan_sold_out"`
 	IsShowAssistantSoldOut string         `json:"is_show_assistant_sold_out"`
-	LanguageList           []LanguageList `json:"language_list"`
+	LanguageList           []LanguageItem `json:"language_list"`
 	DefaultLanguage        string         `json:"default_language"`
 	IsAutoOrder            string         `json:"is_auto_order"`
 	AutoOrderLimit         string         `json:"auto_order_limit"`
@@ -177,13 +165,8 @@ type CloudBasic struct {
 	Base Base `json:"base"`
 }
 
-type CheckoutZeroingMethodList struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-}
-
 type Business struct {
-	CheckoutZeroingMethodList []CheckoutZeroingMethodList `json:"checkout_zeroing_method_list"`
+	CheckoutZeroingMethodList []CheckoutZeroingMethodItem `json:"checkout_zeroing_method_list"`
 	ZeroingMethod             string                      `json:"zeroing_method"`
 	CheckoutZeroingMethod     string                      `json:"checkout_zeroing_method"`
 	GiftMethod                string                      `json:"gift_method"`

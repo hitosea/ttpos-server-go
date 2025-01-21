@@ -32,11 +32,11 @@ type CaptchaConf struct {
 	CachePrefix string // 缓存前缀
 }
 
-type PgpConf struct {
-	CachePrefix     string // 缓存前缀
-	EncryptHeader   string // 请求头x-encrypt
-	ClientID        string // 请求头x-encrypt字段client_id
-	ClientPublicKey string // 请求头x-encrypt字段client_public_key
+type EncryptConf struct {
+	CachePrefix   string // 缓存前缀
+	EncryptHeader string // 请求头x-encrypt
+	ClientID      string // 请求头x-encrypt字段client_id
+	ClientKey     string // 请求头x-encrypt字段client_key
 }
 
 type LogConf struct {

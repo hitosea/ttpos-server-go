@@ -24,9 +24,10 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 
 	// 初始化验证码服务
 	captchaService := service.NewCaptchaService(cache)
-	pgpService := service.NewPGPService(cache)
+	pgpService := service.NewEncryptService(cache)
 	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, userRepo)
-	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo)
+	settingService := service.NewSettingService()
+	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo, settingService)
 	cashierAuthService := service.NewCashierAuthService(userRepo, captchaService, roleAccessService, bindRecordService)
 
 	// 初始化处理器
@@ -40,8 +41,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	// 公开路由
 	publicApiV1 := r.Group("api/v1")
 	{
-		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                   // 获取验证码
-		publicApiV1.GET("/passport/server-public-key", passportHandler.GetServerPublicKey) // 获取服务端 PGP 公钥
+		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                    // 获取验证码
+		publicApiV1.POST("/passport/server-public-key", passportHandler.GetServerPublicKey) // 获取服务端公钥
 		// 收银端
 		cashierGroup := publicApiV1.Group("/cashier")
 		{

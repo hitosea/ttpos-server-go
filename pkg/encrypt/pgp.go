@@ -1,4 +1,4 @@
-package pgp
+package encrypt
 
 import (
 	"github.com/ProtonMail/gopenpgp/v2/crypto"
@@ -11,7 +11,7 @@ type KeyPair struct {
 	Passphrase string `json:"passphrase"`
 }
 
-func GenerateKeyPair(name, email, passphrase string) (*KeyPair, error) {
+func GeneratePgpKeyPair(name, email, passphrase string) (*KeyPair, error) {
 	key, err := crypto.GenerateKey(name, email, "x25519", 0)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func GenerateKeyPair(name, email, passphrase string) (*KeyPair, error) {
 	}, nil
 }
 
-func EncryptMessage(plaintext string, publicKey string) (string, error) {
+func PgpEncryptMessage(plaintext string, publicKey string) (string, error) {
 	var (
 		publicKeyObj  *crypto.Key
 		publicKeyRing *crypto.KeyRing
@@ -65,7 +65,7 @@ func EncryptMessage(plaintext string, publicKey string) (string, error) {
 	return ciphertext.GetArmoredWithCustomHeaders("", "")
 }
 
-func DecryptMessage(encryptedText string, privateKey, passphrase string) (string, error) {
+func PgpDecryptMessage(encryptedText string, privateKey, passphrase string) (string, error) {
 	// decrypt armored encrypted message using the private key and obtain plain text
 	return helper.DecryptMessageArmored(privateKey, []byte(passphrase), encryptedText)
 }

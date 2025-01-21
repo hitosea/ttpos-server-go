@@ -1,5 +1,7 @@
 package model
 
+import "jjjshop-server-go/config"
+
 // User 商家用户表
 type User struct {
 	ShopUserId       uint   `gorm:"column:shop_user_id;type:int(11);primary_key;AUTO_INCREMENT;comment:主键id" json:"shop_user_id"`
@@ -26,7 +28,7 @@ type User struct {
 }
 
 func (User) TableName() string {
-	return "shop_user"
+	return config.Database.TablePrefix + "shop_user"
 }
 
 // ShopRole 商家用户角色表
@@ -72,7 +74,7 @@ type UserRole struct {
 }
 
 func (UserRole) TableName() string {
-	return "shop_user_role"
+	return config.Database.TablePrefix + "shop_user_role"
 }
 
 // ShopRoleAccess 商家角色权限

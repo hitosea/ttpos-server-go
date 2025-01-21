@@ -1,5 +1,7 @@
 package model
 
+import "jjjshop-server-go/config"
+
 // LoginLog 管理员登录记录表
 type LoginLog struct {
 	LoginLogId uint   `gorm:"column:login_log_id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"login_log_id"`
@@ -11,5 +13,5 @@ type LoginLog struct {
 }
 
 func (LoginLog) TableName() string {
-	return "shop_login_log"
+	return config.Database.TablePrefix + "shop_login_log"
 }

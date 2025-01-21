@@ -18,13 +18,26 @@ definitions:
         type: string
       password:
         type: string
-      username:
+      user_name:
         type: string
     required:
     - code
     - device_id
     - password
-    - username
+    - user_name
+    type: object
+  req.GetServerPublicKeyRequest:
+    properties:
+      client_id:
+        type: string
+      type:
+        enum:
+        - pgp
+        - jsencrypt
+        type: string
+    required:
+    - client_id
+    - type
     type: object
   resp.CashierLoginResponse:
     properties:
@@ -94,12 +107,24 @@ paths:
       tags:
       - 通用
   /passport/server-public-key:
-    get:
+    post:
       parameters:
       - description: 客户端Id
         in: query
         name: client_id
+        required: true
         type: string
+      - description: '加密类型: pgp\jsencrypt'
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: 获取公钥参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetServerPublicKeyRequest'
       produces:
       - application/json
       responses:

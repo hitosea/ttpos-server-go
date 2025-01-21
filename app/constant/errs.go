@@ -1,7 +1,7 @@
 package constant
 
 const (
-	CodeSuccess = 0   // 成功
+	CodeSuccess = 1   // 成功
 	CodeFail    = 500 // 失败
 
 	CodeBadRequest            = 400 // 参数错误
