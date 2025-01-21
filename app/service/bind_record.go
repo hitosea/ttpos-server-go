@@ -2,12 +2,12 @@ package service
 
 import (
 	"errors"
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/app/dto/req"
-	apperrors "jjjshop-server-go/app/errors"
-	"jjjshop-server-go/app/repository"
-	"jjjshop-server-go/pkg/utils"
 	"slices"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
+	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/utils"
 )
 
 type BindRecordService struct {

@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"jjjshop-server-go/app/constant"
+	"ttpos-server-go/app/constant"
 
-	"jjjshop-server-go/app/api/helper"
-	"jjjshop-server-go/app/dto/req"
-	"jjjshop-server-go/app/dto/resp"
-	"jjjshop-server-go/app/service"
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/service"
 )
 
 type AuthHandler struct {

@@ -7,19 +7,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"jjjshop-server-go/config"
+	"ttpos-server-go/config"
 )
 
 func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
 	ignoreRecordNotFoundError := true // 忽略ErrRecordNotFound（记录未找到）错误
 	logLevel := logger.Warn
-	if viper.GetString("server.mode") == gin.DebugMode { // 调试模式
+	if config.Server.Mode == gin.DebugMode { // 调试模式
 		ignoreRecordNotFoundError = false // 不忽略
 		logLevel = logger.Info            // 详细日志
 	}

@@ -5,7 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"jjjshop-server-go/app/model"
+	"ttpos-server-go/app/model"
 )
 
 type InitService struct {

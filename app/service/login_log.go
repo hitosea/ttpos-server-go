@@ -1,7 +1,7 @@
 package service
 
 import (
-	"jjjshop-server-go/app/repository"
+	"ttpos-server-go/app/repository"
 )
 
 type LoginLogService struct {

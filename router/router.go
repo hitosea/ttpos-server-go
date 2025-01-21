@@ -5,13 +5,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"jjjshop-server-go/app/api/v1"
-	"jjjshop-server-go/app/api/v1/cashier"
-	"jjjshop-server-go/app/repository"
-	"jjjshop-server-go/app/service"
-	"jjjshop-server-go/middleware"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/database"
+	"ttpos-server-go/app/api/v1"
+	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
 )
 
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {

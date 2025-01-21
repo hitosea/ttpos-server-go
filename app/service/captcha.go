@@ -9,9 +9,9 @@ import (
 
 	"github.com/mojocn/base64Captcha"
 
-	"jjjshop-server-go/app/dto/resp"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/cache"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
 )
 
 // CustomMathDriver 自定义数学验证码驱动

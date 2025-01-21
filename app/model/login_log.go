@@ -1,6 +1,6 @@
 package model
 
-import "jjjshop-server-go/config"
+import "ttpos-server-go/config"
 
 // LoginLog 管理员登录记录表
 type LoginLog struct {

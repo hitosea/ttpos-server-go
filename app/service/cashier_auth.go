@@ -4,12 +4,12 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 
-	"jjjshop-server-go/app/constant"
-	apperrors "jjjshop-server-go/app/errors"
-	"jjjshop-server-go/app/repository"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/auth"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/app/constant"
+	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/utils"
 )
 
 type CashierAuthService struct {

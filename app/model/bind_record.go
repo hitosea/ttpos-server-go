@@ -1,6 +1,6 @@
 package model
 
-import "jjjshop-server-go/config"
+import "ttpos-server-go/config"
 
 // BindRecord 商家设备绑定记录表
 type BindRecord struct {

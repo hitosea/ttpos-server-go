@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"jjjshop-server-go/config"
+	"ttpos-server-go/config"
 )
 
 var Logger *zap.Logger

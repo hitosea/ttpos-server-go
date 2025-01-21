@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"jjjshop-server-go/app/module/order/model"
+	"ttpos-server-go/app/module/order/model"
 
 	"gorm.io/gorm"
 )

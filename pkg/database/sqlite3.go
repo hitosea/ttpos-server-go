@@ -9,13 +9,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+
+	"ttpos-server-go/config"
 )
 
 func NewSQLiteConnection(db string) (*gorm.DB, error) {
 	return gorm.Open(sqlite.Open(db), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "jjjfood_", // 表名前缀z
-			SingularTable: true,       // 使用单一表名, eg. `User` => `user`
+			TablePrefix:   config.Database.TablePrefix, // 表名前缀z
+			SingularTable: true,                        // 使用单一表名, eg. `User` => `user`
 		},
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer（日志输出的地方）

@@ -8,11 +8,11 @@ import (
 	"io"
 	"regexp"
 
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/encrypt"
-	"jjjshop-server-go/pkg/logger"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/encrypt"
+	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 )
 
 type EncryptWriter struct {

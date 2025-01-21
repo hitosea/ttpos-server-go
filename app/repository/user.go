@@ -2,9 +2,9 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/app/model"
-	"jjjshop-server-go/pkg/database"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/database"
 )
 
 type UserRepository struct {

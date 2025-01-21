@@ -1,4 +1,4 @@
-module jjjshop-server-go
+module ttpos-server-go
 
 go 1.23
 

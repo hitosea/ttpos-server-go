@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"time"
-	
-	"jjjshop-server-go/app/model"
+
+	"ttpos-server-go/app/model"
 )
 
 type AppService struct {

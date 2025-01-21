@@ -1,6 +1,6 @@
 package model
 
-import "jjjshop-server-go/config"
+import "ttpos-server-go/config"
 
 // User 商家用户表
 type User struct {
