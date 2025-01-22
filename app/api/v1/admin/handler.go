@@ -2,12 +2,12 @@ package admin
 
 import (
 	"fmt"
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/app/dto"
-	dtoReq "jjjshop-server-go/app/dto/req"
-	"jjjshop-server-go/app/service"
 	"net/http"
 	"strconv"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	dtoReq "ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/service"
 
 	"github.com/gin-gonic/gin"
 )

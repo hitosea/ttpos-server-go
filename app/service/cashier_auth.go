@@ -4,12 +4,12 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 
-	"jjjshop-server-go/app/constant"
-	apperrors "jjjshop-server-go/app/errors"
-	"jjjshop-server-go/app/repository"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/auth"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/app/constant"
+	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/utils"
 )
 
 type CashierAuthService struct {
@@ -45,7 +45,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	}
 	// 验证账号, 在saas库中验证账号是否存在
 	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithCompany())
-	if companyStaff.ID == 0 {
+	if companyStaff.StaffId == 0 {
 		return "", errors.New("账号不存在")
 	}
 	if companyStaff.CompanyID == 0 {

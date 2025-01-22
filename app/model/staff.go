@@ -1,8 +1,7 @@
 package model
 
 type CompanyStaff struct {
-	ID         uint   `gorm:"primaryKey;autoIncrement;comment:集团员工唯一标识符" json:"id"`
-	StaffId    uint   `gorm:"not null;default:0;comment:员工id" json:"staff_id"`
+	StaffId    uint   `gorm:"primaryKey;not null;default:0;comment:员工id" json:"staff_id"`
 	CompanyID  uint   `gorm:"not null;default:0;comment:集团id" json:"company_id"`
 	Name       string `gorm:"not null;default:'';comment:员工名称" json:"name"`
 	Phone      string `gorm:"not null;default:'';comment:员工手机号" json:"phone"`

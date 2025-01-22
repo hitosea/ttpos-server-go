@@ -533,7 +533,7 @@ host: 127.0.0.1:8081
 info:
   contact: {}
   description: 点餐系统服务端接口文档
-  title: jjjshop-server-go API
+  title: ttpos-server-go API
   version: "1.0"
 paths:
   /admin/company:

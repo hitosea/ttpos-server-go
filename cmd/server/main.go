@@ -16,7 +16,7 @@ import (
 	"jjjshop-server-go/router"
 )
 
-// @title jjjshop-server-go API
+// @title ttpos-server-go API
 // @version 1.0
 // @description 点餐系统服务端接口文档
 

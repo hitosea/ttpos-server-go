@@ -2,10 +2,10 @@ package service
 
 import (
 	"errors"
-	"jjjshop-server-go/app/dto/req" // 引入请求参数的包
-	"jjjshop-server-go/app/model"
-	"jjjshop-server-go/app/repository"
 	"time"
+	"ttpos-server-go/app/dto/req" // 引入请求参数的包
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 )
 
 // 定义公司服务接口

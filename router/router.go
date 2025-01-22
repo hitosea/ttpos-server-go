@@ -1,22 +1,22 @@
 package router
 
 import (
-	"jjjshop-server-go/app/api/v1/admin"
-	"jjjshop-server-go/app/api/v1/cashier/bill"
-	cashierOrder "jjjshop-server-go/app/api/v1/cashier/order"
-	"jjjshop-server-go/app/api/v1/cashier/other"
-	"jjjshop-server-go/app/api/v1/kitchen"
 	"net/http"
+	"ttpos-server-go/app/api/v1/admin"
+	"ttpos-server-go/app/api/v1/cashier/bill"
+	cashierOrder "ttpos-server-go/app/api/v1/cashier/order"
+	"ttpos-server-go/app/api/v1/cashier/other"
+	"ttpos-server-go/app/api/v1/kitchen"
 
 	"github.com/gin-gonic/gin"
 
-	v1 "jjjshop-server-go/app/api/v1"
-	"jjjshop-server-go/app/api/v1/cashier"
-	"jjjshop-server-go/app/repository"
-	"jjjshop-server-go/app/service"
-	"jjjshop-server-go/middleware"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/database"
+	v1 "ttpos-server-go/app/api/v1"
+	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
 )
 
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {

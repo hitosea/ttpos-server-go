@@ -50,14 +50,14 @@ CREATE TABLE `ttpos_company_setting` (
     table_limit INT(11) NOT NULL DEFAULT 0 COMMENT '桌台上限',
     printer_limit INT(11) NOT NULL DEFAULT 0 COMMENT '打印机上限',
     timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
-    languages LONGTEXT NOT NULL DEFAULT '' COMMENT '支持语言',
-    address TEXT NOT NULL DEFAULT '' COMMENT '联系地址',
+    languages VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
+    address VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
     deploy_mode TINYINT(4) NOT NULL DEFAULT 0 COMMENT '部署方式 0局域网部署, 1云部署',
     mac_addr VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'mac地址',
     serial_number VARCHAR(100) NOT NULL DEFAULT '' COMMENT '服务序列号',
     chain_number VARCHAR(100) NOT NULL DEFAULT '' COMMENT '连锁编号',
     business_id INT(11) NOT NULL DEFAULT 0 COMMENT '营业执照',
-    description TEXT NOT NULL DEFAULT '' COMMENT '商家介绍',
+    description VARCHAR(255) DEFAULT '' COMMENT '商家介绍',
     total_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '总货款',
     money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '当前可提现金额',
     freeze_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '已冻结金额',
@@ -106,14 +106,14 @@ CREATE TABLE `ttpos_company_setting` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '集团员工唯一标识符',
   `staff_id` int(11) NOT NULL DEFAULT 0 COMMENT '员工id',
   `company_id` int(11) NOT NULL DEFAULT 0 COMMENT '集团id',
   `name` varchar(255)  NOT NULL DEFAULT '' COMMENT '员工名称',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
   `email` varchar(255) NOT NULL DEFAULT '' COMMENT '员工邮箱',
+  `is_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除0否1是',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团员工表';

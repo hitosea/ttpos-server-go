@@ -2,7 +2,7 @@
     "swagger": "2.0",
     "info": {
         "description": "点餐系统服务端接口文档",
-        "title": "jjjshop-server-go API",
+        "title": "ttpos-server-go API",
         "contact": {},
         "version": "1.0"
     },

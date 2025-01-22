@@ -3118,7 +3118,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "127.0.0.1:8081",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "jjjshop-server-go API",
+	Title:            "ttpos-server-go API",
 	Description:      "点餐系统服务端接口文档",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

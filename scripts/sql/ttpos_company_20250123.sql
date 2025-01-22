@@ -1,0 +1,2 @@
+INSERT INTO `ttpos_company` (`id`, `name`, `is_recycle`, `is_chain`, `expire_time`, `auth_day`, `auth_start_time`, `status`, `is_delete`, `create_time`, `update_time`) VALUES (1724054280, '', 0, 1, 0, 0, 1730342110, 1, 0, 1730343435, 1736511981);
+INSERT INTO `ttpos_company` (`id`, `name`, `is_recycle`, `is_chain`, `expire_time`, `auth_day`, `auth_start_time`, `status`, `is_delete`, `create_time`, `update_time`) VALUES (1724054297, '', 0, 1, 0, 0, 1736959029, 1, 0, 1736959110, 1736959110);
