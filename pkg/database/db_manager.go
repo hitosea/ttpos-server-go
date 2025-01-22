@@ -41,16 +41,16 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	}
 	m.dbs[constant.DefaultDB] = db
 	// 根据 APP 表实例化数据库连接
-	var apps []model.App
-	if err := db.Find(&apps).Error; err != nil {
-		log.Fatalf("Error querying apps: %s", err)
+	var companies []model.Company
+	if err := db.Find(&companies).Error; err != nil {
+		log.Fatalf("Error querying companies: %s", err)
 	}
-	for _, app := range apps {
-		appDB, err := m.getConnection(conf, fmt.Sprintf("shop%d", app.AppId)) // 比如：shop1724054084 数据库
+	for _, app := range companies {
+		appDB, err := m.getConnection(conf, fmt.Sprintf("shop%d", app.ID)) // 比如：shop1724054084 数据库
 		if err != nil {
-			log.Fatalf("Error connecting to database for app %d: %s", app.AppId, err)
+			log.Fatalf("Error connecting to database for app %d: %s", app.ID, err)
 		}
-		m.dbs[app.AppId] = appDB
+		m.dbs[app.ID] = appDB
 	}
 }
 

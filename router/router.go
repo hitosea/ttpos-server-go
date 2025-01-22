@@ -16,11 +16,13 @@ import (
 
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化仓库
-	userRepo := repository.NewUserRepository(dbm)
+	companyStaffRepo := repository.NewCompanyStaffRepository(dbm)
+	staffRepo := repository.NewStaffRepository(dbm)
+	companyRepo := repository.NewCompanyRepository(dbm)
 	bindRecordRepo := repository.NewBindRecordRepository(dbm)
 	userRoleRepo := repository.NewUserRoleRepository(dbm)
 	accessRepo := repository.NewAccessRepository(dbm)
-	supplierRepo := repository.NewSupplierRepository(dbm)
+	supplierRepo := repository.NewCompanySettingRepository(dbm)
 
 	// 初始化验证码服务
 	captchaService := service.NewCaptchaService(cache)
@@ -29,6 +31,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	settingService := service.NewSettingService()
 	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo, settingService)
 	cashierAuthService := service.NewCashierAuthService(userRepo, captchaService, roleAccessService, bindRecordService)
+	companyService := service.NewCompanyService(companyRepo)
 
 	// 初始化处理器
 	passportHandler := v1.NewPassportHandler(captchaService, pgpService)
@@ -57,13 +60,23 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 
 	// 需要认证的路由
 	privateApiV1 := r.Group("api/v1")
-	privateApiV1.Use(middleware.Auth())
+	// privateApiV1.Use(middleware.Auth()) // todo: 需要认证
 	{
 		// 收银端
 		cashierGroup := privateApiV1.Group("/cashier")
 		{
 			cashierGroup.POST("/passport/logout", cashierAuthHandler.Logout) // 收银端退出登录
 			//cashierGroup.GET("/info", nil)                                   // 获取登录信息
+		}
+		// 厨房端
+		kitchenGroup := privateApiV1.Group("/kitchen")
+		{
+			kitchen.RegisterHandlers(kitchenGroup)
+		}
+		// 管理端
+		adminGroup := privateApiV1.Group("/admin")
+		{
+			admin.RegisterHandlers(adminGroup, companyService)
 		}
 	}
 }

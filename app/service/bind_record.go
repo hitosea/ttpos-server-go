@@ -11,16 +11,15 @@ import (
 )
 
 type BindRecordService struct {
-	bindRecordRepo *repository.BindRecordRepository
-	supplierRepo   *repository.SupplierRepository
-	settingSrv     *SettingService
+	bindRecordRepo     *repository.BindRecordRepository
+	settingSrv         *SettingService
+	companySettingRepo *repository.CompanySettingRepository
 }
 
-func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.SupplierRepository, settingSrv *SettingService) *BindRecordService {
+func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository) *BindRecordService {
 	return &BindRecordService{
-		bindRecordRepo: bindRecordRepo,
-		supplierRepo:   supplierRepo,
-		settingSrv:     settingSrv,
+		bindRecordRepo:     bindRecordRepo,
+		companySettingRepo: supplierRepo,
 	}
 }
 
@@ -65,7 +64,7 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 	}
 
 	// 获取supplier
-	supplier := s.supplierRepo.GetById(addReq.ShopSupplierId)
+	supplier := s.companySettingRepo.GetById(addReq.ShopSupplierId)
 	type Source struct {
 		Name  string
 		Limit uint
