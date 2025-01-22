@@ -6,7 +6,6 @@ import (
 
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
 )
 
@@ -40,12 +39,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
 		return
 	}
-	token, err := h.cashierAuthService.Login(loginRequest.Username, loginRequest.Password, sign, loginRequest.Code)
+	data, err := h.cashierAuthService.Login(loginRequest.Username, loginRequest.Password, sign, loginRequest.Code)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, resp.CashierLoginResponse{Token: token})
+	helper.Success(c, data)
 }
 
 // Logout 退出登录

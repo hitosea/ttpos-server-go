@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"ttpos-server-go/app/dto/resp"
 
 	"ttpos-server-go/app/constant"
 	apperrors "ttpos-server-go/app/errors"
@@ -35,42 +36,43 @@ func NewCashierAuthService(
 }
 
 // Login 登录
-func (s *CashierAuthService) Login(username, password, captchaId, captchaCode string) (string, error) {
+func (s *CashierAuthService) Login(username, password, captchaId, captchaCode string) (resp.CashierLoginResponse, error) {
+	var loginResp resp.CashierLoginResponse
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
-		return "", apperrors.New("验证码错误")
+		return loginResp, apperrors.New("验证码错误")
 	}
 	// 验证账号
 	user := s.userRepo.GetByUsername(username, s.userRepo.WithApp(), s.userRepo.WithSupplier())
 	if user.ShopUserId == 0 {
-		return "", errors.New("账号不存在")
+		return loginResp, errors.New("账号不存在")
 	}
 	if utils.EncryptPassword(password) != user.Password {
-		return "", errors.New("密码错误")
+		return loginResp, errors.New("密码错误")
 	}
 	if user.IsDelete == 1 {
-		return "", apperrors.NewWithReplace("账号 %s 被删除，请联系管理员", []string{user.UserName})
+		return loginResp, apperrors.NewWithReplace("账号 %s 被删除，请联系管理员", []string{user.UserName})
 	}
 	if user.IsStatus == 1 {
-		return "", errors.New("账号被禁用，请联系管理员")
+		return loginResp, errors.New("账号被禁用，请联系管理员")
 	}
 	if user.App == nil || user.App.IsDelete == 1 {
-		return "", errors.New("未找到绑定的商家，请确认登录信息")
+		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if user.App.IsRecycle != 0 {
-		return "", errors.New("商家账号异常，请联系管理员")
+		return loginResp, errors.New("商家账号异常，请联系管理员")
 	}
 
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CASHIER_ROUTE_NAME, user.ShopUserId)
 	if len(permissions) == 0 {
-		return "", errors.New("当前无权限，请联系管理员")
+		return loginResp, errors.New("当前无权限，请联系管理员")
 	}
 
 	// 检查是否有未交班的收银员
 	currentUser := s.userRepo.GetCurrentCashier(user.BindKey)
 	if currentUser.ShopUserId != 0 && currentUser.ShopUserId != user.ShopUserId {
-		return "", apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentUser.RealName})
+		return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentUser.RealName})
 	}
 
 	// 是否是首次接班
@@ -82,7 +84,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 		if cashierName == "" {
 			cashierName = user.UserName
 		}
-		return "", apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 	}
 
 	// // 绑定设备 先检测是否能进行绑定，避免先更新用户表信息再弹出绑定错误
@@ -104,9 +106,12 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 生成 JWT token
 	token, err := auth.GenerateToken(constant.SOURCE_CASHIER, user.ShopUserId, user.AppId, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
-		return "", errors.New("生成token失败")
+		return loginResp, errors.New("生成token失败")
 	}
-	return token, nil
+	return resp.CashierLoginResponse{
+		Token:       token,
+		Permissions: permissions,
+	}, nil
 }
 
 // Logout 退出登录

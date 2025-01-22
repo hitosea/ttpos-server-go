@@ -213,7 +213,78 @@ const docTemplate = `{
         "resp.CashierLoginResponse": {
             "type": "object",
             "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Permission"
+                    }
+                },
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.Permission": {
+            "type": "object",
+            "properties": {
+                "access_id": {
+                    "type": "integer"
+                },
+                "alias": {
+                    "type": "string"
+                },
+                "api_path": {
+                    "type": "string"
+                },
+                "app_id": {
+                    "type": "integer"
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Permission"
+                    }
+                },
+                "create_time": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "is_menu": {
+                    "type": "integer"
+                },
+                "is_route": {
+                    "type": "integer"
+                },
+                "is_show": {
+                    "type": "integer"
+                },
+                "is_supplier": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "plus_category_id": {
+                    "type": "integer"
+                },
+                "redirect_name": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "update_time": {
                     "type": "string"
                 }
             }
