@@ -17,7 +17,7 @@ import (
 
 func ErrorWithDetail(c *gin.Context, code int, err error) {
 	messages := []string{err.Error()}
-	var appErr *apperrors.AppError
+	var appErr apperrors.AppError
 	if errors.As(err, &appErr) {
 		code = appErr.GetCode()
 		if len(appErr.Replace) > 0 {

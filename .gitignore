@@ -4,3 +4,5 @@ offline
 logs/*
 .env
 bin/*
+docker
+docker-compose.yaml

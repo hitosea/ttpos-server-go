@@ -38,7 +38,7 @@ func NewCashierAuthService(
 func (s *CashierAuthService) Login(username, password, captchaId, captchaCode string) (string, error) {
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
-		return "", errors.New("验证码错误")
+		return "", apperrors.New("验证码错误")
 	}
 	// 验证账号
 	user := s.userRepo.GetByUsername(username, s.userRepo.WithApp(), s.userRepo.WithSupplier())
@@ -49,7 +49,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 		return "", errors.New("密码错误")
 	}
 	if user.IsDelete == 1 {
-		return "", apperrors.NewWithReplace(constant.CodeAccountDeleted, "账号 %s 被删除，请联系管理员", []string{user.UserName})
+		return "", apperrors.NewWithReplace("账号 %s 被删除，请联系管理员", []string{user.UserName})
 	}
 	if user.IsStatus == 1 {
 		return "", errors.New("账号被禁用，请联系管理员")
@@ -70,7 +70,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 检查是否有未交班的收银员
 	currentUser := s.userRepo.GetCurrentCashier(user.BindKey)
 	if currentUser.ShopUserId != 0 && currentUser.ShopUserId != user.ShopUserId {
-		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentUser.RealName})
+		return "", apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentUser.RealName})
 	}
 
 	// 是否是首次接班
@@ -82,7 +82,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 		if cashierName == "" {
 			cashierName = user.UserName
 		}
-		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		return "", apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 	}
 
 	// // 绑定设备 先检测是否能进行绑定，避免先更新用户表信息再弹出绑定错误

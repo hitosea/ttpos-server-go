@@ -90,6 +90,7 @@ func redisConf(opt copier.Option) {
 
 func databaseConf(opt copier.Option) {
 	Database = DatabaseConf{
+		DBType:        "mysql",
 		Host:          "127.0.0.1",
 		Port:          3306,
 		User:          "user",
@@ -100,6 +101,7 @@ func databaseConf(opt copier.Option) {
 		SlowQueryTime: 2,
 	}
 	copier.CopyWithOption(&Database, DatabaseConf{
+		DBType:        viper.GetString("DB_TYPE"),
 		Host:          viper.GetString("DB_HOST"),
 		Port:          viper.GetInt("DB_PORT"),
 		User:          viper.GetString("DB_USER"),

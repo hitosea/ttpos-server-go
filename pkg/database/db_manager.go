@@ -32,9 +32,10 @@ func GetDBManager(conf config.DatabaseConf) *DBManager {
 	return instance
 }
 
+// initDBs 初始化数据库
 func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	// 主数据库
-	db, err := NewMySQLConnection(conf, conf.Database)
+	db, err := m.getConnection(conf, conf.Database)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %s", err)
 	}
@@ -45,7 +46,7 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 		log.Fatalf("Error querying apps: %s", err)
 	}
 	for _, app := range apps {
-		appDB, err := NewMySQLConnection(conf, fmt.Sprintf("shop%d", app.AppId)) // 比如：shop1724054084 数据库
+		appDB, err := m.getConnection(conf, fmt.Sprintf("shop%d", app.AppId)) // 比如：shop1724054084 数据库
 		if err != nil {
 			log.Fatalf("Error connecting to database for app %d: %s", app.AppId, err)
 		}
@@ -53,6 +54,21 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	}
 }
 
+// getConnection 获取数据库连接
+func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
+	switch conf.DBType {
+	case "mysql":
+		return NewMySQLConnection(conf, dbName)
+	case "postgres":
+		return NewPostgreSQLConnection(conf, dbName)
+	case "sqlite":
+		return NewSQLiteConnection(conf)
+	default:
+		return nil, fmt.Errorf("unsupported database type: %s", conf.DBType)
+	}
+}
+
+// GetDB 获取数据库
 func (m *DBManager) GetDB(index uint) *gorm.DB {
 	if db, ok := m.dbs[index]; ok {
 		return db

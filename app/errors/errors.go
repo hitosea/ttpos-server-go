@@ -6,7 +6,6 @@ type AppError struct {
 	Code    int      // 响应码
 	Message string   // 错误信息
 	Replace []string // 替换信息
-	Cause   string   // 错误原因
 }
 
 func (e AppError) Error() string {
@@ -17,20 +16,20 @@ func (e AppError) GetCode() int {
 	return e.Code
 }
 
-func New(code int, message string) *AppError {
+func New(message string) *AppError {
+	return &AppError{Code: constant.CodeFail, Message: message}
+}
+
+func NewWithCode(code int, message string) *AppError {
 	return &AppError{Code: code, Message: message}
 }
 
-func NewWithReplace(code int, message string, replace []string) *AppError {
+func NewWithReplace(message string, replace []string) *AppError {
+	return &AppError{Code: constant.CodeFail, Message: message, Replace: replace}
+}
+
+func NewWithCodeAndReplace(code int, message string, replace []string) *AppError {
 	return &AppError{Code: code, Message: message, Replace: replace}
-}
-
-func NewWithCause(code int, message string, cause string) *AppError {
-	return &AppError{Code: code, Message: message, Cause: cause}
-}
-
-func NewWithAll(code int, message string, replace []string, cause string) *AppError {
-	return &AppError{Code: code, Message: message, Replace: replace, Cause: cause}
 }
 
 var (

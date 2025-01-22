@@ -6,12 +6,13 @@ type ServerConf struct {
 }
 
 type DatabaseConf struct {
+	DBType        string
 	Host          string
 	Port          int
 	User          string
 	Password      string
 	RootPassword  string
-	Database      string // 主数据库
+	Database      string // 主数据库，如果是sqlite3，则为文件路径
 	TablePrefix   string // 表名前缀
 	SlowQueryTime int    // 慢查询阈值，单位秒
 }
