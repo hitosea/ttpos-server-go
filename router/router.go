@@ -1,6 +1,9 @@
 package router
 
 import (
+	"jjjshop-server-go/app/api/v1/cashier/bill"
+	cashierOrder "jjjshop-server-go/app/api/v1/cashier/order"
+	"jjjshop-server-go/app/api/v1/cashier/other"
 	"jjjshop-server-go/app/api/v1/kitchen"
 	"net/http"
 
@@ -47,6 +50,9 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		cashierGroup := publicApiV1.Group("/cashier")
 		{
 			cashierGroup.POST("/passport/login", middleware.Encrypt(cache), cashierAuthHandler.Login) // 登录
+			other.RegisterHandlers(cashierGroup)
+			bill.RegisterHandlers(cashierGroup)
+			cashierOrder.RegisterHandlers(cashierGroup)
 		}
 		// 点餐助手
 		assistantGroup := publicApiV1.Group("/assistant")

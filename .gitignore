@@ -4,3 +4,4 @@ offline
 logs/*
 .env
 bin/*
+.txt
