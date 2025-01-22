@@ -88,6 +88,568 @@ const docTemplate = `{
                 }
             }
         },
+        "/kitchen/call/handle": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "呼叫"
+                ],
+                "summary": "处理呼叫",
+                "parameters": [
+                    {
+                        "description": "id",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ParamCustomerInfo"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/call/list": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "呼叫"
+                ],
+                "summary": "获取呼叫列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CallList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/login": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "登录"
+                ],
+                "summary": "用户登录",
+                "parameters": [
+                    {
+                        "description": "登陆参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ParamLogin"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/login/captcha": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "登录"
+                ],
+                "summary": "获取登录验证码",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.Captcha"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/login/public-key": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "登录"
+                ],
+                "summary": "获取登录公钥",
+                "parameters": [
+                    {
+                        "description": "公钥参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ParamCreatePublicKey"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PublicKeyInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/production/finished-product/history": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "生产"
+                ],
+                "summary": "获取上菜历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "pageNum",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ServedProductHistory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/production/finished-product/latest": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "生产"
+                ],
+                "summary": "获取最新成品",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.ServedProduct"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/production/order/category": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "生产"
+                ],
+                "summary": "获取生产订单分类",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分类ID。默认是0，全部",
+                        "name": "categoryId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "pageNum",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductOrderListByCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/production/order/list": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "生产"
+                ],
+                "summary": "获取生产订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "pageNum",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductOrderList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/production/order/list-by-category": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "生产"
+                ],
+                "summary": "按分类获取生产订单列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分类ID。默认是0，全部",
+                        "name": "categoryId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "pageNum",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductOrderListByCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/setting/info": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设置"
+                ],
+                "summary": "获取设置信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SettingInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/setting/save": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设置"
+                ],
+                "summary": "保存设置",
+                "parameters": [
+                    {
+                        "description": "设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenSetting"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SettingInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/setting/verify-advanced-password": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设置"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ParamVerifyAdvancedPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/passport/captcha": {
             "get": {
                 "produces": [
@@ -174,10 +736,466 @@ const docTemplate = `{
                 }
             }
         },
+        "req.KitchenSetting": {
+            "type": "object",
+            "properties": {
+                "customerCallReminder": {
+                    "description": "顾客呼叫提醒",
+                    "type": "boolean"
+                },
+                "fontSize": {
+                    "description": "字体大小",
+                    "type": "integer"
+                },
+                "foodReminder": {
+                    "description": "来菜提醒",
+                    "type": "boolean"
+                },
+                "productPrint": {
+                    "description": "商品打印档口",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                }
+            }
+        },
+        "req.ParamCreatePublicKey": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "description": "客户端ID",
+                    "type": "string"
+                }
+            }
+        },
+        "req.ParamCustomerInfo": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "顾客呼叫ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ParamLogin": {
+            "type": "object",
+            "properties": {
+                "captcha": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "captchaKey": {
+                    "description": "验证码的签名",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "密码",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "用户名",
+                    "type": "string"
+                }
+            }
+        },
+        "req.ParamVerifyAdvancedPassword": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "description": "高级密码",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.Access": {
+            "type": "object",
+            "properties": {
+                "apiPath": {
+                    "description": "后台api路径",
+                    "type": "string"
+                },
+                "icon": {
+                    "description": "图标名",
+                    "type": "string"
+                },
+                "isMenu": {
+                    "description": "是否是菜单",
+                    "type": "boolean"
+                },
+                "isRoute": {
+                    "description": "是否是路由",
+                    "type": "boolean"
+                },
+                "isShow": {
+                    "description": "是否展示",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "权限名称",
+                    "type": "string"
+                },
+                "parentId": {
+                    "description": "父级id",
+                    "type": "string"
+                },
+                "path": {
+                    "description": "路径",
+                    "type": "string"
+                },
+                "redirectName": {
+                    "description": "重定向名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CallInfo": {
+            "type": "object",
+            "properties": {
+                "deskName": {
+                    "description": "桌台名",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "呼叫ID",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CallList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CallInfo"
+                    }
+                },
+                "pageNum": {
+                    "description": "页码",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "totalPage": {
+                    "description": "总页数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.Captcha": {
+            "type": "object",
+            "properties": {
+                "base64": {
+                    "description": "验证码的base64图片",
+                    "type": "string"
+                },
+                "sign": {
+                    "description": "验证码签名，用于验证用户提交的验证码是否正确",
+                    "type": "string"
+                }
+            }
+        },
         "resp.CashierLoginResponse": {
             "type": "object",
             "properties": {
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CategoryProductInfo": {
+            "type": "object",
+            "properties": {
+                "createTime": {
+                    "description": "送厨时间",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "商品描述",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "成品ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商品名",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "商品数量",
+                    "type": "integer"
+                },
+                "orderNo": {
+                    "description": "订单编号",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CategoryProductList": {
+            "type": "object",
+            "properties": {
+                "categoryName": {
+                    "description": "分类名称",
+                    "type": "string"
+                },
+                "productList": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CategoryProductInfo"
+                    }
+                }
+            }
+        },
+        "resp.FinishedProductInfo": {
+            "type": "object",
+            "properties": {
+                "createTime": {
+                    "description": "送厨时间",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "商品描述",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "成品ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商品名称",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "商品数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.HistoryProductionOrder": {
+            "type": "object",
+            "properties": {
+                "orderNo": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "productList": {
+                    "description": "成品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ServedProductInfo"
+                    }
+                }
+            }
+        },
+        "resp.LoginInfo": {
+            "type": "object",
+            "properties": {
+                "access": {
+                    "description": "权限列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Access"
+                    }
+                },
+                "email": {
+                    "description": "用户邮箱",
+                    "type": "string"
+                },
+                "storeName": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "token": {
+                    "description": "用户token",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.ProductOrderList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "$ref": "#/definitions/resp.ProductionOder"
+                },
+                "pageNum": {
+                    "description": "页码",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "totalPage": {
+                    "description": "总页数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductOrderListByCategory": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CategoryProductList"
+                    }
+                },
+                "pageNum": {
+                    "description": "页码",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "description": "每页数量",
+                    "type": "integer"
+                },
+                "totalPage": {
+                    "description": "总页数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductionOder": {
+            "type": "object",
+            "properties": {
+                "orderNo": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "productList": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.FinishedProductInfo"
+                    }
+                }
+            }
+        },
+        "resp.PublicKeyInfo": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "description": "客户端ID",
+                    "type": "string"
+                },
+                "publicKey": {
+                    "description": "公钥",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.ServedProduct": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "成品ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商品名",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "商品数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ServedProductHistory": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.HistoryProductionOrder"
+                    }
+                },
+                "pageNum": {
+                    "description": "页码",
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "totalPage": {
+                    "description": "总页数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ServedProductInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "商品描述",
+                    "type": "string"
+                },
+                "finishedTime": {
+                    "description": "完成时间",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "成品ID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商品名",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "商品数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SettingInfo": {
+            "type": "object",
+            "properties": {
+                "clientVersion": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
+                "customerCallReminder": {
+                    "description": "是否开启顾客呼叫提醒",
+                    "type": "boolean"
+                },
+                "fontSize": {
+                    "description": "字体大小",
+                    "type": "integer"
+                },
+                "foodReminder": {
+                    "description": "是否开启来菜提醒",
+                    "type": "boolean"
+                },
+                "productPrint": {
+                    "description": "商品打印档口",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                },
+                "serverVersion": {
+                    "description": "服务端版本",
+                    "type": "string"
+                },
+                "sn": {
+                    "description": "机器ID",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "用户名",
                     "type": "string"
                 }
             }

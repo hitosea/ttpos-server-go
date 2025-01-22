@@ -1,0 +1,186 @@
+package kitchen
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+type KitchenServerHandler struct {
+}
+
+// PostCallHandle 处理呼叫
+// @Summary 处理呼叫
+// @Tags 呼叫
+// @Accept json
+// @Produce json
+// @param data body req.ParamCustomerInfo true "id"
+// @Success 200 {object} dto.Response
+// @Router /kitchen/call/handle [post]
+func (siw *KitchenServerHandler) PostCallHandle(c *gin.Context) {
+	// 处理呼叫的逻辑
+}
+
+// GetCallList 获取呼叫列表
+// @Summary 获取呼叫列表
+// @Tags 呼叫
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=resp.CallList}
+// @Router /kitchen/call/list [get]
+func (siw *KitchenServerHandler) GetCallList(c *gin.Context) {
+	// 获取呼叫列表的逻辑
+}
+
+// PostLogin 用户登录
+// @Summary 用户登录
+// @Tags 登录
+// @Accept json
+// @Produce json
+// @param data body req.ParamLogin true "登陆参数"
+// @Success 200 {object} dto.Response{data=resp.LoginInfo}
+// @Router /kitchen/login [post]
+func (siw *KitchenServerHandler) PostLogin(c *gin.Context) {
+	// 用户登录的逻辑
+}
+
+// GetLoginCaptcha 获取登录验证码
+// @Summary 获取登录验证码
+// @Tags 登录
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=resp.Captcha}
+// @Router /kitchen/login/captcha [get]
+func (siw *KitchenServerHandler) GetLoginCaptcha(c *gin.Context) {
+	// 获取登录验证码的逻辑
+}
+
+// PostLoginPublicKey 获取登录公钥
+// @Summary 获取登录公钥
+// @Tags 登录
+// @Accept json
+// @Produce json
+// @param data body req.ParamCreatePublicKey true "公钥参数"
+// @Success 200 {object} dto.Response{data=resp.PublicKeyInfo}
+// @Router /kitchen/login/public-key [post]
+func (siw *KitchenServerHandler) PostLoginPublicKey(c *gin.Context) {
+	// 获取登录公钥的逻辑
+}
+
+// GetProductionFinishedProductHistory 获取上菜历史
+// @Summary 获取上菜历史
+// @Tags 生产
+// @Accept json
+// @Produce json
+// @param language query string true "语言"
+// @param pageNum query int true "页码"
+// @Success 200 {object} dto.Response{data=resp.ServedProductHistory}
+// @Router /kitchen/production/finished-product/history [get]
+func (siw *KitchenServerHandler) GetProductionFinishedProductHistory(c *gin.Context) {
+	// 获取成品历史的逻辑
+}
+
+// GetProductionFinishedProductLatest 获取最新成品
+// @Summary 获取最新成品
+// @Tags 生产
+// @Accept json
+// @Produce json
+// @param language query string true "语言"
+// @Success 200 {object} dto.Response{data=resp.ServedProductList}
+// @Router /kitchen/production/finished-product/latest [get]
+func (siw *KitchenServerHandler) GetProductionFinishedProductLatest(c *gin.Context) {
+	// 获取最新成品的逻辑
+}
+
+// GetProductionOrderCategory 获取生产订单分类
+// @Summary 获取生产订单分类
+// @Tags 生产
+// @Accept json
+// @Produce json
+// @param categoryId query string true "分类ID。默认是0，全部"
+// @param pageNum query int false "页码"
+// @param language query string true "语言"
+// @Success 200 {object} dto.Response{data=resp.ProductOrderListByCategory}
+// @Router /kitchen/production/order/category [get]
+func (siw *KitchenServerHandler) GetProductionOrderCategory(c *gin.Context) {
+	// 获取生产订单分类的逻辑
+}
+
+// GetProductionOrderList 获取生产订单列表
+// @Summary 获取生产订单列表
+// @Tags 生产
+// @Accept json
+// @Produce json
+// @param pageNum query int true "页码"
+// @param language query string true "语言"
+// @Success 200 {object} dto.Response{data=resp.ProductOrderList}
+// @Router /kitchen/production/order/list [get]
+func (siw *KitchenServerHandler) GetProductionOrderList(c *gin.Context) {
+	// 获取生产订单列表的逻辑
+}
+
+// GetProductionOrderListByCategory 按分类获取生产订单列表
+// @Summary 按分类获取生产订单列表
+// @Tags 生产
+// @Accept json
+// @Produce json
+// @param categoryId query string true "分类ID。默认是0，全部"
+// @param pageNum query int true "页码"
+// @param language query string true "语言"
+// @Success 200 {object} dto.Response{data=resp.ProductOrderListByCategory}
+// @Router /kitchen/production/order/list-by-category [get]
+func (siw *KitchenServerHandler) GetProductionOrderListByCategory(c *gin.Context) {
+	// 按分类获取生产订单列表的逻辑
+}
+
+// GetSettingInfo 获取设置信息
+// @Summary 获取设置信息
+// @Tags 设置
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=resp.SettingInfo}
+// @Router /kitchen/setting/info [get]
+func (siw *KitchenServerHandler) GetSettingInfo(c *gin.Context) {
+	// 获取设置信息的逻辑
+}
+
+// PostSettingSave 保存设置
+// @Summary 保存设置
+// @Tags 设置
+// @Accept json
+// @Produce json
+// @param data body req.KitchenSetting true "设置参数"
+// @Success 200 {object} dto.Response{data=resp.SettingInfo}
+// @Router /kitchen/setting/save [post]
+func (siw *KitchenServerHandler) PostSettingSave(c *gin.Context) {
+	// 保存设置的逻辑
+}
+
+// PostSettingVerifyAdvancedPassword 验证高级密码
+// @Summary 验证高级密码
+// @Tags 设置
+// @Accept json
+// @Produce json
+// @param data body req.ParamVerifyAdvancedPassword true "验证参数"
+// @Success 200 {object} dto.Response
+// @Router /kitchen/setting/verify-advanced-password [post]
+func (siw *KitchenServerHandler) PostSettingVerifyAdvancedPassword(c *gin.Context) {
+	// 验证高级密码的逻辑
+}
+
+// RegisterHandlers 创建与 OpenAPI 规范匹配的 http.Handler。
+func RegisterHandlers(router gin.IRouter) {
+	wrapper := KitchenServerHandler{}
+
+	router.POST("/call/handle", wrapper.PostCallHandle)                                             // 处理呼叫
+	router.GET("/call/list", wrapper.GetCallList)                                                   // 获取呼叫列表
+	router.POST("/login", wrapper.PostLogin)                                                        // 用户登录
+	router.GET("/login/captcha", wrapper.GetLoginCaptcha)                                           // 获取登录验证码
+	router.POST("/login/public-key", wrapper.PostLoginPublicKey)                                    // 获取登录公钥
+	router.GET("/production/finished-product/history", wrapper.GetProductionFinishedProductHistory) // 获取上菜历史
+	router.GET("/production/finished-product/latest", wrapper.GetProductionFinishedProductLatest)   // 获取最新成品
+	router.GET("/production/order/category", wrapper.GetProductionOrderCategory)                    // 获取生产订单分类
+	router.GET("/production/order/list", wrapper.GetProductionOrderList)                            // 获取生产订单列表
+	router.GET("/production/order/list-by-category", wrapper.GetProductionOrderListByCategory)      // 按分类获取生产订单列表
+	router.GET("/setting/info", wrapper.GetSettingInfo)                                             // 获取设置信息
+	router.POST("/setting/save", wrapper.PostSettingSave)                                           // 保存设置
+	router.POST("/setting/verify-advanced-password", wrapper.PostSettingVerifyAdvancedPassword)     // 验证高级密码
+}

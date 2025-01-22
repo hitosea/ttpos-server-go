@@ -26,9 +26,332 @@ definitions:
     - password
     - username
     type: object
+  req.KitchenSetting:
+    properties:
+      customerCallReminder:
+        description: 顾客呼叫提醒
+        type: boolean
+      fontSize:
+        description: 字体大小
+        type: integer
+      foodReminder:
+        description: 来菜提醒
+        type: boolean
+      productPrint:
+        description: 商品打印档口
+        type: integer
+      remark:
+        description: 机器备注
+        type: string
+    type: object
+  req.ParamCreatePublicKey:
+    properties:
+      clientId:
+        description: 客户端ID
+        type: string
+    type: object
+  req.ParamCustomerInfo:
+    properties:
+      id:
+        description: 顾客呼叫ID
+        type: integer
+    type: object
+  req.ParamLogin:
+    properties:
+      captcha:
+        description: 验证码
+        type: string
+      captchaKey:
+        description: 验证码的签名
+        type: string
+      password:
+        description: 密码
+        type: string
+      username:
+        description: 用户名
+        type: string
+    type: object
+  req.ParamVerifyAdvancedPassword:
+    properties:
+      password:
+        description: 高级密码
+        type: string
+    type: object
+  resp.Access:
+    properties:
+      apiPath:
+        description: 后台api路径
+        type: string
+      icon:
+        description: 图标名
+        type: string
+      isMenu:
+        description: 是否是菜单
+        type: boolean
+      isRoute:
+        description: 是否是路由
+        type: boolean
+      isShow:
+        description: 是否展示
+        type: boolean
+      name:
+        description: 权限名称
+        type: string
+      parentId:
+        description: 父级id
+        type: string
+      path:
+        description: 路径
+        type: string
+      redirectName:
+        description: 重定向名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+    type: object
+  resp.CallInfo:
+    properties:
+      deskName:
+        description: 桌台名
+        type: string
+      id:
+        description: 呼叫ID
+        type: string
+    type: object
+  resp.CallList:
+    properties:
+      list:
+        description: 列表
+        items:
+          $ref: '#/definitions/resp.CallInfo'
+        type: array
+      pageNum:
+        description: 页码
+        type: integer
+      pageSize:
+        description: 每页数量
+        type: integer
+      totalPage:
+        description: 总页数
+        type: integer
+    type: object
+  resp.Captcha:
+    properties:
+      base64:
+        description: 验证码的base64图片
+        type: string
+      sign:
+        description: 验证码签名，用于验证用户提交的验证码是否正确
+        type: string
+    type: object
   resp.CashierLoginResponse:
     properties:
       token:
+        type: string
+    type: object
+  resp.CategoryProductInfo:
+    properties:
+      createTime:
+        description: 送厨时间
+        type: integer
+      description:
+        description: 商品描述
+        type: string
+      id:
+        description: 成品ID
+        type: string
+      name:
+        description: 商品名
+        type: string
+      num:
+        description: 商品数量
+        type: integer
+      orderNo:
+        description: 订单编号
+        type: string
+    type: object
+  resp.CategoryProductList:
+    properties:
+      categoryName:
+        description: 分类名称
+        type: string
+      productList:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.CategoryProductInfo'
+        type: array
+    type: object
+  resp.FinishedProductInfo:
+    properties:
+      createTime:
+        description: 送厨时间
+        type: integer
+      description:
+        description: 商品描述
+        type: string
+      id:
+        description: 成品ID
+        type: string
+      name:
+        description: 商品名称
+        type: string
+      num:
+        description: 商品数量
+        type: integer
+    type: object
+  resp.HistoryProductionOrder:
+    properties:
+      orderNo:
+        description: 订单编号
+        type: string
+      productList:
+        description: 成品列表
+        items:
+          $ref: '#/definitions/resp.ServedProductInfo'
+        type: array
+    type: object
+  resp.LoginInfo:
+    properties:
+      access:
+        description: 权限列表
+        items:
+          $ref: '#/definitions/resp.Access'
+        type: array
+      email:
+        description: 用户邮箱
+        type: string
+      storeName:
+        description: 门店名称
+        type: string
+      token:
+        description: 用户token
+        type: string
+    type: object
+  resp.ProductOrderList:
+    properties:
+      list:
+        $ref: '#/definitions/resp.ProductionOder'
+      pageNum:
+        description: 页码
+        type: integer
+      pageSize:
+        description: 每页数量
+        type: integer
+      totalPage:
+        description: 总页数
+        type: integer
+    type: object
+  resp.ProductOrderListByCategory:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CategoryProductList'
+        type: array
+      pageNum:
+        description: 页码
+        type: integer
+      pageSize:
+        description: 每页数量
+        type: integer
+      totalPage:
+        description: 总页数
+        type: integer
+    type: object
+  resp.ProductionOder:
+    properties:
+      orderNo:
+        description: 订单编号
+        type: string
+      productList:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.FinishedProductInfo'
+        type: array
+    type: object
+  resp.PublicKeyInfo:
+    properties:
+      clientId:
+        description: 客户端ID
+        type: string
+      publicKey:
+        description: 公钥
+        type: string
+    type: object
+  resp.ServedProduct:
+    properties:
+      id:
+        description: 成品ID
+        type: string
+      name:
+        description: 商品名
+        type: string
+      num:
+        description: 商品数量
+        type: integer
+    type: object
+  resp.ServedProductHistory:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.HistoryProductionOrder'
+        type: array
+      pageNum:
+        description: 页码
+        type: integer
+      pageSize:
+        description: 每页大小
+        type: integer
+      totalPage:
+        description: 总页数
+        type: integer
+    type: object
+  resp.ServedProductInfo:
+    properties:
+      description:
+        description: 商品描述
+        type: string
+      finishedTime:
+        description: 完成时间
+        type: integer
+      id:
+        description: 成品ID
+        type: string
+      name:
+        description: 商品名
+        type: string
+      num:
+        description: 商品数量
+        type: integer
+    type: object
+  resp.SettingInfo:
+    properties:
+      clientVersion:
+        description: 客户端版本
+        type: string
+      customerCallReminder:
+        description: 是否开启顾客呼叫提醒
+        type: boolean
+      fontSize:
+        description: 字体大小
+        type: integer
+      foodReminder:
+        description: 是否开启来菜提醒
+        type: boolean
+      productPrint:
+        description: 商品打印档口
+        type: integer
+      remark:
+        description: 机器备注
+        type: string
+      serverVersion:
+        description: 服务端版本
+        type: string
+      sn:
+        description: 机器ID
+        type: string
+      username:
+        description: 用户名
         type: string
     type: object
 host: 127.0.0.1:8081
@@ -81,6 +404,339 @@ paths:
       summary: 退出登录
       tags:
       - 收银端
+  /kitchen/call/handle:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: id
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamCustomerInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 处理呼叫
+      tags:
+      - 呼叫
+  /kitchen/call/list:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CallList'
+              type: object
+      summary: 获取呼叫列表
+      tags:
+      - 呼叫
+  /kitchen/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 登陆参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginInfo'
+              type: object
+      summary: 用户登录
+      tags:
+      - 登录
+  /kitchen/login/captcha:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.Captcha'
+              type: object
+      summary: 获取登录验证码
+      tags:
+      - 登录
+  /kitchen/login/public-key:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 公钥参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamCreatePublicKey'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PublicKeyInfo'
+              type: object
+      summary: 获取登录公钥
+      tags:
+      - 登录
+  /kitchen/production/finished-product/history:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 语言
+        in: query
+        name: language
+        required: true
+        type: string
+      - description: 页码
+        in: query
+        name: pageNum
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ServedProductHistory'
+              type: object
+      summary: 获取上菜历史
+      tags:
+      - 生产
+  /kitchen/production/finished-product/latest:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 语言
+        in: query
+        name: language
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/resp.ServedProduct'
+                  type: array
+              type: object
+      summary: 获取最新成品
+      tags:
+      - 生产
+  /kitchen/production/order/category:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 分类ID。默认是0，全部
+        in: query
+        name: categoryId
+        required: true
+        type: string
+      - description: 页码
+        in: query
+        name: pageNum
+        type: integer
+      - description: 语言
+        in: query
+        name: language
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductOrderListByCategory'
+              type: object
+      summary: 获取生产订单分类
+      tags:
+      - 生产
+  /kitchen/production/order/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 页码
+        in: query
+        name: pageNum
+        required: true
+        type: integer
+      - description: 语言
+        in: query
+        name: language
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductOrderList'
+              type: object
+      summary: 获取生产订单列表
+      tags:
+      - 生产
+  /kitchen/production/order/list-by-category:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 分类ID。默认是0，全部
+        in: query
+        name: categoryId
+        required: true
+        type: string
+      - description: 页码
+        in: query
+        name: pageNum
+        required: true
+        type: integer
+      - description: 语言
+        in: query
+        name: language
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductOrderListByCategory'
+              type: object
+      summary: 按分类获取生产订单列表
+      tags:
+      - 生产
+  /kitchen/setting/info:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SettingInfo'
+              type: object
+      summary: 获取设置信息
+      tags:
+      - 设置
+  /kitchen/setting/save:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.KitchenSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SettingInfo'
+              type: object
+      summary: 保存设置
+      tags:
+      - 设置
+  /kitchen/setting/verify-advanced-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 验证参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamVerifyAdvancedPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 验证高级密码
+      tags:
+      - 设置
   /passport/captcha:
     get:
       produces:

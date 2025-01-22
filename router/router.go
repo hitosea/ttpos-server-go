@@ -1,11 +1,12 @@
 package router
 
 import (
+	"jjjshop-server-go/app/api/v1/kitchen"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
-	"jjjshop-server-go/app/api/v1"
+	v1 "jjjshop-server-go/app/api/v1"
 	"jjjshop-server-go/app/api/v1/cashier"
 	"jjjshop-server-go/app/repository"
 	"jjjshop-server-go/app/service"
@@ -63,6 +64,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			cashierGroup.POST("/passport/logout", cashierAuthHandler.Logout) // 收银端退出登录
 			//cashierGroup.GET("/info", nil)                                   // 获取登录信息
+		}
+		// 厨房端
+		kitchenGroup := privateApiV1.Group("/kitchen")
+		{
+			kitchen.RegisterHandlers(kitchenGroup)
 		}
 	}
 }
