@@ -39,10 +39,10 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 
 	if staff.IsSuper == 1 { // 超级管理员
 		if staff.UserType == 1 {
-			//if staff.CompanySetting.CategorySet == 10 {
-			//	where = append(where, s.shopAccessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
-			//}
-			//where = append(where, s.shopAccessRepo.WhereIsSupplier())
+			if staff.Company.CompanySetting.CategorySet == 10 {
+				where = append(where, s.shopAccessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
+			}
+			where = append(where, s.shopAccessRepo.WhereIsSupplier())
 		}
 	} else {
 		roleIds, err := s.shopUserRoleRepo.GetRoleIds(staff.ID, staff.CompanyID)
@@ -76,7 +76,7 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 }
 
 // filterPermission 筛选权限
-func (s *RoleAccessService) filterPermission(permissions []resp.Permission, supplier model.CompanySetting) []resp.Permission {
+func (s *RoleAccessService) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
@@ -84,35 +84,35 @@ func (s *RoleAccessService) filterPermission(permissions []resp.Permission, supp
 			continue
 		}
 		// 授权无进销存权限
-		if supplier.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.AccessId) {
+		if companySetting.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.AccessId) {
 			continue
 		}
 		// 授权无会员权限
-		if supplier.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.AccessId) {
+		if companySetting.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.AccessId) {
 			continue
 		}
 		// 授权无平板点餐权限
-		if supplier.IsOpenTablet == 0 && permission.AccessId == 87 {
+		if companySetting.IsOpenTablet == 0 && permission.AccessId == 87 {
 			continue
 		}
 		// 授权无H5点餐权限
-		if supplier.IsOpenScan == 0 && permission.AccessId == 1724220505 {
+		if companySetting.IsOpenScan == 0 && permission.AccessId == 1724220505 {
 			continue
 		}
 		// 授权无点餐助手权限
-		if supplier.IsOpenAssistant == 0 && permission.AccessId == 1720753338 {
+		if companySetting.IsOpenAssistant == 0 && permission.AccessId == 1720753338 {
 			continue
 		}
 		// 授权无后厨权限
-		if supplier.IsOpenKitchenKds == 0 && permission.AccessId == 88 {
+		if companySetting.IsOpenKitchenKds == 0 && permission.AccessId == 88 {
 			continue
 		}
 		// 授权无自助餐权限
-		if supplier.IsOpenBuffet == 0 && permission.AccessId == 1708671616 {
+		if companySetting.IsOpenBuffet == 0 && permission.AccessId == 1708671616 {
 			continue
 		}
 		// 授权无扫码点餐接单权限
-		if supplier.IsAcceptScanOrder == 0 && permission.AccessId == 1724320522 {
+		if companySetting.IsAcceptScanOrder == 0 && permission.AccessId == 1724320522 {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)

@@ -22,9 +22,9 @@ func (r *CompanyStaffRepository) GetById(Id uint, withs ...Where) model.CompanyS
 	return user
 }
 
-func (r *CompanyStaffRepository) WithSupplier() Where {
+func (r *CompanyStaffRepository) WithCompany() Where {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("CompanySetting")
+		return db.Preload("Company")
 	}
 }
 
