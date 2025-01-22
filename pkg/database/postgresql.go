@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
@@ -15,22 +15,22 @@ import (
 	"ttpos-server-go/config"
 )
 
-func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
+func NewPostgreSQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
 	ignoreRecordNotFoundError := true // 忽略ErrRecordNotFound（记录未找到）错误
 	logLevel := logger.Warn
 	if config.Server.Mode == gin.DebugMode { // 调试模式
 		ignoreRecordNotFoundError = false // 不忽略
 		logLevel = logger.Info            // 详细日志
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		conf.User,
-		conf.Password,
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s",
 		conf.Host,
 		conf.Port,
+		conf.User,
 		dbName,
+		conf.Password,
 	)
 	// 初始化会话
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   conf.TablePrefix, // 表名前缀
 			SingularTable: true,             // 使用单一表名, eg. `User` => `user`

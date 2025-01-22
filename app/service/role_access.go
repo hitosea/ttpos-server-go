@@ -9,10 +9,10 @@ import (
 
 	"github.com/jinzhu/copier"
 
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/app/dto/resp"
-	"jjjshop-server-go/app/model"
-	"jjjshop-server-go/app/repository"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 )
 
 type RoleAccessService struct {

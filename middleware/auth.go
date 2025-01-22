@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"jjjshop-server-go/app/api/helper"
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/auth"
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
 )
 
 func Auth() gin.HandlerFunc {

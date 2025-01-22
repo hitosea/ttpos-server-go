@@ -7,17 +7,17 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 
-	"jjjshop-server-go/app/constant"
-	"jjjshop-server-go/app/dto"
-	apperrors "jjjshop-server-go/app/errors"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/i18n"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/utils"
 )
 
 func ErrorWithDetail(c *gin.Context, code int, err error) {
 	messages := []string{err.Error()}
-	var appErr *apperrors.AppError
+	var appErr apperrors.AppError
 	if errors.As(err, &appErr) {
 		code = appErr.GetCode()
 		if len(appErr.Replace) > 0 {

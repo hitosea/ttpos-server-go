@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"jjjshop-server-go/config"
+	"ttpos-server-go/config"
 )
 
 func NewRedisClient(conf config.RedisConf) *redis.Client {

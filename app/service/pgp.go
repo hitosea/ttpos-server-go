@@ -3,55 +3,68 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jinzhu/copier"
 	"strings"
 	"time"
 
-	"jjjshop-server-go/app/dto/resp"
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/pgp"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/encrypt"
+	"ttpos-server-go/pkg/utils"
 )
 
-type PGPService struct {
+type EncryptService struct {
 	cache cache.Cache
 }
 
-func NewPGPService(cache cache.Cache) *PGPService {
-	return &PGPService{
+func NewEncryptService(cache cache.Cache) *EncryptService {
+	return &EncryptService{
 		cache: cache,
 	}
 }
 
 // GetServerPublicKey 获取服务端公钥
-func (s *PGPService) GetServerPublicKey(clientId string) (*resp.ServerPublicKeyResponse, error) {
-	cacheKey := config.Pgp.CachePrefix + clientId
+func (s *EncryptService) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error) {
+	cacheKey := config.Encrypt.CachePrefix + clientId + "_" + encryptType
 	if data, ok := s.cache.Get(cacheKey); ok {
-		var pgpPair pgp.KeyPair
-		err := json.Unmarshal([]byte(data.(string)), &pgpPair)
+		var keyPair encrypt.KeyPair
+		err := json.Unmarshal([]byte(data.(string)), &keyPair)
 		if err != nil {
 			return nil, errors.New("获取服务端公钥失败")
 		}
-		return &resp.ServerPublicKeyResponse{
-			Type:            "pgp",
-			ClientId:        clientId,
-			ServerPublicKey: pgpPair.PublicKey,
+		return &resp.ServerKeyResponse{
+			Type:      encryptType,
+			ClientId:  clientId,
+			ServerKey: keyPair.PublicKey,
 		}, nil
 	}
 
-	name := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
-	passphrase := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
-	pgpPair, err := pgp.GenerateKeyPair(name, "aa@bb.cc", passphrase)
-	if err != nil {
+	var keyPair encrypt.KeyPair
+	switch encryptType {
+	case "pgp":
+		name := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
+		passphrase := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
+		kp, err := encrypt.GeneratePgpKeyPair(name, "aa@bb.cc", passphrase)
+		if err != nil {
+			return nil, errors.New("获取服务端公钥失败")
+		}
+		_ = copier.Copy(&keyPair, *kp)
+	case "jsencrypt":
+		var err error
+		if keyPair, err = encrypt.GenerateRSAKeyPairPEM(2048); err != nil {
+			return nil, errors.New("获取服务端公钥失败")
+		}
+	default:
 		return nil, errors.New("获取服务端公钥失败")
 	}
 
-	b, _ := json.Marshal(pgpPair)
+	b, _ := json.Marshal(keyPair)
 	s.cache.Set(cacheKey, string(b), 86400*90*time.Second)
 
-	return &resp.ServerPublicKeyResponse{
-		Type:            "pgp",
-		ClientId:        clientId,
-		ServerPublicKey: pgpPair.PublicKey,
+	return &resp.ServerKeyResponse{
+		Type:      encryptType,
+		ClientId:  clientId,
+		ServerKey: keyPair.PublicKey,
 	}, nil
 }

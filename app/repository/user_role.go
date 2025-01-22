@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"jjjshop-server-go/app/model"
-	"jjjshop-server-go/pkg/database"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/database"
 )
 
 type UserRoleRepository struct {

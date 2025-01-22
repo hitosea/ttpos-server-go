@@ -7,7 +7,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"jjjshop-server-go/docs"
+	"ttpos-server-go/docs"
 )
 
 func setupSwagger(r *gin.Engine) {

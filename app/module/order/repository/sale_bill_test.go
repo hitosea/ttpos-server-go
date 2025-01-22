@@ -2,12 +2,12 @@ package repository
 
 import (
 	"fmt"
-	sale "jjjshop-server-go/app/module/order/model"
-	"jjjshop-server-go/config"
 	"log"
 	"os"
 	"testing"
 	"time"
+	sale "ttpos-server-go/app/module/order/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"

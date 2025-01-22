@@ -1,7 +1,8 @@
 package req
 
 type GetServerPublicKeyRequest struct {
-	ClientId string `form:"client_id" binding:"required"`
+	ClientId string `json:"client_id" form:"client_id" binding:"required"`
+	Type     string `json:"type" form:"type" binding:"required,oneof=pgp jsencrypt"`
 }
 
 var GetServerPublicKeyRequestMessage = map[string]string{
