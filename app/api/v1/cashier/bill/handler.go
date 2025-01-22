@@ -39,8 +39,8 @@ func (siw *Handler) DeleteCashierBillDiscount(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param discount body Discount true "折扣详情"
-// @Success 201 {object} Discount "已创建"
+// @Param discount body nil true "折扣详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/discount [post]
 func (siw *Handler) PostCashierBillDiscount(c *gin.Context) {
@@ -68,8 +68,8 @@ func (siw *Handler) PostCashierBillDiscountChangePrice(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param gift body Gift true "礼物详情"
-// @Success 201 {object} Gift "已创建"
+// @Param gift body nil true "礼物详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/discount/gift [post]
 func (siw *Handler) PostCashierBillDiscountGift(c *gin.Context) {
@@ -82,8 +82,8 @@ func (siw *Handler) PostCashierBillDiscountGift(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param change body SmallChange true "小额变更详情"
-// @Success 201 {object} SmallChange "已创建"
+// @Param change body nil true "小额变更详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/discount/smallChange [post]
 func (siw *Handler) PostCashierBillDiscountSmallChange(c *gin.Context) {
@@ -97,7 +97,7 @@ func (siw *Handler) PostCashierBillDiscountSmallChange(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param orderId path string true "订单ID"
-// @Success 200 {object} Order "订单详情"
+// @Success 200 {object} nil "订单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /bill/order/check/{orderId} [get]
 func (siw *Handler) GetCashierBillOrderCheck(c *gin.Context) {
@@ -138,8 +138,8 @@ func (siw *Handler) DeleteCashierBillOrderMember(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param member body Member true "成员详情"
-// @Success 201 {object} Member "已创建"
+// @Param member body nil true "成员详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/order/member [post]
 func (siw *Handler) PostCashierBillOrderMember(c *gin.Context) {
@@ -166,7 +166,7 @@ func (siw *Handler) PostCashierBillOrderPay(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param strategy body SmallChangeStrategy true "小额支付策略详情"
+// @Param strategy body nil true "小额支付策略详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/order/paymentSmallChangeStrategy [post]
@@ -237,7 +237,7 @@ func (siw *Handler) PostCashierBillOrderProductionCancelReturn(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param orderId path string true "订单ID"
-// @Success 200 {object} ProductStatus "产品状态"
+// @Success 200 {object} nil "产品状态"
 // @Failure 404 {object} nil "未找到"
 // @Router /bill/order/productionOrder/finishedProduct/status/{orderId} [get]
 func (siw *Handler) GetCashierBillOrderProductionOrderFinishedProductStatus(c *gin.Context) {
@@ -278,8 +278,8 @@ func (siw *Handler) DeleteCashierBillSubBill(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param subBill body SubBill true "子账单详情"
-// @Success 201 {object} SubBill "已创建"
+// @Param subBill body nil true "子账单详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/subBill [post]
 func (siw *Handler) PostCashierBillSubBill(c *gin.Context) {
@@ -292,7 +292,7 @@ func (siw *Handler) PostCashierBillSubBill(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param moveDetails body MoveDetails true "移动详情"
+// @Param moveDetails body nil true "移动详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /bill/subBill/product/move [post]

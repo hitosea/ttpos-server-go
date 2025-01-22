@@ -13,24 +13,27 @@ import (
 )
 
 type CashierAuthService struct {
-	userRepo      *repository.UserRepository
-	loginLogRepo  *repository.LoginLogRepository
-	captchaSrv    *CaptchaService
-	roleAccessSrv *RoleAccessService
-	bindRecordSrv *BindRecordService
+	companyStaffRepo *repository.CompanyStaffRepository
+	staffRepo        *repository.StaffRepository
+	loginLogRepo     *repository.LoginLogRepository
+	captchaSrv       *CaptchaService
+	roleAccessSrv    *RoleAccessService
+	bindRecordSrv    *BindRecordService
 }
 
 func NewCashierAuthService(
-	userRepo *repository.UserRepository,
+	staffRepo *repository.StaffRepository,
+	companyStaffRepo *repository.CompanyStaffRepository,
 	captchaSrv *CaptchaService,
 	roleAccessSrv *RoleAccessService,
 	bindRecordSrv *BindRecordService,
 ) *CashierAuthService {
 	return &CashierAuthService{
-		userRepo:      userRepo,
-		captchaSrv:    captchaSrv,
-		roleAccessSrv: roleAccessSrv,
-		bindRecordSrv: bindRecordSrv,
+		companyStaffRepo: companyStaffRepo,
+		staffRepo:        staffRepo,
+		captchaSrv:       captchaSrv,
+		roleAccessSrv:    roleAccessSrv,
+		bindRecordSrv:    bindRecordSrv,
 	}
 }
 
@@ -40,47 +43,56 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
 		return "", errors.New("验证码错误")
 	}
-	// 验证账号
-	user := s.userRepo.GetByUsername(username, s.userRepo.WithApp(), s.userRepo.WithSupplier())
-	if user.ShopUserId == 0 {
+	// 验证账号, 在saas库中验证账号是否存在
+	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithSupplier())
+	if companyStaff.ID == 0 {
 		return "", errors.New("账号不存在")
 	}
-	if utils.EncryptPassword(password) != user.Password {
-		return "", errors.New("密码错误")
-	}
-	if user.IsDelete == 1 {
-		return "", apperrors.NewWithReplace(constant.CodeAccountDeleted, "账号 %s 被删除，请联系管理员", []string{user.UserName})
-	}
-	if user.IsStatus == 1 {
-		return "", errors.New("账号被禁用，请联系管理员")
-	}
-	if user.App == nil || user.App.IsDelete == 1 {
+	// 验证账号是否中saas中被禁用
+	// 略
+
+	if companyStaff.CompanyID == 0 {
 		return "", errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	if user.App.IsRecycle != 0 {
+
+	// 在集团库中验证用户密码是否正确
+	// 通过staffId查询staff信息，验证密码是否正确
+	staff := s.staffRepo.GetById(companyStaff.StaffId, companyStaff.CompanyID, s.staffRepo.WithCompany())
+	if utils.EncryptPassword(password) != staff.Password {
+		return "", errors.New("密码错误")
+	}
+	if staff.IsDelete == 1 {
+		return "", apperrors.NewWithReplace(constant.CodeAccountDeleted, "账号 %s 被删除，请联系管理员", []string{staff.UserName})
+	}
+	if staff.IsDisable == 1 {
+		return "", errors.New("账号被禁用，请联系管理员")
+	}
+	if staff.Company.IsRecycle != 0 {
 		return "", errors.New("商家账号异常，请联系管理员")
 	}
 
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CASHIER_ROUTE_NAME, user.ShopUserId)
+	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CASHIER_ROUTE_NAME, staff.ID, staff.CompanyID)
 	if len(permissions) == 0 {
 		return "", errors.New("当前无权限，请联系管理员")
 	}
 
 	// 检查是否有未交班的收银员
-	currentUser := s.userRepo.GetCurrentCashier(user.BindKey)
-	if currentUser.ShopUserId != 0 && currentUser.ShopUserId != user.ShopUserId {
-		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentUser.RealName})
+	currentStaff := s.staffRepo.GetCurrentCashier(staff.BindKey)
+	if currentStaff.ID != 0 && currentStaff.ID != staff.ID {
+		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 	}
 
 	// 是否是首次接班
-	//isFirstLogin := user.CashierOnline == 0
+	//isFirstLogin := companyStaff.CashierOnline == 0
+
+	bindKey := "" // 当前登陆的设备key
 
 	// 是否已在其他收银机登录
-	if user.CashierOnline == 1 && user.BindKey != user.BindKey {
-		cashierName := user.RealName
+	if staff.CashierOnline == 1 && bindKey != staff.BindKey {
+		cashierName := staff.RealName
 		if cashierName == "" {
-			cashierName = user.UserName
+			cashierName = staff.UserName
 		}
 		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 	}
@@ -90,19 +102,19 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	//            'key' => $device_id,
 	//            'brand' => $brand,
 	//            'source' => BindRecordModel::SOURCE_CASHIER,
-	//            'finally_login_id' => $user['shop_user_id'],
+	//            'finally_login_id' => $companyStaff['shop_user_id'],
 	//            'finally_login_time' => time(),
-	//            'app_id' => $user['app_id'],
-	//            'shop_supplier_id' => $user['shop_supplier_id'],
+	//            'app_id' => $companyStaff['app_id'],
+	//            'shop_supplier_id' => $companyStaff['shop_supplier_id'],
 	//        ];
 	//        $model = new BindRecordModel;
-	//        if (!$model->add($data, $user->license)) {
+	//        if (!$model->add($data, $companyStaff->license)) {
 	//            $this->error = $model->getError() ?: __('绑定失败');
 	//            return false;
 	//        }
 
 	// 生成 JWT token
-	token, err := auth.GenerateToken(constant.SOURCE_CASHIER, user.ShopUserId, user.AppId, config.JWT.Secret, config.JWT.Expire)
+	token, err := auth.GenerateToken(constant.SOURCE_CASHIER, staff.ID, staff.CompanyID, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
 		return "", errors.New("生成token失败")
 	}
@@ -111,6 +123,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 
 // Logout 退出登录
 func (s *CashierAuthService) Logout(cc *gin.Context) error {
-	shopUser := s.userRepo.GetById(cc.GetUint("shopUserId"))
-	return s.bindRecordSrv.Unbind(cc.GetUint("appId"), constant.SOURCE_CASHIER, shopUser.BindKey, shopUser.ShopUserId)
+	currentCompanyId := uint(0) // todo 从token中获取
+	staff := s.staffRepo.GetById(cc.GetUint("shopUserId"), currentCompanyId)
+	return s.bindRecordSrv.Unbind(cc.GetUint("appId"), constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
 }

@@ -54,8 +54,8 @@ func (siw *Handler) DeleteCashierOrderProductCancelGift(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param gift body Gift true "礼物详情"
-// @Success 201 {object} Gift "已创建"
+// @Param gift body nil true "礼物详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /order/product/gift [post]
 func (siw *Handler) PostCashierOrderProductGift(c *gin.Context) {
@@ -84,7 +84,7 @@ func (siw *Handler) PostCashierOrderProductPrice(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path string true "产品ID"
-// @Success 200 {object} Remark "备注详情"
+// @Success 200 {object} nil "备注详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /order/product/remark/{productId} [get]
 func (siw *Handler) GetCashierOrderProductRemark(c *gin.Context) {
@@ -98,7 +98,7 @@ func (siw *Handler) GetCashierOrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path string true "产品ID"
-// @Param remark body Remark true "备注详情"
+// @Param remark body nil true "备注详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /order/product/remark/{productId} [post]
@@ -112,7 +112,7 @@ func (siw *Handler) PostCashierOrderProductRemark(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} Order "订单列表"
+// @Success 200 {array} nil "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /order/showOrder/list [get]
 func (siw *Handler) GetCashierOrderShowOrderList(c *gin.Context) {

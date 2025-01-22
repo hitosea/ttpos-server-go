@@ -20,15 +20,15 @@ func (s *InitService) InitDatabase() error {
 	// 执行数据库迁移
 	err := s.db.AutoMigrate(
 		// 用户相关模型
-		&model.App{},            // 应用表
-		&model.Supplier{},       // 供应商表
-		&model.User{},           // 商家用户表
+		&model.Company{},        // 应用表
+		&model.CompanySetting{}, // 供应商表
+		&model.Staff{},          // 商家用户表
 		&model.BindRecord{},     // 商家设备绑定记录表
 		&model.LoginLog{},       // 商家用户绑定记录
-		&model.ShopRole{},       //  商家用户角色表
-		&model.ShopAccess{},     //  商家权限表
-		&model.UserRole{},       //  商家用户角色
-		&model.ShopRoleAccess{}, //  商家角色权限
+		&model.Role{},           //  商家用户角色表
+		&model.Access{},         //  商家权限表
+		&model.StaffRole{},      //  商家用户角色
+		&model.RoleAccess{},     //  商家角色权限
 		&model.ShopOptLog{},     //  商家操作日志
 	)
 	if err != nil {

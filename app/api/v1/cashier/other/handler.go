@@ -14,7 +14,7 @@ type Handler struct {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} Desk "收银台列表"
+// @Success 200 {array} nil "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /desk/list [get]
 func (siw *Handler) GetCashierDeskList(c *gin.Context) {
@@ -27,7 +27,7 @@ func (siw *Handler) GetCashierDeskList(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} DeskRegionType "收银台区域和类型列表"
+// @Success 200 {array} nil "收银台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /desk/regionAndType [get]
 func (siw *Handler) GetCashierDeskRegionAndType(c *gin.Context) {
@@ -40,8 +40,8 @@ func (siw *Handler) GetCashierDeskRegionAndType(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param loginDetails body LoginDetails true "登录详情"
-// @Success 200 {object} LoginResponse "登录成功"
+// @Param loginDetails body nil true "登录详情"
+// @Success 200 {object} nil "登录成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /login [post]
 func (siw *Handler) PostCashierLogin(c *gin.Context) {
@@ -54,7 +54,7 @@ func (siw *Handler) PostCashierLogin(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {object} Captcha "验证码详情"
+// @Success 200 {object} nil "验证码详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /login/captcha [get]
 func (siw *Handler) GetCashierLoginCaptcha(c *gin.Context) {
@@ -67,7 +67,7 @@ func (siw *Handler) GetCashierLoginCaptcha(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {object} PublicKey "公钥详情"
+// @Success 200 {object} nil "公钥详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /login/publicKey [post]
 func (siw *Handler) PostCashierLoginPublicKey(c *gin.Context) {
@@ -81,7 +81,7 @@ func (siw *Handler) PostCashierLoginPublicKey(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param memberId path string true "会员ID"
-// @Success 200 {object} Member "会员详情"
+// @Success 200 {object} nil "会员详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /member/info/{memberId} [get]
 func (siw *Handler) GetCashierMemberInfo(c *gin.Context) {
@@ -95,7 +95,7 @@ func (siw *Handler) GetCashierMemberInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param query query string true "搜索查询"
-// @Success 200 {array} Member "会员列表"
+// @Success 200 {array} nil "会员列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /member/search [get]
 func (siw *Handler) GetCashierMemberSearch(c *gin.Context) {
@@ -150,8 +150,8 @@ func (siw *Handler) DeleteCashierOrderProductCancelGift(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param gift body Gift true "礼物详情"
-// @Success 201 {object} Gift "已创建"
+// @Param gift body nil true "礼物详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /order/product/gift [post]
 func (siw *Handler) PostCashierOrderProductGift(c *gin.Context) {
@@ -180,7 +180,7 @@ func (siw *Handler) PostCashierOrderProductPrice(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path string true "产品ID"
-// @Success 200 {object} Remark "备注详情"
+// @Success 200 {object} nil "备注详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /order/product/remark/{productId} [get]
 func (siw *Handler) GetCashierOrderProductRemark(c *gin.Context) {
@@ -194,7 +194,7 @@ func (siw *Handler) GetCashierOrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path string true "产品ID"
-// @Param remark body Remark true "备注详情"
+// @Param remark body nil true "备注详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /order/product/remark/{productId} [post]
@@ -208,7 +208,7 @@ func (siw *Handler) PostCashierOrderProductRemark(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} Order "订单列表"
+// @Success 200 {array} nil "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /order/showOrder/list [get]
 func (siw *Handler) GetCashierOrderShowOrderList(c *gin.Context) {
@@ -235,7 +235,7 @@ func (siw *Handler) PostCashierOrderUnpack(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} PaymentType "支付类型列表"
+// @Success 200 {array} nil "支付类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /payment/typeList [get]
 func (siw *Handler) GetCashierPaymentTypeList(c *gin.Context) {
@@ -248,7 +248,7 @@ func (siw *Handler) GetCashierPaymentTypeList(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} ProductCategory "产品类别列表"
+// @Success 200 {array} nil "产品类别列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /product/category [get]
 func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
@@ -262,7 +262,7 @@ func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path string true "产品ID"
-// @Success 200 {object} Product "产品详情"
+// @Success 200 {object} nil "产品详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /product/info/{productId} [get]
 func (siw *Handler) GetCashierProductInfo(c *gin.Context) {
@@ -275,7 +275,7 @@ func (siw *Handler) GetCashierProductInfo(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} Product "产品列表"
+// @Success 200 {array} nil "产品列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /product/list [get]
 func (siw *Handler) GetCashierProductList(c *gin.Context) {
@@ -288,8 +288,8 @@ func (siw *Handler) GetCashierProductList(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param production body Production true "生产详情"
-// @Success 201 {object} Production "已创建"
+// @Param production body nil true "生产详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /production/create [post]
 func (siw *Handler) PostCashierProductionCreate(c *gin.Context) {
@@ -316,7 +316,7 @@ func (siw *Handler) PostCashierProductionReturn(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} ReturnReason "退货原因列表"
+// @Success 200 {array} nil "退货原因列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /production/return/returnFoodReason [get]
 func (siw *Handler) GetCashierProductionReturnReturnFoodReason(c *gin.Context) {
@@ -329,7 +329,7 @@ func (siw *Handler) GetCashierProductionReturnReturnFoodReason(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} GiftReason "赠送原因列表"
+// @Success 200 {array} nil "赠送原因列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /reason/giftFood [get]
 func (siw *Handler) GetCashierReasonGiftFood(c *gin.Context) {
@@ -342,7 +342,7 @@ func (siw *Handler) GetCashierReasonGiftFood(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {object} ShoppingCart "购物车详情"
+// @Success 200 {object} nil "购物车详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /shoppingCart/info [get]
 func (siw *Handler) GetCashierShoppingCartInfo(c *gin.Context) {
@@ -369,8 +369,8 @@ func (siw *Handler) DeleteCashierShoppingCartProduct(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Param product body Product true "产品详情"
-// @Success 201 {object} Product "已创建"
+// @Param product body nil true "产品详情"
+// @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shoppingCart/product/create [post]
 func (siw *Handler) PostCashierShoppingCartProductCreate(c *gin.Context) {
@@ -398,7 +398,7 @@ func (siw *Handler) PostCashierShoppingCartProductNumber(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {object} SubBill "子账单详情"
+// @Success 200 {object} nil "子账单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /shoppingCart/subBill [get]
 func (siw *Handler) GetCashierShoppingCartSubBill(c *gin.Context) {

@@ -12,10 +12,10 @@ import (
 
 type BindRecordService struct {
 	bindRecordRepo *repository.BindRecordRepository
-	supplierRepo   *repository.SupplierRepository
+	supplierRepo   *repository.CompanySettingRepository
 }
 
-func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.SupplierRepository) *BindRecordService {
+func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository) *BindRecordService {
 	return &BindRecordService{
 		bindRecordRepo: bindRecordRepo,
 		supplierRepo:   supplierRepo,

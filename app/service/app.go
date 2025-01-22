@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"time"
-	
+
 	"jjjshop-server-go/app/model"
 )
 
@@ -14,7 +14,7 @@ func NewAppService() *AppService {
 	return &AppService{}
 }
 
-func (s *AppService) GetLicense(app model.App) error {
+func (s *AppService) GetLicense(app model.Company) error {
 	if app.ExpireTime > 0 && app.ExpireTime < int(time.Now().Unix()) {
 		return errors.New("店铺状态已到期，如需继续使用，请联系销售代表")
 	}

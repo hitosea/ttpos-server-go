@@ -15,6 +15,6 @@ func NewUserRoleRepository(dbm *database.DBManager) *UserRoleRepository {
 
 func (r *UserRoleRepository) GetRoleIds(shoUserId uint, appId uint) ([]int, error) {
 	var roleIds []int
-	err := r.dbm.GetDB(appId).Model(&model.UserRole{}).Where("shop_user_id = ?", shoUserId).Debug().Pluck("role_id", &roleIds).Error
+	err := r.dbm.GetDB(appId).Model(&model.StaffRole{}).Where("shop_user_id = ?", shoUserId).Debug().Pluck("role_id", &roleIds).Error
 	return roleIds, err
 }

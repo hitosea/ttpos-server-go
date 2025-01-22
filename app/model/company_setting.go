@@ -1,8 +1,8 @@
 package model
 
-// Supplier 供应商表
-type Supplier struct {
-	ShopSupplierId    uint    `gorm:"column:shop_supplier_id;type:int(11);primary_key;AUTO_INCREMENT;comment:主键id" json:"shop_supplier_id"`
+// CompanySetting 公司设置表
+type CompanySetting struct {
+	ID                uint    `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	ParentId          int     `gorm:"column:parent_id;type:int(11);default:0;comment:上级商家id" json:"parent_id"`
 	Name              string  `gorm:"column:name;type:varchar(150);comment:商家姓名" json:"name"`
 	RealName          string  `gorm:"column:real_name;type:varchar(50);comment:真实姓名" json:"real_name"`
@@ -71,7 +71,8 @@ type Supplier struct {
 	CloseTime         int     `gorm:"column:close_time;type:int(10);default:0;comment:0分钟清台;NOT NULL" json:"close_time"`
 	CategorySet       int     `gorm:"column:category_set;type:tinyint(1);default:10;comment:商品分类设置10同步主店20分店创建;NOT NULL" json:"category_set"`
 	IsDelete          int     `gorm:"column:is_delete;type:tinyint(3);default:0;comment:是否删除0，否1是" json:"is_delete"`
-	AppId             uint    `gorm:"column:app_id;type:int(11);default:0;comment:程序id;NOT NULL" json:"app_id"`
+	CompanyID         uint    `gorm:"column:company_id;type:int(11);default:0;comment:集团id;NOT NULL" json:"company_id"`
 	CreateTime        uint    `gorm:"autoCreateTime;column:create_time;type:int(11);comment:创建时间;NOT NULL" json:"create_time"`
 	UpdateTime        int     `gorm:"column:update_time;type:int(11);comment:更新时间;NOT NULL" json:"update_time"`
+	DeleteTime        int     `gorm:"column:delete_time;type:int(11);comment:删除时间;NOT NULL" json:"delete_time"`
 }

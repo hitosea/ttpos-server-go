@@ -15,8 +15,8 @@ func NewAccessRepository(dbm *database.DBManager) *AccessRepository {
 	return &AccessRepository{dbm: dbm}
 }
 
-func (r *AccessRepository) GetPermissions(appId uint, where ...Where) ([]model.ShopAccess, error) {
-	var access []model.ShopAccess
+func (r *AccessRepository) GetPermissions(appId uint, where ...Where) ([]model.Access, error) {
+	var access []model.Access
 	db := r.dbm.GetDB(appId)
 	for _, w := range where {
 		db = w(db)
@@ -27,7 +27,7 @@ func (r *AccessRepository) GetPermissions(appId uint, where ...Where) ([]model.S
 
 func (r *AccessRepository) GetAccessIds(roleIds []int, appId uint) ([]int, error) {
 	var accessIds []int
-	err := r.dbm.GetDB(appId).Model(&model.ShopRoleAccess{}).Where("role_id in (?)", roleIds).Debug().Pluck("access_id", &accessIds).Error
+	err := r.dbm.GetDB(appId).Model(&model.RoleAccess{}).Where("role_id in (?)", roleIds).Debug().Pluck("access_id", &accessIds).Error
 	return accessIds, err
 }
 

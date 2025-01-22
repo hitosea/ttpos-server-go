@@ -18,45 +18,45 @@ import (
 type RoleAccessService struct {
 	shopUserRoleRepo *repository.UserRoleRepository
 	shopAccessRepo   *repository.AccessRepository
-	shopUserRepo     *repository.UserRepository
+	staffRepo        *repository.StaffRepository
 }
 
-func NewRoleAccessService(userRoleRepo *repository.UserRoleRepository, shopAccessRepo *repository.AccessRepository, shopUserRepo *repository.UserRepository) *RoleAccessService {
+func NewRoleAccessService(userRoleRepo *repository.UserRoleRepository, shopAccessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
 	return &RoleAccessService{
 		shopUserRoleRepo: userRoleRepo,
 		shopAccessRepo:   shopAccessRepo,
-		shopUserRepo:     shopUserRepo,
+		staffRepo:        staffRepo,
 	}
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, shopUserId uint) ([]*resp.Permission, error) {
+func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
 
-	shopUser := s.shopUserRepo.GetById(shopUserId, s.shopUserRepo.WithSupplier())
+	staff := s.staffRepo.GetById(staffId, companyId)
 
 	var permissions []resp.Permission
 	var where []repository.Where
 
-	if shopUser.IsSuper == 1 { // 超级管理员
-		if shopUser.UserType == 1 {
-			if shopUser.Supplier.CategorySet == 10 {
-				where = append(where, s.shopAccessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
-			}
-			where = append(where, s.shopAccessRepo.WhereIsSupplier())
+	if staff.IsSuper == 1 { // 超级管理员
+		if staff.UserType == 1 {
+			//if staff.CompanySetting.CategorySet == 10 {
+			//	where = append(where, s.shopAccessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
+			//}
+			//where = append(where, s.shopAccessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := s.shopUserRoleRepo.GetRoleIds(shopUser.ShopUserId, shopUser.AppId)
+		roleIds, err := s.shopUserRoleRepo.GetRoleIds(staff.ID, staff.CompanyID)
 		if err != nil {
 			return nil, errors.New("获取用户角色失败")
 		}
-		accessIds, err := s.shopAccessRepo.GetAccessIds(roleIds, shopUser.AppId)
+		accessIds, err := s.shopAccessRepo.GetAccessIds(roleIds, staff.CompanyID)
 		if err != nil {
 			return nil, errors.New("获取角色权限失败")
 		}
 		where = append(where, s.shopAccessRepo.WhereIds(accessIds))
 	}
 
-	dbPermissions, err := s.shopAccessRepo.GetPermissions(shopUser.AppId, where...)
+	dbPermissions, err := s.shopAccessRepo.GetPermissions(staff.CompanyID, where...)
 	if err != nil {
 		return nil, errors.New("获取权限失败")
 	}
@@ -70,13 +70,13 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 		permissions = append(permissions, permission)
 	}
 
-	permissions = s.filterPermission(permissions, *shopUser.Supplier)
+	permissions = s.filterPermission(permissions, *staff.Company.CompanySetting)
 
 	return s.buildPermissionTree(permissions, routerName), nil
 }
 
 // filterPermission 筛选权限
-func (s *RoleAccessService) filterPermission(permissions []resp.Permission, supplier model.Supplier) []resp.Permission {
+func (s *RoleAccessService) filterPermission(permissions []resp.Permission, supplier model.CompanySetting) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理

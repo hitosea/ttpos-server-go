@@ -44,6 +44,92 @@ definitions:
         description: 机器备注
         type: string
     type: object
+  req.ParamCreateCompany:
+    properties:
+      address:
+        description: 地址
+        type: string
+      assistant_limit:
+        description: 助手限制
+        type: integer
+      auth_day:
+        description: 授权天数
+        type: integer
+      auth_start_time:
+        description: 授权开始时间
+        type: string
+      cash_limit:
+        description: 现金限制
+        type: integer
+      chain_number:
+        description: 连锁编号
+        type: string
+      confirm_password:
+        description: 确认密码
+        type: string
+      deploy_mode:
+        description: 部署模式
+        type: integer
+      is_accept_scan_order:
+        description: 是否接受扫码订单
+        type: integer
+      is_open_assistant:
+        description: 是否开启助手
+        type: integer
+      is_open_buffet:
+        description: 是否开启自助餐
+        type: integer
+      is_open_kitchen_kds:
+        description: 是否开启厨房KDS
+        type: integer
+      is_open_local_print:
+        description: 是否开启本地打印
+        type: integer
+      is_open_member:
+        description: 是否开启会员
+        type: integer
+      is_open_scan:
+        description: 是否开启扫码
+        type: integer
+      is_open_tablet:
+        description: 是否开启平板
+        type: integer
+      kitchen_limit:
+        description: 厨房限制
+        type: integer
+      languages:
+        description: 语言列表
+        items:
+          type: string
+        type: array
+      link_phone:
+        description: 联系电话
+        type: string
+      logo:
+        description: 公司logo
+        type: string
+      name:
+        description: 公司名称
+        type: string
+      password:
+        description: 密码
+        type: string
+      printer_limit:
+        description: 打印机限制
+        type: integer
+      table_limit:
+        description: 桌位限制
+        type: integer
+      tablet_limit:
+        description: 平板限制
+        type: integer
+      timezone:
+        description: 时区
+        type: string
+      user_name:
+        description: 用户名
+        type: string
+    type: object
   req.ParamCreatePublicKey:
     properties:
       clientId:
@@ -68,6 +154,95 @@ definitions:
         description: 密码
         type: string
       username:
+        description: 用户名
+        type: string
+    type: object
+  req.ParamUpdateCompany:
+    properties:
+      address:
+        description: 地址
+        type: string
+      assistant_limit:
+        description: 助手限制
+        type: integer
+      auth_day:
+        description: 授权天数
+        type: integer
+      auth_start_time:
+        description: 授权开始时间
+        type: string
+      cash_limit:
+        description: 现金限制
+        type: integer
+      chain_number:
+        description: 连锁编号
+        type: string
+      confirm_password:
+        description: 确认密码
+        type: string
+      deploy_mode:
+        description: 部署模式
+        type: integer
+      id:
+        description: 公司ID
+        type: integer
+      is_accept_scan_order:
+        description: 是否接受扫码订单
+        type: integer
+      is_open_assistant:
+        description: 是否开启助手
+        type: integer
+      is_open_buffet:
+        description: 是否开启自助餐
+        type: integer
+      is_open_kitchen_kds:
+        description: 是否开启厨房KDS
+        type: integer
+      is_open_local_print:
+        description: 是否开启本地打印
+        type: integer
+      is_open_member:
+        description: 是否开启会员
+        type: integer
+      is_open_scan:
+        description: 是否开启扫码
+        type: integer
+      is_open_tablet:
+        description: 是否开启平板
+        type: integer
+      kitchen_limit:
+        description: 厨房限制
+        type: integer
+      languages:
+        description: 语言列表
+        items:
+          type: string
+        type: array
+      link_phone:
+        description: 联系电话
+        type: string
+      logo:
+        description: 公司logo
+        type: string
+      name:
+        description: 公司名称
+        type: string
+      password:
+        description: 密码
+        type: string
+      printer_limit:
+        description: 打印机限制
+        type: integer
+      table_limit:
+        description: 桌位限制
+        type: integer
+      tablet_limit:
+        description: 平板限制
+        type: integer
+      timezone:
+        description: 时区
+        type: string
+      user_name:
         description: 用户名
         type: string
     type: object
@@ -361,6 +536,506 @@ info:
   title: jjjshop-server-go API
   version: "1.0"
 paths:
+  /admin/company:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: 公司ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 删除公司
+      tags:
+      - 公司
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建公司参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamCreateCompany'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 创建公司
+      tags:
+      - 公司
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 更新公司参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ParamUpdateCompany'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 更新公司
+      tags:
+      - 公司
+  /bill/cancel/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除收银账单取消
+      parameters:
+      - description: 账单ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 删除收银账单取消
+      tags:
+      - cashier
+  /bill/discount:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银账单折扣
+      parameters:
+      - description: 折扣详情
+        in: body
+        name: discount
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 发布收银账单折扣
+      tags:
+      - cashier
+  /bill/discount/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除收银账单折扣
+      parameters:
+      - description: 折扣ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 删除收银账单折扣
+      tags:
+      - cashier
+  /bill/discount/changePrice/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更改收银账单折扣价格
+      parameters:
+      - description: 折扣ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 新价格
+        in: body
+        name: price
+        required: true
+        schema:
+          type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 更改收银账单折扣价格
+      tags:
+      - cashier
+  /bill/discount/gift:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银账单折扣礼物
+      parameters:
+      - description: 礼物详情
+        in: body
+        name: gift
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 发布收银账单折扣礼物
+      tags:
+      - cashier
+  /bill/discount/smallChange:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银账单小额变更
+      parameters:
+      - description: 小额变更详情
+        in: body
+        name: change
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 发布收银账单小额变更
+      tags:
+      - cashier
+  /bill/order/check/{orderId}:
+    get:
+      consumes:
+      - application/json
+      description: 检查收银账单订单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单详情
+        "404":
+          description: 未找到
+      summary: 检查收银账单订单
+      tags:
+      - cashier
+  /bill/order/finishPayment/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 完成收银账单订单支付
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 完成收银账单订单支付
+      tags:
+      - cashier
+  /bill/order/member:
+    post:
+      consumes:
+      - application/json
+      description: 添加成员到收银账单订单
+      parameters:
+      - description: 成员详情
+        in: body
+        name: member
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 添加成员到收银账单订单
+      tags:
+      - cashier
+  /bill/order/member/{memberId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除收银账单订单中的成员
+      parameters:
+      - description: 成员ID
+        in: path
+        name: memberId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 删除收银账单订单中的成员
+      tags:
+      - cashier
+  /bill/order/pay/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 收银账单订单支付
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 收银账单订单支付
+      tags:
+      - cashier
+  /bill/order/paymentSmallChangeStrategy:
+    post:
+      consumes:
+      - application/json
+      description: 处理收银账单订单的小额支付策略
+      parameters:
+      - description: 小额支付策略详情
+        in: body
+        name: strategy
+        required: true
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 收银账单订单的小额支付策略
+      tags:
+      - cashier
+  /bill/order/printer/invoice/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 打印收银账单订单发票
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 打印收银账单订单发票
+      tags:
+      - cashier
+  /bill/order/printer/paymentBill/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 打印收银账单订单支付账单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 打印收银账单订单支付账单
+      tags:
+      - cashier
+  /bill/order/printer/prePaymentBill/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 打印收银账单订单预付款账单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 打印收银账单订单预付款账单
+      tags:
+      - cashier
+  /bill/order/production/cancelReturn/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 取消收银账单订单的退货
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 取消收银账单订单的退货
+      tags:
+      - cashier
+  /bill/order/productionOrder/finishedProduct/status/{orderId}:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银账单订单的成品状态
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 产品状态
+        "404":
+          description: 未找到
+      summary: 获取收银账单订单的成品状态
+      tags:
+      - cashier
+  /bill/order/revokePay/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 撤销收银账单订单支付
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 撤销收银账单订单支付
+      tags:
+      - cashier
+  /bill/subBill:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银账单的子账单
+      parameters:
+      - description: 子账单详情
+        in: body
+        name: subBill
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 发布收银账单的子账单
+      tags:
+      - cashier
+  /bill/subBill/{subBillId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除收银账单的子账单
+      parameters:
+      - description: 子账单ID
+        in: path
+        name: subBillId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 删除收银账单的子账单
+      tags:
+      - cashier
+  /bill/subBill/product/move:
+    post:
+      consumes:
+      - application/json
+      description: 在子账单中移动产品
+      parameters:
+      - description: 移动详情
+        in: body
+        name: moveDetails
+        required: true
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 在子账单中移动产品
+      tags:
+      - cashier
   /cashier/passport/login:
     post:
       parameters:
@@ -404,6 +1079,40 @@ paths:
       summary: 退出登录
       tags:
       - 收银端
+  /desk/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银台列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收银台列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银台列表
+      tags:
+      - cashier
+  /desk/regionAndType:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银台的区域和类型
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收银台区域和类型列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银台的区域和类型
+      tags:
+      - cashier
   /kitchen/call/handle:
     post:
       consumes:
@@ -737,6 +1446,293 @@ paths:
       summary: 验证高级密码
       tags:
       - 设置
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: 处理收银员登录
+      parameters:
+      - description: 登录详情
+        in: body
+        name: loginDetails
+        required: true
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+        "400":
+          description: 错误请求
+      summary: 收银员登录
+      tags:
+      - cashier
+  /login/captcha:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银员登录验证码
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 验证码详情
+        "404":
+          description: 未找到
+      summary: 获取收银员登录验证码
+      tags:
+      - cashier
+  /login/publicKey:
+    post:
+      consumes:
+      - application/json
+      description: 获取收银员登录的公钥
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 公钥详情
+        "404":
+          description: 未找到
+      summary: 获取收银员登录的公钥
+      tags:
+      - cashier
+  /member/info/{memberId}:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银员会员信息
+      parameters:
+      - description: 会员ID
+        in: path
+        name: memberId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 会员详情
+        "404":
+          description: 未找到
+      summary: 获取收银员会员信息
+      tags:
+      - cashier
+  /member/search:
+    get:
+      consumes:
+      - application/json
+      description: 搜索收银员会员
+      parameters:
+      - description: 搜索查询
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 会员列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 搜索收银员会员
+      tags:
+      - cashier
+  /order/hideOrder/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 隐藏收银订单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 隐藏收银订单
+      tags:
+      - cashier
+  /order/pack/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 打包收银订单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 打包收银订单
+      tags:
+      - cashier
+  /order/product/cancelGift/{productId}:
+    delete:
+      consumes:
+      - application/json
+      description: 取消收银订单产品的礼物
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 取消收银订单产品的礼物
+      tags:
+      - cashier
+  /order/product/gift:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银订单产品的礼物
+      parameters:
+      - description: 礼物详情
+        in: body
+        name: gift
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 发布收银订单产品的礼物
+      tags:
+      - cashier
+  /order/product/price/{productId}:
+    post:
+      consumes:
+      - application/json
+      description: 发布收银订单产品的价格
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      - description: 新价格
+        in: body
+        name: price
+        required: true
+        schema:
+          type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 发布收银订单产品的价格
+      tags:
+      - cashier
+  /order/product/remark/{productId}:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银订单产品的备注
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 备注详情
+        "404":
+          description: 未找到
+      summary: 获取收银订单产品的备注
+      tags:
+      - cashier
+    post:
+      consumes:
+      - application/json
+      description: 发布收银订单产品的备注
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      - description: 备注详情
+        in: body
+        name: remark
+        required: true
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 发布收银订单产品的备注
+      tags:
+      - cashier
+  /order/showOrder/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银订单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银订单列表
+      tags:
+      - cashier
+  /order/unpack/{orderId}:
+    post:
+      consumes:
+      - application/json
+      description: 拆包收银订单
+      parameters:
+      - description: 订单ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 拆包收银订单
+      tags:
+      - cashier
   /passport/captcha:
     get:
       produces:
@@ -766,6 +1762,273 @@ paths:
       summary: 获取服务端公钥
       tags:
       - 通用
+  /payment/typeList:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银支付类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 支付类型列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银支付类型列表
+      tags:
+      - cashier
+  /product/category:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品类别
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 产品类别列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银产品类别
+      tags:
+      - cashier
+  /product/info/{productId}:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品信息
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 产品详情
+        "404":
+          description: 未找到
+      summary: 获取收银产品信息
+      tags:
+      - cashier
+  /product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 产品列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银产品列表
+      tags:
+      - cashier
+  /production/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建收银生产
+      parameters:
+      - description: 生产详情
+        in: body
+        name: production
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 创建收银生产
+      tags:
+      - cashier
+  /production/return/{productionId}:
+    post:
+      consumes:
+      - application/json
+      description: 返回收银生产
+      parameters:
+      - description: 生产ID
+        in: path
+        name: productionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 返回收银生产
+      tags:
+      - cashier
+  /production/return/returnFoodReason:
+    get:
+      consumes:
+      - application/json
+      description: 获取退货原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退货原因列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取退货原因
+      tags:
+      - cashier
+  /reason/giftFood:
+    get:
+      consumes:
+      - application/json
+      description: 获取赠送食物的原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 赠送原因列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取赠送食物的原因
+      tags:
+      - cashier
+  /shoppingCart/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银购物车信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 购物车详情
+        "404":
+          description: 未找到
+      summary: 获取收银购物车信息
+      tags:
+      - cashier
+  /shoppingCart/product/{productId}:
+    delete:
+      consumes:
+      - application/json
+      description: 从购物车中删除产品
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 无内容
+        "400":
+          description: 错误请求
+      summary: 从购物车中删除产品
+      tags:
+      - cashier
+  /shoppingCart/product/create:
+    post:
+      consumes:
+      - application/json
+      description: 在购物车中创建产品
+      parameters:
+      - description: 产品详情
+        in: body
+        name: product
+        required: true
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 已创建
+        "400":
+          description: 错误请求
+      summary: 在购物车中创建产品
+      tags:
+      - cashier
+  /shoppingCart/product/number/{productId}:
+    post:
+      consumes:
+      - application/json
+      description: 更新购物车中产品的数量
+      parameters:
+      - description: 产品ID
+        in: path
+        name: productId
+        required: true
+        type: string
+      - description: 新数量
+        in: body
+        name: number
+        required: true
+        schema:
+          type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 更新购物车中产品的数量
+      tags:
+      - cashier
+  /shoppingCart/subBill:
+    get:
+      consumes:
+      - application/json
+      description: 获取购物车的子账单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 子账单详情
+        "404":
+          description: 未找到
+      summary: 获取购物车的子账单
+      tags:
+      - cashier
+  /verifyAdvancedPassword:
+    post:
+      consumes:
+      - application/json
+      description: 验证收银员的高级密码
+      parameters:
+      - description: 高级密码
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      summary: 验证收银员的高级密码
+      tags:
+      - cashier
 securityDefinitions:
   JwtToken:
     in: header
