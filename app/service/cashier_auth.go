@@ -44,13 +44,10 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 		return "", errors.New("验证码错误")
 	}
 	// 验证账号, 在saas库中验证账号是否存在
-	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithSupplier())
+	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithCompany())
 	if companyStaff.ID == 0 {
 		return "", errors.New("账号不存在")
 	}
-	// 验证账号是否中saas中被禁用
-	// 略
-
 	if companyStaff.CompanyID == 0 {
 		return "", errors.New("未找到绑定的商家，请确认登录信息")
 	}

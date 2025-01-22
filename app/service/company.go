@@ -7,18 +7,18 @@ import (
 	"jjjshop-server-go/app/model"
 )
 
-type AppService struct {
+type CompanyService struct {
 }
 
-func NewAppService() *AppService {
-	return &AppService{}
+func NewCompanyService() *CompanyService {
+	return &CompanyService{}
 }
 
-func (s *AppService) GetLicense(app model.Company) error {
-	if app.ExpireTime > 0 && app.ExpireTime < int(time.Now().Unix()) {
+func (s *CompanyService) GetLicense(company model.Company) error {
+	if company.ExpireTime > 0 && company.ExpireTime < int(time.Now().Unix()) {
 		return errors.New("店铺状态已到期，如需继续使用，请联系销售代表")
 	}
-	if app.Status != 0 {
+	if company.Status != 0 {
 		return errors.New("店铺状态异常，如需继续使用，请联系销售代表")
 	}
 	return nil
