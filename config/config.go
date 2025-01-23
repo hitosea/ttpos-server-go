@@ -12,7 +12,7 @@ var Database DatabaseConf
 var Redis RedisConf
 var JWT JWTConf
 var Captcha CaptchaConf
-var Pgp PgpConf
+var Encrypt EncryptConf
 var Log LogConf
 
 func Init() error {
@@ -35,11 +35,11 @@ func Init() error {
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
 	// PGP
-	Pgp = PgpConf{
-		CachePrefix:     "keypair:",
-		EncryptHeader:   "x-encrypt",
-		ClientID:        "client_id",
-		ClientPublicKey: "client_public_key",
+	Encrypt = EncryptConf{
+		CachePrefix:   "keypair:",
+		EncryptHeader: "encrypt",
+		ClientID:      "encrypt_id",
+		ClientKey:     "client_key",
 	}
 
 	return nil
@@ -90,6 +90,7 @@ func redisConf(opt copier.Option) {
 
 func databaseConf(opt copier.Option) {
 	Database = DatabaseConf{
+		DBType:        "mysql",
 		Host:          "127.0.0.1",
 		Port:          3306,
 		User:          "user",
@@ -100,6 +101,7 @@ func databaseConf(opt copier.Option) {
 		SlowQueryTime: 2,
 	}
 	copier.CopyWithOption(&Database, DatabaseConf{
+		DBType:        viper.GetString("DB_TYPE"),
 		Host:          viper.GetString("DB_HOST"),
 		Port:          viper.GetInt("DB_PORT"),
 		User:          viper.GetString("DB_USER"),

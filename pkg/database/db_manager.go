@@ -9,6 +9,9 @@ import (
 
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 )
 
 type DBManager struct {
@@ -20,6 +23,7 @@ var (
 	once     sync.Once
 )
 
+// GetDBManager 获取数据库管理器，如果是离线版，则0和商家库是同一个数据库
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
@@ -30,20 +34,21 @@ func GetDBManager(conf config.DatabaseConf) *DBManager {
 	return instance
 }
 
+// initDBs 初始化数据库
 func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	// 主数据库
-	db, err := NewMySQLConnection(conf, conf.Database)
+	db, err := m.getConnection(conf, conf.Database)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %s", err)
 	}
-	m.dbs[0] = db
+	m.dbs[constant.DefaultDB] = db
 	// 根据 APP 表实例化数据库连接
 	var companies []model.Company
 	if err := db.Find(&companies).Error; err != nil {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, app := range companies {
-		appDB, err := NewMySQLConnection(conf, fmt.Sprintf("shop%d", app.ID)) // 比如：shop1724054084 数据库
+		appDB, err := m.getConnection(conf, fmt.Sprintf("shop%d", app.ID)) // 比如：shop1724054084 数据库
 		if err != nil {
 			log.Fatalf("Error connecting to database for app %d: %s", app.ID, err)
 		}
@@ -51,6 +56,21 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	}
 }
 
+// getConnection 获取数据库连接
+func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
+	switch conf.DBType {
+	case "mysql":
+		return NewMySQLConnection(conf, dbName)
+	case "postgres":
+		return NewPostgreSQLConnection(conf, dbName)
+	case "sqlite":
+		return NewSQLiteConnection(conf)
+	default:
+		return nil, fmt.Errorf("unsupported database type: %s", conf.DBType)
+	}
+}
+
+// GetDB 获取数据库
 func (m *DBManager) GetDB(index uint) *gorm.DB {
 	if db, ok := m.dbs[index]; ok {
 		return db

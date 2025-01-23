@@ -5,3 +5,5 @@ logs/*
 .env
 bin/*
 .txt
+docker
+docker-compose.yaml

@@ -3,12 +3,16 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"io"
 	"regexp"
 
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/encrypt"
+	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/logger"
@@ -48,22 +52,33 @@ func Encrypt(cache cache.Cache) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		var (
-			// 请求头x-encrypt形如：client_id=xxxx;client_public_key=xxxxxxx;type=pgp
-			xEncrypt         = c.GetHeader(config.Pgp.EncryptHeader)
-			encrypted        = xEncrypt != ""
-			parsedXEncrypt   = utils.PGPParse(xEncrypt, config.Pgp.ClientPublicKey)
-			serverPgpKeyPair pgp.KeyPair
+			// 请求头x-encrypt形如：client_id=xxxx;client_key=xxxxxxx;type=pgp
+			xEncrypt       = c.GetHeader(config.Encrypt.EncryptHeader)
+			encrypted      = xEncrypt != ""
+			parsedXEncrypt = utils.ParseEncrypt(xEncrypt, config.Encrypt.ClientKey)
+			encryptType    = "pgp"
+			keyPair        encrypt.KeyPair
 		)
 
-		cachedKeyPair, exists := cache.Get(config.Pgp.CachePrefix + parsedXEncrypt[config.Pgp.ClientID])
+		if typ, ok := parsedXEncrypt["encrypt_type"]; ok {
+			encryptType = typ
+		}
+
+		cachedKeyPair, exists := cache.Get(config.Encrypt.CachePrefix + parsedXEncrypt[config.Encrypt.ClientID] + "_" + encryptType)
 		if exists {
-			_ = json.Unmarshal([]byte(cachedKeyPair.(string)), &serverPgpKeyPair)
-			if serverPgpKeyPair.PublicKey == "" || serverPgpKeyPair.PrivateKey == "" || serverPgpKeyPair.Passphrase == "" {
-				logger.Logger.Error("pgp秘钥对无效", zap.Any("pgp_key_pair", serverPgpKeyPair))
+			_ = json.Unmarshal([]byte(cachedKeyPair.(string)), &keyPair)
+			if encryptType == "pgp" {
+				if keyPair.PublicKey == "" || keyPair.PrivateKey == "" || keyPair.Passphrase == "" {
+					logger.Logger.Error("pgp秘钥对无效", zap.Any("key_pair", keyPair))
+				}
+			} else {
+				if keyPair.PublicKey == "" || keyPair.PrivateKey == "" {
+					logger.Logger.Error("rsa秘钥对无效", zap.Any("key_pair", keyPair))
+				}
 			}
 		}
 
-		// 自定义writer
+		// 自定义加密writer
 		writer := &EncryptWriter{
 			ResponseWriter: c.Writer,
 			fn: func(rawResponse []byte) string {
@@ -74,13 +89,25 @@ func Encrypt(cache cache.Cache) gin.HandlerFunc {
 					encryptedResponse string
 					err               error
 				)
-				// 使用客户端公钥加密
-				if encryptedResponse, err = pgp.EncryptMessage(string(rawResponse), parsedXEncrypt[config.Pgp.ClientPublicKey]); err != nil {
-					logger.Logger.Error("pgp加密失败", zap.Error(err), zap.Any("parsed_encrypt", parsedXEncrypt))
+
+				if encryptType == "pgp" { // pgp
+					// 使用客户端公钥加密
+					if encryptedResponse, err = encrypt.PgpEncryptMessage(string(rawResponse), parsedXEncrypt[config.Encrypt.ClientKey]); err != nil {
+						logger.Logger.Error("pgp加密失败", zap.Error(err), zap.Any("parsed_encrypt", parsedXEncrypt))
+					} else {
+						encryptedResponse = regexp.MustCompile(`\s*-----(BEGIN|END) PGP MESSAGE-----\s*`).ReplaceAllString(encryptedResponse, "")
+						b, _ := json.Marshal(map[string]string{"encrypted": encryptedResponse})
+						return string(b)
+					}
+				} else {
+					if encryptedResponse, err = encrypt.JsEncryptMessage(string(rawResponse), parsedXEncrypt[config.Encrypt.ClientKey]); err != nil {
+						logger.Logger.Error("jsencrypt加密失败", zap.Error(err), zap.Any("parsed_encrypt", parsedXEncrypt))
+					} else {
+						b, _ := json.Marshal(map[string]string{"encrypted": encryptedResponse})
+						return string(b)
+					}
 				}
-				encryptedResponse = regexp.MustCompile(`\s*-----(BEGIN|END) PGP MESSAGE-----\s*`).ReplaceAllString(encryptedResponse, "")
-				b, _ := json.Marshal(map[string]string{"encrypted": encryptedResponse})
-				return string(b)
+				return string(rawResponse)
 			},
 		}
 		// 覆盖原writer
@@ -93,12 +120,22 @@ func Encrypt(cache cache.Cache) gin.HandlerFunc {
 			}
 			body, _ := io.ReadAll(c.Request.Body)
 			_ = json.Unmarshal(body, &reqBody)
-			rawRequest, err := pgp.DecryptMessage("-----BEGIN PGP MESSAGE-----\n\n"+reqBody.Encrypted+"\n-----END PGP MESSAGE-----", serverPgpKeyPair.PrivateKey, serverPgpKeyPair.Passphrase)
-			if err != nil {
-				logger.Logger.Error("pgp解密失败", zap.Error(err), zap.Any("req_body", reqBody), zap.Any("server_pgp_key_pair", serverPgpKeyPair))
+
+			if encryptType == "pgp" { // pgp
+				rawRequest, err := encrypt.PgpDecryptMessage("-----BEGIN PGP MESSAGE-----\n\n"+reqBody.Encrypted+"\n-----END PGP MESSAGE-----", keyPair.PrivateKey, keyPair.Passphrase)
+				if err != nil {
+					logger.Logger.Error("pgp解密失败", zap.Error(err), zap.Any("req_body", reqBody), zap.Any("server_key_pair", keyPair))
+				} else {
+					c.Request.Body = io.NopCloser(bytes.NewBuffer([]byte(rawRequest)))
+				}
+			} else { // jsencrypt
+				rawRequestBody, err := encrypt.JsDecryptMessage(keyPair.PrivateKey, reqBody.Encrypted)
+				if err != nil {
+					logger.Logger.Error("jsencrypt解密失败", zap.Error(err), zap.Any("req_body", reqBody), zap.Any("server_key_pair", keyPair))
+				} else {
+					c.Request.Body = io.NopCloser(bytes.NewBuffer(rawRequestBody))
+				}
 			}
-			// 修改请求体
-			c.Request.Body = io.NopCloser(bytes.NewBuffer([]byte(rawRequest)))
 		}
 
 		c.Next()

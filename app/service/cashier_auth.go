@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"ttpos-server-go/app/dto/resp"
 
 	"ttpos-server-go/app/constant"
 	apperrors "ttpos-server-go/app/errors"
@@ -38,10 +39,11 @@ func NewCashierAuthService(
 }
 
 // Login 登录
-func (s *CashierAuthService) Login(username, password, captchaId, captchaCode string) (string, error) {
+func (s *CashierAuthService) Login(username, password, captchaId, captchaCode string) (resp.CashierLoginResponse, error) {
+	var loginResp resp.CashierLoginResponse
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
-		return "", errors.New("验证码错误")
+		return loginResp, apperrors.New("验证码错误")
 	}
 	// 验证账号, 在saas库中验证账号是否存在
 	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithCompany())
@@ -71,7 +73,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CASHIER_ROUTE_NAME, staff.ID, staff.CompanyID)
 	if len(permissions) == 0 {
-		return "", errors.New("当前无权限，请联系管理员")
+		return loginResp, errors.New("当前无权限，请联系管理员")
 	}
 
 	// 检查是否有未交班的收银员
@@ -91,7 +93,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 		if cashierName == "" {
 			cashierName = staff.UserName
 		}
-		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 	}
 
 	// // 绑定设备 先检测是否能进行绑定，避免先更新用户表信息再弹出绑定错误
@@ -99,13 +101,13 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	//            'key' => $device_id,
 	//            'brand' => $brand,
 	//            'source' => BindRecordModel::SOURCE_CASHIER,
-	//            'finally_login_id' => $companyStaff['shop_user_id'],
+	//            'finally_login_id' => $user['shop_user_id'],
 	//            'finally_login_time' => time(),
-	//            'app_id' => $companyStaff['app_id'],
-	//            'shop_supplier_id' => $companyStaff['shop_supplier_id'],
+	//            'app_id' => $user['app_id'],
+	//            'shop_supplier_id' => $user['shop_supplier_id'],
 	//        ];
 	//        $model = new BindRecordModel;
-	//        if (!$model->add($data, $companyStaff->license)) {
+	//        if (!$model->add($data, $user->license)) {
 	//            $this->error = $model->getError() ?: __('绑定失败');
 	//            return false;
 	//        }
@@ -113,9 +115,12 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 生成 JWT token
 	token, err := auth.GenerateToken(constant.SOURCE_CASHIER, staff.ID, staff.CompanyID, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
-		return "", errors.New("生成token失败")
+		return loginResp, errors.New("生成token失败")
 	}
-	return token, nil
+	return resp.CashierLoginResponse{
+		Token:       token,
+		Permissions: permissions,
+	}, nil
 }
 
 // Logout 退出登录

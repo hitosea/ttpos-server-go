@@ -13,6 +13,9 @@ import (
 type BindRecordService struct {
 	bindRecordRepo     *repository.BindRecordRepository
 	companySettingRepo *repository.CompanySettingRepository
+	bindRecordRepo     *repository.BindRecordRepository
+	settingSrv         *SettingService
+	companySettingRepo *repository.CompanySettingRepository
 }
 
 func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository) *BindRecordService {
@@ -80,14 +83,14 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		}
 		count := s.bindRecordRepo.GetBindCount(sourceKey)
 		if count >= source.Limit { // 超过绑定上线
-			return apperrors.New(constant.CodeBindLimit, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
+			return apperrors.NewWithCode(constant.CodeBindLimit, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 
-	// 绑定品牌，如果自带打印，默认更新收银打印配置
-	if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
-
-	}
+	//// 绑定品牌，如果自带打印，默认更新收银打印配置
+	//if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
+	//	printerSettings := s.settingSrv.GetSupplierItem(constant.PRINTER, addReq.ShopSupplierId, 0)
+	//}
 
 	return nil
 }

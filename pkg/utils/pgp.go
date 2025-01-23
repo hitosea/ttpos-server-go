@@ -4,8 +4,8 @@ import (
 	"strings"
 )
 
-// PGPParse 解析字符串
-func PGPParse(encrypt, field string) map[string]string {
+// ParseEncrypt 解析字符串
+func ParseEncrypt(encrypt, field string) map[string]string {
 	parsedMap := make(map[string]string)
 	for _, s := range strings.Split(encrypt, ";") {
 		kv := strings.SplitN(s, "=", 2)
@@ -18,7 +18,13 @@ func PGPParse(encrypt, field string) map[string]string {
 		publicKey = strings.ReplaceAll(publicKey, "-", "+")
 		publicKey = strings.ReplaceAll(publicKey, "_", "/")
 		publicKey = strings.ReplaceAll(publicKey, "$", "\n")
-		publicKey = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n" + publicKey + "\n-----END PGP PUBLIC KEY BLOCK-----"
+		if encryptType, ok2 := parsedMap["encrypt_type"]; ok2 {
+			if encryptType == "pgp" {
+				publicKey = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n" + publicKey + "\n-----END PGP PUBLIC KEY BLOCK-----"
+			} else {
+				publicKey = "-----BEGIN PUBLIC KEY-----\n" + publicKey + "\n-----END PUBLIC KEY-----"
+			}
+		}
 		parsedMap[field] = publicKey
 	}
 	return parsedMap

@@ -11,10 +11,10 @@ import (
 
 type PassportHandler struct {
 	captchaService *service.CaptchaService
-	pgpService     *service.PGPService
+	pgpService     *service.EncryptService
 }
 
-func NewPassportHandler(captchaService *service.CaptchaService, pgpService *service.PGPService) *PassportHandler {
+func NewPassportHandler(captchaService *service.CaptchaService, pgpService *service.EncryptService) *PassportHandler {
 	return &PassportHandler{
 		captchaService: captchaService,
 		pgpService:     pgpService,
@@ -42,16 +42,18 @@ func (h *PassportHandler) GetCaptcha(c *gin.Context) {
 // @Tags 通用
 // @Access json
 // @Produce json
-// @param client_id query string false "客户端Id"
+// @param client_id query string true "客户端Id"
+// @param type query string true "加密类型: pgp\jsencrypt"
+// @param data body req.GetServerPublicKeyRequest true "获取公钥参数"
 // @Success 200 {object} dto.Response
-// @Router /passport/server-public-key [get]
+// @Router /passport/server-public-key [post]
 func (h *PassportHandler) GetServerPublicKey(c *gin.Context) {
 	var getKeyReq req.GetServerPublicKeyRequest
-	if err := c.ShouldBindQuery(&getKeyReq); err != nil {
+	if err := c.ShouldBindJSON(&getKeyReq); err != nil {
 		helper.HandleValidationError(c, err, getKeyReq, req.GetServerPublicKeyRequestMessage)
 		return
 	}
-	resp, err := h.pgpService.GetServerPublicKey(getKeyReq.ClientId)
+	resp, err := h.pgpService.GetServerPublicKey(getKeyReq.ClientId, getKeyReq.Type)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "获取服务端公钥失败")
 		return

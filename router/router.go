@@ -17,6 +17,13 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/app/api/v1"
+	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
 )
 
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
@@ -36,6 +43,12 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo)
 	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService)
 	companyService := service.NewCompanyService(companyRepo)
+	pgpService := service.NewEncryptService(cache)
+	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, userRepo)
+	settingService := service.NewSettingService()
+	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo, settingService)
+	cashierAuthService := service.NewCashierAuthService(userRepo, captchaService, roleAccessService, bindRecordService)
+	companyService := service.NewCompanyService(companyRepo)
 
 	// 初始化处理器
 	passportHandler := v1.NewPassportHandler(captchaService, pgpService)
@@ -48,8 +61,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	// 公开路由
 	publicApiV1 := r.Group("api/v1")
 	{
-		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                   // 获取验证码
-		publicApiV1.GET("/passport/server-public-key", passportHandler.GetServerPublicKey) // 获取服务端 PGP 公钥
+		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                    // 获取验证码
+		publicApiV1.POST("/passport/server-public-key", passportHandler.GetServerPublicKey) // 获取服务端公钥
 		// 收银端
 		cashierGroup := publicApiV1.Group("/cashier")
 		{
@@ -67,7 +80,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 
 	// 需要认证的路由
 	privateApiV1 := r.Group("api/v1")
-	// privateApiV1.Use(middleware.Auth()) // todo: 需要认证
+	privateApiV1.Use(middleware.Auth())
 	{
 		// 收银端
 		cashierGroup := privateApiV1.Group("/cashier")

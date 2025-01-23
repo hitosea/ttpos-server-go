@@ -6,12 +6,13 @@ type ServerConf struct {
 }
 
 type DatabaseConf struct {
+	DBType        string
 	Host          string
 	Port          int
 	User          string
 	Password      string
 	RootPassword  string
-	Database      string // 主数据库
+	Database      string // 主数据库，如果是sqlite3，则为文件路径
 	TablePrefix   string // 表名前缀
 	SlowQueryTime int    // 慢查询阈值，单位秒
 }
@@ -32,11 +33,11 @@ type CaptchaConf struct {
 	CachePrefix string // 缓存前缀
 }
 
-type PgpConf struct {
-	CachePrefix     string // 缓存前缀
-	EncryptHeader   string // 请求头x-encrypt
-	ClientID        string // 请求头x-encrypt字段client_id
-	ClientPublicKey string // 请求头x-encrypt字段client_public_key
+type EncryptConf struct {
+	CachePrefix   string // 缓存前缀
+	EncryptHeader string // 请求头x-encrypt
+	ClientID      string // 请求头x-encrypt字段client_id
+	ClientKey     string // 请求头x-encrypt字段client_key
 }
 
 type LogConf struct {
