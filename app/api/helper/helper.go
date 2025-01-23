@@ -91,3 +91,11 @@ func GetCompanyId(c *gin.Context) uint {
 	companyId := claims.AppId
 	return companyId
 }
+
+func GetLanguage(c *gin.Context) string {
+	language := c.GetHeader("language")
+	if language == "" {
+		language = "zh"
+	}
+	return language
+}

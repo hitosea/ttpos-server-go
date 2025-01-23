@@ -12,7 +12,7 @@ import (
 
 // Handler 结构体
 type Handler struct {
-	cachierService cashier.CashierServiceInterface
+	cashierService cashier.CashierServiceInterface
 }
 
 // GetCashierDeskList 处理获取收银台列表
@@ -256,6 +256,7 @@ func (siw *Handler) GetCashierPaymentTypeList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param token header string true "认证令牌"
+// @Param language header string true "语言"
 // @Success 200 {object} dto.Response{data=resp.ProductCategory} "产品类别列表"
 // @Router /product/category [get]
 func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
@@ -264,8 +265,9 @@ func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
 		helper.Fail(c, constant.CodeBadRequest, "参数错误")
 		return
 	}
+	language := helper.GetLanguage(c)
 	// 处理获取收银产品类别的逻辑
-	productCategory, err := siw.cachierService.GetProductCategory(companyId)
+	productCategory, err := siw.cashierService.GetProductCategory(companyId, language)
 	if err != nil {
 		helper.ErrorWithDetail(c, http.StatusInternalServerError, err)
 		return
@@ -439,7 +441,7 @@ func (siw *Handler) PostCashierVerifyAdvancedPassword(c *gin.Context) {
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager) {
 
 	wrapper := Handler{
-		cachierService: cashier.NewCashierServiceImpl(dbm),
+		cashierService: cashier.NewCashierServiceImpl(dbm),
 	}
 
 	router.GET("/desk/list", wrapper.GetCashierDeskList)

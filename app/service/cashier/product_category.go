@@ -10,7 +10,7 @@ import (
 // 定义收银服务接口
 type CashierServiceInterface interface {
 	// 获取收银机点餐页面产品类别列表
-	GetProductCategory(dbId uint) (resp.ProductCategory, error)
+	GetProductCategory(dbId uint, language string) (resp.ProductCategory, error)
 }
 
 // 创建新的收银产品类别服务
@@ -31,7 +31,7 @@ type CashierService struct {
 }
 
 // 获取产品类别的实现
-func (s *CashierService) GetProductCategory(dbId uint) (resp.ProductCategory, error) {
+func (s *CashierService) GetProductCategory(dbId uint, language string) (resp.ProductCategory, error) {
 	db := s.dbm.GetDB(dbId)
 	// 查询产品类别表
 	productCategoryList, err := repository.NewProductCategoryRepository(db).GetProductCategoryListWithMultiLanguageName()
@@ -60,7 +60,7 @@ func (s *CashierService) GetProductCategory(dbId uint) (resp.ProductCategory, er
 			category := resp.Category{
 				Name:     productCategory.Name,
 				Key:      productCategory.CategoryKey,
-				Children: nil,
+				Children: nil, // todo
 			}
 			categoryList = append(categoryList, category)
 			categoryMap[productCategory.Id] = index
