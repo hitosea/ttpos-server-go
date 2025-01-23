@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ttpos-server-go/app/api/v1"
+	v1 "ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
@@ -54,7 +54,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		cashierGroup := publicApiV1.Group("/cashier")
 		{
 			cashierGroup.POST("/passport/login", middleware.Encrypt(cache), cashierAuthHandler.Login) // 登录
-			other.RegisterHandlers(cashierGroup)
+			other.RegisterHandlers(cashierGroup, dbm)
 			bill.RegisterHandlers(cashierGroup)
 			cashierOrder.RegisterHandlers(cashierGroup)
 		}

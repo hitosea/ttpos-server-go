@@ -1,11 +1,18 @@
 package other
 
 import (
+	"net/http"
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/service/cashier"
+	"ttpos-server-go/pkg/database"
+
 	"github.com/gin-gonic/gin"
 )
 
 // Handler 结构体
 type Handler struct {
+	cachierService cashier.CashierServiceInterface
 }
 
 // GetCashierDeskList 处理获取收银台列表
@@ -248,11 +255,22 @@ func (siw *Handler) GetCashierPaymentTypeList(c *gin.Context) {
 // @Tags cashier
 // @Accept json
 // @Produce json
-// @Success 200 {array} nil "产品类别列表"
-// @Failure 404 {object} nil "未找到"
+// @Param token header string true "认证令牌"
+// @Success 200 {object} dto.Response{data=resp.ProductCategory} "产品类别列表"
 // @Router /product/category [get]
 func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
+	companyId := helper.GetCompanyId(c)
+	if companyId == 0 {
+		helper.Fail(c, constant.CodeBadRequest, "参数错误")
+		return
+	}
 	// 处理获取收银产品类别的逻辑
+	productCategory, err := siw.cachierService.GetProductCategory(companyId)
+	if err != nil {
+		helper.ErrorWithDetail(c, http.StatusInternalServerError, err)
+		return
+	}
+	helper.Success(c, productCategory)
 }
 
 // GetCashierProductInfo 处理获取收银产品信息
@@ -418,9 +436,11 @@ func (siw *Handler) PostCashierVerifyAdvancedPassword(c *gin.Context) {
 	// Handler logic for PostCashierVerifyAdvancedPassword
 }
 
-func RegisterHandlers(router gin.IRouter) {
+func RegisterHandlers(router gin.IRouter, dbm *database.DBManager) {
 
-	wrapper := Handler{}
+	wrapper := Handler{
+		cachierService: cashier.NewCashierServiceImpl(dbm),
+	}
 
 	router.GET("/desk/list", wrapper.GetCashierDeskList)
 	router.GET("/desk/regionAndType", wrapper.GetCashierDeskRegionAndType)

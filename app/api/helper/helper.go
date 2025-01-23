@@ -2,6 +2,7 @@ package helper
 
 import (
 	"net/http"
+	"ttpos-server-go/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -78,4 +79,15 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 		}
 	}
 	Fail(c, constant.CodeBadRequest, "参数错误")
+}
+
+// GetCompanyId 获取公司ID
+func GetCompanyId(c *gin.Context) uint {
+	token := c.GetHeader("token")
+	claims, err := auth.ParseToken(token, config.JWT.Secret)
+	if err != nil {
+		return 0
+	}
+	companyId := claims.AppId
+	return companyId
 }
