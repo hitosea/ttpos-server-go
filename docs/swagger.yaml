@@ -342,6 +342,20 @@ definitions:
       token:
         type: string
     type: object
+  resp.Category:
+    properties:
+      children:
+        description: 子分类列表
+        items:
+          $ref: '#/definitions/resp.ChildCategory'
+        type: array
+      key:
+        description: 分类键
+        type: string
+      name:
+        description: 分类名称
+        type: string
+    type: object
   resp.CategoryProductInfo:
     properties:
       createTime:
@@ -373,6 +387,15 @@ definitions:
         items:
           $ref: '#/definitions/resp.CategoryProductInfo'
         type: array
+    type: object
+  resp.ChildCategory:
+    properties:
+      key:
+        description: 子分类键
+        type: string
+      name:
+        description: 子分类名称
+        type: string
     type: object
   resp.FinishedProductInfo:
     properties:
@@ -428,23 +451,15 @@ definitions:
         type: string
       api_path:
         type: string
-      app_id:
-        type: integer
       children:
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
-      create_time:
-        type: string
-      icon:
-        type: string
       is_menu:
         type: integer
       is_route:
         type: integer
       is_show:
-        type: integer
-      is_supplier:
         type: integer
       name:
         type: string
@@ -452,16 +467,21 @@ definitions:
         type: integer
       path:
         type: string
-      plus_category_id:
-        type: integer
       redirect_name:
         type: string
-      remark:
-        type: string
-      sort:
-        type: integer
-      update_time:
-        type: string
+    type: object
+  resp.ProductCategory:
+    properties:
+      categoryList:
+        description: 分类列表
+        items:
+          $ref: '#/definitions/resp.Category'
+        type: array
+      specialCategoryList:
+        description: 特殊分类列表
+        items:
+          $ref: '#/definitions/resp.SpecialCategory'
+        type: array
     type: object
   resp.ProductOrderList:
     properties:
@@ -587,6 +607,15 @@ definitions:
         type: string
       username:
         description: 用户名
+        type: string
+    type: object
+  resp.SpecialCategory:
+    properties:
+      id:
+        description: 分类ID
+        type: integer
+      name:
+        description: 分类名称
         type: string
     type: object
 host: 127.0.0.1:8081
@@ -1856,15 +1885,29 @@ paths:
       consumes:
       - application/json
       description: 获取收银产品类别
+      parameters:
+      - description: 认证令牌
+        in: header
+        name: token
+        required: true
+        type: string
+      - description: 语言
+        in: header
+        name: language
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: 产品类别列表
           schema:
-            type: array
-        "404":
-          description: 未找到
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductCategory'
+              type: object
       summary: 获取收银产品类别
       tags:
       - cashier
