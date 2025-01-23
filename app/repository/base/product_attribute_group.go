@@ -1,0 +1,91 @@
+package base
+
+import (
+	"time"
+	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
+)
+
+// 产品属性组仓库接口
+type ProductAttributeGroupRepoInterface interface {
+	GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error)                         // 获取产品属性组列表
+	UpdateProductAttributeGroup(id uint, productAttributeGroup model.ProductAttributeGroup) error // 更新产品属性组
+	CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint, error)  // 创建产品属性组
+	DeleteProductAttributeGroup(id uint) error                                                    // 删除产品属性组
+}
+
+// 创建新的产品属性组仓库
+func NewProductAttributeGroupRepo(db *gorm.DB) ProductAttributeGroupRepoInterface {
+	return NewProductAttributeGroupRepoImpl(db)
+}
+
+// 创建新的退菜原因仓库实现
+func NewProductAttributeGroupRepoImpl(db *gorm.DB) *ProductAttributeGroupRepoImpl {
+	return &ProductAttributeGroupRepoImpl{db: db}
+}
+
+type ProductAttributeGroupRepoImpl struct {
+	db *gorm.DB // 数据库连接
+}
+
+// 获取退菜原因列表，排除逻辑删除的退菜原因
+func (r *ProductAttributeGroupRepoImpl) GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error) {
+	var productAttributeGroups []model.ProductAttributeGroup
+	err := r.db.Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productAttributeGroups).Error
+	return productAttributeGroups, err
+}
+
+// 更新退菜原因
+func (r *ProductAttributeGroupRepoImpl) UpdateProductAttributeGroup(id uint, productAttributeGroup model.ProductAttributeGroup) error {
+	tx := r.db.Begin() // 开始事务
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 回滚事务
+		}
+	}()
+
+	if err := tx.Model(&model.ProductAttributeGroup{}).Where("id = ?", id).Updates(productAttributeGroup).Error; err != nil {
+		tx.Rollback() // 更新失败，回滚事务
+		return err
+	}
+
+	if err := tx.Model(&productAttributeGroup.MultiLanguageName).Where("id = ?", productAttributeGroup.MultiLanguageNameId).Updates(productAttributeGroup.MultiLanguageName).Error; err != nil {
+		tx.Rollback() // 更新多语言名称失败，回滚事务
+		return err
+	}
+
+	return tx.Commit().Error // 提交事务
+}
+
+// 创建产品属性组
+func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint, error) {
+	tx := r.db.Begin() // 开始事务
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 回滚事务
+		}
+	}()
+
+	// 创建多语言名称
+	if err := tx.Create(&productAttributeGroup.MultiLanguageName).Error; err != nil {
+		tx.Rollback() // 创建多语言名称失败，回滚事务
+		return 0, err
+	}
+
+	// 将多语言名称ID存入产品属性组
+	productAttributeGroup.MultiLanguageNameId = productAttributeGroup.MultiLanguageName.Id
+
+	// 创建产品属性组
+	if err := tx.Create(&productAttributeGroup).Error; err != nil {
+		tx.Rollback() // 创建失败，回滚事务
+		return 0, err
+	}
+
+	return productAttributeGroup.Id, tx.Commit().Error // 提交事务
+}
+
+// 软删除退菜原因
+func (r *ProductAttributeGroupRepoImpl) DeleteProductAttributeGroup(id uint) error {
+	return r.db.Model(&model.ProductAttributeGroup{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
