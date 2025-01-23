@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/config"
 
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
@@ -112,4 +113,67 @@ func TestGetProductFlavorList(t *testing.T) {
 	}
 	fmt.Println(string(json))
 
+}
+
+func NewSQLiteConnection(conf config.DatabaseConf) (*gorm.DB, error) {
+	return gorm.Open(sqlite.Open(conf.Database), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   conf.TablePrefix, // 表名前缀z
+			SingularTable: true,             // 使用单一表名, eg. `User` => `user`
+		},
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer（日志输出的地方）
+			logger.Config{
+				SlowThreshold: time.Duration(conf.SlowQueryTime) * time.Second, // 慢查询阈值设置为1秒
+				LogLevel:      logger.Info,                                     // 日志级别设置为Info，记录所有SQL
+				Colorful:      true,                                            // 彩色打印
+			},
+		),
+	})
+}
+
+func TestCreateProductFlavorListSQLite(t *testing.T) {
+	db, err := NewSQLiteConnection(config.DatabaseConf{
+		Database: "test.db",
+	})
+	if err != nil {
+		panic(err)
+	}
+	productFlavorRepository := NewProductFlavorRepo(db)
+	db.AutoMigrate(&model.ProductFlavor{}, &model.MultiLanguageName{})
+	productFlavors := []model.ProductFlavor{
+		{
+			Name: "大杯",
+			MultiLanguageName: model.MultiLanguageName{
+				EnName:   "Large Cup",
+				ZhName:   "大杯",
+				ZhTwName: "大杯",
+			},
+		},
+		{
+			Name: "小杯",
+			MultiLanguageName: model.MultiLanguageName{
+				EnName:   "Small Cup",
+				ZhName:   "小杯",
+				ZhTwName: "小杯",
+			},
+		},
+	}
+
+	for _, productFlavor := range productFlavors {
+		_, err := productFlavorRepository.CreateProductFlavor(productFlavor)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	productFlavors, errGet := productFlavorRepository.GetProductFlavorList()
+	if errGet != nil {
+		panic(errGet)
+	}
+	json, err := json.Marshal(productFlavors)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(json))
 }
