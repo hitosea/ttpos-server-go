@@ -8,6 +8,6 @@ func NewSettingService() *SettingService {
 }
 
 func (s *SettingService) GetSupplierItem(printer string, supplierId uint, appId uint) any {
-	
+
 	return nil
 }
