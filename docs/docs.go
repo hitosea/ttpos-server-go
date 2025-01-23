@@ -91,7 +91,7 @@ const docTemplate = `{
                 "summary": "删除公司",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "公司ID",
                         "name": "id",
                         "in": "path",
@@ -1927,7 +1927,7 @@ const docTemplate = `{
             }
         },
         "/passport/server-public-key": {
-            "get": {
+            "post": {
                 "produces": [
                     "application/json"
                 ],
@@ -1940,7 +1940,24 @@ const docTemplate = `{
                         "type": "string",
                         "description": "客户端Id",
                         "name": "client_id",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "加密类型: pgp\\jsencrypt",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "获取公钥参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetServerPublicKeyRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -2382,7 +2399,7 @@ const docTemplate = `{
                 "code",
                 "device_id",
                 "password",
-                "username"
+                "user_name"
             ],
             "properties": {
                 "code": {
@@ -2397,8 +2414,27 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
-                "username": {
+                "user_name": {
                     "type": "string"
+                }
+            }
+        },
+        "req.GetServerPublicKeyRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "type"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "pgp",
+                        "jsencrypt"
+                    ]
                 }
             }
         },
@@ -2809,6 +2845,12 @@ const docTemplate = `{
         "resp.CashierLoginResponse": {
             "type": "object",
             "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Permission"
+                    }
+                },
                 "token": {
                     "type": "string"
                 }
@@ -2920,6 +2962,71 @@ const docTemplate = `{
                 },
                 "token": {
                     "description": "用户token",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.Permission": {
+            "type": "object",
+            "properties": {
+                "access_id": {
+                    "type": "integer"
+                },
+                "alias": {
+                    "type": "string"
+                },
+                "api_path": {
+                    "type": "string"
+                },
+                "app_id": {
+                    "type": "integer"
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Permission"
+                    }
+                },
+                "create_time": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "is_menu": {
+                    "type": "integer"
+                },
+                "is_route": {
+                    "type": "integer"
+                },
+                "is_show": {
+                    "type": "integer"
+                },
+                "is_supplier": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "plus_category_id": {
+                    "type": "integer"
+                },
+                "redirect_name": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "update_time": {
                     "type": "string"
                 }
             }

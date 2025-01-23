@@ -18,13 +18,26 @@ definitions:
         type: string
       password:
         type: string
-      username:
+      user_name:
         type: string
     required:
     - code
     - device_id
     - password
-    - username
+    - user_name
+    type: object
+  req.GetServerPublicKeyRequest:
+    properties:
+      client_id:
+        type: string
+      type:
+        enum:
+        - pgp
+        - jsencrypt
+        type: string
+    required:
+    - client_id
+    - type
     type: object
   req.KitchenSetting:
     properties:
@@ -322,6 +335,10 @@ definitions:
     type: object
   resp.CashierLoginResponse:
     properties:
+      permissions:
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
       token:
         type: string
     type: object
@@ -401,6 +418,49 @@ definitions:
         type: string
       token:
         description: 用户token
+        type: string
+    type: object
+  resp.Permission:
+    properties:
+      access_id:
+        type: integer
+      alias:
+        type: string
+      api_path:
+        type: string
+      app_id:
+        type: integer
+      children:
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
+      create_time:
+        type: string
+      icon:
+        type: string
+      is_menu:
+        type: integer
+      is_route:
+        type: integer
+      is_show:
+        type: integer
+      is_supplier:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      plus_category_id:
+        type: integer
+      redirect_name:
+        type: string
+      remark:
+        type: string
+      sort:
+        type: integer
+      update_time:
         type: string
     type: object
   resp.ProductOrderList:
@@ -545,7 +605,7 @@ paths:
         in: path
         name: id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -1746,12 +1806,24 @@ paths:
       tags:
       - 通用
   /passport/server-public-key:
-    get:
+    post:
       parameters:
       - description: 客户端Id
         in: query
         name: client_id
+        required: true
         type: string
+      - description: '加密类型: pgp\jsencrypt'
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: 获取公钥参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetServerPublicKeyRequest'
       produces:
       - application/json
       responses:
