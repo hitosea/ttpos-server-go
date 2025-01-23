@@ -7,8 +7,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"ttpos-server-go/app/model"
-	"ttpos-server-go/config"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"

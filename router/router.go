@@ -10,13 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	v1 "ttpos-server-go/app/api/v1"
-	"ttpos-server-go/app/api/v1/cashier"
-	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/service"
-	"ttpos-server-go/middleware"
-	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/repository"
@@ -38,17 +31,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 
 	// 初始化验证码服务
 	captchaService := service.NewCaptchaService(cache)
-	pgpService := service.NewPGPService(cache)
 	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, staffRepo)
 	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo)
 	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService)
 	companyService := service.NewCompanyService(companyRepo)
 	pgpService := service.NewEncryptService(cache)
-	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, userRepo)
-	settingService := service.NewSettingService()
-	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo, settingService)
-	cashierAuthService := service.NewCashierAuthService(userRepo, captchaService, roleAccessService, bindRecordService)
-	companyService := service.NewCompanyService(companyRepo)
 
 	// 初始化处理器
 	passportHandler := v1.NewPassportHandler(captchaService, pgpService)

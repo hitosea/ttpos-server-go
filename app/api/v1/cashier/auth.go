@@ -6,7 +6,6 @@ import (
 
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
 )
 

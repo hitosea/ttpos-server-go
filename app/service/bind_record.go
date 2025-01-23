@@ -13,9 +13,6 @@ import (
 type BindRecordService struct {
 	bindRecordRepo     *repository.BindRecordRepository
 	companySettingRepo *repository.CompanySettingRepository
-	bindRecordRepo     *repository.BindRecordRepository
-	settingSrv         *SettingService
-	companySettingRepo *repository.CompanySettingRepository
 }
 
 func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository) *BindRecordService {

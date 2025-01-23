@@ -48,26 +48,26 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 验证账号, 在saas库中验证账号是否存在
 	companyStaff := s.companyStaffRepo.GetByUsername(username, s.companyStaffRepo.WithCompany())
 	if companyStaff.StaffId == 0 {
-		return "", errors.New("账号不存在")
+		return loginResp, errors.New("账号不存在")
 	}
 	if companyStaff.CompanyID == 0 {
-		return "", errors.New("未找到绑定的商家，请确认登录信息")
+		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 
 	// 在集团库中验证用户密码是否正确
 	// 通过staffId查询staff信息，验证密码是否正确
 	staff := s.staffRepo.GetById(companyStaff.StaffId, companyStaff.CompanyID, s.staffRepo.WithCompany())
 	if utils.EncryptPassword(password) != staff.Password {
-		return "", errors.New("密码错误")
+		return loginResp, errors.New("密码错误")
 	}
 	if staff.IsDelete == 1 {
-		return "", apperrors.NewWithReplace(constant.CodeAccountDeleted, "账号 %s 被删除，请联系管理员", []string{staff.UserName})
+		return loginResp, apperrors.NewWithReplace("账号 %s 被删除，请联系管理员", []string{staff.UserName})
 	}
 	if staff.IsDisable == 1 {
-		return "", errors.New("账号被禁用，请联系管理员")
+		return loginResp, errors.New("账号被禁用，请联系管理员")
 	}
 	if staff.Company.IsRecycle != 0 {
-		return "", errors.New("商家账号异常，请联系管理员")
+		return loginResp, errors.New("商家账号异常，请联系管理员")
 	}
 
 	// 判断权限
@@ -79,7 +79,7 @@ func (s *CashierAuthService) Login(username, password, captchaId, captchaCode st
 	// 检查是否有未交班的收银员
 	currentStaff := s.staffRepo.GetCurrentCashier(staff.BindKey)
 	if currentStaff.ID != 0 && currentStaff.ID != staff.ID {
-		return "", apperrors.NewWithReplace(constant.CodeUnhandShiftUserExists, "当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+		return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 	}
 
 	// 是否是首次接班
