@@ -58,3 +58,27 @@ type ProductAttribute struct {
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_id;references:id"` // 多语言名称
 }
+
+// 产品包属性组表，定义产品包的属性分组信息
+type ProductPackageAttributeGroup struct {
+	Id               uint `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	IsMust           bool `gorm:"column:is_must;not null;default:false;comment:'是否必选, 0-否 1-是'"`
+	MaxSelection     uint `gorm:"column:max_selection;not null;default:0;comment:'最大选择数量'"`
+	ProductPackageId uint `gorm:"column:product_package_id;not null;default:0;comment:'产品包ID'"`
+	CreateTime       int  `gorm:"column:create_time;not null;default:0;comment:'创建时间（时间戳）'"`
+	UpdateTime       int  `gorm:"column:update_time;not null;default:0;comment:'更新时间（时间戳）'"`
+	DeleteTime       int  `gorm:"column:delete_time;not null;default:0;comment:'删除时间（时间戳）'"`
+}
+
+// 产品包属性表，定义产品包的属性信息
+type ProductPackageAttribute struct {
+	Id                             uint `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	ProductPackageAttributeGroupId uint `gorm:"column:product_package_attribute_group_id;not null;default:0;comment:'产品包属性组ID'"`
+	AttributeId                    uint `gorm:"column:attribute_id;not null;default:0;comment:'产品属性ID'"`
+	IsDefaultSelected              bool `gorm:"column:is_default_selected;not null;default:false;comment:'是否默认选中, 0-否 1-是'"`
+	CreateTime                     int  `gorm:"column:create_time;not null;default:0;comment:'创建时间（时间戳）'"`
+	UpdateTime                     int  `gorm:"column:update_time;not null;default:0;comment:'更新时间（时间戳）'"`
+	DeleteTime                     int  `gorm:"column:delete_time;not null;default:0;comment:'删除时间（时间戳）'"`
+
+	Attribute ProductAttribute `gorm:"foreignKey:attribute_id;references:id"` // 产品属性
+}

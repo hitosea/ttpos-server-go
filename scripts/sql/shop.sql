@@ -453,7 +453,7 @@ CREATE TABLE `ttpos_product_package_attribute_group` (
 DROP TABLE IF EXISTS `ttpos_product_package_attribute`;
 CREATE TABLE `ttpos_product_package_attribute` (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识符',
-    attribute_group_id INT NOT NULL COMMENT '产品包属性组ID',
+    product_package_attribute_group_id INT NOT NULL COMMENT '产品包属性组ID',
     attribute_id INT NOT NULL COMMENT '产品属性ID',
     is_default_selected BOOLEAN  NOT NULL DEFAULT FALSE COMMENT '是否默认选中, 0-否 1-是',
     create_time INT NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
