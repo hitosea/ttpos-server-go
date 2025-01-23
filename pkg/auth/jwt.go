@@ -8,17 +8,17 @@ import (
 )
 
 type Claims struct {
-	Source     string `json:"source"` // 终端
-	ShopUserId uint   `json:"shop_user_id"`
-	AppId      uint   `json:"app_id"`
+	Source    string `json:"source"` // 终端
+	StaffId   uint   `json:"shop_user_id"`
+	CompanyId uint   `json:"app_id"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source string, shopUserId uint, appId uint, secret string, expire int) (string, error) {
+func GenerateToken(source string, staffId uint, companyId uint, secret string, expire int) (string, error) {
 	claims := Claims{
-		Source:     source,
-		ShopUserId: shopUserId,
-		AppId:      appId,
+		Source:    source,
+		StaffId:   staffId,
+		CompanyId: companyId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expire))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

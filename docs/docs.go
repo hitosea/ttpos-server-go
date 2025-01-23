@@ -2009,15 +2009,40 @@ const docTemplate = `{
                     "cashier"
                 ],
                 "summary": "获取收银产品类别",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "认证令牌",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "产品类别列表",
                         "schema": {
-                            "type": "array"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductCategory"
+                                        }
+                                    }
+                                }
+                            ]
                         }
-                    },
-                    "404": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -2856,6 +2881,26 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Category": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "description": "子分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ChildCategory"
+                    }
+                },
+                "key": {
+                    "description": "分类键",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "分类名称",
+                    "type": "string"
+                }
+            }
+        },
         "resp.CategoryProductInfo": {
             "type": "object",
             "properties": {
@@ -2898,6 +2943,19 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.CategoryProductInfo"
                     }
+                }
+            }
+        },
+        "resp.ChildCategory": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "子分类键",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "子分类名称",
+                    "type": "string"
                 }
             }
         },
@@ -3028,6 +3086,25 @@ const docTemplate = `{
                 },
                 "update_time": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.ProductCategory": {
+            "type": "object",
+            "properties": {
+                "categoryList": {
+                    "description": "分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Category"
+                    }
+                },
+                "specialCategoryList": {
+                    "description": "特殊分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SpecialCategory"
+                    }
                 }
             }
         },
@@ -3205,6 +3282,19 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "用户名",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.SpecialCategory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "分类ID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "分类名称",
                     "type": "string"
                 }
             }

@@ -88,7 +88,7 @@ func GetCompanyId(c *gin.Context) uint {
 	if err != nil {
 		return 0
 	}
-	companyId := claims.AppId
+	companyId := claims.CompanyId
 	return companyId
 }
 
