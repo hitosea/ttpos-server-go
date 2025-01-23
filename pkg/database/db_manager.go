@@ -75,3 +75,14 @@ func (m *DBManager) GetDB(index uint) *gorm.DB {
 	}
 	panic(fmt.Sprintf("Database with index %d not found", index))
 }
+
+func (m *DBManager) SetMockDB(db *gorm.DB) {
+	if m.dbs == nil {
+		m.dbs = make(map[uint]*gorm.DB)
+	}
+	m.dbs[constant.MockDB] = db
+}
+
+func (m *DBManager) GetMockDB() *gorm.DB {
+	return m.dbs[constant.MockDB]
+}

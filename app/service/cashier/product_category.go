@@ -34,12 +34,12 @@ type CashierService struct {
 func (s *CashierService) GetProductCategory(dbId uint) (resp.ProductCategory, error) {
 	db := s.dbm.GetDB(dbId)
 	// 查询产品类别表
-	productCategoryList, err := repository.NewProductCategoryRepository(db).GetProductCategoryList()
+	productCategoryList, err := repository.NewProductCategoryRepository(db).GetProductCategoryListWithMultiLanguageName()
 	if err != nil {
 		return resp.ProductCategory{}, err
 	}
 	// 查询特殊分类表
-	productSpecialCategoryList, err := repository.NewProductSpecialCategoryRepository(db).GetProductSpecialCategoryList()
+	productSpecialCategoryList, err := repository.NewProductSpecialCategoryRepository(db).GetProductSpecialCategoryListWithMultiLanguageName()
 	if err != nil {
 		return resp.ProductCategory{}, err
 	}

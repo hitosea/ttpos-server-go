@@ -1,4 +1,4 @@
-package repository
+package cashier
 
 import (
 	"fmt"
@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 	"time"
-	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/database"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -45,7 +46,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 	})
 }
 
-func TestCreateMultiLanguageName(t *testing.T) {
+func TestGetProductCategory(t *testing.T) {
 	db, err := NewMySQLConnection(config.DatabaseConf{
 		Host:          "localhost",
 		Port:          3306,
@@ -55,38 +56,12 @@ func TestCreateMultiLanguageName(t *testing.T) {
 		TablePrefix:   "ttpos_",
 		SlowQueryTime: 0,
 	}, "shop1111000")
+	dbm := &database.DBManager{}
+	dbm.SetMockDB(db)
+	service := NewCashierProductCategoryService(dbm)
+	productCategory, err := service.GetProductCategory(constant.MockDB)
 	if err != nil {
 		panic(err)
 	}
-	multiLanguageNameRepository := NewMultiLanguageNameRepository(db)
-
-	multiLanguageNames := []model.MultiLanguageName{
-		{
-			EnName:   "Signature Menu",
-			ZhName:   "招牌菜单",
-			ZhTwName: "招牌菜單",
-		},
-		{
-			EnName:   "Dessert Menu",
-			ZhName:   "甜点菜单",
-			ZhTwName: "甜點菜單",
-		},
-		{
-			EnName:   "Beverage Menu",
-			ZhName:   "饮料菜单",
-			ZhTwName: "飲料菜單",
-		},
-		{
-			EnName:   "Appetizer Menu",
-			ZhName:   "开胃菜菜单",
-			ZhTwName: "開胃菜菜單",
-		},
-	}
-
-	for _, multiLanguageName := range multiLanguageNames {
-		_, err := multiLanguageNameRepository.CreateMultiLanguageName(multiLanguageName)
-		if err != nil {
-			panic(err)
-		}
-	}
+	fmt.Println(fmt.Sprintf("%+v", productCategory))
 }

@@ -29,11 +29,24 @@ func (r *ProductSpecialCategoryRepository) UpdateProductSpecialCategory(id uint,
 }
 
 // 创建商品特殊类别
-func (r *ProductSpecialCategoryRepository) CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) error {
-	return r.db.Create(&productSpecialCategory).Error
+func (r *ProductSpecialCategoryRepository) CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) (uint, error) {
+	err := r.db.Create(&productSpecialCategory).Error
+	return productSpecialCategory.Id, err
 }
 
 // 软删除商品特殊类别
 func (r *ProductSpecialCategoryRepository) DeleteProductSpecialCategory(id uint) error {
 	return r.db.Model(&model.ProductSpecialCategory{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+func (r *ProductSpecialCategoryRepository) GetProductSpecialCategoryByIdWithMultiLanguageName(id uint) (*model.ProductSpecialCategory, error) {
+	var productSpecialCategory model.ProductSpecialCategory
+	err := r.db.Model(&model.ProductSpecialCategory{}).Where("id = ?", id).Preload("MultiLanguageName").First(&productSpecialCategory).Error
+	return &productSpecialCategory, err
+}
+
+func (r *ProductSpecialCategoryRepository) GetProductSpecialCategoryListWithMultiLanguageName() ([]model.ProductSpecialCategory, error) {
+	var productSpecialCategories []model.ProductSpecialCategory
+	err := r.db.Model(&model.ProductSpecialCategory{}).Preload("MultiLanguageName").Find(&productSpecialCategories).Error
+	return productSpecialCategories, err
 }

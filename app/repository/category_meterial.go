@@ -29,8 +29,9 @@ func (r *MaterialCategoryRepository) UpdateMaterialCategory(id uint, materialCat
 }
 
 // 创建原料类别
-func (r *MaterialCategoryRepository) CreateMaterialCategory(materialCategory model.MaterialCategory) error {
-	return r.db.Create(&materialCategory).Error
+func (r *MaterialCategoryRepository) CreateMaterialCategory(materialCategory model.MaterialCategory) (uint, error) {
+	err := r.db.Create(&materialCategory).Error
+	return materialCategory.Id, err
 }
 
 // 软删除原料类别

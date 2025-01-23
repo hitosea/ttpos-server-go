@@ -7,12 +7,14 @@ type ProductCategory struct {
 	ParentId            uint   `gorm:"default:NULL;comment:父级ID" json:"parent_id"`
 	MultiLanguageNameId uint   `gorm:"not null;default:0;comment:多语言名称ID" json:"multi_language_name_id"`
 	Status              string `gorm:"not null;default:'';comment:状态, open开启、close关闭" json:"status"`
-	Level               uint   `gorm:"not null;default:0;comment:层级" json:"level"`
+	Level               uint   `gorm:"not null;default:1;comment:层级" json:"level"`
 	CategoryKey         string `gorm:"not null;default:'';comment:关键字" json:"category_key"`
 	OrderBy             uint   `gorm:"not null;default:0;comment:排序" json:"order_by"`
 	CreateTime          uint   `gorm:"not null;default:0;comment:创建时间（时间戳）" json:"create_time"`
 	UpdateTime          uint   `gorm:"not null;default:0;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime          uint   `gorm:"not null;default:0;comment:删除时间（时间戳）" json:"delete_time"`
+
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_id;references:id" json:"multi_language_name"`
 }
 
 // 原料类别
@@ -29,6 +31,8 @@ type MaterialCategory struct {
 	CreateTime          uint   `gorm:"not null;default:0;comment:创建时间（时间戳）" json:"create_time"`
 	UpdateTime          uint   `gorm:"not null;default:0;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime          uint   `gorm:"not null;default:0;comment:删除时间（时间戳）" json:"delete_time"`
+
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_id;references:id" json:"multi_language_name"`
 }
 
 // 商品特殊类别
@@ -42,4 +46,6 @@ type ProductSpecialCategory struct {
 	CreateTime          uint   `gorm:"not null;default:0;comment:创建时间（时间戳）" json:"create_time"`
 	UpdateTime          uint   `gorm:"not null;default:0;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime          uint   `gorm:"not null;default:0;comment:删除时间（时间戳）" json:"delete_time"`
+
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_id;references:id" json:"multi_language_name"`
 }

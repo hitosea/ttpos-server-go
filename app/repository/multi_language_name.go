@@ -11,7 +11,7 @@ import (
 // MultiLanguageNameRepositoryInterface 定义多语言名称仓库接口
 type MultiLanguageNameRepositoryInterface interface {
 	GetMultiLanguageName(id uint) (model.MultiLanguageName, error)                    // 获取多语言名称
-	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) error          // 创建多语言名称
+	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint, error)  // 创建多语言名称
 	UpdateMultiLanguageName(id uint, multiLanguageName model.MultiLanguageName) error // 更新多语言名称
 	DeleteMultiLanguageName(id uint) error                                            // 删除多语言名称
 }
@@ -39,8 +39,9 @@ func (r *MultiLanguageNameRepositoryImpl) GetMultiLanguageName(id uint) (model.M
 }
 
 // CreateMultiLanguageName 创建多语言名称
-func (r *MultiLanguageNameRepositoryImpl) CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) error {
-	return r.db.Create(&multiLanguageName).Error // 将多语言名称插入数据库
+func (r *MultiLanguageNameRepositoryImpl) CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint, error) {
+	err := r.db.Create(&multiLanguageName).Error // 将多语言名称插入数据库
+	return multiLanguageName.Id, err
 }
 
 // UpdateMultiLanguageName 更新多语言名称
