@@ -1,0 +1,90 @@
+package base
+
+import (
+	"time"
+	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
+)
+
+// 商品规格
+type ProductFlavorRepoInterface interface {
+	GetProductFlavorList() ([]model.ProductFlavor, error)
+	UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error
+	CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error)
+	DeleteProductFlavor(id uint) error
+}
+
+func NewProductFlavorRepo(db *gorm.DB) ProductFlavorRepoInterface {
+	return NewProductFlavorRepoImpl(db)
+}
+
+// 创建新的商品规格仓库实现
+func NewProductFlavorRepoImpl(db *gorm.DB) *ProductFlavorRepoImpl {
+	return &ProductFlavorRepoImpl{db: db}
+}
+
+type ProductFlavorRepoImpl struct {
+	db *gorm.DB
+}
+
+// 获取商品规格列表，排除逻辑删除的规格
+func (r *ProductFlavorRepoImpl) GetProductFlavorList() ([]model.ProductFlavor, error) {
+	var productFlavors []model.ProductFlavor
+	err := r.db.Model(&model.ProductFlavor{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productFlavors).Error
+	return productFlavors, err
+}
+
+// 更新商品规格
+func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error {
+	tx := r.db.Begin() // 开始事务
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 回滚事务
+		}
+	}()
+
+	if err := tx.Model(&model.ProductFlavor{}).Where("id = ?", id).Updates(productFlavor).Error; err != nil {
+		tx.Rollback() // 更新失败，回滚事务
+		return err
+	}
+
+	if err := tx.Model(&productFlavor.MultiLanguageName).Where("id = ?", productFlavor.MultiLanguageNameId).Updates(productFlavor.MultiLanguageName).Error; err != nil {
+		tx.Rollback() // 更新多语言名称失败，回滚事务
+		return err
+	}
+
+	return tx.Commit().Error // 提交事务
+}
+
+// 创建商品规格
+func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error) {
+	tx := r.db.Begin() // 开始事务
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 回滚事务
+		}
+	}()
+
+	// 创建多语言名称
+	if err := tx.Create(&productFlavor.MultiLanguageName).Error; err != nil {
+		tx.Rollback() // 创建多语言名称失败，回滚事务
+		return 0, err
+	}
+
+	// 将多语言名称ID存入商品规格
+	productFlavor.MultiLanguageNameId = productFlavor.MultiLanguageName.Id
+
+	// 创建商品规格
+	if err := tx.Create(&productFlavor).Error; err != nil {
+		tx.Rollback() // 创建失败，回滚事务
+		return 0, err
+	}
+
+	return productFlavor.Id, tx.Commit().Error // 提交事务
+}
+
+// 软删除商品规格
+func (r *ProductFlavorRepoImpl) DeleteProductFlavor(id uint) error {
+	return r.db.Model(&model.ProductFlavor{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
