@@ -59,7 +59,7 @@ func TestGetProductCategory(t *testing.T) {
 	dbm := &database.DBManager{}
 	dbm.SetMockDB(db)
 	service := NewCashierProductCategoryService(dbm)
-	productCategory, err := service.GetProductCategory(constant.MockDB)
+	productCategory, err := service.GetProductCategory(constant.MockDB, "zh")
 	if err != nil {
 		panic(err)
 	}
