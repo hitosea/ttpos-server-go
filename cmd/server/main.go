@@ -7,13 +7,13 @@ import (
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/i18n"
-	"jjjshop-server-go/middleware"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/database"
-	"jjjshop-server-go/pkg/logger"
-	"jjjshop-server-go/router"
+	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/router"
 )
 
 // @title ttpos-server-go API

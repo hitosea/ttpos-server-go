@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"jjjshop-server-go/config"
+	"ttpos-server-go/config"
 )
 
 func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {

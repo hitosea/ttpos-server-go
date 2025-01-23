@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	
-	"jjjshop-server-go/app/dto/resp"
+
+	"ttpos-server-go/app/dto/resp"
 )
 
 type ICaptchaService interface {

@@ -1,6 +1,6 @@
 package errors
 
-import "jjjshop-server-go/app/constant"
+import "ttpos-server-go/app/constant"
 
 type AppError struct {
 	Code    int      // 响应码

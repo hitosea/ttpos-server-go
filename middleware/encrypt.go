@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"jjjshop-server-go/config"
-	"jjjshop-server-go/pkg/cache"
-	"jjjshop-server-go/pkg/logger"
-	"jjjshop-server-go/pkg/pgp"
-	"jjjshop-server-go/pkg/utils"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/pgp"
+	"ttpos-server-go/pkg/utils"
 )
 
 type EncryptWriter struct {

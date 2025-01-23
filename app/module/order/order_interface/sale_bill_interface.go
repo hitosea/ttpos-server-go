@@ -1,6 +1,6 @@
 package order_interface
 
-import "jjjshop-server-go/app/module/order/service"
+import "ttpos-server-go/app/module/order/service"
 
 type SaleBillInterface interface {
 	InterfaceImplName() string
