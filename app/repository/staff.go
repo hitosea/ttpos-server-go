@@ -22,10 +22,10 @@ func (r *StaffRepository) GetByIdAndCompanyId(Id, companyId uint, withs ...With)
 	return user
 }
 
-func (r *StaffRepository) GetById(Id, companyId uint, withs ...With) model.Staff {
+func (r *StaffRepository) GetById(companyId uint, id uint, withs ...With) model.Staff {
 	var user model.Staff
 	db := r.dbm.GetDB(companyId)
-	r.handleWiths(db, withs).Debug().First(&user, Id)
+	r.handleWiths(db, withs).Debug().First(&user, id)
 	return user
 }
 
@@ -41,16 +41,16 @@ func (r *StaffRepository) WithCompany() With {
 	}
 }
 
-func (r *StaffRepository) GetByUsername(username string, withs ...With) model.Staff {
+func (r *StaffRepository) OfflineGetByUsername(username string, withs ...With) model.Staff {
 	var user model.Staff
 	db := r.dbm.GetDB(constant.DefaultDB)
 	r.handleWiths(db, withs).Where("username = ?", username).Debug().First(&user)
 	return user
 }
 
-func (r *StaffRepository) GetCurrentCashier(bindKey string) model.Staff {
+func (r *StaffRepository) GetCurrentCashier(companyId uint, bindKey string) model.Staff {
 	var user model.Staff
-	r.dbm.GetDB(constant.DefaultDB).Where("bind_key = ? AND cashier_online = 1", bindKey).Debug().First(&user)
+	r.dbm.GetDB(companyId).Where("bind_key = ? AND cashier_online = 1", bindKey).Debug().First(&user)
 	return user
 }
 

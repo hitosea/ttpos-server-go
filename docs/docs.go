@@ -2412,9 +2412,12 @@ const docTemplate = `{
                 "code",
                 "device_id",
                 "password",
-                "user_name"
+                "username"
             ],
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "code": {
                     "type": "string"
                 },
@@ -2427,7 +2430,7 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
-                "user_name": {
+                "username": {
                     "type": "string"
                 }
             }

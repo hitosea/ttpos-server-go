@@ -37,3 +37,7 @@ func (r *BindRecordRepository) GetRecordBySourceAndKey(source string, key string
 func (r *BindRecordRepository) Update(companyId uint, id uint, vars map[string]interface{}) error {
 	return r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Where("id = ?", id).Updates(vars).Error
 }
+
+func (r *BindRecordRepository) Create(companyId uint, bindRecord model.BindRecord) error {
+	return r.dbm.GetDB(companyId).Create(&bindRecord).Error
+}

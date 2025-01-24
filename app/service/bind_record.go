@@ -3,9 +3,11 @@ package service
 import (
 	"errors"
 	"slices"
+	
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/utils"
 )
@@ -23,7 +25,7 @@ func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, suppl
 }
 
 func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
-	if slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
+	if !slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
 		addReq.CompanyId == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
 	}
@@ -49,7 +51,7 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		err := s.bindRecordRepo.Update(addReq.CompanyId, existsBindRecord.ID, map[string]interface{}{
 			"print_port_id":      printPortId,
 			"remark":             remark,
-			"brand":              addReq.Remark,
+			"brand":              addReq.Brand,
 			"platform":           platform,
 			"user_agent":         addReq.UserAgent,
 			"device_ip":          addReq.DeviceIP,
@@ -89,7 +91,19 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 
 	}
 
-	return nil
+	return s.bindRecordRepo.Create(addReq.CompanyId, model.BindRecord{
+		FinallyLoginId:   int(addReq.FinallyLoginId),
+		FinallyLoginTime: addReq.FinallyLoginTime,
+		Source:           addReq.Source,
+		Key:              addReq.DeviceId,
+		Address:          addReq.Address,
+		Port:             int(addReq.Port),
+		DeviceIp:         addReq.DeviceId,
+		Remark:           addReq.Remark,
+		Brand:            addReq.Brand,
+		Platform:         platform,
+		UserAgent:        addReq.UserAgent,
+	})
 }
 
 func (s *BindRecordService) Unbind(appId uint, source string, key string, shopUserId uint) error {

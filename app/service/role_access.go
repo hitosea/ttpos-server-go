@@ -32,7 +32,7 @@ func NewRoleAccessService(userRoleRepo *repository.StaffRoleRepository, shopAcce
 // GetPermission 获取权限
 func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
 
-	staff := s.staffRepo.GetById(staffId, companyId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
+	staff := s.staffRepo.GetById(companyId, staffId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
 
 	var permissions []resp.Permission
 	var where []repository.Where

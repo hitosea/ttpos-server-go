@@ -33,7 +33,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	captchaService := service.NewCaptchaService(cache)
 	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, staffRepo)
 	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo)
-	shiftService := service.NewShiftService(staffShiftLogRepo)
+	shiftService := service.NewShiftService(staffShiftLogRepo, cache)
 
 	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService, shiftService)
 	companyService := service.NewCompanyService(companyRepo)
