@@ -333,15 +333,6 @@ definitions:
         description: 验证码签名，用于验证用户提交的验证码是否正确
         type: string
     type: object
-  resp.CashierLoginResponse:
-    properties:
-      permissions:
-        items:
-          $ref: '#/definitions/resp.Permission'
-        type: array
-      token:
-        type: string
-    type: object
   resp.Category:
     properties:
       children:
@@ -441,33 +432,6 @@ definitions:
         type: string
       token:
         description: 用户token
-        type: string
-    type: object
-  resp.Permission:
-    properties:
-      access_id:
-        type: integer
-      alias:
-        type: string
-      api_path:
-        type: string
-      children:
-        items:
-          $ref: '#/definitions/resp.Permission'
-        type: array
-      is_menu:
-        type: integer
-      is_route:
-        type: integer
-      is_show:
-        type: integer
-      name:
-        type: string
-      parent_id:
-        type: integer
-      path:
-        type: string
-      redirect_name:
         type: string
     type: object
   resp.ProductCategory:
@@ -1158,12 +1122,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.CashierLoginResponse'
-              type: object
+            $ref: '#/definitions/dto.Response'
       summary: 登录
       tags:
       - 收银端

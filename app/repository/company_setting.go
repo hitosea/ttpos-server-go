@@ -17,7 +17,7 @@ func NewCompanySettingRepository(dbm *database.DBManager) *CompanySettingReposit
 
 func (r *CompanySettingRepository) GetById(id uint) model.CompanySetting {
 	var companySetting model.CompanySetting
-	r.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).First(&companySetting, id)
+	r.dbm.GetDB(id).Model(&model.CompanySetting{}).First(&companySetting, id)
 	return companySetting
 }
 
@@ -28,7 +28,7 @@ func (r *CompanySettingRepository) GetByCompanyId(companyId uint) model.CompanyS
 }
 
 func (r *CompanySettingRepository) Update(companySetting model.CompanySetting) error {
-	if err := r.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_id = ?", companySetting.CompanyID).Updates(companySetting).Error; err != nil {
+	if err := r.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_id = ?", companySetting.CompanyId).Updates(companySetting).Error; err != nil {
 		return err
 	}
 	return nil

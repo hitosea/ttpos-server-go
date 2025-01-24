@@ -1,17 +1,16 @@
 package req
 
 type AddBindRecordReq struct {
-	DeviceID         string `json:"device_id"`
-	Brand            string `json:"brand"`
-	Source           string `json:"source"`
-	FinallyLoginId   uint   `json:"finally_login_id"`
-	FinallyLoginTime int    `json:"finally_login_time"`
-	AppId            uint   `json:"app_id"`
-	ShopSupplierId   uint   `json:"shop_supplier_id"`
-	PrintPortId      int    `json:"print_port_id"`
-	UserAgent        string `json:"user_agent"`
-	Remark           string `json:"remark"`
-	Address          string `json:"address"`
-	Port             uint   `json:"port"`
-	DeviceIP         string `json:"device_ip"`
+	Key              string `json:"key"`                // 设备标识
+	Brand            string `json:"brand"`              // 品牌
+	Source           string `json:"source"`             // 来源：cashier、tablet、kitchen、assistant
+	FinallyLoginId   uint   `json:"finally_login_id"`   // 最后登录的员工ID
+	FinallyLoginTime int    `json:"finally_login_time"` // 最后登录的时间
+	CompanyId        uint   `json:"company_id"`         // 公司ID
+	PrintPortId      int    `json:"print_port_id"`      // 打印端口ID
+	UserAgent        string `json:"user_agent"`         // 用户代理
+	Remark           string `json:"remark"`             // 备注
+	Address          string `json:"address"`            // 地址
+	Port             uint   `json:"port"`               // 端口
+	DeviceIP         string `json:"device_ip"`          // 设备IP
 }

@@ -807,19 +807,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.CashierLoginResponse"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2861,20 +2849,6 @@
                 }
             }
         },
-        "resp.CashierLoginResponse": {
-            "type": "object",
-            "properties": {
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Permission"
-                    }
-                },
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
         "resp.Category": {
             "type": "object",
             "properties": {
@@ -3014,47 +2988,6 @@
                 },
                 "token": {
                     "description": "用户token",
-                    "type": "string"
-                }
-            }
-        },
-        "resp.Permission": {
-            "type": "object",
-            "properties": {
-                "access_id": {
-                    "type": "integer"
-                },
-                "alias": {
-                    "type": "string"
-                },
-                "api_path": {
-                    "type": "string"
-                },
-                "children": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Permission"
-                    }
-                },
-                "is_menu": {
-                    "type": "integer"
-                },
-                "is_route": {
-                    "type": "integer"
-                },
-                "is_show": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "redirect_name": {
                     "type": "string"
                 }
             }

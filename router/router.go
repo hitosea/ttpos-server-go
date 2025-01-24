@@ -1,9 +1,8 @@
 package router
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
 
 	v1 "ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/admin"
@@ -25,15 +24,18 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	staffRepo := repository.NewStaffRepository(dbm)
 	companyRepo := repository.NewCompanyRepository(dbm)
 	bindRecordRepo := repository.NewBindRecordRepository(dbm)
-	userRoleRepo := repository.NewUserRoleRepository(dbm)
+	userRoleRepo := repository.NewStaffRoleRepository(dbm)
 	accessRepo := repository.NewAccessRepository(dbm)
-	supplierRepo := repository.NewCompanySettingRepository(dbm)
+	companySettingRepo := repository.NewCompanySettingRepository(dbm)
+	staffShiftLogRepo := repository.NewShiftLogRepository(dbm)
 
 	// 初始化验证码服务
 	captchaService := service.NewCaptchaService(cache)
 	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, staffRepo)
-	bindRecordService := service.NewBindRecordService(bindRecordRepo, supplierRepo)
-	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService)
+	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo)
+	shiftService := service.NewShiftService(staffShiftLogRepo)
+
+	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService, shiftService)
 	companyService := service.NewCompanyService(companyRepo)
 	pgpService := service.NewEncryptService(cache)
 

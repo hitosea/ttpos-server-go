@@ -36,8 +36,8 @@ func Auth() gin.HandlerFunc {
 		}
 
 		// 将用户信息存储到上下文
-		c.Set("shopUserId", claims.StaffId)
-		c.Set("appId", claims.CompanyId)
+		c.Set("company_id", claims.CompanyId)
+		c.Set("staff_id", claims.StaffId)
 		c.Set("source", claims.Source)
 		c.Next()
 	}

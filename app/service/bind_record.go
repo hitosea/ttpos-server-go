@@ -24,15 +24,15 @@ func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, suppl
 
 func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 	if slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
-		addReq.ShopSupplierId == 0 || addReq.DeviceID == "" {
+		addReq.CompanyId == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
 	}
 
 	platform := utils.GetPlatform(addReq.UserAgent)
 
 	// 获取绑定
-	existsBindRecord := s.bindRecordRepo.GetRecordBySourceAndKey(addReq.Source, addReq.DeviceID)
-	if existsBindRecord.Id != 0 {
+	existsBindRecord := s.bindRecordRepo.GetRecordBySourceAndKey(addReq.Source, addReq.DeviceId)
+	if existsBindRecord.ID != 0 {
 		printPortId := addReq.PrintPortId
 		remark := addReq.Remark
 		if printPortId == 0 {
@@ -41,20 +41,20 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		if remark == "" {
 			remark = existsBindRecord.Remark
 		}
-		if addReq.FinallyLoginTime == 0 {
-			addReq.FinallyLoginTime = existsBindRecord.FinallyLoginTime
+		finallyLoginTime := addReq.FinallyLoginTime
+		if finallyLoginTime == 0 {
+			finallyLoginTime = existsBindRecord.FinallyLoginTime
 		}
-		err := s.bindRecordRepo.Update(existsBindRecord.Id, map[string]interface{}{
+		// 更新绑定
+		err := s.bindRecordRepo.Update(addReq.CompanyId, existsBindRecord.ID, map[string]interface{}{
 			"print_port_id":      printPortId,
 			"remark":             remark,
 			"brand":              addReq.Remark,
 			"platform":           platform,
 			"user_agent":         addReq.UserAgent,
 			"device_ip":          addReq.DeviceIP,
-			"app_id":             addReq.AppId,
-			"shop_supplier_id":   addReq.ShopSupplierId,
 			"finally_login_id":   addReq.FinallyLoginId,
-			"finally_login_time": addReq.FinallyLoginTime,
+			"finally_login_time": finallyLoginTime,
 		})
 		if err != nil {
 			return errors.New("更新绑定信息失败")
@@ -62,29 +62,29 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		return nil
 	}
 
-	// 获取supplier
-	supplier := s.companySettingRepo.GetById(addReq.ShopSupplierId)
+	// 获取 company setting
+	companySetting := s.companySettingRepo.GetById(addReq.CompanyId)
 	type Source struct {
 		Name  string
 		Limit uint
 	}
 	sources := map[string]Source{
-		constant.SOURCE_CASHIER:   {"收银机", uint(supplier.CashLimit)},
-		constant.SOURCE_TABLET:    {"平板", uint(supplier.TabletLimit)},
-		constant.SOURCE_KITCHEN:   {"厨显", uint(supplier.KitchenLimit)},
-		constant.SOURCE_ASSISTANT: {"点餐助手", uint(supplier.AssistantLimit)},
+		constant.SOURCE_CASHIER:   {"收银机", uint(companySetting.CashLimit)},
+		constant.SOURCE_TABLET:    {"平板", uint(companySetting.TabletLimit)},
+		constant.SOURCE_KITCHEN:   {"厨显", uint(companySetting.KitchenLimit)},
+		constant.SOURCE_ASSISTANT: {"点餐助手", uint(companySetting.AssistantLimit)},
 	}
 	for sourceKey, source := range sources {
 		if sourceKey != addReq.Source {
 			continue
 		}
-		count := s.bindRecordRepo.GetBindCount(sourceKey)
+		count := s.bindRecordRepo.GetBindCount(addReq.CompanyId, sourceKey)
 		if count >= source.Limit { // 超过绑定上线
 			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 
-	// 绑定品牌，如果自带打印，默认更新收银打印配置
+	// ToDo 绑定品牌，如果自带打印，默认更新收银打印配置
 	if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
 
 	}

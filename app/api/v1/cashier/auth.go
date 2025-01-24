@@ -27,7 +27,7 @@ func NewCashierAuthHandler(cashierAuthService *service.CashierAuthService) *Auth
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.CashierLoginRequest true "登录参数"
-// @Success 200 {object} dto.Response{data=resp.CashierLoginResponse}
+// @Success 200 {object} dto.Response
 // @Router /cashier/passport/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var loginRequest req.CashierLoginRequest
@@ -40,12 +40,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
 		return
 	}
-	data, err := h.cashierAuthService.Login(loginRequest.Username, loginRequest.Password, sign, loginRequest.Code)
+	token, err := h.cashierAuthService.Login(loginRequest, sign, loginRequest.Code)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, data)
+	helper.Success(c, gin.H{"token": token})
 }
 
 // Logout 退出登录

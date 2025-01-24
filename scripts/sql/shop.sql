@@ -258,7 +258,7 @@ CREATE TABLE `ttpos_buffet_order` (
     delete_time INT(11) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='自助餐订单表';
 
-DROP TABLE IF EXISTS `ttpos_sale_order_buffet_customer_type`;   
+DROP TABLE IF EXISTS `ttpos_sale_order_buffet_customer_type`;
 CREATE TABLE `ttpos_sale_order_buffet_customer_type` (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '销售订单顾客类型唯一标识符',
     sale_order_id INT NOT NULL COMMENT '销售订单ID',
@@ -329,7 +329,7 @@ CREATE TABLE `ttpos_material_unit` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='原料单位表';
 
 DROP TABLE IF EXISTS `ttpos_product_category`;
-CREATE TABLE `ttpos_product_category` ( 
+CREATE TABLE `ttpos_product_category` (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识符',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     multi_language_name_id INT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
@@ -873,7 +873,7 @@ CREATE TABLE `ttpos_company` (
     is_chain TINYINT(3) NOT NULL DEFAULT 1 COMMENT '是否连锁0否1是',
     expire_time INT NOT NULL DEFAULT 0 COMMENT '过期时间;not null',
     auth_day INT NOT NULL DEFAULT 0 COMMENT '授权时间(天) 0为永不过期',
-    `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态1=》启用0禁用;not null',
+    status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态1=》启用0禁用;not null',
     is_delete TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否删除',
     auth_start_time INT NOT NULL DEFAULT 0 COMMENT '授权开始时间（时间戳）',
     create_time INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -963,85 +963,6 @@ CREATE TABLE `ttpos_company_setting` (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团设置表';
 
-DROP TABLE IF EXISTS `ttpos_staff`;
-CREATE TABLE `ttpos_staff` (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '员工唯一标识符',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '员工姓名',
-    email VARCHAR(255) NOT NULL DEFAULT '' COMMENT '电子邮件地址',
-    phone VARCHAR(20) NOT NULL DEFAULT '' COMMENT '电话号码',
-    `password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '密码',
-    password_change INT(11) DEFAULT 0 COMMENT '修改密码次数',
-    real_name VARCHAR(255) NOT NULL COMMENT '姓名',
-    is_super TINYINT(3) DEFAULT 0 NOT NULL COMMENT '是否为超级管理员0不是,1是',
-    company_id INT(11) DEFAULT 0 NOT NULL COMMENT '集团id',
-    is_delete TINYINT(3) DEFAULT 0 NOT NULL COMMENT '0=显示1=伪删除',
-    user_type TINYINT(1) DEFAULT 0 NOT NULL COMMENT '账号类型0总台1门店',
-    is_disable TINYINT(3) DEFAULT 0 NOT NULL COMMENT '是否禁用1禁用，0未禁用',
-    device_key VARCHAR(255) COMMENT '绑定的设备key',
-    cashier_online TINYINT(4) DEFAULT 0 NOT NULL COMMENT '收银员当班 0-不在线 1-在线',
-    cashier_login_time INT(11) DEFAULT 0 NOT NULL COMMENT '收银员当班登录时间',
-    duty_no VARCHAR(64) COMMENT '当班编号',
-    `status` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '状态,active激活、inactive禁用',
-    create_time INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT(11) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表';
-
-DROP TABLE IF EXISTS `ttpos_staff_role`;
-CREATE TABLE `ttpos_staff_role` (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '员工角色唯一标识符',
-    role_id INT NOT NULL DEFAULT 0 COMMENT '角色ID',
-    staff_id INT NOT NULL DEFAULT 0 COMMENT '员工ID',
-    company_id INT(11) NOT NULL DEFAULT 0 COMMENT '集团id',
-    create_time INT NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工角色表';
-
-DROP TABLE IF EXISTS `ttpos_role`;
-CREATE TABLE `ttpos_role` (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '角色唯一标识符',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '角色名称',
-    order_by TINYINT NOT NULL DEFAULT 0 COMMENT '排序',
-    company_id INT(11)  NOT NULL DEFAULT 0 COMMENT '集团id',
-    create_time INT NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
-
-DROP TABLE IF EXISTS `ttpos_role_access`;
-CREATE TABLE `ttpos_role_access` (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '角色权限唯一标识符',
-    role_id INT NOT NULL DEFAULT 0 COMMENT '角色ID',
-    access_id INT NOT NULL DEFAULT 0 COMMENT '权限ID',
-    company_id INT(11) NOT NULL DEFAULT 0 COMMENT '集团id',
-    create_time INT NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限表';
-
-DROP TABLE IF EXISTS `ttpos_access`;
-CREATE TABLE `ttpos_access` (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '权限唯一标识符',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '权限名称',
-    path VARCHAR(255) NOT NULL DEFAULT '' COMMENT '路径',
-    api_path VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'API路径',
-    parent_id INT NOT NULL DEFAULT 0 COMMENT '父权限ID',
-    order_by INT NOT NULL DEFAULT 0 COMMENT '排序', 
-    icon VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图标',
-    redirect_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '重定向名称',
-    is_route BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否是路由',
-    is_menu BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否是菜单',
-    alias VARCHAR(255) NOT NULL DEFAULT '' COMMENT '别名',
-    is_show BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否显示',
-    plus_category_id INT NOT NULL DEFAULT 0 COMMENT '插件分类ID',
-    remark VARCHAR(255) NOT NULL DEFAULT '' COMMENT '描述',
-    company_id INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
-    create_time INT NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
-
 DROP TABLE IF EXISTS `ttpos_customer_call_log`;
 CREATE TABLE `ttpos_customer_call_log` (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '客户呼叫记录唯一标识符',
@@ -1051,3 +972,136 @@ CREATE TABLE `ttpos_customer_call_log` (
     update_time INT NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='客户呼叫记录表';
+
+DROP TABLE IF EXISTS `ttpos_access`;
+CREATE TABLE `ttpos_access` (
+    `id` int(11) unsigned NOT NULL COMMENT '主键id',
+    `name` varchar(255) NOT NULL DEFAULT '' COMMENT '权限名称',
+    `path` varchar(255) DEFAULT '' COMMENT '路由地址',
+    `api_path` varchar(255) DEFAULT '' COMMENT '后端路由地址',
+    `parent_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '父级id',
+    `sort` tinyint(3) unsigned NOT NULL DEFAULT 100 COMMENT '排序(数字越小越靠前)',
+    `icon` varchar(128) DEFAULT '' COMMENT '菜单图标',
+    `redirect_name` varchar(128) DEFAULT '' COMMENT '重定向名称',
+    `is_route` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否是路由 0=不是1=是',
+    `is_menu` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '是否是菜单 0不是 1是',
+    `is_show` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '是否显示1=显示0=不显示',
+    `plus_category_id` int(11) DEFAULT 0 COMMENT '插件分类id',
+    `remark` varchar(255) DEFAULT '' COMMENT '描述',
+    `is_supplier` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否门店菜单0否1是',
+    `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE KEY `idx_path` (`path`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
+
+DROP TABLE IF EXISTS `ttpos_role`;
+CREATE TABLE `ttpos_role` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '角色id',
+    `name` varchar(2000) NOT NULL DEFAULT '' COMMENT '角色名称',
+    `sort` int(10) unsigned NOT NULL DEFAULT 100 COMMENT '排序(数字越小越靠前)',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
+
+DROP TABLE IF EXISTS `ttpos_role_access`;
+CREATE TABLE `ttpos_role_access` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
+    `role_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '角色id',
+    `access_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '权限id',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_role_id` (`role_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关系表';
+
+DROP TABLE IF EXISTS `ttpos_staff`;
+CREATE TABLE `ttpos_staff` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
+    `company_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '集团ID',
+    `username` varchar(255) NOT NULL DEFAULT '' COMMENT '用户名',
+    `password` varchar(255) NOT NULL DEFAULT '' COMMENT '登录密码',
+    `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+    `password_change` int(11) DEFAULT 0 COMMENT '修改密码次数',
+    `real_name` varchar(255) NOT NULL DEFAULT '' COMMENT '姓名',
+    `is_super` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '是否为超级管理员0不是,1是',
+    `user_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '账号类型0总台1门店',
+    `is_disable` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '是否禁用1禁用，0未禁用',
+    `bind_key` varchar(255) DEFAULT '' COMMENT '绑定的设备key',
+    `cashier_online` tinyint(4) NOT NULL DEFAULT 0 COMMENT '收银员当班 0-不在线 1-在线',
+    `cashier_login_time` int(11) NOT NULL DEFAULT 0 COMMENT '收银员当班登录时间',
+    `duty_no` varchar(64) DEFAULT '' COMMENT '当班编号',
+    `is_delete` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '0=显示1=伪删除',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_username` (`username`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表';
+
+DROP TABLE IF EXISTS `ttpos_staff_role`;
+CREATE TABLE `ttpos_staff_role` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
+    `staff_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '超管用户id',
+    `role_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '角色id',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_staff_id` (`staff_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工角色关系表';
+
+DROP TABLE IF EXISTS `ttpos_bind_record`;
+CREATE TABLE `ttpos_bind_record` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `finally_login_id` int(11) DEFAULT 0 COMMENT '最后一个登录id, 退出会清为0',
+    `finally_login_time` int(11) DEFAULT 0 COMMENT '最后登录时间',
+    `source` varchar(255) DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
+    `key` varchar(255) DEFAULT '' COMMENT '唯一设备标识key',
+    `is_main` int(11) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
+    `print_port_id` int(11) DEFAULT 0 COMMENT '打印档口ID',
+    `address` varchar(255) DEFAULT '' COMMENT '绑定地址',
+    `port` int(11) DEFAULT 0 COMMENT '绑定端口',
+    `device_ip` varchar(50) DEFAULT '' COMMENT '设备ip',
+    `remark` varchar(255) DEFAULT '' COMMENT '备注',
+    `brand` varchar(255) DEFAULT '' COMMENT '品牌名称',
+    `platform` varchar(50) DEFAULT '' COMMENT '平台（Web Android iPhone Mobile）',
+    `user_agent` longtext DEFAULT '' COMMENT '请求头信息',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备绑定记录表';
+
+DROP TABLE IF EXISTS `ttpos_staff_shift_log`;
+CREATE TABLE `ttpos_staff_shift_log` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `shift_user_id` int(11) DEFAULT NULL COMMENT '收银员id',
+    `shift_no` varchar(64) NOT NULL DEFAULT '' COMMENT '交班编号',
+    `status` int(11) DEFAULT 1 COMMENT '状态： 0未交班，1已交班',
+    `previous_shift_cash` decimal(12,2) DEFAULT 0.00 COMMENT '上一班遗留备用金',
+    `current_cash_total` decimal(12,2) DEFAULT 0.00 COMMENT '当前钱箱现金总计',
+    `incomes` text DEFAULT NULL COMMENT '收入详情',
+    `total_income` decimal(12,2) DEFAULT 0.00 COMMENT '总收入',
+    `cash_taken_out` decimal(12,2) DEFAULT 0.00 COMMENT '本班取出现金',
+    `cash_left` decimal(12,2) DEFAULT 0.00 COMMENT '本班遗留备用金',
+    `cash_income` decimal(12,2) DEFAULT 0.00 COMMENT '本班收入现金',
+    `total_business` decimal(12,2) DEFAULT 0.00 COMMENT '本班营业总额（不包含退款）',
+    `is_printed` tinyint(1) DEFAULT 0 COMMENT '是否打印 0-未打印 1-已打印',
+    `remark` text DEFAULT NULL COMMENT '备注',
+    `withdraw_cash` decimal(12,2) DEFAULT 0.00 COMMENT '中途取出现金',
+    `deposit_cash` decimal(12,2) DEFAULT 0.00 COMMENT '中途存入现金',
+    `exception_remark` varchar(500) DEFAULT '' COMMENT '异常报备',
+    `abnormal` text DEFAULT '' COMMENT '异常信息-json字符串',
+    `shift_start_time` int(11) NOT NULL DEFAULT 0 COMMENT '当班开始时间',
+    `shift_end_time` int(11) NOT NULL DEFAULT 0 COMMENT '当班结束时间',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_shift_user_id` (`shift_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='员工交班记录表';

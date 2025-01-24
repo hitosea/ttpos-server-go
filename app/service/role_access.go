@@ -16,12 +16,12 @@ import (
 )
 
 type RoleAccessService struct {
-	shopUserRoleRepo *repository.UserRoleRepository
+	shopUserRoleRepo *repository.StaffRoleRepository
 	shopAccessRepo   *repository.AccessRepository
 	staffRepo        *repository.StaffRepository
 }
 
-func NewRoleAccessService(userRoleRepo *repository.UserRoleRepository, shopAccessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
+func NewRoleAccessService(userRoleRepo *repository.StaffRoleRepository, shopAccessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
 	return &RoleAccessService{
 		shopUserRoleRepo: userRoleRepo,
 		shopAccessRepo:   shopAccessRepo,
@@ -32,7 +32,7 @@ func NewRoleAccessService(userRoleRepo *repository.UserRoleRepository, shopAcces
 // GetPermission 获取权限
 func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
 
-	staff := s.staffRepo.GetById(staffId, companyId)
+	staff := s.staffRepo.GetById(staffId, companyId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
 
 	var permissions []resp.Permission
 	var where []repository.Where
@@ -45,18 +45,18 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 			where = append(where, s.shopAccessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := s.shopUserRoleRepo.GetRoleIds(staff.ID, staff.CompanyID)
+		roleIds, err := s.shopUserRoleRepo.GetRoleIds(staff.ID, staff.CompanyId)
 		if err != nil {
 			return nil, errors.New("获取用户角色失败")
 		}
-		accessIds, err := s.shopAccessRepo.GetAccessIds(roleIds, staff.CompanyID)
+		accessIds, err := s.shopAccessRepo.GetAccessIds(roleIds, staff.CompanyId)
 		if err != nil {
 			return nil, errors.New("获取角色权限失败")
 		}
 		where = append(where, s.shopAccessRepo.WhereIds(accessIds))
 	}
 
-	dbPermissions, err := s.shopAccessRepo.GetPermissions(staff.CompanyID, where...)
+	dbPermissions, err := s.shopAccessRepo.GetPermissions(staff.CompanyId, where...)
 	if err != nil {
 		return nil, errors.New("获取权限失败")
 	}
@@ -80,39 +80,39 @@ func (s *RoleAccessService) filterPermission(permissions []resp.Permission, comp
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
-		if permission.AccessId == 1626688443 {
+		if permission.ID == 1626688443 {
 			continue
 		}
 		// 授权无进销存权限
-		if companySetting.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.AccessId) {
+		if companySetting.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.ID) {
 			continue
 		}
 		// 授权无会员权限
-		if companySetting.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.AccessId) {
+		if companySetting.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.ID) {
 			continue
 		}
 		// 授权无平板点餐权限
-		if companySetting.IsOpenTablet == 0 && permission.AccessId == 87 {
+		if companySetting.IsOpenTablet == 0 && permission.ID == 87 {
 			continue
 		}
 		// 授权无H5点餐权限
-		if companySetting.IsOpenScan == 0 && permission.AccessId == 1724220505 {
+		if companySetting.IsOpenScan == 0 && permission.ID == 1724220505 {
 			continue
 		}
 		// 授权无点餐助手权限
-		if companySetting.IsOpenAssistant == 0 && permission.AccessId == 1720753338 {
+		if companySetting.IsOpenAssistant == 0 && permission.ID == 1720753338 {
 			continue
 		}
 		// 授权无后厨权限
-		if companySetting.IsOpenKitchenKds == 0 && permission.AccessId == 88 {
+		if companySetting.IsOpenKitchenKds == 0 && permission.ID == 88 {
 			continue
 		}
 		// 授权无自助餐权限
-		if companySetting.IsOpenBuffet == 0 && permission.AccessId == 1708671616 {
+		if companySetting.IsOpenBuffet == 0 && permission.ID == 1708671616 {
 			continue
 		}
 		// 授权无扫码点餐接单权限
-		if companySetting.IsAcceptScanOrder == 0 && permission.AccessId == 1724320522 {
+		if companySetting.IsAcceptScanOrder == 0 && permission.ID == 1724320522 {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)
@@ -130,10 +130,10 @@ func (s *RoleAccessService) buildPermissionTree(permissions []resp.Permission, r
 	// 第一步：建立ID到节点的映射
 	for i := range permissions {
 		permission := &permissions[i]
-		permissionMap[permission.AccessId] = permission
+		permissionMap[permission.ID] = permission
 
 		// fmt.Printf("%03d%010d\n", 99, 10)
-		accessIds = append(accessIds, fmt.Sprintf("%03d%010d\n", permission.Sort, permission.AccessId))
+		accessIds = append(accessIds, fmt.Sprintf("%03d%010d\n", permission.Sort, permission.ID))
 
 	}
 
@@ -142,7 +142,7 @@ func (s *RoleAccessService) buildPermissionTree(permissions []resp.Permission, r
 
 	for _, accessId := range accessIds {
 		for _, permission := range permissionMap {
-			if fmt.Sprintf("%03d%010d\n", permission.Sort, permission.AccessId) != accessId {
+			if fmt.Sprintf("%03d%010d\n", permission.Sort, permission.ID) != accessId {
 				continue
 			}
 			if parent, exists := permissionMap[permission.ParentId]; exists {
