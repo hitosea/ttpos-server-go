@@ -1,8 +1,9 @@
 package cashier
 
 import (
-	"github.com/gin-gonic/gin"
 	"ttpos-server-go/app/constant"
+
+	"github.com/gin-gonic/gin"
 
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
@@ -58,4 +59,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	h.cashierAuthService.Logout(c.Copy())
 	helper.Success(c, gin.H{})
+}
+
+// Unlock 解锁
+// @Summary 解锁
+// @Tags 收银端
+// @Security JwtToken
+// @Access json
+// @Produce json
+// @Param data body req.ReqCashierUnlock true "解锁参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/passport/unlock [post]
+func (h *AuthHandler) Unlock(c *gin.Context) {
+	//
 }
