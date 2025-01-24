@@ -451,23 +451,15 @@ definitions:
         type: string
       api_path:
         type: string
-      app_id:
-        type: integer
       children:
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
-      create_time:
-        type: string
-      icon:
-        type: string
       is_menu:
         type: integer
       is_route:
         type: integer
       is_show:
-        type: integer
-      is_supplier:
         type: integer
       name:
         type: string
@@ -475,16 +467,21 @@ definitions:
         type: integer
       path:
         type: string
-      plus_category_id:
-        type: integer
       redirect_name:
         type: string
-      remark:
-        type: string
-      sort:
-        type: integer
-      update_time:
-        type: string
+    type: object
+  resp.ProductCategory:
+    properties:
+      categoryList:
+        description: 分类列表
+        items:
+          $ref: '#/definitions/resp.Category'
+        type: array
+      specialCategoryList:
+        description: 特殊分类列表
+        items:
+          $ref: '#/definitions/resp.SpecialCategory'
+        type: array
     type: object
   resp.ProductCategory:
     properties:

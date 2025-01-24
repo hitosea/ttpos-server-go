@@ -3036,20 +3036,11 @@ const docTemplate = `{
                 "api_path": {
                     "type": "string"
                 },
-                "app_id": {
-                    "type": "integer"
-                },
                 "children": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.Permission"
                     }
-                },
-                "create_time": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string"
                 },
                 "is_menu": {
                     "type": "integer"
@@ -3058,9 +3049,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "is_show": {
-                    "type": "integer"
-                },
-                "is_supplier": {
                     "type": "integer"
                 },
                 "name": {
@@ -3072,20 +3060,27 @@ const docTemplate = `{
                 "path": {
                     "type": "string"
                 },
-                "plus_category_id": {
-                    "type": "integer"
-                },
                 "redirect_name": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.ProductCategory": {
+            "type": "object",
+            "properties": {
+                "categoryList": {
+                    "description": "分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Category"
+                    }
                 },
-                "remark": {
-                    "type": "string"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "update_time": {
-                    "type": "string"
+                "specialCategoryList": {
+                    "description": "特殊分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SpecialCategory"
+                    }
                 }
             }
         },

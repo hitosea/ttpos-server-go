@@ -7,11 +7,10 @@ import (
 )
 
 func TestCache(t *testing.T) {
-
 	// 创建Redis缓存
 	redisCache := NewCache(Redis, Config{
 		Host:     "192.168.100.117",
-		Port:     "36379",
+		Port:     36379,
 		Password: "123123",
 		DB:       1,
 	})

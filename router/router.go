@@ -2,16 +2,16 @@ package router
 
 import (
 	"net/http"
-	"ttpos-server-go/app/api/v1/admin"
-	"ttpos-server-go/app/api/v1/cashier/bill"
-	cashierOrder "ttpos-server-go/app/api/v1/cashier/order"
-	"ttpos-server-go/app/api/v1/cashier/other"
-	"ttpos-server-go/app/api/v1/kitchen"
 
 	"github.com/gin-gonic/gin"
 
 	v1 "ttpos-server-go/app/api/v1"
+	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/api/v1/cashier/bill"
+	cashierOrder "ttpos-server-go/app/api/v1/cashier/order"
+	"ttpos-server-go/app/api/v1/cashier/other"
+	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/middleware"
