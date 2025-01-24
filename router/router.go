@@ -54,9 +54,6 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		cashierGroup := publicApiV1.Group("/cashier")
 		{
 			cashierGroup.POST("/passport/login", middleware.Encrypt(cache), cashierAuthHandler.Login) // 登录
-			other.RegisterHandlers(cashierGroup, dbm)
-			bill.RegisterHandlers(cashierGroup)
-			cashierOrder.RegisterHandlers(cashierGroup)
 		}
 		// 点餐助手
 		assistantGroup := publicApiV1.Group("/assistant")
@@ -67,13 +64,16 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 
 	// 需要认证的路由
 	privateApiV1 := r.Group("api/v1")
-	privateApiV1.Use(middleware.Auth())
+	//privateApiV1.Use(middleware.Auth())
 	{
 		// 收银端
 		cashierGroup := privateApiV1.Group("/cashier")
 		{
 			cashierGroup.POST("/passport/logout", cashierAuthHandler.Logout) // 收银端退出登录
 			//cashierGroup.GET("/info", nil)                                   // 获取登录信息
+			other.RegisterHandlers(cashierGroup, dbm)
+			bill.RegisterHandlers(cashierGroup)
+			cashierOrder.RegisterHandlers(cashierGroup)
 		}
 		// 厨房端
 		kitchenGroup := privateApiV1.Group("/kitchen")

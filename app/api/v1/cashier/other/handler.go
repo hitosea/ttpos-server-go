@@ -6,8 +6,10 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/service/cashier"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // Handler 结构体
@@ -258,14 +260,16 @@ func (siw *Handler) GetCashierPaymentTypeList(c *gin.Context) {
 // @Param token header string true "认证令牌"
 // @Param language header string true "语言"
 // @Success 200 {object} dto.Response{data=resp.ProductCategory} "产品类别列表"
-// @Router /product/category [get]
+// @Router /cashier/product/category [get]
 func (siw *Handler) GetCashierProductCategory(c *gin.Context) {
 	companyId := helper.GetCompanyId(c)
 	if companyId == 0 {
 		helper.Fail(c, constant.CodeBadRequest, "参数错误")
+		logger.Logger.Info("从token中获取公司ID失败")
 		return
 	}
 	language := helper.GetLanguage(c)
+	logger.Logger.Info("从token中获取公司ID成功", zap.Any("companyId", companyId), zap.String("从header中获取语言", language))
 	// 处理获取收银产品类别的逻辑
 	productCategory, err := siw.cashierService.GetProductCategory(companyId, language)
 	if err != nil {
