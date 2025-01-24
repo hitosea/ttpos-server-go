@@ -6,7 +6,7 @@ type CashierLoginResponse struct {
 }
 
 type Permission struct {
-	AccessId       int           `json:"access_id"`
+	ID             int           `json:"id"`
 	Name           string        `json:"name"`
 	Path           string        `json:"path"`
 	APIPath        string        `json:"api_path"`

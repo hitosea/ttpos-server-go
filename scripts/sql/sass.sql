@@ -108,9 +108,8 @@ DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
   `staff_id` int(11) NOT NULL DEFAULT 0 COMMENT '员工id',
   `company_id` int(11) NOT NULL DEFAULT 0 COMMENT '集团id',
-  `name` varchar(255)  NOT NULL DEFAULT '' COMMENT '员工名称',
+  `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
-  `email` varchar(255) NOT NULL DEFAULT '' COMMENT '员工邮箱',
   `is_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除0否1是',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',

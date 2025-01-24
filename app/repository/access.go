@@ -33,7 +33,7 @@ func (r *AccessRepository) GetAccessIds(roleIds []int, appId uint) ([]int, error
 
 func (r *AccessRepository) WhereIds(accessIds []int) Where {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("access_id in (?)", accessIds)
+		return db.Where("id in (?)", accessIds)
 	}
 }
 

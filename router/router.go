@@ -1,9 +1,8 @@
 package router
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
 
 	v1 "ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/admin"
@@ -25,7 +24,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	staffRepo := repository.NewStaffRepository(dbm)
 	companyRepo := repository.NewCompanyRepository(dbm)
 	bindRecordRepo := repository.NewBindRecordRepository(dbm)
-	userRoleRepo := repository.NewUserRoleRepository(dbm)
+	userRoleRepo := repository.NewStaffRoleRepository(dbm)
 	accessRepo := repository.NewAccessRepository(dbm)
 	supplierRepo := repository.NewCompanySettingRepository(dbm)
 

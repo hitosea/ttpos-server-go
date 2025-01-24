@@ -48,7 +48,7 @@ func (r *CompanyRepositoryImpl) CreateCompanyInRepo(param req.ParamCreateCompany
 
 	// 2. 创建公司设置
 	companySetting := model.CompanySetting{
-		CompanyID: company.ID,
+		CompanyId: company.ID,
 		// 其他设置
 	}
 	if err := tx.Create(&companySetting).Error; err != nil {
@@ -75,7 +75,7 @@ func (r *CompanyRepositoryImpl) UpdateCompanyInRepo(param req.ParamUpdateCompany
 
 	// 2. 直接更新公司设置
 	if err := r.companySettingRepo.Update(model.CompanySetting{
-		CompanyID:      uint(param.ID),
+		CompanyId:      uint(param.ID),
 		Address:        param.Address,
 		LinkPhone:      param.LinkPhone,
 		CashLimit:      param.CashLimit,

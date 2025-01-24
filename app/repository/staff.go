@@ -15,36 +15,36 @@ type StaffRepository struct {
 func NewStaffRepository(dbm *database.DBManager) *StaffRepository {
 	return &StaffRepository{dbm: dbm}
 }
-func (r *StaffRepository) GetByIdAndCompanyId(Id, companyId uint, withs ...Where) model.Staff {
+func (r *StaffRepository) GetByIdAndCompanyId(Id, companyId uint, withs ...With) model.Staff {
 	var user model.Staff
 	db := r.dbm.GetDB(companyId)
 	r.handleWiths(db, withs).First(&user, Id)
 	return user
 }
 
-func (r *StaffRepository) GetById(Id, companyId uint, withs ...Where) model.Staff {
+func (r *StaffRepository) GetById(Id, companyId uint, withs ...With) model.Staff {
 	var user model.Staff
 	db := r.dbm.GetDB(companyId)
-	r.handleWiths(db, withs).First(&user, Id)
+	r.handleWiths(db, withs).Debug().First(&user, Id)
 	return user
 }
 
-func (r *StaffRepository) WithCompanySetting() Where {
+func (r *StaffRepository) WithCompanySetting() With {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("CompanySetting")
+		return db.Preload("Company.CompanySetting")
 	}
 }
 
-func (r *StaffRepository) WithCompany() Where {
+func (r *StaffRepository) WithCompany() With {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Company")
 	}
 }
 
-func (r *StaffRepository) GetByUsername(username string, withs ...Where) model.Staff {
+func (r *StaffRepository) GetByUsername(username string, withs ...With) model.Staff {
 	var user model.Staff
 	db := r.dbm.GetDB(constant.DefaultDB)
-	r.handleWiths(db, withs).Where("user_name = ?", username).Debug().First(&user)
+	r.handleWiths(db, withs).Where("username = ?", username).Debug().First(&user)
 	return user
 }
 
@@ -54,7 +54,7 @@ func (r *StaffRepository) GetCurrentCashier(bindKey string) model.Staff {
 	return user
 }
 
-func (r *StaffRepository) handleWiths(db *gorm.DB, withs []Where) *gorm.DB {
+func (r *StaffRepository) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
 	if len(withs) == 0 {
 		return db
 	}

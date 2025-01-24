@@ -1,8 +1,9 @@
 package config
 
 type ServerConf struct {
-	Port string // 端口
-	Mode string // 模式：debug/release/test
+	Port       string // 端口
+	Mode       string // 模式：debug/release/test
+	DeployMode string // 部署模式：cloud云上，offline离线
 }
 
 type DatabaseConf struct {

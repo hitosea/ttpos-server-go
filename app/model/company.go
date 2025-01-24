@@ -16,5 +16,5 @@ type Company struct {
 	UpdateTime    uint   `gorm:"column:update_time;type:int(11);default:0;comment:更新时间;NOT NULL" json:"update_time"`
 	DeleteTime    uint   `gorm:"column:delete_time;type:int(11);default:0;comment:删除时间;NOT NULL" json:"delete_time"`
 
-	CompanySetting *CompanySetting `gorm:"foreignKey:company_id;references:id"`
+	CompanySetting *CompanySetting
 }
