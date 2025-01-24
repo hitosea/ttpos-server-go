@@ -6,7 +6,7 @@ type BindRecord struct {
 	FinallyLoginId   int    `gorm:"column:finally_login_id;type:int(11);default:0;comment:最后一个登录id, 退出会清为0" json:"finally_login_id"`
 	FinallyLoginTime int    `gorm:"column:finally_login_time;type:int(11);default:0;comment:最后登录时间" json:"finally_login_time"`
 	Source           string `gorm:"column:source;type:varchar(255);comment:来源 cashier-收银机 tablet-平板端 kitchen-厨显端" json:"source"`
-	Key              string `gorm:"column:key;type:varchar(255);comment:唯一设备标识key" json:"key"`
+	DeviceId         string `gorm:"column:key;type:varchar(255);comment:唯一设备标识key" json:"device_id"`
 	IsMain           int    `gorm:"column:is_main;type:int(11);default:0;comment:是否主设备 0-常规 1-主" json:"is_main"`
 	PrintPortId      int    `gorm:"column:print_port_id;type:int(11);default:0;comment:打印档口ID" json:"print_port_id"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:绑定地址" json:"address"`

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/database"
 )
@@ -14,9 +13,9 @@ func NewBindRecordRepository(dbm *database.DBManager) *BindRecordRepository {
 	return &BindRecordRepository{dbm: dbm}
 }
 
-func (r *BindRecordRepository) Unbind(appId uint, source string, key string, shopUserId uint) error {
-	return r.dbm.GetDB(appId).Model(&model.BindRecord{}).Select("finally_login_id").
-		Where("`source` = ? AND `key` = ? AND `finally_login_id` = ?", source, key, shopUserId).Debug().
+func (r *BindRecordRepository) Unbind(companyId uint, source string, key string, staffId uint) error {
+	return r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Select("finally_login_id").
+		Where("`source` = ? AND `key` = ? AND `finally_login_id` = ?", source, key, staffId).Debug().
 		Updates(map[string]interface{}{
 			"finally_login_id": 0,
 		}).Error
@@ -28,9 +27,9 @@ func (r *BindRecordRepository) GetBindCount(companyId uint, source string) uint 
 	return uint(c)
 }
 
-func (r *BindRecordRepository) GetRecordBySourceAndKey(source string, key string) model.BindRecord {
+func (r *BindRecordRepository) GetRecordBySourceAndDeviceId(companyId uint, source string, deviceId string) model.BindRecord {
 	var bindRecord model.BindRecord
-	r.dbm.GetDB(constant.DefaultDB).Model(&model.BindRecord{}).Where("source = ? AND key = ?", source, key).First(&bindRecord)
+	r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Where("source = ? AND device_id = ?", source, deviceId).First(&bindRecord)
 	return bindRecord
 }
 

@@ -144,6 +144,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 
 // Logout 退出登录
 func (s *CashierAuthService) Logout(cc *gin.Context) error {
-	staff := s.staffRepo.GetById(cc.GetUint("company_id"), cc.GetUint("staff_id"))
-	return s.bindRecordSrv.Unbind(cc.GetUint("appId"), constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
+	companyId := cc.GetUint("company_id")
+	staff := s.staffRepo.GetById(companyId, cc.GetUint("staff_id"))
+	return s.bindRecordSrv.Unbind(companyId, constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
 }

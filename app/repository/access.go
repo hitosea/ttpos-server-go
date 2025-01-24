@@ -15,9 +15,9 @@ func NewAccessRepository(dbm *database.DBManager) *AccessRepository {
 	return &AccessRepository{dbm: dbm}
 }
 
-func (r *AccessRepository) GetPermissions(appId uint, where ...Where) ([]model.Access, error) {
+func (r *AccessRepository) GetPermissions(companyId uint, where ...Where) ([]model.Access, error) {
 	var access []model.Access
-	db := r.dbm.GetDB(appId)
+	db := r.dbm.GetDB(companyId)
 	for _, w := range where {
 		db = w(db)
 	}

@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"slices"
-	
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
@@ -33,7 +33,7 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 	platform := utils.GetPlatform(addReq.UserAgent)
 
 	// 获取绑定
-	existsBindRecord := s.bindRecordRepo.GetRecordBySourceAndKey(addReq.Source, addReq.DeviceId)
+	existsBindRecord := s.bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.CompanyId, addReq.Source, addReq.DeviceId)
 	if existsBindRecord.ID != 0 {
 		printPortId := addReq.PrintPortId
 		remark := addReq.Remark
@@ -95,7 +95,7 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		FinallyLoginId:   int(addReq.FinallyLoginId),
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
-		Key:              addReq.DeviceId,
+		DeviceId:         addReq.DeviceId,
 		Address:          addReq.Address,
 		Port:             int(addReq.Port),
 		DeviceIp:         addReq.DeviceId,
@@ -106,6 +106,6 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 	})
 }
 
-func (s *BindRecordService) Unbind(appId uint, source string, key string, shopUserId uint) error {
-	return s.bindRecordRepo.Unbind(appId, source, key, shopUserId)
+func (s *BindRecordService) Unbind(companyId uint, source string, key string, staffId uint) error {
+	return s.bindRecordRepo.Unbind(companyId, source, key, staffId)
 }

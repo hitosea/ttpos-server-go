@@ -13,11 +13,11 @@ func NewLoginLogRepository(dbm *database.DBManager) *LoginLogRepository {
 	return &LoginLogRepository{dbm: dbm}
 }
 
-func (r *LoginLogRepository) Save(appId uint, username, ip, result string) error {
-	return r.dbm.GetDB(appId).Debug().Create(&model.LoginLog{
+func (r *LoginLogRepository) Save(companyId uint, username, ip, result string) error {
+	return r.dbm.GetDB(companyId).Debug().Create(&model.LoginLog{
 		Username: username,
 		Ip:       ip,
 		Result:   result,
-		AppId:    appId,
+		AppId:    companyId,
 	}).Error
 }

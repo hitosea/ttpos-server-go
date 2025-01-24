@@ -1061,7 +1061,7 @@ CREATE TABLE `ttpos_bind_record` (
     `finally_login_id` int(11) DEFAULT 0 COMMENT '最后一个登录id, 退出会清为0',
     `finally_login_time` int(11) DEFAULT 0 COMMENT '最后登录时间',
     `source` varchar(255) DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
-    `key` varchar(255) DEFAULT '' COMMENT '唯一设备标识key',
+    `device_id` varchar(255) DEFAULT '' COMMENT '唯一设备标识',
     `is_main` int(11) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
     `print_port_id` int(11) DEFAULT 0 COMMENT '打印档口ID',
     `address` varchar(255) DEFAULT '' COMMENT '绑定地址',

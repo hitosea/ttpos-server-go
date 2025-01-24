@@ -24,23 +24,22 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	staffRepo := repository.NewStaffRepository(dbm)
 	companyRepo := repository.NewCompanyRepository(dbm)
 	bindRecordRepo := repository.NewBindRecordRepository(dbm)
-	userRoleRepo := repository.NewStaffRoleRepository(dbm)
+	staffRoleRepo := repository.NewStaffRoleRepository(dbm)
 	accessRepo := repository.NewAccessRepository(dbm)
 	companySettingRepo := repository.NewCompanySettingRepository(dbm)
 	staffShiftLogRepo := repository.NewShiftLogRepository(dbm)
 
-	// 初始化验证码服务
+	// 初始化服务
 	captchaService := service.NewCaptchaService(cache)
-	roleAccessService := service.NewRoleAccessService(userRoleRepo, accessRepo, staffRepo)
+	roleAccessService := service.NewRoleAccessService(staffRoleRepo, accessRepo, staffRepo)
 	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo)
 	shiftService := service.NewShiftService(staffShiftLogRepo, cache)
-
 	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService, shiftService)
 	companyService := service.NewCompanyService(companyRepo)
-	pgpService := service.NewEncryptService(cache)
+	encryptService := service.NewEncryptService(cache)
 
 	// 初始化处理器
-	passportHandler := v1.NewPassportHandler(captchaService, pgpService)
+	passportHandler := v1.NewPassportHandler(captchaService, encryptService)
 	cashierAuthHandler := cashier.NewCashierAuthHandler(cashierAuthService)
 
 	r.GET("api/health", func(c *gin.Context) {
