@@ -63,3 +63,7 @@ func (r *StaffRepository) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
 	}
 	return db
 }
+
+func (r *StaffRepository) Update(companyId uint, id uint, vars map[string]any) error {
+	return r.dbm.GetDB(companyId).Model(&model.Staff{}).Where("id = ?", id).Updates(vars).Error
+}

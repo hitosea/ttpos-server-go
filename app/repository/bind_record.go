@@ -22,9 +22,9 @@ func (r *BindRecordRepository) Unbind(appId uint, source string, key string, sho
 		}).Error
 }
 
-func (r *BindRecordRepository) GetBindCount(source string) uint {
+func (r *BindRecordRepository) GetBindCount(companyId uint, source string) uint {
 	var c int64
-	r.dbm.GetDB(constant.DefaultDB).Model(&model.BindRecord{}).Where("source = ? AND finally_login_id > 0", source).Count(&c)
+	r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Where("source = ? AND finally_login_id > 0", source).Count(&c)
 	return uint(c)
 }
 
@@ -34,6 +34,6 @@ func (r *BindRecordRepository) GetRecordBySourceAndKey(source string, key string
 	return bindRecord
 }
 
-func (r *BindRecordRepository) Update(id uint, vars map[string]interface{}) error {
-	return r.dbm.GetDB(constant.DefaultDB).Model(&model.BindRecord{}).Where("id = ?", id).Updates(vars).Error
+func (r *BindRecordRepository) Update(companyId uint, id uint, vars map[string]interface{}) error {
+	return r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Where("id = ?", id).Updates(vars).Error
 }

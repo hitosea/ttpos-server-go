@@ -21,6 +21,7 @@ type CashierAuthService struct {
 	captchaSrv       *CaptchaService
 	roleAccessSrv    *RoleAccessService
 	bindRecordSrv    *BindRecordService
+	shiftSrv         *ShiftService
 }
 
 func NewCashierAuthService(
@@ -29,6 +30,7 @@ func NewCashierAuthService(
 	captchaSrv *CaptchaService,
 	roleAccessSrv *RoleAccessService,
 	bindRecordSrv *BindRecordService,
+	staffShiftSrv *ShiftService,
 ) *CashierAuthService {
 	return &CashierAuthService{
 		companyStaffRepo: companyStaffRepo,
@@ -36,6 +38,7 @@ func NewCashierAuthService(
 		captchaSrv:       captchaSrv,
 		roleAccessSrv:    roleAccessSrv,
 		bindRecordSrv:    bindRecordSrv,
+		shiftSrv:         staffShiftSrv,
 	}
 }
 
@@ -49,7 +52,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 
 	var staff model.Staff
 	if config.Server.DeployMode == "cloud" { // 云上版本
-		companyStaff := s.companyStaffRepo.GetByUsername(loginReq.UserName, s.companyStaffRepo.WithCompany())
+		companyStaff := s.companyStaffRepo.GetByUsername(loginReq.Username, s.companyStaffRepo.WithCompany())
 		if companyStaff.StaffId == 0 {
 			return token, errors.New("账号不存在")
 		}
@@ -58,7 +61,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 		}
 		staff = s.staffRepo.GetById(companyStaff.StaffId, companyStaff.CompanyId, s.staffRepo.WithCompany())
 	} else { // 离线版本
-		staff = s.staffRepo.GetByUsername(loginReq.UserName, s.staffRepo.WithCompany())
+		staff = s.staffRepo.GetByUsername(loginReq.Username, s.staffRepo.WithCompany())
 	}
 
 	if staff.ID == 0 {
@@ -117,6 +120,38 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 	//            $this->error = $model->getError() ?: __('绑定失败');
 	//            return false;
 	//        }
+
+	// todo 添加绑定记录
+	s.bindRecordSrv.Add(req.AddBindRecordReq{
+		Key:              loginReq.DeviceId,
+		Brand:            "",
+		Source:           "",
+		FinallyLoginId:   0,
+		FinallyLoginTime: 0,
+		CompanyId:        0,
+		PrintPortId:      0,
+		UserAgent:        "",
+		Remark:           "",
+		Address:          "",
+		Port:             0,
+		DeviceIP:         "",
+	})
+
+	// 更新员工信息
+	updates := map[string]any{
+		"cashier_online": 1,
+		"bind_key":       loginReq.DeviceId,
+	}
+	// 创建当班日志
+	if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
+		shiftLog := s.shiftSrv.CreateWorkingLog(staff)
+		updates["cashier_login_time"] = shiftLog.ShiftStartTime
+		updates["duty_no"] = shiftLog.ShiftNo
+	}
+	err = s.staffRepo.Update(staff.CompanyId, staff.ID, updates)
+	if err != nil {
+		return token, errors.New("更新信息失败")
+	}
 
 	// 生成 JWT token
 	token, err = auth.GenerateToken(constant.SOURCE_CASHIER, staff.ID, staff.CompanyId, config.JWT.Secret, config.JWT.Expire)

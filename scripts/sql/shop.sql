@@ -1054,3 +1054,54 @@ CREATE TABLE `ttpos_staff_role` (
     PRIMARY KEY (`id`) USING BTREE,
     KEY `idx_staff_id` (`staff_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工角色关系表';
+
+DROP TABLE IF EXISTS `ttpos_bind_record`;
+CREATE TABLE `ttpos_bind_record` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `finally_login_id` int(11) DEFAULT 0 COMMENT '最后一个登录id, 退出会清为0',
+    `finally_login_time` int(11) DEFAULT 0 COMMENT '最后登录时间',
+    `source` varchar(255) DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
+    `key` varchar(255) DEFAULT '' COMMENT '唯一设备标识key',
+    `is_main` int(11) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
+    `print_port_id` int(11) DEFAULT 0 COMMENT '打印档口ID',
+    `address` varchar(255) DEFAULT '' COMMENT '绑定地址',
+    `port` int(11) DEFAULT 0 COMMENT '绑定端口',
+    `device_ip` varchar(50) DEFAULT '' COMMENT '设备ip',
+    `remark` varchar(255) DEFAULT '' COMMENT '备注',
+    `brand` varchar(255) DEFAULT '' COMMENT '品牌名称',
+    `platform` varchar(50) DEFAULT '' COMMENT '平台（Web Android iPhone Mobile）',
+    `user_agent` longtext DEFAULT '' COMMENT '请求头信息',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备绑定记录表';
+
+DROP TABLE IF EXISTS `ttpos_staff_shift_log`;
+CREATE TABLE `ttpos_staff_shift_log` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `shift_user_id` int(11) DEFAULT NULL COMMENT '收银员id',
+    `shift_no` varchar(64) NOT NULL DEFAULT '' COMMENT '交班编号',
+    `status` int(11) DEFAULT 1 COMMENT '状态： 0未交班，1已交班',
+    `previous_shift_cash` decimal(12,2) DEFAULT 0.00 COMMENT '上一班遗留备用金',
+    `current_cash_total` decimal(12,2) DEFAULT 0.00 COMMENT '当前钱箱现金总计',
+    `incomes` text DEFAULT NULL COMMENT '收入详情',
+    `total_income` decimal(12,2) DEFAULT 0.00 COMMENT '总收入',
+    `cash_taken_out` decimal(12,2) DEFAULT 0.00 COMMENT '本班取出现金',
+    `cash_left` decimal(12,2) DEFAULT 0.00 COMMENT '本班遗留备用金',
+    `cash_income` decimal(12,2) DEFAULT 0.00 COMMENT '本班收入现金',
+    `total_business` decimal(12,2) DEFAULT 0.00 COMMENT '本班营业总额（不包含退款）',
+    `is_printed` tinyint(1) DEFAULT 0 COMMENT '是否打印 0-未打印 1-已打印',
+    `remark` text DEFAULT NULL COMMENT '备注',
+    `withdraw_cash` decimal(12,2) DEFAULT 0.00 COMMENT '中途取出现金',
+    `deposit_cash` decimal(12,2) DEFAULT 0.00 COMMENT '中途存入现金',
+    `exception_remark` varchar(500) DEFAULT '' COMMENT '异常报备',
+    `abnormal` text DEFAULT '' COMMENT '异常信息-json字符串',
+    `shift_start_time` int(11) NOT NULL DEFAULT 0 COMMENT '当班开始时间',
+    `shift_end_time` int(11) NOT NULL DEFAULT 0 COMMENT '当班结束时间',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_shift_user_id` (`shift_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='员工交班记录表';

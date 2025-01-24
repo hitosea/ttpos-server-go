@@ -1,7 +1,7 @@
 package req
 
 type CashierLoginRequest struct {
-	UserName string `json:"user_name" binding:"required"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password"  binding:"required"`
 	Code     string `json:"code"  binding:"required"`
 	DeviceId string `json:"device_id"  binding:"required"`

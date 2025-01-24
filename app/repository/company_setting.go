@@ -17,7 +17,7 @@ func NewCompanySettingRepository(dbm *database.DBManager) *CompanySettingReposit
 
 func (r *CompanySettingRepository) GetById(id uint) model.CompanySetting {
 	var companySetting model.CompanySetting
-	r.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).First(&companySetting, id)
+	r.dbm.GetDB(id).Model(&model.CompanySetting{}).First(&companySetting, id)
 	return companySetting
 }
 
