@@ -1297,16 +1297,3 @@ CREATE TABLE `cash_box_log` (
   delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='钱箱存取记录表';
-
-DROP TABLE IF EXISTS `ttpos_device`;
-CREATE TABLE `ttpos_device` (
-    id INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    device_id VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID',
-    sn VARCHAR(255) NOT NULL DEFAULT '' COMMENT '序列号',
-    type VARCHAR(50) NOT NULL DEFAULT '' COMMENT '设备类型,cashier收银机,kitchen厨显,tablet平板,assistant点餐助手',
-    staff_id INT(11) NOT NULL DEFAULT 0 COMMENT '员工ID,当前登录员工ID',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备表';
