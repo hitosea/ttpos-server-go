@@ -6,6 +6,7 @@ type CashierLoginRequest struct {
 	Code     string `json:"code"  binding:"required"`
 	DeviceId string `json:"device_id"  binding:"required"`
 	DeviceIP string `json:"device_ip"`
+	Brand    string `json:"brand"`
 }
 
 var CashierLoginRequestMessage = map[string]string{

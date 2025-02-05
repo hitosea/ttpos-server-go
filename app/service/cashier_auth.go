@@ -3,14 +3,17 @@ package service
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"ttpos-server-go/app/dto/req"
+	"go.uber.org/zap"
+	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -59,9 +62,9 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 		if companyStaff.CompanyId == 0 {
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
 		}
-		staff = s.staffRepo.GetById(companyStaff.StaffId, companyStaff.CompanyId, s.staffRepo.WithCompany())
+		staff = s.staffRepo.GetById(companyStaff.CompanyId, companyStaff.StaffId, s.staffRepo.WithCompany())
 	} else { // 离线版本
-		staff = s.staffRepo.GetByUsername(loginReq.Username, s.staffRepo.WithCompany())
+		staff = s.staffRepo.OfflineGetByUsername(loginReq.Username, s.staffRepo.WithCompany())
 	}
 
 	if staff.ID == 0 {
@@ -87,56 +90,34 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 		return token, errors.New("当前无权限，请联系管理员")
 	}
 
-	//// 检查是否有未交班的收银员
-	//currentStaff := s.staffRepo.GetCurrentCashier(staff.BindKey)
-	//if currentStaff.ID != 0 && currentStaff.ID != staff.ID {
-	//	return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
-	//}
-	//
-	//// 是否是首次接班
-	////isFirstLogin := companyStaff.CashierOnline == 0
-	//
-	//// 是否已在其他收银机登录
-	//if staff.CashierOnline == 1 && bindKey != staff.BindKey {
-	//	cashierName := staff.RealName
-	//	if cashierName == "" {
-	//		cashierName = staff.Username
-	//	}
-	//	return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
-	//}
+	// 检查是否有未交班的收银员
+	currentStaff := s.staffRepo.GetCurrentCashier(staff.CompanyId, loginReq.DeviceId)
+	if currentStaff.ID != 0 && currentStaff.ID != staff.ID {
+		return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+	}
 
-	// // 绑定设备 先检测是否能进行绑定，避免先更新用户表信息再弹出绑定错误
-	//        $data = [
-	//            'key' => $device_id,
-	//            'brand' => $brand,
-	//            'source' => BindRecordModel::SOURCE_CASHIER,
-	//            'finally_login_id' => $user['shop_user_id'],
-	//            'finally_login_time' => time(),
-	//            'app_id' => $user['app_id'],
-	//            'shop_supplier_id' => $user['shop_supplier_id'],
-	//        ];
-	//        $model = new BindRecordModel;
-	//        if (!$model->add($data, $user->license)) {
-	//            $this->error = $model->getError() ?: __('绑定失败');
-	//            return false;
-	//        }
+	// 是否已在其他收银机登录
+	if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
+		cashierName := staff.RealName
+		if cashierName == "" {
+			cashierName = staff.Username
+		}
+		return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+	}
 
-	// todo 添加绑定记录
-	s.bindRecordSrv.Add(req.AddBindRecordReq{
-		Key:              loginReq.DeviceId,
-		Brand:            "",
-		Source:           "",
-		FinallyLoginId:   0,
-		FinallyLoginTime: 0,
-		CompanyId:        0,
-		PrintPortId:      0,
-		UserAgent:        "",
-		Remark:           "",
-		Address:          "",
-		Port:             0,
-		DeviceIP:         "",
+	// 添加绑定记录
+	err = s.bindRecordSrv.Add(req.AddBindRecordReq{
+		DeviceId:         loginReq.DeviceId,
+		Brand:            loginReq.Brand,
+		Source:           constant.SOURCE_CASHIER,
+		FinallyLoginId:   staff.ID,
+		FinallyLoginTime: int(time.Now().Unix()),
+		CompanyId:        staff.CompanyId,
 	})
-
+	if err != nil {
+		logger.Logger.Error("绑定失败", zap.Error(err))
+		return token, errors.New("绑定失败")
+	}
 	// 更新员工信息
 	updates := map[string]any{
 		"cashier_online": 1,
@@ -163,6 +144,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 
 // Logout 退出登录
 func (s *CashierAuthService) Logout(cc *gin.Context) error {
-	staff := s.staffRepo.GetById(cc.GetUint("staff_id"), cc.GetUint("company_id"))
-	return s.bindRecordSrv.Unbind(cc.GetUint("appId"), constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
+	companyId := cc.GetUint("company_id")
+	staff := s.staffRepo.GetById(companyId, cc.GetUint("staff_id"))
+	return s.bindRecordSrv.Unbind(companyId, constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
 }

@@ -2,7 +2,7 @@ package model
 
 // StaffShiftLog 员工交班记录表
 type StaffShiftLog struct {
-	Id                uint    `gorm:"column:id;type:int(11) unsigned;primary_key;AUTO_INCREMENT" json:"id"`
+	ID                uint    `gorm:"column:id;type:int(11) unsigned;primary_key;AUTO_INCREMENT" json:"id"`
 	ShiftUserId       int     `gorm:"column:shift_user_id;type:int(11);comment:收银员id" json:"shift_user_id"`
 	ShiftNo           string  `gorm:"column:shift_no;type:varchar(64);comment:交班编号;NOT NULL" json:"shift_no"`
 	Status            int     `gorm:"column:status;type:int(11);default:1;comment:状态： 0未交班，1已交班" json:"status"`

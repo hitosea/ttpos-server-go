@@ -13,8 +13,8 @@ func NewStaffRoleRepository(dbm *database.DBManager) *StaffRoleRepository {
 	return &StaffRoleRepository{dbm: dbm}
 }
 
-func (r *StaffRoleRepository) GetRoleIds(shoUserId uint, appId uint) ([]int, error) {
+func (r *StaffRoleRepository) GetRoleIds(staffId uint, appId uint) ([]int, error) {
 	var roleIds []int
-	err := r.dbm.GetDB(appId).Model(&model.StaffRole{}).Where("staff_id = ?", shoUserId).Debug().Pluck("role_id", &roleIds).Error
+	err := r.dbm.GetDB(appId).Model(&model.StaffRole{}).Where("staff_id = ?", staffId).Debug().Pluck("role_id", &roleIds).Error
 	return roleIds, err
 }

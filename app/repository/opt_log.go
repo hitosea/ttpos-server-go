@@ -13,8 +13,8 @@ func NewShopOptLogRepository(dbm *database.DBManager) *ShopOptLogRepository {
 	return &ShopOptLogRepository{dbm: dbm}
 }
 
-func (r *ShopOptLogRepository) Save(appId uint, source string, key string, shopUserId uint) error {
-	return r.dbm.GetDB(appId).Debug().Create(&model.ShopOptLog{
+func (r *ShopOptLogRepository) Save(companyId uint, source string, key string, shopUserId uint) error {
+	return r.dbm.GetDB(companyId).Debug().Create(&model.ShopOptLog{
 		ShopUserId:  0,
 		Title:       "",
 		Url:         "",

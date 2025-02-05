@@ -16,23 +16,23 @@ import (
 )
 
 type RoleAccessService struct {
-	shopUserRoleRepo *repository.StaffRoleRepository
-	shopAccessRepo   *repository.AccessRepository
-	staffRepo        *repository.StaffRepository
+	staffRoleRepo *repository.StaffRoleRepository
+	accessRepo    *repository.AccessRepository
+	staffRepo     *repository.StaffRepository
 }
 
-func NewRoleAccessService(userRoleRepo *repository.StaffRoleRepository, shopAccessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
+func NewRoleAccessService(staffRoleRepo *repository.StaffRoleRepository, accessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
 	return &RoleAccessService{
-		shopUserRoleRepo: userRoleRepo,
-		shopAccessRepo:   shopAccessRepo,
-		staffRepo:        staffRepo,
+		staffRoleRepo: staffRoleRepo,
+		accessRepo:    accessRepo,
+		staffRepo:     staffRepo,
 	}
 }
 
 // GetPermission 获取权限
 func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
 
-	staff := s.staffRepo.GetById(staffId, companyId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
+	staff := s.staffRepo.GetById(companyId, staffId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
 
 	var permissions []resp.Permission
 	var where []repository.Where
@@ -40,23 +40,23 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 	if staff.IsSuper == 1 { // 超级管理员
 		if staff.UserType == 1 {
 			if staff.Company.CompanySetting.CategorySet == 10 {
-				where = append(where, s.shopAccessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
+				where = append(where, s.accessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
 			}
-			where = append(where, s.shopAccessRepo.WhereIsSupplier())
+			where = append(where, s.accessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := s.shopUserRoleRepo.GetRoleIds(staff.ID, staff.CompanyId)
+		roleIds, err := s.staffRoleRepo.GetRoleIds(staff.ID, staff.CompanyId)
 		if err != nil {
 			return nil, errors.New("获取用户角色失败")
 		}
-		accessIds, err := s.shopAccessRepo.GetAccessIds(roleIds, staff.CompanyId)
+		accessIds, err := s.accessRepo.GetAccessIds(roleIds, staff.CompanyId)
 		if err != nil {
 			return nil, errors.New("获取角色权限失败")
 		}
-		where = append(where, s.shopAccessRepo.WhereIds(accessIds))
+		where = append(where, s.accessRepo.WhereIds(accessIds))
 	}
 
-	dbPermissions, err := s.shopAccessRepo.GetPermissions(staff.CompanyId, where...)
+	dbPermissions, err := s.accessRepo.GetPermissions(staff.CompanyId, where...)
 	if err != nil {
 		return nil, errors.New("获取权限失败")
 	}

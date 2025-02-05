@@ -1,7 +1,7 @@
 package req
 
 type AddBindRecordReq struct {
-	Key              string `json:"key"`                // 设备标识
+	DeviceId         string `json:"device_id"`          // 设备标识
 	Brand            string `json:"brand"`              // 品牌
 	Source           string `json:"source"`             // 来源：cashier、tablet、kitchen、assistant
 	FinallyLoginId   uint   `json:"finally_login_id"`   // 最后登录的员工ID
