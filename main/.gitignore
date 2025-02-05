@@ -1,0 +1,6 @@
+.idea
+offline
+logs/*
+.env
+bin/*
+.txt

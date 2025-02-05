@@ -1,0 +1,329 @@
+<template>
+  <div class="unique-name-form" :style="{ width: props.width ?? '100%' }">
+    <el-form :model="form" ref="uniqueNameFormRef" label-position="top" label-width="240px" scroll-to-error @validate="handleValidate" v-bind="props.overridesElFormProps">
+      <template v-if="props.singleLanguage">
+        <el-form-item
+          :label="`${props.labelPrefix}`"
+          :error="formErrors.SINGLE"
+          :required="true"
+          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          prop="SINGLE"
+          :validate-status="formErrors.SINGLE ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
+          for="no_click"
+        >
+          <div class="unique-name-form-item-wrapper">
+            <el-input
+              class="unique-name-form-item-input"
+              v-model="form.SINGLE"
+              type="text"
+              :readonly="translateLoading || validateLoading"
+              :maxlength="props.maxlength ?? 255"
+              :placeholder="props.placeholder ?? $t('请输入名称')"
+            >
+            </el-input>
+          </div>
+        </el-form-item>
+      </template>
+      <template v-else>
+        <el-form-item
+          v-for="languageKey in languageKeys"
+          :key="languageKey"
+          :label="`${props.labelPrefix}(${getLanguageValueByKey(languageKey)})`"
+          :error="formErrors[languageKey]"
+          :required="true"
+          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          :prop="languageKey"
+          :validate-status="formErrors[languageKey] ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
+          for="no_click"
+        >
+          <div class="unique-name-form-item-wrapper">
+            <el-input
+              class="unique-name-form-item-input"
+              v-model="form[languageKey]"
+              :type="inputType"
+              :readonly="translateLoading || validateLoading"
+              @focus="() => handleFocus(languageKey)"
+              @blur="() => handleBlur(languageKey)"
+              :maxlength="props.maxlength ?? 255"
+              :placeholder="props.placeholder ?? $t('请输入名称')"
+              :disabled="props.disabled"
+            >
+            </el-input>
+            <template v-if="focusLanguageKey === languageKey && form[languageKey]">
+              <el-button
+                class="unique-name-form-item-translate-button"
+                type="primary"
+                @click="handleTranslate(languageKey)"
+                :disabled="!form[languageKey] || translateLoading"
+                :loading="translateLoading"
+              >
+                {{ $t('点击翻译') }}
+              </el-button>
+            </template>
+          </div>
+        </el-form-item>
+      </template>
+    </el-form>
+  </div>
+</template>
+
+<script setup>
+  import { ref, reactive, nextTick } from 'vue';
+  import { languageData } from '@/i18n';
+  import { aiTranslate } from '@/api/client';
+
+  defineOptions({
+    name: 'UniqueNameForm',
+  });
+
+  const languageStore = languageData();
+  const languageKeys = ref([]);
+
+  languageStore.map((item) => {
+    languageKeys.value.push(item.lang);
+  });
+
+  const getLanguageKeyForm = () => {
+    const _form = {};
+    for (const key of languageStore) {
+      _form[key.lang] = '';
+    }
+    return _form;
+  };
+
+  const getLanguageValueByKey = (key) => {
+    return languageStore.find((item) => item.lang === key)?.text;
+  };
+
+  const props = defineProps({
+    singleLanguage: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    disabled: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    overrideLanguages: {
+      type: Object,
+      required: false,
+    },
+    overridesElFormProps: {
+      type: Object,
+      required: false,
+      default: () => ({
+        labelWidth: '240px',
+        scrollToError: true,
+        size: '',
+        labelPosition: 'top',
+      }),
+    },
+    inputType: {
+      type: String,
+      default: 'text',
+    },
+    labelPrefix: {
+      type: String,
+      default: '',
+    },
+    maxlength: {
+      type: Number,
+      default: 255,
+      validator: (value) => {
+        return value > 0;
+      },
+    },
+    placeholder: {
+      type: String,
+      required: false,
+    },
+    width: {
+      type: String,
+      required: false,
+      default: '100%',
+    },
+    apiId: {
+      type: Number,
+      required: false,
+      default: undefined,
+    },
+    parent_id: {
+      type: Number,
+      required: false,
+      default: undefined,
+    },
+    apiSource: {
+      type: String,
+      required: true,
+      validator: (value) => {
+        //来源
+        // product_barcode-产品商品条码
+        // product_img-产品图片名称
+        // product-产品
+        // category-分类
+        // sku-规格库
+        // attribute-属性库
+        // feed-加料库
+        // unit-单位库
+        // label-打印标签
+        // buffet-自助餐
+        // table-桌位
+        // table_area-桌位区域
+        // table_type-桌位类型
+        // printer-打印机管理
+        // supplier_printing-商品打印
+        // pay_type-支付管理
+        return [
+          'product_barcode',
+          'product_img',
+          'product',
+          'category',
+          'sku',
+          'attribute',
+          'feed',
+          'unit',
+          'label',
+          'buffet',
+          'table',
+          'table_area',
+          'table_type',
+          'printer',
+          'supplier_printing',
+          'pay_type',
+        ].includes(value);
+      },
+    },
+  });
+
+  const form = reactive(props.singleLanguage ? { SINGLE: '' } : getLanguageKeyForm());
+  const formErrors = reactive(props.singleLanguage ? { SINGLE: '' } : getLanguageKeyForm());
+  if (typeof props.overrideLanguages === 'object') {
+    for (const key of Object.keys(form)) {
+      form[key] = props.overrideLanguages[key] ?? '';
+    }
+  }
+
+  const uniqueNameFormRef = ref(null);
+
+  const translateLoading = ref(false);
+  const validateLoading = ref(false);
+
+  const handleTranslate = async (language) => {
+    translateLoading.value = true;
+    const data = {
+      data: [
+        {
+          lang: language,
+          content: form[language],
+        },
+      ],
+    };
+    try {
+      const res = await aiTranslate(data, true);
+      const {
+        data: { data: translateDataJsonString },
+      } = res;
+      const translateData = JSON.parse(translateDataJsonString);
+      for (const key of Object.keys(form)) {
+        form[key] = key === 'zhtw' ? (translateData[0]['zh-TW'] ?? '') : (translateData[0][key] ?? '');
+      }
+      //   await nextTick();
+      //   await handleValidateUnique();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      translateLoading.value = false;
+      focusLanguageKey.value = '';
+    }
+  };
+
+  const validate = async () => {
+    validateLoading.value = true;
+    try {
+      const baseValidateResult = await uniqueNameFormRef.value.validate();
+      if (!baseValidateResult) return false;
+      //   const uniqueValidateResult = await handleValidateUnique();
+      //   if (!uniqueValidateResult) return false;
+      return true;
+    } catch (error) {
+      console.error('validate error', error);
+      return false;
+    } finally {
+      validateLoading.value = false;
+    }
+  };
+
+  const handleValidate = async (prop, isValid, message) => {
+    formErrors[prop] = isValid ? '' : message;
+  };
+
+  //   const handleValidateUnique = async () => {
+  //     const params = {
+  //       name: form,
+  //       source: props.apiSource,
+  //       id: props.apiId,
+  //     };
+  //     if (props.apiSource == 'attribute') {
+  //       params.parent_id = props.parent_id;
+  //     }
+  //     validateLoading.value = true;
+  //     try {
+  //       const res = await IndexApi.checkNameExist(params, true);
+  //       await handleValidateUniqueResult(res.data);
+  //       return Object.values(res.data).every((value) => value === false);
+  //     } catch (error) {
+  //       console.error('validate unique error', error);
+  //       return false;
+  //     } finally {
+  //       validateLoading.value = false;
+  //     }
+  //   };
+
+  //   const handleValidateUniqueResult = async (data) => {
+  //     formErrors.value = {};
+  //     await nextTick();
+  //     for (const key of Object.keys(formErrors)) {
+  //       formErrors[key] = data[key] ? proxy.$t('此名称已存在') : '';
+  //     }
+  //   };
+
+  const focusLanguageKey = ref('');
+  const handleFocus = (languageKey) => {
+    focusLanguageKey.value = languageKey;
+  };
+
+  const handleBlur = async (languageKey) => {
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (translateLoading.value) return;
+    if (focusLanguageKey.value === languageKey) {
+      focusLanguageKey.value = '';
+    }
+  };
+
+  defineExpose({
+    validate: validate,
+    data: form,
+  });
+</script>
+
+<style lang="scss" scoped>
+  .unique-name-form {
+    .unique-name-form-item-wrapper {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .unique-name-form-item-input {
+        flex-grow: 1;
+      }
+
+      .unique-name-form-item-translate-button {
+        flex-shrink: 0;
+      }
+    }
+  }
+</style>

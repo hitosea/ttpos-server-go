@@ -1,0 +1,125 @@
+<?php
+
+namespace app\common\library\language\engine;
+
+class OpenAi
+{
+
+    const URL = "http://103.63.139.229:8088/api/translate";
+    const CURL_TIMEOUT = 10000;
+
+    private string $APP_KEY = '';
+    private string $SEC_KEY = '';
+
+    /**
+     * @param $APP_KEY
+     * @param $SEC_KEY
+     */
+    public function __construct($APP_KEY = '', $SEC_KEY = '')
+    {
+        $this->APP_KEY = $APP_KEY;
+        $this->SEC_KEY = $SEC_KEY;
+    }
+
+    /**
+     * 翻译
+     * @param array $q
+     * @param $from
+     * @return array
+     * @throws \Exception
+     */
+    public function translate($q, $from = 'cn')
+    {
+        try {
+            $data = ['data' => []];
+            foreach ($q as $key => $value) {
+                $data['data'][] = [
+                    'lang' => is_string($key) ? $key : $from,
+                    'content' => $value
+                ];
+            }
+
+            $jsonData = json_encode($data);
+            $ret = $this->request(self::URL, 'post', $jsonData, true);
+            $res = json_decode($ret, true);
+            if ($res['code'] == 200 && !empty($res['data'])) {
+                $dataArray = json_decode($res['data'], true);
+                $res['data'] = is_array($dataArray) && !empty($dataArray) ? $dataArray : [];
+                return $res['data'];
+            }
+            return [];
+        } catch (\Exception $e) {
+            throw new \Exception("OpenAi Translation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * 转发请求
+     */
+    public function forward($data)
+    {
+        try {
+            $jsonData = json_encode($data);
+            $ret = $this->request(self::URL, 'post', $jsonData, true);
+            $res = json_decode($ret, true);
+            return $res;
+        } catch (\Exception $e) {
+            throw new \Exception("Forward OpenAi Translation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * 请求
+     *
+     * @param [type] $url
+     * @param string $method
+     * @param array $data
+     * @param boolean $header
+     * @param [type] $timeout
+     * @return bool|string
+     */
+    private function request($url, $method = 'get', $data = array(), $header = false, $timeout = self::CURL_TIMEOUT)
+    {
+        $curl = curl_init();
+        $method = strtoupper($method);
+        //
+        curl_setopt($curl, CURLOPT_URL, $url);
+        //请求方式
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+        //post请求
+        if ($method == 'POST') curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+        //超时时间
+        curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
+        //设置header头
+        if ($header === 'form') {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+                'Content-Type: application/x-www-form-urlencoded;',
+                'Cache-Control: no-cache',
+                'Pragma: no-cache'
+            ));
+        } else if (is_array($header)) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+        } else if ($header !== false) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+                'Content-Type: application/json; charset=utf-8',
+                'Cache-Control: no-cache',
+                'Pragma: no-cache'
+            ));
+        }
+        curl_setopt($curl, CURLOPT_FAILONERROR, false);
+        //返回抓取数据
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        //输出header头信息
+        curl_setopt($curl, CURLOPT_HEADER, true);
+        //TRUE 时追踪句柄的请求字符串，从 PHP 5.1.3 开始可用。这个很关键，就是允许你查看请求header
+        curl_setopt($curl, CURLINFO_HEADER_OUT, true);
+        //https请求
+        if (1 == strpos("$" . $url, "https://")) {
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+        }
+        list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
+        $content = trim(substr($content, $status['header_size']));
+        return (intval($status["http_code"]) === 200) ? $content : false;
+    }
+}

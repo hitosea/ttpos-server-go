@@ -1,0 +1,239 @@
+#!/bin/bash
+
+# 统一的前端分支版本
+FRONTEND_BRANCH="1.1.1"
+
+check_pnpm_installed() {
+    if ! command -v pnpm &> /dev/null; then
+        echo "pnpm 未安装，正在安装..."
+        npm install -g pnpm
+        if [ $? -ne 0 ]; then
+            echo "pnpm 安装失败，请检查 npm 是否正确安装"
+            return 1
+        fi
+        echo "pnpm 安装成功"
+    fi
+    return 0
+}
+
+check_pnpm_lock() {
+    if [ ! -f "pnpm-lock.yaml" ]; then
+        echo "错误: 未找到 pnpm-lock.yaml 文件，请使用 pnpm 作为包管理工具"
+        return 1
+    fi
+    return 0
+}
+
+build() {
+    # 检查并安装 pnpm
+    if ! check_pnpm_installed; then
+        return 1
+    fi
+
+    build_force=0
+    build_env=all
+    if [ "$1" == "force" ]; then
+        echo "强制更新"
+        build_force=1
+    elif [ "$1" != "" ]; then
+        echo "强制更新"
+        build_force=1
+        build_env=$1
+    else
+        echo "自动更新"
+    fi
+
+    # 平台端
+    if [[ "$build_env" == 'all' || "$build_env" == 'admin' ]]; then
+        cd ../jjj_food_chain_admin
+        echo "平台端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        git pull
+        pnpm install
+        if ! check_pnpm_lock; then
+            cd ../jjj_food_chain
+            return 1
+        fi
+        pnpm run build
+        rm -rf ../jjj_food_chain/public/admin && cp -r ./admin ../jjj_food_chain/public/admin
+        cd ../jjj_food_chain
+    fi
+
+    # 店家后台
+    if [[ "$build_env" == 'all' || "$build_env" == 'shop' ]]; then
+        cd ../jjj_food_chain_shop
+        echo "店家后台当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        git pull
+        pnpm install
+        if ! check_pnpm_lock; then
+            cd ../jjj_food_chain
+            return 1
+        fi
+        pnpm run build
+        rm -rf ../jjj_food_chain/public/shop && cp -r ./dist ../jjj_food_chain/public/shop
+        cd ../jjj_food_chain
+    fi
+
+    # tmp目录是否存在
+    current_dir=$(dirname "$0")
+    if [ ! -d "$current_dir/tmp" ]; then
+        mkdir "$current_dir/tmp"
+    fi
+    tmp_dir="$current_dir/tmp"
+
+    # 收银端
+    if [[ "$build_env" == 'all' || "$build_env" == 'cashier' ]]; then
+        if [ ! -d "$tmp_dir/cash-register-system" ]; then
+            git clone git@github.com:innet8/cash-register-system.git $tmp_dir/cash-register-system
+        fi
+        cd $tmp_dir/cash-register-system
+        git checkout $FRONTEND_BRANCH
+        echo "收银端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/cashier && cp -r ./dist/build/h5 ../../public/cashier
+        else
+            echo "收银端无需更新"
+        fi
+        cd ../..
+    fi
+
+    # 厨显端
+    if [[ "$build_env" == 'all' || "$build_env" == 'kitchen' ]]; then
+        if [ ! -d "$tmp_dir/KitchenDisplay" ]; then
+            git clone git@github.com:innet8/KitchenDisplay.git $tmp_dir/KitchenDisplay
+        fi
+        cd $tmp_dir/KitchenDisplay
+        git checkout $FRONTEND_BRANCH
+        echo "厨显端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/kitchen && cp -r ./dist/build/h5 ../../public/kitchen
+        else
+            echo "厨显端无需更新"
+        fi
+        cd ../..
+    fi
+
+    # 平板端
+    if [[ "$build_env" == 'all' || "$build_env" == 'tablet' ]]; then
+        if [ ! -d "$tmp_dir/flat-panel-side" ]; then
+            git clone git@github.com:innet8/flat-panel-side.git $tmp_dir/flat-panel-side
+        fi
+        cd $tmp_dir/flat-panel-side
+        git checkout $FRONTEND_BRANCH
+        echo "平板端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/tablet && cp -r ./dist/build/h5 ../../public/tablet
+        else
+            echo "平板端无需更新"
+        fi
+        cd ../..
+    fi
+
+    # 扫码
+    if [[ "$build_env" == 'all' || "$build_env" == 'scan' ]]; then
+        if [ ! -d "$tmp_dir/Cashier-Scan-H5" ]; then
+            git clone git@github.com:innet8/Cashier-Scan-H5.git $tmp_dir/Cashier-Scan-H5
+        fi
+        cd $tmp_dir/Cashier-Scan-H5
+        git checkout $FRONTEND_BRANCH
+        echo "h5端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/scan && cp -r ./dist/build/h5 ../../public/scan
+        else
+            echo "扫码端无需更新"
+        fi
+        cd ../..
+    fi
+
+    # 点餐助手
+    if [[ "$build_env" == 'all' || "$build_env" == 'assistant' ]]; then
+        if [ ! -d "$tmp_dir/Cashier-System-Helper" ]; then
+            git clone git@github.com:innet8/Cashier-System-Helper.git $tmp_dir/Cashier-System-Helper
+        fi
+        cd $tmp_dir/Cashier-System-Helper
+        git checkout $FRONTEND_BRANCH
+        echo "点餐助手端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/assistant && cp -r ./dist/build/h5 ../../public/assistant
+        else
+            echo "点餐助手端无需更新"
+        fi
+        cd ../..
+    fi
+
+    # 电子菜单
+    if [[ "$build_env" == 'all' || "$build_env" == 'menu' ]]; then
+        if [ ! -d "$tmp_dir/Cashier-Scan-menu" ]; then
+            git clone git@github.com:innet8/Cashier-Scan-menu.git $tmp_dir/Cashier-Scan-menu
+        fi
+        cd $tmp_dir/Cashier-Scan-menu
+        git checkout $FRONTEND_BRANCH
+        echo "menu端当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+        if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ] || [ "$build_force" -eq 1 ]; then
+            git fetch --all
+            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            git pull
+            pnpm install
+            if ! check_pnpm_lock; then
+                cd ../../
+                return 1
+            fi
+            pnpm run build:h5
+            rm -rf ../../public/menu && cp -r ./dist/build/h5 ../../public/menu
+        else
+            echo "扫码端无需更新"
+        fi
+        cd ../..
+    fi
+}
+
+#
+build "$1"
+
+# 测试要求-默认ttpos
+sleep 1
+./cmd think renewal:info

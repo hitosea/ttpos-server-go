@@ -1,0 +1,400 @@
+<?php
+
+namespace app\shop\controller\setting;
+
+use help\StringHelp;
+use help\ValidateHelp;
+use Endroid\QrCode\QrCode;
+use app\common\model\store\FreeTag;
+use app\shop\controller\Controller;
+use app\shop\model\store\TableArea;
+use hg\apidoc\annotation as Apidoc;
+use Endroid\QrCode\Writer\PngWriter;
+use app\common\model\order\OrderScheme;
+use app\common\model\store\ReturnReason;
+use app\common\enum\settings\SettingEnum;
+use app\common\service\qrcode\AuthService;
+use app\shop\model\settings\Setting as SettingModel;
+
+/**
+ * 门店业务设置（v1.0.7）
+ * @Apidoc\Group("supplier")
+ * @Apidoc\Sort(4)
+ */
+class Business extends Controller
+{
+    /**
+     * @Apidoc\Title("门店业务设置(get-获取/post-设置)")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/index")
+     * @Apidoc\Param("zeroing_method", type="string", require=true, desc="优惠折扣自动抹零方式 0-实款实收 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元")
+     * @Apidoc\Param("checkout_zeroing_method", type="string", require=true, desc="结账自动抹零方式 0-实款实收 1-抹分 2-抹角 5-抹元（v1.1.0）")
+     * @Apidoc\Param("gift_method", type="string", require=true, desc="赠菜方式 10-计入总销售额、优惠折扣 20-不计入总销售额、优惠折扣")
+     * @Apidoc\Param("free_method", type="string", require=true, desc="免单方式 10-计入总销售额、优惠折扣 20-不计入总销售额、优惠折扣")
+     * @Apidoc\Param("no_clear_table", type="string", require=true, desc="结账后不清台 0-清台 1-不清台")
+     * @Apidoc\Param("is_need_password", type="string", require=true, desc="取消订单/退菜 0-无需密码 1-需要密码（v1.0.8）")
+     * @Apidoc\Param("dish_card_style", type="string", require=true, desc="菜品卡片样式 0-无图模式 1-图片模式（v1.0.8）")
+     * @Apidoc\Param("discount_method", type="string", require=true, desc="折扣计算方式 10-按百分比 20-直接减免（v1.1.0）")
+     * @Apidoc\Param("is_invoice", type="string", require=true, desc="开票信息 0-不需要填写 1-需要填写（v1.0.9补充）")
+     * @Apidoc\Returned()
+     */
+    public function index()
+    {
+        if ($this->request->isGet()) {
+            return $this->fetchData(SettingEnum::BUSINESS);
+        }
+        $model = new SettingModel;
+        $data = $this->request->param();
+
+        $setting = SettingModel::getItem(SettingEnum::BUSINESS);
+        $old_dish_card_style = $setting['dish_card_style'] ?? 0;
+        $update_style_time = $old_dish_card_style != $data['dish_card_style'];
+        $arr = [
+            'zeroing_method' => $data['zeroing_method'] ?? 0,
+            'checkout_zeroing_method' => $data['checkout_zeroing_method'] ?? 0,
+            'gift_method' => $data['gift_method'] ?? 10,
+            'free_method' => $data['free_method'] ?? 10,
+            'no_clear_table' => $data['no_clear_table'] ?? 0,
+            'is_need_password' => $data['is_need_password'] ?? 1,
+            'dish_card_style' => $data['dish_card_style'] ?? 0,
+            'discount_method' => $data['discount_method'] ?? 10,
+            'is_invoice' => $data['is_invoice'] ?? 0,
+        ];
+        if ($update_style_time) {
+            $arr['dish_card_style_time'] = time();
+        }
+        // 过滤掉不需要的列表字段
+        array_diff_key($arr, array_flip([
+            'zeroing_method_list',
+            'checkout_zeroing_method_list',
+            'gift_method_list',
+            'free_method_list'
+        ]));
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'];
+        if ($model->edit(SettingEnum::BUSINESS, $arr, $shop_supplier_id)) {
+            return $this->renderSuccess('操作成功');
+        }
+        return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * 电子菜单二维码生成（v1.1.0）
+     * @Apidoc\Title("电子菜单二维码生成（v1.1.0）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/qrcode")
+     * @Apidoc\Param("action", type="string", require=true, default="", desc="动作：get-获取/update-更新")
+     * @Apidoc\Returned()
+     */
+    public function qrcode()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+
+        $data = $this->postData();
+        $action = $data['action'] ?? '';
+        if ($action == '') {
+            return $this->renderError('参数错误');
+        }
+        $setting = SettingModel::getItem(SettingEnum::BUSINESS);
+        $qr_code = $setting['qr_code'] ?? 0;
+
+        if ($action == 'update') {
+            $qr_code = StringHelp::generatePassword(6, 1);
+            $setting['qr_code'] = $qr_code;
+            (new SettingModel)->edit(SettingEnum::BUSINESS, $setting, $shop_supplier_id);
+        }
+
+        $arr = ['s' => $shop_supplier_id, 'a' => $app_id, 'q' => $qr_code];
+        $auth = new AuthService();
+        $token = $auth->generateToken($arr);
+        $qrCode = new QrCode(base_url() . "menu/#/?token={$token}");
+        $qrCode->setSize(300);
+        $qrCode->setMargin(10);
+
+        return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
+    }
+
+    /**
+     * @Apidoc\Title("免单/赠菜原因(get-获取/post-提交)")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/freeTag")
+     * @Apidoc\Param("free_tag", type="array", require=true, desc="标签", children={
+     *     @Apidoc\Returned("id", type="int", desc="ID"),
+     *     @Apidoc\Returned("free_tag", type="string", desc="标签"),
+     *     @Apidoc\Returned("action", type="string", desc="操作结果 delete-删除 edit-编辑 add-新增"),
+     * })
+     * @Apidoc\Returned()
+     */
+    public function freeTag()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        $model = new FreeTag;
+
+        if ($this->request->isGet()) {
+            return $this->renderSuccess('操作成功', $model->getList($app_id, $shop_supplier_id));
+        }
+
+        $data = $this->request->param();
+        if (isset($data['free_tag'])) {
+            if (empty($data['free_tag'])) {
+                return $this->renderError('请输入免单/赠菜原因');
+            }
+            foreach ($data['free_tag'] as $item) {
+                if (ValidateHelp::hasEmptyValue($item['free_tag'] ?? '')) {
+                    return $this->renderError('原因不能为空');
+                }
+                $id = $item['id'] ?? 0;
+
+                if (isset($item['action'])) {
+                    if ($item['action'] == 'add' || $item['action'] == 'edit') {
+                        $existing = $model->where('id', $id)
+                            ->where('shop_supplier_id', $shop_supplier_id)
+                            ->where('app_id', $app_id)
+                            ->find();
+                        if ($existing) {
+                            $id = $existing['id'];
+                            $item['action'] = 'edit';
+                        } else {
+                            $item['app_id'] = $app_id;
+                            $item['shop_supplier_id'] = $shop_supplier_id;
+                        }
+                    }
+                    //
+                    if ($item['action'] == 'add') {
+                        unset($item['id']);
+                        unset($item['action']);
+                        (new FreeTag)->save($item);
+                    } elseif ($item['action'] == 'delete') {
+                        if ($id) {
+                            $model->where('id', $id)->delete();
+                        }
+                    } elseif ($item['action'] == 'edit') {
+                        if ($id) {
+                            unset($item['action']);
+                            $model->update($item, ['id' => $id]);
+                        }
+                    }
+                }
+            }
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("退菜原因(get-获取/post-提交) v1.0.9")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/returnReason")
+     * @Apidoc\Param("reason", type="array", require=true, desc="标签", children={
+     *     @Apidoc\Returned("id", type="int", desc="ID"),
+     *     @Apidoc\Returned("reason", type="string", desc="标签"),
+     *     @Apidoc\Returned("action", type="string", desc="操作结果 delete-删除 edit-编辑 add-新增"),
+     * })
+     * @Apidoc\Returned()
+     */
+    public function returnReason()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        $model = new ReturnReason;
+
+        if ($this->request->isGet()) {
+            return $this->renderSuccess('操作成功', $model->getList($app_id, $shop_supplier_id));
+        }
+
+        $data = $this->request->param();
+        if (isset($data['reason'])) {
+            if (empty($data['reason'])) {
+                return $this->renderError('请输入退菜原因');
+            }
+            foreach ($data['reason'] as $item) {
+                if (ValidateHelp::hasEmptyValue($item['reason'] ?? '')) {
+                    return $this->renderError('原因不能为空');
+                }
+                $id = $item['id'] ?? 0;
+
+                if (isset($item['action'])) {
+                    if ($item['action'] == 'add' || $item['action'] == 'edit') {
+                        $existing = $model->where('id', $id)
+                            ->where('shop_supplier_id', $shop_supplier_id)
+                            ->where('app_id', $app_id)
+                            ->find();
+                        if ($existing) {
+                            $id = $existing['id'];
+                            $item['action'] = 'edit';
+                        } else {
+                            $item['app_id'] = $app_id;
+                            $item['shop_supplier_id'] = $shop_supplier_id;
+                        }
+                    }
+                    //
+                    if ($item['action'] == 'add') {
+                        unset($item['id']);
+                        unset($item['action']);
+                        (new ReturnReason)->save($item);
+                    } elseif ($item['action'] == 'delete') {
+                        if ($id) {
+                            $model->where('id', $id)->delete();
+                        }
+                    } elseif ($item['action'] == 'edit') {
+                        if ($id) {
+                            unset($item['action']);
+                            $model->update($item, ['id' => $id]);
+                        }
+                    }
+                }
+            }
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("订单方案列表（v1.0.9）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeList")
+     * @Apidoc\Param("name", type="string", require=true, desc="方案名称")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态，1-开启 0-关闭")
+     * @Apidoc\Returned()
+     */
+    public function orderSchemeList()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        //
+        $model = new OrderScheme;
+        $data = $this->request->param();
+        $list = $model->getList($data, $app_id, $shop_supplier_id);
+        // 桌台区域列表
+        $params['list_rows'] = 1000;
+        $table_area_list = (new TableArea)->getList($params, $shop_supplier_id);
+        return $this->renderSuccess('', compact('list', 'table_area_list'));
+    }
+
+    /**
+     * @Apidoc\Title("订单方案新增（v1.0.9）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeAdd")
+     * @Apidoc\Param("name", type="string", require=true, desc="方案名称")
+     * @Apidoc\Param("use_channel", type="array", require=true, desc="使用渠道 10-点餐方式 20-桌台方式")
+     * @Apidoc\Param("table_area_ids", type="array", require=true, desc="桌台区域ids")
+     * @Apidoc\Param("must_type", type="int", require=true, desc="必点类型 1-每人必点1份 2-每笔订单必点1份")
+     * @Apidoc\Param("must_rule", type="int", require=true, desc="必点规则 1-固定商品 2-可选商品")
+     * @Apidoc\Param("product_ids", type="array", require=true, desc="必点商品ids")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态，1-开启 2-关闭")
+     * @Apidoc\Param("auto_cart", type="int", require=true, desc="自动加入购物车 1-是 0-否")
+     * @Apidoc\Param("auto_change", type="int", require=true, desc="顾客可修改必点数量 1-是 0-否")
+     * @Apidoc\Param("auto_check", type="int", require=true, desc="下单时检查必点商品 1-是 0-否")
+     * @Apidoc\Param("auto_checkout", type="int", require=true, desc="结账时检查必点商品 1-是 0-否")
+     * @Apidoc\Returned()
+     */
+    public function orderSchemeAdd()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        //
+        $model = new OrderScheme;
+        $data = $this->request->param();
+        if ($model->add(array_merge($data, ['shop_supplier_id' => $shop_supplier_id, 'app_id' => $app_id]))) {
+            return $this->renderSuccess('');
+        }
+        return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * @Apidoc\Title("订单方案编辑（v1.0.9）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeEdit")
+     * @Apidoc\Param("id", type="int", require=true, desc="方案id")
+     * @Apidoc\Param("name", type="string", require=true, desc="方案名称")
+     * @Apidoc\Param("use_channel", type="array", require=true, desc="使用渠道 10-点餐方式 20-桌台方式")
+     * @Apidoc\Param("table_area_ids", type="array", require=true, desc="桌台区域ids")
+     * @Apidoc\Param("must_type", type="int", require=true, desc="必点类型 1-每人必点1份 2-每笔订单必点1份")
+     * @Apidoc\Param("must_rule", type="int", require=true, desc="必点规则 1-固定商品 2-可选商品")
+     * @Apidoc\Param("product_ids", type="array", require=true, desc="必点商品ids")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态，1-开启 2-关闭")
+     * @Apidoc\Param("auto_cart", type="int", require=true, desc="自动加入购物车 1-是 0-否")
+     * @Apidoc\Param("auto_change", type="int", require=true, desc="顾客可修改必点数量 1-是 0-否")
+     * @Apidoc\Param("auto_check", type="int", require=true, desc="下单时检查必点商品 1-是 0-否")
+     * @Apidoc\Param("auto_checkout", type="int", require=true, desc="结账时检查必点商品 1-是 0-否")
+     * @Apidoc\Returned()
+     */
+    public function orderSchemeEdit()
+    {
+        $data = $this->request->param();
+        /** @var OrderScheme $model */
+        $model = (new OrderScheme)->detail($data['id']);
+        if (!$model) {
+            return $this->renderError('数据不存在');
+        }
+        $data = $this->request->param();
+        if ($model->edit($data)) {
+            return $this->renderSuccess('');
+        }
+        return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * @Apidoc\Title("订单方案删除（v1.0.9）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeDel")
+     * @Apidoc\Param("id", type="int", require=true, desc="方案id")
+     * @Apidoc\Returned()
+     */
+    public function orderSchemeDel()
+    {
+        $data = $this->request->param();
+        /** @var OrderScheme $model */
+        $model = (new OrderScheme)->detail($data['id']);
+        if (!$model) {
+            return $this->renderError('数据不存在');
+        }
+        if ($model->del()) {
+            return $this->renderSuccess('');
+        }
+        return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * @Apidoc\Title("订单方案状态设置（v1.0.9）")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeStatus")
+     * @Apidoc\Param("id", type="int", require=true, desc="方案id")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态，1-开启 2-关闭")
+     * @Apidoc\Returned()
+     */
+    public function orderSchemeStatus()
+    {
+        $data = $this->request->param();
+        if (!in_array($data['status'], [1, 0])) {
+            return $this->renderError('状态错误');
+        }
+        /** @var OrderScheme $model */
+        $model = (new OrderScheme)->detail($data['id']);
+        if (!$model) {
+            return $this->renderError('数据不存在');
+        }
+        if ($model->setStatus($data)) {
+            return $this->renderSuccess('');
+        }
+        return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * 获取配置值
+     */
+    public function fetchData($key)
+    {
+        if ($key == '') {
+            return $this->renderError('缺少参数');
+        }
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        $ret = SettingModel::getSupplierItem($key, $shop_supplier_id, $app_id);
+        //
+        $free_tag_count = FreeTag::where('app_id', '=', $app_id)->where('shop_supplier_id', '=', $shop_supplier_id)->count();
+        //
+        $return_reason_count = ReturnReason::where('app_id', '=', $app_id)->where('shop_supplier_id', '=', $shop_supplier_id)->count();
+        $vars['values'] = $ret;
+        return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count'));
+    }
+}

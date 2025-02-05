@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body,
+div,
+dl,
+dt,
+dd,
+ul,
+ol,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+pre,
+code,
+form,
+fieldset,
+legend,
+input,
+button,
+textarea,
+p,
+blockquote,
+th,
+td {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-width: 0;
+  border-style: solid;
+}
+ol,
+ul {
+  list-style: none;
+}
+fieldset,
+img {
+  border: 0;
+}
+:focus {
+  outline: 0;
+}
+address,
+caption,
+cite,
+code,
+dfn,
+em,
+strong,
+th,
+var,
+optgroup {
+  font-style: normal;
+  font-weight: 400;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 100%;
+  font-weight: 400;
+}
+abbr,
+acronym {
+  border: 0;
+  font-variant: normal;
+}
+code,
+kbd,
+samp,
+tt {
+  font-size: 100%;
+}
+input,
+button,
+textarea,
+select {
+  border: 0;
+}
+
+body {
+  font:
+    14px/1.5 'HarmonyOS Sans SC',
+    'PingFang SC',
+    '微软雅黑',
+    'Microsoft YaHei',
+    Helvetica,
+    'Helvetica Neue',
+    Tahoma,
+    Arial,
+    sans-serif,
+    system-ui;
+  color: #100a05;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@import url(./element-var.scss);
+
+// 自定义进度条颜色
+#nprogress .bar {
+  background-color: #ffbe00 !important;
+}
+
+// 改变primary按钮样式
+.el-button--primary {
+  --el-button-text-color: #100a05 !important;
+  --el-button-hover-bg-color: #100a05 !important;
+  --el-button-hover-border-color: #100a05 !important;
+  --el-button-active-bg-color: #100a05 !important;
+  --el-button-active-border-color: #100a05 !important;
+  --el-button-disabled-text-color: rgba(16, 10, 5, 0.3) !important;
+}
+
+.el-table {
+  --el-table-header-bg-color: #f7f9fb !important;
+  thead th {
+    font-weight: normal !important;
+  }
+}
+
+.ti-search-btn {
+  --el-button-text-color: #ffffff !important;
+  --el-button-bg-color: #100a05 !important;
+  --el-button-border-color: #100a05 !important;
+  --el-button-hover-bg-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-hover-border-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-active-bg-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-active-border-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-disabled-bg-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-disabled-border-color: rgba(16, 10, 5, 0.8) !important;
+  --el-button-disabled-text-color: #eee !important;
+}
+
+.el-input-number .el-input__inner {
+  text-align: left !important;
+}
+
+.max-width {
+  width: 100% !important;
+  max-width: 460px !important;
+}
+
+.el-button--primary.is-link.is-disabled,
+.el-button--primary.is-link.is-disabled:hover {
+  color: var(--el-button-disabled-text-color);
+}
+.el-form--inline .el-form-item {
+  margin-right: 16px;
+}
+.el-message-box__container {
+  align-items: self-start;
+}
+.el-button + .el-button,
+.el-button:nth-of-type(1) {
+  margin-left: 0;
+  margin-right: 12px;
+}
+
+.el-button + .el-button:nth-last-child(1) {
+  margin-right: 0;
+}
+.el-radio.el-radio--small .el-radio__label,
+.el-checkbox.el-checkbox--small .el-checkbox__label {
+  font-size: 14px !important;
+}
+.el-dialog__title {
+  font-weight: 600;
+}

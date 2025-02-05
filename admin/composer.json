@@ -1,0 +1,76 @@
+{
+    "name": "topthink/think",
+    "description": "the new thinkphp framework",
+    "type": "project",
+    "keywords": [
+        "framework",
+        "thinkphp",
+        "ORM"
+    ],
+    "homepage": "https://www.thinkphp.cn/",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "liu21st",
+            "email": "liu21st@gmail.com"
+        },
+        {
+            "name": "yunwuxin",
+            "email": "448901948@qq.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0.0",
+        "ext-bcmath": "*",
+        "ext-zip": "*",
+        "topthink/framework": "8.0.3",
+        "topthink/think-orm": "3.0.16",
+        "topthink/think-filesystem": "2.0.2",
+        "w7corp/easywechat": "6.7",
+        "qiniu/php-sdk": "^7.2",
+        "lvht/geohash": "^1.1",
+        "myclabs/php-enum": "^1.7",
+        "aliyuncs/oss-sdk-php": "^2.3",
+        "qcloud/cos-sdk-v5": "^2.0",
+        "kosinix/grafika": "dev-master",
+        "phpoffice/phpspreadsheet": "^1.13",
+        "workerman/mysql": "^1.0",
+        "alipaysdk/easysdk": "^2.2",
+        "topthink/think-multi-app": "1.0.17",
+        "firebase/php-jwt": "^6.8",
+        "topthink/think-worker": "4.0",
+        "endroid/qr-code": "^4.8",
+        "wechatpay/wechatpay": "^1.4",
+        "topthink/think-migration": "3.1.1",
+        "stichoza/google-translate-php": "^4.1",
+        "hg/apidoc": "^5.2",
+        "mike42/escpos-php": "^4.0",
+        "guzzlehttp/guzzle": "^7.2",
+        "topthink/think-captcha": "3.0.10",
+        "topthink/think-image": "1.0.8",
+        "php-amqplib/php-amqplib": "^3.7",
+        "google/cloud-storage": "^1.43",
+        "topthink/think-queue": "^3.0"
+    },
+    "require-dev": {
+        "symfony/var-dumper": ">=4.2",
+        "topthink/think-trace": "1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": "app"
+        },
+        "psr-0": {
+            "": "extend/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist"
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@php think service:discover",
+            "@php think vendor:publish"
+        ]
+    }
+}

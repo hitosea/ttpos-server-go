@@ -1,9 +1,14 @@
 .idea
-main
 offline
 logs/*
 .env
 bin/*
 .txt
-docker
-docker-compose.yaml
+/docker/redis/data/*
+/docker/mysql/data
+/docker/mysql/backup
+/docker/mysql/import/*
+/docker/mysql/tmp
+/docker/rabbitmq/mnesia
+/docker/php/job.log
+/docker/php/inotify.log

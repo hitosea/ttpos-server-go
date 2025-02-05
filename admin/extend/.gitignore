@@ -1,0 +1,3 @@
+!.gitignore
+_var_www_*
+workerman.log

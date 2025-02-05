@@ -1,0 +1,94 @@
+import { defineConfig, loadEnv } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
+import path from 'path';
+import legacy from '@vitejs/plugin-legacy';
+import viteCompression from 'vite-plugin-compression';
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
+export default defineConfig(({ mode }) => {
+  // 获取当前环境的配置
+  const config = loadEnv(mode, './');
+  return {
+    base: process.env.NODE_ENV === 'production' ? './' : '/',
+    server: {
+      https: false,
+      host: '0.0.0.0', // 指定服务器应该监听哪个 IP 地址。 如果将此设置为 0.0.0.0 或者 true 将监听所有地址，包括局域网和公网地址。
+      port: 3399, // 指定开发服务器端口
+      strictPort: true, // 设为 true 时若端口已被占用则会直接退出，而不是尝试下一个可用端口。
+      proxy: {
+        '/api': {
+          target: config.VITE_BASIC_URL,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
+    },
+    plugins: [
+      viteCompression({
+        verbose: true,
+        disable: false,
+        threshold: 10240,
+        algorithm: 'gzip',
+        ext: '.gz',
+      }),
+      vue(),
+      legacy({
+        targets: ['ie>=11'],
+        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+      }),
+      AutoImport({
+        resolvers: [ElementPlusResolver()],
+      }),
+      Components({
+        resolvers: [ElementPlusResolver()],
+      }),
+      createSvgIconsPlugin({
+        // 指定要缓存的文件夹
+        iconDirs: [path.resolve(process.cwd(), 'src/assets/icons')],
+        // 指定symbolId格式
+        symbolId: '[name]',
+      }),
+    ],
+    css: {
+      preprocessorOptions: {
+        // 全局样式引入
+        scss: {
+          additionalData: '@use "./static/scss/element" as *; @use "./static/scss/main" as *;',
+          javascriptEnabled: true,
+        },
+      },
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
+    build: {
+      assetsDir: 'static',
+      minify: 'terser',
+      productionSouceMap: false,
+      assetsPublicPath: '/shop/',
+      rollupOptions: {
+        output: {
+          chunkFileNames: 'static/js/[name]-[hash].js',
+          entryFileNames: 'static/js/[name]-[hash].js',
+          assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
+          manualChunks: {
+            // 分包规则
+            vue: ['vue', 'vue-i18n', 'vue-router', 'pinia', 'axios'], // vue
+            element: ['element-plus'], // UI库
+            // openpgp: ['openpgp', 'localforage'], // 加密库
+          },
+        },
+      },
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      },
+    },
+  };
+});
