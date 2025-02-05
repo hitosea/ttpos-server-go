@@ -12,3 +12,31 @@ bin/*
 /docker/rabbitmq/mnesia
 /docker/php/job.log
 /docker/php/inotify.log
+
+
+/vendor/
+/node_modules/
+
+# 编译和构建文件
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# 缓存文件
+.cache/
+*.log
+*.cache
+
+# IDE 和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
