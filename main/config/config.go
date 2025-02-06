@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/jinzhu/copier"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -17,7 +18,7 @@ var Log LogConf
 
 func Init() error {
 	// 加载 .env 文件
-	err := godotenv.Load()
+	err := godotenv.Load("../.env")
 	if err != nil {
 		return fmt.Errorf("error loading .env file: %v", err)
 	}
@@ -104,11 +105,11 @@ func databaseConf(opt copier.Option) {
 		DBType:        viper.GetString("DB_TYPE"),
 		Host:          viper.GetString("DB_HOST"),
 		Port:          viper.GetInt("DB_PORT"),
-		User:          viper.GetString("DB_USER"),
+		User:          viper.GetString("DB_USERNAME"),
 		Password:      viper.GetString("DB_PASSWORD"),
 		RootPassword:  viper.GetString("DB_ROOT_PASSWORD"),
 		Database:      viper.GetString("DB_DATABASE"),
-		TablePrefix:   viper.GetString("DB_TABLE_PREFIX"),
+		TablePrefix:   viper.GetString("DB_PREFIX"),
 		SlowQueryTime: viper.GetInt("DB_SLOW_QUERY_TIME"),
 	}, opt)
 }

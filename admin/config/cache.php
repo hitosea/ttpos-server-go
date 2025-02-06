@@ -6,6 +6,7 @@ use think\facade\Env;
 // +----------------------------------------------------------------------
 // 根目录
 $rootPath = dirname(__DIR__);
+
 return [
     // 默认缓存驱动
     'default' => Env::get('CACHE_DRIVER', 'redis'),

@@ -36,28 +36,8 @@ error() {
     echo -e "${Error} ${RedBG}$1${Font}"
 }
 
-info() {
-    echo -e "$1"
-}
-
 docker_name() {
     echo `$COMPOSE ps | awk '{print $1}' | grep "\-$1\-"`
-}
-
-rand() {
-    local min=$1
-    local max=$(($2-$min+1))
-    local num=$(($RANDOM+1000000000))
-    echo $(($num%$max+$min))
-}
-
-rand_string() {
-    local lan=$1
-    if [[ `uname` == 'Linux' ]]; then
-        echo "$(date +%s%N | md5sum | cut -c 1-${lan})"
-    else
-        echo "$(docker run -it --rm alpine sh -c "date +%s%N | md5sum | cut -c 1-${lan}")"
-    fi
 }
 
 env_get() {
@@ -85,27 +65,6 @@ env_set() {
     fi
 }
 
-env_init() {
-    if [ ! -f ".env" ]; then
-        cp .env.local .env
-    fi
-    # if [ -z "$(env_get DB_ROOT_PASSWORD)" ]; then
-    #     env_set DB_ROOT_PASSWORD "$(rand_string 16)"
-    # fi
-    # if [ -z "$(env_get APP_ID)" ]; then
-    #     env_set APP_ID "$(rand_string 6)"
-    # fi
-}
-
-env_cloud() {
-    if [ ! -f ".env" ]; then
-        cp .env.local .env
-    fi
-    env_set IS_CLOUD_DEPLOY "true"
-    env_set CLOUD_PRINTER_NUM "1"
-    env_set CLOUD_TABLE_NUM "5"
-}
-
 run_exec() {
     local container=$1
     local cmd=$2
@@ -129,119 +88,9 @@ run_mysql() {
     prefix=$(env_get DB_PREFIX)
     host=$(env_get DB_HOST)
     port=$(env_get DB_PORT)
-
-    # 备份
-    if [ "$1" = "backup" ]; then
-        shift 1
-        # 备份数据库
-        backupPath=${cur_path}/docker/mysql/backup/$(date "+%Y%m%d%H%M%S")
-        mkdir -p $backupPath
-        info "开始备份数据库"
-        # 备份主数据库
-        filename="${backupPath}/${database}.sql.gz"
-        run_exec db "exec mysqldump --databases $database -P$port -h$host -u$username -p$password" | gzip > $filename
-        # 备份每个数据库 以特定前缀shop1开头的数据库列表
-        databases=$(run_exec db "mysql -P$port -h$host -uroot -p${password} -e \"show databases\" | grep -v Database | grep shop1")
-        for dbname in $databases; do
-            dbname=$(echo -n "$dbname" | sed -e 's/[[:space:]]*$//')
-            echo $dbname
-            filename="${backupPath}/${dbname}.sql.gz"
-            run_exec db "exec mysqldump --databases $dbname -P$port -h$host -u$username -p$password --ignore-table=$dbname.${prefix}shop_opt_log" | gzip > $filename
-        done
-        judge "备份数据库"
-        [ -f "$filename" ] && info "备份目录：$backupPath"
-
-    # 还原
-    elif [ "$1" = "recovery" ]; then
-        # 还原数据库
-        mkdir -p ${cur_path}/docker/mysql/backup
-        list=`ls -1 "${cur_path}/docker/mysql/backup" | grep "^[0-9]\+$"`
-        if [ -z "$list" ]; then
-            error "没有备份文件！"
-            exit 1
-        fi
-        echo "$list"
-        read -rp "请输入备份文件名称还原：" inputname
-        backupPath="${cur_path}/docker/mysql/backup/${inputname}"
-        if [ ! -d "$backupPath" ]; then
-            error "备份文件：${inputname} 不存在！"
-            exit 1
-        fi
-        container_name=`docker_name db`
-        if [ -z "$container_name" ]; then
-            error "没有找到 db 容器!"
-            exit 1
-        fi
-        info "开始还原数据库"
-        #
-        docker cp $backupPath $container_name:/
-        # 还原每个数据库
-        list=`ls -1 "${cur_path}/docker/mysql/backup/$inputname" | grep ".sql.gz"`
-        for filename in $list; do
-            dbname=$(echo -n "$dbname" | sed -e 's/[[:space:]]*$//')
-            dbname=$(echo -n "$filename" | sed -e 's/\.sql\.gz$//')
-            echo $dbname
-            run_exec db "gunzip < /$inputname/$filename | mysql  -P$port -h$host -u$username -p$password $database"
-        done
-        run_exec php "php think migrate:run"
-        judge "还原数据库"
-
-    # 导入
-    elif [ "$1" = "import" ]; then
-        # 导入数据库
-        mkdir -p ${cur_path}/docker/mysql/import
-        list=`ls -1 "${cur_path}/docker/mysql/import" | grep ".sql.gz"`
-        if [ -z "$list" ]; then
-            error "没有导入文件！"
-            exit 1
-        fi
-        echo "$list"
-        # read -rp "请输入导入文件名称：" inputname
-        inputname=jjj_wfs.sql.gz
-        filename="${cur_path}/docker/mysql/import/${inputname}"
-        if [ ! -f "$filename" ]; then
-            error "导入文件：${inputname} 不存在！"
-            exit 1
-        fi
-        #
-        container_name=`docker_name db`
-        if [ -z "$container_name" ]; then
-            error "没有找到 db 容器!"
-            exit 1
-        fi
-        info "开始导入数据库"
-        # 查询某个表中的数据
-        table_name=$prefix"app"
-        newDatabase=shop;
-        tmpDatabase=tmp_shop_transfer;
-        # docker cp $filename $container_name:/
-        # run_exec db "gunzip -c /$inputname > /output.sql"
-        # run_exec db "sed -i 's/\`jjj\`/\`$tmpDatabase\`/g' /output.sql"
-        # run_exec db "mysql -P$port -h$host -u$username -p$password $database < /output.sql"
-        #
-        tmp_app_id=$(run_exec db "mysql -P$port -h$host -u$username -p$password $tmpDatabase -e 'SELECT max(app_id) FROM $table_name'" | awk '{print $2}' | grep "^[0-9]\+$")
-        app_id=$(run_exec db "mysql -P$port -h$host -u$username -p$password $database -e 'SELECT * FROM $table_name where app_id=$tmp_app_id'" | awk '{print $2}' | grep "^[0-9]\+$")
-        if [ "$app_id" ]; then
-            error "导入文件：app_id ${app_id} 已存在！"
-            exit 1
-        fi
-        echo $tmp_app_id;
-        echo "$app_id";
-        # for line in $databases; do
-        #     echo "$line"
-        # done
-        # if [ -z "$app_id" ]; then
-        #     app_id=$(date +%s)
-        # else
-        #     app_id=$((app_id - 1))
-        # fi
-        # echo $app_id
-
-        # run_exec php "php think migrate:run"
-        judge "导入数据库"
-
+    
     # 开启端口
-    elif [ "$1" = "open" ]; then
+    if [ "$1" = "open" ]; then
         container_name=`docker_name db`
         echo "$container_name";
         if [ -z "$container_name" ]; then
@@ -358,7 +207,7 @@ if [ $# -gt 0 ]; then
         #
         $COMPOSE restart
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
-        echo -e "地址: ${GreenBG}http://127.0.0.1:$(env_get APP_PORT)${Font}"
+        echo -e "地址: ${GreenBG}http://127.0.0.1:$(env_get SERVER_PORT)${Font}"
         # 设置云部署初始化密码
         res=`run_exec db "sh /etc/mysql/repassword.sh"`
         echo -e "$res"
@@ -367,24 +216,24 @@ if [ $# -gt 0 ]; then
         if [[ "$@" != "nobackup" ]]; then
             run_mysql backup
         fi
-        echo "当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
-        if [[ -z "$(arg_get local)" ]]; then
-            git fetch --all
-            git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
-        if git pull; then
-            echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
-            run_exec php "composer update --ignore-platform-reqs"
-            run_exec php "php think migrate:run"
-            # 清缓存
-            run_exec php "php think clear-cache"
-            # mac-addr
-            run_exec php "php think get-mac-addr"
-            # 更新前端配置文件
-            run_exec php "php think renewal:info"
-        else
-            echo -e "${Error} ${RedBG} Git pull 失败，请检查网络或远程仓库状态 ${Font}"
-            exit 1
-        fi
+            echo "当前分支: $(git branch | sed -n -e 's/^\* \(.*\)/\1/p')"
+            if [[ -z "$(arg_get local)" ]]; then
+                git fetch --all
+                git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+            if git pull; then
+                echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
+                run_exec php "composer update --ignore-platform-reqs"
+                run_exec php "php think migrate:run"
+                # 清缓存
+                run_exec php "php think clear-cache"
+                # mac-addr
+                run_exec php "php think get-mac-addr"
+                # 更新前端配置文件
+                run_exec php "php think renewal:info"
+            else
+                echo -e "${Error} ${RedBG} Git pull 失败，请检查网络或远程仓库状态 ${Font}"
+                exit 1
+            fi
         fi
         #
         run_exec php "chown -R www-data:www-data ./app"
@@ -406,17 +255,7 @@ if [ $# -gt 0 ]; then
         echo -e "${OK} ${GreenBG} 卸载完成 ${Font}"
     elif [[ "$1" == "mysql" ]]; then
         shift 1
-        if [[ "$1" == "backup" ]] || [[ "$1" == "b" ]]; then
-            run_mysql backup
-        elif [[ "$1" == "recovery" ]] || [[ "$1" == "r" ]]; then
-            run_mysql recovery
-            # 清缓存
-            run_exec php "php think clear-cache"
-        elif [[ "$1" == "import" ]] || [[ "$1" == "r" ]]; then
-            run_mysql import
-            # 清缓存
-            run_exec php "php think clear-cache"
-        elif [[ "$1" == "agent" ]] || [[ "$1" == "open" ]]; then
+        if [[ "$1" == "agent" ]] || [[ "$1" == "open" ]]; then
             run_mysql open
         elif [[ "$1" == "unagent" ]] || [[ "$1" == "close" ]]; then
             run_mysql close
@@ -439,10 +278,10 @@ if [ $# -gt 0 ]; then
     elif [[ "$1" == "repassword" ]]; then
         shift 1
         run_exec db "sh /etc/mysql/repassword.sh \"$@\""
-     elif [[ "$1" == "tail-log" ]]; then
+    elif [[ "$1" == "tail-log" ]]; then
         shift 1
         # 找到最后一个目录，目录名必须是整数格式
-        last_dir=$(ls -d "./runtime/logs/"*/ | grep -E '/[0-9]+/$' | sort -n | tail -n 1)
+        last_dir=$(ls -d "./admin/runtime/logs/"*/ | grep -E '/[0-9]+/$' | sort -n | tail -n 1)
         # 如果目录存在，查找最后一个以整数格式命名的.log结尾的文件
         if [ -n "$last_dir" ]; then
             last_log_file=$(ls -t "$last_dir"*.log 2>/dev/null | grep -E '/[0-9]+\.log$' | head -n 1)

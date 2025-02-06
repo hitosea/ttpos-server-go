@@ -3,7 +3,7 @@ use think\facade\Env;
 
 return [
     // 默认使用的数据库连接配置
-    'default' => Env::get('database.driver', 'mysql'),
+    'default' => Env::get('DB_TYPE', 'mysql'),
 
     // 自定义时间查询规则
     'time_query_rule' => [],
@@ -27,9 +27,9 @@ return [
             // 服务器地址
             'hostname' => Env::get('DB_HOST', 'db'),
             // 数据库名
-            'database' => Env::get('DB_DATABASE', 'jjj'),
+            'database' => Env::get('DB_DATABASE', 'saas'),
             // 用户名
-            'username' => Env::get('DB_USERNAME', 'jjj'),
+            'username' => Env::get('DB_USERNAME', 'ttpos'),
             // 密码
             'password' => Env::get('DB_PASSWORD', '123456'),
             // 端口
@@ -39,7 +39,7 @@ return [
             // 数据库编码默认采用utf8
             'charset' => Env::get('DB_CHARSET', 'utf8'),
             // 数据库表前缀
-            'prefix' => Env::get('DB_PREFIX', 'jjjfood_'),
+            'prefix' => Env::get('DB_PREFIX', 'ttpos_'),
 
             // 数据库部署方式:0 集中式(单一服务器),1 分布式(主从服务器)
             'deploy' => 0,
