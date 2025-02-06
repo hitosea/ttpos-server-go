@@ -232,8 +232,6 @@ if [ $# -gt 0 ]; then
         run_exec php "chmod +x ./bin/license.so"
         run_exec php "chmod +x ./bin/license_arm.so"
         #
-        $COMPOSE up -d
-        $COMPOSE restart
     elif [[ "$1" == "uninstall" ]]; then
         shift 1
         $COMPOSE down

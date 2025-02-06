@@ -60,6 +60,10 @@ build-run:
 
 # 更新
 update:
-	chmod +x ./.sh && ./.sh update
-	chmod +x ./.sh && ./.sh golang go build -o main ./cmd/server/main.go
+	chmod +x ./.sh && ./.sh update && ./.sh golang go build -o main ./cmd/server/main.go
+	docker compose -p ttpos-server-go up -d
 	docker compose -p ttpos-server-go restart golang
+
+# 重启
+restart:
+	chmod +x ./.sh && ./.sh restart
