@@ -37,8 +37,53 @@ type Names struct {
 	ZhTw string `json:"zhtw"`
 }
 
+func (n *Names) GetNames(jsonString string) error {
+	err := json.Unmarshal([]byte(jsonString), &n)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return err
+	}
+	return nil
+}
+
+func (n *Names) CreateMultiLanguageName(nameId uint, targetDB *gorm.DB) error {
+	multiLanguageName := model.MultiLanguageName{
+		Uuid:     nameId,
+		EnName:   n.En,
+		ZhName:   n.Zh,
+		ZhTwName: n.ZhTw,
+		ThName:   n.Th,
+		MyName:   n.My,
+		JaName:   n.Ja,
+		KoName:   n.Ko,
+		TrName:   n.Tr,
+	}
+	fmt.Println(fmt.Sprintf("multiLanguageName:%+v", multiLanguageName))
+	_, err := repository.NewMultiLanguageNameRepository(targetDB).CreateMultiLanguageName(multiLanguageName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *Names) GenMultiLanguageName(nameId uint) model.MultiLanguageName {
+	multiLanguageName := model.MultiLanguageName{
+		Uuid:     nameId,
+		EnName:   n.En,
+		ZhName:   n.Zh,
+		ZhTwName: n.ZhTw,
+		ThName:   n.Th,
+		MyName:   n.My,
+		JaName:   n.Ja,
+		KoName:   n.Ko,
+		TrName:   n.Tr,
+	}
+	return multiLanguageName
+}
+
 type CategoryRepository interface {
 	GetCategoryList() ([]*Category, error)
+	ConvertCategory() error
 }
 
 type CategoryService struct {

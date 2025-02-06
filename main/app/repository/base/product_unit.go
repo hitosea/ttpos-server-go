@@ -49,7 +49,7 @@ func (r *ProductUnitRepoImpl) UpdateProductUnit(id uint, productUnit model.Produ
 		return err
 	}
 
-	if err := tx.Model(&productUnit.MultiLanguageName).Where("id = ?", productUnit.MultiLanguageNameId).Updates(productUnit.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&productUnit.MultiLanguageName).Where("id = ?", productUnit.MultiLanguageNameUuid).Updates(productUnit.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -73,7 +73,7 @@ func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (
 	}
 
 	// 将多语言名称ID存入商品规格
-	productUnit.MultiLanguageNameId = productUnit.MultiLanguageName.Id
+	productUnit.MultiLanguageNameUuid = productUnit.MultiLanguageName.Id
 
 	// 创建商品规格
 	if err := tx.Create(&productUnit).Error; err != nil {

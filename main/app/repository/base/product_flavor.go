@@ -49,7 +49,7 @@ func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model
 		return err
 	}
 
-	if err := tx.Model(&productFlavor.MultiLanguageName).Where("id = ?", productFlavor.MultiLanguageNameId).Updates(productFlavor.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&productFlavor.MultiLanguageName).Where("id = ?", productFlavor.MultiLanguageNameUuid).Updates(productFlavor.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -73,7 +73,7 @@ func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductF
 	}
 
 	// 将多语言名称ID存入商品规格
-	productFlavor.MultiLanguageNameId = productFlavor.MultiLanguageName.Id
+	productFlavor.MultiLanguageNameUuid = productFlavor.MultiLanguageName.Id
 
 	// 创建商品规格
 	if err := tx.Create(&productFlavor).Error; err != nil {

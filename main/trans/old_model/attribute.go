@@ -1,0 +1,95 @@
+package old_model
+
+import (
+	"fmt"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
+)
+
+type Attribute struct {
+	AttributeID    uint   `gorm:"column:attribute_id;primaryKey;autoIncrement;comment:'属性ID'"`
+	ParentID       int    `gorm:"column:parent_id;default:0;comment:'父级ID'"`
+	AttributeName  string `gorm:"column:attribute_name;type:text;not null;default:'';comment:'属性名称'"`
+	ShopSupplierID int    `gorm:"column:shop_supplier_id;default:0;comment:'店铺ID'"`
+	AppID          int    `gorm:"column:app_id;default:0;comment:'应用ID'"`
+	CreateTime     int64  `gorm:"column:create_time;not null;default:0;comment:'创建时间'"`
+	UpdateTime     int64  `gorm:"column:update_time;not null;default:0;comment:'更新时间'"`
+}
+
+type AtttributeInterface interface {
+	GetAttributeList() ([]Attribute, error)
+	ConvertAttribute() error
+}
+
+type AttributeRepository struct {
+	db       *gorm.DB
+	targetDB *gorm.DB
+}
+
+func (r *AttributeRepository) GetAttributeList() ([]Attribute, error) {
+	var attributes []Attribute
+	err := r.db.Find(&attributes).Error
+	if err != nil {
+		return nil, err
+	}
+	return attributes, nil
+}
+
+func (r *AttributeRepository) ConvertAttribute() error {
+	attributes, err := r.GetAttributeList()
+	if err != nil {
+		return err
+	}
+
+	for _, attribute := range attributes {
+		fmt.Println(fmt.Sprintf("-------迁移attribute: %+v", attribute))
+		names := Names{}
+		err := names.GetNames(attribute.AttributeName)
+		if err != nil {
+			return err
+		}
+		fmt.Println(fmt.Sprintf("attribute_id: %d, attribute_name: %+v", attribute.AttributeID, names))
+
+		id, err := database.GetID()
+		if err != nil {
+			return err
+		}
+		fmt.Println(fmt.Sprintf("id: %d", id))
+		// 创建多语言名称
+		//err = names.CreateMultiLanguageName(uint(id), r.targetDB)
+		//if err != nil {
+		//	return err
+		//}
+		languageName := names.GenMultiLanguageName(uint(id))
+		if attribute.ParentID == 0 {
+			// 创建商品属性组
+			attributeGroup := model.ProductAttributeGroup{
+				Uuid:                  attribute.AttributeID,
+				Name:                  names.Zh,
+				MultiLanguageNameUuid: uint(id),
+				MultiLanguageName:     languageName,
+			}
+			fmt.Println(fmt.Sprintf("attribute_group: %+v", attributeGroup))
+			_, err = base.NewProductAttributeGroupRepo(r.targetDB).CreateProductAttributeGroup(attributeGroup)
+			if err != nil {
+				return err
+			}
+		} else {
+			// 创建商品属性
+			productAttribute := model.ProductAttribute{
+				Uuid:               attribute.AttributeID,
+				Name:               names.Zh,
+				AttributeGroupUuid: uint(attribute.ParentID),
+				MultiLanguageName:  languageName,
+			}
+			_, err = base.NewProductAttributeRepo(r.targetDB).CreateProductAttribute(productAttribute)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

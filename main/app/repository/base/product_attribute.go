@@ -50,7 +50,7 @@ func (r *ProductAttributeRepoImpl) UpdateProductAttribute(id uint, productAttrib
 		return err
 	}
 
-	if err := tx.Model(&productAttribute.MultiLanguageName).Where("id = ?", productAttribute.MultiLanguageNameId).Updates(productAttribute.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&productAttribute.MultiLanguageName).Where("id = ?", productAttribute.MultiLanguageNameUuid).Updates(productAttribute.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -74,7 +74,7 @@ func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model
 	}
 
 	// 将多语言名称ID存入产品属性
-	productAttribute.MultiLanguageNameId = productAttribute.MultiLanguageName.Id
+	productAttribute.MultiLanguageNameUuid = productAttribute.MultiLanguageName.Uuid
 
 	// 创建产品属性
 	if err := tx.Create(&productAttribute).Error; err != nil {
@@ -82,7 +82,7 @@ func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model
 		return 0, err
 	}
 
-	return productAttribute.Id, tx.Commit().Error // 提交事务
+	return productAttribute.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 软删除产品属性

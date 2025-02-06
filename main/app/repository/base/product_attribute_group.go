@@ -1,6 +1,7 @@
 package base
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -50,7 +51,7 @@ func (r *ProductAttributeGroupRepoImpl) UpdateProductAttributeGroup(id uint, pro
 		return err
 	}
 
-	if err := tx.Model(&productAttributeGroup.MultiLanguageName).Where("id = ?", productAttributeGroup.MultiLanguageNameId).Updates(productAttributeGroup.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&productAttributeGroup.MultiLanguageName).Where("id = ?", productAttributeGroup.MultiLanguageNameUuid).Updates(productAttributeGroup.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -73,16 +74,16 @@ func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttri
 		return 0, err
 	}
 
-	// 将多语言名称ID存入产品属性组
-	productAttributeGroup.MultiLanguageNameId = productAttributeGroup.MultiLanguageName.Id
+	fmt.Println(fmt.Sprintf("productAttributeGroup.MultiLanguageName.Uuid:%v", productAttributeGroup.MultiLanguageName.Uuid))
 
+	fmt.Println(fmt.Sprintf("productAttributeGroup:%+v", productAttributeGroup))
 	// 创建产品属性组
 	if err := tx.Create(&productAttributeGroup).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
 		return 0, err
 	}
 
-	return productAttributeGroup.Id, tx.Commit().Error // 提交事务
+	return productAttributeGroup.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 软删除退菜原因
