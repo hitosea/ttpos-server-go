@@ -5,6 +5,7 @@ install:
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi
 	# 启动容器
@@ -14,8 +15,6 @@ install:
 	cd main && go mod tidy;
     # 初始化php项目
 	chmod +x ./.sh && ./.sh init
-    # 启动容器
-	docker compose -p ttpos-server-go restart;
     # 运行run
 	cd main && go run ./cmd/server/main.go ./cmd/server/swagger_enabled.go;
 
@@ -36,4 +35,3 @@ dev:
 
 migrate:
 	cd main && go run ./migration/main.go run --version 1738765726
-

@@ -182,17 +182,9 @@ if [ $# -gt 0 ]; then
     if [[ "$1" == "init" ]] || [[ "$1" == "install" ]]; then
         shift 1
         #
-        # env_init
-        #
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
         run_exec php "php think migrate:run"
-        # 清缓存
-        run_exec php "php think clear-cache"
-        # mac-addr
-        run_exec php "php think get-mac-addr"
-        # 更新前端配置文件
-        run_exec php "php think renewal:info"
         #
         run_exec php "chown -R www-data:www-data ./app"
         run_exec php "chown -R www-data:www-data ./public"

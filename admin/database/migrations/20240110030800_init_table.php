@@ -1,6 +1,5 @@
 <?php
 
-use think\facade\Db;
 use think\facade\Env;
 use think\migration\Migrator;
 
@@ -56,7 +55,7 @@ class InitTable extends Migrator
         } else {
             // 检测表
             $pdo->exec("use {$databaseName}");
-            $tableExists = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'jjjfood_app'")->fetchColumn();
+            $tableExists = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'ttpos_company'")->fetchColumn();
             if (!$tableExists) {
                 $sql = file_get_contents($filePath);
                 $pdo->exec($sql);
