@@ -6,11 +6,11 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_access`;
 CREATE TABLE `ttpos_admin_access` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `name` varchar(255) DEFAULT '' COMMENT '权限名称',
   `path` varchar(255) DEFAULT '' COMMENT '路由地址',
   `api_path` varchar(255) DEFAULT '' COMMENT '后端路由地址',
-  `parent_id` int(11) DEFAULT 0 COMMENT '父级id',
+  `parent_id` int(11) DEFAULT 0 COMMENT '父级ID',
   `sort` int(11) DEFAULT 0 COMMENT '排序(数字越小越靠前)',
   `icon` varchar(128) DEFAULT '' COMMENT '菜单图标',
   `redirect_name` varchar(128) DEFAULT '' COMMENT '重定向名称',
@@ -85,7 +85,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_role`;
 CREATE TABLE `ttpos_admin_role` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `role_name` varchar(2000) DEFAULT '' COMMENT '角色名称',
   `sort` int(11) DEFAULT 0 COMMENT '排序(数字越小越靠前)',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
@@ -98,9 +98,9 @@ CREATE TABLE `ttpos_admin_role` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_role_access`;
 CREATE TABLE `ttpos_admin_role_access` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `role_id` int(11) DEFAULT NULL COMMENT '角色id',
-  `access_id` int(11) DEFAULT NULL COMMENT '权限id',
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
+  `access_id` int(11) DEFAULT NULL COMMENT '权限ID',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`id`)
@@ -111,7 +111,7 @@ CREATE TABLE `ttpos_admin_role_access` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_user`;
 CREATE TABLE `ttpos_admin_user` (
-  `admin_user_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
+  `admin_user_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `user_name` varchar(255) NOT NULL DEFAULT '' COMMENT '用户名',
   `phone` varchar(50) DEFAULT '' COMMENT '手机号',
   `password` varchar(255) NOT NULL DEFAULT '' COMMENT '登录密码',
@@ -137,8 +137,8 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_user_login_log`;
 CREATE TABLE `ttpos_admin_user_login_log` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `admin_user_id` int(11) DEFAULT NULL COMMENT '用户id',
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `admin_user_id` int(11) DEFAULT NULL COMMENT '用户ID',
   `username` varchar(255) DEFAULT '' COMMENT '用户名',
   `ip` varchar(128) DEFAULT '' COMMENT '登录ip',
   `result` text DEFAULT NULL COMMENT '登录结果',
@@ -151,8 +151,8 @@ CREATE TABLE `ttpos_admin_user_login_log` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_user_opt_log`;
 CREATE TABLE `ttpos_admin_user_opt_log` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `admin_user_id` int(11) DEFAULT NULL COMMENT '用户id',
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `admin_user_id` int(11) DEFAULT NULL COMMENT '用户ID',
   `title` varchar(255) DEFAULT '' COMMENT '标题',
   `url` varchar(255) DEFAULT '' COMMENT '访问url',
   `request_type` varchar(50) DEFAULT '' COMMENT '请求类型',
@@ -169,9 +169,9 @@ CREATE TABLE `ttpos_admin_user_opt_log` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_admin_user_role`;
 CREATE TABLE `ttpos_admin_user_role` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `admin_user_id` int(11) DEFAULT NULL COMMENT '超管用户id',
-  `role_id` int(11) DEFAULT NULL COMMENT '角色id',
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `admin_user_id` int(11) DEFAULT NULL COMMENT '超管用户ID',
+  `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`id`)
@@ -182,7 +182,8 @@ CREATE TABLE `ttpos_admin_user_role` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_company`;
 CREATE TABLE `ttpos_company` (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '集团唯一标识符',
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
   `name` varchar(255) NOT NULL DEFAULT '' COMMENT '集团名称',
   `logo` varchar(255) NOT NULL DEFAULT '' COMMENT 'logo',
   `is_recycle` tinyint(3) NOT NULL DEFAULT '0' COMMENT '是否回收;not null',
@@ -190,7 +191,6 @@ CREATE TABLE `ttpos_company` (
   `expire_time` int(11) NOT NULL DEFAULT '0' COMMENT '过期时间;not null',
   `auth_day` int(11) NOT NULL DEFAULT '0' COMMENT '授权时间(天) 0为永不过期',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态1=》启用0禁用;not null',
-  `is_delete` tinyint(3) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `auth_start_time` int(11) NOT NULL DEFAULT '0' COMMENT '授权开始时间（时间戳）',
   `create_time` int(11) NOT NULL DEFAULT '0' COMMENT '创建时间（时间戳）',
   `update_time` int(11) NOT NULL DEFAULT '0' COMMENT '更新时间（时间戳）',
@@ -203,79 +203,78 @@ CREATE TABLE `ttpos_company` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_company_setting`;
 CREATE TABLE `ttpos_company_setting` (
-    id INT(11) NOT NULL AUTO_INCREMENT COMMENT '主键id',
-    parent_id INT(11) NOT NULL DEFAULT 0 COMMENT '上级集团id',
-    name VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
-    real_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
-    link_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
-    link_phone VARCHAR(25) NOT NULL DEFAULT '' COMMENT '联系电话',
-    logo VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
-    level INT(11) NOT NULL DEFAULT 1 COMMENT '商家等级: 1开始',
-    sale_stock INT(11) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
-    reserve INT(11) NOT NULL DEFAULT 0 COMMENT '预订: 0不开启, 1开启',
-    is_open_member INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
-    is_open_tablet INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
-    is_open_scan INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
-    is_open_assistant INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
-    is_open_kitchen_kds INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
-    is_open_buffet INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
-    is_accept_scan_order INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
-    is_open_local_print INT(11) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
-    cash_limit INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',
-    kitchen_limit INT(11) NOT NULL DEFAULT 0 COMMENT '厨显上限',
-    tablet_limit INT(11) NOT NULL DEFAULT 0 COMMENT '平板上限',
-    assistant_limit INT(11) NOT NULL DEFAULT 0 COMMENT '点餐助手上限',
-    table_limit INT(11) NOT NULL DEFAULT 0 COMMENT '桌台上限',
-    printer_limit INT(11) NOT NULL DEFAULT 0 COMMENT '打印机上限',
-    timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
-    languages VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
-    address VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
-    deploy_mode TINYINT(4) NOT NULL DEFAULT 0 COMMENT '部署方式 0局域网部署, 1云部署',
-    mac_addr VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'mac地址',
-    serial_number VARCHAR(100) NOT NULL DEFAULT '' COMMENT '服务序列号',
-    chain_number VARCHAR(100) NOT NULL DEFAULT '' COMMENT '连锁编号',
-    business_id INT(11) NOT NULL DEFAULT 0 COMMENT '营业执照',
-    description VARCHAR(255) DEFAULT '' COMMENT '商家介绍',
-    total_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '总货款',
-    money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '当前可提现金额',
-    freeze_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '已冻结金额',
-    cash_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '累积提现佣金',
-    deposit_money DECIMAL(12,2) NOT NULL  DEFAULT 0.00 COMMENT '保证金',
-    user_id INT(11) NOT NULL DEFAULT 0 COMMENT '会员id',
-    fav_count INT(11) NOT NULL DEFAULT 0 COMMENT '关注人数',
-    status TINYINT(3) NOT NULL DEFAULT 0 COMMENT '店铺状态0营业中1停止营业',
-    store_type TINYINT(3) NOT NULL DEFAULT 10 COMMENT '店铺类型10加盟20自营',
-    total_gift INT(11) NOT NULL DEFAULT 0 COMMENT '收到的礼物币总数',
-    is_recycle TINYINT(3) NOT NULL DEFAULT 1 COMMENT '是否禁用0否1是',
-    is_main TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否总店，0否1是',
-    province_id INT(11) NOT NULL DEFAULT 0 COMMENT '所在省份id',
-    city_id INT(11) NOT NULL DEFAULT 0 COMMENT '所在城市id',
-    region_id INT(11) NOT NULL DEFAULT 0 COMMENT '所在辖区id',
-    longitude VARCHAR(50) NOT NULL DEFAULT '' COMMENT '门店坐标经度',
-    latitude VARCHAR(50) NOT NULL DEFAULT '' COMMENT '门店坐标纬度',
-    shipping_fee DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '配送费',
-    bag_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '包装费类型0按商品收费1按单收费',
-    bag_price DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '包装费;NOT NULL',
-    store_bag_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '店内包装费类型0按商品收费1按单收费;NOT NULL',
-    store_bag_price DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '店内包装费;NOT NULL',
-    delivery_time VARCHAR(100) NOT NULL DEFAULT '' COMMENT '外卖营业时间',
-    pick_time VARCHAR(100) NOT NULL DEFAULT '' COMMENT '自提营业时间',
-    store_time VARCHAR(100) NOT NULL DEFAULT '' COMMENT '店内营业时间',
-    delivery_distance FLOAT(10,2) NOT NULL DEFAULT 0.00 COMMENT '配送范围km',
-    delivery_set VARCHAR(150) NOT NULL DEFAULT '' COMMENT '外卖配送方式',
-    store_set VARCHAR(150) NOT NULL DEFAULT '' COMMENT '店内用餐方式',
-    min_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '最低消费',
-    settle_type TINYINT(3) NOT NULL DEFAULT 10 COMMENT '计算模式10先结账后用餐20先用餐后结账',
-    service_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型0按就餐人数1按桌台收费',
-    service_money DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '服务费',
-    auto_close TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0定时清台1立即清台',
-    close_time INT(10) NOT NULL DEFAULT 0 COMMENT '0分钟清台',
-    category_set TINYINT(1) NOT NULL DEFAULT 10 COMMENT '商品分类设置10同步主店20分店创建;NOT NULL',
-    is_delete TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否删除0，否1是',
-    company_id INT(11) NOT NULL DEFAULT 0 COMMENT '集团id',
-    create_time INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-    update_time INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
-    delete_time INT(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+    `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `company_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
+    `parent_id` INT(11) NOT NULL DEFAULT 0 COMMENT '上级集团ID',
+    `name` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
+    `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
+    `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
+    `link_phone` VARCHAR(25) NOT NULL DEFAULT '' COMMENT '联系电话',
+    `logo` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
+    `level` INT(11) NOT NULL DEFAULT 1 COMMENT '商家等级: 1开始',
+    `sale_stock` INT(11) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
+    `reserve` INT(11) NOT NULL DEFAULT 0 COMMENT '预订: 0不开启, 1开启',
+    `is_open_member` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
+    `is_open_tablet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
+    `is_open_scan` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
+    `is_open_assistant` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
+    `is_open_kitchen_kds` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
+    `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
+    `is_accept_scan_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
+    `is_open_local_print` INT(11) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
+    `cash_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',
+    `kitchen_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '厨显上限',
+    `tablet_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '平板上限',
+    `assistant_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '点餐助手上限',
+    `table_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '桌台上限',
+    `printer_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '打印机上限',
+    `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
+    `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
+    `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
+    `deploy_mode` TINYINT(4) NOT NULL DEFAULT 0 COMMENT '部署方式 0局域网部署, 1云部署',
+    `mac_addr` VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'mac地址',
+    `serial_number` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '服务序列号',
+    `chain_number` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '连锁编号',
+    `business_id` INT(11) NOT NULL DEFAULT 0 COMMENT '营业执照',
+    `description` VARCHAR(255) DEFAULT '' COMMENT '商家介绍',
+    `total_money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '总货款',
+    `money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '当前可提现金额',
+    `freeze_money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '已冻结金额',
+    `cash_money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '累积提现佣金',
+    `deposit_money` DECIMAL(12,2) NOT NULL  DEFAULT 0.00 COMMENT '保证金',
+    `user_id` INT(11) NOT NULL DEFAULT 0 COMMENT '会员ID',
+    `fav_count` INT(11) NOT NULL DEFAULT 0 COMMENT '关注人数',
+    `status` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '店铺状态0营业中1停止营业',
+    `store_type` TINYINT(3) NOT NULL DEFAULT 10 COMMENT '店铺类型10加盟20自营',
+    `total_gift` INT(11) NOT NULL DEFAULT 0 COMMENT '收到的礼物币总数',
+    `is_recycle` TINYINT(3) NOT NULL DEFAULT 1 COMMENT '是否禁用0否1是',
+    `is_main` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否总店，0否1是',
+    `province_id` INT(11) NOT NULL DEFAULT 0 COMMENT '所在省份ID',
+    `city_id` INT(11) NOT NULL DEFAULT 0 COMMENT '所在城市ID',
+    `region_id` INT(11) NOT NULL DEFAULT 0 COMMENT '所在辖区ID',
+    `longitude` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '门店坐标经度',
+    `latitude` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '门店坐标纬度',
+    `shipping_fee` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '配送费',
+    `bag_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '包装费类型0按商品收费1按单收费',
+    `bag_price` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '包装费;NOT NULL',
+    `store_bag_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '店内包装费类型0按商品收费1按单收费;NOT NULL',
+    `store_bag_price` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '店内包装费;NOT NULL',
+    `delivery_time` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '外卖营业时间',
+    `pick_time` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '自提营业时间',
+    `store_time` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '店内营业时间',
+    `delivery_distance` FLOAT(10,2) NOT NULL DEFAULT 0.00 COMMENT '配送范围km',
+    `delivery_set` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '外卖配送方式',
+    `store_set` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '店内用餐方式',
+    `min_money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '最低消费',
+    `settle_type` TINYINT(3) NOT NULL DEFAULT 10 COMMENT '计算模式10先结账后用餐20先用餐后结账',
+    `service_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型0按就餐人数1按桌台收费',
+    `service_money` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '服务费',
+    `auto_close` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0定时清台1立即清台',
+    `close_time` INT(10) NOT NULL DEFAULT 0 COMMENT '0分钟清台',
+    `category_set` TINYINT(1) NOT NULL DEFAULT 10 COMMENT '商品分类设置10同步主店20分店创建;NOT NULL',
+    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` INT(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团设置表';
 
@@ -284,11 +283,10 @@ CREATE TABLE `ttpos_company_setting` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
-  `staff_id` int(11) NOT NULL DEFAULT 0 COMMENT '员工id',
-  `company_id` int(11) NOT NULL DEFAULT 0 COMMENT '集团id',
+  `staff_id` int(11) NOT NULL DEFAULT 0 COMMENT '员工ID',
+  `company_uuid` int(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
-  `is_delete` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除0否1是',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
@@ -325,6 +323,7 @@ CREATE TABLE `ttpos_client_version` (
 DROP TABLE IF EXISTS `ttpos_payment_app`;
 CREATE TABLE `ttpos_payment_app` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `company_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
   `ll_white_ip` varchar(255) NOT NULL DEFAULT '' COMMENT '白名单IP',
   `ll_merchant_id` varchar(255) NOT NULL DEFAULT '' COMMENT '商户号',
   `ll_store_id` varchar(100) DEFAULT '' COMMENT '站点ID',
@@ -332,8 +331,6 @@ CREATE TABLE `ttpos_payment_app` (
   `ll_merchant_private_key` text DEFAULT '' COMMENT '商户私钥',
   `ll_token` varchar(255) NOT NULL DEFAULT '' COMMENT 'Token',
   `ll_sign_salt` varchar(255) NOT NULL DEFAULT '' COMMENT '签名盐',
-  `shop_supplier_id` int(11) DEFAULT 0 COMMENT '门店id',
-  `app_id` int(11) DEFAULT 0 COMMENT '应用id',
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`id`)
@@ -344,9 +341,9 @@ CREATE TABLE `ttpos_payment_app` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_upload_file`;
 CREATE TABLE `ttpos_upload_file` (
-  `file_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '文件id',
+  `file_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '文件ID',
   `storage` varchar(20) NOT NULL DEFAULT '' COMMENT '存储方式',
-  `group_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '文件分组id',
+  `group_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '文件分组ID',
   `file_url` varchar(255) NOT NULL DEFAULT '' COMMENT '存储域名',
   `save_name` varchar(255) DEFAULT '' COMMENT '保存路径',
   `file_name` varchar(255) NOT NULL DEFAULT '' COMMENT '文件路径',
@@ -357,9 +354,6 @@ CREATE TABLE `ttpos_upload_file` (
   `extension` varchar(20) NOT NULL DEFAULT '' COMMENT '文件扩展名',
   `is_user` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '是否为c端用户上传',
   `is_recycle` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '是否已回收',
-  `shop_supplier_id` int(11) DEFAULT 0 COMMENT '供应商id',
-  `is_delete` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '软删除',
-  `app_id` int(11) unsigned DEFAULT 0 COMMENT '应用id',
   `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`file_id`) USING BTREE,
@@ -371,13 +365,10 @@ CREATE TABLE `ttpos_upload_file` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_upload_group`;
 CREATE TABLE `ttpos_upload_group` (
-  `group_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '分类id',
+  `group_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '分类ID',
   `group_type` varchar(10) NOT NULL DEFAULT '' COMMENT '文件类型',
   `group_name` varchar(30) NOT NULL DEFAULT '' COMMENT '分类名称',
   `sort` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '分类排序(数字越小越靠前)',
-  `shop_supplier_id` int(11) DEFAULT 0 COMMENT '供应商id',
-  `is_delete` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '是否删除',
-  `app_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '应用id',
   `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`group_id`) USING BTREE,
@@ -389,11 +380,9 @@ CREATE TABLE `ttpos_upload_group` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_setting`;
 CREATE TABLE `ttpos_setting` (
-  `key` varchar(30) NOT NULL COMMENT '设置项标示',
+  `name` varchar(30) NOT NULL COMMENT '设置项标示',
   `describe` varchar(255) NOT NULL DEFAULT '' COMMENT '设置项描述',
   `values` mediumtext NOT NULL COMMENT '设置内容（json格式）',
-  `shop_supplier_id` int(11) NOT NULL DEFAULT 0 COMMENT '商户id',
-  `app_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '小程序id',
   `update_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   UNIQUE KEY `unique_key` (`app_id`,`key`,`shop_supplier_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci ROW_FORMAT=COMPACT COMMENT='商城设置记录表';

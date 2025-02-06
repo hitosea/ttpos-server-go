@@ -3,7 +3,7 @@
 use think\facade\Env;
 use think\migration\Migrator;
 
-class InitTable extends Migrator
+class SaasTable extends Migrator
 {
     // 迁移目标
     const TARGET = 'main';
@@ -31,7 +31,7 @@ class InitTable extends Migrator
      */
     public function up()
     {
-        $filePath = realpath(root_path() . '/database/seeds/init.sql');
+        $filePath = realpath(root_path() . '/database/seeds/saas.sql');
         if (!file_exists($filePath)) {
             throw new \Exception('init sql file not exists');
         }
