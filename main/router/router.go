@@ -51,7 +51,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	publicApiV1 := r.Group("api/v1")
 	{
 		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                    // 获取验证码
-		publicApiV1.POST("/passport/server-public-key", passportHandler.GetServerPublicKey) // 获取服务端公钥
+		publicApiV1.POST("/passport/server_public_key", passportHandler.GetServerPublicKey) // 获取服务端公钥
 		// 收银端
 		cashierGroup := publicApiV1.Group("/cashier")
 		{

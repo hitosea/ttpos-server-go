@@ -1,21 +1,22 @@
 package setting
 
+// Store 商城设置
 type Store struct {
-	Name          string         `json:"name"`
-	AvatarURL     string         `json:"avatarUrl"`
-	LogoURL       string         `json:"logoUrl"`
-	ZeroingMethod string         `json:"zeroing_method"`
-	IPWhiteList   string         `json:"ip_white_list"`
-	TimeZone      string         `json:"time_zone"`
-	NoClearTable  string         `json:"no_clear_table"`
-	TimeZoneList  []TimeZoneItem `json:"time_zone_list"`
-	Company       string         `json:"company"`
-	Address       string         `json:"address"`
-	Phone         string         `json:"phone"`
-	TaxNumber     string         `json:"tax_number"`
-	ChainNumber   string         `json:"chain_number"`
-	Language      []Language     `json:"language"`
-	AuthLanguage  string         `json:"auth_language"`
+	Name          string         `json:"name"`           // 商城名称
+	AvatarURL     string         `json:"avatar_url"`     // 默认头像
+	LogoURL       string         `json:"logo_url"`       // 商城logo
+	ZeroingMethod string         `json:"zeroing_method"` // 抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元
+	IPWhiteList   string         `json:"ip_white_list"`  // ip白名单
+	TimeZone      string         `json:"time_zone"`      // 时区
+	NoClearTable  string         `json:"no_clear_table"` // 结账后不清台 0-清台 1-不清台
+	TimeZoneList  []TimeZoneItem `json:"time_zone_list"` // 时区列表
+	Company       string         `json:"company"`        // 公司名称
+	Address       string         `json:"address"`        // 地址
+	Phone         string         `json:"phone"`          // 联系电话
+	TaxNumber     string         `json:"tax_number"`     // 税号
+	ChainNumber   string         `json:"chain_number"`   // 连锁编号
+	Language      []Language     `json:"language"`       // 系统语言
+	AuthLanguage  string         `json:"auth_language"`  // 授权语言
 }
 
 type TimeZoneItem struct {
