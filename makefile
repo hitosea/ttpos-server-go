@@ -12,3 +12,7 @@ dev:
 		go install github.com/pilu/fresh@latest; \
 	fi
 	cd main && ${HOME}/go/bin/fresh -c ./fresh.conf
+
+migrate:
+	cd main && go run ./migration/main.go run --version 1738765726
+
