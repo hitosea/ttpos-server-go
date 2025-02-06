@@ -205,7 +205,7 @@ DROP TABLE IF EXISTS `ttpos_company_setting`;
 CREATE TABLE `ttpos_company_setting` (
     `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `company_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
-    `parent_id` INT(11) NOT NULL DEFAULT 0 COMMENT '上级集团ID',
+    `parent_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '上级集团ID',
     `name` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
     `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
     `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
