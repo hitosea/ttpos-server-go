@@ -39,6 +39,8 @@ func main() {
 
 	// 初始化国际化
 	i18n.Init()
+	// 初始化雪花ID生成器
+	database.InitSonyFlakeId()
 	// 初始化数据库管理器
 	var dbm *database.DBManager = database.GetDBManager(config.Database)
 
