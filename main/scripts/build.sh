@@ -10,7 +10,7 @@ mkdir -p bin
 if [ "$1" == "swagger" ]; then
     echo "构建包含 swagger 的版本..."
     # 生成Swagger文档
-    swag init -d cmd/server,app/api/v1,app/dto
+    ${HOME}/go/bin/swag init -d cmd/server,app/api/v1,app/dto
     # 添加 -v 参数来查看详细的构建信息
     go build -v -tags swagger -o "bin/${OUTPUT_NAME}" ./cmd/server
     if [ $? -ne 0 ]; then

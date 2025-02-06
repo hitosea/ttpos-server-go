@@ -1,3 +1,13 @@
+LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
+
+# 定义一个函数来更新环境变量并执行脚本
+define update_env_and_run
+	sed -i.bak 's/^SERVER_MODE=.*/SERVER_MODE=debug/' .env && rm .env.bak;
+	sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
+	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
+	chmod +x ./.sh && ./.sh mysql open
+endef
+
 # 初始化项目
 install:
 	# 初始化env文件 
@@ -10,28 +20,24 @@ install:
 	fi
 	# 启动容器
 	docker compose -p ttpos-server-go up -d;
-	# 运行run
-	chmod +x ./.sh && ./.sh mysql open;
-	cd main && go mod tidy;
     # 初始化php项目
 	chmod +x ./.sh && ./.sh init
-    # 运行run
-	cd main && go run ./cmd/server/main.go ./cmd/server/swagger_enabled.go;
 
 # 运行run
 run:
-	chmod +x ./.sh && ./.sh mysql open
-	cd main && go mod tidy
+	$(call update_env_and_run)
 	cd main && go run ./cmd/server/main.go ./cmd/server/swagger_enabled.go
 
 # 启动开发模式 - 热重启
 dev:
-	sed -i.bak 's/^SERVER_MODE=.*/SERVER_MODE=debug/' .env && rm .env.bak;
-	chmod +x ./.sh && ./.sh mysql open
+	$(call update_env_and_run)
 	if [ ! -f "${HOME}/go/bin/fresh" ]; then \
 		go install github.com/pilu/fresh@latest; \
 	fi
 	cd main && ${HOME}/go/bin/fresh -c ./fresh.conf
 
 migrate:
-	cd main && go run ./migration/main.go run --version 1738765726
+	chmod +x ./.sh && ./.sh think migrate:run
+
+build-doc:
+	cd main && go install github.com/swaggo/swag/cmd/swag@latest && chmod +x ./scripts/build.sh && ./scripts/build.sh swagger

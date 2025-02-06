@@ -267,6 +267,11 @@ definitions:
         description: 高级密码
         type: string
     type: object
+  req.ReqCashierUnlock:
+    properties:
+      password:
+        type: string
+    type: object
   resp.Access:
     properties:
       apiPath:
@@ -435,19 +440,6 @@ definitions:
       token:
         description: 用户token
         type: string
-    type: object
-  resp.ProductCategory:
-    properties:
-      categoryList:
-        description: 分类列表
-        items:
-          $ref: '#/definitions/resp.Category'
-        type: array
-      specialCategoryList:
-        description: 特殊分类列表
-        items:
-          $ref: '#/definitions/resp.SpecialCategory'
-        type: array
     type: object
   resp.ProductCategory:
     properties:
@@ -1142,6 +1134,58 @@ paths:
       summary: 退出登录
       tags:
       - 收银端
+  /cashier/passport/unlock:
+    post:
+      parameters:
+      - description: 解锁参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ReqCashierUnlock'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 解锁
+      tags:
+      - 收银端
+  /cashier/product/category:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品类别
+      parameters:
+      - description: 认证令牌
+        in: header
+        name: token
+        required: true
+        type: string
+      - description: 语言
+        in: header
+        name: language
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 产品类别列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductCategory'
+              type: object
+      summary: 获取收银产品类别
+      tags:
+      - cashier
   /desk/list:
     get:
       consumes:
@@ -1852,37 +1896,6 @@ paths:
         "404":
           description: 未找到
       summary: 获取收银支付类型列表
-      tags:
-      - cashier
-  /product/category:
-    get:
-      consumes:
-      - application/json
-      description: 获取收银产品类别
-      parameters:
-      - description: 认证令牌
-        in: header
-        name: token
-        required: true
-        type: string
-      - description: 语言
-        in: header
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 产品类别列表
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ProductCategory'
-              type: object
-      summary: 获取收银产品类别
       tags:
       - cashier
   /product/info/{productId}:
