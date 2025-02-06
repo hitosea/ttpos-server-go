@@ -1,39 +1,33 @@
 package setting
 
+// Business 门店业务设置
 type Business struct {
-	ZeroingMethodList         []ZeroingMethodItem         `json:"zeroing_method_list"`
-	CheckoutZeroingMethodList []CheckoutZeroingMethodItem `json:"checkout_zeroing_method_list"`
-	ZeroingMethod             string                      `json:"zeroing_method"`
-	CheckoutZeroingMethod     string                      `json:"checkout_zeroing_method"`
-	GiftMethodList            []GiftMethodItem            `json:"gift_method_list"`
-	GiftMethod                string                      `json:"gift_method"`
-	FreeMethodList            []FreeMethodItem            `json:"free_method_list"`
-	FreeMethod                string                      `json:"free_method"`
-	DiscountMethod            string                      `json:"discount_method"`
-	QrCode                    string                      `json:"qr_code"`
-	NoClearTable              string                      `json:"no_clear_table"`
-	IsNeedPassword            string                      `json:"is_need_password"`
-	DishCardStyle             string                      `json:"dish_card_style"`
-	DishCardStyleTime         string                      `json:"dish_card_style_time"`
-	IsInvoice                 string                      `json:"is_invoice"`
+	ZeroingMethodList         []ZeroingMethodItem         `json:"zeroing_method_list"`          // 优惠折扣自动抹零方式列表
+	CheckoutZeroingMethodList []CheckoutZeroingMethodItem `json:"checkout_zeroing_method_list"` // 结账自动抹零方式列表
+	ZeroingMethod             string                      `json:"zeroing_method"`               // 优惠折扣自动抹零方式
+	CheckoutZeroingMethod     string                      `json:"checkout_zeroing_method"`      // 结账自动抹零方式
+	GiftMethodList            []GiftMethodItem            `json:"gift_method_list"`             // 赠菜计算方式列表
+	GiftMethod                string                      `json:"gift_method"`                  // 赠菜计算方式
+	FreeMethodList            []FreeMethodItem            `json:"free_method_list"`             // 免单计算方式列表
+	FreeMethod                string                      `json:"free_method"`                  // 免单计算方式
+	DiscountMethod            string                      `json:"discount_method"`              // 折扣计算方式 10-按百分比 20-直接减免
+	QrCode                    string                      `json:"qr_code"`                      // 电子菜单二维码校验失效值，6位数数字
+	NoClearTable              string                      `json:"no_clear_table"`               // 结账后不清台 0-清台 1-不清台
+	IsNeedPassword            string                      `json:"is_need_password"`             // 取消订单/退菜 0-无需密码 1-需要密码
+	DishCardStyle             string                      `json:"dish_card_style"`              // 菜品卡片样式 0-无图模式 1-图片模式
+	DishCardStyleTime         string                      `json:"dish_card_style_time"`         // 菜品卡片样式最后更新时间
+	IsInvoice                 string                      `json:"is_invoice"`                   // 开票信息 0-不需要填写 1-需要填写
 }
 
-type ZeroingMethodItem struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-}
+type ZeroingMethodItem MethodItem
 
-type CheckoutZeroingMethodItem struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-}
+type CheckoutZeroingMethodItem MethodItem
 
-type GiftMethodItem struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-}
+type GiftMethodItem MethodItem
 
-type FreeMethodItem struct {
+type FreeMethodItem MethodItem
+
+type MethodItem struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 }

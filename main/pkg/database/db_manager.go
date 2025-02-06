@@ -46,7 +46,7 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, app := range companies {
-		appDB, err := m.getConnection(conf, fmt.Sprintf("shop%d", app.ID)) // 比如：shop1724054084 数据库
+		appDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, app.ID)) // 比如：shop1724054084 数据库
 		if err != nil {
 			log.Fatalf("Error connecting to database for app %d: %s", app.ID, err)
 		}
@@ -76,6 +76,15 @@ func (m *DBManager) GetDB(index uint) *gorm.DB {
 	panic(fmt.Sprintf("Database with index %d not found", index))
 }
 
+func (m *DBManager) GetDBNameList() map[uint]string {
+	dbNames := make(map[uint]string)
+	for dbName := range m.dbs {
+		dbNames[dbName] = fmt.Sprintf("%s%d", constant.DBNamePrefix, dbName)
+	}
+	return dbNames
+}
+
+// SetMockDB 添加测试用的DB实例
 func (m *DBManager) SetMockDB(db *gorm.DB) {
 	if m.dbs == nil {
 		m.dbs = make(map[uint]*gorm.DB)
@@ -83,6 +92,7 @@ func (m *DBManager) SetMockDB(db *gorm.DB) {
 	m.dbs[constant.MockDB] = db
 }
 
+// GetMockDB 获取测试用的DB实例
 func (m *DBManager) GetMockDB() *gorm.DB {
 	return m.dbs[constant.MockDB]
 }
