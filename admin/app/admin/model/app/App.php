@@ -52,7 +52,7 @@ class App extends AppModel
             "app.status",
             "app.create_time",
             //
-            "user.user_name",
+            "user.username",
             //
             "su.shop_supplier_id",
             "su.name as shop_supplier_name",
@@ -299,7 +299,7 @@ class App extends AppModel
         try {
             // 用户
             $user_data = [
-                'user_name' => $data['user_name'],
+                'username' => $data['user_name'],
                 'phone' => $data['link_phone'] ?? '',
             ];
             if (!empty($data['password'])) {
@@ -323,7 +323,7 @@ class App extends AppModel
                     return false;
                 }
             }
-            if ($shop_user['user_name'] != $data['user_name']) {
+            if ($shop_user['username'] != $data['user_name']) {
                 if (ShopUser::checkExist($data['user_name'])) {
                     $this->error = '超管邮箱已存在';
                     return false;

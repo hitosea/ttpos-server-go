@@ -33,9 +33,9 @@ class OptLog extends BaseModel
         return $this->alias('log')
             ->leftJoin('admin_user user', 'user.admin_user_id = log.admin_user_id')
             ->field('log.*')
-            ->field('user.user_name, IF(user.real_name = "", user.user_name, user.real_name) as real_name')
+            ->field('user.username, IF(user.real_name = "", user.username, user.real_name) as real_name')
             ->when($username, function ($q) use ($username) {
-                $q->like('user.user_name', $username);
+                $q->like('user.username', $username);
                 $q->orLike('user.real_name', $username);
             })
             ->order('log.id', 'desc')

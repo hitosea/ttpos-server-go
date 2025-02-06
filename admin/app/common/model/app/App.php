@@ -15,8 +15,8 @@ use app\common\model\supplier\Supplier;
  */
 class App extends BaseModel
 {
-    protected $name = 'app';
-    protected $pk = 'app_id';
+    protected $name = 'company';
+    protected $pk = 'id';
 
     // 写入后同步数据
     public static function onAfterUpdate(Model $model)
@@ -24,7 +24,7 @@ class App extends BaseModel
         if (app('http')->getName() == 'admin') {
             if ($model->getConnection() == 'mysql' && $model->supplier?->deploy_mode == 1) {
                 try {
-                    (new self([], $model->app_id))->where('app_id', $model->app_id)->find()?->save($model);
+                    (new self([], $model->id))->where('id', $model->id)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -64,7 +64,7 @@ class App extends BaseModel
      */
     public function supplier()
     {
-        return $this->hasOne(Supplier::class, 'app_id', 'app_id');
+        return $this->hasOne(Supplier::class, 'company_id', 'id');
     }
 
     /**
@@ -72,7 +72,7 @@ class App extends BaseModel
      */
     public function suppliers()
     {
-        return $this->hasMany(Supplier::class, 'parent_id', 'shop_supplier_id');
+        return $this->hasMany(Supplier::class, 'parent_id', 'id');
     }
 
     /**
@@ -80,7 +80,7 @@ class App extends BaseModel
      */
     public function shopUsers()
     {
-        return $this->hasMany(User::class, 'app_id', 'app_id');
+        return $this->hasMany(User::class, 'company_id', 'id');
     }
 
     /**
@@ -170,7 +170,7 @@ class App extends BaseModel
         }
         //
         $data = [
-            'app_id' => $this->app_id,
+            'app_id' => $this->id,
             'c_n' => $this->supplier?->chain_number,                // 连锁编号
             'name' => $this->supplier?->name,                       // 真实姓名
             'sale' => $this->supplier?->sale_stock,                 // 进销存: 0不开启, 1开启

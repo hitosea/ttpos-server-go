@@ -17,7 +17,7 @@ class Shop extends ShopModel
             return false;
         }
         return $this->save([
-            'user_name' => $data['user_name'],
+            'username' => $data['user_name'],
             'phone' => $data['phone'],
             'password' => salt_hash($data['password']),
             'app_id' => $app_id,

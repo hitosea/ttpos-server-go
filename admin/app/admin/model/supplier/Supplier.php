@@ -17,7 +17,7 @@ class Supplier extends SupplierModel
     public function add($data, $app_id)
     {
         //添加门店
-        $data['real_name'] = $data['user_name'];
+        $data['real_name'] = $data['username'];
         $data['name'] = $data['name'];
         $data['expire_time'] = $data['expire_time'];
         $data['app_id'] = $app_id;

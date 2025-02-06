@@ -1,5 +1,5 @@
 #!/bin/sh
- 
+
 GreenBG="\033[42;37m"
 Font="\033[0m"
 

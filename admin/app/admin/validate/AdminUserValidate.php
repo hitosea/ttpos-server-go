@@ -78,12 +78,12 @@ class AdminUserValidate extends  BaseValidate
     }
 
     /**
-     * 验证user_name是否存在
+     * 验证username是否存在
      */
     protected function checkUserNameExist($value, $rule, $data = [])
     {
         $id = $data['admin_user_id'] ?? 0;
-        $user = User::where('user_name', $value)
+        $user = User::where('username', $value)
             ->when($id, function ($q) use ($id) {
                 $q->where('admin_user_id', '<>', $id);
             })

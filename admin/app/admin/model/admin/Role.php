@@ -73,7 +73,7 @@ class Role extends RoleModel
         try {
             $roleAccessModel = new RoleAccess();
             // 检查是否存在
-            $role = self::where('role_name', $data['role_name'])->where('app_id', $data['app_id'])->find();
+            $role = self::where('role_name', $data['role_name'])->find();
             if ($role) {
                 $role->save([
                     'role_name' => $data['role_name'],
@@ -85,7 +85,6 @@ class Role extends RoleModel
                 $role = self::create([
                     'role_name' => $data['role_name'],
                     'sort' => max($data['sort'] ?? 1, 1),
-                    'app_id' => $data['app_id']
                 ]);
             }
 
@@ -93,7 +92,6 @@ class Role extends RoleModel
                 return [
                     'role_id' => $role['id'],
                     'access_id' => $accessId,
-                    'app_id' => $data['app_id']
                 ];
             }, $data['access_id']);
 
@@ -163,7 +161,6 @@ class Role extends RoleModel
                 $access_list[] = [
                     'role_id' => $data['id'],
                     'access_id' => $val,
-                    'app_id' => self::$app_id
                 ];
             }
             $access_model->saveAll($access_list);

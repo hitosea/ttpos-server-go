@@ -17,8 +17,8 @@ use app\shop\model\settings\Setting as SettingModel;
  */
 class Supplier extends BaseModel
 {
-    protected $name = 'supplier';
-    protected $pk = 'shop_supplier_id';
+    protected $name = 'company_setting';
+    protected $pk = 'id';
 
     // 写入后同步数据
     public static function onAfterWrite(Model $data)
@@ -32,7 +32,7 @@ class Supplier extends BaseModel
         if (app('http')->getName() == 'admin') {
             if ($model->getConnection() == 'mysql' && $model->deploy_mode == 1) {
                 try {
-                    (new self([], $model->app_id))->where('shop_supplier_id', $model->shop_supplier_id)->find()?->save($model);
+                    (new self([], $model->app_id))->where('id', $model->id)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -129,7 +129,7 @@ class Supplier extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'app_id', 'app_id');
+        return $this->belongsTo('app\\common\\model\\app\\App', 'id', 'company_id');
     }
 
     /**
@@ -153,7 +153,7 @@ class Supplier extends BaseModel
      */
     public function superUser()
     {
-        return $this->hasOne('app\\common\\model\\shop\\User', 'shop_supplier_id', 'shop_supplier_id')
+        return $this->hasOne('app\\common\\model\\shop\\User', 'company_id', 'company_id')
             ->where('is_super', '=', 1);
     }
 
@@ -170,7 +170,7 @@ class Supplier extends BaseModel
      */
     public function paymentApp()
     {
-        return $this->belongsTo('app\\common\\model\\pay\\PaymentApp', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->belongsTo('app\\common\\model\\pay\\PaymentApp', 'company_id', 'company_id');
     }
 
     /**

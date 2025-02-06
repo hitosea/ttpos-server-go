@@ -88,7 +88,7 @@ class Passport extends Controller
         $model = new UserModel;
         if ($user = $model->login($data)) {
             return $this->renderSuccess('登录成功', [
-                'user_name' => $user['user_name'],
+                'user_name' => $user['username'],
                 'token' => $user['token']
             ]);
         }

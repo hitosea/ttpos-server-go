@@ -82,7 +82,6 @@ class Upload extends Controller
             'file_type' => $fileType,
             'extension' => $fileInfo->getOriginalExtension(),
             'real_name' => $fileInfo->getOriginalName(),
-            'app_id' => $model::$app_id,
             'url_param' => $urlParam,
         ]);
         return $model;
