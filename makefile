@@ -55,15 +55,15 @@ build-doc:
 
 # 构建项目 - 生产
 build-run:
-	chmod +x ./.sh && ./.sh golang go build -o main ./cmd/server/main.go
+	chmod +x ./.sh && ./.sh golang build -o main ./cmd/server/main.go
 	docker compose -p ttpos-server-go restart golang
 
 # 更新
 update:
-	chmod +x ./.sh && ./.sh update && ./.sh golang go build -o main ./cmd/server/main.go
+	chmod +x ./.sh && ./.sh update && ./.sh golang build -o main ./cmd/server/main.go
 	docker compose -p ttpos-server-go up -d
 	docker compose -p ttpos-server-go restart golang
 
-# 重启
+# 重启容器
 restart:
 	chmod +x ./.sh && ./.sh restart

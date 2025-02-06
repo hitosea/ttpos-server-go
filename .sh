@@ -248,7 +248,7 @@ if [ $# -gt 0 ]; then
     
     elif [[ "$1" == "golang" ]]; then
         shift 1
-        run_exec golang "go build -o main ./cmd/server/main.go"
+        e="go $@" && run_exec golang "$e"
     elif [[ "$1" == "think" ]]; then
         shift 1
         e="php think $@" && run_exec php "$e"
