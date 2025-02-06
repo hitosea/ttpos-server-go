@@ -79,7 +79,7 @@ func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOr
 		return 0, err
 	}
 
-	return giftOrFreeOrderReason.Id, tx.Commit().Error // 提交事务
+	return giftOrFreeOrderReason.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 软删除赠品或免费订单原因
