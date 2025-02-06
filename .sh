@@ -118,12 +118,10 @@ stream {
 }
 EOF
         default_value="$(env_get DB_PORT_OPEN)"
-        if [ -n "$default_value" ]; then
-            read_tip="请输入代理端口 (3300-65500, 默认: ${default_value}): "
-        else
+        if [ -z "$default_value" ]; then
             read_tip="请输入代理端口 (3300-65500): "
+            read -rp "$read_tip" inputport
         fi
-        read -rp "$read_tip" inputport
         inputport=${inputport:-$default_value}
         if [ $inputport -lt 3300 ] || [ $inputport -gt 65500 ]; then
             error "端口范围不正确！"
@@ -217,12 +215,6 @@ if [ $# -gt 0 ]; then
                 echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
                 run_exec php "composer update --ignore-platform-reqs"
                 run_exec php "php think migrate:run"
-                # 清缓存
-                run_exec php "php think clear-cache"
-                # mac-addr
-                run_exec php "php think get-mac-addr"
-                # 更新前端配置文件
-                run_exec php "php think renewal:info"
             else
                 echo -e "${Error} ${RedBG} Git pull 失败，请检查网络或远程仓库状态 ${Font}"
                 exit 1
@@ -255,6 +247,10 @@ if [ $# -gt 0 ]; then
         else
             e="mysql $@" && run_exec db "$e"
         fi
+    
+    elif [[ "$1" == "golang" ]]; then
+        shift 1
+        run_exec golang "go build -o main ./cmd/server/main.go"
     elif [[ "$1" == "think" ]]; then
         shift 1
         e="php think $@" && run_exec php "$e"
