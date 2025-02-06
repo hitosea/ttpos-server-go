@@ -19,8 +19,9 @@ CREATE TABLE `ttpos_admin_access` (
   `is_show` int(11) DEFAULT 0 COMMENT '是否显示 0=不是1=是',
   `remark` varchar(255) DEFAULT '' COMMENT '描述',
   `is_supplier` int(11) DEFAULT 0 COMMENT '是否门店菜单 0=不是1=是',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=202 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='用户权限表';
 
@@ -88,8 +89,9 @@ CREATE TABLE `ttpos_admin_role` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `role_name` varchar(2000) DEFAULT '' COMMENT '角色名称',
   `sort` int(11) DEFAULT 0 COMMENT '排序(数字越小越靠前)',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台角色表';
 
@@ -101,8 +103,9 @@ CREATE TABLE `ttpos_admin_role_access` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
   `access_id` int(11) DEFAULT NULL COMMENT '权限ID',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台角色权限关系表';
 
@@ -112,24 +115,24 @@ CREATE TABLE `ttpos_admin_role_access` (
 DROP TABLE IF EXISTS `ttpos_admin_user`;
 CREATE TABLE `ttpos_admin_user` (
   `admin_user_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `user_name` varchar(255) NOT NULL DEFAULT '' COMMENT '用户名',
+  `username` varchar(255) NOT NULL DEFAULT '' COMMENT '用户名',
   `phone` varchar(50) DEFAULT '' COMMENT '手机号',
   `password` varchar(255) NOT NULL DEFAULT '' COMMENT '登录密码',
   `real_name` varchar(255) DEFAULT '' COMMENT '姓名',
   `is_super` int(11) DEFAULT 1 COMMENT '是否超级管理员',
   `status` int(11) DEFAULT 1 COMMENT '状态(0未启用,1已启用)',
-  `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL COMMENT '更新时间',
-  `delete_time` int(11) DEFAULT NULL COMMENT '删除时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`admin_user_id`) USING BTREE,
-  KEY `user_name` (`user_name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1715247152 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='超管用户记录表';
+  KEY `username` (`username`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='超管用户记录表';
 
 -- ----------------------------
 -- Records of ttpos_admin_user
 -- ----------------------------
 BEGIN;
-INSERT INTO `ttpos_admin_user` (`admin_user_id`, `user_name`, `password`, `real_name`, `is_super`, `status`, `create_time`, `update_time`, `delete_time`) VALUES (1715247150, 'admin', 'eb94dea542ea69eb670b97b781d8f05d', '', 1, 1, 1529926348, 1595127602, NULL);
+INSERT INTO `ttpos_admin_user` (`admin_user_id`, `username`, `password`, `real_name`, `is_super`, `status`, `create_time`, `update_time`, `delete_time`) VALUES (1715247150, 'admin', 'eb94dea542ea69eb670b97b781d8f05d', '', 1, 1, 1529926348, 1595127602, 0);
 COMMIT;
 
 -- ----------------------------
@@ -142,7 +145,9 @@ CREATE TABLE `ttpos_admin_user_login_log` (
   `username` varchar(255) DEFAULT '' COMMENT '用户名',
   `ip` varchar(128) DEFAULT '' COMMENT '登录ip',
   `result` text DEFAULT NULL COMMENT '登录结果',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员登录记录表';
 
@@ -160,7 +165,9 @@ CREATE TABLE `ttpos_admin_user_opt_log` (
   `agent` varchar(500) DEFAULT '' COMMENT '浏览器信息',
   `content` longtext NOT NULL COMMENT '操作内容',
   `ip` varchar(128) DEFAULT '' COMMENT '登录ip',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员操作记录表';
 
@@ -172,8 +179,9 @@ CREATE TABLE `ttpos_admin_user_role` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `admin_user_id` int(11) DEFAULT NULL COMMENT '超管用户ID',
   `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台用户角色关系表';
 
@@ -192,9 +200,9 @@ CREATE TABLE `ttpos_company` (
   `auth_day` int(11) NOT NULL DEFAULT '0' COMMENT '授权时间(天) 0为永不过期',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态1=》启用0禁用;not null',
   `auth_start_time` int(11) NOT NULL DEFAULT '0' COMMENT '授权开始时间（时间戳）',
-  `create_time` int(11) NOT NULL DEFAULT '0' COMMENT '创建时间（时间戳）',
-  `update_time` int(11) NOT NULL DEFAULT '0' COMMENT '更新时间（时间戳）',
-  `delete_time` int(11) NOT NULL DEFAULT '0' COMMENT '删除时间（时间戳）',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1724054090 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团表';
 
@@ -272,9 +280,9 @@ CREATE TABLE `ttpos_company_setting` (
     `auto_close` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0定时清台1立即清台',
     `close_time` INT(10) NOT NULL DEFAULT 0 COMMENT '0分钟清台',
     `category_set` TINYINT(1) NOT NULL DEFAULT 10 COMMENT '商品分类设置10同步主店20分店创建;NOT NULL',
-    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-    `update_time` INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` INT(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+    `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团设置表';
 
@@ -288,9 +296,9 @@ CREATE TABLE `ttpos_company_staff` (
   `company_uuid` int(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团员工表';
 
 -- ----------------------------
@@ -312,8 +320,9 @@ CREATE TABLE `ttpos_client_version` (
   `package_url` text DEFAULT NULL COMMENT '包地址',
   `original_name` varchar(255) DEFAULT '' COMMENT '文件原名称',
   `update_log` text DEFAULT NULL COMMENT '更新日志',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='客户端版本';
 
@@ -331,8 +340,9 @@ CREATE TABLE `ttpos_payment_app` (
   `ll_merchant_private_key` text DEFAULT '' COMMENT '商户私钥',
   `ll_token` varchar(255) NOT NULL DEFAULT '' COMMENT 'Token',
   `ll_sign_salt` varchar(255) NOT NULL DEFAULT '' COMMENT '签名盐',
-  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='支付应用';
 
@@ -354,8 +364,9 @@ CREATE TABLE `ttpos_upload_file` (
   `extension` varchar(20) NOT NULL DEFAULT '' COMMENT '文件扩展名',
   `is_user` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '是否为c端用户上传',
   `is_recycle` tinyint(3) unsigned NOT NULL DEFAULT 0 COMMENT '是否已回收',
-  `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`file_id`) USING BTREE,
   UNIQUE KEY `path_idx` (`file_name`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件库记录表';
@@ -369,8 +380,9 @@ CREATE TABLE `ttpos_upload_group` (
   `group_type` varchar(10) NOT NULL DEFAULT '' COMMENT '文件类型',
   `group_name` varchar(30) NOT NULL DEFAULT '' COMMENT '分类名称',
   `sort` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '分类排序(数字越小越靠前)',
-  `create_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`group_id`) USING BTREE,
   KEY `type_index` (`group_type`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件库分组记录表';
@@ -380,11 +392,13 @@ CREATE TABLE `ttpos_upload_group` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_setting`;
 CREATE TABLE `ttpos_setting` (
-  `name` varchar(30) NOT NULL COMMENT '设置项标示',
+  `key` varchar(30) NOT NULL COMMENT '设置项标示',
   `describe` varchar(255) NOT NULL DEFAULT '' COMMENT '设置项描述',
   `values` mediumtext NOT NULL COMMENT '设置内容（json格式）',
-  `update_time` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
-  UNIQUE KEY `unique_key` (`name`) USING BTREE
+  `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+  UNIQUE KEY `unique_key` (`key`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设置表';
 
 SET FOREIGN_KEY_CHECKS = 1;
