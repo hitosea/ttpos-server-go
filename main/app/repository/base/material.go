@@ -50,7 +50,7 @@ func (r *MaterialRepoImpl) UpdateMaterial(id uint, material model.Material) erro
 		return err
 	}
 
-	if err := tx.Model(&material.MultiLanguageName).Where("id = ?", material.MultiLanguageNameId).Updates(material.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&material.MultiLanguageName).Where("id = ?", material.MultiLanguageNameUuid).Updates(material.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -72,9 +72,6 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint, error)
 		tx.Rollback() // 创建多语言名称失败，回滚事务
 		return 0, err
 	}
-
-	// 将多语言名称ID存入原料
-	material.MultiLanguageNameId = material.MultiLanguageName.Id
 
 	// 创建原料
 	if err := tx.Create(&material).Error; err != nil {

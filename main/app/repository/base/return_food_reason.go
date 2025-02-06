@@ -50,7 +50,7 @@ func (r *ReturnFoodReasonRepoImpl) UpdateReturnFoodReason(id uint, returnFoodRea
 		return err
 	}
 
-	if err := tx.Model(&returnFoodReason.MultiLanguageName).Where("id = ?", returnFoodReason.MultiLanguageNameId).Updates(returnFoodReason.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&returnFoodReason.MultiLanguageName).Where("id = ?", returnFoodReason.MultiLanguageNameUuid).Updates(returnFoodReason.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -73,16 +73,13 @@ func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model
 		return 0, err
 	}
 
-	// 将多语言名称ID存入退菜原因
-	returnFoodReason.MultiLanguageNameId = returnFoodReason.MultiLanguageName.Id
-
 	// 创建退菜原因
 	if err := tx.Create(&returnFoodReason).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
 		return 0, err
 	}
 
-	return returnFoodReason.Id, tx.Commit().Error // 提交事务
+	return returnFoodReason.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 软删除退菜原因

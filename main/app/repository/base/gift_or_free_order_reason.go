@@ -50,7 +50,7 @@ func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint, gif
 		return err
 	}
 
-	if err := tx.Model(&giftOrFreeOrderReason.MultiLanguageName).Where("id = ?", giftOrFreeOrderReason.MultiLanguageNameId).Updates(giftOrFreeOrderReason.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&giftOrFreeOrderReason.MultiLanguageName).Where("id = ?", giftOrFreeOrderReason.MultiLanguageNameUuid).Updates(giftOrFreeOrderReason.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return err
 	}
@@ -72,9 +72,6 @@ func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOr
 		tx.Rollback() // 创建多语言名称失败，回滚事务
 		return 0, err
 	}
-
-	// 将多语言名称ID存入赠品或免费订单原因
-	giftOrFreeOrderReason.MultiLanguageNameId = giftOrFreeOrderReason.MultiLanguageName.Id
 
 	// 创建赠品或免费订单原因
 	if err := tx.Create(&giftOrFreeOrderReason).Error; err != nil {
