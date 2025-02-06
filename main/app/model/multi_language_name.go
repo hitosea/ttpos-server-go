@@ -12,7 +12,7 @@ type MultiLanguageName struct {
 	JaName     string `gorm:"column:ja_name;not null;default:'';comment:'日语名称'"`
 	KoName     string `gorm:"column:ko_name;not null;default:'';comment:'韩语名称'"`
 	TrName     string `gorm:"column:tr_name;not null;default:'';comment:'土耳其语名称'"`
-	CreateTime int    `gorm:"column:create_time;not null;default:0;comment:'创建时间（时间戳）'"`
-	UpdateTime int    `gorm:"column:update_time;not null;default:0;comment:'更新时间（时间戳）'"`
-	DeleteTime int    `gorm:"column:delete_time;not null;default:0;comment:'删除时间（时间戳）'"`
+	CreateTime int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime int64  `gorm:"comment:'删除时间（时间戳）'"`
 }

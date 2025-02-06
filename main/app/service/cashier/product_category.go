@@ -56,7 +56,7 @@ func (s *CashierService) GetProductCategory(dbId uint, language string) (resp.Pr
 	categoryMap := make(map[uint]int)
 	index := 0
 	for _, productCategory := range productCategoryList {
-		if productCategory.Level == 1 {
+		if productCategory.ParentUuid != 0 {
 			category := resp.Category{
 				Name:     productCategory.Name,
 				Key:      productCategory.CategoryKey,

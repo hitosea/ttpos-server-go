@@ -85,6 +85,7 @@ func (s *CategoryService) ConvertCategory() error {
 			MyName:   names.My,
 			JaName:   names.Ja,
 			KoName:   names.Ko,
+			TrName:   names.Tr,
 		}
 		_, err = repository.NewMultiLanguageNameRepository(s.targetDB).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
