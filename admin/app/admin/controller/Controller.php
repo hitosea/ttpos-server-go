@@ -121,7 +121,7 @@ class Controller extends BaseController
         $this->admin = [
             'user' => [
                 'admin_user_id' => $user['admin_user_id'],
-                'user_name' => $user['user_name'],
+                'user_name' => $user['username'],
             ],
         ];
         return true;
@@ -178,7 +178,6 @@ class Controller extends BaseController
                     'browser' => SystemHelp::getClientBrowser(),
                     'agent' => $_SERVER['HTTP_USER_AGENT'],
                     'title' => $title == '点餐助手' ? '客户端管理' : $title,
-                    'app_id' => 0,
                     'create_time' => time(),
                 ]);
             }

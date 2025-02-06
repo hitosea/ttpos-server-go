@@ -17,7 +17,7 @@ class User extends UserModel
     public function login($data)
     {
         // 验证用户名密码是否正确
-        $user = self::withTrashed()->whereRaw('BINARY user_name = :user_name', ['user_name' => $data['username'] ?? ''])->order('admin_user_id', 'desc')->order('delete_time')->find();
+        $user = self::withTrashed()->whereRaw('BINARY username = :username', ['username' => $data['username'] ?? ''])->order('admin_user_id', 'desc')->order('delete_time')->find();
         if (!$user || $user->password != salt_hash($data['password'] ?? '')) {
             LoginLog::add($data['username'] ?? '', \request()->ip(), '登录失败', 0);
             $this->error = '账号或密码错误';
@@ -36,7 +36,7 @@ class User extends UserModel
         // 保存登录状态
         $user['token'] = signToken($user['admin_user_id'], 'admin', '', md5($user->password));
         // 记录到日志
-        LoginLog::add($user->user_name, \request()->ip(), '登录成功', $user->admin_user_id);
+        LoginLog::add($user->username, \request()->ip(), '登录成功', $user->admin_user_id);
         //
         return $user;
     }
@@ -87,11 +87,11 @@ class User extends UserModel
         $keyword = $param['keyword'] ?? '';
         //
         return self::with(['userRole.role'])
-            ->field('admin_user_id, user_name, phone, real_name, status, create_time')
+            ->field('admin_user_id, username as user_name, phone, real_name, status, create_time')
             ->where('is_super', 0)
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
-                    $qq->like('user_name', $keyword);
+                    $qq->like('username', $keyword);
                     $qq->orLike('real_name', $keyword);
                     $qq->orLike('admin_user_id', $keyword);
                 });
@@ -108,7 +108,7 @@ class User extends UserModel
         $this->startTrans();
         try {
             $res = self::create([
-                'user_name' => trim($data['user_name']),
+                'username' => trim($data['user_name']),
                 'phone' => trim($data['phone']),
                 'password' => salt_hash($data['password']),
                 'real_name' => trim($data['real_name']),
@@ -142,7 +142,7 @@ class User extends UserModel
         try {
             $where = ['admin_user_id' => $data['admin_user_id']];
             $arr = [
-                'user_name' => $data['user_name'],
+                'username' => $data['user_name'],
                 'phone' => trim($data['phone']),
                 'password' => salt_hash($data['password']),
                 'real_name' => $data['real_name'],

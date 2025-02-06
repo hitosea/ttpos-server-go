@@ -5,9 +5,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
 	"ttpos-server-go/config"
+	"ttpos-server-go/docs"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -51,7 +54,10 @@ func main() {
 	r.Use(middleware.Cors())
 	r.Use(middleware.Recovery(logger.Logger))
 	// 注册 Swagger 路由
-	setupSwagger(r)
+	// 允许自定义Swagger文档链接
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	// Swagger API 文档
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	var cacheConfig cache.Config
 	_ = copier.Copy(&cacheConfig, &config.Redis)

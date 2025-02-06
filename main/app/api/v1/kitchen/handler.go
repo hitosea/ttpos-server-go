@@ -1,6 +1,9 @@
 package kitchen
 
 import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +31,7 @@ func (siw *KitchenServerHandler) PostCallHandle(c *gin.Context) {
 // @Router /kitchen/call/list [get]
 func (siw *KitchenServerHandler) GetCallList(c *gin.Context) {
 	// 获取呼叫列表的逻辑
+	helper.Fail(c, constant.CodeBadRequest, "验证码签名8860不能为空")
 }
 
 // PostLogin 用户登录

@@ -27,6 +27,12 @@ func (r *CompanySettingRepository) GetByCompanyId(companyId uint) model.CompanyS
 	return companySetting
 }
 
+func (r *CompanySettingRepository) GetByCompanyIdFromCompanyDB(companyId uint) model.CompanySetting {
+	var companySetting model.CompanySetting
+	r.dbm.GetDB(companyId).First(&companySetting)
+	return companySetting
+}
+
 func (r *CompanySettingRepository) Update(companySetting model.CompanySetting) error {
 	if err := r.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_id = ?", companySetting.CompanyId).Updates(companySetting).Error; err != nil {
 		return err

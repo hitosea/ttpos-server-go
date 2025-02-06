@@ -59,7 +59,7 @@ class ExceptionHandler extends Handle
             'code' => $this->code,
             'data' => $this->data,
         ];
-        if (env('APP_DEBUG')) {
+        if (env('APP_DEBUG') || env('SERVER_MODE') == 'debug') {
             $data['line'] = $e->getline() ?: '';
             $data['file'] = $e->getFile() ?: '';
         }

@@ -1,9 +1,9 @@
 package router
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"ttpos-server-go/app/service/setting"
 
 	v1 "ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/admin"
@@ -29,6 +29,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	accessRepo := repository.NewAccessRepository(dbm)
 	companySettingRepo := repository.NewCompanySettingRepository(dbm)
 	staffShiftLogRepo := repository.NewShiftLogRepository(dbm)
+
+	settingRepo := repository.NewSettingRepository(dbm)
+	settingService := setting.NewSettingService(settingRepo, companySettingRepo)
+	// ToDo 记得删除
+	_ = settingService
 
 	// 初始化服务
 	captchaService := service.NewCaptchaService(cache)

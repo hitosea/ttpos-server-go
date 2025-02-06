@@ -15,6 +15,7 @@ class User extends BaseModel
     protected $name = 'admin_user';
     protected $pk = 'admin_user_id';
     protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 关联角色表

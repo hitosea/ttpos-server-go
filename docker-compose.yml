@@ -58,3 +58,15 @@ services:
       - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     restart: always
+    
+  golang:
+    container_name: "saas-golang-${APP_ID}"
+    image: golang:1.23
+    volumes:
+      - ./docker/golang:/go
+      - ./main:/var/www
+      - .env:/var/.env
+    working_dir: /var/www
+    tty: true
+    command: make run
+    restart: always

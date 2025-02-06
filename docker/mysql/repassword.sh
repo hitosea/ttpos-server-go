@@ -1,5 +1,5 @@
 #!/bin/sh
- 
+
 GreenBG="\033[42;37m"
 Font="\033[0m"
 
@@ -27,7 +27,7 @@ if [ -z "$userid" ]; then
 fi
 
 mysql -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE -h$MARIADB_HOST <<EOF
-update ${MARIADB_PREFIX}admin_user set \`user_name\`='admin',\`password\`='${md5_password}' where \`admin_user_id\` = '${userid}';
+update ${MARIADB_PREFIX}admin_user set \`username\`='admin',\`password\`='${md5_password}' where \`admin_user_id\` = '${userid}';
 EOF
 account="admin"
 echo "账号: ${GreenBG}${account}${Font}"
