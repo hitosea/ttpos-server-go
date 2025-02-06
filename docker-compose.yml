@@ -22,8 +22,8 @@ services:
     container_name: "saas-nginx-${APP_ID}"
     image: "nginx:alpine"
     ports:
-      - "${SERVER_PORT:-}:80"
-      - "${SERVER_SSL_PORT:-}:443"
+      - "${NGINX_PORT:-}:80"
+      - "${NGINX_SSL_PORT:-}:443"
     volumes:
       - ./docker/sysctl/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx:/etc/nginx/conf.d

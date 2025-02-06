@@ -10,13 +10,8 @@ install:
 	fi
 	# 启动容器
 	docker compose -p ttpos-server-go up -d;
-	# 运行run
-	chmod +x ./.sh && ./.sh mysql open;
-	cd main && go mod tidy;
     # 初始化php项目
 	chmod +x ./.sh && ./.sh init
-    # 运行run
-	cd main && go run ./cmd/server/main.go ./cmd/server/swagger_enabled.go;
 
 # 运行run
 run:
@@ -34,4 +29,4 @@ dev:
 	cd main && ${HOME}/go/bin/fresh -c ./fresh.conf
 
 migrate:
-	cd main && go run ./migration/main.go run --version 1738765726
+	chmod +x ./.sh && ./.sh think migrate:run

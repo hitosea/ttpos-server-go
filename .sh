@@ -196,10 +196,11 @@ if [ $# -gt 0 ]; then
         run_exec php "chown -R www-data:www-data think"
         run_exec php "chmod +x ./bin/license.so"
         run_exec php "chmod +x ./bin/license_arm.so"
-        #
+        # 
         $COMPOSE restart
+        #
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
-        echo -e "地址: ${GreenBG}http://127.0.0.1:$(env_get SERVER_PORT)${Font}"
+        echo -e "地址: ${GreenBG}http://127.0.0.1:$(env_get NGINX_PORT)${Font}"
         # 设置云部署初始化密码
         res=`run_exec db "sh /etc/mysql/repassword.sh"`
         echo -e "$res"
