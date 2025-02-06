@@ -1,12 +1,5 @@
 package setting
 
-type LanguageItem struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-	I     string `json:"i"`
-	Index string `json:"index"`
-}
-
 type BuffetOrderLimit OrderLimit
 
 type OrderLimit struct {
