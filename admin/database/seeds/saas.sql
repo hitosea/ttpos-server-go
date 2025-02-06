@@ -392,13 +392,13 @@ CREATE TABLE `ttpos_upload_group` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_setting`;
 CREATE TABLE `ttpos_setting` (
-  `name` varchar(30) NOT NULL COMMENT '设置项标示',
+  `key` varchar(30) NOT NULL COMMENT '设置项标示',
   `describe` varchar(255) NOT NULL DEFAULT '' COMMENT '设置项描述',
-  `value` mediumtext NOT NULL COMMENT '设置内容（json格式）',
+  `values` mediumtext NOT NULL COMMENT '设置内容（json格式）',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-  UNIQUE KEY `unique_key` (`name`) USING BTREE
+  UNIQUE KEY `unique_key` (`key`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设置表';
 
 SET FOREIGN_KEY_CHECKS = 1;
