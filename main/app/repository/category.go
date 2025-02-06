@@ -90,10 +90,10 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 
 	// 创建分类
 	category := model.ProductCategory{
-		ParentId:            params.ParentID,
-		MultiLanguageNameId: nameId,
-		Name:                params.Name.ZH,
-		OrderBy:             uint(params.Sort),
+		ParentUuid:            params.ParentID,
+		MultiLanguageNameUuid: nameId,
+		Name:                  params.Name.ZH,
+		OrderBy:               uint(params.Sort),
 	}
 	id, err := NewProductCategoryRepository(tx).CreateProductCategory(category)
 	if err != nil {

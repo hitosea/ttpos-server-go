@@ -3,6 +3,7 @@ package model
 // MultiLanguageName 结构体表示多语言名称
 type MultiLanguageName struct {
 	Id         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	Uuid       uint   `gorm:"column:uuid;not null;default:0;comment:'唯一标识符'"`
 	EnName     string `gorm:"column:en_name;not null;default:'';comment:'英文名称'"`
 	ZhName     string `gorm:"column:zh_name;not null;default:'';comment:'中文名称'"`
 	ZhTwName   string `gorm:"column:zh_tw_name;not null;default:'';comment:'繁体中文名称'"`

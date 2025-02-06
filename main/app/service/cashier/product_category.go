@@ -66,7 +66,7 @@ func (s *CashierService) GetProductCategory(dbId uint, language string) (resp.Pr
 			categoryMap[productCategory.Id] = index
 			index++
 		} else {
-			categoryList[categoryMap[productCategory.ParentId]].Children = append(categoryList[categoryMap[productCategory.ParentId]].Children, resp.ChildCategory{
+			categoryList[categoryMap[productCategory.ParentUuid]].Children = append(categoryList[categoryMap[productCategory.ParentUuid]].Children, resp.ChildCategory{
 				Name: productCategory.Name,
 				Key:  productCategory.CategoryKey,
 			})
