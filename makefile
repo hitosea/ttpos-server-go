@@ -38,3 +38,6 @@ dev:
 
 migrate:
 	chmod +x ./.sh && ./.sh think migrate:run
+
+build-doc:
+	cd main && go install github.com/swaggo/swag/cmd/swag@latest && chmod +x ./scripts/build.sh && ./scripts/build.sh swagger

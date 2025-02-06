@@ -837,6 +837,92 @@
                 }
             }
         },
+        "/cashier/passport/unlock": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "解锁",
+                "parameters": [
+                    {
+                        "description": "解锁参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ReqCashierUnlock"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/product/category": {
+            "get": {
+                "description": "获取收银产品类别",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cashier"
+                ],
+                "summary": "获取收银产品类别",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "认证令牌",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "语言",
+                        "name": "language",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "产品类别列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/desk/list": {
             "get": {
                 "description": "获取收银台列表",
@@ -1978,57 +2064,6 @@
                 }
             }
         },
-        "/product/category": {
-            "get": {
-                "description": "获取收银产品类别",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银产品类别",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "认证令牌",
-                        "name": "token",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "产品类别列表",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductCategory"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/product/info/{productId}": {
             "get": {
                 "description": "获取收银产品信息",
@@ -2757,6 +2792,14 @@
                 }
             }
         },
+        "req.ReqCashierUnlock": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
         "resp.Access": {
             "type": "object",
             "properties": {
@@ -2992,25 +3035,6 @@
                 "token": {
                     "description": "用户token",
                     "type": "string"
-                }
-            }
-        },
-        "resp.ProductCategory": {
-            "type": "object",
-            "properties": {
-                "categoryList": {
-                    "description": "分类列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Category"
-                    }
-                },
-                "specialCategoryList": {
-                    "description": "特殊分类列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.SpecialCategory"
-                    }
                 }
             }
         },
