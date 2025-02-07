@@ -78,6 +78,8 @@ services:
       - ./docker/golang/websocket:/go
       - ./services/websocket:/var/www
       - .env:/var/.env
+    environment:
+      - GOPROXY=https://goproxy.cn
     working_dir: /var/www
     tty: true
     command: make run
