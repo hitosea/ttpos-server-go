@@ -30,6 +30,8 @@ services:
       - ./admin/public:/var/www/public
     links:
       - php
+      - golang
+      - websocket
     restart: unless-stopped
 
   db:
