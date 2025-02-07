@@ -249,6 +249,9 @@ if [ $# -gt 0 ]; then
     elif [[ "$1" == "golang" ]]; then
         shift 1
         e="go $@" && run_exec golang "$e"
+    elif [[ "$1" == "websocket" ]]; then
+        shift 1
+        e="go $@" && run_exec websocket "$e"
     elif [[ "$1" == "think" ]]; then
         shift 1
         e="php think $@" && run_exec php "$e"
