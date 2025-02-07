@@ -12,7 +12,7 @@ use app\common\model\BaseModel;
 class User extends BaseModel
 {
     protected $name = 'company_staff';
-    protected $pk = 'staff_id';
+    protected $pk = 'uuid';
 
     // 写入后同步数据
     public static function onAfterUpdate(Model $model)
@@ -20,7 +20,7 @@ class User extends BaseModel
         if (app('http')->getName() == 'admin') {
             if ($model->getConnection() == 'mysql' && $model->supplier?->deploy_mode == 1) {
                 try {
-                    (new self([], $model->app_id))->where('staff_id', $model->staff_id)->find()?->save($model);
+                    (new self([], $model->app_id))->where('uuid', $model->uuid)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -58,7 +58,7 @@ class User extends BaseModel
 
     public function userRole()
     {
-        return $this->hasMany('app\\common\\model\\shop\\UserRole', 'staff_id', 'staff_id');
+        return $this->hasMany('app\\common\\model\\shop\\UserRole', 'staff_id', 'uuid');
     }
 
     /**
@@ -161,11 +161,10 @@ class User extends BaseModel
     {
         if ((!$data = Cache::get('first_shop_info')) || $isClearCache) {
             $userModel = new static;
-            $info = (new static)->withoutGlobalScope()->where('app_id', '>', 0)->field('app_id,shop_supplier_id')->find();
-            $app_id = $info?->app_id ?: 0;
-            $shop_supplier_id = $info?->shop_supplier_id ?: 0;
-            $data = compact('shop_supplier_id', 'app_id');
-            if ($shop_supplier_id) {
+            $info = (new static)->withoutGlobalScope()->where('company_uuid', '>', 0)->field('company_uuid')->find();
+            $company_uuid = $info?->company_uuid ?: 0;
+            $data = compact('company_uuid');
+            if ($company_uuid) {
                 Cache::tag('firstshop')->set('first_shop_info', $data);
             }
         }

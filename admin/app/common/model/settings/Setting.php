@@ -25,7 +25,6 @@ use app\common\model\settings\Printer as PrinterModel;
 class Setting extends BaseModel
 {
     protected $name = 'setting';
-    protected $createTime = false;
     protected $pk = 'key';
 
     /**
@@ -68,7 +67,7 @@ class Setting extends BaseModel
         $model = new static;
         $result = $model->withoutGlobalScope()->where('key', '=', $key)->value('values');
         if (!$result) {
-            $languageList = self::getSupplierLanguage(User::getShopInfo('shop_supplier_id'))['language'] ?? [];
+            $languageList = self::getSupplierLanguage(User::getShopInfo('company_uuid'))['language'] ?? [];
             $result = $model->defaultData(null, $languageList)[$key]['values'];
         } else {
             $result = json_decode($result, true);
@@ -79,9 +78,9 @@ class Setting extends BaseModel
     /**
      * 获取指定项语言设置
      */
-    public static function getSupplierLanguage($shop_supplier_id, $app_id = null)
+    public static function getSupplierLanguage($company_uuid, $app_id = null)
     {
-        $data = self::getAll($app_id, $shop_supplier_id);
+        $data = self::getAll($company_uuid);
         $data_key = $data[SettingEnum::STORE]['values'] ?? [];
         if (isset($data_key['language'])) {
             $data_key['language'] = $data_key['language'] ?: [];
@@ -137,7 +136,7 @@ class Setting extends BaseModel
         is_null($shop_supplier_id) && $shop_supplier_id = $static::$app_id;
         $shop_supplier_id == 0 && $shop_supplier_id = $static::$app_id;
         if (!$data = Cache::get('setting_' . $app_id . '_' . $shop_supplier_id)) {
-            $setting = $static->where(compact('app_id'))->where('shop_supplier_id', $shop_supplier_id)->select();
+            $setting = $static->select();
             $data = empty($setting) ? [] : array_column($static->collection($setting)->toArray(), null, 'key');
             Cache::tag('cache')->set('setting_' . $app_id . '_' . $shop_supplier_id, $data);
         }

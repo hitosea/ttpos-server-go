@@ -10,8 +10,6 @@ use app\common\model\BaseModel;
 class UploadFile extends BaseModel
 {
     protected $name = 'upload_file';
-    protected $updateTime = false;
-    protected $deleteTime = false;
     protected $append = ['file_path'];
 
     /**
@@ -32,15 +30,15 @@ class UploadFile extends BaseModel
     {
         $videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.m4v', '.mpeg', '.3gp'];
         # 存储驱动程序上传图片等使用: google,local
-        if ($data['storage'] === 'local' && (!($data['url_param'] ?? '') || env('STORAGE_DRIVER', 'local') == 'local')  ) {
+        if ($data['storage'] === 'local' && (!($data['url_param'] ?? '') || env('STORAGE_DRIVER', 'local') == 'local')) {
             if (($data['file_type'] ?? '') === '.video' || in_array('.' . pathinfo($data['save_name'], PATHINFO_EXTENSION), $videoExtensions)) {
                 return  base_url() . 'uploads/' . $data['save_name'];
             }
             return  base_url() . 'api/product/thumbs/uploads/' . $data['save_name'];
-        } 
+        }
         if ($data['storage'] === 'google' || strstr($data['url_param'] ?? '', 'GoogleAccessId')) {
-            return str_replace('https://storage.googleapis.com/', base_url() . 'storage_googleapis/',  ($data['file_url'] ?? '') . '/' . ($data['save_name'] ?? '') . '?' . ($data['url_param'] ?? '') ) . '&';
-        } 
+            return str_replace('https://storage.googleapis.com/', base_url() . 'storage_googleapis/', ($data['file_url'] ?? '') . '/' . ($data['save_name'] ?? '') . '?' . ($data['url_param'] ?? '')) . '&';
+        }
         return ($data['file_url'] ?? '') . '/' . ($data['file_name'] ?? '');
     }
 
