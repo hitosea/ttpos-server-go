@@ -6,11 +6,18 @@ type Where func(*gorm.DB) *gorm.DB
 type With func(*gorm.DB) *gorm.DB
 type DBOption func(*gorm.DB) *gorm.DB
 
+// WithPreload 预加载
+type WithPreload struct {
+	Query string
+	Args  []interface{}
+}
+
 // ICommonRepo 公共仓库接口
 type ICommonRepo interface {
-	WhereByID(id uint) DBOption
-	WhereLikeByName(name string) DBOption
-	OrderByID(id uint, order string) DBOption
+	WhereByID(id uint) DBOption               // 根据ID查询
+	WhereLikeByName(name string) DBOption     // 根据名称查询
+	OrderByID(id uint, order string) DBOption // 根据ID排序
+	Preload(preloads ...WithPreload) DBOption // 预加载
 }
 
 // commonRepo 公共仓库实现
@@ -44,5 +51,15 @@ func (r *commonRepo) WhereLikeByName(name string) DBOption {
 func (r *commonRepo) OrderByID(id uint, order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("id " + order)
+	}
+}
+
+// Preload 预加载
+func (r *commonRepo) Preload(preloads ...WithPreload) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		for _, preload := range preloads {
+			db = db.Preload(preload.Query, preload.Args...)
+		}
+		return db
 	}
 }
