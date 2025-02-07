@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
 )
 
 func TestProductAttribute(t *testing.T) {
@@ -25,7 +24,11 @@ func TestProductAttribute(t *testing.T) {
 }
 
 func TestConvertProductAttribute(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertProductAttribute()
+}
+
+func testConvertProductAttribute() {
+	InitializeSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

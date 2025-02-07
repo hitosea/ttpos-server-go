@@ -3,6 +3,7 @@ package old_model
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"ttpos-server-go/pkg/database"
 )
@@ -18,8 +19,20 @@ func TestGetAttributeList(t *testing.T) {
 	fmt.Println(string(json))
 }
 
+var SonyFlakeIdOnce sync.Once
+
+func InitializeSonyFlakeId() {
+	SonyFlakeIdOnce.Do(func() {
+		database.InitSonyFlakeId()
+	})
+}
+
 func TestConvertAttribute(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertAttribute()
+}
+
+func testConvertAttribute() {
+	InitializeSonyFlakeId()
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)

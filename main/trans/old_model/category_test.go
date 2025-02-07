@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/database"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -64,7 +63,11 @@ func TestCategory(t *testing.T) {
 }
 
 func TestConvertCategory(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertCategory()
+}
+
+func testConvertCategory() {
+	InitializeSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
 )
 
 func TestFreeTag(t *testing.T) {
@@ -25,7 +24,11 @@ func TestFreeTag(t *testing.T) {
 }
 
 func TestConvertFreeTag(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertFreeTag()
+}
+
+func testConvertFreeTag() {
+	InitializeSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

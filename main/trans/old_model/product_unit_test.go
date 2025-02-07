@@ -47,6 +47,12 @@ func TestProductUnit(t *testing.T) {
 }
 
 func TestConvertProductUnit(t *testing.T) {
+	testConvertProductUnit()
+}
+
+func testConvertProductUnit() {
+	InitializeSonyFlakeId()
+
 	database.InitSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
@@ -63,5 +69,5 @@ func TestConvertProductUnit(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("转换完成")
+	fmt.Println("product_unit转换完成")
 }

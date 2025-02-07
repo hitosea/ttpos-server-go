@@ -25,7 +25,11 @@ func TestSpec(t *testing.T) {
 }
 
 func TestConvertSpec(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertSpec()
+}
+
+func testConvertSpec() {
+	InitializeSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
@@ -40,5 +44,5 @@ func TestConvertSpec(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("转换完成")
+	fmt.Println("spec转换完成")
 }

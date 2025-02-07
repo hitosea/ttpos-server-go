@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
 )
 
 func TestReturnReason(t *testing.T) {
@@ -25,7 +24,11 @@ func TestReturnReason(t *testing.T) {
 }
 
 func TestConvertReturnReason(t *testing.T) {
-	database.InitSonyFlakeId()
+	testConvertReturnReason()
+}
+
+func testConvertReturnReason() {
+	InitializeSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
@@ -40,5 +43,5 @@ func TestConvertReturnReason(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("转换完成")
+	fmt.Println("return_reason转换完成")
 }

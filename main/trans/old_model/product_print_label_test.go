@@ -25,6 +25,12 @@ func TestGetProductUnitList(t *testing.T) {
 }
 
 func TestConvertProductPrintLabel(t *testing.T) {
+	testConvertProductPrintLabel()
+}
+
+func testConvertProductPrintLabel() {
+	InitializeSonyFlakeId()
+
 	database.InitSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
