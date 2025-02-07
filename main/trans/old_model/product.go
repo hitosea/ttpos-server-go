@@ -65,6 +65,7 @@ type Product struct {
 	UpdateTime           int64   `gorm:"autoUpdateTime;comment:'更新时间'"`
 
 	ProductImage ProductImage `gorm:"foreignKey:product_id;references:product_id"`
+	ProductTax   ProductTax   `gorm:"foreignKey:product_id;references:product_id"`
 }
 
 type ProductImage struct {
@@ -75,8 +76,19 @@ type ProductImage struct {
 	CreateTime int64 `gorm:"autoCreateTime;comment:'创建时间'"`
 }
 
+type ProductTax struct {
+	ID             uint  `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
+	ProductID      uint  `gorm:"default:0;comment:'产品id'"`
+	ProductTaxType uint  `gorm:"default:1;comment:'产品税类类型，1-堂食税类，2-外带税类'"`
+	TaxCategoryID  uint  `gorm:"default:0;comment:'税类id'"`
+	AppID          uint  `gorm:"default:0;comment:'应用id'"`
+	CreateTime     int64 `gorm:"autoCreateTime;comment:'创建时间'"`
+	UpdateTime     int64 `gorm:"autoUpdateTime;comment:'更新时间'"`
+}
+
 type ProductInterface interface {
 	GetProductList() ([]Product, error)
+	GetProductTax(productID uint, taxType uint) (ProductTax, error)
 	ConvertProduct() error
 }
 
@@ -94,33 +106,93 @@ func (s *ProductService) GetProductList() ([]Product, error) {
 	return products, nil
 }
 
+func (s *ProductService) GetProductTax(productID uint, taxType uint) (ProductTax, error) {
+	var productTax ProductTax
+	err := s.db.Where("product_id = ? AND product_tax_type = ?", productID, taxType).First(&productTax).Error
+	if err != nil {
+		return ProductTax{}, err
+	}
+	return productTax, nil
+}
+
 func (s *ProductService) ConvertProduct() error {
 	products, err := s.GetProductList()
 	if err != nil {
 		return err
 	}
 	for _, product := range products {
-		//fmt.Println(fmt.Sprintf("-------迁移product: %+v", product))
 		names := Names{}
 		err := names.GetNames(product.ProductName)
 		if err != nil {
 			return err
 		}
-		//fmt.Println(fmt.Sprintf("product_id: %d, product_name: %+v", product.ProductID, names))
+		fmt.Println(fmt.Sprintf("product_id: %d, product_name: %+v", product.ProductID, names))
 
 		id, err := database.GetID()
 		if err != nil {
 			return err
 		}
-		//fmt.Println(fmt.Sprintf("id: %d", id))
+		fmt.Println(fmt.Sprintf("id: %d", id))
 
 		languageName := names.GenMultiLanguageName(uint(id))
 
 		if product.Type == 10 {
 			// 成品
+			fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
+			StockDeductMethod := func() uint8 {
+				if product.DeductStockType == 10 {
+					return 0
+				}
+				return 1
+			}()
+			Status := func() uint8 {
+				if product.ProductStatus == 20 {
+					return 0
+				}
+				return 1
+			}()
+			productDineTax, err := s.GetProductTax(product.ProductID, 1)
+			if err != nil {
+				return err
+			}
+			productTakeoutTax, err := s.GetProductTax(product.ProductID, 2)
+			if err != nil {
+				return err
+			}
+
+			productPackage := model.ProductPackage{
+				Uuid:                  product.ProductID,
+				Name:                  names.Zh,
+				MultiLanguageNameUuid: uint(id),
+				ImageName:             product.ImgName,
+				ImageUuid:             product.ProductImage.ImageID,
+				StockDeductMethod:     StockDeductMethod,
+				UnitUuid:              product.UnitID,
+				DineTaxUuid:           productDineTax.TaxCategoryID,
+				CategoryUuid:          product.CategoryID,
+				TakeoutTaxUuid:        productTakeoutTax.TaxCategoryID,
+				SpecialCategoryUuid:   product.SpecialID,
+				PrinterTagUuid:        product.LabelID,
+				SupplierUuid:          product.ShopSupplierID,
+				Status:                Status,
+				IsShowCashier:         product.IsShowCashier,
+				IsShowTablet:          product.IsShowTablet,
+				IsShowKitchen:         product.IsShowKitchen,
+				IsShowAssistant:       product.IsShowAssistant,
+				IsShowH5:              product.IsShowH5,
+				OrderBy:               product.ProductSort,
+				Limit:                 product.LimitNum,
+				Description:           product.SellingPoint,
+				OpenDiscount:          product.IsEnableGrade,
+				MultiLanguageName:     languageName,
+			}
+			_, err = base.NewProductPackageRepo(s.targetDB).CreateProductPackage(productPackage)
+			if err != nil {
+				return err
+			}
 		} else if product.Type == 20 {
 			// 材料
-			fmt.Println(fmt.Sprintf("材料：%+v", product))
+			fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
 			material := model.Material{
 				Uuid:                  product.ProductID,
 				Name:                  names.Zh,

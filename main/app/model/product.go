@@ -88,3 +88,36 @@ type ProductPackageAttribute struct {
 
 	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
 }
+
+// 产品包表，定义产品包的相关信息
+type ProductPackage struct {
+	Id                    uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid                  uint   `gorm:"default:0;comment:'产品包ID'"`
+	Name                  string `gorm:"default:'';comment:'产品包名称'"`
+	MultiLanguageNameUuid uint   `gorm:"default:0;comment:'多语言名称ID'"`
+	ImageName             string `gorm:"default:'';comment:'图片名称'"`
+	ImageUuid             uint   `gorm:"default:0;comment:'图片ID'"`
+	StockDeductMethod     uint8  `gorm:"default:0;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
+	UnitUuid              uint   `gorm:"default:0;comment:'单位ID'"`
+	DineTaxUuid           uint   `gorm:"default:0;comment:'堂食税ID'"`
+	CategoryUuid          uint   `gorm:"default:0;comment:'类别ID'"`
+	TakeoutTaxUuid        uint   `gorm:"default:0;comment:'外卖税ID'"`
+	SpecialCategoryUuid   uint   `gorm:"default:0;comment:'特殊类别ID'"`
+	PrinterTagUuid        uint   `gorm:"default:0;comment:'打印机标签ID'"`
+	SupplierUuid          uint   `gorm:"default:0;comment:'供应商ID'"`
+	Status                uint8  `gorm:"default:0;comment:'状态, 0-下架 1-上架'"`
+	IsShowCashier         uint8  `gorm:"default:0;comment:'是否在收银设备显示, 0-否 1-是'"`
+	IsShowTablet          uint8  `gorm:"default:0;comment:'是否在平板设备显示, 0-否 1-是'"`
+	IsShowKitchen         uint8  `gorm:"default:0;comment:'是否在厨房设备显示, 0-否 1-是'"`
+	IsShowAssistant       uint8  `gorm:"default:0;comment:'是否在助手设备显示, 0-否 1-是'"`
+	IsShowH5              uint8  `gorm:"default:0;comment:'是否在H5设备显示, 0-否 1-是'"`
+	OrderBy               uint   `gorm:"default:0;comment:'排序'"`
+	Limit                 uint   `gorm:"default:0;comment:'限购数量'"`
+	Description           string `gorm:"default:'';comment:'卖点描述'"`
+	OpenDiscount          uint8  `gorm:"default:0;comment:'是否开启会员折扣, 0-否 1-是'"`
+	CreateTime            int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime            int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime            int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
+
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+}
