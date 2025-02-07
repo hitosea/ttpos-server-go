@@ -47,15 +47,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 }
 
 func TestCategory(t *testing.T) {
-	db, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "QWERASDFQWE23421",
-		RootPassword:  "QWERASDFQWE23421",
-		TablePrefix:   "jjjfood_",
-		SlowQueryTime: 0,
-	}, "wang_shop")
+	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
@@ -74,27 +66,11 @@ func TestCategory(t *testing.T) {
 func TestConvertCategory(t *testing.T) {
 	database.InitSonyFlakeId()
 
-	db, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "yourpassword",
-		RootPassword:  "yourpassword",
-		TablePrefix:   "jjjfood_",
-		SlowQueryTime: 0,
-	}, "shop_wang")
+	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
-	targetDb, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "yourpassword",
-		RootPassword:  "yourpassword",
-		TablePrefix:   "ttpos_",
-		SlowQueryTime: 0,
-	}, "shop_wang")
+	targetDb, err := NewMySQLConnection(targetConf, targetDBName)
 	if err != nil {
 		panic(err)
 	}

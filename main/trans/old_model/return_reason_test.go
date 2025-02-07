@@ -4,20 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 )
 
 func TestReturnReason(t *testing.T) {
-	db, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "yourpassword",
-		RootPassword:  "yourpassword",
-		TablePrefix:   "jjjfood_",
-		SlowQueryTime: 0,
-	}, "shop_wang")
+	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
@@ -36,27 +27,11 @@ func TestReturnReason(t *testing.T) {
 func TestConvertReturnReason(t *testing.T) {
 	database.InitSonyFlakeId()
 
-	db, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "yourpassword",
-		RootPassword:  "yourpassword",
-		TablePrefix:   "jjjfood_",
-		SlowQueryTime: 0,
-	}, "shop_wang")
+	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
-	targetDB, err := NewMySQLConnection(config.DatabaseConf{
-		Host:          "localhost",
-		Port:          3306,
-		User:          "root",
-		Password:      "yourpassword",
-		RootPassword:  "yourpassword",
-		TablePrefix:   "ttpos_",
-		SlowQueryTime: 0,
-	}, "shop_wang")
+	targetDB, err := NewMySQLConnection(targetConf, targetDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -65,4 +40,5 @@ func TestConvertReturnReason(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("转换完成")
 }
