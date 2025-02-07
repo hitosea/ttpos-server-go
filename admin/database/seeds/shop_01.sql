@@ -306,11 +306,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     category_key VARCHAR(255) NOT NULL DEFAULT '' COMMENT '类别关键字',
     category_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '类别ID',
     supplier_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '供应商ID',
-    image_url VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片URL',
+    image_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '图片ID',
     image_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     unit_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '单位ID',
     price DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
-    num INT(11) NOT NULL DEFAULT 0 COMMENT '库存数量',
+    num DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     barcode_value VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -318,6 +318,31 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料信息表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_file` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '文件ID',
+    `storage` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '存储方式',
+    `group_id` INT(11) NOT NULL DEFAULT 0 COMMENT '文件分组id',
+    `file_url` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '存储域名',
+    `save_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '保存路径',
+    `file_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '文件路径',
+    `file_size` INT(11) NOT NULL DEFAULT 0 COMMENT '文件大小(字节)',
+    `file_type` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '文件类型',
+    `real_name` VARCHAR(255) DEFAULT '' COMMENT '文件真实名',
+    `url_param` TEXT DEFAULT NULL COMMENT '签名参数',
+    `index_file_name` VARCHAR(500) DEFAULT '' COMMENT '文件唯一名',
+    `extension` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '文件扩展名',
+    `is_user` INT(11) NOT NULL DEFAULT 0 COMMENT '是否为c端用户上传',
+    `is_recycle` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否已回收',
+    `shop_supplier_id` INT(11) DEFAULT 0 COMMENT '供应商id',
+    `is_delete` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '软删除',
+    `app_id` INT(11) DEFAULT 0 COMMENT '应用id',
+    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间',
+    UNIQUE KEY `path_idx` (`file_name`),
+    UNIQUE KEY `idx_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文件库记录表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_material_attribute` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -403,7 +428,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_tag` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机标签ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
-    ref_count INT(11) NOT NULL DEFAULT 0 COMMENT '引用计数',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
@@ -504,12 +528,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品BOM ID',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
-    multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     price DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    flavor_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '规格ID',
+    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称或小料名称（不用于业务显示）',
+    flavor_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品规格ID（仅商品使用）',
+    product_sauce_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品小料ID（仅小料使用）',
     product_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品包ID',
-    ref_count INT(11) NOT NULL DEFAULT 0 COMMENT '引用计数',
     is_default_select TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
@@ -517,17 +540,29 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品BOM表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_product_bom_item` (
+CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品BOM材料 ID',
-    product_bom_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品BOM ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '关联材料ID',
+    related_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID或商品小料ID',
     material_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '原料ID',
-    num INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
+    num DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料数量,可小数',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品BOM原料表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品小料ID',
+    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    price DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    UNIQUE KEY `idx_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品小料表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_member` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
