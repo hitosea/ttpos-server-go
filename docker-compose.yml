@@ -63,10 +63,24 @@ services:
     container_name: "saas-golang-${APP_ID}"
     image: golang:1.23
     volumes:
-      - ./docker/golang:/go
+      - ./docker/golang/web:/go
       - ./main:/var/www
       - .env:/var/.env
     working_dir: /var/www
     tty: true
     command: make run
     restart: always
+
+  websocket:
+    container_name: "saas-websocket-${APP_ID}"
+    image: golang:1.23
+    volumes:
+      - ./docker/golang/websocket:/go
+      - ./services/websocket:/var/www
+      - .env:/var/.env
+    working_dir: /var/www
+    tty: true
+    command: make run
+    restart: always
+
+  
