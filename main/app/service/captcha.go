@@ -14,6 +14,15 @@ import (
 	"ttpos-server-go/pkg/cache"
 )
 
+type ICaptchaSrv interface {
+	Generate() (*resp.CaptchaResponse, error)
+	Verify(sign string, answer string) bool
+}
+
+func NewCaptchaSrv(cache cache.Cache) ICaptchaSrv {
+	return NewCaptchaSrvImpl(cache)
+}
+
 // CustomMathDriver 自定义数学验证码驱动
 type CustomMathDriver struct {
 	base64Captcha.DriverMath
@@ -60,13 +69,13 @@ func (d *CustomMathDriver) GenerateIdQuestionAnswer() (id, question, answer stri
 	return
 }
 
-type CaptchaService struct {
+type CaptchaSrv struct {
 	cache  cache.Cache
 	driver *CustomMathDriver
 	store  base64Captcha.Store
 }
 
-func NewCaptchaService(cache cache.Cache) *CaptchaService {
+func NewCaptchaSrvImpl(cache cache.Cache) *CaptchaSrv {
 	// 配置验证码选项
 	driver := &CustomMathDriver{
 		DriverMath: base64Captcha.DriverMath{
@@ -84,7 +93,7 @@ func NewCaptchaService(cache cache.Cache) *CaptchaService {
 		},
 	}
 
-	return &CaptchaService{
+	return &CaptchaSrv{
 		cache:  cache,
 		driver: driver,
 		store:  base64Captcha.DefaultMemStore,
@@ -100,7 +109,7 @@ func generateSign() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (s *CaptchaService) Generate() (*resp.CaptchaResponse, error) {
+func (s *CaptchaSrv) Generate() (*resp.CaptchaResponse, error) {
 	// 生成随机标识
 	sign, err := generateSign()
 	if err != nil {
@@ -132,7 +141,7 @@ func (s *CaptchaService) Generate() (*resp.CaptchaResponse, error) {
 	}, nil
 }
 
-func (s *CaptchaService) Verify(sign, answer string) bool {
+func (s *CaptchaSrv) Verify(sign, answer string) bool {
 	// 开发调试使用
 	if config.Server.Mode == "debug" && answer == "123456" {
 		return true

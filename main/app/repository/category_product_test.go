@@ -22,7 +22,7 @@ func TestCreateCategoryProduct(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	productCategoryRepository := NewProductCategoryRepository(db)
+	productCategoryRepository := NewProductCategoryRepo(db)
 
 	productCategories := []model.ProductCategory{
 		{
@@ -123,7 +123,7 @@ func TestGetProductCategoryByIdWithMultiLanguageName(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	productCategoryRepository := NewProductCategoryRepository(db)
+	productCategoryRepository := NewProductCategoryRepo(db)
 
 	productCategory, err := productCategoryRepository.GetProductCategoryByIdWithMultiLanguageName(3)
 	if err != nil {

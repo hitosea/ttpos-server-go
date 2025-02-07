@@ -5,15 +5,23 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-type StaffRoleRepository struct {
+type IStaffRoleRepo interface {
+	GetRoleIds(staffId uint, appId uint) ([]int, error)
+}
+
+func NewStaffRoleRepo(dbm *database.DBManager) IStaffRoleRepo {
+	return NewStaffRoleRepoImpl(dbm)
+}
+
+type StaffRoleRepo struct {
 	dbm *database.DBManager
 }
 
-func NewStaffRoleRepository(dbm *database.DBManager) *StaffRoleRepository {
-	return &StaffRoleRepository{dbm: dbm}
+func NewStaffRoleRepoImpl(dbm *database.DBManager) *StaffRoleRepo {
+	return &StaffRoleRepo{dbm: dbm}
 }
 
-func (r *StaffRoleRepository) GetRoleIds(staffId uint, appId uint) ([]int, error) {
+func (r *StaffRoleRepo) GetRoleIds(staffId uint, appId uint) ([]int, error) {
 	var roleIds []int
 	err := r.dbm.GetDB(appId).Model(&model.StaffRole{}).Where("staff_id = ?", staffId).Debug().Pluck("role_id", &roleIds).Error
 	return roleIds, err

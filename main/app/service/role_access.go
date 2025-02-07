@@ -15,14 +15,22 @@ import (
 	"ttpos-server-go/app/repository"
 )
 
-type RoleAccessService struct {
-	staffRoleRepo *repository.StaffRoleRepository
-	accessRepo    *repository.AccessRepository
-	staffRepo     *repository.StaffRepository
+type IRoleAccessSrv interface {
+	GetPermission(bool, constant.RouteName, uint, uint) ([]*resp.Permission, error)
 }
 
-func NewRoleAccessService(staffRoleRepo *repository.StaffRoleRepository, accessRepo *repository.AccessRepository, staffRepo *repository.StaffRepository) *RoleAccessService {
-	return &RoleAccessService{
+func NewRoleAccessSrv(staffRoleRepo repository.IStaffRoleRepo, accessRepo repository.IAccessRepo, staffRepo repository.IStaffRepo) IRoleAccessSrv {
+	return NewRoleAccessSrvImpl(staffRoleRepo, accessRepo, staffRepo)
+}
+
+type RoleAccessSrv struct {
+	staffRoleRepo repository.IStaffRoleRepo
+	accessRepo    repository.IAccessRepo
+	staffRepo     repository.IStaffRepo
+}
+
+func NewRoleAccessSrvImpl(staffRoleRepo repository.IStaffRoleRepo, accessRepo repository.IAccessRepo, staffRepo repository.IStaffRepo) *RoleAccessSrv {
+	return &RoleAccessSrv{
 		staffRoleRepo: staffRoleRepo,
 		accessRepo:    accessRepo,
 		staffRepo:     staffRepo,
@@ -30,7 +38,7 @@ func NewRoleAccessService(staffRoleRepo *repository.StaffRoleRepository, accessR
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
+func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
 
 	staff := s.staffRepo.GetById(companyId, staffId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
 
@@ -75,8 +83,8 @@ func (s *RoleAccessService) GetPermission(isShow bool, routerName constant.Route
 	return s.buildPermissionTree(permissions, routerName), nil
 }
 
-// filterPermission 筛选权限
-func (s *RoleAccessService) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
+// 筛选权限
+func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
@@ -120,8 +128,8 @@ func (s *RoleAccessService) filterPermission(permissions []resp.Permission, comp
 	return filteredPermissions
 }
 
-// buildPermissionTree 构建权限树
-func (s *RoleAccessService) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
+// 构建权限树
+func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
 	permissionMap := make(map[int]*resp.Permission)
 	var roots []*resp.Permission
 

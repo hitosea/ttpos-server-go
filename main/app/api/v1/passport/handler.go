@@ -1,7 +1,8 @@
-package v1
+package passport
 
 import (
 	"github.com/gin-gonic/gin"
+	"ttpos-server-go/pkg/cache"
 
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -9,16 +10,9 @@ import (
 	"ttpos-server-go/app/service"
 )
 
-type PassportHandler struct {
-	captchaService *service.CaptchaService
-	pgpService     *service.EncryptService
-}
-
-func NewPassportHandler(captchaService *service.CaptchaService, pgpService *service.EncryptService) *PassportHandler {
-	return &PassportHandler{
-		captchaService: captchaService,
-		pgpService:     pgpService,
-	}
+type Handler struct {
+	captchaService service.ICaptchaSrv
+	encryptService service.IEncryptSrv
 }
 
 // GetCaptcha 获取验证码
@@ -28,7 +22,7 @@ func NewPassportHandler(captchaService *service.CaptchaService, pgpService *serv
 // @Produce json
 // @Success 200 {object} dto.Response
 // @Router /passport/captcha [get]
-func (h *PassportHandler) GetCaptcha(c *gin.Context) {
+func (h *Handler) GetCaptcha(c *gin.Context) {
 	captcha, err := h.captchaService.Generate()
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "生成验证码失败")
@@ -44,19 +38,27 @@ func (h *PassportHandler) GetCaptcha(c *gin.Context) {
 // @Produce json
 // @param client_id query string true "客户端Id"
 // @param type query string true "加密类型: pgp\jsencrypt"
-// @param data body req.GetServerPublicKeyRequest true "获取公钥参数"
 // @Success 200 {object} dto.Response
-// @Router /passport/server_public_key [post]
-func (h *PassportHandler) GetServerPublicKey(c *gin.Context) {
+// @Router /passport/server_public_key [get]
+func (h *Handler) GetServerPublicKey(c *gin.Context) {
 	var getKeyReq req.GetServerPublicKeyRequest
-	if err := c.ShouldBindJSON(&getKeyReq); err != nil {
+	if err := c.ShouldBindQuery(&getKeyReq); err != nil {
 		helper.HandleValidationError(c, err, getKeyReq, req.GetServerPublicKeyRequestMessage)
 		return
 	}
-	resp, err := h.pgpService.GetServerPublicKey(getKeyReq.ClientId, getKeyReq.Type)
+	resp, err := h.encryptService.GetServerPublicKey(getKeyReq.ClientId, getKeyReq.Type)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "获取服务端公钥失败")
 		return
 	}
 	helper.Success(c, resp)
+}
+
+func RegisterHandlers(router gin.IRouter, cache cache.Cache) {
+	wrapper := &Handler{
+		captchaService: service.NewCaptchaSrv(cache),
+		encryptService: service.NewEncryptSrv(cache),
+	}
+	router.GET("/captcha", wrapper.GetCaptcha)
+	router.GET("/server_public_key", wrapper.GetServerPublicKey)
 }

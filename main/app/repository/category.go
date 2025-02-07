@@ -8,7 +8,7 @@ import (
 )
 
 // 商品类别
-type ProductCategoryRepositoryInterface interface {
+type IProductCategoryRepo interface {
 	GetProductCategoryList() ([]model.ProductCategory, error)
 	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
 	CreateProductCategory(productCategory model.ProductCategory) (uint, error)
@@ -17,24 +17,24 @@ type ProductCategoryRepositoryInterface interface {
 	GetProductCategoryListWithMultiLanguageName() ([]model.ProductCategory, error)
 }
 
-func NewProductCategoryRepository(db *gorm.DB) ProductCategoryRepositoryInterface {
-	return NewProductCategoryRepositoryImpl(db)
+func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
+	return NewProductCategoryRepoImpl(db)
 }
 
 // 原料类别
-type MaterialCategoryRepositoryInterface interface {
+type IMaterialCategoryRepo interface {
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialCategory(id uint, materialCategory model.MaterialCategory) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint, error)
 	DeleteMaterialCategory(id uint) error
 }
 
-func NewMaterialCategoryRepository(db *gorm.DB) MaterialCategoryRepositoryInterface {
-	return NewMaterialCategoryRepositoryImpl(db)
+func NewMaterialCategoryRepository(db *gorm.DB) IMaterialCategoryRepo {
+	return NewMaterialCategoryRepoImpl(db)
 }
 
 // 商品特殊类别
-type ProductSpecialCategoryRepositoryInterface interface {
+type IProductSpecialCategoryRepo interface {
 	GetProductSpecialCategoryList() ([]model.ProductSpecialCategory, error)
 	UpdateProductSpecialCategory(id uint, productSpecialCategory model.ProductSpecialCategory) error
 	CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) (uint, error)
@@ -43,17 +43,17 @@ type ProductSpecialCategoryRepositoryInterface interface {
 	GetProductSpecialCategoryListWithMultiLanguageName() ([]model.ProductSpecialCategory, error)
 }
 
-func NewProductSpecialCategoryRepository(db *gorm.DB) ProductSpecialCategoryRepositoryInterface {
-	return NewProductSpecialCategoryRepositoryImpl(db)
+func NewProductSpecialCategoryRepo(db *gorm.DB) IProductSpecialCategoryRepo {
+	return NewProductSpecialCategoryRepoImpl(db)
 }
 
 // 分类仓库接口
-type CategoryRepositoryServiceInterface interface {
+type ICategoryRepositorySrv interface {
 	CreateCategory(params req.CreateCategoryRequest) (uint, error)
 }
 
-func NewCategoryRepositoryService(db *gorm.DB) CategoryRepositoryServiceInterface {
-	return NewCategoryRepositoryServiceImpl(db)
+func NewCategoryRepositoryService(db *gorm.DB) ICategoryRepositorySrv {
+	return NewCategoryRepositorySrvImpl(db)
 }
 
 // 分类仓库服务实现
@@ -61,7 +61,7 @@ type CategoryRepositoryService struct {
 	db *gorm.DB
 }
 
-func NewCategoryRepositoryServiceImpl(db *gorm.DB) *CategoryRepositoryService {
+func NewCategoryRepositorySrvImpl(db *gorm.DB) *CategoryRepositoryService {
 	return &CategoryRepositoryService{db: db}
 }
 
@@ -82,7 +82,7 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 		ZhName:   params.Name.ZH,
 		EnName:   params.Name.EN,
 	}
-	nameId, err := NewMultiLanguageNameRepository(tx).CreateMultiLanguageName(multiLanguageName)
+	nameId, err := NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
 		tx.Rollback() // 发生错误，回滚事务
 		return 0, err
@@ -95,7 +95,7 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 		Name:                  params.Name.ZH,
 		OrderBy:               uint(params.Sort),
 	}
-	id, err := NewProductCategoryRepository(tx).CreateProductCategory(category)
+	id, err := NewProductCategoryRepo(tx).CreateProductCategory(category)
 	if err != nil {
 		tx.Rollback() // 发生错误，回滚事务
 		return 0, err

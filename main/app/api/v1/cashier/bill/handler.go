@@ -57,7 +57,7 @@ func (siw *Handler) PostCashierBillDiscount(c *gin.Context) {
 // @Param price body float64 true "新价格"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/discount/changePrice/{id} [post]
+// @Router /bill/discount/change_price/{id} [post]
 func (siw *Handler) PostCashierBillDiscountChangePrice(c *gin.Context) {
 	// 处理更改收银账单折扣价格的逻辑
 }
@@ -85,7 +85,7 @@ func (siw *Handler) PostCashierBillDiscountGift(c *gin.Context) {
 // @Param change body nil true "小额变更详情"
 // @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/discount/smallChange [post]
+// @Router /bill/discount/small_change [post]
 func (siw *Handler) PostCashierBillDiscountSmallChange(c *gin.Context) {
 	// 处理发布收银账单小额变更的逻辑
 }
@@ -113,7 +113,7 @@ func (siw *Handler) GetCashierBillOrderCheck(c *gin.Context) {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/finishPayment/{orderId} [post]
+// @Router /bill/order/finish_payment/{orderId} [post]
 func (siw *Handler) PostCashierBillOrderFinishPayment(c *gin.Context) {
 	// 处理完成收银账单订单支付的逻辑
 }
@@ -169,7 +169,7 @@ func (siw *Handler) PostCashierBillOrderPay(c *gin.Context) {
 // @Param strategy body nil true "小额支付策略详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/paymentSmallChangeStrategy [post]
+// @Router /bill/order/payment_small_change_strategy [post]
 func (siw *Handler) PostCashierBillOrderPaymentSmallChangeStrategy(c *gin.Context) {
 	// 处理收银账单订单的小额支付策略的逻辑
 }
@@ -197,7 +197,7 @@ func (siw *Handler) PostCashierBillOrderPrinterInvoice(c *gin.Context) {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/printer/paymentBill/{orderId} [post]
+// @Router /bill/order/printer/payment_bill/{orderId} [post]
 func (siw *Handler) PostCashierBillOrderPrinterPaymentBill(c *gin.Context) {
 	// 处理打印收银账单订单支付账单的逻辑
 }
@@ -211,7 +211,7 @@ func (siw *Handler) PostCashierBillOrderPrinterPaymentBill(c *gin.Context) {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/printer/prePaymentBill/{orderId} [post]
+// @Router /bill/order/printer/pre_payment_bill/{orderId} [post]
 func (siw *Handler) PostCashierBillOrderPrinterPrePaymentBill(c *gin.Context) {
 	// 处理打印收银账单订单预付款账单的逻辑
 }
@@ -225,7 +225,7 @@ func (siw *Handler) PostCashierBillOrderPrinterPrePaymentBill(c *gin.Context) {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/production/cancelReturn/{orderId} [post]
+// @Router /bill/order/production/cancel_return/{orderId} [post]
 func (siw *Handler) PostCashierBillOrderProductionCancelReturn(c *gin.Context) {
 	// 处理取消收银账单订单的退货的逻辑
 }
@@ -239,7 +239,7 @@ func (siw *Handler) PostCashierBillOrderProductionCancelReturn(c *gin.Context) {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "产品状态"
 // @Failure 404 {object} nil "未找到"
-// @Router /bill/order/productionOrder/finishedProduct/status/{orderId} [get]
+// @Router /bill/order/production_order/finished_product/status/{orderId} [get]
 func (siw *Handler) GetCashierBillOrderProductionOrderFinishedProductStatus(c *gin.Context) {
 	// 处理获取收银账单订单的成品状态的逻辑
 }
@@ -253,7 +253,7 @@ func (siw *Handler) GetCashierBillOrderProductionOrderFinishedProductStatus(c *g
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/order/revokePay/{orderId} [post]
+// @Router /bill/order/revoke_pay/{orderId} [post]
 func (siw *Handler) PostCashierBillOrderRevokePay(c *gin.Context) {
 	// 处理撤销收银账单订单支付的逻辑
 }
@@ -267,7 +267,7 @@ func (siw *Handler) PostCashierBillOrderRevokePay(c *gin.Context) {
 // @Param subBillId path string true "子账单ID"
 // @Success 204 {object} nil "无内容"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/subBill/{subBillId} [delete]
+// @Router /bill/sub_bill/{subBillId} [delete]
 func (siw *Handler) DeleteCashierBillSubBill(c *gin.Context) {
 	// 处理删除收银账单的子账单的逻辑
 }
@@ -281,7 +281,7 @@ func (siw *Handler) DeleteCashierBillSubBill(c *gin.Context) {
 // @Param subBill body nil true "子账单详情"
 // @Success 201 {object} nil "已创建"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/subBill [post]
+// @Router /bill/sub_bill [post]
 func (siw *Handler) PostCashierBillSubBill(c *gin.Context) {
 	// 处理发布收银账单的子账单的逻辑
 }
@@ -295,7 +295,7 @@ func (siw *Handler) PostCashierBillSubBill(c *gin.Context) {
 // @Param moveDetails body nil true "移动详情"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /bill/subBill/product/move [post]
+// @Router /bill/sub_bill/product/move [post]
 func (siw *Handler) PostCashierBillSubBillProductMove(c *gin.Context) {
 	// 处理在子账单中移动产品的逻辑
 }
@@ -307,22 +307,22 @@ func RegisterHandlers(router gin.IRouter) {
 	router.DELETE("/bill/cancel", wrapper.DeleteCashierBillCancel)
 	router.DELETE("/bill/discount", wrapper.DeleteCashierBillDiscount)
 	router.POST("/bill/discount", wrapper.PostCashierBillDiscount)
-	router.POST("/bill/discount/changePrice", wrapper.PostCashierBillDiscountChangePrice)
+	router.POST("/bill/discount/change_price", wrapper.PostCashierBillDiscountChangePrice)
 	router.POST("/bill/discount/gift", wrapper.PostCashierBillDiscountGift)
-	router.POST("/bill/discount/smallChange", wrapper.PostCashierBillDiscountSmallChange)
+	router.POST("/bill/discount/small_change", wrapper.PostCashierBillDiscountSmallChange)
 	router.GET("/bill/order/check", wrapper.GetCashierBillOrderCheck)
-	router.POST("/bill/order/finishPayment", wrapper.PostCashierBillOrderFinishPayment)
+	router.POST("/bill/order/finish_payment", wrapper.PostCashierBillOrderFinishPayment)
 	router.DELETE("/bill/order/member", wrapper.DeleteCashierBillOrderMember)
 	router.POST("/bill/order/member", wrapper.PostCashierBillOrderMember)
 	router.POST("/bill/order/pay", wrapper.PostCashierBillOrderPay)
-	router.POST("/bill/order/paymentSmallChangeStrategy", wrapper.PostCashierBillOrderPaymentSmallChangeStrategy)
+	router.POST("/bill/order/payment_small_change_strategy", wrapper.PostCashierBillOrderPaymentSmallChangeStrategy)
 	router.POST("/bill/order/printer/invoice", wrapper.PostCashierBillOrderPrinterInvoice)
-	router.POST("/bill/order/printer/paymentBill", wrapper.PostCashierBillOrderPrinterPaymentBill)
-	router.POST("/bill/order/printer/prePaymentBill", wrapper.PostCashierBillOrderPrinterPrePaymentBill)
-	router.POST("/bill/order/production/cancelReturn", wrapper.PostCashierBillOrderProductionCancelReturn)
-	router.GET("/bill/order/productionOrder/finishedProduct/status", wrapper.GetCashierBillOrderProductionOrderFinishedProductStatus)
-	router.POST("/bill/order/revokePay", wrapper.PostCashierBillOrderRevokePay)
-	router.DELETE("/bill/subBill", wrapper.DeleteCashierBillSubBill)
-	router.POST("/bill/subBill", wrapper.PostCashierBillSubBill)
-	router.POST("/bill/subBill/product/move", wrapper.PostCashierBillSubBillProductMove)
+	router.POST("/bill/order/printer/payment_bill", wrapper.PostCashierBillOrderPrinterPaymentBill)
+	router.POST("/bill/order/printer/pre_payment_bill", wrapper.PostCashierBillOrderPrinterPrePaymentBill)
+	router.POST("/bill/order/production/cancel_return", wrapper.PostCashierBillOrderProductionCancelReturn)
+	router.GET("/bill/order/production_order/finished_product/status", wrapper.GetCashierBillOrderProductionOrderFinishedProductStatus)
+	router.POST("/bill/order/revoke_pay", wrapper.PostCashierBillOrderRevokePay)
+	router.DELETE("/bill/sub_bill", wrapper.DeleteCashierBillSubBill)
+	router.POST("/bill/sub_bill", wrapper.PostCashierBillSubBill)
+	router.POST("/bill/sub_bill/product/move", wrapper.PostCashierBillSubBillProductMove)
 }

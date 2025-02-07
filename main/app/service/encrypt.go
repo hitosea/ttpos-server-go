@@ -14,18 +14,26 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-type EncryptService struct {
+type IEncryptSrv interface {
+	GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error)
+}
+
+func NewEncryptSrv(cache cache.Cache) IEncryptSrv {
+	return NewEncryptSrvImpl(cache)
+}
+
+type EncryptSrv struct {
 	cache cache.Cache
 }
 
-func NewEncryptService(cache cache.Cache) *EncryptService {
-	return &EncryptService{
+func NewEncryptSrvImpl(cache cache.Cache) *EncryptSrv {
+	return &EncryptSrv{
 		cache: cache,
 	}
 }
 
 // GetServerPublicKey 获取服务端公钥
-func (s *EncryptService) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error) {
+func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error) {
 	cacheKey := config.Encrypt.CachePrefix + clientId + "_" + encryptType
 	if data, ok := s.cache.Get(cacheKey); ok {
 		var keyPair encrypt.KeyPair

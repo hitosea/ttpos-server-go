@@ -15,7 +15,7 @@ type Handler struct {
 // @Param orderId path string true "订单ID"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /order/hideOrder/{orderId} [post]
+// @Router /order/hide_order/{orderId} [post]
 func (siw *Handler) PostCashierOrderHideOrder(c *gin.Context) {
 	// 处理隐藏收银订单的逻辑
 }
@@ -43,7 +43,7 @@ func (siw *Handler) PostCashierOrderPack(c *gin.Context) {
 // @Param productId path string true "产品ID"
 // @Success 204 {object} nil "无内容"
 // @Failure 400 {object} nil "错误请求"
-// @Router /order/product/cancelGift/{productId} [delete]
+// @Router /order/product/cancel_gift/{productId} [delete]
 func (siw *Handler) DeleteCashierOrderProductCancelGift(c *gin.Context) {
 	// 处理取消收银订单产品的礼物的逻辑
 }
@@ -114,7 +114,7 @@ func (siw *Handler) PostCashierOrderProductRemark(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} nil "订单列表"
 // @Failure 404 {object} nil "未找到"
-// @Router /order/showOrder/list [get]
+// @Router /order/show_order/list [get]
 func (siw *Handler) GetCashierOrderShowOrderList(c *gin.Context) {
 	// 处理获取收银订单列表的逻辑
 }
@@ -137,13 +137,13 @@ func RegisterHandlers(router gin.IRouter) {
 
 	wrapper := Handler{}
 
-	router.POST("/order/hideOrder", wrapper.PostCashierOrderHideOrder)
+	router.POST("/order/hide_order", wrapper.PostCashierOrderHideOrder)
 	router.POST("/order/pack", wrapper.PostCashierOrderPack)
-	router.DELETE("/order/product/cancelGift", wrapper.DeleteCashierOrderProductCancelGift)
+	router.DELETE("/order/product/cancel_gift", wrapper.DeleteCashierOrderProductCancelGift)
 	router.POST("/order/product/gift", wrapper.PostCashierOrderProductGift)
 	router.POST("/order/product/price", wrapper.PostCashierOrderProductPrice)
 	router.GET("/order/product/remark", wrapper.GetCashierOrderProductRemark)
 	router.POST("/order/product/remark", wrapper.PostCashierOrderProductRemark)
-	router.GET("/order/showOrder/list", wrapper.GetCashierOrderShowOrderList)
+	router.GET("/order/show_order/list", wrapper.GetCashierOrderShowOrderList)
 	router.POST("/order/unpack", wrapper.PostCashierOrderUnpack)
 }

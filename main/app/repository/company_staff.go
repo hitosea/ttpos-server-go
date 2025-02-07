@@ -7,35 +7,45 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-type CompanyStaffRepository struct {
+type ICompanyStaffRepo interface {
+	GetById(uint, ...Where) model.CompanyStaff
+	WithCompany() Where
+	GetByUsername(string, ...Where) model.CompanyStaff
+}
+
+func NewCompanyStaffRepo(db *database.DBManager) ICompanyStaffRepo {
+	return NewCompanyStaffRepoImpl(db)
+}
+
+type CompanyStaffRepo struct {
 	dbm *database.DBManager
 }
 
-func NewCompanyStaffRepository(db *database.DBManager) *CompanyStaffRepository {
-	return &CompanyStaffRepository{dbm: db}
+func NewCompanyStaffRepoImpl(db *database.DBManager) *CompanyStaffRepo {
+	return &CompanyStaffRepo{dbm: db}
 }
 
-func (r *CompanyStaffRepository) GetById(Id uint, withs ...Where) model.CompanyStaff {
+func (r *CompanyStaffRepo) GetById(Id uint, withs ...Where) model.CompanyStaff {
 	var user model.CompanyStaff
 	db := r.dbm.GetDB(constant.DefaultDB)
 	r.handleWiths(db, withs).First(&user, Id)
 	return user
 }
 
-func (r *CompanyStaffRepository) WithCompany() Where {
+func (r *CompanyStaffRepo) WithCompany() Where {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Company")
 	}
 }
 
-func (r *CompanyStaffRepository) GetByUsername(username string, withs ...Where) model.CompanyStaff {
+func (r *CompanyStaffRepo) GetByUsername(username string, withs ...Where) model.CompanyStaff {
 	var user model.CompanyStaff
 	db := r.dbm.GetDB(constant.DefaultDB)
 	r.handleWiths(db, withs).Where("user_name = ?", username).Debug().First(&user)
 	return user
 }
 
-func (r *CompanyStaffRepository) handleWiths(db *gorm.DB, withs []Where) *gorm.DB {
+func (r *CompanyStaffRepo) handleWiths(db *gorm.DB, withs []Where) *gorm.DB {
 	if len(withs) == 0 {
 		return db
 	}

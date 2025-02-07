@@ -9,7 +9,7 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-// 定义收银服务接口
+// IProductSrv 定义收银服务接口
 type IProductSrv interface {
 	GetProductList(dbId uint, req req.ProductListReq) (resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
 }
@@ -20,12 +20,12 @@ type productSrv struct {
 	localeSrv ILocaleSrv          // 多语言名称服务
 }
 
-// 创建新的收银产品类别服务
+// NewProductSrv 创建新的收银产品类别服务
 func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
 	return NewProductSrvImpl(dbm, localeSrv)
 }
 
-// 创建新的收银服务实现
+// NewProductSrvImpl 创建新的收银服务实现
 func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
 	return &productSrv{
 		dbm:       dbm,
@@ -33,7 +33,7 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 	}
 }
 
-// 获取收银机点餐页面产品类别列表
+// GetProductList 获取收银机点餐页面产品类别列表
 func (s *productSrv) GetProductList(dbId uint, req req.ProductListReq) (resp.ProductListWithPaginationResp, error) {
 	// 构建查询条件
 	filters := make(map[string]interface{})

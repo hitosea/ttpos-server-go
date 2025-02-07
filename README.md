@@ -31,3 +31,17 @@ http://your.domain.com/api/v1/passport/server_public_key
 9. api文档使用https://github.com/swaggo/swag 
 10. API接口响应时间要求本地响应200ms以内
 11. 服务A依赖服务B，通过传参的形式；服务A不能直接依赖服务B所依赖的repo，方便后期按照服务划分模块
+12. 接口声明使用I开头，实现使用Impl结尾；Repository简写成Repo，Service简写成Srv
+```code
+// 声明repository接口 IProductCategoryRepo
+type IProductCategoryRepo interface {}
+
+// ProductCategoryRepoImpl 实现 IProductCategoryRepo
+type ProductCategoryRepoImpl struct {}
+
+// 声明service接口 ICashierSrv
+type ICashierSrv interface {}
+
+// CashierSrvImpl 实现 ICashierSrv
+type CashierSrvImpl struct {}
+```

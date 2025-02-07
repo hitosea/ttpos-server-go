@@ -59,7 +59,7 @@ func (n *Names) CreateMultiLanguageName(nameId uint, targetDB *gorm.DB) error {
 		TrName:   n.Tr,
 	}
 	fmt.Println(fmt.Sprintf("multiLanguageName:%+v", multiLanguageName))
-	_, err := repository.NewMultiLanguageNameRepository(targetDB).CreateMultiLanguageName(multiLanguageName)
+	_, err := repository.NewMultiLanguageNameRepoImpl(targetDB).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (s *CategoryService) ConvertCategory() error {
 			KoName:   names.Ko,
 			TrName:   names.Tr,
 		}
-		_, err = repository.NewMultiLanguageNameRepository(s.targetDB).CreateMultiLanguageName(multiLanguageName)
+		_, err = repository.NewMultiLanguageNameRepoImpl(s.targetDB).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func (s *CategoryService) ConvertCategory() error {
 				MultiLanguageNameUuid: uint(id),
 				OrderBy:               category.Sort,
 			}
-			_, err := repository.NewProductSpecialCategoryRepository(s.targetDB).CreateProductSpecialCategory(specialCategory)
+			_, err := repository.NewProductSpecialCategoryRepo(s.targetDB).CreateProductSpecialCategory(specialCategory)
 			if err != nil {
 				return err
 			}
@@ -159,7 +159,7 @@ func (s *CategoryService) ConvertCategory() error {
 				CategoryKey:           model.GenCategoryKey(category.CategoryID, category.ParentID),
 				OrderBy:               category.Sort,
 			}
-			_, err = repository.NewProductCategoryRepository(s.targetDB).CreateProductCategory(productCategory)
+			_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
 			if err != nil {
 				return err
 			}

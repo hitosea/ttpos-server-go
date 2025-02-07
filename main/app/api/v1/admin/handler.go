@@ -13,10 +13,10 @@ import (
 )
 
 type AdminHandler struct {
-	companyService service.CompanyServiceInterface
+	companyService service.ICompanySrv
 }
 
-func NewAdminHandler(companyService service.CompanyServiceInterface) *AdminHandler {
+func NewAdminHandler(companyService service.ICompanySrv) *AdminHandler {
 	return &AdminHandler{companyService: companyService}
 }
 
@@ -113,7 +113,7 @@ func (h *AdminHandler) DeleteCompany(c *gin.Context) {
 }
 
 // RegisterHandlers 创建与 OpenAPI 规范匹配的 http.Handler。
-func RegisterHandlers(router gin.IRouter, companyService service.CompanyServiceInterface) {
+func RegisterHandlers(router gin.IRouter, companyService service.ICompanySrv) {
 	handler := AdminHandler{
 		companyService: companyService,
 	}
