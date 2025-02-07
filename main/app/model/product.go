@@ -2,7 +2,7 @@ package model
 
 // 商品规格表，定义商品的规格信息
 type ProductFlavor struct {
-	Id                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	Id                    uint   `gorm:"primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
 	Name                  string `gorm:"default:'';comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:'多语言名称ID'"`
@@ -15,7 +15,7 @@ type ProductFlavor struct {
 
 // 商品单位表，定义商品的单位信息
 type ProductUnit struct {
-	Id                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	Id                    uint   `gorm:"primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
 	Name                  string `gorm:"default:'';comment:'单位名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:'多语言名称ID'"`

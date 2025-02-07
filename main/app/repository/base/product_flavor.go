@@ -72,16 +72,13 @@ func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductF
 		return 0, err
 	}
 
-	// 将多语言名称ID存入商品规格
-	productFlavor.MultiLanguageNameUuid = productFlavor.MultiLanguageName.Id
-
 	// 创建商品规格
 	if err := tx.Create(&productFlavor).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
 		return 0, err
 	}
 
-	return productFlavor.Id, tx.Commit().Error // 提交事务
+	return productFlavor.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 软删除商品规格
