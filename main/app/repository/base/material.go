@@ -79,7 +79,7 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint, error)
 		return 0, err
 	}
 
-	return material.Id, tx.Commit().Error // 提交事务
+	return material.Uuid, tx.Commit().Error // 提交事务
 }
 
 // 删除原料

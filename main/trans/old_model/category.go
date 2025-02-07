@@ -156,7 +156,6 @@ func (s *CategoryService) ConvertCategory() error {
 				ParentUuid:            category.ParentID,
 				MultiLanguageNameUuid: uint(id),
 				Status:                category.Status,
-				CategoryKey:           model.GenCategoryKey(category.CategoryID, category.ParentID),
 				OrderBy:               category.Sort,
 			}
 			_, err = repository.NewProductCategoryRepository(s.targetDB).CreateProductCategory(productCategory)

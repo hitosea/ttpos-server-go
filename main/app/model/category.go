@@ -1,7 +1,5 @@
 package model
 
-import "fmt"
-
 // 商品类别
 type ProductCategory struct {
 	Id                    uint   `gorm:"primaryKey;comment:记录唯一标识符"`
@@ -10,20 +8,12 @@ type ProductCategory struct {
 	ParentUuid            uint   `gorm:"default:NULL;comment:父级ID"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:多语言名称ID"`
 	Status                bool   `gorm:"default:false;comment:状态, true-开启、false-关闭"`
-	CategoryKey           string `gorm:"default:'';comment:关键字"`
 	OrderBy               uint   `gorm:"default:0;comment:排序"`
 	CreateTime            int64  `gorm:"autoCreateTime;comment:创建时间（时间戳）"`
 	UpdateTime            int64  `gorm:"autoUpdateTime;comment:更新时间（时间戳）"`
 	DeleteTime            int64  `gorm:"comment:删除时间（时间戳）"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-}
-
-func GenCategoryKey(uuid, parentId uint) string {
-	if parentId == 0 {
-		return fmt.Sprintf("/%d", uuid)
-	}
-	return fmt.Sprintf("/%d/%d", parentId, uuid)
 }
 
 // 原料类别
@@ -35,7 +25,6 @@ type MaterialCategory struct {
 	Status                bool   `gorm:"default:false;comment:状态, true-开启、false-关闭"`
 	Level                 uint   `gorm:"default:0;comment:层级"`
 	ParentUuid            uint   `gorm:"default:NULL;comment:父级ID"`
-	CategoryKey           string `gorm:"default:'';comment:关键字"`
 	OrderBy               uint   `gorm:"default:0;comment:排序"`
 	RefCount              uint   `gorm:"default:0;comment:关联数量"`
 	CreateTime            int64  `gorm:"autoCreateTime;comment:创建时间（时间戳）"`
