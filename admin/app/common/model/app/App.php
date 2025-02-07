@@ -6,6 +6,7 @@ use think\Model;
 use think\facade\Cache;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
+use think\model\concern\SoftDelete;
 use app\common\enum\http\StatusCode;
 use app\common\exception\BaseException;
 use app\common\model\supplier\Supplier;
@@ -15,16 +16,19 @@ use app\common\model\supplier\Supplier;
  */
 class App extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'company';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     // 写入后同步数据
     public static function onAfterUpdate(Model $model)
     {
         if (app('http')->getName() == 'admin') {
-            if ($model->getConnection() == 'mysql' && $model->supplier?->deploy_mode == 1) {
+            if ($model->getConnection() == 'mysql') {
                 try {
-                    (new self([], $model->id))->where('id', $model->id)->find()?->save($model);
+                    (new self([], $model->uuid))->where('uuid', $model->uuid)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -64,7 +68,7 @@ class App extends BaseModel
      */
     public function supplier()
     {
-        return $this->hasOne(Supplier::class, 'company_id', 'id');
+        return $this->hasOne(Supplier::class, 'company_uuid', 'id');
     }
 
     /**
@@ -80,7 +84,7 @@ class App extends BaseModel
      */
     public function shopUsers()
     {
-        return $this->hasMany(User::class, 'company_id', 'id');
+        return $this->hasMany(User::class, 'company_uuid', 'id');
     }
 
     /**
@@ -92,7 +96,7 @@ class App extends BaseModel
             $self = new static();
             $app_id = $self::$app_id;
         }
-        $detail = (new static())->find($app_id);
+        $detail = (new static())->where('uuid', $app_id)->find();
         if (!empty($detail['pay_type'])) {
             $detail['pay_type'] = json_decode($detail['pay_type'], true);
         }

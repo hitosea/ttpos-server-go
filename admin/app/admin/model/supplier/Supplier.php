@@ -17,9 +17,10 @@ class Supplier extends SupplierModel
     public function add($data, $app_id)
     {
         //添加门店
-        $data['real_name'] = $data['username'];
-        $data['name'] = $data['name'];
-        $data['expire_time'] = $data['expire_time'];
+        $data['company_uuid'] = $data['uuid'] ?? 0;
+        $data['real_name'] = $data['user_name'] ?? '';
+        $data['name'] = $data['name'] ?? '';
+        $data['expire_time'] = $data['expire_time'] ?? 0;
         $data['app_id'] = $app_id;
         $data['is_main'] = ($data['parent_id'] ?? 0) > 0 ? 0 : 1;
         $data['delivery_set'] = ["10", "20"];
@@ -31,22 +32,21 @@ class Supplier extends SupplierModel
         $this->save($data);
 
         // 新增商家用户信息
-        $data['shop_supplier_id'] = $this->shop_supplier_id;
         $shopUser = new ShopUser;
         $data['phone'] = $data['link_phone'] ?? '';
-        if (!$shopUser->add($this->app_id, $data)) {
+        if (!$shopUser->add($this->company_uuid, $data)) {
             $this->error = $shopUser->error;
             return false;
         }
 
         // 新增商家数据库
-        return $this->addShopDatabase();
+        return $this->addShopDatabase($data);
     }
 
     /**
      * 添加 数据库
      */
-    private function addShopDatabase()
+    private function addShopDatabase($data)
     {
         // 初始化数据库
         $filePath = realpath(root_path() . '/database/seeds/shop_01.sql');
@@ -60,7 +60,7 @@ class Supplier extends SupplierModel
         $pdo = new PDO("mysql:host={$host};port={$port}", 'root', env('DB_ROOT_PASSWORD'));
 
         // 检测数据库
-        $databaseName = $username = 'shop' . $this->app_id;
+        $databaseName = $username = 'shop' . $this->uuid;
         $dbExists = $pdo->query("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{$databaseName}'")->fetchColumn();
         if (!$dbExists) {
             $pdo->exec("CREATE DATABASE {$databaseName}");
@@ -73,7 +73,7 @@ class Supplier extends SupplierModel
 
         // 初始化数据
         try {
-            return $this->initShopBaseData();
+            return $this->initShopBaseData($data);
         } catch (\Throwable $th) {
             $pdo = new PDO("mysql:host=" . env('DB_HOST') . ";port=" . env('DB_PORT'), 'root', env('DB_ROOT_PASSWORD'));
             if ($pdo->query("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{$databaseName}'")->fetchColumn()) {
@@ -88,16 +88,17 @@ class Supplier extends SupplierModel
     /**
      * 初始化基础数据
      */
-    private function initShopBaseData()
+    private function initShopBaseData($data)
     {
-        $shopUser = ShopUser::where('is_super', 1)->where('shop_supplier_id', $this->shop_supplier_id)->find();
+        $companyUuid = $this->company_uuid;
+        $shopUser = ShopUser::where('company_uuid', $companyUuid)->find();
         //
         $host = env('DB_HOST');
         $port = env('DB_PORT');
         $prefix = env('DB_PREFIX');
         $pdo = new PDO("mysql:host={$host};port={$port}", 'root', env('DB_ROOT_PASSWORD'));
         // 检测数据库
-        $databaseName = 'shop' . $this->app_id;
+        $databaseName = 'shop' . $companyUuid;
         $pdo->exec("use {$databaseName}");
 
         // app
@@ -105,27 +106,26 @@ class Supplier extends SupplierModel
         $datas['auth_start_time'] = $shopUser->app->getData('auth_start_time');
         $datas['create_time'] = $shopUser->app->getData('create_time');
         $datas['update_time'] = $shopUser->app->getData('update_time');
-        $pdo->exec($this->getInsertSql($prefix . 'app', $datas, [
-            'app_id',
-            'app_name',
+        $pdo->exec($this->getInsertSql($prefix . 'company', $datas, [
+            'uuid',
+            'name',
             'logo',
-            'is_recycle',
-            'is_chain',
             'expire_time',
             'auth_day',
             'auth_start_time',
             'status',
-            'is_delete',
             'create_time',
             'update_time'
         ]));
 
         // shop_user
         $datas = $shopUser->toArray();
+        $datas['is_super'] = 1; // 超级管理员
+        $datas['password'] = salt_hash($data['password']);
         $datas['create_time'] = $shopUser->getData('create_time');
         $datas['update_time'] = $shopUser->getData('update_time');
         $subShopUserFields = (new ShopUser([], $this->app_id))->getFields();
-        $pdo->exec($this->getInsertSql($prefix . 'shop_user', $datas, array_keys($subShopUserFields)));
+        $pdo->exec($this->getInsertSql($prefix . 'staff', $datas, array_keys($subShopUserFields)));
         //
         $fileDataPath = realpath(root_path() . '/database/seeds/shop_init_data.sql');
         if (!file_exists($fileDataPath)) {

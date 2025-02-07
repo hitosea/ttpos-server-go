@@ -44,36 +44,25 @@ class App extends AppModel
         $appId = $param['app_id'] ?? 0;
         //
         $field = [
-            "app.app_id as id",
-            "app.app_id",
+            "app.uuid as id",
+            "app.uuid as app_id",
             "app.auth_day",
             "app.auth_start_time",
             "app.expire_time",
             "app.status",
             "app.create_time",
+            "app.name as shop_supplier_name",
+            "app.logo",
             //
-            "user.username",
+            "user.username as user_name",
             //
-            "su.shop_supplier_id",
-            "su.name as shop_supplier_name",
-            "su.parent_id",
             "su.link_phone",
-            "su.logo",
-            "su.level",
             "su.sale_stock",
-            "su.reserve",
             "su.cash_limit",
             "su.kitchen_limit",
             "su.tablet_limit",
             "su.address",
-            "su.store_type",
-            "su.is_main",
-            "su.category_set",
-            "su.mac_addr",
-            "su.serial_number",
-            "su.deploy_mode",
             "su.assistant_limit",
-            "su.chain_number",
             //
             "su.is_open_member",
             "su.is_open_tablet",
@@ -100,65 +89,25 @@ class App extends AppModel
         //
         return $this->alias('app')
             ->field($field)
-            ->field('ifnull(children_apps.count,0) as suppliers_total')
-            ->with(['suppliers' => function ($q)  use ($field, $status, $keyword) {
-                $q->alias('su')->field($field)
-                    ->leftJoin('app app', "app.app_id = su.app_id")
-                    ->leftJoin('shop_user user', "user.app_id = su.app_id")
-                    ->where('user.is_super', '=', 1)
-                    ->where('su.is_delete', '=', 0)
-                    ->where('app.is_delete', '=', 0)
-                    ->when($keyword, function ($q) use ($keyword) {
-                        $q->where(function ($qq) use ($keyword) {
-                            $qq->like('su.name', $keyword);
-                            $qq->orLike('su.app_id', $keyword);
-                        });
-                    })
-                    ->when($status > 0, function ($q) use ($status) {
-                        $q->where('app.status', '=', $status == 1 ? 1 : 0);
-                    })
-                    ->group('app.app_id');
-            }])
-            ->leftJoin('shop_user user', "user.app_id = app.app_id")
-            ->leftJoin('supplier su', "su.app_id = app.app_id")
-            ->leftJoin(
-                "
-                (
-                    SELECT su.parent_id,COUNT(*) as count
-                    FROM {$prefix}supplier as su
-                    left join {$prefix}app as app on su.app_id = app.app_id
-                    $countWhere
-                    GROUP BY su.parent_id
-                ) as children_apps",
-                "su.shop_supplier_id = children_apps.parent_id"
-            )
-            ->where('user.is_super', '=', 1)
-            ->where('app.is_delete', '=', 0)
-            ->where('su.parent_id', '=', 0)
+            ->leftJoin('company_staff user', "user.company_uuid = app.uuid")
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
+
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
                     $qq->like('su.name', $keyword);
-                    $qq->orLike('su.app_id', $keyword);
-                    $qq->whereOr('children_apps.count', '>', 0);
+                    $qq->orLike('su.company_uuid', $keyword);
                 });
             })
             ->when($status > 0, function ($q) use ($status) {
                 $q->where(function ($q) use ($status) {
                     $q->where('app.status', '=', $status == 1 ? 1 : 0);
-                    $q->whereOr('children_apps.count', '>', 0);
                 });
             })
-            ->when($shopType == 1, function ($q) {
-                $q->where('children_apps.count', '>', 0);
-            })
-            ->when($shopType == 2, function ($q) {
-                $q->whereNull('children_apps.count');
-            })
             ->when($appId, function ($q) use ($appId) {
-                $q->where('app.app_id', '=', $appId);
+                $q->where('app.uuid', '=', $appId);
             })
             ->order(["app.create_time" => 'desc'])
-            ->group('app.app_id')
+            ->group('app.uuid')
             ->paginate($param);
     }
 
@@ -198,12 +147,13 @@ class App extends AppModel
             $this->error = '联系电话已存在';
             return false;
         }
+
         if (ShopUser::checkExist($data['user_name'])) {
             $this->error = '超管邮箱已存在';
             return false;
         }
+
         //
-        $level = $data['level'] ?? 1;
         $authDay = $data['auth_day'] ?? 0;
         if (!filter_var($authDay, FILTER_VALIDATE_INT) && $authDay != 0) {
             $this->error = '授权时间需为正整数';
@@ -212,20 +162,14 @@ class App extends AppModel
         $data['auth_start_time'] = $authStartTime = strtotime($data['auth_start_time']) ?? 0;
         $data['expire_time'] = $authDay ? strtotime("+$authDay days", $authStartTime) : 0;
         $data['pay_type'] = json_encode(array_keys(OrderPayTypeEnum::pay()));
-        // 验证不能大于父级时间
-        if (isset($data['parent_id']) && $level == 2) {
-            $parentSupplier = SupplierModel::find($data['parent_id']);
-            $parentAuthDay = $parentSupplier?->app?->auth_day ?? 0;
-            if ($parentAuthDay > 0 && ($authDay == 0 || $parentSupplier?->app?->expire_time < $data['expire_time'])) {
-                $this->error = "不能大于总店的过期时间";
-                return false;
-            }
-        }
+
         //
         $this->startTrans();
         try {
-            // 添加应用
-            $this->allowField(['auth_day', 'expire_time', 'app_name', 'auth_start_time'])->save($data);
+            // 添加集团
+            $data['uuid'] = createUuid();
+            $this->allowField(['uuid', 'name', 'logo', 'auth_day', 'expire_time', 'auth_start_time'])->save($data);
+
             //新增门店
             $supplierModel = new SupplierModel;
             if (!$supplierModel->add($data, $this->app_id)) {
@@ -255,45 +199,14 @@ class App extends AppModel
             return false;
         }
         $authStartTime = $data['auth_start_time'] = strtotime($data['auth_start_time']) ?? 0;
-        $shopSupplierId = $this->shop_supplier_id = $this->supplier?->shop_supplier_id;
-        $appId = $this->app_id;
+        $appId = $this->uuid;
         //
-        if (($data['level'] ?? 0) != $this->supplier->level) {
-            $this->error = "不能编辑商家等级";
-            return false;
-        }
         $save_data = [
+            'name' => $data['name'] ?? '',
             'auth_day' => $authDay,
             'auth_start_time' => $authStartTime,
             'expire_time' => $authDay ? strtotime("+$authDay days", $authStartTime) : 0,
         ];
-        //
-        $level = $this->supplier->level;
-        if (isset($data['parent_id']) && $level == 2) {
-            // 验证上级不能等于自己
-            if ($data['parent_id'] == $shopSupplierId) {
-                $this->error = "上级不能等于自己";
-                return false;
-            }
-            // 验证不能大于父级时间
-            $parentSupplier = SupplierModel::find($data['parent_id']);
-            $parentAuthDay = $parentSupplier?->app?->auth_day ?? 0;
-            if ($parentAuthDay > 0 && ($authDay == 0 || $parentSupplier?->app?->expire_time < $save_data['expire_time'])) {
-                $this->error = "不能大于总店的过期时间";
-                return false;
-            }
-        } else if ($level == 1 && $authDay > 0) {
-            // 验证不能小于子级时间
-            $maxExpireTime = SupplierModel::alias('s')
-                ->leftJoin('app', 'app.app_id = s.app_id')
-                ->where('s.is_delete', 0)
-                ->where('s.parent_id', $shopSupplierId)
-                ->value('max(app.expire_time)');
-            if ($authDay > 0 && $save_data['expire_time'] < $maxExpireTime) {
-                $this->error = "不能小于分店的过期时间";
-                return false;
-            }
-        }
         //
         $this->startTrans();
         try {
@@ -311,11 +224,7 @@ class App extends AppModel
                 $user_data['password'] = salt_hash($data['password']);
             }
             //
-            $shop_user = ShopUser::withoutGlobalScope()->where('app_id', '=', $this['app_id'])
-                ->where('is_delete', '=', 0)
-                ->where('is_super', '=', 1)
-                ->where('user_type', '=', 0)
-                ->find();
+            $shop_user = ShopUser::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->find();
             //
             if ($shop_user['phone'] != $data['link_phone']) {
                 if (ShopUser::checkPhoneExist($data['link_phone'])) {
@@ -338,13 +247,12 @@ class App extends AppModel
 
             // 商户
             if (isset($data['logo'])) unset($data['logo']);
-            $data['is_main'] = ($data['parent_id'] ?? 0) > 0 ? 0 : 1;
-            SupplierModel::where('app_id', '=', $this['app_id'])->find()?->save($data);
+            SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
 
             // 会员设置 - 支付方式关联
-            if (isset($data['is_open_member'])) {
-                (new PayType([], $appId))->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
-            }
+            // if (isset($data['is_open_member'])) {
+            //     (new PayType([], $appId))->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
+            // }
 
             //
             $this->commit();
@@ -357,19 +265,11 @@ class App extends AppModel
     }
 
     /**
-     * 移入移出回收站
-     */
-    public function recycle($is_recycle = true)
-    {
-        return $this->save(['is_recycle' => (int)$is_recycle]);
-    }
-
-    /**
      * 软删除
      */
     public function setDelete()
     {
-        $this->supplier?->save(['is_delete' => 1]);
-        return $this->save(['is_delete' => 1]);
+        $this->supplier?->delete();
+        return $this->delete();
     }
 }
