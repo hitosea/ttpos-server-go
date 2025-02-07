@@ -3,6 +3,7 @@
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
 use help\PrintTexHelp;
+use help\SnowflakeHelp;
 use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Request;
@@ -267,6 +268,18 @@ function getSettingLanguages($shopSupplierId = 0)
         Cache::tag('common_get_settingLanguages')->set('common_setting_languages' . $shopInfo['shop_supplier_id'], $languages);
     }
     return $languages;
+}
+
+/**
+ * 生成雪花算法ID
+ */
+function createUuid()
+{
+    static $snowflake = null;
+    if ($snowflake === null) {
+        $snowflake = new SnowflakeHelp(1);
+    }
+    return $snowflake->next();
 }
 
 /**

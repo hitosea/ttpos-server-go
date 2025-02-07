@@ -12,15 +12,15 @@ use app\common\model\BaseModel;
 class User extends BaseModel
 {
     protected $name = 'company_staff';
-    protected $pk = 'uuid';
+    protected $pk = 'id';
 
     // 写入后同步数据
     public static function onAfterUpdate(Model $model)
     {
         if (app('http')->getName() == 'admin') {
-            if ($model->getConnection() == 'mysql' && $model->supplier?->deploy_mode == 1) {
+            if ($model->getConnection() == 'mysql') {
                 try {
-                    (new self([], $model->app_id))->where('uuid', $model->uuid)->find()?->save($model);
+                    (new self([], $model->company_uuid))->where('uuid', $model->uuid)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -29,13 +29,13 @@ class User extends BaseModel
     }
 
     /**
-     * 当real_name不存在时返回user_name
+     * 当real_name不存在时返回username
      * @return array
      */
     public static function getRealNameAttr($v, $data)
     {
         if (!$v) {
-            return $data['user_name'] ?? '';
+            return $data['username'] ?? '';
         }
         return $v;
     }
@@ -45,7 +45,7 @@ class User extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'id', 'company_id');
+        return $this->belongsTo('app\\common\\model\\app\\App', 'company_uuid', 'uuid');
     }
 
     /**
@@ -58,7 +58,7 @@ class User extends BaseModel
 
     public function userRole()
     {
-        return $this->hasMany('app\\common\\model\\shop\\UserRole', 'staff_id', 'uuid');
+        return $this->hasMany('app\\common\\model\\shop\\UserRole', 'staff_uuid', 'uuid');
     }
 
     /**
@@ -66,7 +66,7 @@ class User extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'company_id', 'company_id');
+        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'company_uuid', 'company_uuid');
     }
 
     /**
@@ -92,9 +92,9 @@ class User extends BaseModel
     {
         // 区分字母大小写
         return !!static::withoutGlobalScope()->alias('user')
-            ->leftJoin('company_setting su', "su.company_id = user.company_id")
-            ->whereRaw('BINARY user.user_name = :user_name', ['user_name' => $user_name])
-            ->value('user.staff_id');
+            ->leftJoin('company_setting su', "su.company_uuid = user.company_uuid")
+            ->whereRaw('BINARY user.username = :username', ['username' => $user_name])
+            ->value('user.uuid');
     }
 
     /**
@@ -103,10 +103,10 @@ class User extends BaseModel
     public static function checkPhoneExist($phone)
     {
         return !!static::withoutGlobalScope()->alias('user')
-            ->leftJoin('company_setting su', "su.company_id = user.company_id")
+            ->leftJoin('company_setting su', "su.company_uuid = user.company_uuid")
             ->where('user.phone', '=', $phone)
             ->where('user.phone', '<>', '')
-            ->value('user.staff_id');
+            ->value('user.uuid');
     }
 
     /**
@@ -115,9 +115,9 @@ class User extends BaseModel
     public static function checkUserExist($shopUserId)
     {
         return !!static::withoutGlobalScope()->alias('user')
-            ->leftJoin('company_setting su', "su.company_id = user.company_id")
-            ->where('user.staff_id', '=', $shopUserId)
-            ->value('user.staff_id');
+            ->leftJoin('company_setting su', "su.company_uuid = user.company_uuid")
+            ->where('user.uuid', '=', $shopUserId)
+            ->value('user.uuid');
     }
 
     /**
@@ -125,7 +125,7 @@ class User extends BaseModel
      */
     public static function detail($where, $with = [])
     {
-        !is_array($where) && $where = ['staff_id' => (int)$where];
+        !is_array($where) && $where = ['uuid' => (int)$where];
         return static::where(array_merge(['is_delete' => 0], $where))->with($with)->find()?->hidden(['password']);
     }
 

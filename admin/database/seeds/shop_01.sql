@@ -530,7 +530,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品BOM ID',
     price DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称或小料名称（不用于业务显示）',
-    flavor_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品规格ID（仅商品使用）',
+    product_flavor_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品规格ID（仅商品使用）',
     product_sauce_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品小料ID（仅小料使用）',
     product_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品包ID',
     is_default_select TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
@@ -971,11 +971,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '集团名称',
     logo VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
-    is_recycle TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否回收;not null',
-    is_chain TINYINT(3) NOT NULL DEFAULT 1 COMMENT '是否连锁0否1是',
     expire_time INT(10) NOT NULL DEFAULT 0 COMMENT '过期时间;not null',
     auth_day INT(11) NOT NULL DEFAULT 0 COMMENT '授权时间(天) 0为永不过期',
-    status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态1=》启用0禁用;not null',
+    status TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态 1-启用 0-禁用;not null',
     auth_start_time INT(10) NOT NULL DEFAULT 0 COMMENT '授权开始时间（时间戳）',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
@@ -985,14 +983,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '集团设置ID',
     company_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
-    parent_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '上级集团ID',
-    name VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
     real_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
     link_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
     link_phone VARCHAR(25) NOT NULL DEFAULT '' COMMENT '联系电话',
-    logo VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
     sale_stock INT(11) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
     is_open_member INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
     is_open_tablet INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
@@ -1010,11 +1004,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     printer_limit INT(11) NOT NULL DEFAULT 0 COMMENT '打印机上限',
     timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     languages VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
-    deploy_mode TINYINT(4) NOT NULL DEFAULT 0 COMMENT '部署方式 0局域网部署, 1云部署',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    address VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_customer_call_log` (

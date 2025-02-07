@@ -10,19 +10,19 @@ class Shop extends ShopModel
     /**
      * 新增商家用户记录
      */
-    public function add($app_id, $data)
+    public function add($company_uuid, $data)
     {
         if (self::checkExist($data['user_name'])) {
             $this->error = '商家用户名已存在';
             return false;
         }
         return $this->save([
+            'uuid' => createUuid(),
             'username' => $data['user_name'],
             'phone' => $data['phone'],
             'password' => salt_hash($data['password']),
-            'app_id' => $app_id,
-            'is_super' => 1,
-            'shop_supplier_id' => $data['shop_supplier_id']
+            'company_uuid' => $company_uuid,
+            'is_super' => 1
         ]);
     }
 
