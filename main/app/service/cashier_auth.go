@@ -46,7 +46,7 @@ func NewCashierAuthService(
 }
 
 // Login 登录
-func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string) (string, error) {
+func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
 	var token string
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
@@ -113,7 +113,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 		FinallyLoginId:   staff.ID,
 		FinallyLoginTime: int(time.Now().Unix()),
 		CompanyId:        staff.CompanyId,
-	})
+	}, cc)
 	if err != nil {
 		logger.Logger.Error("绑定失败", zap.Error(err))
 		return token, errors.New("绑定失败")

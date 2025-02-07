@@ -22,15 +22,15 @@ class Index extends BaseController
             return '';
         }
         $type = $request->param('type');
-        // 
+        //
         if ($type == 'JobScheduler') {
-            $appIds = Db::name('app')->where('is_delete', 0)->column('app_id');
-            foreach ($appIds as $appId) { 
+            $appIds = Db::name('company')->column('uuid');
+            foreach ($appIds as $appId) {
                request()->appId = $appId;
                event('JobScheduler');
             }
         }
-        // 
+        //
         if ($type == 'ShopPrint') {
             request()->appId = $request->param('app_id');
             event('ShopPrint');

@@ -3,8 +3,6 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"ttpos-server-go/app/service/setting"
-
 	v1 "ttpos-server-go/app/api/v1"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/cashier"
@@ -14,6 +12,7 @@ import (
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -29,16 +28,13 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	accessRepo := repository.NewAccessRepository(dbm)
 	companySettingRepo := repository.NewCompanySettingRepository(dbm)
 	staffShiftLogRepo := repository.NewShiftLogRepository(dbm)
-
 	settingRepo := repository.NewSettingRepository(dbm)
-	settingService := setting.NewSettingService(settingRepo, companySettingRepo)
-	// ToDo 记得删除
-	_ = settingService
 
 	// 初始化服务
 	captchaService := service.NewCaptchaService(cache)
+	settingService := setting.NewSettingService(settingRepo, companySettingRepo, cache)
 	roleAccessService := service.NewRoleAccessService(staffRoleRepo, accessRepo, staffRepo)
-	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo)
+	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo, settingService)
 	shiftService := service.NewShiftService(staffShiftLogRepo, cache)
 	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService, shiftService)
 	companyService := service.NewCompanyService(companyRepo)

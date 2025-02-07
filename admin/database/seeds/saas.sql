@@ -191,7 +191,7 @@ CREATE TABLE `ttpos_admin_user_role` (
 DROP TABLE IF EXISTS `ttpos_company`;
 CREATE TABLE `ttpos_company` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
+  `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `name` varchar(255) NOT NULL DEFAULT '' COMMENT '集团名称',
   `logo` varchar(255) NOT NULL DEFAULT '' COMMENT 'logo',
   `is_recycle` tinyint(3) NOT NULL DEFAULT '0' COMMENT '是否回收;not null',
@@ -203,7 +203,8 @@ CREATE TABLE `ttpos_company` (
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1724054090 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团表';
 
 -- ----------------------------
@@ -212,8 +213,8 @@ CREATE TABLE `ttpos_company` (
 DROP TABLE IF EXISTS `ttpos_company_setting`;
 CREATE TABLE `ttpos_company_setting` (
     `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    `company_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
-    `parent_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '上级集团ID',
+    `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
+    `parent_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '上级集团ID',
     `name` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
     `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
     `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
@@ -292,8 +293,8 @@ CREATE TABLE `ttpos_company_setting` (
 DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
   `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-  `uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '员工ID',
-  `company_uuid` int(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
+  `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '员工ID',
+  `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -332,7 +333,7 @@ CREATE TABLE `ttpos_client_version` (
 DROP TABLE IF EXISTS `ttpos_payment_app`;
 CREATE TABLE `ttpos_payment_app` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `company_uuid` INT(11) NOT NULL DEFAULT 0 COMMENT '集团ID',
+  `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `ll_white_ip` varchar(255) NOT NULL DEFAULT '' COMMENT '白名单IP',
   `ll_merchant_id` varchar(255) NOT NULL DEFAULT '' COMMENT '商户号',
   `ll_store_id` varchar(100) DEFAULT '' COMMENT '站点ID',

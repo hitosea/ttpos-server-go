@@ -3,6 +3,7 @@ package setting
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
@@ -14,6 +15,7 @@ import (
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 )
@@ -21,13 +23,43 @@ import (
 type Service struct {
 	settingRepo        *repository.SettingRepository
 	companySettingRepo *repository.CompanySettingRepository
+	cache              cache.Cache
+	cacheKey           string
 }
 
-func NewSettingService(settingRepo *repository.SettingRepository, companySettingRepo *repository.CompanySettingRepository) *Service {
+func NewSettingService(settingRepo *repository.SettingRepository, companySettingRepo *repository.CompanySettingRepository, cache cache.Cache) *Service {
 	return &Service{
 		settingRepo:        settingRepo,
 		companySettingRepo: companySettingRepo,
+		cache:              cache,
+		cacheKey:           "setting:company_id:%d",
 	}
+}
+
+// 从缓存读取，没有则生成缓存
+func (s *Service) fromCache(companyId uint) ([]model.Setting, error) {
+	var settings []model.Setting
+	cacheKey := fmt.Sprintf(s.cacheKey, companyId)
+	if data, exists := s.cache.Get(cacheKey); exists {
+		if dataValue, isString := data.(string); isString {
+			if err := json.Unmarshal([]byte(dataValue), &settings); err != nil {
+				return settings, err
+			}
+			return settings, nil
+		}
+	}
+	// 从数据库读取
+	var err error
+	settings, err = s.settingRepo.GetAll(companyId)
+	if err != nil {
+		logger.Logger.Error("从数据库获取设置失败", zap.Error(err))
+		return nil, errors.New("获取设置失败")
+	}
+
+	data, _ := json.Marshal(settings)
+	s.cache.Set(cacheKey, string(data), 0)
+
+	return settings, nil
 }
 
 // GetAll 获取所有设置
@@ -37,25 +69,21 @@ func (s *Service) GetAll(companyId uint, language string, languageList []dto.Lan
 	companySetting := s.companySettingRepo.GetByCompanyIdFromCompanyDB(companyId)
 
 	var retSettings = make(map[string]any)
-	settings, err := s.settingRepo.GetAll(companyId)
-	if err != nil {
-		logger.Logger.Error("从数据库获取设置失败", zap.Error(err))
-		return nil, errors.New("获取设置失败")
-	}
-	// todo 缓存数据库settings
+	// 从缓存读取
+	settings, err := s.fromCache(companyId)
 
-	var names []string
+	var keys []string
 	for _, m := range settings {
-		names = append(names, m.Key)
+		keys = append(keys, m.Key)
 	}
-	for _, name := range []string{constant.SettingPrinter, constant.SettingStore, constant.SettingRecharge,
+	for _, key := range []string{constant.SettingPrinter, constant.SettingStore, constant.SettingRecharge,
 		constant.SettingPoints, constant.SettingSysAdminConfig, constant.SettingSysConfig, constant.SettingBalance,
 		constant.SettingCurrency, constant.SettingTaxRate, constant.SettingServiceCharge, constant.SettingPayment,
 		constant.SettingBusiness, constant.SettingCashier, constant.SettingTablet, constant.SettingH5, constant.SettingKitchen,
 		constant.SettingAssistant, constant.SettingBuffet} {
-		if !slices.Contains(names, name) {
+		if !slices.Contains(keys, key) {
 			settings = append(settings, model.Setting{
-				Key:    name,
+				Key:    key,
 				Values: "{}",
 			})
 		}
@@ -425,4 +453,37 @@ func (s *Service) GetStoreLanguageList(companyId uint, language string, cc *gin.
 		}
 	}
 	return []dto.LanguageItem{}, nil
+}
+
+// GetPrinterSetting 获取打印机设置
+func (s *Service) GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error) {
+	var printerSetting setting.Printer
+	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
+	if err != nil {
+		return printerSetting, err
+	}
+	settings, err := s.GetAll(companyId, language, languageList, cc)
+	if err != nil {
+		return printerSetting, err
+	}
+	if printerSet, ok := settings[constant.SettingPrinter]; ok {
+		if printer, yes := printerSet.(setting.Printer); yes {
+			return printer, nil
+		}
+	}
+	return s.getDefaultPrinter(language, languageList), nil
+}
+
+// Updates 更新设置
+func (s *Service) Updates(companyId uint, settingKey string, values any) error {
+	value, err := json.Marshal(values)
+	if err != nil {
+		return errors.New("更新设置失败")
+	}
+	if err = s.settingRepo.Updates(companyId, settingKey, string(value)); err != nil {
+		return errors.New("更新设置失败")
+	}
+	// 删除缓存
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyId))
+	return nil
 }

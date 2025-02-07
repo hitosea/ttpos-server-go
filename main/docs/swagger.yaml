@@ -1852,7 +1852,7 @@ paths:
       summary: 获取验证码
       tags:
       - 通用
-  /passport/server-public-key:
+  /passport/server_public_key:
     post:
       parameters:
       - description: 客户端Id

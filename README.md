@@ -18,7 +18,7 @@ http://your.domain.com/api/v1/passport/server_public_key
     "meta": {
       "page_no": 1,
       "page_size": 20,
-      "total": 100
+      "total": 100 // 总记录数
     }
   }
 }
@@ -30,3 +30,4 @@ http://your.domain.com/api/v1/passport/server_public_key
 8. 自动验证的错误消息，使用对应结构+Message的map，传递参数，方便国际化，参考收银端登录接口
 9. api文档使用https://github.com/swaggo/swag 
 10. API接口响应时间要求本地响应200ms以内
+11. 服务A依赖服务B，通过传参的形式；服务A不能直接依赖服务B所依赖的repo，方便后期按照服务划分模块

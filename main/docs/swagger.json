@@ -1994,7 +1994,7 @@
                 }
             }
         },
-        "/passport/server-public-key": {
+        "/passport/server_public_key": {
             "post": {
                 "produces": [
                     "application/json"

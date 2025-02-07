@@ -291,18 +291,18 @@ func (s *Service) getDefaultPrinter(language string, languageList []dto.Language
 		defaultLanguage = languageList[0].Name
 	}
 	return setting.Printer{
-		CashierOpen:        "1",             // 是否开启打印
-		CashierPrinterID:   "-1",            // 打印机id
-		CashierPrinter:     []interface{}{}, // ToDo 未知结构
-		LanguageList:       languageList,    // 语言列表
-		LanguageMethod:     "1",             // 语言方式（收银） 1-单语言 2-多语言
-		DefaultLanguage:    defaultLanguage, // 打印语言（收银）
-		PrintMethod:        "1",             // 打印方式（收银） 1-文本打印 2-图片打印
-		KitchenLanguage:    defaultLanguage, // 打印语言（送厨）
-		KitchenPrintMethod: "1",             // 打印方式（送厨） 1-文本打印 2-图片打印
-		ConsumptionTax:     "1",             // 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
-		BuffetSignOpen:     "1",             // 自助餐标识设置（默认开启）
-		MonetaryUnitOpen:   "1",             // 货币单位（默认开启）
+		CashierOpen:        "1",                            // 是否开启打印
+		CashierPrinterID:   "-1",                           // 打印机id
+		CashierPrinter:     []setting.CashierPrinterItem{}, // 打印机列表
+		LanguageList:       languageList,                   // 语言列表
+		LanguageMethod:     "1",                            // 语言方式（收银） 1-单语言 2-多语言
+		DefaultLanguage:    defaultLanguage,                // 打印语言（收银）
+		PrintMethod:        "1",                            // 打印方式（收银） 1-文本打印 2-图片打印
+		KitchenLanguage:    defaultLanguage,                // 打印语言（送厨）
+		KitchenPrintMethod: "1",                            // 打印方式（送厨） 1-文本打印 2-图片打印
+		ConsumptionTax:     "1",                            // 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
+		BuffetSignOpen:     "1",                            // 自助餐标识设置（默认开启）
+		MonetaryUnitOpen:   "1",                            // 货币单位（默认开启）
 		CalendarList: []setting.CalendarItem{{
 			Key:  "1",
 			Name: i18n.Translate(language, "公历"),
