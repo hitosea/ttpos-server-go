@@ -10,7 +10,7 @@ type ILocaleSrv interface {
 	GetLocaleNames(m model.MultiLanguageName) dto.LocaleResponse // 获取多语言名称
 }
 
-// 多语言名称服务结构体
+// localeSrv 多语言名称服务结构体
 type localeSrv struct {
 }
 

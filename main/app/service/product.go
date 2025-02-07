@@ -3,18 +3,18 @@ package service
 import (
 	"errors"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/req/cashier_req"
+	"ttpos-server-go/app/dto/resp/cashier_resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
 
 // IProductSrv 定义收银服务接口
 type IProductSrv interface {
-	GetProductList(dbId uint, req req.ProductListReq) (resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
+	GetProductList(dbId uint, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
 }
 
-// 收银服务结构体
+// productSrv 收银服务结构体
 type productSrv struct {
 	dbm       *database.DBManager // 数据库管理器
 	localeSrv ILocaleSrv          // 多语言名称服务
@@ -34,30 +34,20 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductList(dbId uint, req req.ProductListReq) (resp.ProductListWithPaginationResp, error) {
-	// 构建查询条件
-	filters := make(map[string]interface{})
-	if req.Keyword != "" {
-		filters["name"] = req.Keyword
-	}
-	if req.CategoryID > 0 {
-		filters["category_id"] = req.CategoryID
-	}
-
+func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
 	// 获取总数
 	products, total, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductListWithPagination(
 		req.PageNo,
 		req.PageSize,
-		repository.NewCommonRepo().WhereLikeByName(req.Keyword),
 	)
 	if err != nil {
-		return resp.ProductListWithPaginationResp{}, errors.New("获取产品列表失败")
+		return cashier_resp.ProductListWithPaginationResp{}, errors.New("获取产品列表失败")
 	}
 
 	// 转换为响应对象
-	productList := make([]resp.Product, 0, len(products))
+	productList := make([]cashier_resp.Product, 0, len(products))
 	for _, product := range products {
-		productList = append(productList, resp.Product{
+		productList = append(productList, cashier_resp.Product{
 			ID:    product.ID,
 			Image: product.ImageUrl,
 			Name:  s.localeSrv.GetLocaleNames(product.MultiLanguageName),
@@ -66,7 +56,7 @@ func (s *productSrv) GetProductList(dbId uint, req req.ProductListReq) (resp.Pro
 	}
 
 	// 返回响应对象
-	return resp.ProductListWithPaginationResp{
+	return cashier_resp.ProductListWithPaginationResp{
 		List: productList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
