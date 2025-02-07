@@ -5,26 +5,26 @@ import (
 	"ttpos-server-go/app/model"
 )
 
-// 多语言名称服务接口
+// ILocaleSrv 多语言名称服务接口
 type ILocaleSrv interface {
 	GetLocaleNames(m model.MultiLanguageName) dto.LocaleResponse // 获取多语言名称
 }
 
-// 多语言名称服务结构体
+// localeSrv 多语言名称服务结构体
 type localeSrv struct {
 }
 
-// 创建新的多语言名称服务
+// NewLocaleSrv 创建新的多语言名称服务
 func NewLocaleSrv() ILocaleSrv {
 	return NewLocaleSrvImpl()
 }
 
-// 创建新的多语言名称服务实现
+// NewLocaleSrvImpl 创建新的多语言名称服务实现
 func NewLocaleSrvImpl() ILocaleSrv {
 	return &localeSrv{}
 }
 
-// 获取多语言名称
+// GetLocaleNames 获取多语言名称
 func (s *localeSrv) GetLocaleNames(m model.MultiLanguageName) dto.LocaleResponse {
 	return dto.LocaleResponse{
 		ZH:   m.ZhName,
