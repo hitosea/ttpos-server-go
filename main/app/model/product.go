@@ -31,7 +31,6 @@ type PrinterTag struct {
 	Id         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid       uint   `gorm:"default:0;comment:'UUID'"`
 	Name       string `gorm:"default:'';comment:'名称'"`
-	RefCount   uint   `gorm:"default:0;comment:'引用计数'"`
 	CreateTime int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
