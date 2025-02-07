@@ -12,12 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AdminHandler struct {
-	companyService service.CompanyServiceInterface
+type Handler struct {
+	companyService service.ICompanySrv
 }
 
-func NewAdminHandler(companyService service.CompanyServiceInterface) *AdminHandler {
-	return &AdminHandler{companyService: companyService}
+func NewAdminHandler(companyService service.ICompanySrv) *Handler {
+	return &Handler{companyService: companyService}
 }
 
 // CreateCompany 创建公司
@@ -28,7 +28,7 @@ func NewAdminHandler(companyService service.CompanyServiceInterface) *AdminHandl
 // @param data body req.ParamCreateCompany true "创建公司参数"
 // @Success 200 {object} dto.Response
 // @Router /admin/company [post]
-func (h *AdminHandler) CreateCompany(c *gin.Context) {
+func (h *Handler) CreateCompany(c *gin.Context) {
 	// 创建公司的逻辑. 新建一个company表, 然后新建一个company_setting表
 	// 1. 获取参数
 	param := dtoReq.ParamCreateCompany{}
@@ -59,7 +59,7 @@ func (h *AdminHandler) CreateCompany(c *gin.Context) {
 // @param data body req.ParamUpdateCompany true "更新公司参数"
 // @Success 200 {object} dto.Response
 // @Router /admin/company [put]
-func (h *AdminHandler) UpdateCompany(c *gin.Context) {
+func (h *Handler) UpdateCompany(c *gin.Context) {
 	// 更新公司的逻辑. 更新company表, 然后更新company_setting表
 	// 1. 获取参数
 	param := dtoReq.ParamUpdateCompany{}
@@ -89,7 +89,7 @@ func (h *AdminHandler) UpdateCompany(c *gin.Context) {
 // @param id path int true "公司ID"
 // @Success 200 {object} dto.Response
 // @Router /admin/company [delete]
-func (h *AdminHandler) DeleteCompany(c *gin.Context) {
+func (h *Handler) DeleteCompany(c *gin.Context) {
 	// 1. 获取参数
 	companyId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -113,8 +113,8 @@ func (h *AdminHandler) DeleteCompany(c *gin.Context) {
 }
 
 // RegisterHandlers 创建与 OpenAPI 规范匹配的 http.Handler。
-func RegisterHandlers(router gin.IRouter, companyService service.CompanyServiceInterface) {
-	handler := AdminHandler{
+func RegisterHandlers(router gin.IRouter, companyService service.ICompanySrv) {
+	handler := Handler{
 		companyService: companyService,
 	}
 

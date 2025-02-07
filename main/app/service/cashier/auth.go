@@ -1,10 +1,11 @@
-package service
+package cashier
 
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"time"
+	"ttpos-server-go/app/service"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -17,25 +18,39 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-type CashierAuthService struct {
-	companyStaffRepo *repository.CompanyStaffRepository
-	staffRepo        *repository.StaffRepository
-	loginLogRepo     *repository.LoginLogRepository
-	captchaSrv       *CaptchaService
-	roleAccessSrv    *RoleAccessService
-	bindRecordSrv    *BindRecordService
-	shiftSrv         *ShiftService
+type IAuthSrv interface {
+	Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
+	Logout(cc *gin.Context) error
 }
 
-func NewCashierAuthService(
-	staffRepo *repository.StaffRepository,
-	companyStaffRepo *repository.CompanyStaffRepository,
-	captchaSrv *CaptchaService,
-	roleAccessSrv *RoleAccessService,
-	bindRecordSrv *BindRecordService,
-	staffShiftSrv *ShiftService,
-) *CashierAuthService {
-	return &CashierAuthService{
+func NewAuthSrv(staffRepo repository.IStaffRepo,
+	companyStaffRepo repository.ICompanyStaffRepo,
+	captchaSrv service.ICaptchaSrv,
+	roleAccessSrv service.IRoleAccessSrv,
+	bindRecordSrv service.IBindRecordSrv,
+	staffShiftSrv service.IStaffShiftSrv) IAuthSrv {
+	return NewAuthSrvImpl(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv)
+}
+
+type AuthService struct {
+	companyStaffRepo repository.ICompanyStaffRepo
+	staffRepo        repository.IStaffRepo
+	loginLogRepo     *repository.LoginLogRepo
+	captchaSrv       service.ICaptchaSrv
+	roleAccessSrv    service.IRoleAccessSrv
+	bindRecordSrv    service.IBindRecordSrv
+	shiftSrv         service.IStaffShiftSrv
+}
+
+func NewAuthSrvImpl(
+	staffRepo repository.IStaffRepo,
+	companyStaffRepo repository.ICompanyStaffRepo,
+	captchaSrv service.ICaptchaSrv,
+	roleAccessSrv service.IRoleAccessSrv,
+	bindRecordSrv service.IBindRecordSrv,
+	staffShiftSrv service.IStaffShiftSrv,
+) *AuthService {
+	return &AuthService{
 		companyStaffRepo: companyStaffRepo,
 		staffRepo:        staffRepo,
 		captchaSrv:       captchaSrv,
@@ -46,7 +61,7 @@ func NewCashierAuthService(
 }
 
 // Login 登录
-func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
+func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
 	var token string
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
@@ -135,7 +150,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(constant.SOURCE_CASHIER, staff.ID, staff.CompanyId, config.JWT.Secret, config.JWT.Expire)
+	token, err = auth.GenerateToken(constant.SOURCE_CASHIER, loginReq.DeviceId, staff.ID, staff.CompanyId, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
 		return token, errors.New("生成token失败")
 	}
@@ -143,7 +158,7 @@ func (s *CashierAuthService) Login(loginReq req.CashierLoginRequest, captchaId, 
 }
 
 // Logout 退出登录
-func (s *CashierAuthService) Logout(cc *gin.Context) error {
+func (s *AuthService) Logout(cc *gin.Context) error {
 	companyId := cc.GetUint("company_id")
 	staff := s.staffRepo.GetById(companyId, cc.GetUint("staff_id"))
 	return s.bindRecordSrv.Unbind(companyId, constant.SOURCE_CASHIER, staff.BindKey, staff.ID)

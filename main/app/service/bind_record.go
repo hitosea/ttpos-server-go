@@ -16,21 +16,30 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-type BindRecordService struct {
-	bindRecordRepo     *repository.BindRecordRepository
-	companySettingRepo *repository.CompanySettingRepository
-	settingSrv         *setting.Service
+type IBindRecordSrv interface {
+	Add(addReq req.AddBindRecordReq, cc *gin.Context) error
+	Unbind(companyId uint, source string, key string, staffId uint) error
 }
 
-func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository, settingSrv *setting.Service) *BindRecordService {
-	return &BindRecordService{
+func NewBindRecordSrv(bindRecordRepo repository.IBindRecordRepo, companySettingRepo repository.ICompanySettingRepo, settingSrv setting.ISrv) IBindRecordSrv {
+	return NewBindRecordSrvImpl(bindRecordRepo, companySettingRepo, settingSrv)
+}
+
+type BindRecordSrv struct {
+	bindRecordRepo     repository.IBindRecordRepo
+	companySettingRepo repository.ICompanySettingRepo
+	settingSrv         setting.ISrv
+}
+
+func NewBindRecordSrvImpl(bindRecordRepo repository.IBindRecordRepo, companySettingRepo repository.ICompanySettingRepo, settingSrv setting.ISrv) *BindRecordSrv {
+	return &BindRecordSrv{
 		bindRecordRepo:     bindRecordRepo,
-		companySettingRepo: supplierRepo,
+		companySettingRepo: companySettingRepo,
 		settingSrv:         settingSrv,
 	}
 }
 
-func (s *BindRecordService) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
+func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
 	if !slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
 		addReq.CompanyId == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
@@ -132,6 +141,6 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq, cc *gin.Context) er
 	})
 }
 
-func (s *BindRecordService) Unbind(companyId uint, source string, key string, staffId uint) error {
+func (s *BindRecordSrv) Unbind(companyId uint, source string, key string, staffId uint) error {
 	return s.bindRecordRepo.Unbind(companyId, source, key, staffId)
 }

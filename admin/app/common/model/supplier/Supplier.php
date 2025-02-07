@@ -7,6 +7,7 @@ use help\ImgHelp;
 use help\DateHelp;
 use help\ImageHelp;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\model\store\TakeOrder;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\settings\LanguageEnum;
@@ -17,8 +18,11 @@ use app\shop\model\settings\Setting as SettingModel;
  */
 class Supplier extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'company_setting';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     // 写入后同步数据
     public static function onAfterWrite(Model $data)
@@ -30,9 +34,9 @@ class Supplier extends BaseModel
     public static function onAfterUpdate(Model $model)
     {
         if (app('http')->getName() == 'admin') {
-            if ($model->getConnection() == 'mysql' && $model->deploy_mode == 1) {
+            if ($model->getConnection() == 'mysql') {
                 try {
-                    (new self([], $model->app_id))->where('id', $model->id)->find()?->save($model);
+                    (new self([], $model->company_uuid))->where('company_uuid', $model->company_uuid)->find()?->save($model);
                 } catch (\Exception $e) {
                     //
                 }
@@ -129,7 +133,7 @@ class Supplier extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'id', 'company_id');
+        return $this->belongsTo('app\\common\\model\\app\\App', 'id', 'company_uuid');
     }
 
     /**
@@ -153,7 +157,7 @@ class Supplier extends BaseModel
      */
     public function superUser()
     {
-        return $this->hasOne('app\\common\\model\\shop\\User', 'company_id', 'company_id')
+        return $this->hasOne('app\\common\\model\\shop\\User', 'company_uuid', 'company_uuid')
             ->where('is_super', '=', 1);
     }
 
@@ -170,7 +174,7 @@ class Supplier extends BaseModel
      */
     public function paymentApp()
     {
-        return $this->belongsTo('app\\common\\model\\pay\\PaymentApp', 'company_id', 'company_id');
+        return $this->belongsTo('app\\common\\model\\pay\\PaymentApp', 'company_uuid', 'company_uuid');
     }
 
     /**
@@ -276,7 +280,8 @@ class Supplier extends BaseModel
     public static function synchronousSetting(self $data, $type = '')
     {
         $oidAppId = request()->appId;
-        request()->appId = $data->app_id;
+        request()->appId = $data->company_uuid;
+        $companyUuid = $data->company_uuid;
         try {
             $languages = $data['languages'] ?? [];
             $languages = !is_array($languages) ? json_decode($languages, true) : $languages;
@@ -313,10 +318,10 @@ class Supplier extends BaseModel
                 'chain_number' => $data['chain_number'] ?? '',
                 'tax_number' => $data['tax_number'] ?? $setting->values['tax_number'] ?? '', // 兼容后台修改商家授权信息，重置税号
                 'language' => $settingLanguages
-            ], $data->shop_supplier_id, $data->app_id, 1);
+            ], $data->shop_supplier_id, $companyUuid, 1);
             // 拒单
             if (isset($data['is_accept_scan_order']) && $data['is_accept_scan_order'] == 0) {
-                $list = (new TakeOrder([], $data->app_id))->where('status', 0)->select();
+                $list = (new TakeOrder([], $companyUuid))->where('status', 0)->select();
                 /** @var TakeOrder $item */
                 foreach ($list as $item) {
                     $item?->reject();

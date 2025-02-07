@@ -7,19 +7,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// 商品规格
-type ProductFlavorRepoInterface interface {
+// IProductFlavorRepo 商品规格
+type IProductFlavorRepo interface {
 	GetProductFlavorList() ([]model.ProductFlavor, error)
 	UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error
 	CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error)
 	DeleteProductFlavor(id uint) error
 }
 
-func NewProductFlavorRepo(db *gorm.DB) ProductFlavorRepoInterface {
+func NewProductFlavorRepo(db *gorm.DB) IProductFlavorRepo {
 	return NewProductFlavorRepoImpl(db)
 }
 
-// 创建新的商品规格仓库实现
+// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
 func NewProductFlavorRepoImpl(db *gorm.DB) *ProductFlavorRepoImpl {
 	return &ProductFlavorRepoImpl{db: db}
 }
@@ -28,14 +28,14 @@ type ProductFlavorRepoImpl struct {
 	db *gorm.DB
 }
 
-// 获取商品规格列表，排除逻辑删除的规格
+// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
 func (r *ProductFlavorRepoImpl) GetProductFlavorList() ([]model.ProductFlavor, error) {
 	var productFlavors []model.ProductFlavor
 	err := r.db.Model(&model.ProductFlavor{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productFlavors).Error
 	return productFlavors, err
 }
 
-// 更新商品规格
+// UpdateProductFlavor 更新商品规格
 func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -57,7 +57,7 @@ func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model
 	return tx.Commit().Error // 提交事务
 }
 
-// 创建商品规格
+// CreateProductFlavor 创建商品规格
 func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -81,7 +81,7 @@ func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductF
 	return productFlavor.Uuid, tx.Commit().Error // 提交事务
 }
 
-// 软删除商品规格
+// DeleteProductFlavor 软删除商品规格
 func (r *ProductFlavorRepoImpl) DeleteProductFlavor(id uint) error {
 	return r.db.Model(&model.ProductFlavor{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

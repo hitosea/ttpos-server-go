@@ -5,11 +5,11 @@ import (
 )
 
 type LoginLogService struct {
-	shopLoginLogRepo *repository.LoginLogRepository
+	shopLoginLogRepo *repository.LoginLogRepo
 }
 
 func NewLoginLogService(
-	shopLoginLogRepo *repository.LoginLogRepository,
+	shopLoginLogRepo *repository.LoginLogRepo,
 ) *LoginLogService {
 	return &LoginLogService{
 		shopLoginLogRepo: shopLoginLogRepo,

@@ -3,90 +3,38 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	v1 "ttpos-server-go/app/api/v1"
-	"ttpos-server-go/app/api/v1/admin"
-	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/cashier/bill"
 	cashierOrder "ttpos-server-go/app/api/v1/cashier/order"
 	"ttpos-server-go/app/api/v1/cashier/other"
 	"ttpos-server-go/app/api/v1/kitchen"
-	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/middleware"
+	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 )
 
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
-	// 初始化仓库
-	companyStaffRepo := repository.NewCompanyStaffRepository(dbm)
-	staffRepo := repository.NewStaffRepository(dbm)
-	companyRepo := repository.NewCompanyRepository(dbm)
-	bindRecordRepo := repository.NewBindRecordRepository(dbm)
-	staffRoleRepo := repository.NewStaffRoleRepository(dbm)
-	accessRepo := repository.NewAccessRepository(dbm)
-	companySettingRepo := repository.NewCompanySettingRepository(dbm)
-	staffShiftLogRepo := repository.NewShiftLogRepository(dbm)
-	settingRepo := repository.NewSettingRepository(dbm)
-
-	// 初始化服务
-	captchaService := service.NewCaptchaService(cache)
-	settingService := setting.NewSettingService(settingRepo, companySettingRepo, cache)
-	roleAccessService := service.NewRoleAccessService(staffRoleRepo, accessRepo, staffRepo)
-	bindRecordService := service.NewBindRecordService(bindRecordRepo, companySettingRepo, settingService)
-	shiftService := service.NewShiftService(staffShiftLogRepo, cache)
-	cashierAuthService := service.NewCashierAuthService(staffRepo, companyStaffRepo, captchaService, roleAccessService, bindRecordService, shiftService)
-	companyService := service.NewCompanyService(companyRepo)
-	encryptService := service.NewEncryptService(cache)
-
-	// 初始化处理器
-	passportHandler := v1.NewPassportHandler(captchaService, encryptService)
-	cashierAuthHandler := cashier.NewCashierAuthHandler(cashierAuthService)
-
+	// 判活接口
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
-
-	// 公开路由
-	publicApiV1 := r.Group("api/v1")
+	apiV1 := r.Group("api/v1")
 	{
-		publicApiV1.GET("/passport/captcha", passportHandler.GetCaptcha)                    // 获取验证码
-		publicApiV1.POST("/passport/server_public_key", passportHandler.GetServerPublicKey) // 获取服务端公钥
-		// 收银端
-		cashierGroup := publicApiV1.Group("/cashier")
+		// 通用接口
+		passportGroup := apiV1.Group("/passport")
 		{
-			cashierGroup.POST("/passport/login", middleware.Encrypt(cache), cashierAuthHandler.Login) // 登录
+			passport.RegisterHandlers(passportGroup, cache)
 		}
-		// 点餐助手
-		assistantGroup := publicApiV1.Group("/assistant")
-		{
-			assistantGroup.GET("/passport/captcha", passportHandler.GetCaptcha)
-		}
-	}
-
-	// 需要认证的路由
-	privateApiV1 := r.Group("api/v1")
-	//privateApiV1.Use(middleware.Auth())
-	{
 		// 收银端
-		cashierGroup := privateApiV1.Group("/cashier")
+		cashierGroup := apiV1.Group("/cashier")
 		{
-			cashierGroup.POST("/passport/logout", cashierAuthHandler.Logout) // 收银端退出登录
-			//cashierGroup.GET("/info", nil)                                   // 获取登录信息
-			other.RegisterHandlers(cashierGroup, dbm)
+			other.RegisterHandlers(cashierGroup, dbm, cache)
 			bill.RegisterHandlers(cashierGroup)
 			cashierOrder.RegisterHandlers(cashierGroup)
 		}
 		// 厨房端
-		kitchenGroup := privateApiV1.Group("/kitchen")
+		kitchenGroup := apiV1.Group("/kitchen")
 		{
 			kitchen.RegisterHandlers(kitchenGroup)
-		}
-		// 管理端
-		adminGroup := privateApiV1.Group("/admin")
-		{
-			admin.RegisterHandlers(adminGroup, companyService)
 		}
 	}
 }

@@ -2,10 +2,9 @@ package database
 
 import (
 	"fmt"
+	"gorm.io/gorm"
 	"log"
 	"sync"
-
-	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -13,7 +12,9 @@ import (
 )
 
 type DBManager struct {
-	dbs map[uint]*gorm.DB
+	lock *sync.Mutex
+	dbs  map[uint]*gorm.DB
+	conf config.DatabaseConf
 }
 
 var (
@@ -25,7 +26,9 @@ var (
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
-			dbs: make(map[uint]*gorm.DB),
+			dbs:  make(map[uint]*gorm.DB),
+			conf: conf,
+			lock: &sync.Mutex{},
 		}
 		instance.initDBs(conf)
 	})
@@ -45,12 +48,12 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	if err := db.Find(&companies).Error; err != nil {
 		log.Fatalf("Error querying companies: %s", err)
 	}
-	for _, app := range companies {
-		appDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, app.ID)) // 比如：shop1724054084 数据库
+	for _, company := range companies {
+		companyDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, company.ID)) // 比如：shop1724054084 数据库
 		if err != nil {
-			log.Fatalf("Error connecting to database for app %d: %s", app.ID, err)
+			log.Fatalf("Error connecting to database for company %d: %s", company.ID, err)
 		}
-		m.dbs[app.ID] = appDB
+		m.dbs[company.ID] = companyDB
 	}
 }
 
@@ -68,12 +71,21 @@ func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gor
 	}
 }
 
-// GetDB 获取数据库
+// GetDB 获取数据库，动态获取新增商家
 func (m *DBManager) GetDB(index uint) *gorm.DB {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	if db, ok := m.dbs[index]; ok {
 		return db
 	}
-	panic(fmt.Sprintf("Database with index %d not found", index))
+	// 不存在，尝试连接
+	companyDB, err := m.getConnection(m.conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, index)) // 比如：shop1724054084 数据库
+	if err != nil {
+		log.Printf("Error connecting to database for company %d: %s\n", index, err)
+		return nil
+	}
+	m.dbs[index] = companyDB
+	return companyDB
 }
 
 func (m *DBManager) GetDBNameList() map[uint]string {

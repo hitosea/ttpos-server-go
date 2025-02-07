@@ -5,15 +5,23 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-type ShopOptLogRepository struct {
+type IOptLogRepo interface {
+	Save(companyId uint, source string, key string, shopUserId uint) error
+}
+
+func NewOptLogRepo(dbm *database.DBManager) IOptLogRepo {
+	return NewOptLogRepoImpl(dbm)
+}
+
+type OptLogRepo struct {
 	dbm *database.DBManager
 }
 
-func NewShopOptLogRepository(dbm *database.DBManager) *ShopOptLogRepository {
-	return &ShopOptLogRepository{dbm: dbm}
+func NewOptLogRepoImpl(dbm *database.DBManager) *OptLogRepo {
+	return &OptLogRepo{dbm: dbm}
 }
 
-func (r *ShopOptLogRepository) Save(companyId uint, source string, key string, shopUserId uint) error {
+func (r *OptLogRepo) Save(companyId uint, source string, key string, shopUserId uint) error {
 	return r.dbm.GetDB(companyId).Debug().Create(&model.ShopOptLog{
 		ShopUserId:  0,
 		Title:       "",

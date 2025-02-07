@@ -39,6 +39,7 @@ func Auth() gin.HandlerFunc {
 		c.Set("company_id", claims.CompanyId)
 		c.Set("staff_id", claims.StaffId)
 		c.Set("source", claims.Source)
+		c.Set("device_id", claims.DeviceId)
 		c.Next()
 	}
 }

@@ -7,19 +7,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// 商品规格
-type ProductUnitRepoInterface interface {
+// IProductUnitRepo 商品规格
+type IProductUnitRepo interface {
 	GetProductUnitList() ([]model.ProductUnit, error)
 	UpdateProductUnit(id uint, productUnit model.ProductUnit) error
 	CreateProductUnit(productUnit model.ProductUnit) (uint, error)
 	DeleteProductUnit(id uint) error
 }
 
-func NewProductUnitRepo(db *gorm.DB) ProductUnitRepoInterface {
+func NewProductUnitRepo(db *gorm.DB) IProductUnitRepo {
 	return NewProductUnitRepoImpl(db)
 }
 
-// 创建新的商品规格仓库实现
+// NewProductUnitRepoImpl 创建新的商品规格仓库实现
 func NewProductUnitRepoImpl(db *gorm.DB) *ProductUnitRepoImpl {
 	return &ProductUnitRepoImpl{db: db}
 }
@@ -28,14 +28,14 @@ type ProductUnitRepoImpl struct {
 	db *gorm.DB
 }
 
-// 获取商品规格列表，排除逻辑删除的规格
+// GetProductUnitList 获取商品规格列表，排除逻辑删除的规格
 func (r *ProductUnitRepoImpl) GetProductUnitList() ([]model.ProductUnit, error) {
 	var productUnits []model.ProductUnit
 	err := r.db.Model(&model.ProductUnit{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productUnits).Error
 	return productUnits, err
 }
 
-// 更新商品规格
+// UpdateProductUnit 更新商品规格
 func (r *ProductUnitRepoImpl) UpdateProductUnit(id uint, productUnit model.ProductUnit) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -57,7 +57,7 @@ func (r *ProductUnitRepoImpl) UpdateProductUnit(id uint, productUnit model.Produ
 	return tx.Commit().Error // 提交事务
 }
 
-// 创建商品规格
+// CreateProductUnit 创建商品规格
 func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (uint, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -81,7 +81,7 @@ func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (
 	return productUnit.Uuid, tx.Commit().Error // 提交事务
 }
 
-// 软删除商品规格
+// DeleteProductUnit 软删除商品规格
 func (r *ProductUnitRepoImpl) DeleteProductUnit(id uint) error {
 	return r.db.Model(&model.ProductUnit{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

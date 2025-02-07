@@ -20,15 +20,26 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-type Service struct {
-	settingRepo        *repository.SettingRepository
-	companySettingRepo *repository.CompanySettingRepository
+type ISrv interface {
+	GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error)
+	GetStoreLanguageList(companyId uint, language string, cc *gin.Context) ([]dto.LanguageItem, error)
+	GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error)
+	Updates(companyId uint, settingKey string, values any) error
+}
+
+func NewSrv(settingRepo repository.ISettingRepo, companySettingRepo repository.ICompanySettingRepo, cache cache.Cache) ISrv {
+	return NewSrvImpl(settingRepo, companySettingRepo, cache)
+}
+
+type Srv struct {
+	settingRepo        repository.ISettingRepo
+	companySettingRepo repository.ICompanySettingRepo
 	cache              cache.Cache
 	cacheKey           string
 }
 
-func NewSettingService(settingRepo *repository.SettingRepository, companySettingRepo *repository.CompanySettingRepository, cache cache.Cache) *Service {
-	return &Service{
+func NewSrvImpl(settingRepo repository.ISettingRepo, companySettingRepo repository.ICompanySettingRepo, cache cache.Cache) *Srv {
+	return &Srv{
 		settingRepo:        settingRepo,
 		companySettingRepo: companySettingRepo,
 		cache:              cache,
@@ -37,7 +48,7 @@ func NewSettingService(settingRepo *repository.SettingRepository, companySetting
 }
 
 // 从缓存读取，没有则生成缓存
-func (s *Service) fromCache(companyId uint) ([]model.Setting, error) {
+func (s *Srv) fromCache(companyId uint) ([]model.Setting, error) {
 	var settings []model.Setting
 	cacheKey := fmt.Sprintf(s.cacheKey, companyId)
 	if data, exists := s.cache.Get(cacheKey); exists {
@@ -63,7 +74,7 @@ func (s *Service) fromCache(companyId uint) ([]model.Setting, error) {
 }
 
 // GetAll 获取所有设置
-func (s *Service) GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
+func (s *Srv) GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
 
 	// 获取company_setting
 	companySetting := s.companySettingRepo.GetByCompanyIdFromCompanyDB(companyId)
@@ -442,7 +453,7 @@ func (s *Service) GetAll(companyId uint, language string, languageList []dto.Lan
 }
 
 // GetStoreLanguageList 获取商家语言列表
-func (s *Service) GetStoreLanguageList(companyId uint, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
+func (s *Srv) GetStoreLanguageList(companyId uint, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
 	all, err := s.GetAll(companyId, language, []dto.LanguageItem{}, cc)
 	if err != nil {
 		return nil, err
@@ -456,7 +467,7 @@ func (s *Service) GetStoreLanguageList(companyId uint, language string, cc *gin.
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Service) GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error) {
+func (s *Srv) GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error) {
 	var printerSetting setting.Printer
 	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
 	if err != nil {
@@ -475,7 +486,7 @@ func (s *Service) GetPrinterSetting(companyId uint, language string, cc *gin.Con
 }
 
 // Updates 更新设置
-func (s *Service) Updates(companyId uint, settingKey string, values any) error {
+func (s *Srv) Updates(companyId uint, settingKey string, values any) error {
 	value, err := json.Marshal(values)
 	if err != nil {
 		return errors.New("更新设置失败")

@@ -19,15 +19,15 @@ func NewCompanyRepository(dbm *database.DBManager) CompanyRepositoryInterface {
 
 type CompanyRepositoryImpl struct {
 	dbm                *database.DBManager
-	companySettingRepo *CompanySettingRepository
-	companyRepo        *CompanyRepository
+	companySettingRepo ICompanySettingRepo
+	companyRepo        *CompanyRepoImpl
 }
 
 func NewCompanyRepositoryImpl(dbm *database.DBManager) *CompanyRepositoryImpl {
 	return &CompanyRepositoryImpl{
 		dbm:                dbm,
-		companySettingRepo: NewCompanySettingRepository(dbm),
-		companyRepo:        NewCompanyRepo(dbm),
+		companySettingRepo: NewCompanySettingRepo(dbm),
+		companyRepo:        NewCompanyRepoImpl(dbm),
 	}
 }
 

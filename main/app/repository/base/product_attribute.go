@@ -7,20 +7,20 @@ import (
 	"gorm.io/gorm"
 )
 
-// 产品属性仓库接口
-type ProductAttributeRepoInterface interface {
+// IProductAttributeRepo 产品属性仓库接口
+type IProductAttributeRepo interface {
 	GetProductAttributeList() ([]model.ProductAttribute, error)                    // 获取产品属性列表
 	UpdateProductAttribute(id uint, productAttribute model.ProductAttribute) error // 更新产品属性
 	CreateProductAttribute(productAttribute model.ProductAttribute) (uint, error)  // 创建产品属性
 	DeleteProductAttribute(id uint) error                                          // 删除产品属性
 }
 
-// 创建新的产品属性仓库
-func NewProductAttributeRepo(db *gorm.DB) ProductAttributeRepoInterface {
+// NewProductAttributeRepo 创建新的产品属性仓库
+func NewProductAttributeRepo(db *gorm.DB) IProductAttributeRepo {
 	return NewProductAttributeRepoImpl(db)
 }
 
-// 创建新的产品属性仓库实现
+// NewProductAttributeRepoImpl 创建新的产品属性仓库实现
 func NewProductAttributeRepoImpl(db *gorm.DB) *ProductAttributeRepoImpl {
 	return &ProductAttributeRepoImpl{db: db}
 }
@@ -29,14 +29,14 @@ type ProductAttributeRepoImpl struct {
 	db *gorm.DB // 数据库连接
 }
 
-// 获取产品属性列表，排除逻辑删除的产品属性
+// GetProductAttributeList 获取产品属性列表，排除逻辑删除的产品属性
 func (r *ProductAttributeRepoImpl) GetProductAttributeList() ([]model.ProductAttribute, error) {
 	var productAttributes []model.ProductAttribute
 	err := r.db.Model(&model.ProductAttribute{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productAttributes).Error
 	return productAttributes, err
 }
 
-// 更新产品属性
+// UpdateProductAttribute 更新产品属性
 func (r *ProductAttributeRepoImpl) UpdateProductAttribute(id uint, productAttribute model.ProductAttribute) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -58,7 +58,7 @@ func (r *ProductAttributeRepoImpl) UpdateProductAttribute(id uint, productAttrib
 	return tx.Commit().Error // 提交事务
 }
 
-// 创建产品属性
+// CreateProductAttribute 创建产品属性
 func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model.ProductAttribute) (uint, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -85,7 +85,7 @@ func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model
 	return productAttribute.Uuid, tx.Commit().Error // 提交事务
 }
 
-// 软删除产品属性
+// DeleteProductAttribute 软删除产品属性
 func (r *ProductAttributeRepoImpl) DeleteProductAttribute(id uint) error {
 	return r.db.Model(&model.ProductAttribute{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

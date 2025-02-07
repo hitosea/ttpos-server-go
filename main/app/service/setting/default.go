@@ -9,7 +9,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-func (s *Service) getIPAndPort() (string, string) {
+func (s *Srv) getIPAndPort() (string, string) {
 	var serverIP, serverPort string
 	serverIP = viper.GetString("HARDWARE_SERVER_URL")
 	if serverIP == "" {
@@ -25,7 +25,7 @@ func (s *Service) getIPAndPort() (string, string) {
 }
 
 // 默认收银机设置
-func (s *Service) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier {
+func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier {
 	var defaultLanguage = "en"
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
@@ -60,7 +60,7 @@ func (s *Service) getDefaultCashier(languageList []dto.LanguageItem) setting.Cas
 }
 
 // 默认平板端设置
-func (s *Service) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
+func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
 	var defaultLanguage = "en"
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
@@ -95,7 +95,7 @@ func (s *Service) getDefaultTablet(languageList []dto.LanguageItem) setting.Tabl
 }
 
 // 默认扫码H5设置
-func (s *Service) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
+func (s *Srv) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
 	var defaultLanguage = "en"
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -126,7 +126,7 @@ func (s *Service) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
 }
 
 // 默认厨显设置
-func (s *Service) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen {
+func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen {
 	var defaultLanguage = "en"
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
@@ -147,7 +147,7 @@ func (s *Service) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kit
 }
 
 // 默认自助餐设置
-func (s *Service) getDefaultBuffet() setting.Buffet {
+func (s *Srv) getDefaultBuffet() setting.Buffet {
 	return setting.Buffet{
 		IsOpen:                   "1",                      // 是否开启自助餐 0-关闭 1-开启
 		TabletEndTime:            "5",                      // 平板结束时间提醒（分）
@@ -162,7 +162,7 @@ func (s *Service) getDefaultBuffet() setting.Buffet {
 }
 
 // 默认支付方式设置
-func (s *Service) getDefaultPayment() setting.Payment {
+func (s *Srv) getDefaultPayment() setting.Payment {
 	return setting.Payment{
 		IsCash:    "0", // 是否开启现金支付 0-关闭 1-开启
 		IsBalance: "0", // 是否开启余额支付 0-关闭 1-开启
@@ -171,7 +171,7 @@ func (s *Service) getDefaultPayment() setting.Payment {
 }
 
 // 默认门店业务设置
-func (s *Service) getDefaultBusiness(language string) setting.Business {
+func (s *Srv) getDefaultBusiness(language string) setting.Business {
 	return setting.Business{
 		ZeroingMethodList: []setting.ZeroingMethodItem{{
 			Key:  "0",
@@ -232,7 +232,7 @@ func (s *Service) getDefaultBusiness(language string) setting.Business {
 }
 
 // 默认点餐助手设置
-func (s *Service) getDefaultAssistant(language string, languageList []dto.LanguageItem) setting.Assistant {
+func (s *Srv) getDefaultAssistant(language string, languageList []dto.LanguageItem) setting.Assistant {
 	var defaultLanguage = "en"
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
@@ -254,7 +254,7 @@ func (s *Service) getDefaultAssistant(language string, languageList []dto.Langua
 }
 
 // 默认商城设置
-func (s *Service) getDefaultStore(language string) setting.Store {
+func (s *Srv) getDefaultStore(language string) setting.Store {
 	return setting.Store{
 		Name:          "XXX shop",                 // 商城名称
 		AvatarURL:     "image/user/avatarUrl.png", //默认头像
@@ -285,7 +285,7 @@ func (s *Service) getDefaultStore(language string) setting.Store {
 }
 
 // 小票打印机设置
-func (s *Service) getDefaultPrinter(language string, languageList []dto.LanguageItem) setting.Printer {
+func (s *Srv) getDefaultPrinter(language string, languageList []dto.LanguageItem) setting.Printer {
 	var defaultLanguage = "en"
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -322,7 +322,7 @@ func (s *Service) getDefaultPrinter(language string, languageList []dto.Language
 }
 
 // 默认用户充值设置
-func (s *Service) getDefaultRecharge() setting.Recharge {
+func (s *Srv) getDefaultRecharge() setting.Recharge {
 	return setting.Recharge{
 		IsEntrance:  "1", // 是否允许用户充值
 		IsCustom:    "1", // 是否允许自定义金额
@@ -335,7 +335,7 @@ func (s *Service) getDefaultRecharge() setting.Recharge {
 }
 
 // 默认积分设置
-func (s *Service) getDefaultPoints() setting.Points {
+func (s *Srv) getDefaultPoints() setting.Points {
 	return setting.Points{
 		DeductionOrder:     "1",   // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
 		DeductRatioMain:    "100", // 主账户扣款比例0-100
@@ -357,7 +357,7 @@ func (s *Service) getDefaultPoints() setting.Points {
 }
 
 // 默认系统设置
-func (s *Service) getDefaultSysAdminConfig() setting.SysAdminConfig {
+func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 	return setting.SysAdminConfig{
 		BrandName:     "XXX shop",                   // 商城名称
 		BrandLogo:     "/image/logo/jbc_64_64.png",  // 商城背景图
@@ -368,7 +368,7 @@ func (s *Service) getDefaultSysAdminConfig() setting.SysAdminConfig {
 }
 
 // 默认系统设置
-func (s *Service) getDefaultSysConfig() setting.SysConfig {
+func (s *Srv) getDefaultSysConfig() setting.SysConfig {
 	return setting.SysConfig{
 		ShopName:    "XXX shop", // 商城名称
 		CashierName: "收银台",      // 收银台名称
@@ -376,7 +376,7 @@ func (s *Service) getDefaultSysConfig() setting.SysConfig {
 }
 
 // 默认充值设置
-func (s *Service) getDefaultBalance() setting.Balance {
+func (s *Srv) getDefaultBalance() setting.Balance {
 	return setting.Balance{
 		IsOpen:   "0", // 是否开启
 		IsPlan:   "1", // 是否可以自定义
@@ -387,7 +387,7 @@ func (s *Service) getDefaultBalance() setting.Balance {
 }
 
 // 默认货币单位设置
-func (s *Service) getDefaultCurrency() setting.Currency {
+func (s *Srv) getDefaultCurrency() setting.Currency {
 	return setting.Currency{
 		Unit:             "฿", // 货币单位，默认泰铢
 		PrintUnit:        "฿", // 货币单位 - 打印专用，默认泰铢
@@ -398,7 +398,7 @@ func (s *Service) getDefaultCurrency() setting.Currency {
 }
 
 // 默认税率管理设置
-func (s *Service) getDefaultTaxRate() setting.TaxRate {
+func (s *Srv) getDefaultTaxRate() setting.TaxRate {
 	// DefaultTaxRateSetting 税率管理
 	return setting.TaxRate{
 		IsOpen:         "0",                            // 是否开启 0关闭 1开启
@@ -408,7 +408,7 @@ func (s *Service) getDefaultTaxRate() setting.TaxRate {
 }
 
 // 默认服务费设置
-func (s *Service) getDefaultServiceCharge() setting.ServiceCharge {
+func (s *Srv) getDefaultServiceCharge() setting.ServiceCharge {
 	return setting.ServiceCharge{
 		IsOpen:     "0", // 是否开启 0关闭 1开启
 		ChargeType: "1", // 服务费类型 1-固定金额 2-百分比

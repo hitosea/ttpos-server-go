@@ -1,4 +1,4 @@
-// 包含收银相关的服务
+// Package cashier 包含收银相关的服务
 package cashier
 
 import (
@@ -7,44 +7,44 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-// 定义收银服务接口
-type CashierServiceInterface interface {
-	// 获取收银机点餐页面产品类别列表
+// ICashierSrv 定义收银服务接口
+type ICashierSrv interface {
+	// GetProductCategory 获取收银机点餐页面产品类别列表
 	GetProductCategory(dbId uint, language string) (resp.ProductCategory, error)
 }
 
-// 创建新的收银产品类别服务
-func NewCashierProductCategoryService(dbm *database.DBManager) CashierServiceInterface {
-	return NewCashierServiceImpl(dbm)
+// NewCashierProductCategorySrv 创建新的收银产品类别服务
+func NewCashierProductCategorySrv(dbm *database.DBManager) ICashierSrv {
+	return NewCashierSrvImpl(dbm)
 }
 
-// 创建新的收银服务实现
-func NewCashierServiceImpl(dbm *database.DBManager) *CashierService {
-	return &CashierService{
+// NewCashierSrvImpl 创建新的收银服务实现
+func NewCashierSrvImpl(dbm *database.DBManager) *CashierSrv {
+	return &CashierSrv{
 		dbm: dbm,
 	}
 }
 
-// 收银服务结构体
-type CashierService struct {
+// CashierSrv 收银服务结构体
+type CashierSrv struct {
 	dbm *database.DBManager
 }
 
-// 获取产品类别的实现
-func (s *CashierService) GetProductCategory(dbId uint, language string) (resp.ProductCategory, error) {
+// GetProductCategory 获取产品类别的实现
+func (s *CashierSrv) GetProductCategory(dbId uint, language string) (resp.ProductCategory, error) {
 	db := s.dbm.GetDB(dbId)
 	// 查询产品类别表
-	productCategoryList, err := repository.NewProductCategoryRepository(db).GetProductCategoryListWithMultiLanguageName()
+	productCategoryList, err := repository.NewProductCategoryRepo(db).GetProductCategoryListWithMultiLanguageName()
 	if err != nil {
 		return resp.ProductCategory{}, err
 	}
 	// 查询特殊分类表
-	productSpecialCategoryList, err := repository.NewProductSpecialCategoryRepository(db).GetProductSpecialCategoryListWithMultiLanguageName()
+	productSpecialCategoryList, err := repository.NewProductSpecialCategoryRepo(db).GetProductSpecialCategoryListWithMultiLanguageName()
 	if err != nil {
 		return resp.ProductCategory{}, err
 	}
 
-	specialCategoryList := []resp.SpecialCategory{}
+	var specialCategoryList []resp.SpecialCategory
 	for _, productSpecialCategory := range productSpecialCategoryList {
 		specialCategoryList = append(specialCategoryList, resp.SpecialCategory{
 			Name: productSpecialCategory.Name,
@@ -52,7 +52,7 @@ func (s *CashierService) GetProductCategory(dbId uint, language string) (resp.Pr
 		})
 	}
 
-	categoryList := []resp.Category{}
+	var categoryList []resp.Category
 	categoryMap := make(map[uint]int)
 	index := 0
 	for _, productCategory := range productCategoryList {

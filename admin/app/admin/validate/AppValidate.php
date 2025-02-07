@@ -143,7 +143,7 @@ class AppValidate extends  BaseValidate
      */
     protected function checkIdExist($value, $rule, $data = [])
     {
-        if (!App::find($value)) {
+        if (!App::where('uuid', $value)->find()) {
             return false;
         } else {
             return true;
@@ -156,9 +156,9 @@ class AppValidate extends  BaseValidate
     protected function checkNameExist($value, $rule, $data = [])
     {
         $id = $data['app_id'] ?? 0;
-        $app = Supplier::where('name', $value)
+        $app = App::where('name', $value)
             ->when($id, function ($q) use ($id) {
-                $q->where('app_id', '<>', $id);
+                $q->where('uuid', '<>', $id);
             })
             ->find();
         if ($app) {

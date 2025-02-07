@@ -7,20 +7,20 @@ import (
 	"gorm.io/gorm"
 )
 
-// 原料仓库接口
-type MaterialRepoInterface interface {
+// IMaterialRepo 原料仓库接口
+type IMaterialRepo interface {
 	GetMaterialList() ([]model.Material, error)
 	UpdateMaterial(id uint, material model.Material) error
 	CreateMaterial(material model.Material) (uint, error)
 	DeleteMaterial(id uint) error
 }
 
-// 创建新的原料仓库
-func NewMaterialRepo(db *gorm.DB) MaterialRepoInterface {
+// NewMaterialRepo 创建新的原料仓库
+func NewMaterialRepo(db *gorm.DB) IMaterialRepo {
 	return NewMaterialRepoImpl(db)
 }
 
-// 创建新的原料仓库实现
+// NewMaterialRepoImpl 创建新的原料仓库实现
 func NewMaterialRepoImpl(db *gorm.DB) *MaterialRepoImpl {
 	return &MaterialRepoImpl{db: db}
 }
@@ -29,14 +29,14 @@ type MaterialRepoImpl struct {
 	db *gorm.DB // 数据库连接
 }
 
-// 获取原料列表
+// GetMaterialList 获取原料列表
 func (r *MaterialRepoImpl) GetMaterialList() ([]model.Material, error) {
 	var materials []model.Material
 	err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&materials).Error
 	return materials, err
 }
 
-// 更新原料
+// UpdateMaterial 更新原料
 func (r *MaterialRepoImpl) UpdateMaterial(id uint, material model.Material) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -58,7 +58,7 @@ func (r *MaterialRepoImpl) UpdateMaterial(id uint, material model.Material) erro
 	return tx.Commit().Error // 提交事务
 }
 
-// 创建原料
+// CreateMaterial 创建原料
 func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -82,7 +82,7 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint, error)
 	return material.Uuid, tx.Commit().Error // 提交事务
 }
 
-// 删除原料
+// DeleteMaterial 删除原料
 func (r *MaterialRepoImpl) DeleteMaterial(id uint) error {
 	return r.db.Model(&model.Material{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

@@ -127,6 +127,7 @@ EOF
             error "端口范围不正确！"
             exit 1
         fi
+        env_set DB_PORT $inputport
         env_set DB_PORT_OPEN $inputport
         run_mysql rm-port
         container_network=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' ${container_name})
@@ -249,6 +250,9 @@ if [ $# -gt 0 ]; then
     elif [[ "$1" == "golang" ]]; then
         shift 1
         e="go $@" && run_exec golang "$e"
+    elif [[ "$1" == "websocket" ]]; then
+        shift 1
+        e="go $@" && run_exec websocket "$e"
     elif [[ "$1" == "think" ]]; then
         shift 1
         e="php think $@" && run_exec php "$e"

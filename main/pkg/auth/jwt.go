@@ -11,14 +11,16 @@ type Claims struct {
 	Source    string `json:"source"`     // 终端
 	CompanyId uint   `json:"company_id"` // 集团ID
 	StaffId   uint   `json:"staff_id"`   // 员工ID
+	DeviceId  string `json:"device_id"`  // 设备ID
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source string, companyId, staffId uint, secret string, expire int) (string, error) {
+func GenerateToken(source, deviceId string, companyId, staffId uint, secret string, expire int) (string, error) {
 	claims := Claims{
 		Source:    source,
 		CompanyId: companyId,
 		StaffId:   staffId,
+		DeviceId:  deviceId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expire))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

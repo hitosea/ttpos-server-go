@@ -58,7 +58,7 @@ func TestCreateMultiLanguageName(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	multiLanguageNameRepository := NewMultiLanguageNameRepository(db)
+	multiLanguageNameRepository := NewMultiLanguageNameRepoImpl(db)
 
 	multiLanguageNames := []model.MultiLanguageName{
 		{
