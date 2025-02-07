@@ -58,6 +58,7 @@ build-run:
 	chmod +x ./.sh && ./.sh golang build -o main ./main.go && ./.sh websocket build -o main ./main.go
 	docker compose -p ttpos-server-go restart golang
 	docker compose -p ttpos-server-go restart websocket
+	docker compose -p ttpos-server-go restart nginx
 
 # 更新
 update:
