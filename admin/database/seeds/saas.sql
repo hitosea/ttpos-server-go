@@ -23,7 +23,7 @@ CREATE TABLE `ttpos_admin_access` (
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=202 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='用户权限表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='用户权限表';
 
 -- ----------------------------
 -- Records of ttpos_admin_access
@@ -149,7 +149,7 @@ CREATE TABLE `ttpos_admin_user_login_log` (
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员登录记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员登录记录表';
 
 -- ----------------------------
 -- Table structure for ttpos_admin_user_opt_log
@@ -169,7 +169,7 @@ CREATE TABLE `ttpos_admin_user_opt_log` (
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员操作记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员操作记录表';
 
 -- ----------------------------
 -- Table structure for ttpos_admin_user_role
@@ -205,7 +205,7 @@ CREATE TABLE `ttpos_company` (
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=1724054090 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团表';
 
 -- ----------------------------
 -- Table structure for ttpos_company_setting
@@ -214,12 +214,9 @@ DROP TABLE IF EXISTS `ttpos_company_setting`;
 CREATE TABLE `ttpos_company_setting` (
     `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
-    `parent_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '上级集团ID',
-    `name` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '集团名称',
     `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
     `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
     `link_phone` VARCHAR(25) NOT NULL DEFAULT '' COMMENT '联系电话',
-    `logo` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
     `level` INT(11) NOT NULL DEFAULT 1 COMMENT '商家等级: 1开始',
     `sale_stock` INT(11) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
     `reserve` INT(11) NOT NULL DEFAULT 0 COMMENT '预订: 0不开启, 1开启',
@@ -256,7 +253,6 @@ CREATE TABLE `ttpos_company_setting` (
     `status` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '店铺状态0营业中1停止营业',
     `store_type` TINYINT(3) NOT NULL DEFAULT 10 COMMENT '店铺类型10加盟20自营',
     `total_gift` INT(11) NOT NULL DEFAULT 0 COMMENT '收到的礼物币总数',
-    `is_recycle` TINYINT(3) NOT NULL DEFAULT 1 COMMENT '是否禁用0否1是',
     `is_main` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否总店，0否1是',
     `province_id` INT(11) NOT NULL DEFAULT 0 COMMENT '所在省份ID',
     `city_id` INT(11) NOT NULL DEFAULT 0 COMMENT '所在城市ID',
@@ -292,14 +288,17 @@ CREATE TABLE `ttpos_company_setting` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+  `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '员工ID',
   `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
+  `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+  PRIMARY KEY (id),
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='集团员工表';
 
 -- ----------------------------
@@ -325,7 +324,7 @@ CREATE TABLE `ttpos_client_version` (
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='客户端版本';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='客户端版本';
 
 -- ----------------------------
 -- Table structure for ttpos_payment_app
@@ -370,7 +369,7 @@ CREATE TABLE `ttpos_upload_file` (
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
   PRIMARY KEY (`file_id`) USING BTREE,
   UNIQUE KEY `path_idx` (`file_name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件库记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件库记录表';
 
 -- ----------------------------
 -- Table structure for ttpos_upload_group
