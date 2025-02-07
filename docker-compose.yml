@@ -76,11 +76,9 @@ services:
     image: golang:1.23
     volumes:
       - ./docker/golang/websocket:/go
-      - ./services/websocket:/var/www
+      - ./services/websocket:/var/www/websocket
       - .env:/var/.env
-    environment:
-      - GOPROXY=https://goproxy.cn
-    working_dir: /var/www
+    working_dir: /var/www/websocket
     tty: true
     command: make run
     restart: always
