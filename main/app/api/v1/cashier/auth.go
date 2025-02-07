@@ -40,7 +40,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
 		return
 	}
-	token, err := h.cashierAuthService.Login(loginRequest, sign, loginRequest.Code)
+	token, err := h.cashierAuthService.Login(loginRequest, sign, loginRequest.Code, c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return

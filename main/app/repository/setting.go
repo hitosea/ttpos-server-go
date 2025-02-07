@@ -18,3 +18,7 @@ func (r *SettingRepository) GetAll(companyId uint) ([]model.Setting, error) {
 	err := r.dbm.GetDB(companyId).Find(&settings).Error
 	return settings, err
 }
+
+func (r *SettingRepository) Updates(companyId uint, key string, values string) error {
+	return r.dbm.GetDB(companyId).Model(&model.Setting{}).Where("`key` = ?", key).Updates(map[string]any{"values": values}).Error
+}

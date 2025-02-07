@@ -42,6 +42,12 @@ func main() {
 
 	// 初始化国际化
 	i18n.Init()
+
+	// 初始化全局缓存引擎
+	var cacheConfig cache.Config
+	_ = copier.Copy(&cacheConfig, &config.Redis)
+	cache.Init(cache.Redis, cacheConfig)
+
 	// 初始化雪花ID生成器
 	database.InitSonyFlakeId()
 	// 初始化数据库管理器
@@ -59,10 +65,8 @@ func main() {
 	// Swagger API 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	var cacheConfig cache.Config
-	_ = copier.Copy(&cacheConfig, &config.Redis)
 	// 注册路由
-	router.Setup(r, dbm, cache.NewCache(cache.Redis, cacheConfig))
+	router.Setup(r, dbm, cache.Global)
 
 	// 启动服务器
 	if err := r.Run(":" + config.Server.Port); err != nil {

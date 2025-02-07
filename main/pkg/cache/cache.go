@@ -1,6 +1,9 @@
 package cache
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // Cache 缓存接口
 type Cache interface {
@@ -34,4 +37,13 @@ func NewCache(cacheType CacheType, config Config) Cache {
 	default:
 		return newRedisCache(config) // 默认使用redis-cache
 	}
+}
+
+var Global Cache
+var once sync.Once
+
+func Init(cacheType CacheType, config Config) {
+	once.Do(func() {
+		Global = NewCache(cacheType, config)
+	})
 }

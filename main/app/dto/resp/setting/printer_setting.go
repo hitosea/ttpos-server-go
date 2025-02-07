@@ -4,22 +4,22 @@ import "ttpos-server-go/app/dto"
 
 // Printer 小票打印机设置
 type Printer struct {
-	CashierOpen        string             `json:"cashier_open"`       // 是否开启打印
-	CashierPrinterID   string             `json:"cashier_printer_id"` // 打印机id
-	CashierPrinter     []interface{}      `json:"cashier_printer"`
-	LanguageList       []dto.LanguageItem `json:"language_list"`        // 语言列表
-	LanguageMethod     string             `json:"language_method"`      // 语言方式（收银） 1-单语言 2-多语言
-	DefaultLanguage    string             `json:"default_language"`     // 打印语言（收银）
-	PrintMethod        string             `json:"print_method"`         // 打印方式（收银） 1-文本打印 2-图片打印
-	KitchenLanguage    string             `json:"kitchen_language"`     // 打印语言（送厨）
-	KitchenPrintMethod string             `json:"kitchen_print_method"` // 打印方式（送厨） 1-文本打印 2-图片打印
-	ConsumptionTax     string             `json:"consumption_tax"`      // 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
-	BuffetSignOpen     string             `json:"buffet_sign_open"`     // 自助餐标识设置（默认开启）
-	MonetaryUnitOpen   string             `json:"monetary_unit_open"`   // 货币单位（默认开启）
-	CalendarList       []CalendarItem     `json:"calendar_list"`        // 日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
-	PrintList          []PrintItem        `json:"print_list"`           // 打印方式列表 （1-文本打印 2-图片打印 ）
-	DefaultCalendar    string             `json:"default_calendar"`     // 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
-	Language           []string           `json:"language"`             // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+	CashierOpen        string               `json:"cashier_open"`         // 是否开启打印
+	CashierPrinterID   string               `json:"cashier_printer_id"`   // 打印机id
+	CashierPrinter     []CashierPrinterItem `json:"cashier_printer"`      // 打印机列表
+	LanguageList       []dto.LanguageItem   `json:"language_list"`        // 语言列表
+	LanguageMethod     string               `json:"language_method"`      // 语言方式（收银） 1-单语言 2-多语言
+	DefaultLanguage    string               `json:"default_language"`     // 打印语言（收银）
+	PrintMethod        string               `json:"print_method"`         // 打印方式（收银） 1-文本打印 2-图片打印
+	KitchenLanguage    string               `json:"kitchen_language"`     // 打印语言（送厨）
+	KitchenPrintMethod string               `json:"kitchen_print_method"` // 打印方式（送厨） 1-文本打印 2-图片打印
+	ConsumptionTax     string               `json:"consumption_tax"`      // 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
+	BuffetSignOpen     string               `json:"buffet_sign_open"`     // 自助餐标识设置（默认开启）
+	MonetaryUnitOpen   string               `json:"monetary_unit_open"`   // 货币单位（默认开启）
+	CalendarList       []CalendarItem       `json:"calendar_list"`        // 日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+	PrintList          []PrintItem          `json:"print_list"`           // 打印方式列表 （1-文本打印 2-图片打印 ）
+	DefaultCalendar    string               `json:"default_calendar"`     // 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+	Language           []string             `json:"language"`             // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
 }
 
 type CalendarItem struct {
@@ -30,4 +30,9 @@ type CalendarItem struct {
 type PrintItem struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
+}
+
+type CashierPrinterItem struct {
+	Key       string `json:"key"`
+	PrinterId string `json:"printer_id"`
 }

@@ -46,7 +46,7 @@ func (h *PassportHandler) GetCaptcha(c *gin.Context) {
 // @param type query string true "加密类型: pgp\jsencrypt"
 // @param data body req.GetServerPublicKeyRequest true "获取公钥参数"
 // @Success 200 {object} dto.Response
-// @Router /passport/server-public-key [post]
+// @Router /passport/server_public_key [post]
 func (h *PassportHandler) GetServerPublicKey(c *gin.Context) {
 	var getKeyReq req.GetServerPublicKeyRequest
 	if err := c.ShouldBindJSON(&getKeyReq); err != nil {

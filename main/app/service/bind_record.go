@@ -2,7 +2,11 @@ package service
 
 import (
 	"errors"
+	"github.com/gin-gonic/gin"
 	"slices"
+	setting2 "ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -15,16 +19,18 @@ import (
 type BindRecordService struct {
 	bindRecordRepo     *repository.BindRecordRepository
 	companySettingRepo *repository.CompanySettingRepository
+	settingSrv         *setting.Service
 }
 
-func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository) *BindRecordService {
+func NewBindRecordService(bindRecordRepo *repository.BindRecordRepository, supplierRepo *repository.CompanySettingRepository, settingSrv *setting.Service) *BindRecordService {
 	return &BindRecordService{
 		bindRecordRepo:     bindRecordRepo,
 		companySettingRepo: supplierRepo,
+		settingSrv:         settingSrv,
 	}
 }
 
-func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
+func (s *BindRecordService) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
 	if !slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
 		addReq.CompanyId == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
@@ -86,9 +92,29 @@ func (s *BindRecordService) Add(addReq req.AddBindRecordReq) error {
 		}
 	}
 
-	// ToDo 绑定品牌，如果自带打印，默认更新收银打印配置
 	if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
-
+		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyId, i18n.GetAcceptLanguage(cc), cc)
+		if err != nil {
+			return err
+		}
+		if printerSetting.CashierOpen == "1" {
+			var added bool
+			for _, item := range printerSetting.CashierPrinter {
+				if item.Key == addReq.DeviceId {
+					added = true
+				}
+			}
+			if !added {
+				printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, setting2.CashierPrinterItem{
+					Key:       addReq.DeviceId,
+					PrinterId: addReq.DeviceId,
+				})
+			}
+			// 设置默认打印机
+			if err = s.settingSrv.Updates(addReq.CompanyId, constant.SettingPrinter, printerSetting); err != nil {
+				return errors.New("设置默认打印机失败")
+			}
+		}
 	}
 
 	return s.bindRecordRepo.Create(addReq.CompanyId, model.BindRecord{
