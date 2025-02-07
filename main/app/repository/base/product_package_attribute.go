@@ -53,7 +53,7 @@ func (r *ProductPackageAttributeRepoImpl) CreateProductPackageAttribute(productP
 		return 0, err
 	}
 
-	return productPackageAttribute.Id, nil // 返回产品包属性ID
+	return productPackageAttribute.Uuid, nil // 返回产品包属性ID
 }
 
 // 软删除产品包属性
