@@ -105,11 +105,11 @@ func databaseConf(opt copier.Option) {
 		DBType:        viper.GetString("DB_TYPE"),
 		Host:          viper.GetString("DB_HOST"),
 		Port:          viper.GetInt("DB_PORT"),
-		User:          viper.GetString("DB_USER"),
+		User:          viper.GetString("DB_USERNAME"),
 		Password:      viper.GetString("DB_PASSWORD"),
 		RootPassword:  viper.GetString("DB_ROOT_PASSWORD"),
 		Database:      viper.GetString("DB_DATABASE"),
-		TablePrefix:   viper.GetString("DB_TABLE_PREFIX"),
+		TablePrefix:   viper.GetString("DB_PREFIX"),
 		SlowQueryTime: viper.GetInt("DB_SLOW_QUERY_TIME"),
 	}, opt)
 }

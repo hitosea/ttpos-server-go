@@ -16,7 +16,7 @@ func NewProductCategoryRepoImpl(db *gorm.DB) *ProductCategoryRepoImpl {
 	return &ProductCategoryRepoImpl{db: db}
 }
 
-// 获取商品类别列表
+// GetProductCategoryList 获取商品类别列表
 func (r *ProductCategoryRepoImpl) GetProductCategoryList() ([]model.ProductCategory, error) {
 	// 实现获取商品类别列表的逻辑
 	var categories []model.ProductCategory
@@ -24,20 +24,20 @@ func (r *ProductCategoryRepoImpl) GetProductCategoryList() ([]model.ProductCateg
 	return categories, err
 }
 
-// 更新商品类别
+// UpdateProductCategory 更新商品类别
 func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory model.ProductCategory) error {
 	// 实现更新商品类别的逻辑
 	return r.db.Model(&model.ProductCategory{}).Where("id = ?", id).Updates(productCategory).Error
 }
 
-// 创建商品类别
+// CreateProductCategory 创建商品类别
 func (r *ProductCategoryRepoImpl) CreateProductCategory(productCategory model.ProductCategory) (uint, error) {
 	// 实现创建商品类别的逻辑
 	err := r.db.Create(&productCategory).Error
 	return productCategory.Id, err
 }
 
-// 软删除商品类别
+// DeleteProductCategory 软删除商品类别
 func (r *ProductCategoryRepoImpl) DeleteProductCategory(id uint) error {
 	// 实现软删除商品类别的逻辑
 	return r.db.Model(&model.ProductCategory{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error

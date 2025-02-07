@@ -8,9 +8,9 @@ import (
 )
 
 type ICompanyStaffRepo interface {
-	GetById(uint, ...Where) model.CompanyStaff
+	GetById(Id uint, withs ...Where) model.CompanyStaff
 	WithCompany() Where
-	GetByUsername(string, ...Where) model.CompanyStaff
+	GetByUsername(username string, withs ...Where) model.CompanyStaff
 }
 
 func NewCompanyStaffRepo(db *database.DBManager) ICompanyStaffRepo {

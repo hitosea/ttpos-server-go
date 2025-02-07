@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 商品类别
+// IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
 	GetProductCategoryList() ([]model.ProductCategory, error)
 	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
@@ -21,7 +21,7 @@ func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
 	return NewProductCategoryRepoImpl(db)
 }
 
-// 原料类别
+// IMaterialCategoryRepo 原料类别
 type IMaterialCategoryRepo interface {
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialCategory(id uint, materialCategory model.MaterialCategory) error
@@ -33,7 +33,7 @@ func NewMaterialCategoryRepository(db *gorm.DB) IMaterialCategoryRepo {
 	return NewMaterialCategoryRepoImpl(db)
 }
 
-// 商品特殊类别
+// IProductSpecialCategoryRepo 商品特殊类别
 type IProductSpecialCategoryRepo interface {
 	GetProductSpecialCategoryList() ([]model.ProductSpecialCategory, error)
 	UpdateProductSpecialCategory(id uint, productSpecialCategory model.ProductSpecialCategory) error
@@ -47,7 +47,7 @@ func NewProductSpecialCategoryRepo(db *gorm.DB) IProductSpecialCategoryRepo {
 	return NewProductSpecialCategoryRepoImpl(db)
 }
 
-// 分类仓库接口
+// ICategoryRepositorySrv 分类仓库接口
 type ICategoryRepositorySrv interface {
 	CreateCategory(params req.CreateCategoryRequest) (uint, error)
 }
@@ -56,7 +56,7 @@ func NewCategoryRepositoryService(db *gorm.DB) ICategoryRepositorySrv {
 	return NewCategoryRepositorySrvImpl(db)
 }
 
-// 分类仓库服务实现
+// CategoryRepositoryService 分类仓库服务实现
 type CategoryRepositoryService struct {
 	db *gorm.DB
 }
@@ -65,7 +65,7 @@ func NewCategoryRepositorySrvImpl(db *gorm.DB) *CategoryRepositoryService {
 	return &CategoryRepositoryService{db: db}
 }
 
-// 创建分类
+// CreateCategory 创建分类
 func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequest) (uint, error) {
 	// 开始事务
 	tx := s.db.Begin()

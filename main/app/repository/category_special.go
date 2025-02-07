@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 商品特殊类别
+// ProductSpecialCategoryRepoImpl 商品特殊类别
 type ProductSpecialCategoryRepoImpl struct {
 	db *gorm.DB
 }
@@ -16,25 +16,25 @@ func NewProductSpecialCategoryRepoImpl(db *gorm.DB) *ProductSpecialCategoryRepoI
 	return &ProductSpecialCategoryRepoImpl{db: db}
 }
 
-// 获取商品特殊类别列表
+// GetProductSpecialCategoryList 获取商品特殊类别列表
 func (r *ProductSpecialCategoryRepoImpl) GetProductSpecialCategoryList() ([]model.ProductSpecialCategory, error) {
 	var categories []model.ProductSpecialCategory
 	err := r.db.Model(&model.ProductSpecialCategory{}).Find(&categories).Error
 	return categories, err
 }
 
-// 更新商品特殊类别
+// UpdateProductSpecialCategory 更新商品特殊类别
 func (r *ProductSpecialCategoryRepoImpl) UpdateProductSpecialCategory(id uint, productSpecialCategory model.ProductSpecialCategory) error {
 	return r.db.Model(&model.ProductSpecialCategory{}).Where("id = ?", id).Updates(productSpecialCategory).Error
 }
 
-// 创建商品特殊类别
+// CreateProductSpecialCategory 创建商品特殊类别
 func (r *ProductSpecialCategoryRepoImpl) CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) (uint, error) {
 	err := r.db.Create(&productSpecialCategory).Error
 	return productSpecialCategory.Id, err
 }
 
-// 软删除商品特殊类别
+// DeleteProductSpecialCategory 软删除商品特殊类别
 func (r *ProductSpecialCategoryRepoImpl) DeleteProductSpecialCategory(id uint) error {
 	return r.db.Model(&model.ProductSpecialCategory{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

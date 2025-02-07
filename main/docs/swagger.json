@@ -102,7 +102,7 @@
                 }
             }
         },
-        "/bill/cancel/{id}": {
+        "/cashier/bill/cancel/{id}": {
             "delete": {
                 "description": "删除收银账单取消",
                 "consumes": [
@@ -112,7 +112,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "删除收银账单取消",
                 "parameters": [
@@ -134,7 +134,7 @@
                 }
             }
         },
-        "/bill/discount": {
+        "/cashier/bill/discount": {
             "post": {
                 "description": "发布收银账单折扣",
                 "consumes": [
@@ -144,7 +144,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "发布收银账单折扣",
                 "parameters": [
@@ -165,7 +165,7 @@
                 }
             }
         },
-        "/bill/discount/changePrice/{id}": {
+        "/cashier/bill/discount/change_price/{id}": {
             "post": {
                 "description": "更改收银账单折扣价格",
                 "consumes": [
@@ -175,7 +175,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "更改收银账单折扣价格",
                 "parameters": [
@@ -206,7 +206,7 @@
                 }
             }
         },
-        "/bill/discount/gift": {
+        "/cashier/bill/discount/gift": {
             "post": {
                 "description": "发布收银账单折扣礼物",
                 "consumes": [
@@ -216,7 +216,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "发布收银账单折扣礼物",
                 "parameters": [
@@ -237,7 +237,7 @@
                 }
             }
         },
-        "/bill/discount/smallChange": {
+        "/cashier/bill/discount/small_change": {
             "post": {
                 "description": "发布收银账单小额变更",
                 "consumes": [
@@ -247,7 +247,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "发布收银账单小额变更",
                 "parameters": [
@@ -268,7 +268,7 @@
                 }
             }
         },
-        "/bill/discount/{id}": {
+        "/cashier/bill/discount/{id}": {
             "delete": {
                 "description": "删除收银账单折扣",
                 "consumes": [
@@ -278,7 +278,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "删除收银账单折扣",
                 "parameters": [
@@ -300,7 +300,7 @@
                 }
             }
         },
-        "/bill/order/check/{orderId}": {
+        "/cashier/bill/order/check/{orderId}": {
             "get": {
                 "description": "检查收银账单订单",
                 "consumes": [
@@ -310,7 +310,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "检查收银账单订单",
                 "parameters": [
@@ -332,7 +332,7 @@
                 }
             }
         },
-        "/bill/order/finishPayment/{orderId}": {
+        "/cashier/bill/order/finish_payment/{orderId}": {
             "post": {
                 "description": "完成收银账单订单支付",
                 "consumes": [
@@ -342,7 +342,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "完成收银账单订单支付",
                 "parameters": [
@@ -364,7 +364,7 @@
                 }
             }
         },
-        "/bill/order/member": {
+        "/cashier/bill/order/member": {
             "post": {
                 "description": "添加成员到收银账单订单",
                 "consumes": [
@@ -374,7 +374,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "添加成员到收银账单订单",
                 "parameters": [
@@ -395,7 +395,7 @@
                 }
             }
         },
-        "/bill/order/member/{memberId}": {
+        "/cashier/bill/order/member/{memberId}": {
             "delete": {
                 "description": "删除收银账单订单中的成员",
                 "consumes": [
@@ -405,7 +405,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "删除收银账单订单中的成员",
                 "parameters": [
@@ -427,7 +427,7 @@
                 }
             }
         },
-        "/bill/order/pay/{orderId}": {
+        "/cashier/bill/order/pay/{orderId}": {
             "post": {
                 "description": "收银账单订单支付",
                 "consumes": [
@@ -437,7 +437,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "收银账单订单支付",
                 "parameters": [
@@ -459,7 +459,7 @@
                 }
             }
         },
-        "/bill/order/paymentSmallChangeStrategy": {
+        "/cashier/bill/order/payment_small_change_strategy": {
             "post": {
                 "description": "处理收银账单订单的小额支付策略",
                 "consumes": [
@@ -469,7 +469,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "收银账单订单的小额支付策略",
                 "parameters": [
@@ -490,7 +490,7 @@
                 }
             }
         },
-        "/bill/order/printer/invoice/{orderId}": {
+        "/cashier/bill/order/printer/invoice/{orderId}": {
             "post": {
                 "description": "打印收银账单订单发票",
                 "consumes": [
@@ -500,7 +500,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "打印收银账单订单发票",
                 "parameters": [
@@ -522,7 +522,7 @@
                 }
             }
         },
-        "/bill/order/printer/paymentBill/{orderId}": {
+        "/cashier/bill/order/printer/payment_bill/{orderId}": {
             "post": {
                 "description": "打印收银账单订单支付账单",
                 "consumes": [
@@ -532,7 +532,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "打印收银账单订单支付账单",
                 "parameters": [
@@ -554,7 +554,7 @@
                 }
             }
         },
-        "/bill/order/printer/prePaymentBill/{orderId}": {
+        "/cashier/bill/order/printer/pre_payment_bill/{orderId}": {
             "post": {
                 "description": "打印收银账单订单预付款账单",
                 "consumes": [
@@ -564,7 +564,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "打印收银账单订单预付款账单",
                 "parameters": [
@@ -586,7 +586,7 @@
                 }
             }
         },
-        "/bill/order/production/cancelReturn/{orderId}": {
+        "/cashier/bill/order/production/cancel_return/{orderId}": {
             "post": {
                 "description": "取消收银账单订单的退货",
                 "consumes": [
@@ -596,7 +596,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "取消收银账单订单的退货",
                 "parameters": [
@@ -618,7 +618,7 @@
                 }
             }
         },
-        "/bill/order/productionOrder/finishedProduct/status/{orderId}": {
+        "/cashier/bill/order/production_order/finished_product/status/{orderId}": {
             "get": {
                 "description": "获取收银账单订单的成品状态",
                 "consumes": [
@@ -628,7 +628,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "获取收银账单订单的成品状态",
                 "parameters": [
@@ -650,7 +650,7 @@
                 }
             }
         },
-        "/bill/order/revokePay/{orderId}": {
+        "/cashier/bill/order/revoke_pay/{orderId}": {
             "post": {
                 "description": "撤销收银账单订单支付",
                 "consumes": [
@@ -660,7 +660,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "撤销收银账单订单支付",
                 "parameters": [
@@ -682,7 +682,7 @@
                 }
             }
         },
-        "/bill/subBill": {
+        "/cashier/bill/sub_bill": {
             "post": {
                 "description": "发布收银账单的子账单",
                 "consumes": [
@@ -692,7 +692,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "发布收银账单的子账单",
                 "parameters": [
@@ -713,7 +713,7 @@
                 }
             }
         },
-        "/bill/subBill/product/move": {
+        "/cashier/bill/sub_bill/product/move": {
             "post": {
                 "description": "在子账单中移动产品",
                 "consumes": [
@@ -723,7 +723,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "在子账单中移动产品",
                 "parameters": [
@@ -744,7 +744,7 @@
                 }
             }
         },
-        "/bill/subBill/{subBillId}": {
+        "/cashier/bill/sub_bill/{subBillId}": {
             "delete": {
                 "description": "删除收银账单的子账单",
                 "consumes": [
@@ -754,7 +754,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "删除收银账单的子账单",
                 "parameters": [
@@ -776,103 +776,7 @@
                 }
             }
         },
-        "/cashier/passport/login": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "登录",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "验证码sign",
-                        "name": "X-SIGN",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "登录参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.CashierLoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/cashier/passport/logout": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "退出登录",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/cashier/passport/unlock": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "解锁",
-                "parameters": [
-                    {
-                        "description": "解锁参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ReqCashierUnlock"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/cashier/product/category": {
+        "/cashier/cashier/product/category": {
             "get": {
                 "description": "获取收银产品类别",
                 "consumes": [
@@ -882,7 +786,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "获取收银产品类别",
                 "parameters": [
@@ -923,7 +827,7 @@
                 }
             }
         },
-        "/desk/list": {
+        "/cashier/desk/list": {
             "get": {
                 "description": "获取收银台列表",
                 "consumes": [
@@ -933,7 +837,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "获取收银台列表",
                 "responses": {
@@ -949,7 +853,7 @@
                 }
             }
         },
-        "/desk/regionAndType": {
+        "/cashier/desk/region_and_type": {
             "get": {
                 "description": "获取收银台的区域和类型",
                 "consumes": [
@@ -959,7 +863,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "cashier"
+                    "收银端"
                 ],
                 "summary": "获取收银台的区域和类型",
                 "responses": {
@@ -971,6 +875,791 @@
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/login": {
+            "post": {
+                "description": "收银端登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "收银端登录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "验证码sign",
+                        "name": "X-SIGN",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "登录参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CashierLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member/info/{memberId}": {
+            "get": {
+                "description": "获取收银员会员信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银员会员信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员ID",
+                        "name": "memberId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "会员详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/member/search": {
+            "get": {
+                "description": "搜索收银员会员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "搜索收银员会员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索查询",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "会员列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/hide_order/{orderId}": {
+            "post": {
+                "description": "隐藏收银订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "隐藏收银订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订单ID",
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/pack/{orderId}": {
+            "post": {
+                "description": "打包收银订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "打包收银订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订单ID",
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/product/cancel_gift/{productId}": {
+            "delete": {
+                "description": "取消收银订单产品的礼物",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "取消收银订单产品的礼物",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "无内容"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/product/gift": {
+            "post": {
+                "description": "发布收银订单产品的礼物",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "发布收银订单产品的礼物",
+                "parameters": [
+                    {
+                        "description": "礼物详情",
+                        "name": "gift",
+                        "in": "body",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "已创建"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/product/price/{productId}": {
+            "post": {
+                "description": "发布收银订单产品的价格",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "发布收银订单产品的价格",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "新价格",
+                        "name": "price",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "number"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/product/remark/{productId}": {
+            "get": {
+                "description": "获取收银订单产品的备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银订单产品的备注",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "备注详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
+            "post": {
+                "description": "发布收银订单产品的备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "发布收银订单产品的备注",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "备注详情",
+                        "name": "remark",
+                        "in": "body",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/show_order/list": {
+            "get": {
+                "description": "获取收银订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银订单列表",
+                "responses": {
+                    "200": {
+                        "description": "订单列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/unpack/{orderId}": {
+            "post": {
+                "description": "拆包收银订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "拆包收银订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订单ID",
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/payment/type_list": {
+            "get": {
+                "description": "获取收银支付类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银支付类型列表",
+                "responses": {
+                    "200": {
+                        "description": "支付类型列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/product/info/{productId}": {
+            "get": {
+                "description": "获取收银产品信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银产品信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "产品详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/product/list": {
+            "get": {
+                "description": "获取收银产品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银产品列表",
+                "responses": {
+                    "200": {
+                        "description": "产品列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/production/create": {
+            "post": {
+                "description": "创建收银生产",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "创建收银生产",
+                "parameters": [
+                    {
+                        "description": "生产详情",
+                        "name": "production",
+                        "in": "body",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "已创建"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/production/return/return_foodReason": {
+            "get": {
+                "description": "获取退货原因",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取退货原因",
+                "responses": {
+                    "200": {
+                        "description": "退货原因列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/production/return/{productionId}": {
+            "post": {
+                "description": "返回收银生产",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "返回收银生产",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "生产ID",
+                        "name": "productionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/reason/gift_food": {
+            "get": {
+                "description": "获取赠送食物的原因",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取赠送食物的原因",
+                "responses": {
+                    "200": {
+                        "description": "赠送原因列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/shopping_cart/info": {
+            "get": {
+                "description": "获取收银购物车信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银购物车信息",
+                "responses": {
+                    "200": {
+                        "description": "购物车详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/shopping_cart/product/create": {
+            "post": {
+                "description": "在购物车中创建产品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "在购物车中创建产品",
+                "parameters": [
+                    {
+                        "description": "产品详情",
+                        "name": "product",
+                        "in": "body",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "已创建"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/shopping_cart/product/number/{productId}": {
+            "post": {
+                "description": "更新购物车中产品的数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "更新购物车中产品的数量",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "新数量",
+                        "name": "number",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/shopping_cart/product/{productId}": {
+            "delete": {
+                "description": "从购物车中删除产品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "从购物车中删除产品",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "产品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "无内容"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/shopping_cart/sub_bill": {
+            "get": {
+                "description": "获取购物车的子账单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取购物车的子账单",
+                "responses": {
+                    "200": {
+                        "description": "子账单详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/verify_advanced_password": {
+            "post": {
+                "description": "验证收银员的高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "验证收银员的高级密码",
+                "parameters": [
+                    {
+                        "description": "高级密码",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
@@ -1087,86 +1776,7 @@
                 }
             }
         },
-        "/kitchen/login/captcha": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "登录"
-                ],
-                "summary": "获取登录验证码",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.Captcha"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/login/public-key": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "登录"
-                ],
-                "summary": "获取登录公钥",
-                "parameters": [
-                    {
-                        "description": "公钥参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamCreatePublicKey"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.PublicKeyInfo"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/production/finished-product/history": {
+        "/kitchen/production/finished_product/history": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -1216,7 +1826,7 @@
                 }
             }
         },
-        "/kitchen/production/finished-product/latest": {
+        "/kitchen/production/finished_product/latest": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -1368,7 +1978,7 @@
                 }
             }
         },
-        "/kitchen/production/order/list-by-category": {
+        "/kitchen/production/order/list_by_category": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -1504,7 +2114,7 @@
                 }
             }
         },
-        "/kitchen/setting/verify-advanced-password": {
+        "/kitchen/setting/verify_advanced_password": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -1537,444 +2147,6 @@
                 }
             }
         },
-        "/login": {
-            "post": {
-                "description": "处理收银员登录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "收银员登录",
-                "parameters": [
-                    {
-                        "description": "登录详情",
-                        "name": "loginDetails",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "登录成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/login/captcha": {
-            "get": {
-                "description": "获取收银员登录验证码",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银员登录验证码",
-                "responses": {
-                    "200": {
-                        "description": "验证码详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/login/publicKey": {
-            "post": {
-                "description": "获取收银员登录的公钥",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银员登录的公钥",
-                "responses": {
-                    "200": {
-                        "description": "公钥详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/member/info/{memberId}": {
-            "get": {
-                "description": "获取收银员会员信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银员会员信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "会员ID",
-                        "name": "memberId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "会员详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/member/search": {
-            "get": {
-                "description": "搜索收银员会员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "搜索收银员会员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "搜索查询",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "会员列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/order/hideOrder/{orderId}": {
-            "post": {
-                "description": "隐藏收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "隐藏收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/pack/{orderId}": {
-            "post": {
-                "description": "打包收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "打包收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/product/cancelGift/{productId}": {
-            "delete": {
-                "description": "取消收银订单产品的礼物",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "取消收银订单产品的礼物",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/product/gift": {
-            "post": {
-                "description": "发布收银订单产品的礼物",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "发布收银订单产品的礼物",
-                "parameters": [
-                    {
-                        "description": "礼物详情",
-                        "name": "gift",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/product/price/{productId}": {
-            "post": {
-                "description": "发布收银订单产品的价格",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "发布收银订单产品的价格",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "新价格",
-                        "name": "price",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "number"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/product/remark/{productId}": {
-            "get": {
-                "description": "获取收银订单产品的备注",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银订单产品的备注",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "备注详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            },
-            "post": {
-                "description": "发布收银订单产品的备注",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "发布收银订单产品的备注",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "备注详情",
-                        "name": "remark",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/order/showOrder/list": {
-            "get": {
-                "description": "获取收银订单列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银订单列表",
-                "responses": {
-                    "200": {
-                        "description": "订单列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/order/unpack/{orderId}": {
-            "post": {
-                "description": "拆包收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "拆包收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/passport/captcha": {
             "get": {
                 "produces": [
@@ -1995,7 +2167,7 @@
             }
         },
         "/passport/server_public_key": {
-            "post": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -2017,15 +2189,6 @@
                         "name": "type",
                         "in": "query",
                         "required": true
-                    },
-                    {
-                        "description": "获取公钥参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.GetServerPublicKeyRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -2034,389 +2197,6 @@
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
-                    }
-                }
-            }
-        },
-        "/payment/typeList": {
-            "get": {
-                "description": "获取收银支付类型列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银支付类型列表",
-                "responses": {
-                    "200": {
-                        "description": "支付类型列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/product/info/{productId}": {
-            "get": {
-                "description": "获取收银产品信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银产品信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "产品详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/product/list": {
-            "get": {
-                "description": "获取收银产品列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银产品列表",
-                "responses": {
-                    "200": {
-                        "description": "产品列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/production/create": {
-            "post": {
-                "description": "创建收银生产",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "创建收银生产",
-                "parameters": [
-                    {
-                        "description": "生产详情",
-                        "name": "production",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/production/return/returnFoodReason": {
-            "get": {
-                "description": "获取退货原因",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取退货原因",
-                "responses": {
-                    "200": {
-                        "description": "退货原因列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/production/return/{productionId}": {
-            "post": {
-                "description": "返回收银生产",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "返回收银生产",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "生产ID",
-                        "name": "productionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/reason/giftFood": {
-            "get": {
-                "description": "获取赠送食物的原因",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取赠送食物的原因",
-                "responses": {
-                    "200": {
-                        "description": "赠送原因列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/shoppingCart/info": {
-            "get": {
-                "description": "获取收银购物车信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取收银购物车信息",
-                "responses": {
-                    "200": {
-                        "description": "购物车详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/shoppingCart/product/create": {
-            "post": {
-                "description": "在购物车中创建产品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "在购物车中创建产品",
-                "parameters": [
-                    {
-                        "description": "产品详情",
-                        "name": "product",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/shoppingCart/product/number/{productId}": {
-            "post": {
-                "description": "更新购物车中产品的数量",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "更新购物车中产品的数量",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "新数量",
-                        "name": "number",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/shoppingCart/product/{productId}": {
-            "delete": {
-                "description": "从购物车中删除产品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "从购物车中删除产品",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/shoppingCart/subBill": {
-            "get": {
-                "description": "获取购物车的子账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "获取购物车的子账单",
-                "responses": {
-                    "200": {
-                        "description": "子账单详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/verifyAdvancedPassword": {
-            "post": {
-                "description": "验证收银员的高级密码",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cashier"
-                ],
-                "summary": "验证收银员的高级密码",
-                "parameters": [
-                    {
-                        "description": "高级密码",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
                     }
                 }
             }
@@ -2461,25 +2241,6 @@
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "req.GetServerPublicKeyRequest": {
-            "type": "object",
-            "required": [
-                "client_id",
-                "type"
-            ],
-            "properties": {
-                "client_id": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "pgp",
-                        "jsencrypt"
-                    ]
                 }
             }
         },
@@ -2620,15 +2381,6 @@
                 },
                 "user_name": {
                     "description": "用户名",
-                    "type": "string"
-                }
-            }
-        },
-        "req.ParamCreatePublicKey": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "description": "客户端ID",
                     "type": "string"
                 }
             }
@@ -2792,14 +2544,6 @@
                 }
             }
         },
-        "req.ReqCashierUnlock": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
         "resp.Access": {
             "type": "object",
             "properties": {
@@ -2879,19 +2623,6 @@
                 "totalPage": {
                     "description": "总页数",
                     "type": "integer"
-                }
-            }
-        },
-        "resp.Captcha": {
-            "type": "object",
-            "properties": {
-                "base64": {
-                    "description": "验证码的base64图片",
-                    "type": "string"
-                },
-                "sign": {
-                    "description": "验证码签名，用于验证用户提交的验证码是否正确",
-                    "type": "string"
                 }
             }
         },
@@ -3113,19 +2844,6 @@
                     "items": {
                         "$ref": "#/definitions/resp.FinishedProductInfo"
                     }
-                }
-            }
-        },
-        "resp.PublicKeyInfo": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "description": "客户端ID",
-                    "type": "string"
-                },
-                "publicKey": {
-                    "description": "公钥",
-                    "type": "string"
                 }
             }
         },
