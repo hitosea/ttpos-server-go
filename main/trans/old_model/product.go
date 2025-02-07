@@ -181,9 +181,11 @@ func (s *ProductService) ConvertProduct() error {
 				IsShowAssistant:       product.IsShowAssistant,
 				IsShowH5:              product.IsShowH5,
 				OrderBy:               product.ProductSort,
-				Limit:                 product.LimitNum,
+				LimitNum:              product.LimitNum,
 				Description:           product.SellingPoint,
 				OpenDiscount:          product.IsEnableGrade,
+				SauceRequired:         uint8(product.FeedRequired),
+				SauceMaxSelection:     product.FeedMaxSelect,
 				MultiLanguageName:     languageName,
 			}
 			_, err = base.NewProductPackageRepo(s.targetDB).CreateProductPackage(productPackage)

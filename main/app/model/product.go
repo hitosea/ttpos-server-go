@@ -112,9 +112,11 @@ type ProductPackage struct {
 	IsShowAssistant       uint8  `gorm:"default:0;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5              uint8  `gorm:"default:0;comment:'是否在H5设备显示, 0-否 1-是'"`
 	OrderBy               uint   `gorm:"default:0;comment:'排序'"`
-	Limit                 uint   `gorm:"default:0;comment:'限购数量'"`
+	LimitNum              uint   `gorm:"default:0;comment:'限购数量'"`
 	Description           string `gorm:"default:'';comment:'卖点描述'"`
 	OpenDiscount          uint8  `gorm:"default:0;comment:'是否开启会员折扣, 0-否 1-是'"`
+	SauceRequired         uint8  `gorm:"default:0;comment:'是否必选小料, 0-否 1-是'"`
+	SauceMaxSelection     uint   `gorm:"default:0;comment:'小料最大选择数量'"`
 	CreateTime            int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime            int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime            int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
