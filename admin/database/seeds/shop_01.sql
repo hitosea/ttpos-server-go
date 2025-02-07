@@ -701,7 +701,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     address VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商地址',
     contact_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人姓名',
     contact_phone VARCHAR(20) NOT NULL DEFAULT '' COMMENT '联系人电话',
-    role VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
+    position VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     staff_uuid BIGINT NOT NULL COMMENT '员工ID, 采购负责人',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
