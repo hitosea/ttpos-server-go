@@ -35,7 +35,7 @@ debug:
 # 运行run
 run: debug
 	$(call update_env_and_run)
-	cd main && go run ./cmd/server/main.go
+	cd main && go run ./main.go
 
 # 启动开发模式 - 热重启
 dev: debug
@@ -55,13 +55,13 @@ build-doc:
 
 # 构建项目 - 生产
 build-run:
-	chmod +x ./.sh && ./.sh golang build -o main ./cmd/server/main.go && ./.sh websocket build -o main ./main.go
+	chmod +x ./.sh && ./.sh golang build -o main ./main.go && ./.sh websocket build -o main ./main.go
 	docker compose -p ttpos-server-go restart golang
 	docker compose -p ttpos-server-go restart websocket
 
 # 更新
 update:
-	chmod +x ./.sh && ./.sh update && ./.sh golang build -o main ./cmd/server/main.go && ./.sh websocket build -o main ./main.go
+	chmod +x ./.sh && ./.sh update && ./.sh golang build -o main ./main.go && ./.sh websocket build -o main ./main.go
 	docker compose -p ttpos-server-go up -d
 	chmod +x ./.sh && ./.sh restart
 
