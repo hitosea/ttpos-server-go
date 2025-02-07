@@ -58,11 +58,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			return err
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
-		// 创建多语言名称
-		//err = names.CreateMultiLanguageName(uint(id), r.targetDB)
-		//if err != nil {
-		//	return err
-		//}
+
 		languageName := names.GenMultiLanguageName(uint(id))
 		if attribute.ParentID == 0 {
 			// 创建商品属性组
