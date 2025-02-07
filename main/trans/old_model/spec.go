@@ -60,7 +60,6 @@ func (s *SpecService) ConvertSpec() error {
 		languageName := names.GenMultiLanguageName(uint(id))
 
 		flavor := model.ProductFlavor{
-			Id:                    0,
 			Uuid:                  spec.SpecID,
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),

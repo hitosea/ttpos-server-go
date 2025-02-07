@@ -52,7 +52,6 @@ func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
 		tag := model.PrinterTag{
-			Id:   0,
 			Uuid: productPrintLabel.LabelID,
 			Name: productPrintLabel.LabelName,
 		}

@@ -151,6 +151,43 @@ func (s *ProductService) ConvertProduct() error {
 				}
 				return 1
 			}()
+			IsShowCashier := func() uint {
+				if product.IsShowCashier == 1 {
+					return 1
+				}
+				return 0
+			}()
+			IsShowTablet := func() uint {
+				if product.IsShowTablet == 1 {
+					return 1
+				}
+				return 0
+			}()
+			IsShowKitchen := func() uint {
+				if product.IsShowKitchen == 1 {
+					return 1
+				}
+				return 0
+			}()
+			IsShowAssistant := func() uint {
+				if product.IsShowAssistant == 1 {
+					return 1
+				}
+				return 0
+			}()
+			IsShowH5 := func() uint {
+				if product.IsShowH5 == 1 {
+					return 1
+				}
+				return 0
+			}()
+			OpenDiscount := func() uint {
+				if product.IsEnableGrade == 1 {
+					return 1
+				}
+				return 0
+			}()
+
 			productDineTax, err := s.GetProductTax(product.ProductID, 1)
 			if err != nil {
 				return err
@@ -166,7 +203,7 @@ func (s *ProductService) ConvertProduct() error {
 				MultiLanguageNameUuid: uint(id),
 				ImageName:             product.ImgName,
 				ImageUuid:             product.ProductImage.ImageID,
-				StockDeductMethod:     StockDeductMethod,
+				StockDeductMethod:     uint(StockDeductMethod),
 				UnitUuid:              product.UnitID,
 				DineTaxUuid:           productDineTax.TaxCategoryID,
 				CategoryUuid:          product.CategoryID,
@@ -174,16 +211,16 @@ func (s *ProductService) ConvertProduct() error {
 				SpecialCategoryUuid:   product.SpecialID,
 				PrinterTagUuid:        product.LabelID,
 				SupplierUuid:          product.ShopSupplierID,
-				Status:                Status,
-				IsShowCashier:         product.IsShowCashier,
-				IsShowTablet:          product.IsShowTablet,
-				IsShowKitchen:         product.IsShowKitchen,
-				IsShowAssistant:       product.IsShowAssistant,
-				IsShowH5:              product.IsShowH5,
+				Status:                uint(Status),
+				IsShowCashier:         IsShowCashier,
+				IsShowTablet:          IsShowTablet,
+				IsShowKitchen:         IsShowKitchen,
+				IsShowAssistant:       IsShowAssistant,
+				IsShowH5:              IsShowH5,
 				OrderBy:               product.ProductSort,
 				LimitNum:              product.LimitNum,
 				Description:           product.SellingPoint,
-				OpenDiscount:          product.IsEnableGrade,
+				OpenDiscount:          OpenDiscount,
 				SauceRequired:         uint8(product.FeedRequired),
 				SauceMaxSelection:     product.FeedMaxSelect,
 				MultiLanguageName:     languageName,

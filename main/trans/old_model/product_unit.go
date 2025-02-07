@@ -61,7 +61,6 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 		fmt.Println(fmt.Sprintf("languageName: %+v", languageName))
 
 		unit := model.ProductUnit{
-			Id:                    0,
 			Uuid:                  productUnit.UnitID,
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),

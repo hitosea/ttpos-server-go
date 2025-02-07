@@ -474,6 +474,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '产品包名称',
     multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     image_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
+    image_url VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片URL',
     image_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '图片ID',
     stock_deduct_method TINYINT(2) NOT NULL DEFAULT 0 COMMENT '库存计算方法, 0-付款减库存 1-下单减库存',
     unit_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '单位ID',

@@ -53,7 +53,7 @@ func (r *ProductPackageAttributeGroupRepoImpl) CreateProductPackageAttributeGrou
 		return 0, err
 	}
 
-	return productPackageAttributeGroup.Id, nil // 返回产品包属性组ID
+	return productPackageAttributeGroup.ID, nil // 返回产品包属性组ID
 }
 
 // DeleteProductPackageAttributeGroup 软删除产品包属性组
