@@ -1091,7 +1091,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff` (
     KEY `idx_username` (username)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '员工表';
 
-CREATE TABLE IF NOT EXISTS `staff_operation_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_staff_operation_log` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '操作日志ID',
     staff_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '员工ID',
@@ -1287,7 +1287,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_cash_box` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '钱箱表';
 
-CREATE TABLE IF NOT EXISTS `cash_box_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_cash_box_log` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '钱箱ID',
     type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '类型 1-取现 2-存现',

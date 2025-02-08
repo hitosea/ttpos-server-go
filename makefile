@@ -69,3 +69,7 @@ update:
 # 重启容器
 restart:
 	chmod +x ./.sh && ./.sh restart
+
+# 翻译
+translate:
+	cd main && go run ./main.go translate
