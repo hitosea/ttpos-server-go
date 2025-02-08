@@ -18,7 +18,7 @@ var Log LogConf
 
 func Init() error {
 	// 加载 .env 文件
-	err := godotenv.Load("../../.env")
+	err := godotenv.Load("../.env")
 	if err != nil {
 		return fmt.Errorf("error loading .env file: %v", err)
 	}

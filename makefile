@@ -62,7 +62,7 @@ build-run:
 
 # 更新
 update:
-	chmod +x ./.sh && ./.sh update && ./.sh golang build -o main ./main.go && ./.sh websocket build -o main ./main.go
+	chmod +x ./.sh && ./.sh update
 	docker compose -p ttpos-server-go up -d
 	chmod +x ./.sh && ./.sh restart
 
