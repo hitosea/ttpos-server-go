@@ -20,9 +20,14 @@ class User extends UserModel
     {
         $username = $user['username'] ?? '';
         $password = $user['password'] ?? '';
-        $user = $this->where(function ($q) use ($username) {
-            $q->whereRaw('BINARY user_name = :user_name', ['user_name' => $username])->whereOr('phone', $username);
-        })->where('password', $password)->order('shop_user_id', 'desc')->with(['app', 'supplier'])->find();
+
+        $user = $this->with(['app', 'supplier'])
+            ->where(function ($q) use ($username) {
+                $q->whereRaw('BINARY username = :username', ['username' => $username]);
+                $q->whereOr('phone', $username);
+            })
+            ->where('password', $password)
+            ->find();
         if (!$user) {
             $this->error = '账号或密码错误';
             return false;
@@ -49,8 +54,7 @@ class User extends UserModel
             return false;
         }
         //
-        request()->appId = $user['app_id'];
-        request()->shopSupplierId = $user['shop_supplier_id'];
+        request()->appId = $user['company_uuid'];
         request()->license = $user->license = $user['app']->getLicense();
         // 验证权限
         $permission = (new AccessModel)->getPermission(AccessModel::SHOP_ROUTE_NAME, $user, $user['supplier']);
@@ -59,11 +63,11 @@ class User extends UserModel
             return false;
         }
         // 保存登录状态
-        $user['token'] = signToken($user['shop_user_id'], 'shop', '', md5($user->password));
+        $user['token'] = signToken($user['uuid'], 'shop', '', md5($user->password));
         // 货币信息
-        $user['currency'] = SettingModel::getCurrency($user['shop_supplier_id'], $user['app_id']);
+        $user['currency'] = SettingModel::getCurrency(0, $user['company_uuid']);
         // 写入登录日志
-        LoginLogModel::add($username, \request()->ip(), '登录成功', $user['app']['app_id']);
+        LoginLogModel::add($username, \request()->ip(), '登录成功', $user['app']['uuid']);
         return $user;
     }
 
@@ -138,6 +142,6 @@ class User extends UserModel
      */
     public static function getUser($data)
     {
-        return (new static())->where('shop_user_id', '=', $data['uid'])->with(['app'])->find();
+        return (new static())->where('uuid', '=', $data['uid'])->with(['app'])->find();
     }
 }

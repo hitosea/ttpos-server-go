@@ -28,6 +28,19 @@ class CompanyStaff extends BaseModel
     }
 
     /**
+     * 检测账号是否存在集团中
+     * @param string $username 用户名或手机号
+     * @return mixed 存在返回company_uuid,不存在返回false
+     */
+    public static function checkExistInCompany($username)
+    {
+        return static::where(function ($query) use ($username) {
+            $query->whereRaw('BINARY username = :username', ['username' => $username])
+                ->whereOr('phone', $username);
+        })->value('company_uuid') ?: false;
+    }
+
+    /**
      * 验证用户名是否重复
      */
     public static function checkExist($user_name)

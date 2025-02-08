@@ -4,6 +4,7 @@ namespace app\shop\controller;
 
 use help\SystemHelp;
 use think\facade\Env;
+use app\admin\model\CompanyStaff;
 use app\common\model\shop\OptLog;
 use app\shop\service\AuthService;
 use app\common\enum\http\StatusCode;
@@ -120,6 +121,12 @@ class Controller extends BaseController
         if ($data['data']['type'] != 'shop') {
             throw new BaseException(['msg' => '用户信息错误', 'code' => StatusCode::USER_ERROR]);
         }
+        // 集团检测
+        if (!$companyUuid = CompanyStaff::where('uuid', $data['data']['uid'] ?? 0)->value('company_uuid')) {
+            throw new BaseException(['msg' => '没有找到用户信息', 'code' => StatusCode::USER_ERROR]);
+        }
+        request()->appId = $companyUuid;
+        //
         if (!$user = UserModel::getUser($data['data'])) {
             throw new BaseException(['msg' => '没有找到用户信息', 'code' => StatusCode::USER_ERROR]);
         }
@@ -133,22 +140,19 @@ class Controller extends BaseController
             throw new BaseException(['msg' => '密码已变更，请重新登录', 'code' => StatusCode::USER_ERROR]);
         }
         // 授权
-        request()->appId = $user['app_id'];
-        request()->shopSupplierId = $user['shop_supplier_id'];
+
         request()->licenses = $user->app->getLicense();
         // 保存登录状态
         request()->userInfo = $this->store = [
             'user' => [
-                'shop_user_id' => $user['shop_user_id'],
+                'company_uuid' => $companyUuid,
                 'user_name' => $user['user_name'],
                 'real_name' => $user['real_name'],
-                'shop_supplier_id' => $user['shop_supplier_id'],
                 'user_type' => $user['user_type'],
             ],
             'app' => $user->app,
             'supplier' => $user->supplier()->field('
-                app_id, shop_supplier_id, name, level, parent_id, store_type, category_set, sale_stock, reserve, cash_limit,
-                kitchen_limit, tablet_limit, assistant_limit, chain_number, is_open_member, is_open_tablet,languages,
+                sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, is_open_member, is_open_tablet,languages,
                 is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone
             ')->find(),
         ];
@@ -181,10 +185,6 @@ class Controller extends BaseController
         if ($this->store == null) {
             return;
         }
-        $shop_user_id = $this->store['user']['shop_user_id'];
-        if (!$shop_user_id) {
-            return;
-        }
         // 如果不记录查询日志
         $config = Setting::getItem('store');
         if (!$config || !$config['is_get_log']) {
@@ -195,7 +195,6 @@ class Controller extends BaseController
             $title = (new AuthService($this->store))::getAccessNameByApiPath($this->routeUri, $this->store['app']['app_id']);
             if ($title) {
                 (new OptLog)->save([
-                    'shop_user_id' => $shop_user_id,
                     'ip' => \request()->ip(),
                     'request_type' => $this->request->isGet() ? 'Get' : 'Post',
                     'url' => $this->routeUri,
@@ -203,7 +202,6 @@ class Controller extends BaseController
                     'browser' => SystemHelp::getClientBrowser(),
                     'agent' => $_SERVER['HTTP_USER_AGENT'],
                     'title' => $title,
-                    'app_id' => $this->store['app']['app_id']
                 ]);
             }
         } catch (\Throwable $th) {

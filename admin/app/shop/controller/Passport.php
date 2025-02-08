@@ -4,6 +4,7 @@ namespace app\shop\controller;
 
 use captcha\facade\Captcha;
 use app\shop\model\shop\User;
+use app\admin\model\CompanyStaff;
 use hg\apidoc\annotation as Apidoc;
 use app\common\enum\http\StatusCode;
 use app\common\enum\settings\SettingEnum;
@@ -65,6 +66,14 @@ class Passport extends Controller
         if (!Captcha::check($user['code']) && !(env('APP_DEBUG') == true && $user['code'] == 123456)) {
             return $this->renderError('验证码错误');
         }
+
+        // 集团检测
+        $uuid = (new CompanyStaff())->checkExistInCompany($user['username']);
+        if (!$uuid) {
+            return $this->renderError('用户不存在');
+        }
+        request()->appId = $uuid;
+
         $model = new User();
         if ($userInfo = $model->checkLogin($user)) {
             // saas首次修改密码
@@ -128,8 +137,17 @@ class Passport extends Controller
      */
     public function saasEditPassword()
     {
+        $data = $this->postData();
+        trace($data);
+        // 集团检测
+        $uuid = (new CompanyStaff())->checkExistInCompany($data['username']);
+        if (!$uuid) {
+            return $this->renderError('用户不存在');
+        }
+        request()->appId = $uuid;
+
         $model = new User();
-        if ($model->saasEditPassword($this->postData(), $this->store['user'])) {
+        if ($model->saasEditPassword($data, $this->store['user'])) {
             return $this->renderSuccess('修改成功');
         }
         return $this->renderError($model->getError() ?: '修改失败');
