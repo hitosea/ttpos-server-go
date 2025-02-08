@@ -12,4 +12,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertProductUnit()
 	testConvertReturnReason()
 	testConvertSpec()
+	testConvertProduct()
 }

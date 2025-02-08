@@ -12,8 +12,8 @@ var conf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          3306,
 	User:          "root",
-	Password:      "yourpassword",
-	RootPassword:  "yourpassword",
+	Password:      "5cd6a0408e9ccf92",
+	RootPassword:  "5cd6a0408e9ccf92",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
@@ -22,12 +22,12 @@ var targetConf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          3306,
 	User:          "root",
-	Password:      "yourpassword",
-	RootPassword:  "yourpassword",
+	Password:      "5cd6a0408e9ccf92",
+	RootPassword:  "5cd6a0408e9ccf92",
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop_wang"
+var targetDBName = "shop_1"
 
 func TestProductUnit(t *testing.T) {
 	db, err := NewMySQLConnection(conf, dbName)

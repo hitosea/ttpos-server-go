@@ -137,32 +137,32 @@ func (s *CategoryService) ConvertCategory() error {
 			return err
 		}
 
-		if category.IsSpecial {
-			specialCategory := model.ProductSpecialCategory{
-				Uuid:                  category.CategoryID,
-				Status:                category.Status,
-				Name:                  multiLanguageName.ZhName,
-				MultiLanguageNameUuid: uint(id),
-				OrderBy:               category.Sort,
-			}
-			_, err := repository.NewProductSpecialCategoryRepo(s.targetDB).CreateProductSpecialCategory(specialCategory)
-			if err != nil {
-				return err
-			}
-		} else {
-			productCategory := model.ProductCategory{
-				Uuid:                  category.CategoryID,
-				Name:                  names.Zh,
-				ParentUuid:            category.ParentID,
-				MultiLanguageNameUuid: uint(id),
-				Status:                category.Status,
-				OrderBy:               category.Sort,
-			}
-			_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
-			if err != nil {
-				return err
-			}
+		//if category.IsSpecial {
+		//specialCategory := model.ProductSpecialCategory{
+		//	Uuid:                  category.CategoryID,
+		//	Status:                category.Status,
+		//	Name:                  multiLanguageName.ZhName,
+		//	MultiLanguageNameUuid: uint(id),
+		//	OrderBy:               category.Sort,
+		//}
+		//_, err := repository.NewProductSpecialCategoryRepo(s.targetDB).CreateProductSpecialCategory(specialCategory)
+		//if err != nil {
+		//	return err
+		//}
+		//} else {
+		productCategory := model.ProductCategory{
+			Uuid:                  category.CategoryID,
+			Name:                  names.Zh,
+			ParentUuid:            category.ParentID,
+			MultiLanguageNameUuid: uint(id),
+			Status:                category.Status,
+			OrderBy:               category.Sort,
 		}
+		_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
+		if err != nil {
+			return err
+		}
+		//}
 	}
 	return nil
 }
