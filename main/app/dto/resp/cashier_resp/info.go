@@ -1,0 +1,46 @@
+package cashier_resp
+
+import (
+	"ttpos-server-go/app/dto/resp/setting"
+)
+
+type Info struct {
+	Username     string             `json:"username"`      // 登录账号
+	CashierId    uint               `json:"cashier_id"`    // 收银员ID
+	DeviceId     string             `json:"device_id"`     // 设备ID
+	DeviceRemark string             `json:"device_remark"` // 设备备注
+	Cashier      setting.Cashier    `json:"cashier"`       // 收银机设置
+	Business     setting.Business   `json:"business"`      // 门店业务设置
+	Buffet       setting.Buffet     `json:"buffet"`        // 自助餐设置
+	Currency     setting.Currency   `json:"currency"`      // 货币单位
+	Permissions  []*Permission      `json:"permissions"`   // 页面权限
+	Company      Company            `json:"company"`       // 商家信息
+	CloudBasic   setting.CloudBasic `json:"cloud_basic"`   // 云端基础信息
+}
+
+type Company struct {
+	ID   uint   `json:"id"`   // 商家ID
+	Name string `json:"name"` // 商家名称
+}
+
+type Permission struct {
+	ID             int           `json:"id"`
+	Name           string        `json:"name"`
+	Path           string        `json:"path"`
+	APIPath        string        `json:"-"`
+	ParentId       int           `json:"parent_id"`
+	Sort           int           `json:"-"`
+	Icon           string        `json:"-"`
+	RedirectName   string        `json:"redirect_name"`
+	IsRoute        int           `json:"is_route"`
+	IsMenu         int           `json:"is_menu"`
+	Alias          string        `json:"alias"`
+	IsShow         int           `json:"is_show"`
+	PlusCategoryId int           `json:"-"`
+	Remark         string        `json:"-"`
+	IsSupplier     int           `json:"-"`
+	AppId          int           `json:"-"`
+	CreateTime     string        `json:"-"`
+	UpdateTime     string        `json:"-"`
+	Children       []*Permission `json:"children"`
+}

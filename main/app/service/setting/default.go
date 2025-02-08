@@ -26,7 +26,7 @@ func (s *Srv) getIPAndPort() (string, string) {
 
 // 默认收银机设置
 func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -61,7 +61,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 
 // 默认平板端设置
 func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -96,7 +96,7 @@ func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
 
 // 默认扫码H5设置
 func (s *Srv) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
 	}
@@ -127,7 +127,7 @@ func (s *Srv) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
 
 // 默认厨显设置
 func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -233,7 +233,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 
 // 默认点餐助手设置
 func (s *Srv) getDefaultAssistant(language string, languageList []dto.LanguageItem) setting.Assistant {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
@@ -286,7 +286,7 @@ func (s *Srv) getDefaultStore(language string) setting.Store {
 
 // 小票打印机设置
 func (s *Srv) getDefaultPrinter(language string, languageList []dto.LanguageItem) setting.Printer {
-	var defaultLanguage = "en"
+	var defaultLanguage = i18n.LanguageEN
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
 	}

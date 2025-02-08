@@ -1,5 +1,92 @@
 basePath: /
 definitions:
+  cashier_resp.Company:
+    properties:
+      id:
+        description: 商家ID
+        type: integer
+      name:
+        description: 商家名称
+        type: string
+    type: object
+  cashier_resp.Info:
+    properties:
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cashier:
+        allOf:
+        - $ref: '#/definitions/setting.Cashier'
+        description: 收银机设置
+      cashier_id:
+        description: 收银员ID
+        type: integer
+      cloud_basic:
+        allOf:
+        - $ref: '#/definitions/setting.CloudBasic'
+        description: 云端基础信息
+      company:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      device_id:
+        description: 设备ID
+        type: string
+      device_remark:
+        description: 设备备注
+        type: string
+      permissions:
+        description: 页面权限
+        items:
+          $ref: '#/definitions/cashier_resp.Permission'
+        type: array
+      username:
+        description: 登录账号
+        type: string
+    type: object
+  cashier_resp.Permission:
+    properties:
+      alias:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/cashier_resp.Permission'
+        type: array
+      id:
+        type: integer
+      is_menu:
+        type: integer
+      is_route:
+        type: integer
+      is_show:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      redirect_name:
+        type: string
+    type: object
+  dto.LanguageItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
+    type: object
   dto.Response:
     properties:
       code:
@@ -545,6 +632,284 @@ definitions:
         type: integer
       name:
         description: 分类名称
+        type: string
+    type: object
+  setting.AddClockItem:
+    properties:
+      action:
+        description: 操作结果 delete-删除 edit-编辑 add-新增
+        type: string
+      delay_time:
+        description: 时间（分）
+        type: string
+      id:
+        description: 加钟id
+        type: integer
+      name:
+        description: 名称
+        type: string
+      price:
+        description: 价格
+        type: string
+    type: object
+  setting.Buffet:
+    properties:
+      add_clock:
+        description: 名称 - 加钟时间（分）- 价格
+        items:
+          $ref: '#/definitions/setting.AddClockItem'
+        type: array
+      is_add_clock:
+        description: 是否开启加钟 0-关闭 1-开启
+        type: string
+      is_buffet_discount:
+        description: 是否开启自助餐优惠折扣 0-关闭 1-开启
+        type: string
+      is_buy_continue:
+        description: 非自助餐商品到时是否能继续选购 0-关闭 1-开启
+        type: string
+      is_open:
+        description: 是否开启自助餐 0-关闭 1-开启
+        type: string
+      is_remain_continue:
+        description: 剩余xx分不可继续点餐开关 0-关闭 1-开启
+        type: string
+      remain_continue_notice_time:
+        description: 剩余xx分提醒不可继续点餐
+        type: string
+      remain_continue_time:
+        description: 剩余xx分不可继续点餐
+        type: string
+      tablet_end_time:
+        description: 平板结束时间提醒（分）
+        type: string
+    type: object
+  setting.Business:
+    properties:
+      checkout_zeroing_method:
+        description: 结账自动抹零方式
+        type: string
+      checkout_zeroing_method_list:
+        description: 结账自动抹零方式列表
+        items:
+          $ref: '#/definitions/setting.CheckoutZeroingMethodItem'
+        type: array
+      discount_method:
+        description: 折扣计算方式 10-按百分比 20-直接减免
+        type: string
+      dish_card_style:
+        description: 菜品卡片样式 0-无图模式 1-图片模式
+        type: string
+      dish_card_style_time:
+        description: 菜品卡片样式最后更新时间
+        type: string
+      free_method:
+        description: 免单计算方式
+        type: string
+      free_method_list:
+        description: 免单计算方式列表
+        items:
+          $ref: '#/definitions/setting.FreeMethodItem'
+        type: array
+      gift_method:
+        description: 赠菜计算方式
+        type: string
+      gift_method_list:
+        description: 赠菜计算方式列表
+        items:
+          $ref: '#/definitions/setting.GiftMethodItem'
+        type: array
+      is_invoice:
+        description: 开票信息 0-不需要填写 1-需要填写
+        type: string
+      is_need_password:
+        description: 取消订单/退菜 0-无需密码 1-需要密码
+        type: string
+      no_clear_table:
+        description: 结账后不清台 0-清台 1-不清台
+        type: string
+      qr_code:
+        description: 电子菜单二维码校验失效值，6位数数字
+        type: string
+      zeroing_method:
+        description: 优惠折扣自动抹零方式
+        type: string
+      zeroing_method_list:
+        description: 优惠折扣自动抹零方式列表
+        items:
+          $ref: '#/definitions/setting.ZeroingMethodItem'
+        type: array
+    type: object
+  setting.CarouselItem:
+    properties:
+      file_path:
+        type: string
+      real_name:
+        type: string
+      sort:
+        type: string
+      type:
+        type: string
+    type: object
+  setting.Cashier:
+    properties:
+      advanced_password:
+        description: 高级设置密码
+        type: string
+      auto_lock_screen:
+        description: 自动锁屏（秒），默认5分钟
+        type: string
+      auto_order_limit:
+        description: 自动接单金额上限
+        type: string
+      carousel:
+        description: 上传后的轮播内容url（图片 + 视频）
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
+      cashier_password:
+        description: 钱箱密码
+        type: string
+      default_language:
+        description: 默认语言
+        type: string
+      is_auto_lock_screen:
+        description: 是否开启自动锁屏 0-关闭 1-开启
+        type: string
+      is_auto_order:
+        description: 是否自动接单
+        type: string
+      is_auto_send:
+        description: 收银结账自动送厨房 0-关闭 1-开启
+        type: string
+      is_auto_voice:
+        description: 是否开启自动接单语音播报
+        type: string
+      is_open_cashier_password:
+        description: 是否开启钱箱密码 0-关闭 1-开启
+        type: string
+      is_remain_color:
+        description: 是否开启剩余时长颜色 0-关闭 1-开启
+        type: string
+      is_show_assistant_sold_out:
+        description: 点餐助手是否显示售罄商品 0-不显示 1-显示
+        type: integer
+      is_show_scan_sold_out:
+        description: 扫码点餐是否显示售罄商品 0-不显示 1-显示
+        type: integer
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      lock_password:
+        description: 锁屏密码
+        type: string
+      menu_show_sold_out:
+        description: 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: string
+      order_method:
+        allOf:
+        - $ref: '#/definitions/setting.OrderMethodItem'
+        description: 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
+      remain_color:
+        description: 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+        items:
+          type: string
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 收银机服务器连接
+    type: object
+  setting.CheckoutZeroingMethodItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+  setting.CloudBasic:
+    properties:
+      brand_logo:
+        type: string
+      brand_logo_long:
+        type: string
+      brand_name:
+        type: string
+      browser_logo:
+        type: string
+      browser_title:
+        type: string
+      expiration_reminder:
+        type: integer
+    type: object
+  setting.Currency:
+    properties:
+      is_open:
+        description: 副货币单位开关
+        type: string
+      print_unit:
+        description: 货币单位 - 打印专用，默认泰铢
+        type: string
+      unit:
+        description: 货币单位，默认泰铢
+        type: string
+      unit_position:
+        description: 主货币显示位置 0-金额前 1-金额后
+        type: string
+      unit_rate:
+        description: 单位汇率
+        type: string
+      vice_unit:
+        description: 副货币单位
+        type: string
+      vice_unit_position:
+        description: 副货币显示位置 0-金额前 1-金额后
+        type: string
+    type: object
+  setting.FreeMethodItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+  setting.GiftMethodItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+  setting.OrderMethodItem:
+    properties:
+      is_cashier_order:
+        description: 收银用餐
+        type: string
+      is_table_order:
+        description: 桌台用餐
+        type: string
+    type: object
+  setting.Server:
+    properties:
+      ip:
+        description: ip地址
+        type: string
+      port:
+        description: 端口号
+        type: string
+    type: object
+  setting.ZeroingMethodItem:
+    properties:
+      key:
+        type: string
+      name:
         type: string
     type: object
 host: 127.0.0.1:8081
@@ -1117,6 +1482,26 @@ paths:
         "404":
           description: 未找到
       summary: 获取收银台的区域和类型
+      tags:
+      - 收银端
+  /cashier/info:
+    get:
+      consumes:
+      - application/json
+      description: 收银端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/cashier_resp.Info'
+              type: object
+      summary: 收银端信息
       tags:
       - 收银端
   /cashier/login:

@@ -1342,5 +1342,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_setting` (
     UNIQUE KEY `unique_key` (`key`) USING BTREE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '设置表';
 
-SET
-    FOREIGN_KEY_CHECKS = 1;
+CREATE TABLE IF NOT EXISTS `ttpos_staff_login_log` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+  `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT 'UUID',
+  `username` varchar(50) NOT NULL DEFAULT '' COMMENT '用户名',
+  `ip` varchar(128) NOT NULL DEFAULT '' COMMENT '登录ip',
+  `result` varchar(128) NOT NULL DEFAULT '' COMMENT '登录结果',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '签到时间',
+  UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='员工登录日志表';
+
+SET FOREIGN_KEY_CHECKS = 1;

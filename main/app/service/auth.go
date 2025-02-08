@@ -1,11 +1,16 @@
-package cashier
+package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"slices"
 	"time"
-	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/constant/jwt"
+	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/service/setting"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -19,49 +24,56 @@ import (
 )
 
 type IAuthSrv interface {
-	Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
+	Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
 	Logout(cc *gin.Context) error
+	Info(cc *gin.Context) (cashier_resp.Info, error)
+	AuthenticateStaff(source string, companyId, staffId uint, url string) (model.Company, model.CompanySetting, model.Staff, error)
 }
 
 func NewAuthSrv(staffRepo repository.IStaffRepo,
 	companyStaffRepo repository.ICompanyStaffRepo,
-	captchaSrv service.ICaptchaSrv,
-	roleAccessSrv service.IRoleAccessSrv,
-	bindRecordSrv service.IBindRecordSrv,
-	staffShiftSrv service.IStaffShiftSrv) IAuthSrv {
-	return NewAuthSrvImpl(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv)
+	captchaSrv ICaptchaSrv,
+	roleAccessSrv IRoleAccessSrv,
+	bindRecordSrv IBindRecordSrv,
+	staffShiftSrv IStaffShiftSrv,
+	settingSrv setting.ISrv,
+) IAuthSrv {
+	return NewAuthSrvImpl(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 }
 
-type AuthService struct {
+type AuthSrv struct {
 	companyStaffRepo repository.ICompanyStaffRepo
 	staffRepo        repository.IStaffRepo
 	loginLogRepo     *repository.LoginLogRepo
-	captchaSrv       service.ICaptchaSrv
-	roleAccessSrv    service.IRoleAccessSrv
-	bindRecordSrv    service.IBindRecordSrv
-	shiftSrv         service.IStaffShiftSrv
+	captchaSrv       ICaptchaSrv
+	roleAccessSrv    IRoleAccessSrv
+	bindRecordSrv    IBindRecordSrv
+	shiftSrv         IStaffShiftSrv
+	settingSrv       setting.ISrv
 }
 
 func NewAuthSrvImpl(
 	staffRepo repository.IStaffRepo,
 	companyStaffRepo repository.ICompanyStaffRepo,
-	captchaSrv service.ICaptchaSrv,
-	roleAccessSrv service.IRoleAccessSrv,
-	bindRecordSrv service.IBindRecordSrv,
-	staffShiftSrv service.IStaffShiftSrv,
-) *AuthService {
-	return &AuthService{
+	captchaSrv ICaptchaSrv,
+	roleAccessSrv IRoleAccessSrv,
+	bindRecordSrv IBindRecordSrv,
+	staffShiftSrv IStaffShiftSrv,
+	settingSrv setting.ISrv,
+) *AuthSrv {
+	return &AuthSrv{
 		companyStaffRepo: companyStaffRepo,
 		staffRepo:        staffRepo,
 		captchaSrv:       captchaSrv,
 		roleAccessSrv:    roleAccessSrv,
 		bindRecordSrv:    bindRecordSrv,
 		shiftSrv:         staffShiftSrv,
+		settingSrv:       settingSrv,
 	}
 }
 
 // Login 登录
-func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
+func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
 	var token string
 	// 验证验证码
 	if !s.captchaSrv.Verify(captchaId, captchaCode) {
@@ -100,7 +112,7 @@ func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captcha
 	}
 
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CASHIER_ROUTE_NAME, staff.ID, staff.CompanyId)
+	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.ID, staff.CompanyId)
 	if len(permissions) == 0 {
 		return token, errors.New("当前无权限，请联系管理员")
 	}
@@ -124,7 +136,7 @@ func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captcha
 	err = s.bindRecordSrv.Add(req.AddBindRecordReq{
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
-		Source:           constant.SOURCE_CASHIER,
+		Source:           constant.SourceCashier,
 		FinallyLoginId:   staff.ID,
 		FinallyLoginTime: int(time.Now().Unix()),
 		CompanyId:        staff.CompanyId,
@@ -150,7 +162,7 @@ func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captcha
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(constant.SOURCE_CASHIER, loginReq.DeviceId, staff.ID, staff.CompanyId, config.JWT.Secret, config.JWT.Expire)
+	token, err = auth.GenerateToken(constant.SourceCashier, loginReq.DeviceId, staff.CompanyId, staff.ID, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
 		return token, errors.New("生成token失败")
 	}
@@ -158,8 +170,70 @@ func (s *AuthService) Login(loginReq req.CashierLoginRequest, captchaId, captcha
 }
 
 // Logout 退出登录
-func (s *AuthService) Logout(cc *gin.Context) error {
-	companyId := cc.GetUint("company_id")
-	staff := s.staffRepo.GetById(companyId, cc.GetUint("staff_id"))
-	return s.bindRecordSrv.Unbind(companyId, constant.SOURCE_CASHIER, staff.BindKey, staff.ID)
+func (s *AuthSrv) Logout(cc *gin.Context) error {
+	companyId := cc.GetUint(jwt.CompanyId)
+	staff := s.staffRepo.GetById(companyId, cc.GetUint(jwt.StaffId))
+	return s.bindRecordSrv.Unbind(companyId, constant.SourceCashier, staff.BindKey, staff.ID)
+}
+
+// Info 获取信息
+func (s *AuthSrv) Info(cc *gin.Context) (cashier_resp.Info, error) {
+
+	if val, exists := cc.Get(jwt.CompanySetting); exists {
+		if companySetting, ok := val.(model.CompanySetting); ok {
+			cccccc, _ := json.Marshal(companySetting)
+			fmt.Println(string(cccccc))
+		}
+	}
+
+	return cashier_resp.Info{}, nil
+}
+
+// AuthenticateStaff 认证登录员工
+func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url string) (model.Company, model.CompanySetting, model.Staff, error) {
+	var (
+		company        model.Company
+		companySetting model.CompanySetting
+		staff          model.Staff
+	)
+	staff = s.staffRepo.GetByIdAndCompanyId(staffId, companyId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
+	if staff.ID == 0 {
+		return company, companySetting, staff, errors.New("用户不存在")
+	}
+	if staff.IsDelete == 1 {
+		return company, companySetting, staff, errors.New("用户被删除")
+	}
+	if staff.Company != nil {
+		company = *staff.Company
+		if staff.Company.CompanySetting != nil {
+			companySetting = *staff.Company.CompanySetting
+		}
+	}
+	if company.ID == 0 || companySetting.ID == 0 {
+		return company, companySetting, staff, errors.New("商家不存在")
+	}
+	if company.IsDelete == 1 {
+		return company, companySetting, staff, errors.New("商家被删除")
+	}
+	if company.Status == 0 {
+		return company, companySetting, staff, errors.New("商家被禁用")
+	}
+
+	// 判断权限
+	sourceMap := map[string]constant.RouteName{
+		constant.SourceCashier:   constant.CashierRouteName,
+		constant.SourceAssistant: constant.AssistantRouteName,
+	}
+	if _, exists := sourceMap[source]; exists {
+		// 判断权限
+		permissions, err := s.roleAccessSrv.GetApiPermission(staff.ID, staff.CompanyId)
+		if err != nil {
+			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+		}
+		if !slices.Contains(permissions, url) {
+			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+		}
+	}
+
+	return company, companySetting, staff, nil
 }

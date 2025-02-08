@@ -27,7 +27,7 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 
 	// 获取收银产品列表
 	res, err := h.productService.GetProductList(
-		helper.GetCompanyId(c),
+		1,
 		req,
 	)
 

@@ -9,8 +9,8 @@ use app\common\model\BaseModel;
  */
 class LoginLog extends BaseModel
 {
-    protected $name = 'shop_login_log';
-    protected $pk = 'login_log_id';
+    protected $name = 'staff_login_log';
+    protected $pk = 'id';
 
     /**
      * 结果兼容多语言
@@ -29,7 +29,7 @@ class LoginLog extends BaseModel
             'username' => $username,
             'ip' => $ip,
             'result' => $result,
-            'app_id' => $app_id
+            'uuid' => $app_id
         ]);
     }
 }

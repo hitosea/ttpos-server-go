@@ -22,9 +22,15 @@ install:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+	fi 
+	# 检查 .env 文件是否存在
+	if [ -f ".env" ]; then \
+		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
+		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
+		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
 	fi
 	# 启动容器
-	docker compose -p ttpos-server-go up -d;
+	docker compose -p ttpos-server-go up -d --build;
     # 初始化php项目
 	chmod +x ./.sh && ./.sh init
 

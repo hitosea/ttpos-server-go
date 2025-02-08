@@ -10,8 +10,8 @@ use app\common\model\BaseModel;
  */
 class Access extends BaseModel
 {
-    protected $name = 'shop_access';
-    protected $pk = 'access_id';
+    protected $name = 'access';
+    protected $pk = 'id';
 
     // 路由筛选名称
     const SHOP_ROUTE_NAME = '管理后台';
@@ -51,7 +51,7 @@ class Access extends BaseModel
         if (is_array($where)) {
             return static::where($where)->find();
         } else {
-            return static::where('access_id', '=', $where)->find();
+            return static::where('uuid', '=', $where)->find();
         }
     }
 
@@ -62,7 +62,7 @@ class Access extends BaseModel
     {
         $urls = [];
         foreach (static::getAll(1, $user_type, $supplier) as $item) {
-            in_array($item['access_id'], $accessIds) && $urls[] = $item['path'];
+            in_array($item['uuid'], $accessIds) && $urls[] = $item['path'];
         }
         return $urls;
     }
@@ -74,7 +74,7 @@ class Access extends BaseModel
     {
         $urls = [];
         foreach (static::getAll(1, $user_type, $supplier) as $item) {
-            in_array($item['access_id'], $accessIds) && $urls[] = $item['api_path'];
+            in_array($item['uuid'], $accessIds) && $urls[] = $item['api_path'];
         }
         return $urls;
     }
@@ -91,7 +91,7 @@ class Access extends BaseModel
             }
             $model = $model->where('is_supplier', '=', 1);
         }
-        return $model->where('access_id', 'in', $accessIds)
+        return $model->where('uuid', 'in', $accessIds)
             ->order(['sort' => 'asc', 'create_time' => 'asc'])
             ->select()?->toArray() ?: [];
     }
@@ -102,7 +102,7 @@ class Access extends BaseModel
     public static function getCashierAccessList($accessIds, $user_type, $supplier)
     {
         $model = (new static)::withoutGlobalScope();
-        return $model->where('access_id', 'in', $accessIds)
+        return $model->where('uuid', 'in', $accessIds)
             ->order(['sort' => 'asc', 'create_time' => 'asc'])
             ->select()?->toArray() ?: [];
     }
@@ -220,9 +220,9 @@ class Access extends BaseModel
     {
         $tree = array();
         foreach ($all as $k => $v) {
-            if ($v['parent_id'] == $parent_id) {
+            if ($v['parent_uuid'] == $parent_id) {
                 //父亲找到儿子
-                $v['children'] = $this->formatTreeData($all, $v['access_id']);
+                $v['children'] = $this->formatTreeData($all, $v['uuid']);
                 $tree[] = $v;
             }
         }
@@ -255,8 +255,8 @@ class Access extends BaseModel
         // 移除云上部署无自助餐权限
         // 暂时去掉外卖管理
         $array = array_filter($array, function ($value) {
-            return (!isset($value['access_id']) || ($value['access_id'] != 1711006072 && $value['access_id'] != 1711009130))
-                && ($value['access_id'] != 1626688443);
+            return (!isset($value['uuid']) || ($value['uuid'] != 1711006072 && $value['uuid'] != 1711009130))
+                && ($value['uuid'] != 1626688443);
         });
 
         $array = array_values($array);
@@ -273,61 +273,61 @@ class Access extends BaseModel
         $licenses = request()->licenses;
         foreach ($data as $key => $value) {
             // 暂时去掉外卖管理
-            if ($value['access_id'] == 1626688443) {
+            if ($value['uuid'] == 1626688443) {
                 continue;
             }
             // 授权无进销存权限
             if (isset($licenses['sale']) && $licenses['sale'] == 0) {
-                if ($value['access_id'] == 1711006072 || $value['access_id'] == 1711009130) {
+                if ($value['uuid'] == 1711006072 || $value['uuid'] == 1711009130) {
                     continue;
                 }
             }
             // 授权无会员权限
             if (isset($licenses['is_open_member']) && $licenses['is_open_member'] == 0) {
-                if ($value['access_id'] == 1636183779 || $value['access_id'] == 1704881218) {
+                if ($value['uuid'] == 1636183779 || $value['uuid'] == 1704881218) {
                     continue;
                 }
             }
             // 授权无平板点餐权限
             if (isset($licenses['is_open_tablet']) && $licenses['is_open_tablet'] == 0) {
-                if ($value['access_id'] == 87) {
+                if ($value['uuid'] == 87) {
                     continue;
                 }
             }
             // 授权无H5点餐权限
             if (isset($licenses['is_open_scan']) && $licenses['is_open_scan'] == 0) {
-                if ($value['access_id'] == 1724220505) {
+                if ($value['uuid'] == 1724220505) {
                     continue;
                 }
             }
             // 授权无点餐助手权限
             if (isset($licenses['is_open_assistant']) && $licenses['is_open_assistant'] == 0) {
-                if ($value['access_id'] == 1720753338) {
+                if ($value['uuid'] == 1720753338) {
                     continue;
                 }
             }
             // 授权无后厨权限
             if (isset($licenses['is_open_kitchen_kds']) && $licenses['is_open_kitchen_kds'] == 0) {
-                if ($value['access_id'] == 88) {
+                if ($value['uuid'] == 88) {
                     continue;
                 }
             }
             // 授权无自助餐权限
             if (isset($licenses['is_open_buffet']) && $licenses['is_open_buffet'] == 0) {
-                if ($value['access_id'] == 1708671616) {
+                if ($value['uuid'] == 1708671616) {
                     continue;
                 }
             }
             // 授权无扫码点餐接单权限
             if (isset($licenses['is_accept_scan_order']) && $licenses['is_accept_scan_order'] == 0) {
-                if ($value['access_id'] == 1724320522) {
+                if ($value['uuid'] == 1724320522) {
                     continue;
                 }
             }
             //
-            if ($value['parent_id'] == $pid) {
-                $re_data[$value['access_id']] = $value;
-                $re_data[$value['access_id']]['children'] = $this->recursiveMenuArray($data, $value['access_id']);
+            if ($value['parent_uuid'] == $pid) {
+                $re_data[$value['uuid']] = $value;
+                $re_data[$value['uuid']]['children'] = $this->recursiveMenuArray($data, $value['uuid']);
             } else {
                 continue;
             }

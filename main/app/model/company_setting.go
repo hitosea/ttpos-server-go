@@ -69,7 +69,6 @@ type CompanySetting struct {
 	ServiceMoney      float64 `gorm:"default:0.00;comment:服务费"`
 	AutoClose         int     `gorm:"default:1;comment:0定时清台1立即清台"`
 	CloseTime         int     `gorm:"default:0;comment:0分钟清台"`
-	CategorySet       int     `gorm:"default:10;comment:商品分类设置10同步主店20分店创建"`
 	IsDelete          int     `gorm:"default:0;comment:是否删除0，否1是"`
 	CompanyId         uint    `gorm:"default:0;comment:集团id"`
 	CreateTime        int64   `gorm:"autoCreateTime;comment:创建时间"`

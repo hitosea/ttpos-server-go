@@ -40,7 +40,7 @@ func NewBindRecordSrvImpl(bindRecordRepo repository.IBindRecordRepo, companySett
 }
 
 func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
-	if !slices.Contains([]string{constant.SOURCE_CASHIER, constant.SOURCE_TABLET, constant.SOURCE_KITCHEN, constant.SOURCE_ASSISTANT}, addReq.Source) ||
+	if !slices.Contains([]string{constant.SourceCashier, constant.SourceTablet, constant.SourceKitchen, constant.SourceAssistant}, addReq.Source) ||
 		addReq.CompanyId == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
 	}
@@ -86,10 +86,10 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		Limit uint
 	}
 	sources := map[string]Source{
-		constant.SOURCE_CASHIER:   {"收银机", uint(companySetting.CashLimit)},
-		constant.SOURCE_TABLET:    {"平板", uint(companySetting.TabletLimit)},
-		constant.SOURCE_KITCHEN:   {"厨显", uint(companySetting.KitchenLimit)},
-		constant.SOURCE_ASSISTANT: {"点餐助手", uint(companySetting.AssistantLimit)},
+		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit)},
+		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit)},
+		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit)},
+		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit)},
 	}
 	for sourceKey, source := range sources {
 		if sourceKey != addReq.Source {
@@ -101,7 +101,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		}
 	}
 
-	if slices.Contains(constant.BRANDS_PRINTS, addReq.Brand) {
+	if slices.Contains(constant.BrandsPrints, addReq.Brand) {
 		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyId, i18n.GetAcceptLanguage(cc), cc)
 		if err != nil {
 			return err

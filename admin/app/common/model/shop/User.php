@@ -74,12 +74,12 @@ class User extends BaseModel
     /**
      * 验证用户名是否重复
      */
-    public static function checkExist($user_name)
+    public static function checkExist($username)
     {
         // 区分字母大小写
         return !!static::withoutGlobalScope()->alias('user')
             ->leftJoin('company_setting su', "su.company_uuid = user.company_uuid")
-            ->whereRaw('BINARY user.username = :username', ['username' => $user_name])
+            ->whereRaw('BINARY user.username = :username', ['username' => $username])
             ->value('user.uuid');
     }
 
