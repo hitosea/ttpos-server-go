@@ -392,6 +392,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-开启 0-关闭',
     parent_uuid INT DEFAULT NULL COMMENT '父级ID',
+    is_special INT NOT NULL DEFAULT 0 COMMENT '特殊分类, 1-是 0-否',
     category_key VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关键字',
     order_by INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -410,19 +411,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_unit` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品单位表';
-
-CREATE TABLE IF NOT EXISTS `ttpos_product_special_category` (
-    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品特殊类别ID',
-    status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-开启 0-关闭',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
-    multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    order_by INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品特殊类别表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_printer_tag` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -508,6 +496,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute_group` (
     is_must TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否必选, 0-否 1-是',
     max_selection INT(11) NOT NULL DEFAULT 0 COMMENT '最大选择数量',
     product_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品包ID',
+    product_attribute_group_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品属性组ID',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
