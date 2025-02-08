@@ -11,7 +11,7 @@ type Message struct {
 	Value string
 }
 
-// 使用有道翻译API翻译文本
+// YoudaoResponse 使用有道翻译API翻译文本
 type YoudaoResponse struct {
 	ErrorCode   string   `json:"errorCode"`
 	Query       string   `json:"query"`

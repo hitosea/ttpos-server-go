@@ -33,8 +33,6 @@ var rootCommand = &cobra.Command{
 		if err := logger.Init(); err != nil {
 			log.Fatalf("Failed to initialize logger: %v", err)
 		}
-		defer logger.Logger.Sync()
-
 		// 初始化国际化
 		i18n.Init()
 
@@ -47,6 +45,7 @@ var rootCommand = &cobra.Command{
 		database.InitSonyFlakeId()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		defer logger.Logger.Sync()
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
 

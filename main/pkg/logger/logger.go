@@ -25,7 +25,7 @@ func Init() error {
 
 	// 获取当前日期作为日志文件名
 	now := time.Now()
-	logfile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s.log", now.Format("2006-01-02")))
+	logfile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s.log", now.Format(time.DateOnly)))
 
 	// 配置 lumberjack
 	hook := &lumberjack.Logger{
