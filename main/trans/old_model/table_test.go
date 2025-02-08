@@ -7,28 +7,28 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-func TestProductUnit(t *testing.T) {
+func TestTable(t *testing.T) {
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
-	productUnitService := ProductUnitService{db: db}
-	productUnitList, err := productUnitService.GetProductUnitList()
+	tableService := TableService{db: db}
+	tableList, err := tableService.GetTableList()
 	if err != nil {
 		panic(err)
 	}
-	json, err := json.Marshal(productUnitList)
+	json, err := json.Marshal(tableList)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(json))
 }
 
-func TestConvertProductUnit(t *testing.T) {
-	testConvertProductUnit()
+func TestConvertTable(t *testing.T) {
+	testConvertTable()
 }
 
-func testConvertProductUnit() {
+func testConvertTable() {
 	InitializeSonyFlakeId()
 
 	database.InitSonyFlakeId()
@@ -42,10 +42,10 @@ func testConvertProductUnit() {
 	if err != nil {
 		panic(err)
 	}
-	productUnitService := ProductUnitService{db: db, targetDB: targetDB}
-	err = productUnitService.ConvertProductUnit()
+	tableService := TableService{db: db, targetDB: targetDB}
+	err = tableService.ConvertTable()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("product_unit转换完成")
+	fmt.Println("table转换完成")
 }

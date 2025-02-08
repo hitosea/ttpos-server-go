@@ -7,28 +7,28 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-func TestProductUnit(t *testing.T) {
+func TestTableArea(t *testing.T) {
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {
 		panic(err)
 	}
-	productUnitService := ProductUnitService{db: db}
-	productUnitList, err := productUnitService.GetProductUnitList()
+	tableAreaService := TableAreaService{db: db}
+	tableAreaList, err := tableAreaService.GetTableAreaList()
 	if err != nil {
 		panic(err)
 	}
-	json, err := json.Marshal(productUnitList)
+	json, err := json.Marshal(tableAreaList)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(json))
 }
 
-func TestConvertProductUnit(t *testing.T) {
-	testConvertProductUnit()
+func TestConvertTableArea(t *testing.T) {
+	testConvertTableArea()
 }
 
-func testConvertProductUnit() {
+func testConvertTableArea() {
 	InitializeSonyFlakeId()
 
 	database.InitSonyFlakeId()
@@ -42,10 +42,10 @@ func testConvertProductUnit() {
 	if err != nil {
 		panic(err)
 	}
-	productUnitService := ProductUnitService{db: db, targetDB: targetDB}
-	err = productUnitService.ConvertProductUnit()
+	tableAreaService := TableAreaService{db: db, targetDB: targetDB}
+	err = tableAreaService.ConvertTableArea()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("product_unit转换完成")
+	fmt.Println("table_area转换完成")
 }

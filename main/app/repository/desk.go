@@ -1,0 +1,58 @@
+package repository
+
+import (
+	"time"
+	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
+)
+
+// IDeskRepo 桌台
+type IDeskRepo interface {
+	GetDeskList() ([]model.Desk, error)
+	UpdateDesk(uuid uint, desk model.Desk) error
+	CreateDesk(desk model.Desk) (uint, error)
+	DeleteDesk(uuid uint) error
+}
+
+func NewDeskRepo(db *gorm.DB) IDeskRepo {
+	return NewDeskRepoImpl(db)
+}
+
+// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+func NewDeskRepoImpl(db *gorm.DB) *DeskRepoImpl {
+	return &DeskRepoImpl{db: db}
+}
+
+type DeskRepoImpl struct {
+	db *gorm.DB
+}
+
+// GetDeskList 获取桌台列表，排除逻辑删除的桌台
+func (r *DeskRepoImpl) GetDeskList() ([]model.Desk, error) {
+	var desks []model.Desk
+	err := r.db.Model(&model.Desk{}).Where("delete_time = ?", 0).Find(&desks).Error
+	return desks, err
+}
+
+// UpdateDesk 更新桌台
+func (r *DeskRepoImpl) UpdateDesk(uuid uint, desk model.Desk) error {
+	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", uuid).Updates(desk).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateDesk 创建桌台
+func (r *DeskRepoImpl) CreateDesk(desk model.Desk) (uint, error) {
+	// 创建桌台
+	if err := r.db.Create(&desk).Error; err != nil {
+		return 0, err
+	}
+	return desk.Uuid, nil
+}
+
+// DeleteProductFlavor 软删除商品规格
+func (r *DeskRepoImpl) DeleteDesk(id uint) error {
+	return r.db.Model(&model.Desk{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
