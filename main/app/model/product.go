@@ -117,7 +117,6 @@ type ProductPackage struct {
 	StockDeductMethod     uint   `gorm:"default:0;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
 	UnitUuid              uint   `gorm:"default:0;comment:'单位UUID'"`
 	DineTaxUuid           uint   `gorm:"default:0;comment:'堂食税UUID'"`
-	CategoryKey           string `gorm:"default:'';comment:'类别关键字'"`
 	CategoryUuid          uint   `gorm:"default:0;comment:'类别UUID'"`
 	TakeoutTaxUuid        uint   `gorm:"default:0;comment:'外卖税UUID'"`
 	SpecialCategoryUuid   uint   `gorm:"default:0;comment:'特殊类别UUID'"`
