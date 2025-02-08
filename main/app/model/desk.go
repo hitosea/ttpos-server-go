@@ -39,4 +39,5 @@ type Desk struct {
 	CreateTime int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
+	// order      SaleOrder `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }

@@ -1,4 +1,4 @@
-package other
+package cashier
 
 import (
 	"net/http"
@@ -22,19 +22,6 @@ import (
 type Handler struct {
 	cashierSrv cashier.ICashierSrv
 	authSrv    service.IAuthSrv
-}
-
-// GetCashierDeskList 处理获取收银台列表
-// @Summary 获取收银台列表
-// @Description 获取收银台列表
-// @Tags 收银端
-// @Accept json
-// @Produce json
-// @Success 200 {array} nil "收银台列表"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/list [get]
-func (h *Handler) GetCashierDeskList(c *gin.Context) {
-	// 处理获取收银台列表的逻辑
 }
 
 // GetCashierDeskRegionAndType 处理获取收银台的区域和类型
@@ -306,19 +293,6 @@ func (h *Handler) GetCashierProductInfo(c *gin.Context) {
 	// 处理获取收银产品信息的逻辑
 }
 
-// GetCashierProductList 处理获取收银产品列表
-// @Summary 获取收银产品列表
-// @Description 获取收银产品列表
-// @Tags 收银端
-// @Accept json
-// @Produce json
-// @Success 200 {array} nil "产品列表"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/product/list [get]
-func (h *Handler) GetCashierProductList(c *gin.Context) {
-	// 处理获取收银产品列表的逻辑
-}
-
 // PostCashierProductionCreate 处理创建收银生产
 // @Summary 创建收银生产
 // @Description 创建收银生产
@@ -491,14 +465,12 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 
 	// 需要认证
-	router.GET("/desk/list", wrapper.GetCashierDeskList)
 	router.GET("/desk/region_and_type", wrapper.GetCashierDeskRegionAndType)
 	router.GET("/member/info", wrapper.GetCashierMemberInfo)
 	router.GET("/member/search", wrapper.GetCashierMemberSearch)
 	router.GET("/payment/type_list", wrapper.GetCashierPaymentTypeList)
 	router.GET("/product/category", wrapper.GetCashierProductCategory)
 	router.GET("/product/info", wrapper.GetCashierProductInfo)
-	router.GET("/product/list", wrapper.GetCashierProductList)
 	router.POST("/production/create", wrapper.PostCashierProductionCreate)
 	router.POST("/production/return", wrapper.PostCashierProductionReturn)
 	router.GET("/production/return/return_food_reason", wrapper.GetCashierProductionReturnReturnFoodReason)

@@ -9,7 +9,8 @@ import (
 
 // IDeskRepo 桌台
 type IDeskRepo interface {
-	GetDeskList() ([]model.Desk, error)
+	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	UpdateDesk(uuid uint, desk model.Desk) error
 	CreateDesk(desk model.Desk) (uint, error)
 	DeleteDesk(uuid uint) error
@@ -29,10 +30,40 @@ type DeskRepoImpl struct {
 }
 
 // GetDeskList 获取桌台列表，排除逻辑删除的桌台
-func (r *DeskRepoImpl) GetDeskList() ([]model.Desk, error) {
+func (r *DeskRepoImpl) GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error) {
 	var desks []model.Desk
-	err := r.db.Model(&model.Desk{}).Where("delete_time = ?", 0).Find(&desks).Error
-	return desks, err
+	var total int64
+
+	query := r.db.Model(&model.Desk{}).Where("delete_time = ?", 0)
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 获取分页数据
+	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
+	return desks, total, err
+}
+
+// GetClientDeskList 获取客户端桌台列表，排除逻辑删除的桌台，排除被禁用的桌台
+func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error) {
+	var desks []model.Desk
+	var total int64
+
+	// todo 未完成
+	// .Preload("Type")
+	query := r.db.Model(&model.Desk{}).Where("delete_time = ?", 0).Where("is_disable = ?", 0)
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 获取分页数据
+	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
+
+	return desks, total, err
 }
 
 // UpdateDesk 更新桌台
