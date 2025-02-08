@@ -39,19 +39,19 @@ class UploadFileToGoogle extends Command
         dump("---------------------------------------------------");
         $uploadFiles = Db::name('upload_file')
             ->where('storage', 'local')
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNull('url_param')->whereOr('url_param', '');
             })
             ->where('is_delete', 0)
             ->select();
-            
+
         // 批量上传文件到谷歌云
         foreach ($uploadFiles as $file) {
             $imageSrc = root_path('public/uploads') . $file['save_name'];
             $objectPath = $catalogue . '/' . $file['save_name'];
             $object = $storage->bucket($bucket)->object($objectPath);
             $url = $object->signedUrl(new \DateTime('+100 years'));
-            // 
+            //
             if (!$object->exists()) {
                 if (file_exists($imageSrc)) {
                     $storage->bucket($bucket)->upload(file_get_contents($imageSrc), [
@@ -63,7 +63,7 @@ class UploadFileToGoogle extends Command
                         'url_param' =>  explode('?', $url)[1],
                         'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
                     ]);
-                    // 
+                    //
                     dump("文件处理成功: " . $imageSrc);
                 }
             } else {
@@ -72,7 +72,7 @@ class UploadFileToGoogle extends Command
                     'url_param' =>  explode('?', $url)[1],
                     'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
                 ]);
-                // 
+                //
                 dump("文件处理成功: " . $imageSrc);
             }
         }
@@ -84,9 +84,9 @@ class UploadFileToGoogle extends Command
             dump("---------------------------------------------------");
             dump("---------------处理商家$appId------------------");
             dump("---------------------------------------------------");
-            // 
+            //
             $uploadFiles = (new UploadFile([], $appId))->where('storage', 'local')
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->whereNull('url_param')->whereOr('url_param', '');
                 })
                 ->where('is_delete', 0)
@@ -97,7 +97,7 @@ class UploadFileToGoogle extends Command
                 $objectPath = $catalogue . '/' . $file['save_name'];
                 $object = $storage->bucket($bucket)->object($objectPath);
                 $url = $object->signedUrl(new \DateTime('+100 years'));
-                // 
+                //
                 if (!$object->exists()) {
                     if (file_exists($imageSrc)) {
                         $storage->bucket($bucket)->upload(file_get_contents($imageSrc), [
@@ -105,20 +105,20 @@ class UploadFileToGoogle extends Command
                             'predefinedAcl' => 'publicRead' // 设置为公开访问
                         ]);
                         // 更新数据库中的存储类型为google
-                        $file->where('app_id', $appId)->where('file_id', $file['file_id'])->update([
+                        $file->where('company_uuid', $appId)->where('file_id', $file['file_id'])->update([
                             'url_param' =>  explode('?', $url)[1],
                             'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
                         ]);
-                        // 
+                        //
                         dump("文件处理成功: " . $imageSrc);
                     }
                 } else {
                     // 更新数据库中的存储类型为google
-                    $file->where('app_id', $appId)->where('file_id', $file['file_id'])->update([
+                    $file->where('company_uuid', $appId)->where('file_id', $file['file_id'])->update([
                         'url_param' =>  explode('?', $url)[1],
                         'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
                     ]);
-                    // 
+                    //
                     dump("文件处理成功: " . $imageSrc);
                 }
             }

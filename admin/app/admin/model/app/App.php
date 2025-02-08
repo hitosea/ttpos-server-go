@@ -4,11 +4,12 @@ namespace app\admin\model\app;
 
 use think\facade\Env;
 use think\facade\Validate;
+use app\admin\model\CompanyStaff;
 use app\common\model\store\PayType;
 use hg\apidoc\annotation as Apidoc;
-use app\admin\model\Shop as ShopUser;
 use app\common\model\app\App as AppModel;
 use app\common\enum\order\OrderPayTypeEnum;
+use app\common\model\shop\User  as ShopStaffModel;
 use app\admin\model\supplier\Supplier as SupplierModel;
 
 class App extends AppModel
@@ -64,6 +65,7 @@ class App extends AppModel
             "su.address",
             "su.assistant_limit",
             //
+            "su.company_uuid as shop_supplier_id",
             "su.is_open_member",
             "su.is_open_tablet",
             "su.is_open_scan",
@@ -78,7 +80,7 @@ class App extends AppModel
             "su.timezone",
         ];
         //
-        $countWhere = 'where su.is_delete = 0';
+        $countWhere = 'where 1 = 1';
         if ($keyword) {
             $countWhere .= ($countWhere ? ' and' : ' where') . ' (su.name like "%' . $keyword . '%" OR su.app_id like "%' . $keyword . '%")';
         }
@@ -94,8 +96,8 @@ class App extends AppModel
 
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
-                    $qq->like('su.name', $keyword);
-                    $qq->orLike('su.company_uuid', $keyword);
+                    $qq->like('app.name', $keyword);
+                    $qq->orLike('app.uuid', $keyword);
                 });
             })
             ->when($status > 0, function ($q) use ($status) {
@@ -143,12 +145,12 @@ class App extends AppModel
      */
     public function add($data)
     {
-        if (ShopUser::checkPhoneExist($data['link_phone'])) {
+        if (CompanyStaff::checkPhoneExist($data['link_phone'])) {
             $this->error = '联系电话已存在';
             return false;
         }
 
-        if (ShopUser::checkExist($data['user_name'])) {
+        if (CompanyStaff::checkExist($data['user_name'])) {
             $this->error = '超管邮箱已存在';
             return false;
         }
@@ -199,7 +201,7 @@ class App extends AppModel
             return false;
         }
         $authStartTime = $data['auth_start_time'] = strtotime($data['auth_start_time']) ?? 0;
-        $appId = $this->uuid;
+        $companyUuid = $this->uuid;
         //
         $save_data = [
             'name' => $data['name'] ?? '',
@@ -224,16 +226,15 @@ class App extends AppModel
                 $user_data['password'] = salt_hash($data['password']);
             }
             //
-            $shop_user = ShopUser::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->find();
-            //
+            $shop_user = CompanyStaff::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->find();
             if ($shop_user['phone'] != $data['link_phone']) {
-                if (ShopUser::checkPhoneExist($data['link_phone'])) {
+                if (CompanyStaff::checkPhoneExist($data['link_phone'])) {
                     $this->error = '联系电话已存在';
                     return false;
                 }
             }
             if ($shop_user['username'] != $data['user_name']) {
-                if (ShopUser::checkExist($data['user_name'])) {
+                if (CompanyStaff::checkExist($data['user_name'])) {
                     $this->error = '超管邮箱已存在';
                     return false;
                 }
@@ -245,13 +246,21 @@ class App extends AppModel
             // 用户
             $shop_user->save($user_data);
 
+            // 同步商家会员信息
+            $staff['username'] = $shop_user->getData('username');
+            $staff['phone'] = $shop_user->getData('phone');
+            if (isset($data['password']) && $data['password'] != '') {
+                $staff['password'] = salt_hash($data['password']);
+            }
+            (new ShopStaffModel([], $companyUuid))->setAppId($companyUuid)->where('uuid', $shop_user->uuid)->find()?->save($staff);
+
             // 商户
             if (isset($data['logo'])) unset($data['logo']);
             SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
 
-            // 会员设置 - 支付方式关联
+            // todo 会员设置 - 支付方式关联
             // if (isset($data['is_open_member'])) {
-            //     (new PayType([], $appId))->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
+            //     (new PayType([], $companyUuid))->setAppId($companyUuid)->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
             // }
 
             //

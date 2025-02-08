@@ -582,10 +582,16 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '会员等级ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '等级名称',
     multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    open_money TINYINT(3) DEFAULT 0 COMMENT '是否开放0，否1是',
+    upgrade_money INT(11) NOT NULL DEFAULT 0 COMMENT '升级条件',
+    open_points TINYINT(3) DEFAULT 0 COMMENT '积分是否开放0否1是',
+    upgrade_points INT(11) DEFAULT 0 COMMENT '累计积分升级',
+    open_invite TINYINT(3) DEFAULT 0 COMMENT '邀请是否开放0否1是',
+    upgrade_invite INT(11) DEFAULT 0 COMMENT '邀请人数升级',
+    discount TINYINT(3) NOT NULL DEFAULT 0 COMMENT '等级权益,百分比',
     priority INT(11) NOT NULL DEFAULT 0 COMMENT '等级权重',
-    discount TINYINT(1) NOT NULL DEFAULT 0 COMMENT '折扣,单位%',
-    upgrade_method TINYINT(2) NOT NULL DEFAULT 0 COMMENT '升级方法, 0-积分 1-消费金额',
-    upgrade_value INT(11) NOT NULL DEFAULT 0 COMMENT '升级所需值',
+    is_default TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认, 1-是 0-否',
+    remark VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
@@ -800,6 +806,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机类型表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
+  id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+  uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机模板ID',
+  name varchar(255) DEFAULT '' COMMENT '打印名称',
+  template int(11) DEFAULT 1 COMMENT '模板选择',
+  create_time int(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+  update_time int(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+  delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+  UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印机模板表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

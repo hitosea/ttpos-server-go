@@ -14,6 +14,7 @@ use base\imgs\ImgFont;
 use GuzzleHttp\Client;
 use think\facade\Lang;
 use app\job\event\Sync;
+use help\SnowflakeHelp;
 use think\facade\Cache;
 use help\EncryptionHelp;
 use think\console\Input;
@@ -54,23 +55,36 @@ class Test extends Command
 
     protected function execute(Input $input, Output $output)
     {
-       
-        WebSocketService::publish('1724054105', 'cashier' , WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
+        // 测试雪花ID生成是否重复
+        $snowflake = new SnowflakeHelp(1);
+        dump($snowflake->next());
+        die;
+
+        // 使用项目根目录路径
+        $rootPath = root_path();
+        // 读取输入SQL文件
+        $inputSql = file_get_contents($rootPath . 'jjjfood_shop_access.sql');
+        $outputSql = $this->convertSqlFormat($inputSql);
+        // 保存到数据库初始化文件目录
+        $outputPath = $rootPath . 'out_jjjfood_shop_access.sql';
+        file_put_contents($outputPath, $outputSql);
+        die;
+
+        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
             'ddd' => '1',
             'dddd' => '51325121233',
             'ddddddd' => 'test',
         ]]);
-        WebSocketService::publish('1724054105', 'cashier' , WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
+        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
             'ddd' => '1',
             'dddd' => '51325121231',
             'ddddddd' => 'test',
         ]]);
-        WebSocketService::publish('1724054105', 'cashier' , WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
+        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
             'ddd' => '1',
             'dddd' => '51325121235',
             'ddddddd' => 'test',
         ]]);
-        
 
         die;
         //
@@ -155,13 +169,13 @@ class Test extends Command
             dump("连接打印机出错");
             die;
         }
-        // 初始化打印机 
+        // 初始化打印机
         fwrite($fp, "\x1B\x40");
         // 文本打印
         fwrite($fp, hex2bin($orderData));
         //
         fwrite($fp, "\x1d\x56\x00");
-        // 
+        //
         // 关闭打印机连接
         fclose($fp);
 
@@ -176,7 +190,7 @@ class Test extends Command
         $printer->printAndExitPageMode();
         $printer->lineFeed(6);
         $printer->cutPaper(false);
-        // 
+        //
         $fp = @fsockopen('192.168.100.180', 9100, $errno, $errstr, 3);
         if ($fp === false) { //连接打印机出错
             dump("连接打印机出错");
@@ -198,5 +212,68 @@ class Test extends Command
                 fwrite($fp, iconv("UTF-8", "GBK//IGNORE",  $segment));
             }
         }
+    }
+
+    function convertSqlFormat($input)
+    {
+        // 读取输入SQL
+        $lines = explode(";\n", trim($input));
+        $output = [];
+
+        foreach ($lines as $line) {
+            if (empty(trim($line))) continue;
+
+            // 提取VALUES部分
+            preg_match('/\((.*?)\) VALUES \((.*?)\)/', $line, $matches);
+            if (empty($matches)) continue;
+
+            $columns = array_map('trim', explode(',', $matches[1]));
+            $values = str_getcsv(str_replace('\'', '"', $matches[2]));
+
+            // 创建新的数据映射
+            $data = array_combine($columns, $values);
+
+            // 构建新的SQL
+            $newColumns = [
+                'id' => $data['`access_id`'],
+                'uuid' => $data['`access_id`'],
+                'name' => $data['`name`'],
+                'path' => $data['`path`'],
+                'api_path' => $data['`api_path`'],
+                'parent_uuid' => $data['`parent_id`'],
+                'sort' => $data['`sort`'],
+                'icon' => $data['`icon`'],
+                'redirect_name' => $data['`redirect_name`'],
+                'is_route' => $data['`is_route`'],
+                'is_menu' => $data['`is_menu`'],
+                'is_show' => $data['`is_show`'],
+                'plus_category_uuid' => $data['`plus_category_id`'],
+                'remark' => $data['`remark`'],
+                'is_supplier' => $data['`is_supplier`'],
+                'create_time' => $data['`create_time`'],
+                'update_time' => $data['`update_time`']
+            ];
+
+            // 构建新的INSERT语句
+            $newSql = "INSERT INTO `ttpos_access` (`" . implode("`, `", array_keys($newColumns)) . "`) VALUES (";
+
+            // 根据字段类型决定是否添加引号
+            $formattedValues = array_map(function ($key, $value) {
+                // 数字类型字段
+                $numericFields = ['id', 'uuid', 'parent_uuid', 'sort', 'is_route', 'is_menu', 'is_show', 'plus_category_uuid', 'is_supplier', 'create_time', 'update_time'];
+                if (in_array($key, $numericFields)) {
+                    return trim($value, "' ");
+                }
+                // 字符串类型字段
+                return "'" . trim($value, "'") . "'";
+            }, array_keys($newColumns), array_values($newColumns));
+
+            $newSql .= implode(", ", $formattedValues);
+            $newSql .= ");";
+
+            $output[] = $newSql;
+        }
+
+        return implode("\n", $output);
     }
 }

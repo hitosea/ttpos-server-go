@@ -124,9 +124,7 @@ class PayType extends BaseModel
      */
     public static function listAll($shopSupplierId = 0, $appId = 0)
     {
-        return self::where('shop_supplier_id', $shopSupplierId)
-            ->where('app_id', $appId)
-            ->orderRaw('CAST(sort AS UNSIGNED)')
+        return self::orderRaw('CAST(sort AS UNSIGNED)')
             ->order('create_time', 'desc')
             ->select()
             ->toArray();

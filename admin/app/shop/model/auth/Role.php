@@ -71,7 +71,7 @@ class Role extends RoleModel
         try {
             $roleAccessModel = new RoleAccess();
             // 检查是否存在
-            $role = self::where('role_name', $data['role_name'])->where('app_id', $data['app_id'])->find();
+            $role = self::where('role_name', $data['role_name'])->find();
             if ($role) {
                 $role->save([
                     'role_name' => $data['role_name'],
@@ -113,7 +113,7 @@ class Role extends RoleModel
      */
     public function add($data)
     {
-        $count = self::where('role_name', $data['role_name'])->where('app_id', self::$app_id)->count();
+        $count = self::where('role_name', $data['role_name'])->count();
         if ($count > 0) {
             $this->error = '角色名称已存在';
             return false;
@@ -154,7 +154,7 @@ class Role extends RoleModel
     public function edit($data)
     {
         $role_id = $data['role_id'] ?? 0;
-        $count = self::where('role_name', $data['role_name'])->where('app_id', self::$app_id)->where('role_id', '<>', $role_id)->count();
+        $count = self::where('role_name', $data['role_name'])->where('role_id', '<>', $role_id)->count();
         if ($count > 0) {
             $this->error = '角色名称已存在';
             return false;

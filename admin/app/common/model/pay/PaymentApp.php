@@ -25,7 +25,7 @@ class PaymentApp extends BaseModel
      */
     public static function detail($shop_supplier_id)
     {
-        return self::where('shop_supplier_id', '=', $shop_supplier_id)->find() ?: ['ll_white_ip' => env('PAY_SERVICE_IP') ?: ''];
+        return self::where('company_uuid', '=', $shop_supplier_id)->find() ?: ['ll_white_ip' => env('PAY_SERVICE_IP') ?: ''];
     }
 
     /**
@@ -45,7 +45,7 @@ class PaymentApp extends BaseModel
             $this->error = '支付服务环境配置错误';
             return false;
         }
-    
+
         // 加密数据
         try {
             $encryptedData = $this->encryptData($param, $pbk, $ip);
@@ -117,8 +117,9 @@ class PaymentApp extends BaseModel
     {
         $model = new self();
         $param['ll_white_ip'] = $ip;
+        $param['company_uuid'] = $param['shop_supplier_id'] ?? 0;
 
-        $existingRecord = $model->where('shop_supplier_id', $param['shop_supplier_id'])->find();
+        $existingRecord = $model->where('company_uuid', $param['shop_supplier_id'])->find();
         // 确保 create_time 是时间戳
         $create_time = $existingRecord['create_time'] ?? time();
         if (!is_numeric($create_time)) {

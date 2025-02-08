@@ -68,7 +68,7 @@ class App extends BaseModel
      */
     public function supplier()
     {
-        return $this->hasOne(Supplier::class, 'company_uuid', 'id');
+        return $this->hasOne(Supplier::class, 'company_uuid', 'uuid');
     }
 
     /**
@@ -76,7 +76,7 @@ class App extends BaseModel
      */
     public function suppliers()
     {
-        return $this->hasMany(Supplier::class, 'parent_id', 'id');
+        return $this->hasMany(Supplier::class, 'parent_uuid', 'uuid');
     }
 
     /**
@@ -84,7 +84,7 @@ class App extends BaseModel
      */
     public function shopUsers()
     {
-        return $this->hasMany(User::class, 'company_uuid', 'id');
+        return $this->hasMany(User::class, 'company_uuid', 'uuid');
     }
 
     /**
@@ -126,8 +126,7 @@ class App extends BaseModel
      */
     public function updateStatus()
     {
-        $res = $this->allowField(['status', 'is_recycle'])->save([
-            'is_recycle' => $this['is_recycle'] == 1 ? 0 : 1,
+        $res = $this->allowField(['status'])->save([
             'status' => $this['status'] == 1 ? 0 : 1,
         ]);
         return $res;
@@ -148,9 +147,7 @@ class App extends BaseModel
      */
     public static function getAll()
     {
-        return (new self())->where('is_delete', '=', 0)
-            ->where('is_recycle', '=', 0)
-            ->select();
+        return (new self())->select();
     }
 
     /**

@@ -87,7 +87,7 @@ class Buffet extends Controller
                 return $this->renderError('顾客类型名称已存在，请重新输入');
             }
             // 有多少个顾客类型
-            $oldCount = $customerCommonModel->where('app_id', '=', $this->store['app']['app_id'])->where('status', '=', 1)->count();
+            $oldCount = $customerCommonModel->where('status', '=', 1)->count();
             // 遍历除去删除的顾客类型 不判断数量
             $deleteCount = 0;
             $addCount = 0;

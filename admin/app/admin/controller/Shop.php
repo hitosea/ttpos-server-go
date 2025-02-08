@@ -237,7 +237,7 @@ class Shop extends Controller
     {
         $param = $validate->goCheck('id');
         /** @var SupplierModel $model */
-        $model = SupplierModel::where('app_id', $param['app_id'])->find();
+        $model = SupplierModel::where('company_uuid', $param['app_id'])->find();
         if (!$model->updateSaleStock()) {
             return $this->renderError('操作失败');
         }
@@ -254,7 +254,7 @@ class Shop extends Controller
     {
         $param = $validate->goCheck('id');
         /** @var SupplierModel $model */
-        $model = SupplierModel::where('app_id', $param['app_id'])->find();
+        $model = SupplierModel::where('company_uuid', $param['app_id'])->find();
         if (!$model->updateReserve()) {
             return $this->renderError('操作失败');
         }
