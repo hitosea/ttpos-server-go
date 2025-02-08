@@ -1,16 +1,16 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"slices"
 	"time"
+	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/resp/cashier_resp"
+	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -26,7 +26,7 @@ import (
 type IAuthSrv interface {
 	Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
 	Logout(cc *gin.Context) error
-	Info(cc *gin.Context) (cashier_resp.Info, error)
+	Base(cc *gin.Context) (cashier_resp.Base, error)
 	AuthenticateStaff(source string, companyId, staffId uint, url string) (model.Company, model.CompanySetting, model.Staff, error)
 }
 
@@ -113,6 +113,9 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.ID, staff.CompanyId)
+	if err != nil {
+		return token, err
+	}
 	if len(permissions) == 0 {
 		return token, errors.New("当前无权限，请联系管理员")
 	}
@@ -176,17 +179,40 @@ func (s *AuthSrv) Logout(cc *gin.Context) error {
 	return s.bindRecordSrv.Unbind(companyId, constant.SourceCashier, staff.BindKey, staff.ID)
 }
 
-// Info 获取信息
-func (s *AuthSrv) Info(cc *gin.Context) (cashier_resp.Info, error) {
-
-	if val, exists := cc.Get(jwt.CompanySetting); exists {
-		if companySetting, ok := val.(model.CompanySetting); ok {
-			cccccc, _ := json.Marshal(companySetting)
-			fmt.Println(string(cccccc))
-		}
+// Base 获取基本信息
+func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
+	company := helper.GetCompany(cc)
+	staff := helper.GetStaff(cc)
+	var (
+		source   = cc.GetString(jwt.Source)
+		deviceId = cc.GetString(jwt.DeviceId)
+	)
+	deviceRemark := s.bindRecordSrv.GetRemark(company.ID, source, deviceId)
+	// 判断权限
+	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.ID, staff.CompanyId)
+	if err != nil {
+		return cashier_resp.Base{}, err
 	}
-
-	return cashier_resp.Info{}, nil
+	if len(permissions) == 0 {
+		return cashier_resp.Base{}, errors.New("当前无权限，请联系管理员")
+	}
+	languageList, _ := s.settingSrv.GetStoreLanguageList(company.ID, i18n.GetAcceptLanguage(cc), cc)
+	allSettings, _ := s.settingSrv.GetAll(company.ID, i18n.GetAcceptLanguage(cc), languageList, cc)
+	return cashier_resp.Base{
+		Username:     staff.Username,
+		CashierId:    staff.ID,
+		DeviceId:     deviceId,
+		DeviceRemark: deviceRemark,
+		Cashier:      allSettings[constant.SettingCashier].(setting2.Cashier),
+		Business:     allSettings[constant.SettingBusiness].(setting2.Business),
+		Buffet:       allSettings[constant.SettingBuffet].(setting2.Buffet),
+		Currency:     allSettings[constant.SettingCurrency].(setting2.Currency),
+		Permissions:  permissions,
+		Company: cashier_resp.Company{
+			ID:   company.ID,
+			Name: company.Name,
+		},
+	}, nil
 }
 
 // AuthenticateStaff 认证登录员工
@@ -226,13 +252,14 @@ func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url 
 	}
 	if _, exists := sourceMap[source]; exists {
 		// 判断权限
-		permissions, err := s.roleAccessSrv.GetApiPermission(staff.ID, staff.CompanyId)
+		_, err := s.roleAccessSrv.GetApiPermission(staff.ID, staff.CompanyId)
 		if err != nil {
 			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
 		}
-		if !slices.Contains(permissions, url) {
-			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
-		}
+		// ToDo 记得开放
+		//if !slices.Contains(permissions, url) {
+		//	return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+		//}
 	}
 
 	return company, companySetting, staff, nil

@@ -1,15 +1,6 @@
 basePath: /
 definitions:
-  cashier_resp.Company:
-    properties:
-      id:
-        description: 商家ID
-        type: integer
-      name:
-        description: 商家名称
-        type: string
-    type: object
-  cashier_resp.Info:
+  cashier_resp.Base:
     properties:
       buffet:
         allOf:
@@ -26,10 +17,6 @@ definitions:
       cashier_id:
         description: 收银员ID
         type: integer
-      cloud_basic:
-        allOf:
-        - $ref: '#/definitions/setting.CloudBasic'
-        description: 云端基础信息
       company:
         allOf:
         - $ref: '#/definitions/cashier_resp.Company'
@@ -51,6 +38,15 @@ definitions:
         type: array
       username:
         description: 登录账号
+        type: string
+    type: object
+  cashier_resp.Company:
+    properties:
+      id:
+        description: 商家ID
+        type: integer
+      name:
+        description: 商家名称
         type: string
     type: object
   cashier_resp.Permission:
@@ -834,21 +830,6 @@ definitions:
       name:
         type: string
     type: object
-  setting.CloudBasic:
-    properties:
-      brand_logo:
-        type: string
-      brand_logo_long:
-        type: string
-      brand_name:
-        type: string
-      browser_logo:
-        type: string
-      browser_title:
-        type: string
-      expiration_reminder:
-        type: integer
-    type: object
   setting.Currency:
     properties:
       is_open:
@@ -979,6 +960,26 @@ paths:
       summary: 更新公司
       tags:
       - 公司
+  /cashier/base:
+    get:
+      consumes:
+      - application/json
+      description: 收银端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/cashier_resp.Base'
+              type: object
+      summary: 收银端信息
+      tags:
+      - 收银端
   /cashier/bill/cancel/{id}:
     delete:
       consumes:
@@ -1482,26 +1483,6 @@ paths:
         "404":
           description: 未找到
       summary: 获取收银台的区域和类型
-      tags:
-      - 收银端
-  /cashier/info:
-    get:
-      consumes:
-      - application/json
-      description: 收银端信息
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/cashier_resp.Info'
-              type: object
-      summary: 收银端信息
       tags:
       - 收银端
   /cashier/login:

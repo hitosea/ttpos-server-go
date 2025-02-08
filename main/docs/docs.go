@@ -108,6 +108,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/base": {
+            "get": {
+                "description": "收银端信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "收银端信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/cashier_resp.Base"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/bill/cancel/{id}": {
             "delete": {
                 "description": "删除收银账单取消",
@@ -881,41 +916,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/info": {
-            "get": {
-                "description": "收银端信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "收银端信息",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/cashier_resp.Info"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
                     }
                 }
             }
@@ -2244,20 +2244,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "cashier_resp.Company": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "商家ID",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "商家名称",
-                    "type": "string"
-                }
-            }
-        },
-        "cashier_resp.Info": {
+        "cashier_resp.Base": {
             "type": "object",
             "properties": {
                 "buffet": {
@@ -2287,14 +2274,6 @@ const docTemplate = `{
                 "cashier_id": {
                     "description": "收银员ID",
                     "type": "integer"
-                },
-                "cloud_basic": {
-                    "description": "云端基础信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.CloudBasic"
-                        }
-                    ]
                 },
                 "company": {
                     "description": "商家信息",
@@ -2329,6 +2308,19 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "登录账号",
+                    "type": "string"
+                }
+            }
+        },
+        "cashier_resp.Company": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "商家ID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "商家名称",
                     "type": "string"
                 }
             }
@@ -3428,29 +3420,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                }
-            }
-        },
-        "setting.CloudBasic": {
-            "type": "object",
-            "properties": {
-                "brand_logo": {
-                    "type": "string"
-                },
-                "brand_logo_long": {
-                    "type": "string"
-                },
-                "brand_name": {
-                    "type": "string"
-                },
-                "browser_logo": {
-                    "type": "string"
-                },
-                "browser_title": {
-                    "type": "string"
-                },
-                "expiration_reminder": {
-                    "type": "integer"
                 }
             }
         },

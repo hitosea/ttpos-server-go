@@ -11,6 +11,7 @@ type IBindRecordRepo interface {
 	GetRecordBySourceAndDeviceId(companyId uint, source string, deviceId string) model.BindRecord
 	Update(companyId uint, id uint, vars map[string]interface{}) error
 	Create(companyId uint, bindRecord model.BindRecord) error
+	GetRemark(companyId uint, source string, deviceId string) string
 }
 
 type BindRecordRepo struct {
@@ -51,4 +52,10 @@ func (r *BindRecordRepo) Update(companyId uint, id uint, vars map[string]interfa
 
 func (r *BindRecordRepo) Create(companyId uint, bindRecord model.BindRecord) error {
 	return r.dbm.GetDB(companyId).Create(&bindRecord).Error
+}
+
+func (r *BindRecordRepo) GetRemark(companyId uint, source string, deviceId string) string {
+	var remark string
+	r.dbm.GetDB(companyId).Model(&model.BindRecord{}).Where("source = ? AND device_id = ?", source, deviceId).Select("remark").Scan(&remark)
+	return remark
 }

@@ -79,16 +79,16 @@ func (h *Handler) PostCashierLogin(c *gin.Context) {
 	helper.Success(c, gin.H{"token": token})
 }
 
-// GetCashierInfo 收银端信息
+// GetCashierBase 收银端信息
 // @Summary 收银端信息
 // @Description 收银端信息
 // @Tags 收银端
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=cashier_resp.Info}
-// @Router /cashier/info [get]
-func (h *Handler) GetCashierInfo(c *gin.Context) {
-	info, err := h.authSrv.Info(c.Copy())
+// @Success 200 {object} dto.Response{data=cashier_resp.Base}
+// @Router /cashier/base [get]
+func (h *Handler) GetCashierBase(c *gin.Context) {
+	info, err := h.authSrv.Base(c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -487,10 +487,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/info", wrapper.GetCashierInfo)
-		privateApi.GET("/auth/user/add", func(c *gin.Context) {
-			c.String(http.StatusOK, "yes")
-		})
+		privateApi.GET("/base", wrapper.GetCashierBase)
 	}
 
 	// 需要认证

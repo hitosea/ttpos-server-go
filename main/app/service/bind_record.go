@@ -19,6 +19,7 @@ import (
 type IBindRecordSrv interface {
 	Add(addReq req.AddBindRecordReq, cc *gin.Context) error
 	Unbind(companyId uint, source string, key string, staffId uint) error
+	GetRemark(companyId uint, source string, deviceId string) string
 }
 
 func NewBindRecordSrv(bindRecordRepo repository.IBindRecordRepo, companySettingRepo repository.ICompanySettingRepo, settingSrv setting.ISrv) IBindRecordSrv {
@@ -143,4 +144,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 
 func (s *BindRecordSrv) Unbind(companyId uint, source string, key string, staffId uint) error {
 	return s.bindRecordRepo.Unbind(companyId, source, key, staffId)
+}
+
+func (s *BindRecordSrv) GetRemark(companyId uint, source string, deviceId string) string {
+	return s.bindRecordRepo.GetRemark(companyId, source, deviceId)
 }

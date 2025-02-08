@@ -2,7 +2,9 @@ package router
 
 import (
 	"net/http"
+
 	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/api/v1/cashier/other"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/pkg/cache"
@@ -26,7 +28,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
 		{
-			// other.RegisterHandlers(cashierGroup, dbm, cache)
+			other.RegisterHandlers(cashierGroup, dbm, cache)
 			// bill.RegisterHandlers(cashierGroup)
 			// cashierOrder.RegisterHandlers(cashierGroup)
 			cashier.RegisterProductHandlers(cashierGroup, dbm)

@@ -13,11 +13,11 @@ import (
 )
 
 type Handler struct {
-	companyService service.ICompanySrv
+	companySrv service.ICompanySrv
 }
 
-func NewAdminHandler(companyService service.ICompanySrv) *Handler {
-	return &Handler{companyService: companyService}
+func NewAdminHandler(companySrv service.ICompanySrv) *Handler {
+	return &Handler{companySrv: companySrv}
 }
 
 // CreateCompany 创建公司
@@ -41,7 +41,7 @@ func (h *Handler) CreateCompany(c *gin.Context) {
 	}
 
 	// 创建公司
-	if errCreateCompany := h.companyService.CreateCompany(param); errCreateCompany != nil {
+	if errCreateCompany := h.companySrv.CreateCompany(param); errCreateCompany != nil {
 		c.JSON(http.StatusInternalServerError, dto.Response{
 			Code:    constant.CodeFail,
 			Message: errCreateCompany.Error(),
@@ -71,7 +71,7 @@ func (h *Handler) UpdateCompany(c *gin.Context) {
 		return
 	}
 	// 更新公司
-	if errUpdateCompany := h.companyService.UpdateCompany(param); errUpdateCompany != nil {
+	if errUpdateCompany := h.companySrv.UpdateCompany(param); errUpdateCompany != nil {
 		c.JSON(http.StatusInternalServerError, dto.Response{
 			Code:    constant.CodeFail,
 			Message: errUpdateCompany.Error(),
@@ -102,7 +102,7 @@ func (h *Handler) DeleteCompany(c *gin.Context) {
 	fmt.Println("companyId", companyId)
 
 	// 2. 删除公司
-	if errDeleteCompany := h.companyService.DeleteCompany(uint(companyId)); errDeleteCompany != nil {
+	if errDeleteCompany := h.companySrv.DeleteCompany(uint(companyId)); errDeleteCompany != nil {
 		c.JSON(http.StatusInternalServerError, dto.Response{
 			Code:    constant.CodeFail,
 			Message: errDeleteCompany.Error(),
@@ -113,9 +113,9 @@ func (h *Handler) DeleteCompany(c *gin.Context) {
 }
 
 // RegisterHandlers 创建与 OpenAPI 规范匹配的 http.Handler。
-func RegisterHandlers(router gin.IRouter, companyService service.ICompanySrv) {
+func RegisterHandlers(router gin.IRouter, companySrv service.ICompanySrv) {
 	handler := Handler{
-		companyService: companyService,
+		companySrv: companySrv,
 	}
 
 	router.POST("/company", handler.CreateCompany)       // 创建公司

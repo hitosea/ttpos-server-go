@@ -4,18 +4,17 @@ import (
 	"ttpos-server-go/app/dto/resp/setting"
 )
 
-type Info struct {
-	Username     string             `json:"username"`      // 登录账号
-	CashierId    uint               `json:"cashier_id"`    // 收银员ID
-	DeviceId     string             `json:"device_id"`     // 设备ID
-	DeviceRemark string             `json:"device_remark"` // 设备备注
-	Cashier      setting.Cashier    `json:"cashier"`       // 收银机设置
-	Business     setting.Business   `json:"business"`      // 门店业务设置
-	Buffet       setting.Buffet     `json:"buffet"`        // 自助餐设置
-	Currency     setting.Currency   `json:"currency"`      // 货币单位
-	Permissions  []*Permission      `json:"permissions"`   // 页面权限
-	Company      Company            `json:"company"`       // 商家信息
-	CloudBasic   setting.CloudBasic `json:"cloud_basic"`   // 云端基础信息
+type Base struct {
+	Username     string           `json:"username"`      // 登录账号
+	CashierId    uint             `json:"cashier_id"`    // 收银员ID
+	DeviceId     string           `json:"device_id"`     // 设备ID
+	DeviceRemark string           `json:"device_remark"` // 设备备注
+	Cashier      setting.Cashier  `json:"cashier"`       // 收银机设置
+	Business     setting.Business `json:"business"`      // 门店业务设置
+	Buffet       setting.Buffet   `json:"buffet"`        // 自助餐设置
+	Currency     setting.Currency `json:"currency"`      // 货币单位
+	Permissions  []*Permission    `json:"permissions"`   // 页面权限
+	Company      Company          `json:"company"`       // 商家信息
 }
 
 type Company struct {

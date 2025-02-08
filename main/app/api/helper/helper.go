@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
@@ -86,4 +87,34 @@ func GetCompanyId(c *gin.Context) uint {
 
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
+}
+
+// GetCompany 获取request上下文的company
+func GetCompany(cc *gin.Context) model.Company {
+	if val, exists := cc.Get(jwt.Company); exists {
+		if company, ok := val.(model.Company); ok {
+			return company
+		}
+	}
+	return model.Company{}
+}
+
+// GetStaff 获取request上下文的staff
+func GetStaff(cc *gin.Context) model.Staff {
+	if val, exists := cc.Get(jwt.Staff); exists {
+		if staff, ok := val.(model.Staff); ok {
+			return staff
+		}
+	}
+	return model.Staff{}
+}
+
+// GetCompanySetting 获取request上下文的companySetting
+func GetCompanySetting(cc *gin.Context) model.CompanySetting {
+	if val, exists := cc.Get(jwt.CompanySetting); exists {
+		if companySetting, ok := val.(model.CompanySetting); ok {
+			return companySetting
+		}
+	}
+	return model.CompanySetting{}
 }
