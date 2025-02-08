@@ -489,6 +489,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     unit_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '单位UUID',
     dine_tax_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '堂食税UUID',
     category_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '类别UUID',
+    special_category_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '特殊类别UUID',
     takeout_tax_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '外卖税UUID',
     printer_tag_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机标签UUID',
     supplier_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '供应商UUID',

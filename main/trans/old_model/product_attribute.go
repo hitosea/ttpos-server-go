@@ -50,7 +50,7 @@ func (s *ProductAttributeService) ConvertProductAttribute() error {
 			Uuid:                             productAttribute.ProductAttributeID,
 			ProductPackageAttributeGroupUuid: productAttribute.GroupAttributeID,
 			AttributeUuid:                    productAttribute.AttributeID,
-			IsDefaultSelected:                productAttribute.DefaultSelect == 1,
+			IsDefaultSelected:                uint(productAttribute.DefaultSelect),
 			CreateTime:                       productAttribute.CreateTime,
 			UpdateTime:                       productAttribute.UpdateTime,
 		}

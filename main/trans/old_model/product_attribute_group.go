@@ -48,7 +48,7 @@ func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 		fmt.Println(fmt.Sprintf("productAttributeGroup: %+v", productAttributeGroup))
 		group := model.ProductPackageAttributeGroup{
 			Uuid:               productAttributeGroup.GroupAttributeID,
-			IsMust:             productAttributeGroup.AttributeRequired == 1,
+			IsMust:             uint(productAttributeGroup.AttributeRequired),
 			MaxSelection:       productAttributeGroup.AttributeMaxSelect,
 			ProductPackageUuid: productAttributeGroup.ProductID,
 		}
