@@ -124,7 +124,7 @@ class AuthService
         // 商家登录信息
         $this->store = $store;
         // 当前用户信息
-        $this->user = User::detail($this->store['user']['shop_user_id']);
+        $this->user = User::detail($this->store['user']['uuid']);
         // 把白名单uri转换成小写，兼容旧版本请求不区分大小写
         $allowAllAction = array_map('strtolower', $this->allowAllAction);
         $this->allowAllAction = $allowAllAction;

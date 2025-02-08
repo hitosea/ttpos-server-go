@@ -122,7 +122,7 @@ class Controller extends BaseController
             throw new BaseException(['msg' => '用户信息错误', 'code' => StatusCode::USER_ERROR]);
         }
         // 集团检测
-        if (!$companyUuid = CompanyStaff::where('uuid', $data['data']['uid'] ?? 0)->value('company_uuid')) {
+        if (!$companyUuid = (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $data['data']['uid'] ?? 0)->value('company_uuid')) {
             throw new BaseException(['msg' => '没有找到用户信息', 'code' => StatusCode::USER_ERROR]);
         }
         request()->appId = $companyUuid;
@@ -140,13 +140,13 @@ class Controller extends BaseController
             throw new BaseException(['msg' => '密码已变更，请重新登录', 'code' => StatusCode::USER_ERROR]);
         }
         // 授权
-
         request()->licenses = $user->app->getLicense();
         // 保存登录状态
         request()->userInfo = $this->store = [
             'user' => [
+                'uuid' => $user['uuid'],
                 'company_uuid' => $companyUuid,
-                'user_name' => $user['user_name'],
+                'user_name' => $user['username'],
                 'real_name' => $user['real_name'],
                 'user_type' => $user['user_type'],
             ],

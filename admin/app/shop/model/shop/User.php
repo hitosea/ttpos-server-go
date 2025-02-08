@@ -81,7 +81,7 @@ class User extends UserModel
             $this->error = '不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种';
             return false;
         }
-        $user_info = User::detail($user['shop_user_id']);
+        $user_info = User::detail($user['uuid']);
         if ($user_info['password'] != salt_hash($data['oldpass'])) {
             $this->error = '原密码错误';
             return false;
@@ -92,8 +92,6 @@ class User extends UserModel
         }
         $date['password'] = salt_hash($data['password']);
         $user_info->save($date);
-        //
-        (new User([], 0))->where('shop_user_id', $user_info->shop_user_id)->find()?->save($date);
         //
         return true;
     }
@@ -115,7 +113,7 @@ class User extends UserModel
             return false;
         }
         //
-        $userInfo = User::detail($user['shop_user_id']);
+        $userInfo = User::detail($user['uuid']);
         if ($userInfo['password'] != salt_hash($oldPassword)) {
             $this->error = '原密码错误';
             return false;
@@ -131,8 +129,6 @@ class User extends UserModel
         $date['password_change'] = $userInfo['password_change'] + 1;
         $date['password'] = salt_hash($newPassword);
         $userInfo->save($date);
-        //
-        (new User([], 0))->where('shop_user_id', $userInfo->shop_user_id)->find()?->save($date);
         //
         return true;
     }

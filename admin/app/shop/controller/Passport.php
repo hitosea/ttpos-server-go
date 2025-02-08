@@ -68,7 +68,7 @@ class Passport extends Controller
         }
 
         // 集团检测
-        $uuid = (new CompanyStaff())->checkExistInCompany($user['username']);
+        $uuid = (new CompanyStaff([], 0))->setAppId(0)->checkExistInCompany($user['username']);
         if (!$uuid) {
             return $this->renderError('用户不存在');
         }
@@ -138,14 +138,6 @@ class Passport extends Controller
     public function saasEditPassword()
     {
         $data = $this->postData();
-        trace($data);
-        // 集团检测
-        $uuid = (new CompanyStaff())->checkExistInCompany($data['username']);
-        if (!$uuid) {
-            return $this->renderError('用户不存在');
-        }
-        request()->appId = $uuid;
-
         $model = new User();
         if ($model->saasEditPassword($data, $this->store['user'])) {
             return $this->renderSuccess('修改成功');
