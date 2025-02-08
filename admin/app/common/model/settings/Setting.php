@@ -67,7 +67,8 @@ class Setting extends BaseModel
         $model = new static;
         $result = $model->withoutGlobalScope()->where('key', '=', $key)->value('values');
         if (!$result) {
-            $languageList = self::getSupplierLanguage(User::getShopInfo('company_uuid'))['language'] ?? [];
+            $appName = app('http')->getName();
+            $languageList = self::getSupplierLanguage($appName != 'admin' ? User::getShopInfo('company_uuid') : 0)['language'] ?? [];
             $result = $model->defaultData(null, $languageList)[$key]['values'];
         } else {
             $result = json_decode($result, true);

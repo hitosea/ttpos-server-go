@@ -164,7 +164,6 @@ class User extends BaseModel
     public function getList()
     {
         return $this->with(['userRole.role', 'supplier'])
-            ->where('is_delete', '=', 0)
             ->order(['create_time' => 'desc'])
             ->hidden(['password'])
             ->select();
