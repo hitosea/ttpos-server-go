@@ -71,7 +71,6 @@ class Order
             ->where('eat_type', '=', 10)
             ->where('auto_close', '=', 0)
             ->where('close_time', '<=', time())
-            ->where('app_id', '=', $this->appId)
             ->column('order_id');
         $orderIds = helper::getArrayColumnIds($orderId_arr);
         if (!empty($orderIds)) {
@@ -106,7 +105,6 @@ class Order
         $orderId_arr = $this->model->where('pay_status', '=', 20)
             ->where('order_status', '=', 10)
             ->where('eat_type', '<>', 10)
-            ->where('app_id', '=', $this->appId)
             ->where('pay_time', '<=', $deadlineTime)
             ->column('order_id');
         $orderIds = helper::getArrayColumnIds($orderId_arr);

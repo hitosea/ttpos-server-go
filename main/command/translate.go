@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 
 	"github.com/spf13/cobra"
@@ -24,9 +26,16 @@ func init() {
 var translateCmd = &cobra.Command{
 	Use:   "translate",
 	Short: "开始翻译",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// 初始化配置
+		if err := config.Init(); err != nil {
+			log.Fatalf("Failed to initialize config: %v", err)
+		}
+	},
 	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("-------translate start-------\n")
 		//
+		// websocket.PushClient(1, "*", "*", websocket.UPDATE_PRODUCT, "")
 		execute()
 		//
 		fmt.Printf("-------translate end-------\n")

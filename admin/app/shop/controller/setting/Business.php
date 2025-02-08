@@ -148,10 +148,7 @@ class Business extends Controller
 
                 if (isset($item['action'])) {
                     if ($item['action'] == 'add' || $item['action'] == 'edit') {
-                        $existing = $model->where('id', $id)
-                            ->where('shop_supplier_id', $shop_supplier_id)
-                            ->where('app_id', $app_id)
-                            ->find();
+                        $existing = $model->where('id', $id)->find();
                         if ($existing) {
                             $id = $existing['id'];
                             $item['action'] = 'edit';
@@ -215,10 +212,7 @@ class Business extends Controller
 
                 if (isset($item['action'])) {
                     if ($item['action'] == 'add' || $item['action'] == 'edit') {
-                        $existing = $model->where('id', $id)
-                            ->where('shop_supplier_id', $shop_supplier_id)
-                            ->where('app_id', $app_id)
-                            ->find();
+                        $existing = $model->where('id', $id)->find();
                         if ($existing) {
                             $id = $existing['id'];
                             $item['action'] = 'edit';
@@ -391,9 +385,9 @@ class Business extends Controller
         $app_id = $this->store['app']['app_id'] ?: 0;
         $ret = SettingModel::getSupplierItem($key, $shop_supplier_id, $app_id);
         //
-        $free_tag_count = FreeTag::where('app_id', '=', $app_id)->where('shop_supplier_id', '=', $shop_supplier_id)->count();
+        $free_tag_count = FreeTag::count();
         //
-        $return_reason_count = ReturnReason::where('app_id', '=', $app_id)->where('shop_supplier_id', '=', $shop_supplier_id)->count();
+        $return_reason_count = ReturnReason::count();
         $vars['values'] = $ret;
         return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count'));
     }

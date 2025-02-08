@@ -11,22 +11,8 @@ use app\common\model\BaseModel;
  */
 class User extends BaseModel
 {
-    protected $name = 'company_staff';
+    protected $name = 'staff';
     protected $pk = 'id';
-
-    // 写入后同步数据
-    public static function onAfterUpdate(Model $model)
-    {
-        if (app('http')->getName() == 'admin') {
-            if ($model->getConnection() == 'mysql') {
-                try {
-                    (new self([], $model->company_uuid))->where('uuid', $model->uuid)->find()?->save($model);
-                } catch (\Exception $e) {
-                    //
-                }
-            }
-        }
-    }
 
     /**
      * 当real_name不存在时返回username

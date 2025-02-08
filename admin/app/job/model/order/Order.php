@@ -19,8 +19,6 @@ class Order extends OrderModel
             ->where('order_status', '=', 10)
             ->where('pay_end_time', '<=', time())
             ->where('pay_end_time', '>', 0)
-            ->where('is_delete', '=', 0)
-            ->where('app_id', '=', $app_id)
             ->select();
     }
 
@@ -44,7 +42,6 @@ class Order extends OrderModel
             ->where('order_status', '=', 30)
             ->where('receipt_time', '<=', $deadlineTime)
             ->where('is_settled', '=', 0)
-            ->where('app_id', '=', $app_id)
             ->select();
     }
 }

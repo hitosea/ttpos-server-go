@@ -76,10 +76,7 @@ class Grade extends BaseModel
     {
         $model = new static;
         $appId = $appId ? $appId : $model::$app_id;
-        return $model->where('is_delete', '=', '0')
-            ->where('app_id', '=', $appId)
-            ->order(['weight' => 'asc', 'create_time' => 'asc'])
-            ->select();
+        return $model->order(['weight' => 'asc', 'create_time' => 'asc'])->select();
     }
 
     /**
@@ -89,10 +86,7 @@ class Grade extends BaseModel
     {
         $model = new static;
         $appId = $appId ? $appId : $model::$app_id;
-        return $model->where('is_delete', '=', '0')
-            ->where('app_id', '=', $appId)
-            ->order(['weight' => 'desc'])
-            ->select();
+        return $model->order(['weight' => 'desc'])->select();
     }
 
     /**

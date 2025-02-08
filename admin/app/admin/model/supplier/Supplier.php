@@ -3,7 +3,8 @@
 namespace app\admin\model\supplier;
 
 use PDO;
-use app\admin\model\Shop as ShopUser;
+use app\admin\model\CompanyStaff;
+use app\common\model\shop\User  as ShopStaffModel;
 use app\common\model\supplier\Supplier as SupplierModel;
 
 /**
@@ -32,7 +33,7 @@ class Supplier extends SupplierModel
         $this->save($data);
 
         // 新增商家用户信息
-        $shopUser = new ShopUser;
+        $shopUser = new CompanyStaff;
         $data['phone'] = $data['link_phone'] ?? '';
         if (!$shopUser->add($this->company_uuid, $data)) {
             $this->error = $shopUser->error;
@@ -91,7 +92,7 @@ class Supplier extends SupplierModel
     private function initShopBaseData($data)
     {
         $companyUuid = $this->company_uuid;
-        $shopUser = ShopUser::where('company_uuid', $companyUuid)->find();
+        $shopUser = CompanyStaff::where('company_uuid', $companyUuid)->find();
         //
         $host = env('DB_HOST');
         $port = env('DB_PORT');
@@ -122,9 +123,10 @@ class Supplier extends SupplierModel
         $datas = $shopUser->toArray();
         $datas['is_super'] = 1; // 超级管理员
         $datas['password'] = salt_hash($data['password']);
+        $datas['real_name'] = $shopUser->getData('username');
         $datas['create_time'] = $shopUser->getData('create_time');
         $datas['update_time'] = $shopUser->getData('update_time');
-        $subShopUserFields = (new ShopUser([], $this->app_id))->getFields();
+        $subShopUserFields = (new ShopStaffModel([], $this->company_uuid))->getFields();
         $pdo->exec($this->getInsertSql($prefix . 'staff', $datas, array_keys($subShopUserFields)));
         //
         $fileDataPath = realpath(root_path() . '/database/seeds/shop_init_data.sql');
@@ -150,7 +152,7 @@ class Supplier extends SupplierModel
         $datas = $this->toArray();
         $datas['create_time'] = $this->getData('create_time');
         $datas['update_time'] = $this->getData('update_time');
-        $pdo->exec($this->getInsertSql($prefix . 'supplier', $datas, array_keys($this->getFields())));
+        $pdo->exec($this->getInsertSql($prefix . 'company_setting', $datas, array_keys($this->getFields())));
 
         // 同步设置
         $this->synchronousSetting($this, 'initShopBaseData');

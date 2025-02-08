@@ -231,9 +231,7 @@ class Supplier extends BaseModel
     {
         $model = new static();
         // 查询列表数据
-        return $model->where('is_delete', '=', '0')
-            ->order(['create_time' => 'desc'])
-            ->select();
+        return $model->order(['create_time' => 'desc'])->select();
     }
 
     /**

@@ -26,30 +26,30 @@ class FixOrderPayType extends Command
     {
         $output->writeln("请输入商家id");
         $appId = trim($output->ask($input, ''));
-        // 
+        //
         $default = config('database.default');
         $config = config('database');
         $mysql = $config['connections'][$default];
-        $mysql['database'] = 'shop'.$appId;
+        $mysql['database'] = 'shop' . $appId;
         $mysql['username'] = 'root';
         $mysql['password'] = env('DB_ROOT_PASSWORD');
         $config['connections'][$default] = $mysql;
         Config::set($config, 'database');
-        // 
+        //
         $db = Db::connect(Db::getConfig('default'), true);
-        // 
-        $supplierName = $db->name('supplier')->where('app_id', $appId)->value('name');
+        //
+        $supplierName = $db->name('supplier')->where('company_uuid', $appId)->value('name');
         if (!$supplierName) {
             $output->writeln("商家id不存在!");
         }
-        // 
+        //
         $random = mt_rand(100000, 999999);
         $output->writeln("<info>商家：" . $supplierName . "($appId)</info>");
         $output->writeln("<fg=red>将会查询所有重复的现金支付记录进行修复 (包含订单,交班单,统计报表); 因业务影响问题“钱箱金额”不会修复, 需自行协商解决</>");
         $output->writeln("<fg=red>确认修复, 请输入确认码: {$random}</>");
         $confirmationCode = trim($output->ask($input, ''));
         if ($confirmationCode == $random) {
-            // 
+            //
             $orderPayTypes = $db->name('order_pay_type')
                 ->field('*, count(*) as count_num')
                 ->group('order_id,value,price')
@@ -59,7 +59,7 @@ class FixOrderPayType extends Command
             if (!$orderPayTypes) {
                 $output->writeln("不存在重复的现金支付记录");
                 return;
-            } 
+            }
             $output->writeln("存在重复的现金支付记录 " . count($orderPayTypes) . " 条, 正在修复...");
             // 开启事务
             $db->startTrans();
@@ -68,15 +68,15 @@ class FixOrderPayType extends Command
                 foreach ($orderPayTypes as $key => $orderPayType) {
                     $index = $key + 1;
                     $price = $orderPayType['price'];
-                    // 
-                    $output->writeln("修复条目：$index  订单ID：" . $orderPayType['order_id']. " 支付金额：" . $price);
-                    // 
+                    //
+                    $output->writeln("修复条目：$index  订单ID：" . $orderPayType['order_id'] . " 支付金额：" . $price);
+                    //
                     $order = $db->name('order')
                         ->field('order_id,cashier_id,create_time,actual_price,pay_price,change_due,pay_status')
                         ->where('order_id', $orderPayType['order_id'])
                         ->where('pay_status', 20)
                         ->find();
-                    // 
+                    //
                     if ($order && $price) {
                         // 修复订单
                         $db->name('order')->where('order_id', $orderPayType['order_id'])->update([
@@ -105,9 +105,9 @@ class FixOrderPayType extends Command
                             $recordedIncome = $orderPayType['price'] - $newOrder['change_due'];
                             // 差值
                             $difference = $recordedIncome - $oldRecordedIncome;
-                            // 
+                            //
                             $output->writeln("修复差值：" . $difference);
-                            // 
+                            //
                             $cashIncome = false;
                             $incomes = json_decode($shiftLog[0]['incomes'], true);
                             foreach ($incomes as $key => $income) {
@@ -133,7 +133,7 @@ class FixOrderPayType extends Command
                                 }
                             }
                         }
-                        
+
                         // 修复订单支付类型
                         $db->name('order_pay_type')
                             ->where('id', $orderPayType['id'])

@@ -9,3 +9,7 @@ run:
 dev:
 	${HOME}/go/bin/fresh -c ./fresh.conf
 	
+# test	
+test:
+	go run ./main.go test
+	

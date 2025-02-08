@@ -7,6 +7,7 @@ import (
 	"websocket/config"
 	"websocket/pkg/cache"
 	"websocket/pkg/database"
+	"websocket/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -34,6 +35,11 @@ var testsCmd = &cobra.Command{
 
 	},
 	Run: func(_ *cobra.Command, _ []string) {
+
+		token, _ := utils.GenerateToken("cashier", 1, 1, "", config.JWT.Secret, 1186400)
+
+		fmt.Println(token)
+
 		// 订阅
 		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", "您的消息内容").Err()
 		if err != nil {

@@ -73,7 +73,7 @@ class ErpSupplier extends BaseModel
     {
         $model = new self;
         // 验证供应商名称唯一性
-        $exist = $model->where('name', $data['name'])->where('app_id', self::$app_id)->find();
+        $exist = $model->where('name', $data['name'])->find();
         if ($exist) {
             $this->error = '该供应商名称已存在';
             return false;
@@ -89,7 +89,7 @@ class ErpSupplier extends BaseModel
     public function edit($data)
     {
         // 验证供应商名称唯一性
-        $exist = (new self)->where('name', $data['name'])->where('app_id', self::$app_id)->where('id', '<>', $this->id)->find();
+        $exist = (new self)->where('name', $data['name'])->where('id', '<>', $this->id)->find();
         if ($exist) {
             $this->error = '该供应商名称已存在';
             return false;

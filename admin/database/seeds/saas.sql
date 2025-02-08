@@ -357,6 +357,7 @@ CREATE TABLE `ttpos_setting` (
   UNIQUE KEY `unique_key` (`key`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设置表';
 
+-- ----------------------------
 -- Table structure for ttpos_web_socket_msg
 -- ----------------------------
 CREATE TABLE `ttpos_web_socket_msg` (
@@ -372,6 +373,6 @@ CREATE TABLE `ttpos_web_socket_msg` (
   `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=557 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='websocket消息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='websocket消息表';
 
 SET FOREIGN_KEY_CHECKS = 1;
