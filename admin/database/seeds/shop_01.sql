@@ -392,7 +392,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     multi_language_name_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-开启 0-关闭',
-    parent_uuid INT DEFAULT NULL COMMENT '父级ID',
+    parent_uuid BIGINT DEFAULT NULL COMMENT '父级ID',
     is_special INT NOT NULL DEFAULT 0 COMMENT '特殊分类, 1-是 0-否',
     category_key VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关键字',
     order_by INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
