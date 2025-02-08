@@ -37,4 +37,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertProduct()
 	testConvertTable()
 	testConvertTableType()
+	testConvertTableArea()
 }
