@@ -1,14 +1,12 @@
 package helper
 
 import (
-	"net/http"
-	"ttpos-server-go/pkg/auth"
-
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
-
+	"net/http"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/config"
@@ -83,19 +81,9 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 
 // GetCompanyId 获取公司ID
 func GetCompanyId(c *gin.Context) uint {
-	token := c.GetHeader("token")
-	claims, err := auth.ParseToken(token, config.JWT.Secret)
-	if err != nil {
-		return 0
-	}
-	companyId := claims.CompanyId
-	return companyId
+	return c.GetUint(jwt.CompanyId)
 }
 
 func GetLanguage(c *gin.Context) string {
-	language := c.GetHeader("language")
-	if language == "" {
-		language = "zh"
-	}
-	return language
+	return i18n.GetAcceptLanguage(c)
 }

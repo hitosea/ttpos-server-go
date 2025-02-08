@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/cashier"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -19,8 +20,8 @@ import (
 
 // Handler 结构体
 type Handler struct {
-	cashierService cashier.ICashierSrv
-	authService    cashier.IAuthSrv
+	cashierSrv cashier.ICashierSrv
+	authSrv    service.IAuthSrv
 }
 
 // GetCashierDeskList 处理获取收银台列表
@@ -70,12 +71,29 @@ func (h *Handler) PostCashierLogin(c *gin.Context) {
 		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
 		return
 	}
-	token, err := h.authService.Login(loginRequest, sign, loginRequest.Code, c.Copy())
+	token, err := h.authSrv.Login(constant.SourceCashier, loginRequest, sign, loginRequest.Code, c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
 	helper.Success(c, gin.H{"token": token})
+}
+
+// GetCashierInfo 收银端信息
+// @Summary 收银端信息
+// @Description 收银端信息
+// @Tags 收银端
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=cashier_resp.Info}
+// @Router /cashier/info [get]
+func (h *Handler) GetCashierInfo(c *gin.Context) {
+	info, err := h.authSrv.Info(c.Copy())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, info)
 }
 
 // GetCashierMemberInfo 处理获取收银员会员信息
@@ -266,7 +284,7 @@ func (h *Handler) GetCashierProductCategory(c *gin.Context) {
 	language := helper.GetLanguage(c)
 	logger.Logger.Info("从token中获取公司ID成功", zap.Any("companyId", companyId), zap.String("从header中获取语言", language))
 	// 处理获取收银产品类别的逻辑
-	productCategory, err := h.cashierService.GetProductCategory(companyId, language)
+	productCategory, err := h.cashierSrv.GetProductCategory(companyId, language)
 	if err != nil {
 		helper.ErrorWithDetail(c, http.StatusInternalServerError, err)
 		return
@@ -454,13 +472,26 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	roleAccessSrv := service.NewRoleAccessSrv(staffRoleRepo, accessRepo, staffRepo)
 	bindRecordSrv := service.NewBindRecordSrv(bindRecordRepo, companySettingRepo, settingSrv)
 	staffShiftSrv := service.NewStaffShiftSrv(staffShiftLogRepo, cache)
+	authSrv := service.NewAuthSrv(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &Handler{
-		cashierService: cashier.NewCashierProductCategorySrv(dbm),
-		authService:    cashier.NewAuthSrv(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv),
+		cashierSrv: cashier.NewCashierProductCategorySrv(dbm),
+		authSrv:    authSrv,
 	}
-	// 不需要认证
-	router.POST("/login", wrapper.PostCashierLogin)
+
+	publicApi := router.Group("")
+	{
+		publicApi.POST("/login", wrapper.PostCashierLogin)
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv))
+	{
+		privateApi.GET("/info", wrapper.GetCashierInfo)
+		privateApi.GET("/auth/user/add", func(c *gin.Context) {
+			c.String(http.StatusOK, "yes")
+		})
+	}
 
 	// 需要认证
 	router.GET("/desk/list", wrapper.GetCashierDeskList)

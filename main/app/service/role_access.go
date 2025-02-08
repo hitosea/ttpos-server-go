@@ -6,17 +6,18 @@ import (
 	"slices"
 	"sort"
 	"time"
+	"ttpos-server-go/app/dto/resp/cashier_resp"
 
 	"github.com/jinzhu/copier"
 
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 )
 
 type IRoleAccessSrv interface {
-	GetPermission(bool, constant.RouteName, uint, uint) ([]*resp.Permission, error)
+	GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*cashier_resp.Permission, error)
+	GetApiPermission(staffId, companyId uint) ([]string, error)
 }
 
 func NewRoleAccessSrv(staffRoleRepo repository.IStaffRoleRepo, accessRepo repository.IAccessRepo, staffRepo repository.IStaffRepo) IRoleAccessSrv {
@@ -37,55 +38,70 @@ func NewRoleAccessSrvImpl(staffRoleRepo repository.IStaffRoleRepo, accessRepo re
 	}
 }
 
-// GetPermission 获取权限
-func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*resp.Permission, error) {
-
+// 从数据库获取权限
+func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Access, model.CompanySetting, error) {
+	var companySetting model.CompanySetting
 	staff := s.staffRepo.GetById(companyId, staffId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
 
-	var permissions []resp.Permission
+	if staff.Company == nil || staff.Company.CompanySetting == nil {
+		return nil, companySetting, errors.New("获取商家信息错误")
+	}
+
+	companySetting = *staff.Company.CompanySetting
+
 	var where []repository.Where
 
 	if staff.IsSuper == 1 { // 超级管理员
 		if staff.UserType == 1 {
-			if staff.Company.CompanySetting.CategorySet == 10 {
-				where = append(where, s.accessRepo.WherePath([]string{"/product/takeaway/category/index", "/product/store/category/index"})) // ToDo 修改为具体值
-			}
 			where = append(where, s.accessRepo.WhereIsSupplier())
 		}
 	} else {
 		roleIds, err := s.staffRoleRepo.GetRoleIds(staff.ID, staff.CompanyId)
 		if err != nil {
-			return nil, errors.New("获取用户角色失败")
+			return nil, companySetting, errors.New("获取用户角色失败")
 		}
 		accessIds, err := s.accessRepo.GetAccessIds(roleIds, staff.CompanyId)
 		if err != nil {
-			return nil, errors.New("获取角色权限失败")
+			return nil, companySetting, errors.New("获取角色权限失败")
 		}
 		where = append(where, s.accessRepo.WhereIds(accessIds))
 	}
 
 	dbPermissions, err := s.accessRepo.GetPermissions(staff.CompanyId, where...)
+
 	if err != nil {
-		return nil, errors.New("获取权限失败")
+		return nil, companySetting, errors.New("获取权限失败")
+	}
+
+	return dbPermissions, companySetting, nil
+}
+
+// GetPermission 获取权限
+func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*cashier_resp.Permission, error) {
+
+	var permissions []cashier_resp.Permission
+	dbPermissions, companySetting, err := s.getDbPermissions(staffId, companyId)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, dbPermission := range dbPermissions {
-		var permission resp.Permission
+		var permission cashier_resp.Permission
 		copier.Copy(&permission, dbPermission)
 		permission.CreateTime = time.Unix(int64(dbPermission.CreateTime), 0).Format(time.DateTime)
 		permission.UpdateTime = time.Unix(int64(dbPermission.UpdateTime), 0).Format(time.DateTime)
-		permission.Children = []*resp.Permission{}
+		permission.Children = []*cashier_resp.Permission{}
 		permissions = append(permissions, permission)
 	}
 
-	permissions = s.filterPermission(permissions, *staff.Company.CompanySetting)
+	permissions = s.filterPermission(permissions, companySetting)
 
 	return s.buildPermissionTree(permissions, routerName), nil
 }
 
 // 筛选权限
-func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
-	var filteredPermissions []resp.Permission
+func (s *RoleAccessSrv) filterPermission(permissions []cashier_resp.Permission, companySetting model.CompanySetting) []cashier_resp.Permission {
+	var filteredPermissions []cashier_resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
 		if permission.ID == 1626688443 {
@@ -129,9 +145,9 @@ func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 }
 
 // 构建权限树
-func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
-	permissionMap := make(map[int]*resp.Permission)
-	var roots []*resp.Permission
+func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permission, routerName constant.RouteName) []*cashier_resp.Permission {
+	permissionMap := make(map[int]*cashier_resp.Permission)
+	var roots []*cashier_resp.Permission
 
 	var accessIds []string
 
@@ -161,7 +177,7 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, route
 		}
 	}
 
-	var filteredRoots []*resp.Permission
+	var filteredRoots []*cashier_resp.Permission
 	for _, root := range roots {
 		if root.Name == string(routerName) {
 			filteredRoots = append(filteredRoots, root.Children...)
@@ -169,4 +185,18 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, route
 	}
 
 	return filteredRoots
+}
+
+func (s *RoleAccessSrv) GetApiPermission(staffId, companyId uint) ([]string, error) {
+	accesses, _, err := s.getDbPermissions(staffId, companyId)
+	if err != nil {
+		return nil, err
+	}
+	var permissions []string
+	for _, access := range accesses {
+		if !slices.Contains(permissions, access.ApiPath) {
+			permissions = append(permissions, access.ApiPath)
+		}
+	}
+	return permissions, nil
 }
