@@ -206,34 +206,29 @@ func (s *productSrv) GetProductCategoryList(dbId uint) (cashier_resp.ProductCate
 	list := make([]cashier_resp.ProductCategory, 0, len(categories))
 	for _, category := range categories {
 		if category.ParentUuid == 0 {
+			children := make([]cashier_resp.ProductCategory, 0)
+			for _, child := range categories {
+				if child.ParentUuid == category.Uuid {
+					children = append(children, cashier_resp.ProductCategory{
+						Uuid:       child.Uuid,
+						LocaleName: s.localeSrv.GetLocaleNames(child.MultiLanguageName),
+						ParentUuid: child.ParentUuid,
+						IsSpecial:  child.IsSpecial == 1,
+						Children: cashier_resp.ProductCategoryListResp{
+							List: make([]cashier_resp.ProductCategory, 0),
+						},
+					})
+				}
+			}
 			list = append(list, cashier_resp.ProductCategory{
 				Uuid:       category.Uuid,
 				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
 				ParentUuid: category.ParentUuid,
 				IsSpecial:  category.IsSpecial == 1,
 				Children: cashier_resp.ProductCategoryListResp{
-					List: make([]cashier_resp.ProductCategory, 0),
+					List: children,
 				},
 			})
-		} else {
-			for index, child := range list {
-				if child.Uuid == category.ParentUuid {
-					children := make([]cashier_resp.ProductCategory, 0)
-					children = append(children, cashier_resp.ProductCategory{
-						Uuid:       category.Uuid,
-						LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
-						ParentUuid: category.ParentUuid,
-						IsSpecial:  category.IsSpecial == 1,
-						Children: cashier_resp.ProductCategoryListResp{
-							List: make([]cashier_resp.ProductCategory, 0),
-						},
-					})
-					child.Children = cashier_resp.ProductCategoryListResp{
-						List: children,
-					}
-					list[index] = child
-				}
-			}
 		}
 	}
 
