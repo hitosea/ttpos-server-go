@@ -9,6 +9,7 @@ import (
 // IProductRepo 定义商品仓库接口
 type IProductRepo interface {
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
+	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
 }
 
 // productRepo 商品仓库
@@ -47,4 +48,22 @@ func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opt
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&products).Error
 
 	return products, total, err
+}
+
+// GetProductCategoryList 获取产品类别列表
+func (r *productRepo) GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error) {
+	var categories []model.ProductCategory
+
+	db := r.db.Model(&model.ProductCategory{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&categories).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return categories, nil
 }

@@ -14,10 +14,14 @@ type WithPreload struct {
 
 // ICommonRepo 公共仓库接口
 type ICommonRepo interface {
-	WhereByID(id uint) DBOption               // 根据ID查询
-	WhereLikeByName(name string) DBOption     // 根据名称查询
-	OrderByID(id uint, order string) DBOption // 根据ID排序
-	Preload(preloads ...WithPreload) DBOption // 预加载
+	WhereByID(id uint) DBOption                       // 根据ID查询
+	WhereByStatus(status uint) DBOption               // 根据状态查询
+	WhereByIsShowCashier(isShowCashier uint) DBOption // 根据是否显示收银机查询
+	WhereLikeByName(name string) DBOption             // 根据名称查询
+	SortWithID(order string) DBOption                 // 根据ID排序
+	SortWithOrderBy(order string) DBOption            // 根据Order By排序
+	SortWithIsSpecial(order string) DBOption          // 根据是否特殊排序
+	Preload(preloads ...WithPreload) DBOption         // 预加载
 }
 
 // commonRepo 公共仓库实现
@@ -40,6 +44,20 @@ func (r *commonRepo) WhereByID(id uint) DBOption {
 	}
 }
 
+// WhereByStatus 根据状态查询
+func (r *commonRepo) WhereByStatus(status uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
+	}
+}
+
+// WhereByIsShowCashier 根据是否显示收银机查询
+func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_cashier = ?", isShowCashier)
+	}
+}
+
 // WhereLikeByName 根据名称查询
 func (r *commonRepo) WhereLikeByName(name string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -47,10 +65,24 @@ func (r *commonRepo) WhereLikeByName(name string) DBOption {
 	}
 }
 
-// OrderByID 根据ID排序
-func (r *commonRepo) OrderByID(id uint, order string) DBOption {
+// SortWithID 根据ID排序
+func (r *commonRepo) SortWithID(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("id " + order)
+	}
+}
+
+// SortWithOrderBy 根据Order By排序
+func (r *commonRepo) SortWithOrderBy(order string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order("order_by " + order)
+	}
+}
+
+// SortWithIsSpecial 根据是否特殊排序
+func (r *commonRepo) SortWithIsSpecial(order string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order("is_special " + order)
 	}
 }
 

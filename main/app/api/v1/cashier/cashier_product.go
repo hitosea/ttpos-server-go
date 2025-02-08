@@ -1,4 +1,4 @@
-package cashier_product
+package cashier
 
 import (
 	"ttpos-server-go/app/api/helper"
@@ -17,6 +17,16 @@ type CashierProductHandler struct {
 }
 
 // GetProductList 获取收银产品列表
+// @Summary 获取收银产品列表
+// @Description 获取收银产品列表
+// @Tags 收银端
+// @Accept json
+// @Produce json
+// @Param pageNo query int true "页码"
+// @Param pageSize query int true "每页条数"
+// @Success 200 {object} cashier_resp.ProductListWithPaginationResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /cashier/product/list [get]
 func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 	// 绑定请求参数
 	req := cashier_req.ProductListReq{}
@@ -41,6 +51,29 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductCategoryList 获取收银产品类别列表
+// @Summary 获取收银产品类别列表
+// @Description 获取收银产品类别列表
+// @Tags 收银端
+// @Accept json
+// @Produce json
+// @Success 200 {object} cashier_resp.ProductCategoryListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /cashier/product/category/list [get]
+func (h *CashierProductHandler) GetProductCategoryList(c *gin.Context) {
+	// 获取收银产品类别列表
+	res, err := h.productService.GetProductCategoryList(1)
+
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterProductHandlers 注册收银产品路由
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager) {
 	// 创建收银产品处理程序
@@ -52,5 +85,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager) {
 	}
 
 	// 注册收银产品路由
-	router.GET("/product/list", wrapper.GetProductList) // 获取收银产品列表
+	router.GET("/product/list", wrapper.GetProductList)                  // 获取收银产品列表
+	router.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取收银产品类别列表
 }

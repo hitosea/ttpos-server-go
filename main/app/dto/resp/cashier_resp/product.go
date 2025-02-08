@@ -72,3 +72,17 @@ type ProductListWithPaginationResp struct {
 	List []Product        `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
 }
+
+// ProductCategory 商品类别
+type ProductCategory struct {
+	Uuid       uint                    `json:"uuid"`        // 商品类别UUID
+	LocaleName dto.LocaleResponse      `json:"locale_name"` // 商品类别名称
+	ParentUuid uint                    `json:"parent_uuid"` // 父级类别UUID
+	IsSpecial  bool                    `json:"is_special"`  // 是否特殊类别
+	Children   ProductCategoryListResp `json:"children"`    // 子级类别
+}
+
+// ProductCategoryListResp 商品类别列表响应
+type ProductCategoryListResp struct {
+	List []ProductCategory `json:"list"`
+}

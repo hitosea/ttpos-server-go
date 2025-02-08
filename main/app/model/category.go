@@ -6,6 +6,7 @@ type ProductCategory struct {
 	Uuid                  uint   `gorm:"default:0;comment:UUID"`
 	Name                  string `gorm:"default:'';comment:名称"`
 	ParentUuid            uint   `gorm:"default:NULL;comment:父级ID"`
+	IsSpecial             uint   `gorm:"default:0;comment:是否特殊, 0-否、1-是"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:多语言名称ID"`
 	Status                bool   `gorm:"default:false;comment:状态, true-开启、false-关闭"`
 	OrderBy               uint   `gorm:"default:0;comment:排序"`

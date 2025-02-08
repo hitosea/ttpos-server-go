@@ -12,6 +12,7 @@ import (
 // IProductSrv 定义收银服务接口
 type IProductSrv interface {
 	GetProductList(dbId uint, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
+	GetProductCategoryList(dbId uint) (cashier_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
 }
 
 // productSrv 收银服务结构体
@@ -83,6 +84,8 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.Attribute.MultiLanguageName",
 			},
 		),
+		repository.NewCommonRepo().WhereByIsShowCashier(1),
+		repository.NewCommonRepo().WhereByStatus(1),
 	)
 
 	// 处理错误
@@ -178,5 +181,64 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 			PageSize: req.PageSize,
 			Total:    total,
 		},
+	}, nil
+}
+
+// GetProductCategoryList 获取收银机点餐页面产品类别列表
+func (s *productSrv) GetProductCategoryList(dbId uint) (cashier_resp.ProductCategoryListResp, error) {
+	// 获取产品类别列表
+	categories, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductCategoryList(
+		repository.NewCommonRepo().Preload(
+			repository.WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+		repository.NewCommonRepo().WhereByStatus(1),
+		repository.NewCommonRepo().SortWithIsSpecial("DESC"),
+		repository.NewCommonRepo().SortWithOrderBy("ASC"),
+		repository.NewCommonRepo().SortWithID("DESC"),
+	)
+	if err != nil {
+		return cashier_resp.ProductCategoryListResp{}, errors.New("获取产品类别列表失败")
+	}
+
+	// 根据parent_uuid分组转换为响应对象
+	list := make([]cashier_resp.ProductCategory, 0, len(categories))
+	for _, category := range categories {
+		if category.ParentUuid == 0 {
+			list = append(list, cashier_resp.ProductCategory{
+				Uuid:       category.Uuid,
+				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
+				ParentUuid: category.ParentUuid,
+				IsSpecial:  category.IsSpecial == 1,
+				Children: cashier_resp.ProductCategoryListResp{
+					List: make([]cashier_resp.ProductCategory, 0),
+				},
+			})
+		} else {
+			for index, child := range list {
+				if child.Uuid == category.ParentUuid {
+					children := make([]cashier_resp.ProductCategory, 0)
+					children = append(children, cashier_resp.ProductCategory{
+						Uuid:       category.Uuid,
+						LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
+						ParentUuid: category.ParentUuid,
+						IsSpecial:  category.IsSpecial == 1,
+						Children: cashier_resp.ProductCategoryListResp{
+							List: make([]cashier_resp.ProductCategory, 0),
+						},
+					})
+					child.Children = cashier_resp.ProductCategoryListResp{
+						List: children,
+					}
+					list[index] = child
+				}
+			}
+		}
+	}
+
+	// 返回响应对象
+	return cashier_resp.ProductCategoryListResp{
+		List: list,
 	}, nil
 }
