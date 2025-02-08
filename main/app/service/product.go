@@ -68,6 +68,12 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 				Query: "ProductPackageAttributeGroup",
 			},
 			repository.WithPreload{
+				Query: "ProductPackageAttributeGroup.ProductAttributeGroup",
+			},
+			repository.WithPreload{
+				Query: "ProductPackageAttributeGroup.ProductAttributeGroup.MultiLanguageName",
+			},
+			repository.WithPreload{
 				Query: "ProductPackageAttributeGroup.ProductPackageAttributes",
 			},
 			repository.WithPreload{
@@ -75,12 +81,6 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 			},
 			repository.WithPreload{
 				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.Attribute.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.AttributeGroup",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.Attribute.AttributeGroup.MultiLanguageName",
 			},
 		),
 	)
@@ -96,31 +96,68 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                             // 商品规格
 		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                               // 商品小料
 		attributes := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroup)) // 商品属性组
+		prices := []float64{}                                                                                  // 保存所有价格，用于计算最低价格
+
+		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
 			for _, bom := range product.ProductBoms {
 				if bom.ProductFlavor.Uuid > 0 {
 					flavors = append(flavors, cashier_resp.ProductFlavor{
-						Uuid:  bom.ProductFlavor.Uuid,
-						Name:  s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
-						Price: bom.Price,
+						Uuid:              bom.ProductFlavor.Uuid,
+						LocaleName:        s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
+						Price:             bom.Price,
+						IsDefaultSelected: bom.IsDefaultSelect == 1,
 					})
+					if len(prices) == 0 {
+						prices = append(prices, bom.Price)
+					} else {
+						if prices[0] > bom.Price {
+							prices[0] = bom.Price
+						}
+					}
 				}
 				if bom.ProductSauce.Uuid > 0 {
 					sauces = append(sauces, cashier_resp.ProductSauce{
-						Uuid:  bom.ProductSauce.Uuid,
-						Name:  s.localeSrv.GetLocaleNames(bom.ProductSauce.MultiLanguageName),
-						Price: bom.Price,
+						Uuid:              bom.ProductSauce.Uuid,
+						LocaleName:        s.localeSrv.GetLocaleNames(bom.ProductSauce.MultiLanguageName),
+						Price:             bom.Price,
+						IsDefaultSelected: bom.IsDefaultSelect == 1,
 					})
 				}
 			}
 		}
 
+		// 商品属性组
+		if len(product.ProductPackageAttributeGroup) > 0 {
+			for _, group := range product.ProductPackageAttributeGroup {
+				values := make([]cashier_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
+				for _, attribute := range group.ProductPackageAttributes {
+					values = append(values, cashier_resp.ProductAttributeValue{
+						Uuid:              attribute.AttributeUuid,
+						LocaleName:        s.localeSrv.GetLocaleNames(attribute.Attribute.MultiLanguageName),
+						IsDefaultSelected: attribute.IsDefaultSelected == 1,
+					})
+				}
+				attributes = append(attributes, cashier_resp.ProductAttributeGroup{
+					Uuid:       group.ProductAttributeGroupUuid,
+					LocaleName: s.localeSrv.GetLocaleNames(group.ProductAttributeGroup.MultiLanguageName),
+					IsMust:     group.IsMust == 1,
+					MaxSelect:  group.MaxSelection,
+					Value: cashier_resp.ProductAttributeValueList{
+						List: values,
+					},
+				})
+			}
+		}
+
 		// 添加到列表
 		list = append(list, cashier_resp.Product{
-			Uuid:  product.Uuid,
-			Image: product.ImageUrl,
-			Name:  s.localeSrv.GetLocaleNames(product.MultiLanguageName),
-			Unit:  s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
+			Uuid:       product.Uuid,
+			Image:      product.ImageUrl,
+			LocaleName: s.localeSrv.GetLocaleNames(product.MultiLanguageName),
+			Unit:       s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
+			Price:      prices[0],
+			LimitNum:   product.LimitNum,
 			Flavors: cashier_resp.ProductFlavorList{
 				List: flavors,
 			},

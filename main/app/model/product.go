@@ -79,15 +79,17 @@ type ProductAttribute struct {
 
 // ProductPackageAttributeGroup 产品包属性组表，定义产品包的属性分组信息
 type ProductPackageAttributeGroup struct {
-	ID                 uint  `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid               uint  `gorm:"default:0;comment:'UUID'"`
-	IsMust             bool  `gorm:"default:0;comment:'是否必选, 0-否 1-是'"`
-	MaxSelection       uint  `gorm:"default:0;comment:'最大选择数量'"`
-	ProductPackageUuid uint  `gorm:"default:0;comment:'产品包UUID'"`
-	CreateTime         int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
-	UpdateTime         int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
-	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
+	ID                        uint  `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	Uuid                      uint  `gorm:"default:0;comment:'UUID'"`
+	IsMust                    uint  `gorm:"default:0;comment:'是否必选, 0-否 1-是'"`
+	MaxSelection              uint  `gorm:"default:0;comment:'最大选择数量'"`
+	ProductPackageUuid        uint  `gorm:"default:0;comment:'产品包UUID'"`
+	ProductAttributeGroupUuid uint  `gorm:"default:0;comment:'商品属性组UUID'"`
+	CreateTime                int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime                int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime                int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
 
+	ProductAttributeGroup    ProductAttributeGroup     `gorm:"foreignKey:product_attribute_group_uuid;references:uuid"`         // 商品属性组
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"` // 产品包属性
 }
 
@@ -97,7 +99,7 @@ type ProductPackageAttribute struct {
 	Uuid                             uint  `gorm:"default:0;comment:'UUID'"`
 	ProductPackageAttributeGroupUuid uint  `gorm:"default:0;comment:'产品包属性组UUID'"`
 	AttributeUuid                    uint  `gorm:"default:0;comment:'产品属性UUID'"`
-	IsDefaultSelected                bool  `gorm:"default:0;comment:'是否默认选中, 0-否 1-是'"`
+	IsDefaultSelected                uint  `gorm:"default:0;comment:'是否默认选中, 0-否 1-是'"`
 	CreateTime                       int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime                       int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime                       int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
@@ -148,7 +150,6 @@ type ProductPackage struct {
 type ProductBom struct {
 	ID                 uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid               uint    `gorm:"column:uuid;not null;default:0;comment:'UUID'"`
-	Name               string  `gorm:"column:name;not null;default:'';comment:'商品名称或小料名称（不用于业务显示）'"`
 	Price              float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
 	ProductFlavorUuid  uint    `gorm:"column:product_flavor_uuid;not null;default:0;comment:'商品规格UUID（仅商品使用）'"`
 	ProductSauceUuid   uint    `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
