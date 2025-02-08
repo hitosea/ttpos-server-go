@@ -13,3 +13,6 @@ dev:
 test:
 	go run ./main.go test
 	
+# 构建镜像	
+build-image:
+	docker build -t ttpos-server-websocket .

@@ -4,3 +4,7 @@ run:
 		go build -o main ./main.go; \
 	fi
 	./main
+
+# 构建镜像
+build-image:
+	docker build -t ttpos-server-go .
