@@ -41,4 +41,6 @@ func TestConvertAll(t *testing.T) {
 	testConvertShopAccess()            // 权限
 	testConvertShopRole()              // 角色
 	testConvertShopUser()              // 用户
+	testConvertShopUserRole()          // 用户角色
+	testConvertShopRoleAccess()        // 角色权限
 }

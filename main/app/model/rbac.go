@@ -60,8 +60,9 @@ type Role struct {
 // StaffRole 员工角色
 type StaffRole struct {
 	ID         uint  `gorm:"primary_key;AUTO_INCREMENT;comment:主键id"`
-	StaffId    uint  `gorm:"default:0;comment:超管用户id"`
-	RoleId     uint  `gorm:"default:0;comment:角色id"`
+	Uuid       uint  `gorm:"default:0;comment:uuid"`
+	StaffUuid  uint  `gorm:"default:0;comment:超管用户id"`
+	RoleUuid   uint  `gorm:"default:0;comment:角色id"`
 	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间"`
 	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间"`
 	DeleteTime int64 `gorm:"default:0;comment:删除时间"`
