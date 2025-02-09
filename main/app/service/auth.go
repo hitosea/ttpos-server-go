@@ -110,7 +110,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	}
 
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyId)
+	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
 		return token, err
 	}
@@ -119,8 +119,8 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	}
 
 	// 检查是否有未交班的收银员
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyId))
-	currentStaff := staffRepo.GetCurrentCashier(staff.CompanyId, loginReq.DeviceId)
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+	currentStaff := staffRepo.GetCurrentCashier(staff.CompanyUuid, loginReq.DeviceId)
 	if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
 		return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 	}
@@ -141,7 +141,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 		Source:           constant.SourceCashier,
 		FinallyLoginId:   staff.Uuid,
 		FinallyLoginTime: int(time.Now().Unix()),
-		CompanyId:        staff.CompanyId,
+		CompanyId:        staff.CompanyUuid,
 	}, cc)
 	if err != nil {
 		logger.Logger.Error("绑定失败", zap.Error(err))
@@ -158,14 +158,14 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 		updates["cashier_login_time"] = shiftLog.ShiftStartTime
 		updates["duty_no"] = shiftLog.ShiftNo
 	}
-	staffRepo = repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyId))
-	err = staffRepo.Update(staff.CompanyId, staff.Uuid, updates)
+	staffRepo = repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+	err = staffRepo.Update(staff.CompanyUuid, staff.Uuid, updates)
 	if err != nil {
 		return token, errors.New("更新信息失败")
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(constant.SourceCashier, loginReq.DeviceId, staff.CompanyId, staff.Uuid, config.JWT.Secret, config.JWT.Expire)
+	token, err = auth.GenerateToken(constant.SourceCashier, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire)
 	if err != nil {
 		return token, errors.New("生成token失败")
 	}
@@ -190,7 +190,7 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 	)
 	deviceRemark := s.bindRecordSrv.GetRemark(company.ID, source, deviceId)
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyId)
+	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
 		return cashier_resp.Base{}, err
 	}
@@ -254,7 +254,7 @@ func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url 
 	}
 	if _, exists := sourceMap[source]; exists {
 		// 判断权限
-		_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, staff.CompanyId)
+		_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, staff.CompanyUuid)
 		if err != nil {
 			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
 		}

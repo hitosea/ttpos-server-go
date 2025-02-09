@@ -35,13 +35,13 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) *StaffShiftSrv 
 
 // CreateWorkingLog 创建当班记录
 func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) model.StaffShiftLog {
-	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyId))
-	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash(staff.CompanyId)
+	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
+	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash(staff.CompanyUuid)
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
 		startTime = uint(time.Now().Unix())
 	}
-	shiftLog, _ := shiftLogRepo.Create(staff.CompanyId, model.StaffShiftLog{
+	shiftLog, _ := shiftLogRepo.Create(staff.CompanyUuid, model.StaffShiftLog{
 		ShiftUserId:       uint(staff.Uuid),
 		ShiftNo:           s.generateNumber(),
 		PreviousShiftCash: previousShiftCash,

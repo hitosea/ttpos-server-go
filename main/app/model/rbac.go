@@ -25,7 +25,7 @@ type Access struct {
 type Staff struct {
 	ID               uint   `gorm:"primary_key;AUTO_INCREMENT;comment:主键id"`
 	Uuid             uint   `gorm:"default:0;comment:主键id"`
-	CompanyId        uint   `gorm:"default:0;comment:集团ID"`
+	CompanyUuid      uint   `gorm:"default:0;comment:集团ID"`
 	Username         string `gorm:"default:'';comment:用户名"`
 	Password         string `gorm:"default:'';comment:登录密码"`
 	Phone            string `gorm:"default:'';comment:手机号"`
@@ -42,7 +42,7 @@ type Staff struct {
 	UpdateTime       int64  `gorm:"autoUpdateTime;comment:更新时间"`
 	DeleteTime       int64  `gorm:"default:0;comment:删除时间"`
 
-	Company *Company `gorm:"foreignKey:company_id"`
+	Company *Company `gorm:"foreignKey:company_uuid"`
 }
 
 // Role 角色表

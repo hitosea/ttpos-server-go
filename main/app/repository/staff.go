@@ -12,7 +12,7 @@ type IStaffRepo interface {
 	WithCompanySetting() With
 	WithCompany() With
 	OfflineGetByUsername(username string, withs ...With) model.Staff
-	//CreateStaff(staff model.Staff) error
+	CreateStaff(staff model.Staff) error
 	GetCurrentCashier(companyId uint, bindKey string) model.Staff
 	Update(companyId uint, id uint, vars map[string]any) error
 }
@@ -27,6 +27,10 @@ type StaffRepo struct {
 
 func NewStaffRepoImpl(db *gorm.DB) *StaffRepo {
 	return &StaffRepo{db: db}
+}
+
+func (r *StaffRepo) CreateStaff(staff model.Staff) error {
+	return r.db.Create(&staff).Error
 }
 
 func (r *StaffRepo) GetByIdAndCompanyId(Id, companyId uint, withs ...With) model.Staff {

@@ -3,6 +3,7 @@ package old_model
 import (
 	"fmt"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 )
@@ -52,9 +53,8 @@ func (s *ShopUserService) ConvertShopUser() error {
 	for _, shopUser := range shopUsers {
 		fmt.Println(fmt.Sprintf("shopUser: %+v", shopUser))
 		staff := model.Staff{
-			ID:               0,
 			Uuid:             shopUser.ShopUserID,
-			CompanyId:        shopUser.AppID,
+			CompanyUuid:      shopUser.AppID,
 			Username:         shopUser.UserName,
 			Password:         shopUser.Password,
 			Phone:            shopUser.Phone,
@@ -71,7 +71,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 			UpdateTime:       shopUser.UpdateTime,
 			DeleteTime:       shopUser.IsDelete,
 		}
-		err := s.targetDB.Create(&staff).Error
+		err := repository.NewStaffRepo(s.targetDB).CreateStaff(staff)
 		if err != nil {
 			return err
 		}

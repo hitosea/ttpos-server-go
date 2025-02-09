@@ -55,18 +55,18 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Acces
 			where = append(where, accessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyId)).GetRoleIds(staff.Uuid)
+		roleIds, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleIds(staff.Uuid)
 		if err != nil {
 			return nil, companySetting, errors.New("获取用户角色失败")
 		}
-		accessIds, err := accessRepo.GetAccessIds(roleIds, staff.CompanyId)
+		accessIds, err := accessRepo.GetAccessIds(roleIds, staff.CompanyUuid)
 		if err != nil {
 			return nil, companySetting, errors.New("获取角色权限失败")
 		}
 		where = append(where, accessRepo.WhereIds(accessIds))
 	}
 
-	dbPermissions, err := accessRepo.GetPermissions(staff.CompanyId, where...)
+	dbPermissions, err := accessRepo.GetPermissions(staff.CompanyUuid, where...)
 
 	if err != nil {
 		return nil, companySetting, errors.New("获取权限失败")
