@@ -52,6 +52,13 @@ func (s *TableService) ConvertTable() error {
 	}
 	for _, table := range tables {
 		fmt.Println(fmt.Sprintf("table: %+v", table))
+
+		var isDisable uint
+		if table.SwitchStatus == 1 {
+			isDisable = 0
+		} else {
+			isDisable = 1
+		}
 		desk := model.Desk{
 			Uuid:       table.TableID,
 			TableNo:    table.TableNo,
@@ -59,7 +66,7 @@ func (s *TableService) ConvertTable() error {
 			TypeUuid:   table.TypeID,
 			OrderBy:    uint(table.Sort),
 			Status:     uint(table.Status),
-			IsDisable:  uint(table.SwitchStatus),
+			IsDisable:  isDisable,
 			QrcodeUrl:  table.QRCodeValue,
 			IsBind:     uint(table.IsBind),
 			CreateTime: table.CreateTime,

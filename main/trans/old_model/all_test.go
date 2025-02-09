@@ -25,17 +25,17 @@ var targetConf = config.DatabaseConf{
 var targetDBName = "shop_1"
 
 func TestConvertAll(t *testing.T) {
-	testConvertAttribute()
-	testConvertCategory()
-	testConvertFreeTag()
-	testConvertProductAttributeGroup()
-	testConvertProductAttribute()
-	testConvertProductPrintLabel()
-	testConvertProductUnit()
-	testConvertReturnReason()
-	testConvertSpec()
-	testConvertProduct()
-	testConvertTable()
-	testConvertTableType()
-	testConvertTableArea()
+	testConvertAttribute()             // 商品属性
+	testConvertCategory()              // 商品分类
+	testConvertFreeTag()               // 商品标签
+	testConvertProductAttributeGroup() // 商品属性组
+	testConvertProductAttribute()      // 商品包属性
+	testConvertProductPrintLabel()     // 商品打印标签
+	testConvertProductUnit()           // 商品单位
+	testConvertReturnReason()          // 退菜原因
+	testConvertSpec()                  // 规格
+	testConvertProduct()               // 商品
+	testConvertTable()                 // 桌台
+	testConvertTableType()             // 桌台类型
+	testConvertTableArea()             // 桌台区域
 }
