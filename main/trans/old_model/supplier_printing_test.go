@@ -46,3 +46,22 @@ func testConvertSupplierPrinting() {
 	}
 	fmt.Println("supplier_printing转换完成")
 }
+func TestParseRegionID(t *testing.T) {
+	supplierPrintingService := SupplierPrintingService{}
+	testCases := []string{
+		`["2","6","4","0","8"]`,
+		`["1","3","5","7","9"]`,
+		`["10","20","30","40","50"]`,
+		`["100","200","300","400","500"]`,
+		`""`,
+		``,
+	}
+
+	for _, str := range testCases {
+		regionIDs, err := supplierPrintingService.parseIdList(str)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(regionIDs)
+	}
+}

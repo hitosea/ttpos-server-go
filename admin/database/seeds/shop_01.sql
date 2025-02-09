@@ -818,16 +818,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '报损单表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
-    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
-    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型名称',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机类型表';
-
 CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
   id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
   uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机模板ID',
@@ -844,10 +834,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机名称',
     printer_type_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
-    sn VARCHAR(255) NOT NULL DEFAULT '' COMMENT '序列号',
-    ip VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'IP地址',
-    port INT NOT NULL DEFAULT 0 COMMENT '端口号',
-    status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-open开启 1-close关闭',
+    config_json TEXT DEFAULT "" COMMENT '打印机json配置',
     copies INT NOT NULL DEFAULT 0 COMMENT '打印份数',
     order_by INT NOT NULL DEFAULT 0 COMMENT '排序',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -856,6 +843,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
+    name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型名称',
+    `key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型key',
+    config_json TEXT DEFAULT "" COMMENT '打印机类型json配置,描述需要填写的字段',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机类型表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -899,7 +897,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_printer_region` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机区域ID',
     product_printer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机ID',
-    region_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '区域ID',
+    desk_region_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '桌台区域ID',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
@@ -908,25 +906,25 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_printer_region` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_item` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机明细ID',
-    product_printer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品打印（档口）打印机ID',
+    product_printer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '商品打印（档口）ID',
     printer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印机ID',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品打印机明细表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印（档口）打印机关联表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_product_item` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机产品明细ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机产品关联ID',
     product_printer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机ID',
     product_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品包ID',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品打印机产品明细表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品打印机产品关联表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_sale_inventory` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

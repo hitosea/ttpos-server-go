@@ -1,5 +1,29 @@
 package model
 
+type Printer struct {
+	ID              uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	UUID            uint   `gorm:"default:0;unique;comment:'打印机ID'"`
+	Name            string `gorm:"default:'';comment:'打印机名称'"`
+	PrinterTypeUuid uint   `gorm:"default:0;comment:'打印机类型ID'"`
+	ConfigJson      string `gorm:"default:'';comment:'打印机json配置'"`
+	Copies          uint   `gorm:"default:0;comment:'打印份数'"`
+	OrderBy         uint   `gorm:"default:0;comment:'排序'"`
+	CreateTime      int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime      int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime      int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
+}
+
+type PrinterType struct {
+	ID         uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid       uint   `gorm:"default:0;unique;comment:'打印机类型ID'"`
+	Name       string `gorm:"default:'';comment:'打印机类型名称'"`
+	Key        string `gorm:"default:'';comment:'打印机类型key'"`
+	ConfigJson string `gorm:"default:'';comment:'打印机类型json配置,描述需要填写的字段'"`
+	CreateTime int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
+}
+
 type ProductPrinter struct {
 	ID                 uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID               uint   `gorm:"default:0;comment:'产品打印机ID'"`
@@ -12,4 +36,34 @@ type ProductPrinter struct {
 	CreateTime         int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime         int64  `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime         int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
+}
+
+type ProductPrinterRegion struct {
+	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	UUID               uint  `gorm:"default:0;comment:'产品打印机区域ID'"`
+	ProductPrinterUuid uint  `gorm:"default:0;comment:'产品打印机ID'"`
+	DeskRegionUuid     uint  `gorm:"default:0;comment:'桌台区域ID'"`
+	CreateTime         int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime         int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
+}
+
+type ProductPrinterItem struct {
+	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	UUID               uint  `gorm:"default:0;comment:'商品打印（档口）打印机ID'"`
+	ProductPrinterUuid uint  `gorm:"default:0;comment:'商品打印（档口）ID'"`
+	PrinterUuid        uint  `gorm:"default:0;comment:'打印机ID'"`
+	CreateTime         int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime         int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
+}
+
+type ProductPrinterProductItem struct {
+	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	UUID               uint  `gorm:"default:0;comment:'产品打印机产品明细ID'"`
+	ProductPrinterUuid uint  `gorm:"default:0;comment:'产品打印机ID'"`
+	ProductPackageUuid uint  `gorm:"default:0;comment:'产品包ID'"`
+	CreateTime         int64 `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
+	UpdateTime         int64 `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
+	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }

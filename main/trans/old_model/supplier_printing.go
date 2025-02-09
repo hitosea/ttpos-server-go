@@ -1,8 +1,12 @@
 package old_model
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/pkg/database"
 
 	"gorm.io/gorm"
 )
@@ -53,6 +57,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 	if err != nil {
 		return err
 	}
+
 	for _, supplierPrinting := range supplierPrintings {
 		printType := 0
 		if supplierPrinting.PrintType == 20 {
@@ -71,6 +76,82 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		if supplierPrinting.PrintSelect == 2 {
 			printModeScene = 1
 		}
+		// 档口产品关联ID列表
+		productIDList, err := s.parseIdList(supplierPrinting.ProductIDs)
+		if err != nil {
+			return err
+		}
+		for _, productID := range productIDList {
+			id, err := database.GetID()
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("id: %d", id))
+			// 转换档口产品关联数据
+			productPrinterProductItem := model.ProductPrinterProductItem{
+				UUID:               uint(id),
+				ProductPrinterUuid: uint(supplierPrinting.ID),
+				ProductPackageUuid: productID,
+				CreateTime:         supplierPrinting.CreateTime,
+				UpdateTime:         supplierPrinting.UpdateTime,
+				DeleteTime:         int64(supplierPrinting.IsDelete),
+			}
+			_, err = base.NewProductPrinterProductItemRepo(s.targetDB).CreateProductPrinterProductItem(productPrinterProductItem)
+			if err != nil {
+				return err
+			}
+		}
+
+		// 档口打印机ID列表
+		printerIDList, err := s.parseIdList(supplierPrinting.PrinterID)
+		if err != nil {
+			return err
+		}
+		for _, printerID := range printerIDList {
+			id, err := database.GetID()
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("id: %d", id))
+			// 转换档口打印机数据
+			productPrinterItem := model.ProductPrinterItem{
+				UUID:               uint(id),
+				ProductPrinterUuid: uint(supplierPrinting.ID),
+				PrinterUuid:        printerID,
+				CreateTime:         supplierPrinting.CreateTime,
+				UpdateTime:         supplierPrinting.UpdateTime,
+				DeleteTime:         int64(supplierPrinting.IsDelete),
+			}
+			_, err = base.NewProductPrinterItemRepo(s.targetDB).CreateProductPrinterItem(productPrinterItem)
+			if err != nil {
+				return err
+			}
+		}
+		// 档口区域ID列表
+		regionIDList, err := s.parseIdList(supplierPrinting.AreaID)
+		if err != nil {
+			return err
+		}
+		for _, regionID := range regionIDList {
+			id, err := database.GetID()
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("id: %d", id))
+			// 转换档口区域数据
+			productPrinterRegion := model.ProductPrinterRegion{
+				UUID:               uint(id),
+				ProductPrinterUuid: uint(supplierPrinting.ID),
+				DeskRegionUuid:     regionID,
+				CreateTime:         supplierPrinting.CreateTime,
+				UpdateTime:         supplierPrinting.UpdateTime,
+			}
+			_, err = base.NewProductPrinterRegionRepo(s.targetDB).CreateProductPrinterRegion(productPrinterRegion)
+			if err != nil {
+				return err
+			}
+		}
+		// 档口打印机. 转换商品打印（档口）数据
 		productPrinter := model.ProductPrinter{
 			UUID:               supplierPrinting.ID,
 			Name:               supplierPrinting.Name,
@@ -88,4 +169,27 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		}
 	}
 	return nil
+}
+
+// 将字符串数据转为数组
+func (s *SupplierPrintingService) parseIdList(regionArrayString string) ([]uint, error) {
+	if regionArrayString == "" {
+		return []uint{}, nil
+	}
+	if regionArrayString == "\"\"" {
+		return []uint{}, nil
+	}
+	regionIDs := []uint{}
+	regionArrayString = strings.ReplaceAll(regionArrayString, `"`, "")
+	regionArrayString = strings.Trim(regionArrayString, "[")
+	regionArrayString = strings.Trim(regionArrayString, "]")
+	regionArray := strings.Split(regionArrayString, ",")
+	for _, region := range regionArray {
+		regionID, err := strconv.ParseUint(region, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		regionIDs = append(regionIDs, uint(regionID))
+	}
+	return regionIDs, nil
 }
