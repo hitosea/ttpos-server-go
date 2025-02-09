@@ -38,4 +38,7 @@ func TestConvertAll(t *testing.T) {
 	testConvertTable()                 // 桌台
 	testConvertTableType()             // 桌台类型
 	testConvertTableArea()             // 桌台区域
+	testConvertShopAccess()            // 权限
+	testConvertShopRole()              // 角色
+	testConvertShopUser()              // 用户
 }

@@ -49,6 +49,7 @@ type Staff struct {
 // Role 角色表
 type Role struct {
 	ID         uint   `gorm:"primary_key;AUTO_INCREMENT;comment:角色id"`
+	Uuid       uint   `gorm:"default:0;comment:uuid"`
 	Name       string `gorm:"comment:角色名称"`
 	Sort       uint   `gorm:"default:100;comment:排序(数字越小越靠前)"`
 	CreateTime int64  `gorm:"autoCreateTime;comment:创建时间"`
