@@ -9,6 +9,7 @@ import (
 type IAccessRepo interface {
 	GetPermissions(companyId uint, where ...Where) ([]model.Access, error)
 	GetAccessIds(roleIds []int, appId uint) ([]int, error)
+	CreateAccess(access *model.Access) error
 	WhereIds(accessIds []int) Where
 	WherePath(excludePath []string) Where
 	WhereIsSupplier() Where
@@ -24,6 +25,10 @@ type AccessRepo struct {
 
 func NewAccessRepoImpl(db *gorm.DB) *AccessRepo {
 	return &AccessRepo{db: db}
+}
+
+func (r *AccessRepo) CreateAccess(access *model.Access) error {
+	return r.db.Create(access).Error
 }
 
 func (r *AccessRepo) GetPermissions(companyId uint, where ...Where) ([]model.Access, error) {

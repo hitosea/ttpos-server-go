@@ -40,7 +40,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Acces
 	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyId))
 	var companySetting model.CompanySetting
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff := staffRepo.GetById(companyId, staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff := staffRepo.GetById(staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {
 		return nil, companySetting, errors.New("获取商家信息错误")

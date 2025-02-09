@@ -10,7 +10,7 @@ import (
 )
 
 type ProductUnit struct {
-	UnitID         uint   `gorm:"primaryKey;autoIncrement;comment:ID"`
+	UnitID         uint   `gorm:"primaryKey;autoIncrement;comment:Uuid"`
 	UnitName       string `gorm:"default:'';comment:属性名"`
 	ShopSupplierID uint   `gorm:"default:0;comment:门店id"`
 	Sort           uint   `gorm:"default:0;comment:排序"`

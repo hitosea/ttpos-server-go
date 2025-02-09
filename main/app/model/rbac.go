@@ -2,23 +2,24 @@ package model
 
 // Access 权限表
 type Access struct {
-	ID             uint   `gorm:"primary_key;comment:主键id"`
-	Name           string `gorm:"default:'';comment:权限名称;"`
-	Path           string `gorm:"default:'';comment:路由地址"`
-	ApiPath        string `gorm:"default:'';comment:后端路由地址"`
-	ParentId       uint   `gorm:"default:0;comment:父级id"`
-	Sort           uint   `gorm:"default:100;comment:排序(数字越小越靠前)"`
-	Icon           string `gorm:"default:'';comment:菜单图标"`
-	RedirectName   string `gorm:"default:'';comment:重定向名称"`
-	IsRoute        uint   `gorm:"default:0;comment:是否是路由 0=不是1=是"`
-	IsMenu         uint   `gorm:"default:0;comment:是否是菜单 0不是 1是"`
-	IsShow         uint   `gorm:"default:1;comment:是否显示1=显示0=不显示"`
-	PlusCategoryId uint   `gorm:"default:0;comment:插件分类id"`
-	Remark         string `gorm:"default:'';comment:描述"`
-	IsSupplier     uint   `gorm:"default:0;comment:是否门店菜单0否1是"`
-	CreateTime     int64  `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime     int64  `gorm:"autoUpdateTime;comment:更新时间"`
-	DeleteTime     int64  `gorm:"default:0;comment:删除时间"`
+	Id               uint   `gorm:"primary_key;comment:主键id"`
+	Uuid             uint   `gorm:"default:0;comment:uuid"`
+	Name             string `gorm:"default:'';comment:权限名称;"`
+	Path             string `gorm:"default:'';comment:路由地址"`
+	ApiPath          string `gorm:"default:'';comment:后端路由地址"`
+	ParentUuid       uint   `gorm:"default:0;comment:父级id"`
+	Sort             uint   `gorm:"default:100;comment:排序(数字越小越靠前)"`
+	Icon             string `gorm:"default:'';comment:菜单图标"`
+	RedirectName     string `gorm:"default:'';comment:重定向名称"`
+	IsRoute          uint   `gorm:"default:0;comment:是否是路由 0=不是1=是"`
+	IsMenu           uint   `gorm:"default:0;comment:是否是菜单 0不是 1是"`
+	IsShow           uint   `gorm:"default:1;comment:是否显示1=显示0=不显示"`
+	PlusCategoryUuid uint   `gorm:"default:0;comment:插件分类id"`
+	Remark           string `gorm:"default:'';comment:描述"`
+	IsSupplier       uint   `gorm:"default:0;comment:是否门店菜单0否1是"`
+	CreateTime       int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime       int64  `gorm:"autoUpdateTime;comment:更新时间"`
+	DeleteTime       int64  `gorm:"default:0;comment:删除时间"`
 }
 
 // Staff 员工表
@@ -42,7 +43,7 @@ type Staff struct {
 	UpdateTime       int64  `gorm:"autoUpdateTime;comment:更新时间"`
 	DeleteTime       int64  `gorm:"default:0;comment:删除时间"`
 
-	Company *Company `gorm:"foreignKey:company_uuid"`
+	Company *Company `gorm:"foreignKey:company_id"`
 }
 
 // Role 角色表

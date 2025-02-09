@@ -86,7 +86,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyId))
-		staff = staffRepo.GetById(companyStaff.CompanyId, companyStaff.StaffId, staffRepo.WithCompany())
+		staff = staffRepo.GetById(companyStaff.StaffId, staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		staff = staffRepo.OfflineGetByUsername(loginReq.Username, staffRepo.WithCompany())
@@ -120,7 +120,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 
 	// 检查是否有未交班的收银员
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-	currentStaff := staffRepo.GetCurrentCashier(staff.CompanyUuid, loginReq.DeviceId)
+	currentStaff := staffRepo.GetCurrentCashier(loginReq.DeviceId)
 	if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
 		return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 	}
@@ -159,7 +159,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 		updates["duty_no"] = shiftLog.ShiftNo
 	}
 	staffRepo = repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-	err = staffRepo.Update(staff.CompanyUuid, staff.Uuid, updates)
+	err = staffRepo.Update(staff.Uuid, updates)
 	if err != nil {
 		return token, errors.New("更新信息失败")
 	}
@@ -176,7 +176,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 func (s *AuthSrv) Logout(cc *gin.Context) error {
 	companyId := cc.GetUint(jwt.CompanyId)
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff := staffRepo.GetById(companyId, cc.GetUint(jwt.StaffId))
+	staff := staffRepo.GetById(cc.GetUint(jwt.StaffId))
 	return s.bindRecordSrv.Unbind(companyId, constant.SourceCashier, staff.BindKey, staff.Uuid)
 }
 
@@ -224,7 +224,7 @@ func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url 
 		staff          model.Staff
 	)
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff = staffRepo.GetByIdAndCompanyId(staffId, companyId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff = staffRepo.GetByIdAndCompanyId(staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
