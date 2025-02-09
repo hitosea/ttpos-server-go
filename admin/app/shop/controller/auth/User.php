@@ -176,7 +176,7 @@ class User extends Controller
         $user = $this->store['user'];
         $supplier = $this->store['supplier'];
         $menus = [];
-        $user_info = AuthUserModel::find($user['shop_user_id']);
+        $user_info = AuthUserModel::find($user['uuid']);
         if (empty($user_info)) {
             return $this->renderError('用户不存在');
         }
@@ -186,7 +186,7 @@ class User extends Controller
             $menus = $model->getList($user['user_type'], $supplier);
         } else {
             $model = new AccessModel();
-            $menus = $model->getListByUser($user['shop_user_id'], $user['user_type'], $supplier);
+            $menus = $model->getListByUser($user['uuid'], $user['user_type'], $supplier);
 
             foreach ($menus as $key => $val) {
                 if (!isset($val['children'][0]['path'])) {

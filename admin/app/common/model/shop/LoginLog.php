@@ -26,10 +26,11 @@ class LoginLog extends BaseModel
     public static function add($username, $ip, $result, $app_id)
     {
         (new self)->save([
+            'uuid' => createUuid(),
+            'staff_uuid' => $app_id,
             'username' => $username,
             'ip' => $ip,
-            'result' => $result,
-            'uuid' => $app_id
+            'result' => $result
         ]);
     }
 }
