@@ -856,10 +856,35 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机表';
 
+
+CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '打印日志ID',
+    printer_id INT(11) NOT NULL DEFAULT 0 COMMENT '打印机id',
+    cashier_device_key VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银机绑定的key',
+    sale_bill_id INT(11) NOT NULL DEFAULT 0 COMMENT '销售账单id',
+    data VARCHAR(255) DEFAULT NULL COMMENT '打印数据',
+    type INT(11) NOT NULL DEFAULT 0 COMMENT '类型：0系统默认队列，1云上服务下放',
+    data_type INT(11) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
+    printer_rule INT(11) NOT NULL DEFAULT 0 COMMENT '打印规则id, 指向supplier_printing表',
+    printer_rule_text TEXT DEFAULT NULL COMMENT '打印规则, 指向supplier_printing表集合',
+    print_method INT(11) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
+    num INT(11) NOT NULL DEFAULT 0 COMMENT '打印次数',
+    status INT(11) NOT NULL DEFAULT 1 COMMENT '状态(0结束,1进行中,2成功)',
+    reason VARCHAR(255) DEFAULT '' COMMENT '原因',
+    printer_time INT(11) NOT NULL DEFAULT 0 COMMENT '打印时间',
+    first_execution INT(11) NOT NULL DEFAULT 0 COMMENT '是否首次执行打印',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印日志表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品打印机ID',
-    status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-open开启 1-close关闭',
+    name varchar(100) NOT NULL DEFAULT '' COMMENT '名称.厨显上叫档口', 
+    status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,1-open开启 1、0-close关闭',
     print_mode TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印模式,0-payment付款打印 1-kitchen送厨打印',
     print_method TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印方式,0-order整单打印 1-item按一菜一单打印',
     print_product_select TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印商品选择,0-category按商品分类 1-tag按打印标签',
@@ -868,7 +893,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品打印机表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印（档口）表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_region` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
