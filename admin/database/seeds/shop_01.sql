@@ -1043,11 +1043,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）'
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_customer_call_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_customer_call` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '客户呼叫记录ID',
-    desk_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台名称',
+    desk_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '桌台ID',
+    desk_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-unhandled未处理 1-handled已处理',
+    is_send INT(11) NOT NULL DEFAULT 0 COMMENT '消息发送状态 0-否 1-是',
     create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

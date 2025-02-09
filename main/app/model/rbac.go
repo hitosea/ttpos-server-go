@@ -43,7 +43,7 @@ type Staff struct {
 	UpdateTime       int64  `gorm:"autoUpdateTime;comment:更新时间"`
 	DeleteTime       int64  `gorm:"default:0;comment:删除时间"`
 
-	Company *Company `gorm:"foreignKey:company_id"`
+	Company *Company `gorm:"foreignKey:company_uuid"`
 }
 
 // Role 角色表

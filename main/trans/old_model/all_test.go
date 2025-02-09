@@ -43,4 +43,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertShopUser()              // 用户
 	testConvertShopUserRole()          // 用户角色
 	testConvertShopRoleAccess()        // 角色权限
+	testConvertCall()                  // 客户呼叫记录
 }
