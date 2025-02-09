@@ -2,17 +2,19 @@ package service
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+
+	"github.com/gin-gonic/gin"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -22,21 +24,19 @@ type IBindRecordSrv interface {
 	GetRemark(companyId uint, source string, deviceId string) string
 }
 
-func NewBindRecordSrv(bindRecordRepo repository.IBindRecordRepo, companySettingRepo repository.ICompanySettingRepo, settingSrv setting.ISrv) IBindRecordSrv {
-	return NewBindRecordSrvImpl(bindRecordRepo, companySettingRepo, settingSrv)
+func NewBindRecordSrv(settingSrv setting.ISrv, dbm *database.DBManager) IBindRecordSrv {
+	return NewBindRecordSrvImpl(settingSrv, dbm)
 }
 
 type BindRecordSrv struct {
-	bindRecordRepo     repository.IBindRecordRepo
-	companySettingRepo repository.ICompanySettingRepo
-	settingSrv         setting.ISrv
+	settingSrv setting.ISrv
+	dbm        *database.DBManager
 }
 
-func NewBindRecordSrvImpl(bindRecordRepo repository.IBindRecordRepo, companySettingRepo repository.ICompanySettingRepo, settingSrv setting.ISrv) *BindRecordSrv {
+func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) *BindRecordSrv {
 	return &BindRecordSrv{
-		bindRecordRepo:     bindRecordRepo,
-		companySettingRepo: companySettingRepo,
-		settingSrv:         settingSrv,
+		dbm:        dbm,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -49,7 +49,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 	platform := utils.GetPlatform(addReq.UserAgent)
 
 	// 获取绑定
-	existsBindRecord := s.bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.CompanyId, addReq.Source, addReq.DeviceId)
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(addReq.CompanyId))
+	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.CompanyId, addReq.Source, addReq.DeviceId)
 	if existsBindRecord.ID != 0 {
 		printPortId := addReq.PrintPortId
 		remark := addReq.Remark
@@ -64,7 +65,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 			finallyLoginTime = existsBindRecord.FinallyLoginTime
 		}
 		// 更新绑定
-		err := s.bindRecordRepo.Update(addReq.CompanyId, existsBindRecord.ID, map[string]interface{}{
+		err := bindRecordRepo.Update(addReq.CompanyId, existsBindRecord.ID, map[string]interface{}{
 			"print_port_id":      printPortId,
 			"remark":             remark,
 			"brand":              addReq.Brand,
@@ -81,7 +82,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 	}
 
 	// 获取 company setting
-	companySetting := s.companySettingRepo.GetById(addReq.CompanyId)
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(addReq.CompanyId))
+	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB(addReq.CompanyId)
 	type Source struct {
 		Name  string
 		Limit uint
@@ -96,7 +98,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		if sourceKey != addReq.Source {
 			continue
 		}
-		count := s.bindRecordRepo.GetBindCount(addReq.CompanyId, sourceKey)
+		count := bindRecordRepo.GetBindCount(addReq.CompanyId, sourceKey)
 		if count >= source.Limit { // 超过绑定上线
 			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
@@ -127,7 +129,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		}
 	}
 
-	return s.bindRecordRepo.Create(addReq.CompanyId, model.BindRecord{
+	return bindRecordRepo.Create(addReq.CompanyId, model.BindRecord{
 		FinallyLoginId:   int(addReq.FinallyLoginId),
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
@@ -143,9 +145,11 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 }
 
 func (s *BindRecordSrv) Unbind(companyId uint, source string, key string, staffId uint) error {
-	return s.bindRecordRepo.Unbind(companyId, source, key, staffId)
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
+	return bindRecordRepo.Unbind(companyId, source, key, staffId)
 }
 
 func (s *BindRecordSrv) GetRemark(companyId uint, source string, deviceId string) string {
-	return s.bindRecordRepo.GetRemark(companyId, source, deviceId)
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
+	return bindRecordRepo.GetRemark(companyId, source, deviceId)
 }

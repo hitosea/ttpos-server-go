@@ -1,10 +1,9 @@
 package repository
 
 import (
-	"gorm.io/gorm"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 type ICompanyStaffRepo interface {
@@ -13,22 +12,21 @@ type ICompanyStaffRepo interface {
 	GetByUsername(username string, withs ...Where) model.CompanyStaff
 }
 
-func NewCompanyStaffRepo(db *database.DBManager) ICompanyStaffRepo {
+func NewCompanyStaffRepo(db *gorm.DB) ICompanyStaffRepo {
 	return NewCompanyStaffRepoImpl(db)
 }
 
 type CompanyStaffRepo struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
-func NewCompanyStaffRepoImpl(db *database.DBManager) *CompanyStaffRepo {
-	return &CompanyStaffRepo{dbm: db}
+func NewCompanyStaffRepoImpl(db *gorm.DB) *CompanyStaffRepo {
+	return &CompanyStaffRepo{db: db}
 }
 
 func (r *CompanyStaffRepo) GetById(Id uint, withs ...Where) model.CompanyStaff {
 	var user model.CompanyStaff
-	db := r.dbm.GetDB(constant.DefaultDB)
-	r.handleWiths(db, withs).First(&user, Id)
+	r.handleWiths(r.db, withs).First(&user, Id)
 	return user
 }
 
@@ -40,8 +38,7 @@ func (r *CompanyStaffRepo) WithCompany() Where {
 
 func (r *CompanyStaffRepo) GetByUsername(username string, withs ...Where) model.CompanyStaff {
 	var user model.CompanyStaff
-	db := r.dbm.GetDB(constant.DefaultDB)
-	r.handleWiths(db, withs).Where("user_name = ?", username).Debug().First(&user)
+	r.handleWiths(r.db, withs).Where("user_name = ?", username).Debug().First(&user)
 	return user
 }
 

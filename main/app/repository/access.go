@@ -4,7 +4,6 @@ import (
 	"gorm.io/gorm"
 
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/database"
 )
 
 type IAccessRepo interface {
@@ -15,31 +14,30 @@ type IAccessRepo interface {
 	WhereIsSupplier() Where
 }
 
-func NewAccessRepo(dbm *database.DBManager) IAccessRepo {
-	return NewAccessRepoImpl(dbm)
+func NewAccessRepo(db *gorm.DB) IAccessRepo {
+	return NewAccessRepoImpl(db)
 }
 
 type AccessRepo struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
-func NewAccessRepoImpl(dbm *database.DBManager) *AccessRepo {
-	return &AccessRepo{dbm: dbm}
+func NewAccessRepoImpl(db *gorm.DB) *AccessRepo {
+	return &AccessRepo{db: db}
 }
 
 func (r *AccessRepo) GetPermissions(companyId uint, where ...Where) ([]model.Access, error) {
 	var access []model.Access
-	db := r.dbm.GetDB(companyId)
 	for _, w := range where {
-		db = w(db)
+		r.db = w(r.db)
 	}
-	err := db.Order("sort asc, create_time asc").Debug().Find(&access).Error
+	err := r.db.Order("sort asc, create_time asc").Debug().Find(&access).Error
 	return access, err
 }
 
 func (r *AccessRepo) GetAccessIds(roleIds []int, appId uint) ([]int, error) {
 	var accessIds []int
-	err := r.dbm.GetDB(appId).Model(&model.RoleAccess{}).Where("role_id in (?)", roleIds).Debug().Pluck("access_id", &accessIds).Error
+	err := r.db.Model(&model.RoleAccess{}).Where("role_id in (?)", roleIds).Debug().Pluck("access_id", &accessIds).Error
 	return accessIds, err
 }
 

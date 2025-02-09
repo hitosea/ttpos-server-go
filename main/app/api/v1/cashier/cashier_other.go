@@ -5,7 +5,6 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/cashier"
 	"ttpos-server-go/app/service/setting"
@@ -430,23 +429,13 @@ func (h *Handler) PostCashierVerifyAdvancedPassword(c *gin.Context) {
 }
 
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
-	// 初始化仓库
-	companyStaffRepo := repository.NewCompanyStaffRepo(dbm)
-	staffRepo := repository.NewStaffRepo(dbm)
-	bindRecordRepo := repository.NewBindRecordRepo(dbm)
-	staffRoleRepo := repository.NewStaffRoleRepo(dbm)
-	accessRepo := repository.NewAccessRepo(dbm)
-	companySettingRepo := repository.NewCompanySettingRepo(dbm)
-	staffShiftLogRepo := repository.NewShiftLogRepo(dbm)
-	settingRepo := repository.NewSettingRepo(dbm)
-
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
-	settingSrv := setting.NewSrv(settingRepo, companySettingRepo, cache)
-	roleAccessSrv := service.NewRoleAccessSrv(staffRoleRepo, accessRepo, staffRepo)
-	bindRecordSrv := service.NewBindRecordSrv(bindRecordRepo, companySettingRepo, settingSrv)
-	staffShiftSrv := service.NewStaffShiftSrv(staffShiftLogRepo, cache)
-	authSrv := service.NewAuthSrv(staffRepo, companyStaffRepo, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &Handler{
 		cashierSrv: cashier.NewCashierProductCategorySrv(dbm),

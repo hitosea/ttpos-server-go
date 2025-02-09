@@ -8,25 +8,26 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
 )
 
 type IStaffShiftSrv interface {
 	CreateWorkingLog(staff model.Staff) model.StaffShiftLog
 }
 
-func NewStaffShiftSrv(shiftLogRepo repository.IShiftLogRepo, cache cache.Cache) IStaffShiftSrv {
-	return NewShiftSrvImpl(shiftLogRepo, cache)
+func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
+	return NewShiftSrvImpl(cache, dbm)
 }
 
 type StaffShiftSrv struct {
-	shiftLogRepo   repository.IShiftLogRepo
+	dbm            *database.DBManager
 	cache          cache.Cache
 	cacheKeyPrefix string
 }
 
-func NewShiftSrvImpl(shiftLogRepo repository.IShiftLogRepo, cache cache.Cache) *StaffShiftSrv {
+func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) *StaffShiftSrv {
 	return &StaffShiftSrv{
-		shiftLogRepo:   shiftLogRepo,
+		dbm:            dbm,
 		cache:          cache,
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 	}
@@ -34,13 +35,14 @@ func NewShiftSrvImpl(shiftLogRepo repository.IShiftLogRepo, cache cache.Cache) *
 
 // CreateWorkingLog 创建当班记录
 func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) model.StaffShiftLog {
-	previousShiftCash, _ := s.shiftLogRepo.GetPreviousShiftCash(staff.CompanyId)
+	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyId))
+	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash(staff.CompanyId)
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
-		startTime = int(time.Now().Unix())
+		startTime = uint(time.Now().Unix())
 	}
-	shiftLog, _ := s.shiftLogRepo.Create(staff.CompanyId, model.StaffShiftLog{
-		ShiftUserId:       int(staff.ID),
+	shiftLog, _ := shiftLogRepo.Create(staff.CompanyId, model.StaffShiftLog{
+		ShiftUserId:       uint(staff.Uuid),
 		ShiftNo:           s.generateNumber(),
 		PreviousShiftCash: previousShiftCash,
 		CurrentCashTotal:  previousShiftCash,

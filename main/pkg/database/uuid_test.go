@@ -12,5 +12,5 @@ func TestGenerateUUID(t *testing.T) {
 	if err != nil {
 		log.Fatalf("GetID Failed Err: %#v\n", err)
 	}
-	fmt.Println("sonyFlake 生成 ID: ", id)
+	fmt.Println("sonyFlake 生成 Uuid: ", id)
 }

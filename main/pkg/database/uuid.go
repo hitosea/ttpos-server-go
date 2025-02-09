@@ -19,7 +19,7 @@ func InitSonyFlakeId() {
 	return
 }
 
-// 获取全局 ID 的函数
+// 获取全局 Uuid 的函数
 func GetID() (id uint64, err error) {
 	if sonyFlake == nil {
 		err = fmt.Errorf("需要先初始化以后再执行 GetID 函数 err: %#v \n", err)

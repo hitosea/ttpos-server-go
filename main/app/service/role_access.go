@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/pkg/database"
 
 	"github.com/jinzhu/copier"
 
@@ -20,28 +21,26 @@ type IRoleAccessSrv interface {
 	GetApiPermission(staffId, companyId uint) ([]string, error)
 }
 
-func NewRoleAccessSrv(staffRoleRepo repository.IStaffRoleRepo, accessRepo repository.IAccessRepo, staffRepo repository.IStaffRepo) IRoleAccessSrv {
-	return NewRoleAccessSrvImpl(staffRoleRepo, accessRepo, staffRepo)
+func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
+	return NewRoleAccessSrvImpl(dbm)
 }
 
 type RoleAccessSrv struct {
-	staffRoleRepo repository.IStaffRoleRepo
-	accessRepo    repository.IAccessRepo
-	staffRepo     repository.IStaffRepo
+	dbm *database.DBManager
 }
 
-func NewRoleAccessSrvImpl(staffRoleRepo repository.IStaffRoleRepo, accessRepo repository.IAccessRepo, staffRepo repository.IStaffRepo) *RoleAccessSrv {
+func NewRoleAccessSrvImpl(dbm *database.DBManager) *RoleAccessSrv {
 	return &RoleAccessSrv{
-		staffRoleRepo: staffRoleRepo,
-		accessRepo:    accessRepo,
-		staffRepo:     staffRepo,
+		dbm: dbm,
 	}
 }
 
 // 从数据库获取权限
 func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Access, model.CompanySetting, error) {
+	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyId))
 	var companySetting model.CompanySetting
-	staff := s.staffRepo.GetById(companyId, staffId, s.staffRepo.WithCompany(), s.staffRepo.WithCompanySetting())
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
+	staff := staffRepo.GetById(companyId, staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {
 		return nil, companySetting, errors.New("获取商家信息错误")
@@ -53,21 +52,21 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Acces
 
 	if staff.IsSuper == 1 { // 超级管理员
 		if staff.UserType == 1 {
-			where = append(where, s.accessRepo.WhereIsSupplier())
+			where = append(where, accessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := s.staffRoleRepo.GetRoleIds(staff.ID, staff.CompanyId)
+		roleIds, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyId)).GetRoleIds(staff.Uuid)
 		if err != nil {
 			return nil, companySetting, errors.New("获取用户角色失败")
 		}
-		accessIds, err := s.accessRepo.GetAccessIds(roleIds, staff.CompanyId)
+		accessIds, err := accessRepo.GetAccessIds(roleIds, staff.CompanyId)
 		if err != nil {
 			return nil, companySetting, errors.New("获取角色权限失败")
 		}
-		where = append(where, s.accessRepo.WhereIds(accessIds))
+		where = append(where, accessRepo.WhereIds(accessIds))
 	}
 
-	dbPermissions, err := s.accessRepo.GetPermissions(staff.CompanyId, where...)
+	dbPermissions, err := accessRepo.GetPermissions(staff.CompanyId, where...)
 
 	if err != nil {
 		return nil, companySetting, errors.New("获取权限失败")

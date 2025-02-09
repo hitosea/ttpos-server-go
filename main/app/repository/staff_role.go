@@ -2,27 +2,28 @@ package repository
 
 import (
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 type IStaffRoleRepo interface {
-	GetRoleIds(staffId uint, appId uint) ([]int, error)
+	GetRoleIds(staffId uint) ([]int, error)
 }
 
-func NewStaffRoleRepo(dbm *database.DBManager) IStaffRoleRepo {
-	return NewStaffRoleRepoImpl(dbm)
+func NewStaffRoleRepo(db *gorm.DB) IStaffRoleRepo {
+	return NewStaffRoleRepoImpl(db)
 }
 
 type StaffRoleRepo struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
-func NewStaffRoleRepoImpl(dbm *database.DBManager) *StaffRoleRepo {
-	return &StaffRoleRepo{dbm: dbm}
+func NewStaffRoleRepoImpl(db *gorm.DB) *StaffRoleRepo {
+	return &StaffRoleRepo{db: db}
 }
 
-func (r *StaffRoleRepo) GetRoleIds(staffId uint, appId uint) ([]int, error) {
+func (r *StaffRoleRepo) GetRoleIds(staffId uint) ([]int, error) {
 	var roleIds []int
-	err := r.dbm.GetDB(appId).Model(&model.StaffRole{}).Where("staff_id = ?", staffId).Debug().Pluck("role_id", &roleIds).Error
+	err := r.db.Model(&model.StaffRole{}).Where("staff_id = ?", staffId).Debug().Pluck("role_id", &roleIds).Error
 	return roleIds, err
 }

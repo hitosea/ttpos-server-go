@@ -4,10 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/copier"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 	"slices"
 	"strings"
 	"ttpos-server-go/app/constant"
@@ -16,8 +12,14 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/copier"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type ISrv interface {
@@ -27,23 +29,21 @@ type ISrv interface {
 	Updates(companyId uint, settingKey string, values any) error
 }
 
-func NewSrv(settingRepo repository.ISettingRepo, companySettingRepo repository.ICompanySettingRepo, cache cache.Cache) ISrv {
-	return NewSrvImpl(settingRepo, companySettingRepo, cache)
+func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
+	return NewSrvImpl(dbm, cache)
 }
 
 type Srv struct {
-	settingRepo        repository.ISettingRepo
-	companySettingRepo repository.ICompanySettingRepo
-	cache              cache.Cache
-	cacheKey           string
+	dbm      *database.DBManager
+	cache    cache.Cache
+	cacheKey string
 }
 
-func NewSrvImpl(settingRepo repository.ISettingRepo, companySettingRepo repository.ICompanySettingRepo, cache cache.Cache) *Srv {
+func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 	return &Srv{
-		settingRepo:        settingRepo,
-		companySettingRepo: companySettingRepo,
-		cache:              cache,
-		cacheKey:           "setting:company_id:%d",
+		dbm:      dbm,
+		cache:    cache,
+		cacheKey: "setting:company_id:%d",
 	}
 }
 
@@ -61,7 +61,8 @@ func (s *Srv) fromCache(companyId uint) ([]model.Setting, error) {
 	}
 	// 从数据库读取
 	var err error
-	settings, err = s.settingRepo.GetAll(companyId)
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyId))
+	settings, err = settingRepo.GetAll(companyId)
 	if err != nil {
 		logger.Logger.Error("从数据库获取设置失败", zap.Error(err))
 		return nil, errors.New("获取设置失败")
@@ -77,7 +78,8 @@ func (s *Srv) fromCache(companyId uint) ([]model.Setting, error) {
 func (s *Srv) GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
 
 	// 获取company_setting
-	companySetting := s.companySettingRepo.GetByCompanyIdFromCompanyDB(companyId)
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyId))
+	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB(companyId)
 
 	var retSettings = make(map[string]any)
 	// 从缓存读取
@@ -491,7 +493,8 @@ func (s *Srv) Updates(companyId uint, settingKey string, values any) error {
 	if err != nil {
 		return errors.New("更新设置失败")
 	}
-	if err = s.settingRepo.Updates(companyId, settingKey, string(value)); err != nil {
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyId))
+	if err = settingRepo.Updates(companyId, settingKey, string(value)); err != nil {
 		return errors.New("更新设置失败")
 	}
 	// 删除缓存
