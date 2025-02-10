@@ -561,7 +561,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品BOM原料表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '关联材料表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
