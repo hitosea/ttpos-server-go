@@ -20,7 +20,7 @@ class Printer extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['printer_id'];
+    protected $append = ['printer_id', 'printer_name'];
 
     /**
      * 兼容ID字段
@@ -28,6 +28,14 @@ class Printer extends BaseModel
     public function getPrinterIdAttr()
     {
         return $this->uuid ?? 0;
+    }
+
+    /**
+     * 兼容字段
+     */
+    public function getPrinterNameAttr()
+    {
+        return $this->name ?? 0;
     }
 
     /**
@@ -153,7 +161,7 @@ class Printer extends BaseModel
      */
     public static function detail($printer_id)
     {
-        return self::find($printer_id);
+        return self::where('uuid', $printer_id)->find();
     }
 
     /**

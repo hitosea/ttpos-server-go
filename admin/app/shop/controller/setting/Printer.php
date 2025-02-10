@@ -84,7 +84,7 @@ class Printer extends Controller
     public function detail($printer_id)
     {
         $detail = PrinterModel::detail($printer_id);
-        $detail['printer_config'] = json_decode($detail['printer_config'], true);
+        $detail['printer_config'] = json_decode($detail['config_json'], true);
         $printerType = $detail::getPrinterTypeList();
         return $this->renderSuccess('', compact('detail', 'printerType'));
     }
