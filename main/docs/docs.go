@@ -1145,6 +1145,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/order/list": {
+            "get": {
+                "description": "获取收银订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "获取收银订单列表",
+                "responses": {
+                    "200": {
+                        "description": "订单列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/order/pack/{orderId}": {
             "post": {
                 "description": "打包收银订单",
@@ -1874,7 +1900,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "呼叫"
+                    "厨显端.呼叫"
                 ],
                 "summary": "获取呼叫列表",
                 "responses": {

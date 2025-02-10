@@ -24,7 +24,7 @@ func (h *Handler) PostCallHandle(c *gin.Context) {
 
 // GetCallList 获取呼叫列表
 // @Summary 获取呼叫列表
-// @Tags 呼叫
+// @Tags 厨显端.呼叫
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.Response{data=resp.CallList}

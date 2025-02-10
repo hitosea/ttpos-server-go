@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     cashier_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     buffet_order_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
     desk_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
-    desk_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号',
+    serial_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     tax_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     buffet_duration INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长（秒）',
     hide_bill_time INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单（挂单）时间（时间戳）',

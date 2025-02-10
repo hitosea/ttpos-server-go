@@ -22,8 +22,6 @@ type CashierInstantHandler struct {
 // @Accept json
 // @Produce json
 // @Success 200 {object} cashier_resp.CreateOrderResp
-// @Failure 400 {object} helper.Error
-// @Failure 500 {object} helper.Error
 // @Router /cashier/instant/order/create [post]
 func (h *CashierInstantHandler) CreateOrder(c *gin.Context) {
 	// 创建订单

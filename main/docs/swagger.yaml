@@ -1841,6 +1841,23 @@ paths:
       summary: 隐藏收银订单
       tags:
       - 收银端
+  /cashier/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银订单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银订单列表
+      tags:
+      - 收银端.订单
   /cashier/order/pack/{orderId}:
     post:
       consumes:
@@ -2330,7 +2347,7 @@ paths:
               type: object
       summary: 获取呼叫列表
       tags:
-      - 呼叫
+      - 厨显端.呼叫
   /kitchen/login:
     post:
       consumes:
