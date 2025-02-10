@@ -31,7 +31,7 @@ func (r *ProductSpecialCategoryRepoImpl) UpdateProductSpecialCategory(id uint, p
 // CreateProductSpecialCategory 创建商品特殊类别
 func (r *ProductSpecialCategoryRepoImpl) CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) (uint, error) {
 	err := r.db.Create(&productSpecialCategory).Error
-	return productSpecialCategory.Id, err
+	return productSpecialCategory.ID, err
 }
 
 // DeleteProductSpecialCategory 软删除商品特殊类别

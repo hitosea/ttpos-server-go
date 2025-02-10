@@ -1,7 +1,7 @@
 package model
 
 type ReturnFoodReason struct {
-	Id                    uint   `gorm:"primaryKey;autoIncrement;comment:'退菜原因唯一标识符'"`
+	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'退菜原因唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
 	Name                  string `gorm:"default:'';comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:'多语言名称ID'"`
@@ -13,7 +13,7 @@ type ReturnFoodReason struct {
 }
 
 type GiftOrFreeOrderReason struct {
-	Id                    uint   `gorm:"primaryKey;autoIncrement;comment:'赠品或免费订单原因唯一标识符'"`
+	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'赠品或免费订单原因唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
 	Name                  string `gorm:"default:'';comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;comment:'多语言名称ID'"`

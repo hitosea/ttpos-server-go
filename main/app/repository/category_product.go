@@ -34,7 +34,7 @@ func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory
 func (r *ProductCategoryRepoImpl) CreateProductCategory(productCategory model.ProductCategory) (uint, error) {
 	// 实现创建商品类别的逻辑
 	err := r.db.Create(&productCategory).Error
-	return productCategory.Id, err
+	return productCategory.ID, err
 }
 
 // DeleteProductCategory 软删除商品类别

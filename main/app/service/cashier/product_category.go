@@ -48,7 +48,7 @@ func (s *CashierSrv) GetProductCategory(dbId uint64, language string) (resp.Prod
 	for _, productSpecialCategory := range productSpecialCategoryList {
 		specialCategoryList = append(specialCategoryList, resp.SpecialCategory{
 			Name: productSpecialCategory.Name,
-			Id:   productSpecialCategory.Id,
+			Id:   productSpecialCategory.ID,
 		})
 	}
 
@@ -62,7 +62,7 @@ func (s *CashierSrv) GetProductCategory(dbId uint64, language string) (resp.Prod
 				Children: nil, // todo
 			}
 			categoryList = append(categoryList, category)
-			categoryMap[productCategory.Id] = index
+			categoryMap[productCategory.ID] = index
 			index++
 		} else {
 			categoryList[categoryMap[productCategory.ParentUuid]].Children = append(categoryList[categoryMap[productCategory.ParentUuid]].Children, resp.ChildCategory{

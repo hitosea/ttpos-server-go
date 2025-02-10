@@ -51,7 +51,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		id, err := database.GetID()
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 
 		reason := model.GiftOrFreeOrderReason{
 			Uuid:                  freeTag.Id,

@@ -4,7 +4,7 @@ import "ttpos-server-go/config"
 
 // LoginLog 管理员登录记录表
 type LoginLog struct {
-	Id         int    `gorm:"column:id;type:int(11);AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
+	ID         int    `gorm:"column:id;type:int(11);AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid       int64  `gorm:"column:uuid;type:bigint(20);default:0;comment:UUID;NOT NULL" json:"uuid"`
 	StaffUuid  int64  `gorm:"column:staff_uuid;type:bigint(20);default:0;comment:员工UUID;NOT NULL" json:"staff_uuid"`
 	Username   string `gorm:"column:username;type:varchar(50);comment:用户名;NOT NULL" json:"username"`

@@ -11,7 +11,7 @@ import (
 type IProductPackageAttributeRepo interface {
 	GetProductPackageAttributeList(productPackageAttributeGroupId uint) ([]model.ProductPackageAttribute, error)                    // 获取产品包属性列表
 	UpdateProductPackageAttribute(productPackageAttributeGroupId uint, productPackageAttribute model.ProductPackageAttribute) error // 更新产品包属性
-	CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint, error)                              // 创建产品包属性
+	CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint64, error)                            // 创建产品包属性
 	DeleteProductPackageAttribute(productPackageAttributeGroupId uint) error                                                        // 删除产品包属性
 }
 
@@ -47,7 +47,7 @@ func (r *ProductPackageAttributeRepoImpl) UpdateProductPackageAttribute(productP
 }
 
 // CreateProductPackageAttribute 创建产品包属性
-func (r *ProductPackageAttributeRepoImpl) CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint, error) {
+func (r *ProductPackageAttributeRepoImpl) CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint64, error) {
 	// 创建产品包属性
 	if err := r.db.Create(&productPackageAttribute).Error; err != nil {
 		return 0, err
