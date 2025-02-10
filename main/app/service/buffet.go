@@ -43,7 +43,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginatio
 	respBuffets := make([]cashier_resp.Buffet, 0, len(buffets))
 	for _, buffet := range buffets {
 		respBuffet := cashier_resp.Buffet{
-			Uuid:              uint64(buffet.UUID),
+			Uuid:              uint64(buffet.Uuid),
 			Price:             buffet.BuffetCustomerTypePrice.Price,
 			IsLimitTime:       buffet.IsLimitTime,
 			CanCombined:       buffet.CanCombined,

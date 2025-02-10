@@ -118,7 +118,7 @@ func serverConf(opt copier.Option) {
 	Server = ServerConf{
 		Port:       "8080",
 		Mode:       "debug",
-		DeployMode: "offline",
+		DeployMode: "cloud",
 	}
 	copier.CopyWithOption(&Server, ServerConf{
 		Port: viper.GetString("SERVER_PORT"),

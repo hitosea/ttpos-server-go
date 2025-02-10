@@ -8,7 +8,7 @@ import (
 )
 
 type CustomerType struct {
-	ID             uint   `gorm:"primaryKey;autoIncrement;comment:ID"`
+	ID             uint64 `gorm:"primaryKey;autoIncrement;comment:ID"`
 	Name           string `gorm:"default:'';comment:名称"`
 	Status         uint   `gorm:"default:1;comment:状态"`
 	AppID          uint   `gorm:"default:0;comment:应用ID"`
@@ -47,7 +47,7 @@ func (s *CustomerTypeService) ConvertCustomerType() error {
 			isDelete = 1
 		}
 		customerType := model.BuffetCustomerType{
-			UUID:       customerType.ID,
+			Uuid:       customerType.ID,
 			Name:       customerType.Name,
 			CreateTime: customerType.CreateTime,
 			UpdateTime: customerType.UpdateTime,

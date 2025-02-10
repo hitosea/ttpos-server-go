@@ -50,7 +50,7 @@ func (r *BuffetCustomerTypePriceRepoImpl) CreateBuffetCustomerTypePrice(buffetCu
 	if err := r.db.Create(&buffetCustomerTypePrice).Error; err != nil {
 		return 0, err
 	}
-	return buffetCustomerTypePrice.UUID, nil
+	return buffetCustomerTypePrice.Uuid, nil
 }
 
 // DeleteBuffetCustomerTypePrice 软删除自助餐客户类型
