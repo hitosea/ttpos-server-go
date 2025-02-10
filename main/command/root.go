@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/router"
 
@@ -48,6 +49,8 @@ var rootCommand = &cobra.Command{
 		defer logger.Logger.Sync()
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
+		// 初始化系统事件总线
+		event.NewSystemBus()
 
 		gin.SetMode(config.Server.Mode)
 		// 创建Gin引擎

@@ -30,3 +30,20 @@ http://your.domain.com/api/v1/passport/server_public_key
 8. 自动验证的错误消息，使用对应结构+Message的map，传递参数，方便国际化，参考收银端登录接口
 9. api文档使用https://github.com/swaggo/swag 
 10. API接口响应时间要求本地响应200ms以内
+11. repository层的接口实现不能传入dbm实例，只能传入db实例
+12. 系统事件总线。使用前先`定义事件`，才可以`发布事件`和`订阅事件`
+
+```
+# 定义事件，参考：
+main/pkg/eventbus/event/sample_event.go
+```
+```
+# 发布事件
+引入这个包	     "ttpos-server-go/pkg/eventbus/event"
+发布一个Sample事件 event.NewSystemBus().PublishSampleEvent()
+```
+```
+# 订阅事件
+引入这个包	     "ttpos-server-go/pkg/eventbus/event"
+订阅Sample事件 event.NewSystemBus().SubscribeSampleEvent(func(msg event.SamplePayload) {})
+```
