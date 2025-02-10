@@ -14,5 +14,5 @@ type Company struct {
 	UpdateTime    int    `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
 	DeleteTime    int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 
-	CompanySetting *CompanySetting
+	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting,omitempty"`
 }
