@@ -7,11 +7,10 @@ import (
 )
 
 type IAccessRepo interface {
-	GetPermissions(companyId uint64, where ...Where) ([]model.Access, error)
-	GetAccessIds(roleIds []uint64, appId uint64) ([]uint64, error)
+	GetPermissions(companyUuid uint64, where ...Where) ([]model.Access, error)
+	GetAccessUuids(roleUuids []uint64) ([]uint64, error)
 	CreateAccess(access *model.Access) error
-	WhereIds(accessIds []uint64) Where
-	WherePath(excludePath []string) Where
+	WhereUuids(accessUuids []uint64) Where
 	WhereIsSupplier() Where
 }
 
@@ -40,21 +39,15 @@ func (r *AccessRepo) GetPermissions(companyId uint64, where ...Where) ([]model.A
 	return access, err
 }
 
-func (r *AccessRepo) GetAccessIds(roleIds []uint64, appId uint64) ([]uint64, error) {
-	var accessIds []uint64
-	err := r.db.Model(&model.RoleAccess{}).Where("role_id in (?)", roleIds).Debug().Pluck("access_id", &accessIds).Error
-	return accessIds, err
+func (r *AccessRepo) GetAccessUuids(roleIds []uint64) ([]uint64, error) {
+	var accessUuids []uint64
+	err := r.db.Model(&model.RoleAccess{}).Where("role_uuid in (?)", roleIds).Debug().Pluck("access_uuid", &accessUuids).Error
+	return accessUuids, err
 }
 
-func (r *AccessRepo) WhereIds(accessIds []uint64) Where {
+func (r *AccessRepo) WhereUuids(accessIds []uint64) Where {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("id in (?)", accessIds)
-	}
-}
-
-func (r *AccessRepo) WherePath(excludePath []string) Where {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("path no in (?)", excludePath)
+		return db.Where("uuid in (?)", accessIds)
 	}
 }
 

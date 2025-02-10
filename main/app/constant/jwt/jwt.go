@@ -1,7 +1,7 @@
 package jwt
 
-const CompanyId = "company_id"           // 商家ID
-const StaffId = "staff_id"               // 员工ID
+const CompanyUuid = "company_uuid"       // 商家ID
+const StaffUuid = "staff_uuid"           // 员工ID
 const Source = "source"                  // 来源: cashier-收银机; tablet-平板; kitchen-厨显; assistant-点餐助手
 const DeviceId = "device_id"             // 设备ID
 const CompanySetting = "company_setting" // 商家设置

@@ -42,7 +42,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		}
 
 		// 认证用户
-		company, companySetting, staff, err := authSrv.AuthenticateStaff(claims.Source, claims.DeviceId, claims.CompanyId, claims.StaffId, c.Request.URL.Path)
+		company, companySetting, staff, err := authSrv.AuthenticateStaff(claims.Source, claims.DeviceId, claims.CompanyUuid, claims.StaffUuid, c.Request.URL.Path)
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
 			c.Abort()
@@ -53,8 +53,8 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		c.Set(jwt.Staff, staff)
 		c.Set(jwt.Company, company)
 		c.Set(jwt.CompanySetting, companySetting)
-		c.Set(jwt.CompanyId, claims.CompanyId)
-		c.Set(jwt.StaffId, claims.StaffId)
+		c.Set(jwt.CompanyUuid, claims.CompanyUuid)
+		c.Set(jwt.StaffUuid, claims.StaffUuid)
 		c.Set(jwt.Source, claims.Source)
 		c.Set(jwt.DeviceId, claims.DeviceId)
 		c.Next()

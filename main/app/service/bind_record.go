@@ -2,11 +2,13 @@ package service
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,10 +21,10 @@ import (
 )
 
 type IBindRecordSrv interface {
-	Add(addReq req.AddBindRecordReq, cc *gin.Context) error                   // 添加绑定记录
-	Unbind(companyId uint64, source string, key string, staffId uint64) error // 解绑
-	GetRemark(companyId uint64, source string, deviceId string) string        // 获取设备绑定备注
-	IsDeviceBind(companyId uint64, source string, deviceId string) bool       // 设备是否绑定
+	Add(addReq req.AddBindRecordReq, cc *gin.Context) error                            // 添加绑定记录
+	Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error // 解绑
+	GetRemark(companyUuid uint64, source string, deviceId string) string               // 获取设备绑定备注
+	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool              // 设备是否绑定
 }
 
 func NewBindRecordSrv(settingSrv setting.ISrv, dbm *database.DBManager) IBindRecordSrv {
@@ -43,20 +45,20 @@ func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) *Bin
 
 func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
 	if !slices.Contains([]string{constant.SourceCashier, constant.SourceTablet, constant.SourceKitchen, constant.SourceAssistant}, addReq.Source) ||
-		addReq.CompanyId == 0 || addReq.DeviceId == "" {
+		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
 	}
 
 	platform := utils.GetPlatform(addReq.UserAgent)
 
 	// 获取绑定
-	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(addReq.CompanyId))
-	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.CompanyId, addReq.Source, addReq.DeviceId)
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(addReq.CompanyUuid))
+	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.Source, addReq.DeviceId)
 	if existsBindRecord.ID != 0 {
-		printPortId := addReq.PrintPortId
+		printPortUuid := addReq.PrintPortUuid
 		remark := addReq.Remark
-		if printPortId == 0 {
-			printPortId = existsBindRecord.PrintPortId
+		if printPortUuid == 0 {
+			printPortUuid = existsBindRecord.PrintPortUuid
 		}
 		if remark == "" {
 			remark = existsBindRecord.Remark
@@ -66,14 +68,14 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 			finallyLoginTime = existsBindRecord.FinallyLoginTime
 		}
 		// 更新绑定
-		err := bindRecordRepo.Update(addReq.CompanyId, existsBindRecord.ID, map[string]interface{}{
-			"print_port_id":      printPortId,
+		err := bindRecordRepo.Update(existsBindRecord.Uuid, map[string]interface{}{
+			"print_port_uuid":    printPortUuid,
 			"remark":             remark,
 			"brand":              addReq.Brand,
 			"platform":           platform,
 			"user_agent":         addReq.UserAgent,
 			"device_ip":          addReq.DeviceIP,
-			"finally_login_id":   addReq.FinallyLoginId,
+			"finally_login_uuid": addReq.FinallyLoginUuid,
 			"finally_login_time": finallyLoginTime,
 		})
 		if err != nil {
@@ -83,8 +85,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 	}
 
 	// 获取 company setting
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(addReq.CompanyId))
-	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB(addReq.CompanyId)
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(addReq.CompanyUuid))
+	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB()
 	type Source struct {
 		Name  string
 		Limit uint
@@ -99,14 +101,14 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		if sourceKey != addReq.Source {
 			continue
 		}
-		count := bindRecordRepo.GetBindCount(addReq.CompanyId, sourceKey)
+		count := bindRecordRepo.GetBindCount(sourceKey)
 		if count >= source.Limit { // 超过绑定上线
 			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 
 	if slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyId, i18n.GetAcceptLanguage(cc), cc)
+		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), cc)
 		if err != nil {
 			return err
 		}
@@ -124,14 +126,20 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 				})
 			}
 			// 设置默认打印机
-			if err = s.settingSrv.Updates(addReq.CompanyId, constant.SettingPrinter, printerSetting); err != nil {
+			if err = s.settingSrv.Updates(addReq.CompanyUuid, constant.SettingPrinter, printerSetting); err != nil {
 				return errors.New("设置默认打印机失败")
 			}
 		}
 	}
 
-	return bindRecordRepo.Create(addReq.CompanyId, model.BindRecord{
-		FinallyLoginId:   int(addReq.FinallyLoginId),
+	uuid, err := database.GetID()
+	if err != nil {
+		logger.Logger.Error("生成雪花ID失败", zap.Error(err))
+		return apperrors.NewWithCode(constant.CodeFail, "系统内部错误")
+	}
+	return bindRecordRepo.Create(model.BindRecord{
+		Uuid:             uuid,
+		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
 		DeviceId:         addReq.DeviceId,
@@ -145,17 +153,17 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 	})
 }
 
-func (s *BindRecordSrv) Unbind(companyId uint64, source string, key string, staffId uint64) error {
-	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
-	return bindRecordRepo.Unbind(companyId, source, key, staffId)
+func (s *BindRecordSrv) Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error {
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
+	return bindRecordRepo.Unbind(source, deviceId, staffUuid)
 }
 
-func (s *BindRecordSrv) GetRemark(companyId uint64, source string, deviceId string) string {
-	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
-	return bindRecordRepo.GetRemark(companyId, source, deviceId)
+func (s *BindRecordSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
+	return bindRecordRepo.GetRemark(source, deviceId)
 }
 
-func (s *BindRecordSrv) IsDeviceBind(companyId uint64, source string, deviceId string) bool {
-	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
-	return bindRecordRepo.GetBindRecordId(source, deviceId) > 0
+func (s *BindRecordSrv) IsDeviceBind(companyUuid uint64, source string, deviceId string) bool {
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
+	return bindRecordRepo.GetBindRecordUuid(source, deviceId) > 0
 }

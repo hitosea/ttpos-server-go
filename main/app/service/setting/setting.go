@@ -23,11 +23,11 @@ import (
 )
 
 type ISrv interface {
-	GetAll(companyId uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) // 获取所有设置
-	GetStoreLanguageList(companyId uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                // 获取商家语言
-	GetPrinterSetting(companyId uint64, language string, cc *gin.Context) (setting.Printer, error)                      // 获取打印机设置
-	GetCashierSetting(companyId uint64, language string, cc *gin.Context) (setting.Cashier, error)                      // 获取收银机设置
-	Updates(companyId uint64, settingKey string, values any) error                                                      // 更新设置
+	GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) // 获取所有设置
+	GetStoreLanguageList(companyUuid uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                // 获取商家语言
+	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Printer, error)                      // 获取打印机设置
+	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Cashier, error)                      // 获取收银机设置
+	Updates(companyUuid uint64, settingKey string, values any) error                                                      // 更新设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -49,9 +49,9 @@ func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 }
 
 // 从缓存读取，没有则生成缓存
-func (s *Srv) fromCache(companyId uint64) ([]model.Setting, error) {
+func (s *Srv) fromCache(companyUuid uint64) ([]model.Setting, error) {
 	var settings []model.Setting
-	cacheKey := fmt.Sprintf(s.cacheKey, companyId)
+	cacheKey := fmt.Sprintf(s.cacheKey, companyUuid)
 	if data, exists := s.cache.Get(cacheKey); exists {
 		if dataValue, isString := data.(string); isString {
 			if err := json.Unmarshal([]byte(dataValue), &settings); err != nil {
@@ -62,8 +62,8 @@ func (s *Srv) fromCache(companyId uint64) ([]model.Setting, error) {
 	}
 	// 从数据库读取
 	var err error
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyId))
-	settings, err = settingRepo.GetAll(companyId)
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
+	settings, err = settingRepo.GetAll()
 	if err != nil {
 		logger.Logger.Error("从数据库获取设置失败", zap.Error(err))
 		return nil, errors.New("获取设置失败")
@@ -76,15 +76,15 @@ func (s *Srv) fromCache(companyId uint64) ([]model.Setting, error) {
 }
 
 // GetAll 获取所有设置
-func (s *Srv) GetAll(companyId uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
+func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
 
 	// 获取company_setting
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyId))
-	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB(companyId)
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
+	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB()
 
 	var retSettings = make(map[string]any)
 	// 从缓存读取
-	settings, err := s.fromCache(companyId)
+	settings, err := s.fromCache(companyUuid)
 
 	var keys []string
 	for _, m := range settings {
@@ -470,13 +470,13 @@ func (s *Srv) GetStoreLanguageList(companyId uint64, language string, cc *gin.Co
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Srv) GetPrinterSetting(companyId uint64, language string, cc *gin.Context) (setting.Printer, error) {
+func (s *Srv) GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Printer, error) {
 	var printerSetting setting.Printer
-	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
+	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
 	if err != nil {
 		return printerSetting, err
 	}
-	settings, err := s.GetAll(companyId, language, languageList, cc)
+	settings, err := s.GetAll(companyUuid, language, languageList, cc)
 	if err != nil {
 		return printerSetting, err
 	}
@@ -489,13 +489,13 @@ func (s *Srv) GetPrinterSetting(companyId uint64, language string, cc *gin.Conte
 }
 
 // GetCashierSetting 获取收银机设置
-func (s *Srv) GetCashierSetting(companyId uint64, language string, cc *gin.Context) (setting.Cashier, error) {
+func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Cashier, error) {
 	var cashierSetting setting.Cashier
-	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
+	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
 	if err != nil {
 		return cashierSetting, err
 	}
-	settings, err := s.GetAll(companyId, language, languageList, cc)
+	settings, err := s.GetAll(companyUuid, language, languageList, cc)
 	if err != nil {
 		return cashierSetting, err
 	}
@@ -508,16 +508,16 @@ func (s *Srv) GetCashierSetting(companyId uint64, language string, cc *gin.Conte
 }
 
 // Updates 更新设置
-func (s *Srv) Updates(companyId uint64, settingKey string, values any) error {
+func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
 	value, err := json.Marshal(values)
 	if err != nil {
 		return errors.New("更新设置失败")
 	}
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyId))
-	if err = settingRepo.Updates(companyId, settingKey, string(value)); err != nil {
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
+	if err = settingRepo.Updates(settingKey, string(value)); err != nil {
 		return errors.New("更新设置失败")
 	}
 	// 删除缓存
-	s.cache.Del(fmt.Sprintf(s.cacheKey, companyId))
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
 	return nil
 }

@@ -14,8 +14,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Cashier'
         description: 收银机设置
-      cashier_id:
-        description: 收银员ID
+      cashier_uuid:
+        description: 收银员UUID
         type: integer
       company:
         allOf:
@@ -42,12 +42,12 @@ definitions:
     type: object
   cashier_resp.Company:
     properties:
-      id:
-        description: 商家ID
-        type: integer
       name:
         description: 商家名称
         type: string
+      uuid:
+        description: 商家UUID
+        type: integer
     type: object
   cashier_resp.DeskRegion:
     properties:
@@ -108,6 +108,8 @@ definitions:
         type: string
       redirect_name:
         type: string
+      uuid:
+        type: integer
     type: object
   cashier_resp.Product:
     properties:
@@ -918,40 +920,55 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /assistant/desk/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台详情
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台详情
+        "404":
+          description: 未找到
+      summary: 获取桌台详情
+      tags:
+      - 点餐助手端
   /assistant/desk/list:
     get:
       consumes:
       - application/json
-      description: 获取收银台列表
+      description: 获取桌台列表
       produces:
       - application/json
       responses:
         "200":
-          description: 收银台列表
+          description: 桌台列表
           schema:
             type: array
         "404":
           description: 未找到
-      summary: 获取收银台列表
+      summary: 获取桌台列表
       tags:
-      - 收银端
+      - 点餐助手端
   /assistant/desk/region_and_type:
     get:
       consumes:
       - application/json
-      description: 获取收银台的区域和类型
+      description: 获取桌台的区域和类型
       produces:
       - application/json
       responses:
         "200":
-          description: 收银台区域和类型列表
+          description: 桌台区域和类型列表
           schema:
             $ref: '#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
-      summary: 获取收银台的区域和类型
+      summary: 获取桌台的区域和类型
       tags:
-      - 收银端
+      - 点餐助手端
   /cashier/base:
     get:
       consumes:
@@ -1410,6 +1427,21 @@ paths:
         "400":
           description: 错误请求
       summary: 在子账单中移动产品
+      tags:
+      - 收银端
+  /cashier/desk/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银台详情
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收银台详情
+        "404":
+          description: 未找到
+      summary: 获取收银台详情
       tags:
       - 收银端
   /cashier/desk/list:
