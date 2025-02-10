@@ -14,7 +14,7 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	Service service.IDeskSrv // 桌台服务
+	Service service.IDeskSrv // 主服务
 }
 
 // GetCashierDeskRegionAndType 处理获取收银台的区域和类型

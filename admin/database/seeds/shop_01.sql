@@ -304,6 +304,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_customer_type` (
 CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐产品ID',
+    buffet_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     product_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '产品包ID',
     display_cashier TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否在收银台显示, 0-否 1-是',
     display_table TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否在桌面显示, 0-否 1-是',
@@ -315,17 +316,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐产品表';
-
-CREATE TABLE IF NOT EXISTS `ttpos_buffet_order` (
-    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
-    sale_bill_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    buffet_package_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐订单表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

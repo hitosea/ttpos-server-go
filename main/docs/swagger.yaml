@@ -918,40 +918,55 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /assistant/desk/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台详情
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台详情
+        "404":
+          description: 未找到
+      summary: 获取桌台详情
+      tags:
+      - 点餐助手端
   /assistant/desk/list:
     get:
       consumes:
       - application/json
-      description: 获取收银台列表
+      description: 获取桌台列表
       produces:
       - application/json
       responses:
         "200":
-          description: 收银台列表
+          description: 桌台列表
           schema:
             type: array
         "404":
           description: 未找到
-      summary: 获取收银台列表
+      summary: 获取桌台列表
       tags:
-      - 收银端
+      - 点餐助手端
   /assistant/desk/region_and_type:
     get:
       consumes:
       - application/json
-      description: 获取收银台的区域和类型
+      description: 获取桌台的区域和类型
       produces:
       - application/json
       responses:
         "200":
-          description: 收银台区域和类型列表
+          description: 桌台区域和类型列表
           schema:
             $ref: '#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
-      summary: 获取收银台的区域和类型
+      summary: 获取桌台的区域和类型
       tags:
-      - 收银端
+      - 点餐助手端
   /cashier/base:
     get:
       consumes:
@@ -1410,6 +1425,38 @@ paths:
         "400":
           description: 错误请求
       summary: 在子账单中移动产品
+      tags:
+      - 收银端
+  /cashier/buffet/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助餐列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 自助餐列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取自助餐列表
+      tags:
+      - 收银端
+  /cashier/desk/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银台详情
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收银台详情
+        "404":
+          description: 未找到
+      summary: 获取收银台详情
       tags:
       - 收银端
   /cashier/desk/list:

@@ -16,7 +16,7 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	Service service.IDeskSrv // 桌台服务
+	Service service.IDeskSrv // 主服务
 }
 
 // GetAssistantDeskRegionAndType 处理获取桌台的区域和类型
