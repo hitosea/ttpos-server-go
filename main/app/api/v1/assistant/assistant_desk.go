@@ -1,4 +1,4 @@
-package cashier
+package assistant
 
 import (
 	"ttpos-server-go/app/api/helper"
@@ -16,7 +16,7 @@ type DeskHandler struct {
 	Service service.IDeskSrv // 桌台服务
 }
 
-// GetCashierDeskRegionAndType 处理获取收银台的区域和类型
+// GetAssistantDeskRegionAndType 处理获取收银台的区域和类型
 // @Summary 获取收银台的区域和类型
 // @Description 获取收银台的区域和类型
 // @Tags 收银端
@@ -24,7 +24,7 @@ type DeskHandler struct {
 // @Produce json
 // @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/region_and_type [get]
+// @Router /assistant/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	// 处理获取收银台的区域和类型的逻辑
 	res, err := h.Service.GetDeskRegionAndTypeList(1)
@@ -37,7 +37,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetCashierDeskList 处理获取收银台列表
+// GetAssistantDeskList 处理获取收银台列表
 // @Summary 获取收银台列表
 // @Description 获取收银台列表
 // @Tags 收银端
@@ -45,7 +45,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} nil "收银台列表"
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/list [get]
+// @Router /assistant/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	// 绑定请求参数
 	req := cashier_req.DeskListReq{}
