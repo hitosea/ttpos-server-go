@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
@@ -29,7 +30,7 @@ type IAuthSrv interface {
 	Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
 	Logout(cc *gin.Context) error
 	Base(cc *gin.Context) (cashier_resp.Base, error)
-	AuthenticateStaff(source string, companyId, staffId uint, url string) (model.Company, model.CompanySetting, model.Staff, error)
+	AuthenticateStaff(source, deviceId string, companyId, staffId uint64, url string) (model.Company, model.CompanySetting, model.Staff, error)
 }
 
 func NewAuthSrv(
@@ -49,6 +50,8 @@ type AuthSrv struct {
 	bindRecordSrv IBindRecordSrv
 	shiftSrv      IStaffShiftSrv
 	settingSrv    setting.ISrv
+
+	cashierOpenStatusActions []string
 }
 
 func NewAuthSrvImpl(
@@ -64,6 +67,19 @@ func NewAuthSrvImpl(
 		bindRecordSrv: bindRecordSrv,
 		shiftSrv:      staffShiftSrv,
 		settingSrv:    settingSrv,
+
+		cashierOpenStatusActions: []string{ // ToDo 待完善
+			//"/order/cart/add",
+			//"/order/cart/delProduct",
+			//"/order/cart/stay",
+			//"/order/cart/pick",
+			//"/order/cart/delStay",
+			//"/order/cart/sendKitchen",
+			//"/order/cart/moveProduct",
+			//"/order/cart/changeMoney",
+			//"/order/order/buy",
+			//"/index/getAllProductImg",
+		},
 	}
 }
 
@@ -79,14 +95,14 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	var staff model.Staff
 	if config.Server.DeployMode == "cloud" { // 云上版本
 		companyStaff := companyStaffRepo.GetByUsername(loginReq.Username, companyStaffRepo.WithCompany())
-		if companyStaff.StaffId == 0 {
+		if companyStaff.Uuid == 0 {
 			return token, errors.New("账号不存在")
 		}
-		if companyStaff.CompanyId == 0 {
+		if companyStaff.CompanyUuid == 0 {
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
 		}
-		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyId))
-		staff = staffRepo.GetById(companyStaff.StaffId, staffRepo.WithCompany())
+		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
+		staff = staffRepo.GetById(companyStaff.Uuid, staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		staff = staffRepo.OfflineGetByUsername(loginReq.Username, staffRepo.WithCompany())
@@ -104,9 +120,6 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	}
 	if staff.IsDisable == 1 {
 		return token, errors.New("账号被禁用，请联系管理员")
-	}
-	if staff.Company.IsRecycle != 0 {
-		return token, errors.New("商家账号异常，请联系管理员")
 	}
 
 	// 判断权限
@@ -174,9 +187,9 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 
 // Logout 退出登录
 func (s *AuthSrv) Logout(cc *gin.Context) error {
-	companyId := cc.GetUint(jwt.CompanyId)
+	companyId := cc.GetUint64(jwt.CompanyId)
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff := staffRepo.GetById(cc.GetUint(jwt.StaffId))
+	staff := staffRepo.GetById(cc.GetUint64(jwt.StaffId))
 	return s.bindRecordSrv.Unbind(companyId, constant.SourceCashier, staff.BindKey, staff.Uuid)
 }
 
@@ -188,7 +201,7 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 		source   = cc.GetString(jwt.Source)
 		deviceId = cc.GetString(jwt.DeviceId)
 	)
-	deviceRemark := s.bindRecordSrv.GetRemark(company.ID, source, deviceId)
+	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
@@ -197,8 +210,8 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 	if len(permissions) == 0 {
 		return cashier_resp.Base{}, errors.New("当前无权限，请联系管理员")
 	}
-	languageList, _ := s.settingSrv.GetStoreLanguageList(company.ID, i18n.GetAcceptLanguage(cc), cc)
-	allSettings, _ := s.settingSrv.GetAll(company.ID, i18n.GetAcceptLanguage(cc), languageList, cc)
+	languageList, _ := s.settingSrv.GetStoreLanguageList(company.Uuid, i18n.GetAcceptLanguage(cc), cc)
+	allSettings, _ := s.settingSrv.GetAll(company.Uuid, i18n.GetAcceptLanguage(cc), languageList, cc)
 	return cashier_resp.Base{
 		Username:     staff.Username,
 		CashierId:    staff.Uuid,
@@ -217,7 +230,7 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 }
 
 // AuthenticateStaff 认证登录员工
-func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url string) (model.Company, model.CompanySetting, model.Staff, error) {
+func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyId, staffId uint64, urlPath string) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
@@ -240,9 +253,6 @@ func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url 
 	if company.ID == 0 || companySetting.ID == 0 {
 		return company, companySetting, staff, errors.New("商家不存在")
 	}
-	if company.IsDelete == 1 {
-		return company, companySetting, staff, errors.New("商家被删除")
-	}
 	if company.Status == 0 {
 		return company, companySetting, staff, errors.New("商家被禁用")
 	}
@@ -259,9 +269,24 @@ func (s *AuthSrv) AuthenticateStaff(source string, companyId, staffId uint, url 
 			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
 		}
 		// ToDo 记得开放
-		//if !slices.Contains(permissions, url) {
+		//if !slices.Contains(permissions, urlPath) {
 		//	return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
 		//}
+	}
+	// 验证设备是否绑定
+	if !s.bindRecordSrv.IsDeviceBind(companyId, source, deviceId) {
+		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
+	}
+
+	if source == constant.SourceCashier {
+		// 检查收银是否开启
+		cashierSetting, err := s.settingSrv.GetCashierSetting(companyId, "", nil)
+		if err != nil {
+			return company, companySetting, staff, err
+		}
+		if cashierSetting.OrderMethod.IsCashierOrder == "0" && slices.Contains(s.cashierOpenStatusActions, urlPath) {
+			return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "收银用餐已关闭，请选择其他用餐方式")
+		}
 	}
 
 	return company, companySetting, staff, nil

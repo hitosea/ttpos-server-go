@@ -49,6 +49,41 @@ definitions:
         description: 商家名称
         type: string
     type: object
+  cashier_resp.DeskRegion:
+    properties:
+      name:
+        description: 餐桌区域名称
+        type: string
+      uuid:
+        description: 餐桌区域ID
+        type: integer
+    type: object
+  cashier_resp.DeskRegionAndTypeListWithPaginationResp:
+    properties:
+      region:
+        properties:
+          list:
+            items:
+              $ref: '#/definitions/cashier_resp.DeskRegion'
+            type: array
+        type: object
+      type:
+        properties:
+          list:
+            items:
+              $ref: '#/definitions/cashier_resp.DeskType'
+            type: array
+        type: object
+    type: object
+  cashier_resp.DeskType:
+    properties:
+      name:
+        description: 餐桌类型名称
+        type: string
+      uuid:
+        description: 餐桌类型ID
+        type: integer
+    type: object
   cashier_resp.Permission:
     properties:
       alias:
@@ -74,6 +109,170 @@ definitions:
       redirect_name:
         type: string
     type: object
+  cashier_resp.Product:
+    properties:
+      attributes:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductAttributeGroupList'
+        description: 商品属性组
+      flavors:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductFlavorList'
+        description: 商品规格
+      image:
+        description: 商品图片
+        type: string
+      limit_num:
+        description: 商品限购数量
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      price:
+        description: 商品价格
+        type: number
+      sauces:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductSauceList'
+        description: 商品小料
+      unit:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  cashier_resp.ProductAttributeGroup:
+    properties:
+      is_must:
+        description: 是否必选
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性组名称
+      max_select:
+        description: 最大可选数量
+        type: integer
+      uuid:
+        description: 商品属性组UUID
+        type: integer
+      value:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductAttributeValueList'
+        description: 商品属性值
+    type: object
+  cashier_resp.ProductAttributeGroupList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.ProductAttributeGroup'
+        type: array
+    type: object
+  cashier_resp.ProductAttributeValue:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
+  cashier_resp.ProductAttributeValueList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.ProductAttributeValue'
+        type: array
+    type: object
+  cashier_resp.ProductCategory:
+    properties:
+      children:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductCategoryListResp'
+        description: 子级类别
+      is_special:
+        description: 是否特殊类别
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品类别名称
+      parent_uuid:
+        description: 父级类别UUID
+        type: integer
+      uuid:
+        description: 商品类别UUID
+        type: integer
+    type: object
+  cashier_resp.ProductCategoryListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.ProductCategory'
+        type: array
+    type: object
+  cashier_resp.ProductFlavor:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      price:
+        description: 商品规格价格
+        type: number
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  cashier_resp.ProductFlavorList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.ProductFlavor'
+        type: array
+    type: object
+  cashier_resp.ProductListWithPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.Product'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  cashier_resp.ProductSauce:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品小料名称
+      price:
+        description: 商品小料价格
+        type: number
+      uuid:
+        description: 商品小料UUID
+        type: integer
+    type: object
+  cashier_resp.ProductSauceList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.ProductSauce'
+        type: array
+    type: object
   dto.LanguageItem:
     properties:
       key:
@@ -82,6 +281,45 @@ definitions:
         type: string
       value:
         type: string
+    type: object
+  dto.LocaleResponse:
+    properties:
+      en:
+        description: 英语
+        type: string
+      ja:
+        description: 日语
+        type: string
+      ko:
+        description: 韩语
+        type: string
+      my:
+        description: 缅甸语
+        type: string
+      th:
+        description: 泰语
+        type: string
+      tr:
+        description: 土耳其语
+        type: string
+      zh:
+        description: 中文
+        type: string
+      zhtw:
+        description: 粤语
+        type: string
+    type: object
+  dto.PageResponse:
+    properties:
+      page_no:
+        description: 当前页码
+        type: integer
+      page_size:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总数
+        type: integer
     type: object
   dto.Response:
     properties:
@@ -129,92 +367,6 @@ definitions:
         description: 机器备注
         type: string
     type: object
-  req.ParamCreateCompany:
-    properties:
-      address:
-        description: 地址
-        type: string
-      assistant_limit:
-        description: 助手限制
-        type: integer
-      auth_day:
-        description: 授权天数
-        type: integer
-      auth_start_time:
-        description: 授权开始时间
-        type: string
-      cash_limit:
-        description: 现金限制
-        type: integer
-      chain_number:
-        description: 连锁编号
-        type: string
-      confirm_password:
-        description: 确认密码
-        type: string
-      deploy_mode:
-        description: 部署模式
-        type: integer
-      is_accept_scan_order:
-        description: 是否接受扫码订单
-        type: integer
-      is_open_assistant:
-        description: 是否开启助手
-        type: integer
-      is_open_buffet:
-        description: 是否开启自助餐
-        type: integer
-      is_open_kitchen_kds:
-        description: 是否开启厨房KDS
-        type: integer
-      is_open_local_print:
-        description: 是否开启本地打印
-        type: integer
-      is_open_member:
-        description: 是否开启会员
-        type: integer
-      is_open_scan:
-        description: 是否开启扫码
-        type: integer
-      is_open_tablet:
-        description: 是否开启平板
-        type: integer
-      kitchen_limit:
-        description: 厨房限制
-        type: integer
-      languages:
-        description: 语言列表
-        items:
-          type: string
-        type: array
-      link_phone:
-        description: 联系电话
-        type: string
-      logo:
-        description: 公司logo
-        type: string
-      name:
-        description: 公司名称
-        type: string
-      password:
-        description: 密码
-        type: string
-      printer_limit:
-        description: 打印机限制
-        type: integer
-      table_limit:
-        description: 桌位限制
-        type: integer
-      tablet_limit:
-        description: 平板限制
-        type: integer
-      timezone:
-        description: 时区
-        type: string
-      user_name:
-        description: 用户名
-        type: string
-    type: object
   req.ParamCustomerInfo:
     properties:
       id:
@@ -233,95 +385,6 @@ definitions:
         description: 密码
         type: string
       username:
-        description: 用户名
-        type: string
-    type: object
-  req.ParamUpdateCompany:
-    properties:
-      address:
-        description: 地址
-        type: string
-      assistant_limit:
-        description: 助手限制
-        type: integer
-      auth_day:
-        description: 授权天数
-        type: integer
-      auth_start_time:
-        description: 授权开始时间
-        type: string
-      cash_limit:
-        description: 现金限制
-        type: integer
-      chain_number:
-        description: 连锁编号
-        type: string
-      confirm_password:
-        description: 确认密码
-        type: string
-      deploy_mode:
-        description: 部署模式
-        type: integer
-      id:
-        description: 公司ID
-        type: integer
-      is_accept_scan_order:
-        description: 是否接受扫码订单
-        type: integer
-      is_open_assistant:
-        description: 是否开启助手
-        type: integer
-      is_open_buffet:
-        description: 是否开启自助餐
-        type: integer
-      is_open_kitchen_kds:
-        description: 是否开启厨房KDS
-        type: integer
-      is_open_local_print:
-        description: 是否开启本地打印
-        type: integer
-      is_open_member:
-        description: 是否开启会员
-        type: integer
-      is_open_scan:
-        description: 是否开启扫码
-        type: integer
-      is_open_tablet:
-        description: 是否开启平板
-        type: integer
-      kitchen_limit:
-        description: 厨房限制
-        type: integer
-      languages:
-        description: 语言列表
-        items:
-          type: string
-        type: array
-      link_phone:
-        description: 联系电话
-        type: string
-      logo:
-        description: 公司logo
-        type: string
-      name:
-        description: 公司名称
-        type: string
-      password:
-        description: 密码
-        type: string
-      printer_limit:
-        description: 打印机限制
-        type: integer
-      table_limit:
-        description: 桌位限制
-        type: integer
-      tablet_limit:
-        description: 平板限制
-        type: integer
-      timezone:
-        description: 时区
-        type: string
-      user_name:
         description: 用户名
         type: string
     type: object
@@ -390,20 +453,6 @@ definitions:
         description: 总页数
         type: integer
     type: object
-  resp.Category:
-    properties:
-      children:
-        description: 子分类列表
-        items:
-          $ref: '#/definitions/resp.ChildCategory'
-        type: array
-      key:
-        description: 分类键
-        type: string
-      name:
-        description: 分类名称
-        type: string
-    type: object
   resp.CategoryProductInfo:
     properties:
       createTime:
@@ -435,15 +484,6 @@ definitions:
         items:
           $ref: '#/definitions/resp.CategoryProductInfo'
         type: array
-    type: object
-  resp.ChildCategory:
-    properties:
-      key:
-        description: 子分类键
-        type: string
-      name:
-        description: 子分类名称
-        type: string
     type: object
   resp.FinishedProductInfo:
     properties:
@@ -490,19 +530,6 @@ definitions:
       token:
         description: 用户token
         type: string
-    type: object
-  resp.ProductCategory:
-    properties:
-      categoryList:
-        description: 分类列表
-        items:
-          $ref: '#/definitions/resp.Category'
-        type: array
-      specialCategoryList:
-        description: 特殊分类列表
-        items:
-          $ref: '#/definitions/resp.SpecialCategory'
-        type: array
     type: object
   resp.ProductOrderList:
     properties:
@@ -619,15 +646,6 @@ definitions:
         type: string
       username:
         description: 用户名
-        type: string
-    type: object
-  resp.SpecialCategory:
-    properties:
-      id:
-        description: 分类ID
-        type: integer
-      name:
-        description: 分类名称
         type: string
     type: object
   setting.AddClockItem:
@@ -900,66 +918,40 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
-  /admin/company:
-    delete:
+  /assistant/desk/list:
+    get:
       consumes:
       - application/json
-      parameters:
-      - description: 公司ID
-        in: path
-        name: id
-        required: true
-        type: integer
+      description: 获取收银台列表
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 收银台列表
           schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 删除公司
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银台列表
       tags:
-      - 公司
-    post:
+      - 收银端
+  /assistant/desk/region_and_type:
+    get:
       consumes:
       - application/json
-      parameters:
-      - description: 创建公司参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.ParamCreateCompany'
+      description: 获取收银台的区域和类型
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 收银台区域和类型列表
           schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 创建公司
+            $ref: '#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp'
+        "404":
+          description: 未找到
+      summary: 获取收银台的区域和类型
       tags:
-      - 公司
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: 更新公司参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.ParamUpdateCompany'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 更新公司
-      tags:
-      - 公司
+      - 收银端
   /cashier/base:
     get:
       consumes:
@@ -1420,37 +1412,6 @@ paths:
       summary: 在子账单中移动产品
       tags:
       - 收银端
-  /cashier/cashier/product/category:
-    get:
-      consumes:
-      - application/json
-      description: 获取收银产品类别
-      parameters:
-      - description: 认证令牌
-        in: header
-        name: token
-        required: true
-        type: string
-      - description: 语言
-        in: header
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 产品类别列表
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ProductCategory'
-              type: object
-      summary: 获取收银产品类别
-      tags:
-      - 收银端
   /cashier/desk/list:
     get:
       consumes:
@@ -1479,7 +1440,7 @@ paths:
         "200":
           description: 收银台区域和类型列表
           schema:
-            type: array
+            $ref: '#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
       summary: 获取收银台的区域和类型
@@ -1766,6 +1727,23 @@ paths:
       summary: 获取收银支付类型列表
       tags:
       - 收银端
+  /cashier/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/cashier_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      summary: 获取收银产品类别列表
+      tags:
+      - 收银端
   /cashier/product/info/{productId}:
     get:
       consumes:
@@ -1792,15 +1770,26 @@ paths:
       consumes:
       - application/json
       description: 获取收银产品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: pageNo
+        required: true
+        type: integer
+      - description: 每页条数
+        in: query
+        name: pageSize
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: 产品列表
+          description: 成功
           schema:
-            type: array
-        "404":
-          description: 未找到
+            $ref: '#/definitions/cashier_resp.ProductListWithPaginationResp'
+        "400":
+          description: 错误请求
       summary: 获取收银产品列表
       tags:
       - 收银端

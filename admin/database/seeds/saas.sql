@@ -245,8 +245,8 @@ CREATE TABLE `ttpos_company_setting` (
 DROP TABLE IF EXISTS `ttpos_company_staff`;
 CREATE TABLE `ttpos_company_staff` (
   `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '员工ID',
-  `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
+  `uuid` BIGINT unsigned NOT NULL DEFAULT 0 COMMENT '员工ID',
+  `company_uuid` BIGINT unsigned NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',

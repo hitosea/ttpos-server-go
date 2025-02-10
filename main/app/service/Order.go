@@ -11,7 +11,7 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateOrder(dbId uint) (cashier_resp.CreateOrderResp, error) // 创建订单
+	CreateOrder(dbId uint64) (cashier_resp.CreateOrderResp, error) // 创建订单
 }
 
 // orderSrv 收银服务结构体
@@ -32,7 +32,7 @@ func NewOrderSrvImpl(dbm *database.DBManager) IOrderSrv {
 }
 
 // CreateOrder 创建订单
-func (s *orderSrv) CreateOrder(dbId uint) (cashier_resp.CreateOrderResp, error) {
+func (s *orderSrv) CreateOrder(dbId uint64) (cashier_resp.CreateOrderResp, error) {
 	// 创建销售账单
 	db := s.dbm.GetDB(dbId)
 	_ = db.Transaction(func(tx *gorm.DB) error {
@@ -42,7 +42,6 @@ func (s *orderSrv) CreateOrder(dbId uint) (cashier_resp.CreateOrderResp, error) 
 		}
 		_, err = repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
 			Uuid:            uuid,
-			Sn:              "",
 			BillType:        0,
 			DiningMethod:    0,
 			IsBuffet:        0,

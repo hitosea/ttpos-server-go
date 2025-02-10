@@ -6,7 +6,7 @@ import (
 
 type Base struct {
 	Username     string           `json:"username"`      // 登录账号
-	CashierId    uint             `json:"cashier_id"`    // 收银员ID
+	CashierId    uint64           `json:"cashier_id"`    // 收银员ID
 	DeviceId     string           `json:"device_id"`     // 设备ID
 	DeviceRemark string           `json:"device_remark"` // 设备备注
 	Cashier      setting.Cashier  `json:"cashier"`       // 收银机设置

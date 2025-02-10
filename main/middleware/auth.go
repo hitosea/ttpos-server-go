@@ -3,11 +3,10 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"strings"
-	"ttpos-server-go/app/constant/jwt"
-	"ttpos-server-go/app/service"
-
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/constant/jwt"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
 )
@@ -43,9 +42,9 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		}
 
 		// 认证用户
-		company, companySetting, staff, err := authSrv.AuthenticateStaff(claims.Source, claims.CompanyId, claims.StaffId, c.Request.URL.Path)
+		company, companySetting, staff, err := authSrv.AuthenticateStaff(claims.Source, claims.DeviceId, claims.CompanyId, claims.StaffId, c.Request.URL.Path)
 		if err != nil {
-			helper.Fail(c, constant.CodeBadRequest, err.Error())
+			helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
 			c.Abort()
 			return
 		}

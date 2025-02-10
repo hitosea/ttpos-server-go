@@ -11,8 +11,8 @@ import (
 
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
-	GetDeskList(dbId uint, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error)    // 获取桌台区域和类型列表
+	GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) // 获取桌台列表
+	GetDeskRegionAndTypeList(dbId uint64) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error)    // 获取桌台区域和类型列表
 }
 
 // deskSrv 收银服务结构体
@@ -35,7 +35,7 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IDeskSrv {
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error) {
 	// 获取列表
 	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
 	types, _ := repository.NewDeskTypeRepo(s.dbm.GetDB(dbId)).GetDeskTypeList()
@@ -69,7 +69,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint) (cashier_resp.DeskRegionAn
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskList(dbId uint, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) {
 	// 获取列表
 	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)
 	if err != nil {

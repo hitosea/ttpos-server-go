@@ -14,7 +14,7 @@ import (
 
 type DBManager struct {
 	lock *sync.Mutex
-	dbs  map[uint]*gorm.DB
+	dbs  map[uint64]*gorm.DB
 	conf config.DatabaseConf
 }
 
@@ -27,7 +27,7 @@ var (
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
-			dbs:  make(map[uint]*gorm.DB),
+			dbs:  make(map[uint64]*gorm.DB),
 			conf: conf,
 			lock: &sync.Mutex{},
 		}
@@ -73,7 +73,7 @@ func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gor
 }
 
 // GetDB 获取数据库，动态获取新增商家
-func (m *DBManager) GetDB(index uint) *gorm.DB {
+func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if db, ok := m.dbs[index]; ok {
@@ -89,8 +89,8 @@ func (m *DBManager) GetDB(index uint) *gorm.DB {
 	return companyDB
 }
 
-func (m *DBManager) GetDBNameList() map[uint]string {
-	dbNames := make(map[uint]string)
+func (m *DBManager) GetDBNameList() map[uint64]string {
+	dbNames := make(map[uint64]string)
 	for dbName := range m.dbs {
 		dbNames[dbName] = fmt.Sprintf("%s%d", constant.DBNamePrefix, dbName)
 	}
@@ -100,7 +100,7 @@ func (m *DBManager) GetDBNameList() map[uint]string {
 // SetMockDB 添加测试用的DB实例
 func (m *DBManager) SetMockDB(db *gorm.DB) {
 	if m.dbs == nil {
-		m.dbs = make(map[uint]*gorm.DB)
+		m.dbs = make(map[uint64]*gorm.DB)
 	}
 	m.dbs[constant.MockDB] = db
 }

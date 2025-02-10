@@ -6,7 +6,7 @@ import (
 )
 
 type ILoginLogRepo interface {
-	Save(companyId uint, username, ip, result string) error
+	Save(companyId uint64, username, ip, result string) error
 }
 
 func NewLoginLogRepo(dbm *database.DBManager) ILoginLogRepo {
@@ -21,11 +21,13 @@ func NewLoginLogRepoImpl(dbm *database.DBManager) *LoginLogRepo {
 	return &LoginLogRepo{dbm: dbm}
 }
 
-func (r *LoginLogRepo) Save(companyId uint, username, ip, result string) error {
+func (r *LoginLogRepo) Save(companyId uint64, username, ip, result string) error {
 	return r.dbm.GetDB(companyId).Debug().Create(&model.LoginLog{
-		Username: username,
-		Ip:       ip,
-		Result:   result,
-		AppId:    companyId,
+		Uuid:       0, // todo 生成uuid
+		StaffUuid:  0,
+		Username:   "",
+		Ip:         "",
+		Result:     "",
+		CreateTime: 0,
 	}).Error
 }

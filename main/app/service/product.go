@@ -11,8 +11,8 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IProductSrv interface {
-	GetProductList(dbId uint, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
-	GetProductCategoryList(dbId uint) (cashier_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
+	GetProductList(dbId uint64, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
+	GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
 }
 
 // productSrv 收银服务结构体
@@ -35,7 +35,7 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
+func (s *productSrv) GetProductList(dbId uint64, req cashier_req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
 	// 获取产品列表
 	products, total, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductListWithPagination(
 		req.PageNo,
@@ -187,7 +187,7 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 }
 
 // GetProductCategoryList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductCategoryList(dbId uint) (cashier_resp.ProductCategoryListResp, error) {
+func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error) {
 	// 获取产品类别列表
 	categories, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductCategoryList(
 		repository.NewCommonRepo().Preload(
