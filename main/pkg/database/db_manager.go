@@ -2,9 +2,10 @@ package database
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"log"
 	"sync"
+
+	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -49,11 +50,11 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, company := range companies {
-		companyDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, company.ID)) // 比如：shop1724054084 数据库
+		companyDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, company.Uuid)) // 比如：shop1724054084 数据库
 		if err != nil {
-			log.Fatalf("Error connecting to database for company %d: %s", company.ID, err)
+			log.Fatalf("Error connecting to database for company %d: %s", company.Uuid, err)
 		}
-		m.dbs[company.ID] = companyDB
+		m.dbs[company.Uuid] = companyDB
 	}
 }
 
