@@ -16,11 +16,11 @@ class Printer extends PrinterModel
     {
         $licenses = request()->licenses;
         $pl = ($licenses['p_l'] ?? 0);
-        if ($pl != -1 && $this->where('shop_supplier_id', '=', $data['shop_supplier_id'])->where('is_delete', '=', 0)->count() >= $pl) {
+        if ($pl != -1 && $this->count() >= $pl) {
             $this->error = '打印机数量已达上限，如有需要，请联系销售代表';
             return false;
         }
-        if ($this->where('printer_name', '=', $data['printer_name'])->where('is_delete', '=', 0)->count()) {
+        if ($this->where('name', '=', $data['printer_name'])->count()) {
             $this->error = '打印机名称已存在';
             return false;
         }
@@ -31,8 +31,10 @@ class Printer extends PrinterModel
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
         }
-        $data['printer_config'] = json_encode($data[$printerType]);
-        $data['app_id'] = self::$app_id;
+        $data['uuid'] = createUuid();
+        $data['name'] = $data['printer_name'] ?? '';
+        $data['copies'] = $data['print_times'] ?? 0;
+        $data['config_json'] = json_encode($data[$printerType]);
         return $this->save($data);
     }
 
@@ -41,7 +43,7 @@ class Printer extends PrinterModel
      */
     public function edit($data)
     {
-        if ($this->where('printer_name', '=', $data['printer_name'])->where('is_delete', '=', 0)->where('printer_id', '<>', $data['printer_id'])->count()) {
+        if ($this->where('name', '=', $data['printer_name'])->where('uuid', '<>', $data['printer_id'])->count()) {
             $this->error = '打印机名称已存在';
             return false;
         }
@@ -52,7 +54,9 @@ class Printer extends PrinterModel
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
         }
-        $data['printer_config'] = json_encode($data[$printerType]);
+        $data['name'] = $data['printer_name'] ?? '';
+        $data['copies'] = $data['print_times'] ?? 0;
+        $data['config_json'] = json_encode($data[$printerType]);
         return $this->save($data);
     }
 
@@ -68,10 +72,10 @@ class Printer extends PrinterModel
             $this->error = '该打印机已被使用，无法删除';
             return false;
         }
-        if (PrintingModel::where('shop_supplier_id', '=', $this->shop_supplier_id)->like('printer_id', '"' . $this->printer_id . '"')->where('is_delete', '0')->find()) {
+        if (PrintingModel::like('uuid', '"' . $this->printer_id . '"')->find()) {
             $this->error = '该打印机已被使用，无法删除';
             return false;
         }
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }
