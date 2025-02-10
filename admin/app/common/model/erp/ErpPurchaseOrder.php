@@ -15,7 +15,8 @@ use app\common\model\product\ProductSku;
 class ErpPurchaseOrder extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'erp_purchase_order';
+    protected $name = 'purchase_form';
+    protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 

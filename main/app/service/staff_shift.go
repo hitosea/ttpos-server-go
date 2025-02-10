@@ -39,10 +39,10 @@ func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) model.StaffShiftLog 
 	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash(staff.CompanyUuid)
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
-		startTime = uint(time.Now().Unix())
+		startTime = int(time.Now().Unix())
 	}
 	shiftLog, _ := shiftLogRepo.Create(staff.CompanyUuid, model.StaffShiftLog{
-		ShiftUserId:       uint(staff.Uuid),
+		StaffUuid:         staff.Uuid,
 		ShiftNo:           s.generateNumber(),
 		PreviousShiftCash: previousShiftCash,
 		CurrentCashTotal:  previousShiftCash,

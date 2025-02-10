@@ -17,8 +17,8 @@ import (
 )
 
 type IRoleAccessSrv interface {
-	GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*cashier_resp.Permission, error)
-	GetApiPermission(staffId, companyId uint) ([]string, error)
+	GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint64) ([]*cashier_resp.Permission, error)
+	GetApiPermission(staffId, companyId uint64) ([]string, error)
 }
 
 func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
@@ -36,7 +36,7 @@ func NewRoleAccessSrvImpl(dbm *database.DBManager) *RoleAccessSrv {
 }
 
 // 从数据库获取权限
-func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Access, model.CompanySetting, error) {
+func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint64) ([]model.Access, model.CompanySetting, error) {
 	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyId))
 	var companySetting model.CompanySetting
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
@@ -76,7 +76,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint) ([]model.Acces
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint) ([]*cashier_resp.Permission, error) {
+func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint64) ([]*cashier_resp.Permission, error) {
 
 	var permissions []cashier_resp.Permission
 	dbPermissions, companySetting, err := s.getDbPermissions(staffId, companyId)
@@ -186,7 +186,7 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permissio
 	return filteredRoots
 }
 
-func (s *RoleAccessSrv) GetApiPermission(staffId, companyId uint) ([]string, error) {
+func (s *RoleAccessSrv) GetApiPermission(staffId, companyId uint64) ([]string, error) {
 	accesses, _, err := s.getDbPermissions(staffId, companyId)
 	if err != nil {
 		return nil, err

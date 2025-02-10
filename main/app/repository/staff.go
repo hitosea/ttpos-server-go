@@ -7,14 +7,14 @@ import (
 )
 
 type IStaffRepo interface {
-	GetByIdAndCompanyId(Id uint, withs ...With) model.Staff
-	GetById(id uint, withs ...With) model.Staff
+	GetByIdAndCompanyId(Id uint64, withs ...With) model.Staff
+	GetById(id uint64, withs ...With) model.Staff
 	WithCompanySetting() With
 	WithCompany() With
 	OfflineGetByUsername(username string, withs ...With) model.Staff
 	CreateStaff(staff model.Staff) error
 	GetCurrentCashier(bindKey string) model.Staff
-	Update(id uint, vars map[string]any) error
+	Update(id uint64, vars map[string]any) error
 }
 
 func NewStaffRepo(db *gorm.DB) IStaffRepo {
@@ -33,13 +33,13 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 	return r.db.Create(&staff).Error
 }
 
-func (r *StaffRepo) GetByIdAndCompanyId(Id uint, withs ...With) model.Staff {
+func (r *StaffRepo) GetByIdAndCompanyId(Id uint64, withs ...With) model.Staff {
 	var user model.Staff
 	r.handleWiths(r.db, withs).First(&user, Id)
 	return user
 }
 
-func (r *StaffRepo) GetById(id uint, withs ...With) model.Staff {
+func (r *StaffRepo) GetById(id uint64, withs ...With) model.Staff {
 	var user model.Staff
 	r.handleWiths(r.db, withs).Debug().First(&user, id)
 	return user
@@ -79,6 +79,6 @@ func (r *StaffRepo) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
 	return db
 }
 
-func (r *StaffRepo) Update(id uint, vars map[string]any) error {
+func (r *StaffRepo) Update(id uint64, vars map[string]any) error {
 	return r.db.Model(&model.Staff{}).Where("id = ?", id).Updates(vars).Error
 }

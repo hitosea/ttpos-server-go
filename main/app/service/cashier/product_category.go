@@ -10,7 +10,7 @@ import (
 // ICashierSrv 定义收银服务接口
 type ICashierSrv interface {
 	// GetProductCategory 获取收银机点餐页面产品类别列表
-	GetProductCategory(dbId uint, language string) (resp.ProductCategory, error)
+	GetProductCategory(dbId uint64, language string) (resp.ProductCategory, error)
 }
 
 // NewCashierProductCategorySrv 创建新的收银产品类别服务
@@ -31,7 +31,7 @@ type CashierSrv struct {
 }
 
 // GetProductCategory 获取产品类别的实现
-func (s *CashierSrv) GetProductCategory(dbId uint, language string) (resp.ProductCategory, error) {
+func (s *CashierSrv) GetProductCategory(dbId uint64, language string) (resp.ProductCategory, error) {
 	db := s.dbm.GetDB(dbId)
 	// 查询产品类别表
 	productCategoryList, err := repository.NewProductCategoryRepo(db).GetProductCategoryListWithMultiLanguageName()

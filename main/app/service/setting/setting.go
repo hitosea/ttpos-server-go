@@ -23,10 +23,11 @@ import (
 )
 
 type ISrv interface {
-	GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error)
-	GetStoreLanguageList(companyId uint, language string, cc *gin.Context) ([]dto.LanguageItem, error)
-	GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error)
-	Updates(companyId uint, settingKey string, values any) error
+	GetAll(companyId uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) // 获取所有设置
+	GetStoreLanguageList(companyId uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                // 获取商家语言
+	GetPrinterSetting(companyId uint64, language string, cc *gin.Context) (setting.Printer, error)                      // 获取打印机设置
+	GetCashierSetting(companyId uint64, language string, cc *gin.Context) (setting.Cashier, error)                      // 获取收银机设置
+	Updates(companyId uint64, settingKey string, values any) error                                                      // 更新设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -48,7 +49,7 @@ func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 }
 
 // 从缓存读取，没有则生成缓存
-func (s *Srv) fromCache(companyId uint) ([]model.Setting, error) {
+func (s *Srv) fromCache(companyId uint64) ([]model.Setting, error) {
 	var settings []model.Setting
 	cacheKey := fmt.Sprintf(s.cacheKey, companyId)
 	if data, exists := s.cache.Get(cacheKey); exists {
@@ -75,7 +76,7 @@ func (s *Srv) fromCache(companyId uint) ([]model.Setting, error) {
 }
 
 // GetAll 获取所有设置
-func (s *Srv) GetAll(companyId uint, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
+func (s *Srv) GetAll(companyId uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
 
 	// 获取company_setting
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyId))
@@ -455,7 +456,7 @@ func (s *Srv) GetAll(companyId uint, language string, languageList []dto.Languag
 }
 
 // GetStoreLanguageList 获取商家语言列表
-func (s *Srv) GetStoreLanguageList(companyId uint, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
+func (s *Srv) GetStoreLanguageList(companyId uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
 	all, err := s.GetAll(companyId, language, []dto.LanguageItem{}, cc)
 	if err != nil {
 		return nil, err
@@ -469,7 +470,7 @@ func (s *Srv) GetStoreLanguageList(companyId uint, language string, cc *gin.Cont
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Srv) GetPrinterSetting(companyId uint, language string, cc *gin.Context) (setting.Printer, error) {
+func (s *Srv) GetPrinterSetting(companyId uint64, language string, cc *gin.Context) (setting.Printer, error) {
 	var printerSetting setting.Printer
 	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
 	if err != nil {
@@ -487,8 +488,27 @@ func (s *Srv) GetPrinterSetting(companyId uint, language string, cc *gin.Context
 	return s.getDefaultPrinter(language, languageList), nil
 }
 
+// GetCashierSetting 获取收银机设置
+func (s *Srv) GetCashierSetting(companyId uint64, language string, cc *gin.Context) (setting.Cashier, error) {
+	var cashierSetting setting.Cashier
+	languageList, err := s.GetStoreLanguageList(companyId, language, cc)
+	if err != nil {
+		return cashierSetting, err
+	}
+	settings, err := s.GetAll(companyId, language, languageList, cc)
+	if err != nil {
+		return cashierSetting, err
+	}
+	if cashierSet, ok := settings[constant.SettingCashier]; ok {
+		if cashier, yes := cashierSet.(setting.Cashier); yes {
+			return cashier, nil
+		}
+	}
+	return s.getDefaultCashier(languageList), nil
+}
+
 // Updates 更新设置
-func (s *Srv) Updates(companyId uint, settingKey string, values any) error {
+func (s *Srv) Updates(companyId uint64, settingKey string, values any) error {
 	value, err := json.Marshal(values)
 	if err != nil {
 		return errors.New("更新设置失败")

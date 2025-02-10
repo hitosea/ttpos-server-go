@@ -18,8 +18,21 @@ use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
  */
 class User extends BaseModel
 {
-    protected $pk = 'user_id';
-    protected $name = 'user';
+    protected $name = 'member';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['user_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getUserIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 默认头像

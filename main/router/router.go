@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/passport"
@@ -30,6 +31,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterProductHandlers(cashierGroup, dbm)
 			cashier.RegisterDeskHandlers(cashierGroup, dbm)
+		}
+		// 点餐助手端
+		assistantGroup := apiV1.Group("/assistant")
+		{
+			assistant.RegisterDeskHandlers(assistantGroup, dbm)
 		}
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")

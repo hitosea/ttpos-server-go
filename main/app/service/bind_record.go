@@ -19,9 +19,10 @@ import (
 )
 
 type IBindRecordSrv interface {
-	Add(addReq req.AddBindRecordReq, cc *gin.Context) error
-	Unbind(companyId uint, source string, key string, staffId uint) error
-	GetRemark(companyId uint, source string, deviceId string) string
+	Add(addReq req.AddBindRecordReq, cc *gin.Context) error                   // 添加绑定记录
+	Unbind(companyId uint64, source string, key string, staffId uint64) error // 解绑
+	GetRemark(companyId uint64, source string, deviceId string) string        // 获取设备绑定备注
+	IsDeviceBind(companyId uint64, source string, deviceId string) bool       // 设备是否绑定
 }
 
 func NewBindRecordSrv(settingSrv setting.ISrv, dbm *database.DBManager) IBindRecordSrv {
@@ -144,12 +145,17 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 	})
 }
 
-func (s *BindRecordSrv) Unbind(companyId uint, source string, key string, staffId uint) error {
+func (s *BindRecordSrv) Unbind(companyId uint64, source string, key string, staffId uint64) error {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
 	return bindRecordRepo.Unbind(companyId, source, key, staffId)
 }
 
-func (s *BindRecordSrv) GetRemark(companyId uint, source string, deviceId string) string {
+func (s *BindRecordSrv) GetRemark(companyId uint64, source string, deviceId string) string {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
 	return bindRecordRepo.GetRemark(companyId, source, deviceId)
+}
+
+func (s *BindRecordSrv) IsDeviceBind(companyId uint64, source string, deviceId string) bool {
+	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyId))
+	return bindRecordRepo.GetBindRecordId(source, deviceId) > 0
 }

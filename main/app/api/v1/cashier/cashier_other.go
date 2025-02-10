@@ -1,39 +1,21 @@
 package cashier
 
 import (
-	"net/http"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/cashier"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 // Handler 结构体
 type Handler struct {
-	cashierSrv cashier.ICashierSrv
-	authSrv    service.IAuthSrv
-}
-
-// GetCashierDeskRegionAndType 处理获取收银台的区域和类型
-// @Summary 获取收银台的区域和类型
-// @Description 获取收银台的区域和类型
-// @Tags 收银端
-// @Accept json
-// @Produce json
-// @Success 200 {array} nil "收银台区域和类型列表"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/region_and_type [get]
-func (h *Handler) GetCashierDeskRegionAndType(c *gin.Context) {
-	// 处理获取收银台的区域和类型的逻辑
+	authSrv service.IAuthSrv
 }
 
 // PostCashierLogin 收银端登录
@@ -250,34 +232,6 @@ func (h *Handler) GetCashierPaymentTypeList(c *gin.Context) {
 	// 处理获取收银支付类型列表的逻辑
 }
 
-// GetCashierProductCategory 处理获取收银产品类别
-// @Summary 获取收银产品类别
-// @Description 获取收银产品类别
-// @Tags 收银端
-// @Accept json
-// @Produce json
-// @Param token header string true "认证令牌"
-// @Param language header string true "语言"
-// @Success 200 {object} dto.Response{data=resp.ProductCategory} "产品类别列表"
-// @Router /cashier/cashier/product/category [get]
-func (h *Handler) GetCashierProductCategory(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
-	if companyId == 0 {
-		helper.Fail(c, constant.CodeBadRequest, "参数错误")
-		logger.Logger.Info("从token中获取公司ID失败")
-		return
-	}
-	language := helper.GetLanguage(c)
-	logger.Logger.Info("从token中获取公司ID成功", zap.Any("companyId", companyId), zap.String("从header中获取语言", language))
-	// 处理获取收银产品类别的逻辑
-	productCategory, err := h.cashierSrv.GetProductCategory(companyId, language)
-	if err != nil {
-		helper.ErrorWithDetail(c, http.StatusInternalServerError, err)
-		return
-	}
-	helper.Success(c, productCategory)
-}
-
 // GetCashierProductInfo 处理获取收银产品信息
 // @Summary 获取收银产品信息
 // @Description 获取收银产品信息
@@ -438,8 +392,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &Handler{
-		cashierSrv: cashier.NewCashierProductCategorySrv(dbm),
-		authSrv:    authSrv,
+		authSrv: authSrv,
 	}
 
 	publicApi := router.Group("")
@@ -454,11 +407,9 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 
 	// 需要认证
-	router.GET("/desk/region_and_type", wrapper.GetCashierDeskRegionAndType)
 	router.GET("/member/info", wrapper.GetCashierMemberInfo)
 	router.GET("/member/search", wrapper.GetCashierMemberSearch)
 	router.GET("/payment/type_list", wrapper.GetCashierPaymentTypeList)
-	router.GET("/product/category", wrapper.GetCashierProductCategory)
 	router.GET("/product/info", wrapper.GetCashierProductInfo)
 	router.POST("/production/create", wrapper.PostCashierProductionCreate)
 	router.POST("/production/return", wrapper.PostCashierProductionReturn)

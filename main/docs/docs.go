@@ -15,8 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/company": {
-            "put": {
+        "/assistant/desk/list": {
+            "get": {
+                "description": "获取收银台列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -24,30 +25,25 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "公司"
+                    "收银端"
                 ],
-                "summary": "更新公司",
-                "parameters": [
-                    {
-                        "description": "更新公司参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamUpdateCompany"
-                        }
-                    }
-                ],
+                "summary": "获取收银台列表",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "收银台列表",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "type": "array"
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
-            },
-            "post": {
+            }
+        },
+        "/assistant/desk/region_and_type": {
+            "get": {
+                "description": "获取收银台的区域和类型",
                 "consumes": [
                     "application/json"
                 ],
@@ -55,55 +51,18 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "公司"
+                    "收银端"
                 ],
-                "summary": "创建公司",
-                "parameters": [
-                    {
-                        "description": "创建公司参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamCreateCompany"
-                        }
-                    }
-                ],
+                "summary": "获取收银台的区域和类型",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "收银台区域和类型列表",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "$ref": "#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp"
                         }
-                    }
-                }
-            },
-            "delete": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "公司"
-                ],
-                "summary": "删除公司",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "公司ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -817,57 +776,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/cashier/product/category": {
-            "get": {
-                "description": "获取收银产品类别",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银产品类别",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "认证令牌",
-                        "name": "token",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "产品类别列表",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductCategory"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/cashier/desk/list": {
             "get": {
                 "description": "获取收银台列表",
@@ -911,7 +819,7 @@ const docTemplate = `{
                     "200": {
                         "description": "收银台区域和类型列表",
                         "schema": {
-                            "type": "array"
+                            "$ref": "#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp"
                         }
                     },
                     "404": {
@@ -1348,6 +1256,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/product/category/list": {
+            "get": {
+                "description": "获取收银产品类别列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银产品类别列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/cashier_resp.ProductCategoryListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/cashier/product/info/{productId}": {
             "get": {
                 "description": "获取收银产品信息",
@@ -1393,15 +1327,31 @@ const docTemplate = `{
                     "收银端"
                 ],
                 "summary": "获取收银产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "pageNo",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "产品列表",
+                        "description": "成功",
                         "schema": {
-                            "type": "array"
+                            "$ref": "#/definitions/cashier_resp.ProductListWithPaginationResp"
                         }
                     },
-                    "404": {
-                        "description": "未找到"
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
@@ -2325,6 +2275,59 @@ const docTemplate = `{
                 }
             }
         },
+        "cashier_resp.DeskRegion": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "餐桌区域名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "餐桌区域ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.DeskRegionAndTypeListWithPaginationResp": {
+            "type": "object",
+            "properties": {
+                "region": {
+                    "type": "object",
+                    "properties": {
+                        "list": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/cashier_resp.DeskRegion"
+                            }
+                        }
+                    }
+                },
+                "type": {
+                    "type": "object",
+                    "properties": {
+                        "list": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/cashier_resp.DeskType"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "cashier_resp.DeskType": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "餐桌类型名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "餐桌类型ID",
+                    "type": "integer"
+                }
+            }
+        },
         "cashier_resp.Permission": {
             "type": "object",
             "properties": {
@@ -2363,6 +2366,273 @@ const docTemplate = `{
                 }
             }
         },
+        "cashier_resp.Product": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "description": "商品属性组",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductAttributeGroupList"
+                        }
+                    ]
+                },
+                "flavors": {
+                    "description": "商品规格",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductFlavorList"
+                        }
+                    ]
+                },
+                "image": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
+                "limit_num": {
+                    "description": "商品限购数量",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品价格",
+                    "type": "number"
+                },
+                "sauces": {
+                    "description": "商品小料",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductSauceList"
+                        }
+                    ]
+                },
+                "unit": {
+                    "description": "商品单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.ProductAttributeGroup": {
+            "type": "object",
+            "properties": {
+                "is_must": {
+                    "description": "是否必选",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品属性组名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "max_select": {
+                    "description": "最大可选数量",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品属性组UUID",
+                    "type": "integer"
+                },
+                "value": {
+                    "description": "商品属性值",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductAttributeValueList"
+                        }
+                    ]
+                }
+            }
+        },
+        "cashier_resp.ProductAttributeGroupList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.ProductAttributeGroup"
+                    }
+                }
+            }
+        },
+        "cashier_resp.ProductAttributeValue": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品属性名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.ProductAttributeValueList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.ProductAttributeValue"
+                    }
+                }
+            }
+        },
+        "cashier_resp.ProductCategory": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "description": "子级类别",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductCategoryListResp"
+                        }
+                    ]
+                },
+                "is_special": {
+                    "description": "是否特殊类别",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品类别名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_uuid": {
+                    "description": "父级类别UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.ProductCategoryListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.ProductCategory"
+                    }
+                }
+            }
+        },
+        "cashier_resp.ProductFlavor": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品规格价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.ProductFlavorList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.ProductFlavor"
+                    }
+                }
+            }
+        },
+        "cashier_resp.ProductListWithPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.Product"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "cashier_resp.ProductSauce": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品小料名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品小料价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品小料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "cashier_resp.ProductSauceList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/cashier_resp.ProductSauce"
+                    }
+                }
+            }
+        },
         "dto.LanguageItem": {
             "type": "object",
             "properties": {
@@ -2374,6 +2644,60 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.LocaleResponse": {
+            "type": "object",
+            "properties": {
+                "en": {
+                    "description": "英语",
+                    "type": "string"
+                },
+                "ja": {
+                    "description": "日语",
+                    "type": "string"
+                },
+                "ko": {
+                    "description": "韩语",
+                    "type": "string"
+                },
+                "my": {
+                    "description": "缅甸语",
+                    "type": "string"
+                },
+                "th": {
+                    "description": "泰语",
+                    "type": "string"
+                },
+                "tr": {
+                    "description": "土耳其语",
+                    "type": "string"
+                },
+                "zh": {
+                    "description": "中文",
+                    "type": "string"
+                },
+                "zhtw": {
+                    "description": "粤语",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PageResponse": {
+            "type": "object",
+            "properties": {
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
                 }
             }
         },
@@ -2443,122 +2767,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.ParamCreateCompany": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "地址",
-                    "type": "string"
-                },
-                "assistant_limit": {
-                    "description": "助手限制",
-                    "type": "integer"
-                },
-                "auth_day": {
-                    "description": "授权天数",
-                    "type": "integer"
-                },
-                "auth_start_time": {
-                    "description": "授权开始时间",
-                    "type": "string"
-                },
-                "cash_limit": {
-                    "description": "现金限制",
-                    "type": "integer"
-                },
-                "chain_number": {
-                    "description": "连锁编号",
-                    "type": "string"
-                },
-                "confirm_password": {
-                    "description": "确认密码",
-                    "type": "string"
-                },
-                "deploy_mode": {
-                    "description": "部署模式",
-                    "type": "integer"
-                },
-                "is_accept_scan_order": {
-                    "description": "是否接受扫码订单",
-                    "type": "integer"
-                },
-                "is_open_assistant": {
-                    "description": "是否开启助手",
-                    "type": "integer"
-                },
-                "is_open_buffet": {
-                    "description": "是否开启自助餐",
-                    "type": "integer"
-                },
-                "is_open_kitchen_kds": {
-                    "description": "是否开启厨房KDS",
-                    "type": "integer"
-                },
-                "is_open_local_print": {
-                    "description": "是否开启本地打印",
-                    "type": "integer"
-                },
-                "is_open_member": {
-                    "description": "是否开启会员",
-                    "type": "integer"
-                },
-                "is_open_scan": {
-                    "description": "是否开启扫码",
-                    "type": "integer"
-                },
-                "is_open_tablet": {
-                    "description": "是否开启平板",
-                    "type": "integer"
-                },
-                "kitchen_limit": {
-                    "description": "厨房限制",
-                    "type": "integer"
-                },
-                "languages": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "link_phone": {
-                    "description": "联系电话",
-                    "type": "string"
-                },
-                "logo": {
-                    "description": "公司logo",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "公司名称",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "密码",
-                    "type": "string"
-                },
-                "printer_limit": {
-                    "description": "打印机限制",
-                    "type": "integer"
-                },
-                "table_limit": {
-                    "description": "桌位限制",
-                    "type": "integer"
-                },
-                "tablet_limit": {
-                    "description": "平板限制",
-                    "type": "integer"
-                },
-                "timezone": {
-                    "description": "时区",
-                    "type": "string"
-                },
-                "user_name": {
-                    "description": "用户名",
-                    "type": "string"
-                }
-            }
-        },
         "req.ParamCustomerInfo": {
             "type": "object",
             "properties": {
@@ -2584,126 +2792,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "description": "用户名",
-                    "type": "string"
-                }
-            }
-        },
-        "req.ParamUpdateCompany": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "地址",
-                    "type": "string"
-                },
-                "assistant_limit": {
-                    "description": "助手限制",
-                    "type": "integer"
-                },
-                "auth_day": {
-                    "description": "授权天数",
-                    "type": "integer"
-                },
-                "auth_start_time": {
-                    "description": "授权开始时间",
-                    "type": "string"
-                },
-                "cash_limit": {
-                    "description": "现金限制",
-                    "type": "integer"
-                },
-                "chain_number": {
-                    "description": "连锁编号",
-                    "type": "string"
-                },
-                "confirm_password": {
-                    "description": "确认密码",
-                    "type": "string"
-                },
-                "deploy_mode": {
-                    "description": "部署模式",
-                    "type": "integer"
-                },
-                "id": {
-                    "description": "公司ID",
-                    "type": "integer"
-                },
-                "is_accept_scan_order": {
-                    "description": "是否接受扫码订单",
-                    "type": "integer"
-                },
-                "is_open_assistant": {
-                    "description": "是否开启助手",
-                    "type": "integer"
-                },
-                "is_open_buffet": {
-                    "description": "是否开启自助餐",
-                    "type": "integer"
-                },
-                "is_open_kitchen_kds": {
-                    "description": "是否开启厨房KDS",
-                    "type": "integer"
-                },
-                "is_open_local_print": {
-                    "description": "是否开启本地打印",
-                    "type": "integer"
-                },
-                "is_open_member": {
-                    "description": "是否开启会员",
-                    "type": "integer"
-                },
-                "is_open_scan": {
-                    "description": "是否开启扫码",
-                    "type": "integer"
-                },
-                "is_open_tablet": {
-                    "description": "是否开启平板",
-                    "type": "integer"
-                },
-                "kitchen_limit": {
-                    "description": "厨房限制",
-                    "type": "integer"
-                },
-                "languages": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "link_phone": {
-                    "description": "联系电话",
-                    "type": "string"
-                },
-                "logo": {
-                    "description": "公司logo",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "公司名称",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "密码",
-                    "type": "string"
-                },
-                "printer_limit": {
-                    "description": "打印机限制",
-                    "type": "integer"
-                },
-                "table_limit": {
-                    "description": "桌位限制",
-                    "type": "integer"
-                },
-                "tablet_limit": {
-                    "description": "平板限制",
-                    "type": "integer"
-                },
-                "timezone": {
-                    "description": "时区",
-                    "type": "string"
-                },
-                "user_name": {
                     "description": "用户名",
                     "type": "string"
                 }
@@ -2800,26 +2888,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.Category": {
-            "type": "object",
-            "properties": {
-                "children": {
-                    "description": "子分类列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ChildCategory"
-                    }
-                },
-                "key": {
-                    "description": "分类键",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "分类名称",
-                    "type": "string"
-                }
-            }
-        },
         "resp.CategoryProductInfo": {
             "type": "object",
             "properties": {
@@ -2862,19 +2930,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.CategoryProductInfo"
                     }
-                }
-            }
-        },
-        "resp.ChildCategory": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "description": "子分类键",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "子分类名称",
-                    "type": "string"
                 }
             }
         },
@@ -2940,25 +2995,6 @@ const docTemplate = `{
                 "token": {
                     "description": "用户token",
                     "type": "string"
-                }
-            }
-        },
-        "resp.ProductCategory": {
-            "type": "object",
-            "properties": {
-                "categoryList": {
-                    "description": "分类列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Category"
-                    }
-                },
-                "specialCategoryList": {
-                    "description": "特殊分类列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.SpecialCategory"
-                    }
                 }
             }
         },
@@ -3123,19 +3159,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "用户名",
-                    "type": "string"
-                }
-            }
-        },
-        "resp.SpecialCategory": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "分类名称",
                     "type": "string"
                 }
             }

@@ -11,7 +11,7 @@ import (
 type IRoleRepo interface {
 	GetRoleList() ([]model.Role, error)
 	UpdateRole(uuid uint, role model.Role) error
-	CreateRole(role model.Role) (uint, error)
+	CreateRole(role model.Role) (uint64, error)
 	DeleteRole(uuid uint) error
 }
 
@@ -41,7 +41,7 @@ func (r *RoleRepoImpl) UpdateRole(uuid uint, role model.Role) error {
 }
 
 // CreateRole 创建角色
-func (r *RoleRepoImpl) CreateRole(role model.Role) (uint, error) {
+func (r *RoleRepoImpl) CreateRole(role model.Role) (uint64, error) {
 	return role.Uuid, r.db.Create(&role).Error
 }
 

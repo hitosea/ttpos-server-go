@@ -41,8 +41,8 @@ use app\common\model\product\ProductSku as ProductSkuModel;
 class BaseModelOrder extends BaseModel
 {
     use SoftDelete;
-    protected $pk = 'order_id';
-    protected $name = 'order';
+    protected $name = 'sale_bill';
+    protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -55,6 +55,7 @@ class BaseModelOrder extends BaseModel
      * @var string[]
      */
     protected $append = [
+        'order_id',
         'state_text',
         'order_source_text',
         'order_type_text',
@@ -66,6 +67,14 @@ class BaseModelOrder extends BaseModel
         'actual_receive_price',
         'lock_elapsed_time',
     ];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getOrderIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 订单商品列表
@@ -354,7 +363,7 @@ class BaseModelOrder extends BaseModel
 
         $pay_price = isset($data['pay_price']) ? $data['pay_price'] : 0;
         $refund_money = isset($data['refund_money']) ? $data['refund_money'] : 0;
-        
+
         return helper::bcsub($pay_price, $refund_money);
     }
 
@@ -872,14 +881,17 @@ class BaseModelOrder extends BaseModel
     public function checkPartialPayment()
     {
         if ($this->merge_parent_id && (
-            OrderPayType::where('order_id', $this->merge_parent_id)->find() || 
+            OrderPayType::where('order_id', $this->merge_parent_id)->find() ||
             Order::where('order_id', $this->merge_parent_id)->where('pay_status', OrderPayStatusEnum::SUCCESS)->find()
         )) {
             return '当前订单已被部分支付，不支持取消';
-        } else if (OrderPayType::where('order_id', $this->order_id)->find() || 
-            Order::where('order_id', $this->order_id)->where('pay_status', OrderPayStatusEnum::SUCCESS)->find()) {
+        } else if (
+            OrderPayType::where('order_id', $this->order_id)->find() ||
+            Order::where('order_id', $this->order_id)->where('pay_status', OrderPayStatusEnum::SUCCESS)->find()
+        ) {
             return '当前订单已被部分支付，不支持取消';
-        } else if (OrderPayType::where('order_id', 'in', self::where('parent_id', $this->order_id)->column('order_id'))->find() || 
+        } else if (
+            OrderPayType::where('order_id', 'in', self::where('parent_id', $this->order_id)->column('order_id'))->find() ||
             Order::where('order_id', 'in', self::where('parent_id', $this->order_id)->column('order_id'))->where('pay_status', OrderPayStatusEnum::SUCCESS)->find()
         ) {
             return '当前订单已被部分支付，不支持取消';
@@ -1219,7 +1231,7 @@ class BaseModelOrder extends BaseModel
             $attrIds = array_filter($attrIds);
             $addAttrIds = array_keys($attrIds);
             if (is_array($productAttr) && !empty($productAttr)) {
-                $requiredAttributes = array_filter($productAttr, function($item) {
+                $requiredAttributes = array_filter($productAttr, function ($item) {
                     return !empty($item['attribute_required']) && $item['attribute_required'] == 1;
                 });
                 foreach ($requiredAttributes as $item) {
@@ -1369,7 +1381,7 @@ class BaseModelOrder extends BaseModel
         if ($limitNum && $productNum > $limitNum) {
             return $this->handleError('超过限购数量');
         }
-        
+
         // 一次性获取所有订单商品数量信息
         $orderProducts = OrderProduct::where([
             'order_id' => $orderId,
@@ -1401,7 +1413,7 @@ class BaseModelOrder extends BaseModel
             $this->errorData = ['product_sku_id' => $productSkuId];
             return $this->handleError('规格已下架,请选择其他规格', StatusCode::PRODUCT_ERROR_NOT_EXIST_SKU);
         }
-        // 
+        //
         $is_material_sku = (new ProductSkuMaterial())->where('product_sku_id', $productSkuId)->find();
         if (($license['sale'] ?? 0) != 1 || !$is_material_sku) {
             $skuStockNum = $productSku->stock_num;

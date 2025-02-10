@@ -9,7 +9,7 @@ import (
 // IRoleAccessRepo 角色权限仓库接口
 type IRoleAccessRepo interface {
 	GetRoleAccessList() ([]model.RoleAccess, error)
-	CreateRoleAccess(roleAccess model.RoleAccess) (uint, error)
+	CreateRoleAccess(roleAccess model.RoleAccess) (uint64, error)
 }
 
 func NewRoleAccessRepo(db *gorm.DB) IRoleAccessRepo {
@@ -30,6 +30,6 @@ func (r *RoleAccessRepoImpl) GetRoleAccessList() ([]model.RoleAccess, error) {
 	return roleAccesses, err
 }
 
-func (r *RoleAccessRepoImpl) CreateRoleAccess(roleAccess model.RoleAccess) (uint, error) {
+func (r *RoleAccessRepoImpl) CreateRoleAccess(roleAccess model.RoleAccess) (uint64, error) {
 	return roleAccess.RoleUuid, r.db.Create(&roleAccess).Error
 }

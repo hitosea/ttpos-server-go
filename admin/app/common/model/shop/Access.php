@@ -13,10 +13,31 @@ class Access extends BaseModel
     protected $name = 'access';
     protected $pk = 'id';
 
+    /**
+     * 追加属性
+     */
+    protected $append = ['access_id', 'parent_id'];
+
     // 路由筛选名称
     const SHOP_ROUTE_NAME = '管理后台';
     const CASHIER_ROUTE_NAME = '收银机';
     const ASSISTANT_ROUTE_NAME = '点餐助手';
+
+    /**
+     * 兼容ID字段
+     */
+    public function getAccessIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
+
+    /**
+     * 兼容ID字段
+     */
+    public function getParentIdAttr()
+    {
+        return $this->parent_uuid ?? 0;
+    }
 
     /*
      * 获取所有权限
@@ -35,7 +56,8 @@ class Access extends BaseModel
                 ->order(['sort' => 'asc', 'create_time' => 'asc'])
                 ->select();
         } else {
-            $data = $model->order(['sort' => 'asc', 'create_time' => 'asc'])
+            $data = $model
+                ->order(['sort' => 'asc', 'create_time' => 'asc'])
                 ->select();
         }
 

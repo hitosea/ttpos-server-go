@@ -146,13 +146,14 @@ class Controller extends BaseController
             'user' => [
                 'uuid' => $user['uuid'],
                 'company_uuid' => $companyUuid,
+                'shop_supplier_id' => $companyUuid, // 保留，兼容旧版本
                 'user_name' => $user['username'],
                 'real_name' => $user['real_name'],
                 'user_type' => $user['user_type'],
             ],
             'app' => $user->app,
             'supplier' => $user->supplier()->field('
-                sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, is_open_member, is_open_tablet,languages,
+                company_uuid as app_id, company_uuid, sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, is_open_member, is_open_tablet,languages,
                 is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone
             ')->find(),
         ];

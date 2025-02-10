@@ -51,12 +51,12 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, app := range companies {
-		if _, ok := m.dbs[app.ID]; !ok {
-			appDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", "shop", app.ID)) // 比如：shop1724054084 数据库
+		if _, ok := m.dbs[app.Uuid]; !ok {
+			appDB, err := m.getConnection(conf, fmt.Sprintf("%s%d", "shop", app.Uuid)) // 比如：shop1724054084 数据库
 			if err != nil {
-				log.Fatalf("Error connecting to database for app %d: %s", app.ID, err)
+				log.Fatalf("Error connecting to database for app %d: %s", app.Uuid, err)
 			}
-			m.dbs[app.ID] = appDB
+			m.dbs[app.Uuid] = appDB
 		}
 	}
 }

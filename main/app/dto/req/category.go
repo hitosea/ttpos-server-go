@@ -1,8 +1,8 @@
 package req
 
 type CreateCategoryRequest struct {
-	ParentID   uint                `json:"parent_id"`
-	CategoryID uint                `json:"category_id"`
+	ParentID   uint64              `json:"parent_id"`
+	CategoryID uint64              `json:"category_id"`
 	Name       CategoryTranslation `json:"name"`
 	Sort       int                 `json:"sort"`
 }

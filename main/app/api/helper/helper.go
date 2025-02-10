@@ -81,8 +81,8 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 }
 
 // GetCompanyId 获取公司ID
-func GetCompanyId(c *gin.Context) uint {
-	return c.GetUint(jwt.CompanyId)
+func GetCompanyId(c *gin.Context) uint64 {
+	return c.GetUint64(jwt.CompanyId)
 }
 
 func GetLanguage(c *gin.Context) string {
