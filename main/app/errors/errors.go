@@ -35,4 +35,5 @@ func NewWithCodeAndReplace(code int, message string, replace []string) *AppError
 var (
 	ErrUserNotFound       = &AppError{Code: constant.CodeFail, Message: "user not found"}
 	ErrInvalidCredentials = &AppError{Code: 401, Message: "invalid credentials"}
+	ErrInternal           = &AppError{Code: constant.CodeFail, Message: "系统内部错误"}
 )

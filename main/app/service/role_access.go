@@ -17,8 +17,8 @@ import (
 )
 
 type IRoleAccessSrv interface {
-	GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint64) ([]*cashier_resp.Permission, error)
-	GetApiPermission(staffId, companyId uint64) ([]string, error)
+	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*cashier_resp.Permission, error)
+	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
 }
 
 func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
@@ -36,11 +36,11 @@ func NewRoleAccessSrvImpl(dbm *database.DBManager) *RoleAccessSrv {
 }
 
 // 从数据库获取权限
-func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint64) ([]model.Access, model.CompanySetting, error) {
-	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyId))
+func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, error) {
+	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyUuid))
 	var companySetting model.CompanySetting
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff := staffRepo.GetById(staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
+	staff := staffRepo.GetByUuid(staffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {
 		return nil, companySetting, errors.New("获取商家信息错误")
@@ -55,15 +55,15 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint64) ([]model.Acc
 			where = append(where, accessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleIds, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleIds(staff.Uuid)
+		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuids(staff.Uuid)
 		if err != nil {
 			return nil, companySetting, errors.New("获取用户角色失败")
 		}
-		accessIds, err := accessRepo.GetAccessIds(roleIds, staff.CompanyUuid)
+		accessUuids, err := accessRepo.GetAccessUuids(roleUuids)
 		if err != nil {
 			return nil, companySetting, errors.New("获取角色权限失败")
 		}
-		where = append(where, accessRepo.WhereIds(accessIds))
+		where = append(where, accessRepo.WhereUuids(accessUuids))
 	}
 
 	dbPermissions, err := accessRepo.GetPermissions(staff.CompanyUuid, where...)
@@ -76,10 +76,10 @@ func (s *RoleAccessSrv) getDbPermissions(staffId, companyId uint64) ([]model.Acc
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessSrv) GetPermission(isShow bool, routerName constant.RouteName, staffId, companyId uint64) ([]*cashier_resp.Permission, error) {
+func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*cashier_resp.Permission, error) {
 
 	var permissions []cashier_resp.Permission
-	dbPermissions, companySetting, err := s.getDbPermissions(staffId, companyId)
+	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -145,19 +145,16 @@ func (s *RoleAccessSrv) filterPermission(permissions []cashier_resp.Permission, 
 
 // 构建权限树
 func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permission, routerName constant.RouteName) []*cashier_resp.Permission {
-	permissionMap := make(map[int]*cashier_resp.Permission)
+	permissionMap := make(map[uint64]*cashier_resp.Permission)
 	var roots []*cashier_resp.Permission
-
 	var accessIds []string
+	format := "%03d%020d"
 
 	// 第一步：建立ID到节点的映射
 	for i := range permissions {
 		permission := &permissions[i]
-		permissionMap[permission.ID] = permission
-
-		// fmt.Printf("%03d%010d\n", 99, 10)
-		accessIds = append(accessIds, fmt.Sprintf("%03d%010d\n", permission.Sort, permission.ID))
-
+		permissionMap[permission.Uuid] = permission
+		accessIds = append(accessIds, fmt.Sprintf(format, permission.Sort, permission.Uuid))
 	}
 
 	sort.Strings(accessIds)
@@ -165,10 +162,10 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permissio
 
 	for _, accessId := range accessIds {
 		for _, permission := range permissionMap {
-			if fmt.Sprintf("%03d%010d\n", permission.Sort, permission.ID) != accessId {
+			if fmt.Sprintf(format, permission.Sort, permission.Uuid) != accessId {
 				continue
 			}
-			if parent, exists := permissionMap[permission.ParentId]; exists {
+			if parent, exists := permissionMap[permission.ParentUuid]; exists {
 				parent.Children = append(parent.Children, permission)
 			} else {
 				roots = append(roots, permission)
@@ -186,8 +183,8 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permissio
 	return filteredRoots
 }
 
-func (s *RoleAccessSrv) GetApiPermission(staffId, companyId uint64) ([]string, error) {
-	accesses, _, err := s.getDbPermissions(staffId, companyId)
+func (s *RoleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
+	accesses, _, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, err
 	}

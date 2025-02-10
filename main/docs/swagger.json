@@ -793,32 +793,6 @@
                 }
             }
         },
-        "/cashier/buffet/list": {
-            "get": {
-                "description": "获取自助餐列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取自助餐列表",
-                "responses": {
-                    "200": {
-                        "description": "自助餐列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/info": {
             "get": {
                 "description": "获取收银台详情",
@@ -2287,8 +2261,8 @@
                         }
                     ]
                 },
-                "cashier_id": {
-                    "description": "收银员ID",
+                "cashier_uuid": {
+                    "description": "收银员UUID",
                     "type": "integer"
                 },
                 "company": {
@@ -2331,13 +2305,13 @@
         "cashier_resp.Company": {
             "type": "object",
             "properties": {
-                "id": {
-                    "description": "商家ID",
-                    "type": "integer"
-                },
                 "name": {
                     "description": "商家名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "商家UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -2429,6 +2403,9 @@
                 },
                 "redirect_name": {
                     "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },

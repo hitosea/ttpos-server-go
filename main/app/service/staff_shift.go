@@ -12,7 +12,7 @@ import (
 )
 
 type IStaffShiftSrv interface {
-	CreateWorkingLog(staff model.Staff) model.StaffShiftLog
+	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
@@ -34,14 +34,19 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) *StaffShiftSrv 
 }
 
 // CreateWorkingLog 创建当班记录
-func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) model.StaffShiftLog {
+func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
 	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash(staff.CompanyUuid)
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
 		startTime = int(time.Now().Unix())
 	}
-	shiftLog, _ := shiftLogRepo.Create(staff.CompanyUuid, model.StaffShiftLog{
+	uuid, err := database.GetID()
+	if err != nil {
+		return model.StaffShiftLog{}, err
+	}
+	shiftLog, _ := shiftLogRepo.Create(model.StaffShiftLog{
+		Uuid:              uuid,
 		StaffUuid:         staff.Uuid,
 		ShiftNo:           s.generateNumber(),
 		PreviousShiftCash: previousShiftCash,
@@ -50,7 +55,7 @@ func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) model.StaffShiftLog 
 		ShiftStartTime:    startTime,
 		ShiftEndTime:      0,
 	})
-	return shiftLog
+	return shiftLog, nil
 }
 
 func (s *StaffShiftSrv) generateNumber() string {

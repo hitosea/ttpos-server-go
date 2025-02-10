@@ -27,7 +27,7 @@ type DeskHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 处理获取收银台的区域和类型的逻辑
 	res, err := h.Service.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
@@ -49,7 +49,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -77,7 +77,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {

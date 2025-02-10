@@ -10,7 +10,7 @@ import (
 type ICompanySettingRepo interface {
 	GetById(companyId uint64) model.CompanySetting
 	GetByCompanyId(companyId uint64) model.CompanySetting
-	GetByCompanyIdFromCompanyDB(companyId uint64) model.CompanySetting
+	GetByCompanyIdFromCompanyDB() model.CompanySetting
 	Update(companySetting model.CompanySetting) error
 	Delete(companyId uint64) error
 }
@@ -39,7 +39,7 @@ func (r *CompanySettingRepo) GetByCompanyId(companyId uint64) model.CompanySetti
 	return companySetting
 }
 
-func (r *CompanySettingRepo) GetByCompanyIdFromCompanyDB(companyId uint64) model.CompanySetting {
+func (r *CompanySettingRepo) GetByCompanyIdFromCompanyDB() model.CompanySetting {
 	var companySetting model.CompanySetting
 	r.db.First(&companySetting)
 	return companySetting

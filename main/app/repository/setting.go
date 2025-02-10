@@ -7,8 +7,8 @@ import (
 )
 
 type ISettingRepo interface {
-	GetAll(companyId uint64) ([]model.Setting, error)
-	Updates(companyId uint64, key string, values string) error
+	GetAll() ([]model.Setting, error)
+	Updates(key string, values string) error
 }
 
 func NewSettingRepo(db *gorm.DB) ISettingRepo {
@@ -23,12 +23,12 @@ func NewSettingRepoImpl(db *gorm.DB) *SettingRepo {
 	return &SettingRepo{db: db}
 }
 
-func (r *SettingRepo) GetAll(companyId uint64) ([]model.Setting, error) {
+func (r *SettingRepo) GetAll() ([]model.Setting, error) {
 	var settings []model.Setting
 	err := r.db.Find(&settings).Error
 	return settings, err
 }
 
-func (r *SettingRepo) Updates(companyId uint64, key string, values string) error {
+func (r *SettingRepo) Updates(key string, values string) error {
 	return r.db.Model(&model.Setting{}).Where("`key` = ?", key).Updates(map[string]any{"values": values}).Error
 }

@@ -15,9 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/assistant/desk/list": {
+        "/assistant/desk/info": {
             "get": {
-                "description": "获取收银台列表",
+                "description": "获取桌台详情",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,12 +25,35 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "点餐助手端"
                 ],
-                "summary": "获取收银台列表",
+                "summary": "获取桌台详情",
                 "responses": {
                     "200": {
-                        "description": "收银台列表",
+                        "description": "桌台详情"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/list": {
+            "get": {
+                "description": "获取桌台列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端"
+                ],
+                "summary": "获取桌台列表",
+                "responses": {
+                    "200": {
+                        "description": "桌台列表",
                         "schema": {
                             "type": "array"
                         }
@@ -43,7 +66,7 @@ const docTemplate = `{
         },
         "/assistant/desk/region_and_type": {
             "get": {
-                "description": "获取收银台的区域和类型",
+                "description": "获取桌台的区域和类型",
                 "consumes": [
                     "application/json"
                 ],
@@ -51,12 +74,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "点餐助手端"
                 ],
-                "summary": "获取收银台的区域和类型",
+                "summary": "获取桌台的区域和类型",
                 "responses": {
                     "200": {
-                        "description": "收银台区域和类型列表",
+                        "description": "桌台区域和类型列表",
                         "schema": {
                             "$ref": "#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp"
                         }
@@ -772,6 +795,29 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/info": {
+            "get": {
+                "description": "获取收银台详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端"
+                ],
+                "summary": "获取收银台详情",
+                "responses": {
+                    "200": {
+                        "description": "收银台详情"
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -2221,8 +2267,8 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "cashier_id": {
-                    "description": "收银员ID",
+                "cashier_uuid": {
+                    "description": "收银员UUID",
                     "type": "integer"
                 },
                 "company": {
@@ -2265,13 +2311,13 @@ const docTemplate = `{
         "cashier_resp.Company": {
             "type": "object",
             "properties": {
-                "id": {
-                    "description": "商家ID",
-                    "type": "integer"
-                },
                 "name": {
                     "description": "商家名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "商家UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -2363,6 +2409,9 @@ const docTemplate = `{
                 },
                 "redirect_name": {
                     "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
