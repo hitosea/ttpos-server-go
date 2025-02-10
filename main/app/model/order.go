@@ -4,7 +4,7 @@ package model
 type SaleBill struct {
 	ID              uint    `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid            uint64  `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单ID" json:"uuid"`
-	Sn              string  `gorm:"column:sn;type:varchar(255);default:'';comment:订单编号" json:"sn"`
+	OrderNo         string  `gorm:"column:sn;type:varchar(255);default:'';comment:订单编号" json:"sn"`
 	BillType        uint    `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-Desk桌台订单、1-OrderingFood点餐订单" json:"bill_type"`
 	DiningMethod    uint    `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式, 0-Takeout打包、1-DineIn堂食" json:"dining_method"`
 	IsBuffet        uint    `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`

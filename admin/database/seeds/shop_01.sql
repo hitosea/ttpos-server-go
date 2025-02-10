@@ -7,7 +7,7 @@ SET
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    sn VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
+    order_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
     bill_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-Desk桌台订单、1-OrderingFood点餐订单',
     dining_method TINYINT(1) NOT NULL DEFAULT 0 COMMENT '用餐方式, 0-Takeout打包、1-DineIn堂食',
     is_buffet TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
