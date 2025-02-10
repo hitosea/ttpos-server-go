@@ -117,7 +117,9 @@ class Index extends Controller
     public function index()
     {
         $service = new ShopService;
-        return $this->renderSuccess('', ['data' => $service->getHomeData($this->store['user']), 'test' => DiskHelp::getDiskSpaceInfo()]);
+        // todo 兼容
+        // return $this->renderSuccess('', ['data' => $service->getHomeData($this->store['user']), 'test' => DiskHelp::getDiskSpaceInfo()]);
+        return $this->renderSuccess('', ['data' => [], 'test' => DiskHelp::getDiskSpaceInfo()]);
     }
 
     /**
@@ -181,7 +183,7 @@ class Index extends Controller
      */
     public function base()
     {
-        $settingData = SettingModel::getAll($this->store['user']['shop_supplier_id'] ?? 0, $this->store['app']['app_id'] ?? 0);
+        $settingData = SettingModel::getAll($this->store['app']['uuid'] ?? 0);
         $store = $settingData[SettingEnum::STORE]['values'];
         $taxRate = $settingData[SettingEnum::TAX_RATE]['values'];
         $settings = [

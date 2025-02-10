@@ -253,19 +253,20 @@ function extractLanguage($json)
 /**
  * 获取当前系统设置的语言
  */
-function getSettingLanguages($shopSupplierId = 0)
+function getSettingLanguages($companyUuid = 0)
 {
-    if ($shopSupplierId) {
-        if (!($shopInfo = Cache::get('common_shop_info' . $shopSupplierId)) || !Cache::get('first_shop_info')) {
+    if ($companyUuid) {
+        if (!($shopInfo = Cache::get('common_shop_info' . $companyUuid)) || !Cache::get('first_shop_info')) {
             $shopInfo = User::getShopInfo('', true);
-            Cache::tag('common_get_settingLanguages')->set('common_shop_info' . $shopSupplierId, $shopInfo);
+            Cache::tag('common_get_settingLanguages')->set('common_shop_info' . $companyUuid, $shopInfo);
         }
     } else {
         $shopInfo = User::getShopInfo('', true);
     }
-    if (!$languages = Cache::get('common_setting_languages' . $shopInfo['shop_supplier_id'])) {
-        $languages = SettingModel::getSupplierLanguage($shopInfo['shop_supplier_id'], $shopInfo['app_id']);
-        Cache::tag('common_get_settingLanguages')->set('common_setting_languages' . $shopInfo['shop_supplier_id'], $languages);
+    $companyUuid = $shopInfo['company_uuid'] ?? 0;
+    if (!$languages = Cache::get('common_setting_languages' . $companyUuid)) {
+        $languages = SettingModel::getSupplierLanguage($companyUuid);
+        Cache::tag('common_get_settingLanguages')->set('common_setting_languages' . $companyUuid, $languages);
     }
     return $languages;
 }

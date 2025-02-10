@@ -80,19 +80,20 @@ class Passport extends Controller
             if ($userInfo['password_change'] == 0) {
                 return $this->renderError('首次登录需修改密码', ['token' => $userInfo['token']], StatusCode::UNBIND_ERROR);
             }
-            $setting = SettingModel::getSupplierItem(SettingEnum::STORE, $userInfo['shop_supplier_id'] ?? 0, $userInfo['app_id'] ?? 0);
+            $companyUuid = $userInfo['company_uuid'] ?? 0;
+            $setting = SettingModel::getSupplierItem(SettingEnum::STORE, $companyUuid, $companyUuid);
             //
             return $this->renderSuccess('登录成功', [
-                'app_id' => $userInfo['app_id'],
-                'user_name' => $userInfo['user_name'],
+                'user_name' => $userInfo['username'],
                 'token' => $userInfo['token'],
                 'shop_name' => $setting['name'],
-                'supplier_name' => $userInfo['supplier']['name'],
-                'shop_supplier_id' => $userInfo['shop_supplier_id'],
+                'supplier_name' => $userInfo['app']['name'],
                 'user_type' => $userInfo['user_type'],
                 'version' => get_version(),
                 'logoUrl' => $setting['logoUrl'],
                 'currency' => $userInfo['currency'],
+                'app_id' => $companyUuid,
+                'shop_supplier_id' => $companyUuid,
             ]);
         }
         return $this->renderError($model->getError() ?: '登录失败');

@@ -23,15 +23,23 @@ use app\shop\model\product\Category as CategoryModel;
  */
 class Product extends BaseModel
 {
-    protected $name = 'product';
-    protected $pk = 'product_id';
-    protected $append = ['product_sales', 'product_name_text', 'product_unit_text'];
+    protected $name = 'product_category';
+    protected $pk = 'id';
+    protected $append = ['product_id', 'product_sales', 'product_name_text', 'product_unit_text'];
 
     /*
      * 类型 10-成品 20-材料
      */
     const TYPE_PRODUCT = 10;
     const TYPE_MATERIAL = 20;
+
+    /**
+     * 兼容ID字段
+     */
+    public function getProductIdAttr($value, $data = [])
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 商品价格

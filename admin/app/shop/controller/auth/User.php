@@ -176,7 +176,7 @@ class User extends Controller
         $user = $this->store['user'];
         $supplier = $this->store['supplier'];
         $menus = [];
-        $user_info = AuthUserModel::find($user['uuid']);
+        $user_info = AuthUserModel::where('uuid', $user['uuid'])->find();
         if (empty($user_info)) {
             return $this->renderError('用户不存在');
         }

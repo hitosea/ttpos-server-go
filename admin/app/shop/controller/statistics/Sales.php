@@ -61,12 +61,13 @@ class Sales extends Controller
         if ($user['user_type'] == 1) {
             $shop_supplier_id = $user['shop_supplier_id'];
         }
-        $data = (new OrderService($shop_supplier_id))->getDataByDate($days);
+        // todo 兼容
+        // $data = (new OrderService($shop_supplier_id))->getDataByDate($days);
         return $this->renderSuccess('', [
             // 日期
             'days' => $days,
             // 数据
-            'data' => $data,
+            'data' => [],
         ]);
     }
 
