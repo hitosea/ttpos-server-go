@@ -19,7 +19,7 @@ type CashierProductHandler struct {
 // GetProductList 获取收银产品列表
 // @Summary 获取收银产品列表
 // @Description 获取收银产品列表
-// @Tags 收银端
+// @Tags 收银端.产品
 // @Accept json
 // @Produce json
 // @Param pageNo query int true "页码"
@@ -51,7 +51,7 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 // GetProductCategoryList 获取收银产品类别列表
 // @Summary 获取收银产品类别列表
 // @Description 获取收银产品类别列表
-// @Tags 收银端
+// @Tags 收银端.产品
 // @Accept json
 // @Produce json
 // @Success 200 {object} cashier_resp.ProductCategoryListResp "成功"

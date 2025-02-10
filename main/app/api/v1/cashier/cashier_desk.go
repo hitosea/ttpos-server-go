@@ -22,7 +22,7 @@ type DeskHandler struct {
 // GetCashierDeskRegionAndType 处理获取收银台的区域和类型
 // @Summary 获取收银台的区域和类型
 // @Description 获取收银台的区域和类型
-// @Tags 收银端
+// @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
@@ -41,13 +41,14 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetCashierDeskList 处理获取收银台列表
-// @Summary 获取收银台列表
-// @Description 获取收银台列表
-// @Tags 收银端
+// GetCashierDeskList 处理获取桌台列表
+// @Summary 获取桌台列表
+// @Description 获取桌台列表
+// @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {array} nil "收银台列表"
+// @param data body cashier_req.DeskListReq true "列表参数"
+// @Success 200 {array} cashier_resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
@@ -70,12 +71,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 }
 
 // GetCashierDeskList 处理获取收银台列表
-// @Summary 获取收银台详情
-// @Description 获取收银台详情
-// @Tags 收银端
+// @Summary 获取桌台详情
+// @Description 获取桌台详情
+// @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} nil "收银台详情"
+// @param data body cashier_req.DeskInfoReq true "详情参数"
+// @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {

@@ -17,15 +17,15 @@ type BuffetHandler struct {
 	Service service.IBuffetSrv // 主服务
 }
 
-// GetCashierDeskList 处理获取自助餐列表
+// GetAssistantDeskList 处理获取自助餐列表
 // @Summary 获取自助餐列表
 // @Description 获取自助餐列表
-// @Tags 收银端
+// @Tags 点餐助手端.自助餐
 // @Accept json
 // @Produce json
-// @Success 200 {array} nil "自助餐列表"
+// @Success 200 {object} cashier_resp.BuffetListPaginationResp "自助餐列表"
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/buffet/list [get]
+// @Router /assistant/buffet/list [get]
 func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 获取收银产品列表

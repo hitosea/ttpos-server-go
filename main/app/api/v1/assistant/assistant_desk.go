@@ -22,7 +22,7 @@ type DeskHandler struct {
 // GetAssistantDeskRegionAndType 处理获取桌台的区域和类型
 // @Summary 获取桌台的区域和类型
 // @Description 获取桌台的区域和类型
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
 // @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
@@ -44,10 +44,11 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // GetAssistantDeskList 处理获取桌台列表
 // @Summary 获取桌台列表
 // @Description 获取桌台列表
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {array} nil "桌台列表"
+// @param data body cashier_req.DeskListReq true "列表参数"
+// @Success 200 {array} cashier_resp.DeskListWithPaginationResp "桌台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
@@ -72,10 +73,11 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // GetAssistantDeskInfo 处理获取桌台详情
 // @Summary 获取桌台详情
 // @Description 获取桌台详情
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} nil "桌台详情"
+// @param data body cashier_req.DeskInfoReq true "详情参数"
+// @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
