@@ -9,6 +9,7 @@ import (
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
 	CreateSaleBill(model model.SaleBill) (uint64, error)   // 创建销售单
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)  // 获取销售单
 	CreateSaleOrder(model model.SaleOrder) (uint64, error) // 创建订单
 }
 
@@ -34,6 +35,23 @@ func (r *orderRepo) CreateSaleBill(model model.SaleBill) (uint64, error) {
 		return 0, err
 	}
 	return model.Uuid, nil
+}
+
+// GetSaleBill 获取销售单
+func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
+	var model model.SaleBill
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.First(&model)
+	if result.Error != nil {
+		return model, result.Error
+	}
+
+	return model, nil
 }
 
 // CreateSaleOrder 创建销售订单

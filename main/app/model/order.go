@@ -5,7 +5,7 @@ type SaleBill struct {
 	// 主键和标识字段
 	ID      uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid    uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单ID" json:"uuid"`
-	OrderNo string `gorm:"column:sn;type:varchar(255);default:'';comment:销售账单编号" json:"order_no"`
+	OrderNo string `gorm:"column:order_no;type:varchar(255);default:'';comment:销售账单编号" json:"order_no"`
 
 	// 基本信息字段
 	BillType       uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
