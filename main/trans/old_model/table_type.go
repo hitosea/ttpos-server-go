@@ -9,7 +9,7 @@ import (
 )
 
 type TableType struct {
-	TypeID         uint   `gorm:"primaryKey;autoIncrement;comment:'id'"`
+	TypeID         uint64 `gorm:"primaryKey;autoIncrement;comment:'id'"`
 	TypeName       string `gorm:"type:varchar(50);not null;comment:'桌位类型'"`
 	Sort           int    `gorm:"not null;default:0;comment:'排序'"`
 	MinNum         int    `gorm:"not null;default:0;comment:'最小人数'"`

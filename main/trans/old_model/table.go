@@ -9,11 +9,11 @@ import (
 )
 
 type Table struct {
-	TableID        uint   `gorm:"primaryKey;autoIncrement;comment:id"`
+	TableID        uint64 `gorm:"primaryKey;autoIncrement;comment:id"`
 	TableNo        string `gorm:"default:'';comment:桌位编号"`
 	Sort           uint   `gorm:"default:0;comment:排序"`
-	AreaID         uint   `gorm:"default:0;comment:区域id"`
-	TypeID         uint   `gorm:"default:0;comment:类型id"`
+	AreaID         uint64 `gorm:"default:0;comment:区域id"`
+	TypeID         uint64 `gorm:"default:0;comment:类型id"`
 	Status         uint   `gorm:"default:10;comment:桌台状态 10-未开台 30-已开台"`
 	SwitchStatus   uint   `gorm:"default:1;comment:桌台开关状态 0-关 1-开"`
 	AreaName       string `gorm:"default:'';comment:区域名称"`

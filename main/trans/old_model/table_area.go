@@ -9,7 +9,7 @@ import (
 )
 
 type TableArea struct {
-	AreaID         uint   `gorm:"primaryKey;autoIncrement;comment:'id'"`
+	AreaID         uint64 `gorm:"primaryKey;autoIncrement;comment:'id'"`
 	AreaName       string `gorm:"type:varchar(50);not null;comment:'区域名称'"`
 	Sort           int    `gorm:"not null;default:0;comment:'排序'"`
 	ShopSupplierID int    `gorm:"not null;default:0;comment:'门店id'"`

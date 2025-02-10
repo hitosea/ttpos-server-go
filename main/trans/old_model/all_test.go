@@ -47,4 +47,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertSupplierPrinting()      // 商品打印（档口）
 	testConvertPrinter()               // 打印机
 	testConvertCustomerType()          // 自助餐顾客类型
+	testConvertBuffetCustomer()        // 自助餐顾客类型价格
 }
