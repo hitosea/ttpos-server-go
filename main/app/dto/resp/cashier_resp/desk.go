@@ -7,8 +7,8 @@ type Desk struct {
 	DeskNo        string  `json:"desk_no"`        // 桌台名称
 	CustomerCount uint    `json:"customer_count"` // 桌台人数
 	Status        uint    `json:"status"`         // 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
-	IsLock        uint    `json:"is_lock"`        // 是否锁单	0:否 1:是
-	IsBuffet      uint    `json:"is_buffet"`      // 是否自助餐	0:否 1:是
+	IsLock        bool    `json:"is_lock"`        // 是否锁单
+	IsBuffet      bool    `json:"is_buffet"`      // 是否自助餐
 	Time          uint    `json:"time"`           // 桌台用餐时间（秒）
 	Price         float64 `json:"price"`          // 桌台价格
 	Remark        string  `json:"remark"`         // 桌台备注
@@ -61,8 +61,8 @@ type DeskInfoResp struct {
 	RegionUuid    uint64 `json:"region_uuid"`              // 桌台区域ID
 	Status        uint   `json:"status"`                   // 桌台状态
 	CustomerCount uint   `json:"customer_count,omitempty"` // 桌台人数
-	IsLock        uint   `json:"is_lock"`                  // 是否锁单
-	IsBuffet      uint   `json:"is_buffet"`                // 是否自助餐
+	IsLock        bool   `json:"is_lock"`                  // 是否锁单
+	IsBuffet      bool   `json:"is_buffet"`                // 是否自助餐
 	Remark        string `json:"remark"`                   // 桌台备注
 	Time          uint   `json:"time"`                     // 桌台用餐时间（秒）
 }

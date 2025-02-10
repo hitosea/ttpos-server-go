@@ -45,8 +45,8 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginatio
 		respBuffet := cashier_resp.Buffet{
 			Uuid:              uint64(buffet.Uuid),
 			Price:             buffet.BuffetCustomerTypePrice.Price,
-			IsLimitTime:       buffet.IsLimitTime,
-			CanCombined:       buffet.CanCombined,
+			IsLimitTime:       buffet.IsLimitTime == 1,
+			CanCombined:       buffet.CanCombined == 1,
 			NonOrderingTime:   buffet.NonOrderingTime,
 			ReminderOrderTime: buffet.ReminderOrderTime,
 			LocaleName:        s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
