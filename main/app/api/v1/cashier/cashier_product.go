@@ -36,10 +36,7 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 	}
 
 	// 获取收银产品列表
-	res, err := h.productService.GetProductList(
-		1,
-		req,
-	)
+	res, err := h.productService.GetProductList(1, req)
 
 	// 处理错误
 	if err != nil {

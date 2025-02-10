@@ -4,7 +4,7 @@ import "ttpos-server-go/app/dto"
 
 // Product 商品
 type Product struct {
-	Uuid       uint                      `json:"uuid"`        // 商品UUID
+	Uuid       uint64                    `json:"uuid"`        // 商品UUID
 	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品名称
 	Image      string                    `json:"image"`       // 商品图片
 	Unit       dto.LocaleResponse        `json:"unit"`        // 商品单位
@@ -17,7 +17,7 @@ type Product struct {
 
 // ProductFlavor 商品规格
 type ProductFlavor struct {
-	Uuid              uint               `json:"uuid"`                // 商品规格UUID
+	Uuid              uint64             `json:"uuid"`                // 商品规格UUID
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品规格名称
 	Price             float64            `json:"price"`               // 商品规格价格
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
@@ -25,7 +25,7 @@ type ProductFlavor struct {
 
 // ProductSauce 商品小料
 type ProductSauce struct {
-	Uuid              uint               `json:"uuid"`                // 商品小料UUID
+	Uuid              uint64             `json:"uuid"`                // 商品小料UUID
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品小料名称
 	Price             float64            `json:"price"`               // 商品小料价格
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
@@ -33,7 +33,7 @@ type ProductSauce struct {
 
 // ProductAttributeGroup 商品属性组
 type ProductAttributeGroup struct {
-	Uuid       uint                      `json:"uuid"`        // 商品属性组UUID
+	Uuid       uint64                    `json:"uuid"`        // 商品属性组UUID
 	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品属性组名称
 	Value      ProductAttributeValueList `json:"value"`       // 商品属性值
 	IsMust     bool                      `json:"is_must"`     // 是否必选
@@ -42,7 +42,7 @@ type ProductAttributeGroup struct {
 
 // ProductAttributeValue 商品属性值
 type ProductAttributeValue struct {
-	Uuid              uint               `json:"uuid"`                // 商品属性UUID
+	Uuid              uint64             `json:"uuid"`                // 商品属性UUID
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品属性名称
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
 }
@@ -75,9 +75,9 @@ type ProductListWithPaginationResp struct {
 
 // ProductCategory 商品类别
 type ProductCategory struct {
-	Uuid       uint                    `json:"uuid"`        // 商品类别UUID
+	Uuid       uint64                  `json:"uuid"`        // 商品类别UUID
 	LocaleName dto.LocaleResponse      `json:"locale_name"` // 商品类别名称
-	ParentUuid uint                    `json:"parent_uuid"` // 父级类别UUID
+	ParentUuid uint64                  `json:"parent_uuid"` // 父级类别UUID
 	IsSpecial  bool                    `json:"is_special"`  // 是否特殊类别
 	Children   ProductCategoryListResp `json:"children"`    // 子级类别
 }

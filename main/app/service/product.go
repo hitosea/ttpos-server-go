@@ -86,6 +86,8 @@ func (s *productSrv) GetProductList(dbId uint, req cashier_req.ProductListReq) (
 		),
 		repository.NewCommonRepo().WhereByIsShowCashier(1),
 		repository.NewCommonRepo().WhereByStatus(1),
+		repository.NewCommonRepo().WhereBySoftDelete(),
+		repository.NewCommonRepo().SortWithID("DESC"),
 	)
 
 	// 处理错误
@@ -193,6 +195,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint) (cashier_resp.ProductCate
 				Query: "MultiLanguageName",
 			},
 		),
+		repository.NewCommonRepo().WhereBySoftDelete(),
 		repository.NewCommonRepo().WhereByStatus(1),
 		repository.NewCommonRepo().SortWithIsSpecial("DESC"),
 		repository.NewCommonRepo().SortWithOrderBy("ASC"),
