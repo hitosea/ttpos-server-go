@@ -21,7 +21,7 @@ type ICommonRepo interface {
 	WhereByOrderNo(orderNo string) DBOption           // 根据订单编号查询
 	WhereLikeByName(name string) DBOption             // 根据名称查询
 	SortWithID(order string) DBOption                 // 根据ID排序
-	SortWithOrderBy(order string) DBOption            // 根据Order By排序
+	SortWithSort(order string) DBOption               // 根据Order By排序
 	SortWithIsSpecial(order string) DBOption          // 根据是否特殊排序
 	Preload(preloads ...WithPreload) DBOption         // 预加载
 }
@@ -88,10 +88,10 @@ func (r *commonRepo) SortWithID(order string) DBOption {
 	}
 }
 
-// SortWithOrderBy 根据Order By排序
-func (r *commonRepo) SortWithOrderBy(order string) DBOption {
+// SortWithSort 根据Order By排序
+func (r *commonRepo) SortWithSort(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Order("order_by " + order)
+		return db.Order("sort " + order)
 	}
 }
 

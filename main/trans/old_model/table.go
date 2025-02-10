@@ -68,7 +68,7 @@ func (s *TableService) ConvertTable() error {
 			DeskNo:     table.TableNo,
 			RegionUuid: table.AreaID,
 			TypeUuid:   table.TypeID,
-			OrderBy:    uint(table.Sort),
+			Sort:       uint(table.Sort),
 			Status:     uint(status),
 			IsDisable:  isDisable,
 			QrcodeUrl:  table.QRCodeValue,

@@ -5,7 +5,7 @@ type BuffetPackage struct {
 	UUID                  uint   `gorm:"default:0;comment:'自助餐ID'"`
 	Name                  string `gorm:"default:'';comment:'自助餐名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:NULL;comment:多语言名称ID"`
-	OrderBy               uint   `gorm:"default:0;comment:排序顺序"`
+	Sort                  uint   `gorm:"default:0;comment:排序顺序"`
 	TaxUuid               uint64 `gorm:"default:NULL;comment:税率ID"`
 	IsLimitTime           uint   `gorm:"default:0;comment:是否限时, 0-否、1-是"`
 	LimitTime             uint   `gorm:"default:0;comment:限时时间"`

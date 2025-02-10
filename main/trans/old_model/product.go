@@ -217,7 +217,7 @@ func (s *ProductService) ConvertProduct() error {
 				IsShowKitchen:         IsShowKitchen,
 				IsShowAssistant:       IsShowAssistant,
 				IsShowH5:              IsShowH5,
-				OrderBy:               product.ProductSort,
+				Sort:                  product.ProductSort,
 				LimitNum:              product.LimitNum,
 				Description:           product.SellingPoint,
 				OpenDiscount:          OpenDiscount,

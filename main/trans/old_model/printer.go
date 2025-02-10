@@ -99,7 +99,7 @@ func (s *PrinterService) ConvertPrinter() error {
 			PrinterTypeUuid: s.parsePrinterType(printer.PrinterType),
 			ConfigJson:      printer.PrinterConfig,
 			Copies:          printer.PrintTimes,
-			OrderBy:         printer.Sort,
+			Sort:            printer.Sort,
 			CreateTime:      printer.CreateTime,
 			UpdateTime:      printer.UpdateTime,
 			DeleteTime:      int64(printer.IsDelete),

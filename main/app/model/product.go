@@ -130,7 +130,7 @@ type ProductPackage struct {
 	IsShowKitchen         uint   `gorm:"default:0;comment:'是否在厨房设备显示, 0-否 1-是'"`
 	IsShowAssistant       uint   `gorm:"default:0;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5              uint   `gorm:"default:0;comment:'是否在H5设备显示, 0-否 1-是'"`
-	OrderBy               uint   `gorm:"default:0;comment:'排序'"`
+	Sort                  uint   `gorm:"default:0;comment:'排序'"`
 	LimitNum              uint   `gorm:"default:0;comment:'限购数量'"`
 	Description           string `gorm:"default:'';comment:'卖点描述'"`
 	SauceRequired         uint8  `gorm:"default:0;comment:'是否必选小料, 0-否 1-是'"`

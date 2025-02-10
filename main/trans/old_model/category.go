@@ -143,7 +143,7 @@ func (s *CategoryService) ConvertCategory() error {
 		//	Status:                category.Status,
 		//	Name:                  multiLanguageName.ZhName,
 		//	MultiLanguageNameUuid: uint(id),
-		//	OrderBy:               category.Sort,
+		//	Sort:               category.Sort,
 		//}
 		//_, err := repository.NewProductSpecialCategoryRepo(s.targetDB).CreateProductSpecialCategory(specialCategory)
 		//if err != nil {
@@ -156,7 +156,7 @@ func (s *CategoryService) ConvertCategory() error {
 			ParentUuid:            category.ParentID,
 			MultiLanguageNameUuid: uint(id),
 			Status:                category.Status,
-			OrderBy:               category.Sort,
+			Sort:                  category.Sort,
 		}
 		_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
 		if err != nil {

@@ -44,7 +44,7 @@ func (s *TableAreaService) ConvertTableArea() error {
 		deskRegion := model.DeskRegion{
 			Uuid:       tableArea.AreaID,
 			Name:       tableArea.AreaName,
-			OrderBy:    uint(tableArea.Sort),
+			Sort:       uint(tableArea.Sort),
 			CreateTime: int64(tableArea.CreateTime),
 			UpdateTime: int64(tableArea.UpdateTime),
 			DeleteTime: 0,

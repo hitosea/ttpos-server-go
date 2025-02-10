@@ -93,7 +93,7 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 		ParentUuid:            params.ParentID,
 		MultiLanguageNameUuid: nameId,
 		Name:                  params.Name.ZH,
-		OrderBy:               uint(params.Sort),
+		Sort:                  uint(params.Sort),
 	}
 	id, err := NewProductCategoryRepo(tx).CreateProductCategory(category)
 	if err != nil {

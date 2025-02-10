@@ -46,7 +46,7 @@ func (s *TableTypeService) ConvertTableType() error {
 		deskType := model.DeskType{
 			Uuid:       tableType.TypeID,
 			Name:       tableType.TypeName,
-			OrderBy:    uint(tableType.Sort),
+			Sort:       uint(tableType.Sort),
 			RangeMin:   uint(tableType.MinNum),
 			RangeMax:   uint(tableType.MaxNum),
 			CreateTime: int64(tableType.CreateTime),

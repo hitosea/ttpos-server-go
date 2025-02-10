@@ -198,7 +198,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCa
 		repository.NewCommonRepo().WhereBySoftDelete(),
 		repository.NewCommonRepo().WhereByStatus(1),
 		repository.NewCommonRepo().SortWithIsSpecial("DESC"),
-		repository.NewCommonRepo().SortWithOrderBy("ASC"),
+		repository.NewCommonRepo().SortWithSort("ASC"),
 		repository.NewCommonRepo().SortWithID("DESC"),
 	)
 	if err != nil {
