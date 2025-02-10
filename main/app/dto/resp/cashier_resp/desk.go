@@ -55,6 +55,7 @@ type DeskListWithPaginationResp struct {
 // DeskInfoResp 桌台详情响应
 type DeskInfoResp struct {
 	Uuid          uint64 `json:"uuid"`                     // 桌台UUID
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`           // 订单UUID
 	DeskNo        string `json:"desk_no"`                  // 桌台名称
 	TypeUuid      uint64 `json:"type_uuid"`                // 桌台类型ID
 	RegionUuid    uint64 `json:"region_uuid"`              // 桌台区域ID
