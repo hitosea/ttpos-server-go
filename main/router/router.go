@@ -37,6 +37,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		assistantGroup := apiV1.Group("/assistant")
 		{
 			assistant.RegisterDeskHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterBuffetHandlers(assistantGroup, dbm, cache)
 		}
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")

@@ -65,7 +65,7 @@ func (s *TableService) ConvertTable() error {
 		}
 		desk := model.Desk{
 			Uuid:       table.TableID,
-			TableNo:    table.TableNo,
+			DeskNo:     table.TableNo,
 			RegionUuid: table.AreaID,
 			TypeUuid:   table.TypeID,
 			OrderBy:    uint(table.Sort),

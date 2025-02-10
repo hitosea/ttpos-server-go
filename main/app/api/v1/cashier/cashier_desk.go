@@ -6,6 +6,8 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req/cashier_req"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -49,7 +51,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
-	companyId := helper.GetCompanyUuid(c)
+	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -57,7 +59,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(companyId, req)
+	res, err := h.Service.GetDeskList(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -77,7 +79,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
-	companyId := helper.GetCompanyUuid(c)
+	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -85,7 +87,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskInfo(companyId, req.Uuid)
+	res, err := h.Service.GetDeskInfo(companyUuid, req.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -98,12 +100,12 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // RegisterProductHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
-	// captchaSrv := service.NewCaptchaSrv(cache)
-	// settingSrv := setting.NewSrv(dbm, cache)
-	// roleAccessSrv := service.NewRoleAccessSrv(dbm)
-	// bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
-	// staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	// authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	// 初始化处理器
 	wrapper := DeskHandler{
@@ -114,8 +116,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("")
-	// privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
 		privateApi.GET("/desk/list", wrapper.GetDeskList)

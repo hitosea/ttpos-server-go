@@ -4,7 +4,7 @@ import "ttpos-server-go/app/dto"
 
 type Desk struct {
 	Uuid          uint64  `json:"uuid"`           // 桌台UUID
-	TableNo       string  `json:"table_no"`       // 桌台名称
+	DeskNo        string  `json:"desk_no"`        // 桌台名称
 	CustomerCount uint    `json:"customer_count"` // 桌台人数
 	Status        uint    `json:"status"`         // 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
 	IsLock        uint    `json:"is_lock"`        // 是否锁单	0:否 1:是
@@ -55,7 +55,7 @@ type DeskListWithPaginationResp struct {
 // DeskInfoResp 桌台详情响应
 type DeskInfoResp struct {
 	Uuid          uint64 `json:"uuid"`
-	TableNo       string `json:"table_no"`
+	DeskNo        string `json:"desk_no"`
 	TypeUuid      uint64 `json:"type_uuid"`
 	RegionUuid    uint64 `json:"region_uuid"`
 	Status        uint   `json:"status"`

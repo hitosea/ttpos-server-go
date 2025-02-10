@@ -28,7 +28,7 @@ type DeskType struct {
 type Desk struct {
 	ID         uint     `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint64   `gorm:"default:0;comment:'桌台ID'"`
-	TableNo    string   `gorm:"default:'';comment:'桌位编号'"`
+	DeskNo     string   `gorm:"default:'';comment:'桌位编号'"`
 	RegionUuid uint64   `gorm:"default:0;comment:'桌台区域ID'"`
 	TypeUuid   uint64   `gorm:"default:0;comment:'桌台类型ID'"`
 	OrderBy    uint     `gorm:"default:0;comment:'排序序号'"`
@@ -39,5 +39,5 @@ type Desk struct {
 	CreateTime int64    `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
 	UpdateTime int64    `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'"`
 	DeleteTime int64    `gorm:"default:0;comment:'删除时间（时间戳）'"`
-	SaleBill   SaleBill `gorm:"foreignKey:table_uuid;references:uuid"` // 销售账单
+	SaleBill   SaleBill `gorm:"foreignKey:desk_uuid;references:uuid"` // 销售账单
 }
