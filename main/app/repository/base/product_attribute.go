@@ -9,10 +9,10 @@ import (
 
 // IProductAttributeRepo 产品属性仓库接口
 type IProductAttributeRepo interface {
-	GetProductAttributeList() ([]model.ProductAttribute, error)                    // 获取产品属性列表
-	UpdateProductAttribute(id uint, productAttribute model.ProductAttribute) error // 更新产品属性
-	CreateProductAttribute(productAttribute model.ProductAttribute) (uint, error)  // 创建产品属性
-	DeleteProductAttribute(id uint) error                                          // 删除产品属性
+	GetProductAttributeList() ([]model.ProductAttribute, error)                     // 获取产品属性列表
+	UpdateProductAttribute(id uint, productAttribute model.ProductAttribute) error  // 更新产品属性
+	CreateProductAttribute(productAttribute model.ProductAttribute) (uint64, error) // 创建产品属性
+	DeleteProductAttribute(id uint) error                                           // 删除产品属性
 }
 
 // NewProductAttributeRepo 创建新的产品属性仓库
@@ -59,7 +59,7 @@ func (r *ProductAttributeRepoImpl) UpdateProductAttribute(id uint, productAttrib
 }
 
 // CreateProductAttribute 创建产品属性
-func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model.ProductAttribute) (uint, error) {
+func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model.ProductAttribute) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

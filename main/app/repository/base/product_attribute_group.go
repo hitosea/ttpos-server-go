@@ -10,10 +10,10 @@ import (
 
 // IProductAttributeGroupRepo 产品属性组仓库接口
 type IProductAttributeGroupRepo interface {
-	GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error)                         // 获取产品属性组列表
-	UpdateProductAttributeGroup(id uint, productAttributeGroup model.ProductAttributeGroup) error // 更新产品属性组
-	CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint, error)  // 创建产品属性组
-	DeleteProductAttributeGroup(id uint) error                                                    // 删除产品属性组
+	GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error)                          // 获取产品属性组列表
+	UpdateProductAttributeGroup(id uint, productAttributeGroup model.ProductAttributeGroup) error  // 更新产品属性组
+	CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint64, error) // 创建产品属性组
+	DeleteProductAttributeGroup(id uint) error                                                     // 删除产品属性组
 }
 
 // NewProductAttributeGroupRepo 创建新的产品属性组仓库
@@ -60,7 +60,7 @@ func (r *ProductAttributeGroupRepoImpl) UpdateProductAttributeGroup(id uint, pro
 }
 
 // CreateProductAttributeGroup 创建产品属性组
-func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint, error) {
+func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

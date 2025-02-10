@@ -11,7 +11,7 @@ import (
 type IProductUnitRepo interface {
 	GetProductUnitList() ([]model.ProductUnit, error)
 	UpdateProductUnit(id uint, productUnit model.ProductUnit) error
-	CreateProductUnit(productUnit model.ProductUnit) (uint, error)
+	CreateProductUnit(productUnit model.ProductUnit) (uint64, error)
 	DeleteProductUnit(id uint) error
 }
 
@@ -58,7 +58,7 @@ func (r *ProductUnitRepoImpl) UpdateProductUnit(id uint, productUnit model.Produ
 }
 
 // CreateProductUnit 创建商品规格
-func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (uint, error) {
+func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

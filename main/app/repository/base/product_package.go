@@ -9,10 +9,10 @@ import (
 
 // 产品包
 type ProductPackageRepoInterface interface {
-	GetProductPackageList() ([]model.ProductPackage, error)                  // 获取产品包列表
-	UpdateProductPackage(id uint, productPackage model.ProductPackage) error // 更新产品包
-	CreateProductPackage(productPackage model.ProductPackage) (uint, error)  // 创建产品包
-	DeleteProductPackage(id uint) error                                      // 软删除产品包
+	GetProductPackageList() ([]model.ProductPackage, error)                   // 获取产品包列表
+	UpdateProductPackage(id uint, productPackage model.ProductPackage) error  // 更新产品包
+	CreateProductPackage(productPackage model.ProductPackage) (uint64, error) // 创建产品包
+	DeleteProductPackage(id uint) error                                       // 软删除产品包
 }
 
 func NewProductPackageRepo(db *gorm.DB) ProductPackageRepoInterface {
@@ -58,7 +58,7 @@ func (r *ProductPackageRepoImpl) UpdateProductPackage(id uint, productPackage mo
 }
 
 // 创建产品包
-func (r *ProductPackageRepoImpl) CreateProductPackage(productPackage model.ProductPackage) (uint, error) {
+func (r *ProductPackageRepoImpl) CreateProductPackage(productPackage model.ProductPackage) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

@@ -11,7 +11,7 @@ import (
 type IProductFlavorRepo interface {
 	GetProductFlavorList() ([]model.ProductFlavor, error)
 	UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error
-	CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error)
+	CreateProductFlavor(productFlavor model.ProductFlavor) (uint64, error)
 	DeleteProductFlavor(id uint) error
 }
 
@@ -58,7 +58,7 @@ func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model
 }
 
 // CreateProductFlavor 创建商品规格
-func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductFlavor) (uint, error) {
+func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductFlavor) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {
