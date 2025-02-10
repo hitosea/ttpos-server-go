@@ -1,5 +1,25 @@
 basePath: /
 definitions:
+  cashier_req.DeskInfoReq:
+    properties:
+      uuid:
+        description: 桌台uuid
+        type: integer
+    required:
+    - uuid
+    type: object
+  cashier_req.DeskListReq:
+    properties:
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1000
+        minimum: 1
+        type: integer
+    type: object
   cashier_resp.Base:
     properties:
       buffet:
@@ -40,6 +60,57 @@ definitions:
         description: 登录账号
         type: string
     type: object
+  cashier_resp.Buffet:
+    properties:
+      buffet_customer_type:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.BuffetCustomerType'
+        description: 自助餐客户类型
+      can_combined:
+        description: 是否可组合
+        type: integer
+      is_limit_time:
+        description: 是否限时
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 自助餐名称
+      non_ordering_time:
+        description: 不可下单时间（分钟）
+        type: integer
+      price:
+        description: 价格
+        type: number
+      reminder_order_time:
+        description: 提醒下单时间（分钟）
+        type: integer
+      uuid:
+        description: 自助餐UUID
+        type: integer
+    type: object
+  cashier_resp.BuffetCustomerType:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 自助餐客户类型名称
+      price:
+        description: 价格
+        type: number
+      uuid:
+        description: 自助餐客户类型UUID
+        type: integer
+    type: object
+  cashier_resp.BuffetListPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/cashier_resp.Buffet'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
   cashier_resp.Company:
     properties:
       name:
@@ -48,6 +119,118 @@ definitions:
       uuid:
         description: 商家UUID
         type: integer
+    type: object
+  cashier_resp.CreateOrderResp:
+    properties:
+      uuid:
+        description: 订单UUID
+        type: integer
+    type: object
+  cashier_resp.Desk:
+    properties:
+      customer_count:
+        description: 桌台人数
+        type: integer
+      desk_no:
+        description: 桌台名称
+        type: string
+      is_buffet:
+        description: "是否自助餐\t0:否 1:是"
+        type: integer
+      is_lock:
+        description: "是否锁单\t0:否 1:是"
+        type: integer
+      price:
+        description: 桌台价格
+        type: number
+      region_uuid:
+        description: 桌台区域ID
+        type: integer
+      remark:
+        description: 桌台备注
+        type: string
+      status:
+        description: "桌台状态\t0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单"
+        type: integer
+      time:
+        description: 桌台用餐时间（秒）
+        type: integer
+      type_uuid:
+        description: 桌台类型ID
+        type: integer
+      uuid:
+        description: 桌台UUID
+        type: integer
+    type: object
+  cashier_resp.DeskExtra:
+    properties:
+      available_num:
+        description: 桌台可用数量
+        type: integer
+      lock_num:
+        description: 桌台锁定数量
+        type: integer
+      occupy_buffet_num:
+        description: 桌台自助餐数量
+        type: integer
+      occupy_not_buffet_num:
+        description: 桌台不是自助餐数量
+        type: integer
+      occupy_wait_num:
+        description: 桌台等待数量
+        type: integer
+      total_num:
+        description: 桌台总计数量
+        type: integer
+    type: object
+  cashier_resp.DeskInfoResp:
+    properties:
+      customer_count:
+        description: 桌台人数
+        type: integer
+      desk_no:
+        description: 桌台名称
+        type: string
+      is_buffet:
+        description: 是否自助餐
+        type: integer
+      is_lock:
+        description: 是否锁单
+        type: integer
+      region_uuid:
+        description: 桌台区域ID
+        type: integer
+      remark:
+        description: 桌台备注
+        type: string
+      status:
+        description: 桌台状态
+        type: integer
+      time:
+        description: 桌台用餐时间（秒）
+        type: integer
+      type_uuid:
+        description: 桌台类型ID
+        type: integer
+      uuid:
+        description: 桌台UUID
+        type: integer
+    type: object
+  cashier_resp.DeskListWithPaginationResp:
+    properties:
+      extra:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.DeskExtra'
+        description: 桌台额外信息
+      list:
+        description: 桌台列表
+        items:
+          $ref: '#/definitions/cashier_resp.Desk'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
     type: object
   cashier_resp.DeskRegion:
     properties:
@@ -920,38 +1103,73 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /assistant/buffet/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助餐列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 自助餐列表
+          schema:
+            $ref: '#/definitions/cashier_resp.BuffetListPaginationResp'
+        "404":
+          description: 未找到
+      summary: 获取自助餐列表
+      tags:
+      - 点餐助手端.自助餐
   /assistant/desk/info:
     get:
       consumes:
       - application/json
       description: 获取桌台详情
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/cashier_req.DeskInfoReq'
       produces:
       - application/json
       responses:
         "200":
           description: 桌台详情
+          schema:
+            $ref: '#/definitions/cashier_resp.DeskInfoResp'
         "404":
           description: 未找到
       summary: 获取桌台详情
       tags:
-      - 点餐助手端
+      - 点餐助手端.桌台
   /assistant/desk/list:
     get:
       consumes:
       - application/json
       description: 获取桌台列表
+      parameters:
+      - description: 列表参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/cashier_req.DeskListReq'
       produces:
       - application/json
       responses:
         "200":
           description: 桌台列表
           schema:
+            items:
+              $ref: '#/definitions/cashier_resp.DeskListWithPaginationResp'
             type: array
         "404":
           description: 未找到
       summary: 获取桌台列表
       tags:
-      - 点餐助手端
+      - 点餐助手端.桌台
   /assistant/desk/region_and_type:
     get:
       consumes:
@@ -968,7 +1186,7 @@ paths:
           description: 未找到
       summary: 获取桌台的区域和类型
       tags:
-      - 点餐助手端
+      - 点餐助手端.桌台
   /cashier/base:
     get:
       consumes:
@@ -1429,38 +1647,73 @@ paths:
       summary: 在子账单中移动产品
       tags:
       - 收银端
-  /cashier/desk/info:
+  /cashier/buffet/list:
     get:
       consumes:
       - application/json
-      description: 获取收银台详情
+      description: 获取自助餐列表
       produces:
       - application/json
       responses:
         "200":
-          description: 收银台详情
+          description: 自助餐列表
+          schema:
+            $ref: '#/definitions/cashier_resp.BuffetListPaginationResp'
         "404":
           description: 未找到
-      summary: 获取收银台详情
+      summary: 获取自助餐列表
       tags:
-      - 收银端
+      - 收银端.自助餐
+  /cashier/desk/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台详情
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/cashier_req.DeskInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台详情
+          schema:
+            $ref: '#/definitions/cashier_resp.DeskInfoResp'
+        "404":
+          description: 未找到
+      summary: 获取桌台详情
+      tags:
+      - 收银端.桌台
   /cashier/desk/list:
     get:
       consumes:
       - application/json
-      description: 获取收银台列表
+      description: 获取桌台列表
+      parameters:
+      - description: 列表参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/cashier_req.DeskListReq'
       produces:
       - application/json
       responses:
         "200":
           description: 收银台列表
           schema:
+            items:
+              $ref: '#/definitions/cashier_resp.DeskListWithPaginationResp'
             type: array
         "404":
           description: 未找到
-      summary: 获取收银台列表
+      summary: 获取桌台列表
       tags:
-      - 收银端
+      - 收银端.桌台
   /cashier/desk/region_and_type:
     get:
       consumes:
@@ -1477,7 +1730,24 @@ paths:
           description: 未找到
       summary: 获取收银台的区域和类型
       tags:
-      - 收银端
+      - 收银端.桌台
+  /cashier/instant/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建点餐订单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cashier_resp.CreateOrderResp'
+        "400":
+          description: 未找到
+      summary: 创建点餐订单
+      tags:
+      - 收银端.点餐订单
   /cashier/login:
     post:
       consumes:
@@ -1775,7 +2045,7 @@ paths:
           description: 错误请求
       summary: 获取收银产品类别列表
       tags:
-      - 收银端
+      - 收银端.产品
   /cashier/product/info/{productId}:
     get:
       consumes:
@@ -1824,7 +2094,7 @@ paths:
           description: 错误请求
       summary: 获取收银产品列表
       tags:
-      - 收银端
+      - 收银端.产品
   /cashier/production/create:
     post:
       consumes:
