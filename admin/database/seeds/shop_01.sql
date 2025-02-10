@@ -40,8 +40,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     order_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
-    is_buffet TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
-    type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '销售订单类型, 0-桌台订单 1-扫码订单',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-未结账 1-已结账',
     product_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额',
     product_original_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原始金额',
