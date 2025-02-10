@@ -15,10 +15,10 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateOrderNo(db *gorm.DB, orderSource string) string                              // 创建订单编号
-	CreateOrder(dbId uint64, orderSource string) (cashier_resp.CreateOrderResp, error) // 创建订单
-	CreateSaleBill(db *gorm.DB, orderSource string) (uint64, error)                    // 创建销售账单
-	CreateSaleOrder(db *gorm.DB, saleBillUuid uint64) (uint64, error)                  // 创建销售订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                        // 创建订单编号
+	CreateInstantOrder(dbId uint64) (cashier_resp.CreateInstantOrderResp, error) // 创建点餐订单
+	CreateSaleBill(db *gorm.DB, orderSource string) (uint64, error)              // 创建销售账单
+	CreateSaleOrder(db *gorm.DB, saleBillUuid uint64) (uint64, error)            // 创建销售订单
 }
 
 // orderSrv 收银服务结构体
@@ -73,13 +73,13 @@ func (s *orderSrv) CreateOrderNo(db *gorm.DB, orderSource string) string {
 	return orderNo
 }
 
-// CreateOrder 创建订单
-func (s *orderSrv) CreateOrder(dbId uint64, orderSource string) (cashier_resp.CreateOrderResp, error) {
+// CreateInstantOrder 创建点餐订单
+func (s *orderSrv) CreateInstantOrder(dbId uint64) (cashier_resp.CreateInstantOrderResp, error) {
 	var uuid uint64
 	db := s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 创建销售账单
-		saleBillUuid, err := s.CreateSaleBill(tx, orderSource)
+		saleBillUuid, err := s.CreateSaleBill(tx, constant.OrderSourceInstant)
 		if err != nil {
 			return err
 		}
@@ -95,11 +95,11 @@ func (s *orderSrv) CreateOrder(dbId uint64, orderSource string) (cashier_resp.Cr
 		return nil
 	})
 	if err != nil {
-		return cashier_resp.CreateOrderResp{}, err
+		return cashier_resp.CreateInstantOrderResp{}, err
 	}
 
-	return cashier_resp.CreateOrderResp{
-		Uuid: uuid,
+	return cashier_resp.CreateInstantOrderResp{
+		SaleBillUuid: uuid,
 	}, nil
 }
 

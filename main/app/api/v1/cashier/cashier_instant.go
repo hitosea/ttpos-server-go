@@ -15,7 +15,7 @@ type CashierInstantHandler struct {
 	orderService service.IOrderSrv // 订单服务
 }
 
-// CreateOrder 创建点餐订单
+// CreateInstantOrder 创建点餐订单
 // @Summary 创建点餐订单
 // @Description 创建点餐订单
 // @Tags 收银端.点餐订单
@@ -23,9 +23,9 @@ type CashierInstantHandler struct {
 // @Produce json
 // @Success 200 {object} cashier_resp.CreateOrderResp
 // @Router /cashier/instant/order/create [post]
-func (h *CashierInstantHandler) CreateOrder(c *gin.Context) {
+func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 	// 创建订单
-	res, err := h.orderService.CreateOrder(1, constant.OrderSourceInstant)
+	res, err := h.orderService.CreateInstantOrder(1)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("创建订单失败"))
 		return
@@ -40,5 +40,5 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager) {
 		orderService: service.NewOrderSrv(dbm), // 订单服务
 	}
 
-	router.POST("/instant/order/create", wrapper.CreateOrder)
+	router.POST("/instant/order/create", wrapper.CreateInstantOrder)
 }
