@@ -45,4 +45,6 @@ func TestConvertAll(t *testing.T) {
 	testConvertShopRoleAccess()        // 角色权限
 	testConvertCall()                  // 客户呼叫记录
 	testConvertSupplierPrinting()      // 商品打印（档口）
+	testConvertPrinter()               // 打印机
+	testConvertCustomerType()          // 自助餐顾客类型
 }
