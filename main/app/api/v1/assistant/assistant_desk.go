@@ -16,20 +16,20 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	Service service.IDeskSrv // 桌台服务
+	Service service.IDeskSrv // 主服务
 }
 
 // GetAssistantDeskRegionAndType 处理获取桌台的区域和类型
 // @Summary 获取桌台的区域和类型
 // @Description 获取桌台的区域和类型
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
 // @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 处理获取桌台的区域和类型的逻辑
 	res, err := h.Service.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
@@ -44,14 +44,15 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // GetAssistantDeskList 处理获取桌台列表
 // @Summary 获取桌台列表
 // @Description 获取桌台列表
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {array} nil "桌台列表"
+// @param data body cashier_req.DeskListReq true "列表参数"
+// @Success 200 {array} cashier_resp.DeskListWithPaginationResp "桌台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -72,14 +73,15 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // GetAssistantDeskInfo 处理获取桌台详情
 // @Summary 获取桌台详情
 // @Description 获取桌台详情
-// @Tags 点餐助手端
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} nil "桌台详情"
+// @param data body cashier_req.DeskInfoReq true "详情参数"
+// @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
-	companyId := helper.GetCompanyId(c)
+	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := cashier_req.DeskInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -105,7 +107,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	// 创建处理程序
 	wrapper := DeskHandler{

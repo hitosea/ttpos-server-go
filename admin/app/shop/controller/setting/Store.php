@@ -8,6 +8,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\supplier\Supplier;
 use app\common\enum\settings\SettingEnum;
+use app\common\model\app\App;
 use app\shop\model\settings\Setting as SettingModel;
 
 /**
@@ -38,7 +39,7 @@ class Store extends Controller
     {
         if ($this->request->isGet()) {
             $ret = $this->fetchData();
-            $ret['shop']['shop_supplier_id'] = $this->store['app']['app_id'];
+            $ret['shop']['shop_supplier_id'] = $this->store['app']['uuid'];
             // 获取当前设备机器码
             $ret['shop']['device_code'] = DiskHelp::getMachineCode();
             // 获取语言列表
@@ -57,13 +58,13 @@ class Store extends Controller
         if (mb_strlen($name) > 100) {
             return $this->renderError('商家名称不能超过100个字符');
         }
-        $nameExist = (new Supplier([], 0))->where('name', $name)->where('shop_supplier_id', '<>', $this->store['user']['shop_supplier_id'])->find();
+        $nameExist = (new App([], 0))->where('name', $name)->where('uuid', '<>', $this->store['user']['shop_supplier_id'])->find();
         if ($nameExist) {
             return $this->renderError('商家名称已存在');
         } else {
             // 更新云平台商家名称
-            $supplier = new Supplier([], 0);
-            $supplier->where('shop_supplier_id', $this->store['user']['shop_supplier_id'])->update(['name' => $name]);
+            $supplier = new App([], 0);
+            $supplier->where('uuid', $this->store['user']['shop_supplier_id'])->update(['name' => $name]);
         }
         // 判断商家名称是否存在
         if (empty($data['logoUrl'])) {

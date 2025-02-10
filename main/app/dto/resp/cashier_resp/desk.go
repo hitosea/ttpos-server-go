@@ -4,7 +4,7 @@ import "ttpos-server-go/app/dto"
 
 type Desk struct {
 	Uuid          uint64  `json:"uuid"`           // 桌台UUID
-	TableNo       string  `json:"table_no"`       // 桌台名称
+	DeskNo        string  `json:"desk_no"`        // 桌台名称
 	CustomerCount uint    `json:"customer_count"` // 桌台人数
 	Status        uint    `json:"status"`         // 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
 	IsLock        uint    `json:"is_lock"`        // 是否锁单	0:否 1:是
@@ -37,31 +37,32 @@ type DeskType struct {
 
 // DeskRegionAndTypeListWithPaginationResp 桌台区域和类型列表响应
 type DeskRegionAndTypeListWithPaginationResp struct {
-	Region struct {
+	Region struct { // 餐桌区域
 		List []DeskRegion `json:"list"`
 	} `json:"region"`
-	Type struct {
+	Type struct { // 餐桌类型
 		List []DeskType `json:"list"`
 	} `json:"type"`
 }
 
 // DeskListWithPaginationResp 桌台列表响应
 type DeskListWithPaginationResp struct {
-	Extra DeskExtra        `json:"extra"`
-	List  []Desk           `json:"list"`
-	Meta  dto.PageResponse `json:"meta"`
+	Extra DeskExtra        `json:"extra"` // 桌台额外信息
+	List  []Desk           `json:"list"`  // 桌台列表
+	Meta  dto.PageResponse `json:"meta"`  // 分页信息
 }
 
 // DeskInfoResp 桌台详情响应
 type DeskInfoResp struct {
-	Uuid          uint64 `json:"uuid"`
-	TableNo       string `json:"table_no"`
-	TypeUuid      uint64 `json:"type_uuid"`
-	RegionUuid    uint64 `json:"region_uuid"`
-	Status        uint   `json:"status"`
-	CustomerCount uint   `json:"customer_count,omitempty"`
-	IsLock        uint   `json:"is_lock"`
-	IsBuffet      uint   `json:"is_buffet"`
-	Remark        string `json:"remark"`
-	Time          uint   `json:"time"`
+	Uuid          uint64 `json:"uuid"`                     // 桌台UUID
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`           // 订单UUID
+	DeskNo        string `json:"desk_no"`                  // 桌台名称
+	TypeUuid      uint64 `json:"type_uuid"`                // 桌台类型ID
+	RegionUuid    uint64 `json:"region_uuid"`              // 桌台区域ID
+	Status        uint   `json:"status"`                   // 桌台状态
+	CustomerCount uint   `json:"customer_count,omitempty"` // 桌台人数
+	IsLock        uint   `json:"is_lock"`                  // 是否锁单
+	IsBuffet      uint   `json:"is_buffet"`                // 是否自助餐
+	Remark        string `json:"remark"`                   // 桌台备注
+	Time          uint   `json:"time"`                     // 桌台用餐时间（秒）
 }

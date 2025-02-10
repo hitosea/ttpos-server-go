@@ -9,15 +9,35 @@ use app\common\model\BaseModel;
  */
 class UploadFile extends BaseModel
 {
-    protected $name = 'upload_file';
-    protected $append = ['file_path'];
+    protected $name = 'file';
+    protected $pk = 'id';
+     /**
+     * 追加属性
+     */
+    protected $append = ['file_path', 'file_id', 'group_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getFileIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
+
+    /**
+     * 兼容ID字段
+     */
+    public function getGroupIdAttr()
+    {
+        return $this->group_uuid ?? 0;
+    }
 
     /**
      * 关联文件库分组表
      */
     public function uploadGroup()
     {
-        return $this->belongsTo('UploadGroup', 'group_id');
+        return $this->belongsTo('UploadGroup', 'group_uuid', 'uuid');
     }
 
     /**
@@ -47,7 +67,7 @@ class UploadFile extends BaseModel
      */
     public static function detail($file_id)
     {
-        return self::find($file_id);
+        return self::where('uuid', $file_id)->find();
     }
 
     /**
@@ -55,7 +75,7 @@ class UploadFile extends BaseModel
      */
     public static function getFildIdByName($fileName)
     {
-        return (new static)->where(['file_name' => $fileName])->value('file_id');
+        return (new static)->where(['file_name' => $fileName])->value('uuid');
     }
 
     /**
@@ -63,7 +83,7 @@ class UploadFile extends BaseModel
      */
     public static function getFileName($fileId)
     {
-        return (new static)->where(['file_id' => $fileId])->value('file_name');
+        return (new static)->where(['uuid' => $fileId])->value('file_name');
     }
 
     /**
@@ -82,7 +102,7 @@ class UploadFile extends BaseModel
         $model = $this;
         // 文件分组
         if ($groupId != 0) {
-            $model = $model->where('group_id', '=', (int)$groupId);
+            $model = $model->where('group_uuid', '=', (int)$groupId);
         }
         // 文件类型
         !empty($fileType) && $model = $model->where('file_type', '=', trim($fileType));
@@ -90,9 +110,8 @@ class UploadFile extends BaseModel
         $isRecycle > -1 && $model = $model->where('is_recycle', '=', (int)$isRecycle);
         // 查询列表数据
         return $model->with(['upload_group'])
-            ->where(['is_user' => 0, 'is_delete' => 0])
-            ->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['file_id' => 'desc'])
+            ->where(['is_user' => 0])
+            ->order(['id' => 'desc'])
             ->paginate($pageSize);
     }
 }

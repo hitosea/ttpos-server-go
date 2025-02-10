@@ -10,8 +10,21 @@ use app\common\model\BaseModel;
  */
 class Role extends BaseModel
 {
-    protected $name = 'shop_role';
-    protected $pk = 'role_id';
+    protected $name = 'role';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['role_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getRoleIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 关联权限
@@ -19,7 +32,7 @@ class Role extends BaseModel
      */
     public function access()
     {
-        return $this->hasMany('RoleAccess', 'role_id', 'role_id');
+        return $this->hasMany('RoleAccess', 'role_uuid', 'uuid');
     }
 
     /**
@@ -32,6 +45,6 @@ class Role extends BaseModel
      */
     public static function detail($role_id)
     {
-        return static::with(['access'])->find($role_id);
+        return static::with(['access'])->field('*, name as role_name')->where('uuid', $role_id)->find();
     }
 }

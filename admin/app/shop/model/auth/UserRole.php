@@ -13,7 +13,7 @@ class UserRole extends UserRoleModel
 
     public function getUserRole($where)
     {
-        return $this->where($where)->column('role_id');
+        return $this->where($where)->column('role_uuid');
     }
 
     /**
@@ -23,9 +23,8 @@ class UserRole extends UserRoleModel
     {
         $model = new static();
         return $model->alias('userRole')
-            ->join('shop_user', 'userRole.shop_user_id = shop_user.shop_user_id', 'left')
-            ->where('userRole.role_id', '=', $role_id)
-            ->where('shop_user.is_delete', '=', 0)
+            ->join('staff s', 'userRole.staff_uuid = s.uuid', 'left')
+            ->where('userRole.role_uuid', '=', $role_id)
             ->count();
     }
 }

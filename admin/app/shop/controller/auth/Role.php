@@ -74,9 +74,9 @@ class Role extends Controller
         // 获取角色的详细信息
         $model = RoleModel::detail($role_id);
         $accessList = $model->toArray()['access'];
-        $accessIds = array_column($accessList, 'access_id');
+        $accessIds = array_column($accessList, 'access_uuid');
         // 获取所有有子类的权限ID
-        $parentIds = $accessModel->whereIn('parent_id', $accessIds)->column('parent_id');
+        $parentIds = $accessModel->whereIn('parent_uuid', $accessIds)->column('parent_uuid');
         $parentIds = array_unique($parentIds);
         // 过滤掉有子类的权限ID
         $select_menu = array_values(array_diff($accessIds, $parentIds));

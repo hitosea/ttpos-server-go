@@ -8,19 +8,19 @@ import (
 )
 
 type Claims struct {
-	Source    string `json:"source"`     // 终端
-	CompanyId uint64 `json:"company_id"` // 集团ID
-	StaffId   uint64 `json:"staff_id"`   // 员工ID
-	DeviceId  string `json:"device_id"`  // 设备ID
+	Source      string `json:"source"`       // 终端
+	CompanyUuid uint64 `json:"company_uuid"` // 集团ID
+	StaffUuid   uint64 `json:"staff_uuid"`   // 员工ID
+	DeviceId    string `json:"device_id"`    // 设备ID
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source, deviceId string, companyId, staffId uint64, secret string, expire int) (string, error) {
+func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int) (string, error) {
 	claims := Claims{
-		Source:    source,
-		CompanyId: companyId,
-		StaffId:   staffId,
-		DeviceId:  deviceId,
+		Source:      source,
+		CompanyUuid: companyUuid,
+		StaffUuid:   staffUuid,
+		DeviceId:    deviceId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expire))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

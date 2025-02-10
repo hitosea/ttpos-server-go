@@ -17,11 +17,11 @@ class OptLog extends OptLogModel
         $model = $this;
         //
         if (isset($params['username']) && $params['username'] != '') {
-            $model = $model->like('user.user_name|user.real_name', $params['username']);
+            $model = $model->like('user.username|user.real_name', $params['username']);
         }
         // 查询列表数据
-        return $model->alias('log')->field(['log.*', 'user.user_name', 'IF(user.real_name = "", user.user_name, user.real_name) as real_name'])
-            ->join('shop_user user', 'user.shop_user_id = log.shop_user_id', 'left')
+        return $model->alias('log')->field(['log.*', 'log.source as browser', 'user.username as user_name', 'IF(user.real_name = "", user.username, user.real_name) as real_name'])
+            ->join('staff user', 'user.uuid = log.staff_uuid', 'left')
             ->order(['log.create_time' => 'desc'])
             ->paginate($params);
     }

@@ -137,7 +137,7 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 		// todo  desk.SaleBill.PaymentAmount 需要等后面业务缓存中取
 		deskResp[i] = cashier_resp.Desk{
 			Uuid:          desk.Uuid,
-			TableNo:       desk.TableNo,
+			DeskNo:        desk.DeskNo,
 			TypeUuid:      desk.TypeUuid,
 			RegionUuid:    desk.RegionUuid,
 			Status:        deskStatus,
@@ -203,14 +203,15 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskIn
 	}
 	//
 	return cashier_resp.DeskInfoResp{
-		Uuid:       desk.Uuid,
-		TableNo:    desk.TableNo,
-		TypeUuid:   desk.TypeUuid,
-		RegionUuid: desk.RegionUuid,
-		Status:     deskStatus,
-		IsLock:     desk.SaleBill.IsLock,
-		IsBuffet:   desk.SaleBill.IsBuffet,
-		Remark:     desk.SaleBill.Remark,
-		Time:       elapsedTime,
+		Uuid:         desk.Uuid,
+		SaleBillUuid: desk.SaleBill.Uuid,
+		DeskNo:       desk.DeskNo,
+		TypeUuid:     desk.TypeUuid,
+		RegionUuid:   desk.RegionUuid,
+		Status:       deskStatus,
+		IsLock:       desk.SaleBill.IsLock,
+		IsBuffet:     desk.SaleBill.IsBuffet,
+		Remark:       desk.SaleBill.Remark,
+		Time:         elapsedTime,
 	}, nil
 }

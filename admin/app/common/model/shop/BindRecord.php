@@ -16,7 +16,7 @@ use app\common\model\shop\UserShiftLog as UserShiftLogModel;
  */
 class BindRecord extends BaseModel
 {
-    protected $name = 'shop_bind_record';
+    protected $name = 'bind_record';
     protected $pk = 'id';
 
     // 品牌
@@ -50,12 +50,13 @@ class BindRecord extends BaseModel
     public function add($data, $licenseInfo = [])
     {
         $source = isset($data['source']) ? $data['source'] : '';
-        $shop_supplier_id = isset($data['shop_supplier_id']) ? $data['shop_supplier_id'] : 0;
         $finally_login_id = isset($data['finally_login_id']) ? $data['finally_login_id'] : 0;
         $finally_login_time = isset($data['finally_login_time']) ? $data['finally_login_time'] : 0;
-        $app_id = $data['app_id'] ?: self::$app_id;
         $key = isset($data['key']) ? $data['key'] : '';
         $print_port_id = $data['print_port_id'] ?? 0;
+        //
+        $app_id = request()->appId;
+        $shop_supplier_id = isset($data['shop_supplier_id']) ? $data['shop_supplier_id'] : 0;
         if (empty($key)) {
             $key = request()->header('deviceid') ?? '';
         }
@@ -91,8 +92,6 @@ class BindRecord extends BaseModel
                 'platform' => $platform,
                 'user_agent' => $userAgent,
                 'device_ip' => $device_ip,
-                'app_id' => $app_id,
-                'shop_supplier_id' => $shop_supplier_id,
                 'finally_login_id' => $finally_login_id,
                 'finally_login_time' => $finally_login_time == 0 ? $record->finally_login_time : $finally_login_time,
             ]);
@@ -162,6 +161,7 @@ class BindRecord extends BaseModel
         }
 
         $this->save([
+            "uuid"=> createUuid(),
             'source' => $source,
             'key' => $key,
             'address' => $data['address'] ?? '',
@@ -171,8 +171,6 @@ class BindRecord extends BaseModel
             'platform' => $platform,
             'user_agent' => $userAgent,
             'device_ip' => $device_ip,
-            'app_id' => $app_id,
-            'shop_supplier_id' => $shop_supplier_id,
             'finally_login_id' => $finally_login_id,
             'finally_login_time' => $finally_login_time,
         ]);
@@ -185,13 +183,11 @@ class BindRecord extends BaseModel
     public function updateRemark($data)
     {
         $source = isset($data['source']) ? $data['source'] : '';
-        $shop_supplier_id = isset($data['shop_supplier_id']) ? $data['shop_supplier_id'] : 0;
-        $app_id = $data['app_id'] ?: self::$app_id;
         $key = isset($data['key']) ? $data['key'] : '';
         if (empty($key)) {
             $key = request()->header('deviceid') ?? '';
         }
-        if (!in_array($source, [self::SOURCE_CASHIER, self::SOURCE_TABLET, self::SOURCE_KITCHEN, self::SOURCE_ASSISTANT]) || !$shop_supplier_id || !$key) {
+        if (!in_array($source, [self::SOURCE_CASHIER, self::SOURCE_TABLET, self::SOURCE_KITCHEN, self::SOURCE_ASSISTANT]) || !$key) {
             $this->error = "来源设备错误";
             return false;
         }
@@ -208,8 +204,6 @@ class BindRecord extends BaseModel
             $record->withoutGlobalScope()->save([
                 'id' => $record['id'],
                 'remark' => $data['device_remark'] ?? '',
-                'app_id' => $app_id,
-                'shop_supplier_id' => $shop_supplier_id,
             ]);
             return true;
         }
@@ -219,9 +213,9 @@ class BindRecord extends BaseModel
     /**
      * 获取各端绑定记录
      */
-    public function getBindList($source, $shopSupplierId)
+    public function getBindList($source)
     {
-        $query = $this->where('shop_supplier_id', '=', $shopSupplierId);
+        $query = $this;
 
         if ($source !== 'all') {
             if (!in_array($source, [self::SOURCE_CASHIER, self::SOURCE_TABLET, self::SOURCE_KITCHEN, self::SOURCE_ASSISTANT])) {
@@ -233,7 +227,7 @@ class BindRecord extends BaseModel
 
         $list = $query->with([
             'shopUser' => function ($query) {
-                $query->field(['shop_user_id', 'IF(real_name = "", user_name, real_name) as real_name', 'cashier_login_time']);
+                $query->field(['shop_user_id', 'IF(real_name = "", username, real_name) as real_name', 'cashier_login_time']);
             }
         ])->order(['create_time' => 'desc'])->select();
         // 处理收银机是否有交班  is_cashier_shift 1-已交班 0-未交班
@@ -257,8 +251,9 @@ class BindRecord extends BaseModel
     public function unbind($id)
     {
         $record = $this->where('id', '=', $id)->find();
-        $shop_supplier_id = $record['shop_supplier_id'] ?? 0;
+        //
         $app_id = $record['app_id'] ?? 0;
+        $shop_supplier_id = $record['shop_supplier_id'] ?? 0;
         if (!$record) {
             $this->error = "设备不存在";
             return false;
@@ -345,8 +340,7 @@ class BindRecord extends BaseModel
      */
     public function getBindCount($shopSupplierId)
     {
-        $counts = $this->where('shop_supplier_id', $shopSupplierId)
-            ->field('source, COUNT(*) as count')
+        $counts = $this->field('source, COUNT(*) as count')
             ->group('source')
             ->select()
             ->toArray();

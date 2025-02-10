@@ -18,6 +18,7 @@ type ICommonRepo interface {
 	WhereByStatus(status uint) DBOption               // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                      // 根据软删除查询
+	WhereByOrderNo(orderNo string) DBOption           // 根据订单编号查询
 	WhereLikeByName(name string) DBOption             // 根据名称查询
 	SortWithID(order string) DBOption                 // 根据ID排序
 	SortWithOrderBy(order string) DBOption            // 根据Order By排序
@@ -63,6 +64,13 @@ func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = 0")
+	}
+}
+
+// WhereByOrderNo 根据订单编号查询
+func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("order_no = ?", orderNo)
 	}
 }
 

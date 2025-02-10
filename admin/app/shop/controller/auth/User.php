@@ -90,9 +90,9 @@ class User extends Controller
      */
     public function editInfo($shop_user_id)
     {
-        $info = UserModel::detail(['shop_user_id' => $shop_user_id], ['UserRole']);
+        $info = UserModel::detail(['uuid' => $shop_user_id], ['UserRole']);
 
-        $role_arr = array_column($info->toArray()['UserRole'], 'role_id');
+        $role_arr = array_column($info->toArray()['UserRole'], 'role_uuid');
 
         $model = new Role();
         // 角色列表

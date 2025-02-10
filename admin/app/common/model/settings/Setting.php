@@ -119,12 +119,7 @@ class Setting extends BaseModel
      */
     public static function detail($key, $shop_supplier_id = 0)
     {
-        $where = [];
-        if ($shop_supplier_id) {
-            $where['shop_supplier_id'] = $shop_supplier_id;
-        }
-
-        return self::where('key', '=', $key)->where($where)->find() ?? new self;
+        return self::where('key', '=', $key)->find() ?? new self;
     }
 
     /**

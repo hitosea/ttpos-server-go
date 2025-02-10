@@ -8,7 +8,7 @@ import (
 
 type IShiftLogRepo interface {
 	GetPreviousShiftCash(companyId uint64) (float64, error)
-	Create(companyId uint64, shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
+	Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
 }
 
 func NewShiftLogRepo(db *gorm.DB) IShiftLogRepo {
@@ -29,7 +29,7 @@ func (r *ShiftLogRepo) GetPreviousShiftCash(companyId uint64) (float64, error) {
 	return previewShiftCash, err
 }
 
-func (r *ShiftLogRepo) Create(companyId uint64, shiftLog model.StaffShiftLog) (model.StaffShiftLog, error) {
+func (r *ShiftLogRepo) Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error) {
 	err := r.db.Model(&model.StaffShiftLog{}).Create(&shiftLog).Error
 	return shiftLog, err
 }

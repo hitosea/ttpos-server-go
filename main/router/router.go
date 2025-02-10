@@ -31,11 +31,14 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterProductHandlers(cashierGroup, dbm)
 			cashier.RegisterDeskHandlers(cashierGroup, dbm, cache)
+			cashier.RegisterBuffetHandlers(cashierGroup, dbm, cache)
+			cashier.RegisterInstantHandlers(cashierGroup, dbm)
 		}
 		// 点餐助手端
 		assistantGroup := apiV1.Group("/assistant")
 		{
 			assistant.RegisterDeskHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterBuffetHandlers(assistantGroup, dbm, cache)
 		}
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")

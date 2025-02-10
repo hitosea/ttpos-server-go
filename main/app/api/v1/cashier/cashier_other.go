@@ -389,7 +389,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &Handler{
 		authSrv: authSrv,

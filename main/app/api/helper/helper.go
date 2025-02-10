@@ -81,9 +81,9 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 	Fail(c, constant.CodeBadRequest, "参数错误")
 }
 
-// GetCompanyId 获取公司ID
-func GetCompanyId(c *gin.Context) uint64 {
-	return c.GetUint64(jwt.CompanyId)
+// GetCompanyUuid 获取公司ID
+func GetCompanyUuid(c *gin.Context) uint64 {
+	return c.GetUint64(jwt.CompanyUuid)
 }
 
 // GetSource 获取来源

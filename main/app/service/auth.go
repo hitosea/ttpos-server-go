@@ -30,17 +30,18 @@ type IAuthSrv interface {
 	Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
 	Logout(cc *gin.Context) error
 	Base(cc *gin.Context) (cashier_resp.Base, error)
-	AuthenticateStaff(source, deviceId string, companyId, staffId uint64, url string) (model.Company, model.CompanySetting, model.Staff, error)
+	AuthenticateStaff(source, deviceId string, companyUuid, staffUuid uint64, url string) (model.Company, model.CompanySetting, model.Staff, error)
 }
 
 func NewAuthSrv(
+	dbm *database.DBManager,
 	captchaSrv ICaptchaSrv,
 	roleAccessSrv IRoleAccessSrv,
 	bindRecordSrv IBindRecordSrv,
 	staffShiftSrv IStaffShiftSrv,
 	settingSrv setting.ISrv,
 ) IAuthSrv {
-	return NewAuthSrvImpl(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	return NewAuthSrvImpl(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 }
 
 type AuthSrv struct {
@@ -55,6 +56,7 @@ type AuthSrv struct {
 }
 
 func NewAuthSrvImpl(
+	dbm *database.DBManager,
 	captchaSrv ICaptchaSrv,
 	roleAccessSrv IRoleAccessSrv,
 	bindRecordSrv IBindRecordSrv,
@@ -62,6 +64,7 @@ func NewAuthSrvImpl(
 	settingSrv setting.ISrv,
 ) *AuthSrv {
 	return &AuthSrv{
+		dbm:           dbm,
 		captchaSrv:    captchaSrv,
 		roleAccessSrv: roleAccessSrv,
 		bindRecordSrv: bindRecordSrv,
@@ -102,7 +105,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
-		staff = staffRepo.GetById(companyStaff.Uuid, staffRepo.WithCompany())
+		staff = staffRepo.GetByUuid(companyStaff.Uuid, staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		staff = staffRepo.OfflineGetByUsername(loginReq.Username, staffRepo.WithCompany())
@@ -123,7 +126,7 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	}
 
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
+	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
 		return token, err
 	}
@@ -152,9 +155,9 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
 		Source:           constant.SourceCashier,
-		FinallyLoginId:   staff.Uuid,
+		FinallyLoginUuid: staff.Uuid,
 		FinallyLoginTime: int(time.Now().Unix()),
-		CompanyId:        staff.CompanyUuid,
+		CompanyUuid:      staff.CompanyUuid,
 	}, cc)
 	if err != nil {
 		logger.Logger.Error("绑定失败", zap.Error(err))
@@ -167,7 +170,10 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 	}
 	// 创建当班日志
 	if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
-		shiftLog := s.shiftSrv.CreateWorkingLog(staff)
+		shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
+		if err != nil {
+			return "", apperrors.ErrInternal
+		}
 		updates["cashier_login_time"] = shiftLog.ShiftStartTime
 		updates["duty_no"] = shiftLog.ShiftNo
 	}
@@ -187,10 +193,10 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 
 // Logout 退出登录
 func (s *AuthSrv) Logout(cc *gin.Context) error {
-	companyId := cc.GetUint64(jwt.CompanyId)
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff := staffRepo.GetById(cc.GetUint64(jwt.StaffId))
-	return s.bindRecordSrv.Unbind(companyId, constant.SourceCashier, staff.BindKey, staff.Uuid)
+	companyUuid := cc.GetUint64(jwt.CompanyUuid)
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
+	staff := staffRepo.GetByUuid(cc.GetUint64(jwt.StaffUuid))
+	return s.bindRecordSrv.Unbind(companyUuid, constant.SourceCashier, staff.BindKey, staff.Uuid)
 }
 
 // Base 获取基本信息
@@ -203,7 +209,7 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 	)
 	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(true, constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
+	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
 		return cashier_resp.Base{}, err
 	}
@@ -214,7 +220,7 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 	allSettings, _ := s.settingSrv.GetAll(company.Uuid, i18n.GetAcceptLanguage(cc), languageList, cc)
 	return cashier_resp.Base{
 		Username:     staff.Username,
-		CashierId:    staff.Uuid,
+		CashierUuid:  staff.Uuid,
 		DeviceId:     deviceId,
 		DeviceRemark: deviceRemark,
 		Cashier:      allSettings[constant.SettingCashier].(setting2.Cashier),
@@ -223,21 +229,21 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 		Currency:     allSettings[constant.SettingCurrency].(setting2.Currency),
 		Permissions:  permissions,
 		Company: cashier_resp.Company{
-			ID:   company.ID,
+			Uuid: company.Uuid,
 			Name: company.Name,
 		},
 	}, nil
 }
 
 // AuthenticateStaff 认证登录员工
-func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyId, staffId uint64, urlPath string) (model.Company, model.CompanySetting, model.Staff, error) {
+func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyUuid, staffUuid uint64, urlPath string) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
 		staff          model.Staff
 	)
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyId))
-	staff = staffRepo.GetByIdAndCompanyId(staffId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
+	staff = staffRepo.GetByUuid(staffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
@@ -250,7 +256,7 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyId, staffId 
 			companySetting = *staff.Company.CompanySetting
 		}
 	}
-	if company.ID == 0 || companySetting.ID == 0 {
+	if company.Uuid == 0 || companySetting.ID == 0 {
 		return company, companySetting, staff, errors.New("商家不存在")
 	}
 	if company.Status == 0 {
@@ -264,7 +270,7 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyId, staffId 
 	}
 	if _, exists := sourceMap[source]; exists {
 		// 判断权限
-		_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, staff.CompanyUuid)
+		_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, companyUuid)
 		if err != nil {
 			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
 		}
@@ -274,13 +280,13 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyId, staffId 
 		//}
 	}
 	// 验证设备是否绑定
-	if !s.bindRecordSrv.IsDeviceBind(companyId, source, deviceId) {
+	if !s.bindRecordSrv.IsDeviceBind(companyUuid, source, deviceId) {
 		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
 	}
 
 	if source == constant.SourceCashier {
 		// 检查收银是否开启
-		cashierSetting, err := s.settingSrv.GetCashierSetting(companyId, "", nil)
+		cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
 		if err != nil {
 			return company, companySetting, staff, err
 		}
