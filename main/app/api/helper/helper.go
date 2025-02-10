@@ -1,9 +1,6 @@
 package helper
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
 	"net/http"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
@@ -13,6 +10,10 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 )
 
 func ErrorWithDetail(c *gin.Context, code int, err error) {
@@ -85,6 +86,12 @@ func GetCompanyId(c *gin.Context) uint64 {
 	return c.GetUint64(jwt.CompanyId)
 }
 
+// GetSource 获取来源
+func GetSource(c *gin.Context) uint {
+	return c.GetUint(jwt.Source)
+}
+
+// GetLanguage 获取语言
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
 }

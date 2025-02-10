@@ -11,7 +11,7 @@ import (
 type IDeskTypeRepo interface {
 	GetDeskTypeList() ([]model.DeskType, error)
 	UpdateDeskType(uuid uint, deskType model.DeskType) error
-	CreateDeskType(deskType model.DeskType) (uint, error)
+	CreateDeskType(deskType model.DeskType) (uint64, error)
 	DeleteDeskType(uuid uint) error
 }
 
@@ -44,7 +44,7 @@ func (r *DeskTypeRepoImpl) UpdateDeskType(uuid uint, deskType model.DeskType) er
 }
 
 // CreateDeskType 创建桌台类型
-func (r *DeskTypeRepoImpl) CreateDeskType(deskType model.DeskType) (uint, error) {
+func (r *DeskTypeRepoImpl) CreateDeskType(deskType model.DeskType) (uint64, error) {
 	// 创建桌台类型
 	if err := r.db.Create(&deskType).Error; err != nil {
 		return 0, err

@@ -11,9 +11,10 @@ import (
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
-	UpdateDesk(uuid uint, desk model.Desk) error
-	CreateDesk(desk model.Desk) (uint, error)
-	DeleteDesk(uuid uint) error
+	GetDeskInfo(deskUuid uint64) (model.Desk, error)
+	UpdateDesk(deskUuid uint64, desk model.Desk) error
+	CreateDesk(desk model.Desk) (uint64, error)
+	DeleteDesk(deskUuid uint64) error
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -64,16 +65,25 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 	return desks, total, err
 }
 
+// GetDeskInfo 获取桌台信息
+func (r *DeskRepoImpl) GetDeskInfo(deskUuid uint64) (model.Desk, error) {
+	var desk model.Desk
+	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).First(&desk).Error; err != nil {
+		return model.Desk{}, err
+	}
+	return desk, nil
+}
+
 // UpdateDesk 更新桌台
-func (r *DeskRepoImpl) UpdateDesk(uuid uint, desk model.Desk) error {
-	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", uuid).Updates(desk).Error; err != nil {
+func (r *DeskRepoImpl) UpdateDesk(deskUuid uint64, desk model.Desk) error {
+	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(desk).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 // CreateDesk 创建桌台
-func (r *DeskRepoImpl) CreateDesk(desk model.Desk) (uint, error) {
+func (r *DeskRepoImpl) CreateDesk(desk model.Desk) (uint64, error) {
 	// 创建桌台
 	if err := r.db.Create(&desk).Error; err != nil {
 		return 0, err
@@ -82,6 +92,6 @@ func (r *DeskRepoImpl) CreateDesk(desk model.Desk) (uint, error) {
 }
 
 // DeleteProductFlavor 软删除商品规格
-func (r *DeskRepoImpl) DeleteDesk(id uint) error {
-	return r.db.Model(&model.Desk{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+func (r *DeskRepoImpl) DeleteDesk(deskUuid uint64) error {
+	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("delete_time", uint(time.Now().Unix())).Error
 }

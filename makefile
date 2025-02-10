@@ -57,7 +57,7 @@ migrate:
 
 # 生成文档
 build-doc:
-	cd main && go install github.com/swaggo/swag/cmd/swag@latest && chmod +x ./scripts/build.sh && ./scripts/build.sh swagger
+	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
 
 # 构建项目 - 生产
 build-run:

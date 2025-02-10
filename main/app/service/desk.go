@@ -13,6 +13,7 @@ import (
 type IDeskSrv interface {
 	GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error)    // 获取桌台区域和类型列表
+	GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskInfoResp, error)                           // 获取桌台详情
 }
 
 // deskSrv 收银服务结构体
@@ -158,5 +159,58 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 			PageSize: req.PageSize,
 			Total:    total,
 		},
+	}, nil
+}
+
+// GetDeskInfo 获取桌台详情
+func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskInfoResp, error) {
+	// 获取列表
+	desk, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetDeskInfo(deskUuid)
+	if err != nil {
+		return cashier_resp.DeskInfoResp{}, err
+	}
+	// 转换为响应对象
+	// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
+	var deskStatus uint
+	var elapsedTime uint
+	if desk.SaleBill.ID == 0 {
+		if desk.Status == 1 {
+			deskStatus = 3
+		} else {
+			deskStatus = 0
+		}
+		elapsedTime = 0
+	} else {
+		//
+		if desk.SaleBill.IsLock == 1 {
+			deskStatus = 4
+		} else if desk.SaleBill.IsBuffet == 1 {
+			deskStatus = 2
+		} else {
+			deskStatus = 1
+		}
+		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+		passedTime := uint(time.Now().Unix()) - desk.SaleBill.CreateTime
+		if desk.SaleBill.IsBuffet == 1 {
+			if passedTime >= desk.SaleBill.BuffetDuration {
+				elapsedTime = 0
+			} else {
+				elapsedTime = desk.SaleBill.BuffetDuration - passedTime
+			}
+		} else {
+			elapsedTime = passedTime
+		}
+	}
+	//
+	return cashier_resp.DeskInfoResp{
+		Uuid:       desk.Uuid,
+		TableNo:    desk.TableNo,
+		TypeUuid:   desk.TypeUuid,
+		RegionUuid: desk.RegionUuid,
+		Status:     deskStatus,
+		IsLock:     desk.SaleBill.IsLock,
+		IsBuffet:   desk.SaleBill.IsBuffet,
+		Remark:     desk.SaleBill.Remark,
+		Time:       elapsedTime,
 	}, nil
 }
