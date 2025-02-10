@@ -88,7 +88,8 @@ class Upload extends BaseController
         $model = new UploadFile;
         $real_name = $fileInfo->getOriginalName();
         $model->save([
-            'group_id' => $group_id > 0 ? (int)$group_id : 0,
+            'uuid'=> createUuid(),
+            'group_uuid' => $group_id > 0 ? (int)$group_id : 0,
             'storage' => $storage,
             'file_url' => $fileUrl,
             'file_name' => $fileName,
@@ -97,7 +98,6 @@ class Upload extends BaseController
             'file_type' => $fileType,
             'extension' => $fileInfo->getOriginalExtension(),
             'real_name' => $real_name,
-            'app_id' => $model::$app_id,
             'index_file_name' => pathinfo($real_name, PATHINFO_FILENAME),
             'url_param' => $urlParam,
         ]);

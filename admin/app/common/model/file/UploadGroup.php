@@ -10,15 +10,28 @@ use app\shop\model\file\UploadFile;
  */
 class UploadGroup extends BaseModel
 {
-    protected $name = 'upload_group';
-    protected $pk = 'group_id';
+    protected $name = 'file_group';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['group_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getGroupIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 分组详情
      */
     public static function detail($group_id, $shop_supplier_id = 0)
     {
-        return self::where('shop_supplier_id', '=', $shop_supplier_id)->find($group_id);
+        return self::where('uuid', '=', $group_id)->find();
     }
 
     /**
@@ -27,9 +40,9 @@ class UploadGroup extends BaseModel
     public function getList($groupType, $shop_supplier_id = 0)
     {
         !empty($groupType) && $this->where('group_type', '=', trim($groupType));
-        return $this->where('group_type', '=', trim($groupType))
-            ->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->where('is_delete', '=', 0)
+        return $this
+            ->field('*, uuid as group_id')
+            ->where('group_type', '=', trim($groupType))
             ->order(['sort' => 'asc', 'create_time' => 'desc'])
             ->select();
     }
@@ -40,7 +53,7 @@ class UploadGroup extends BaseModel
     public function add($data)
     {
         return $this->save(array_merge([
-            'app_id' => self::$app_id,
+            'uuid'=> createUuid(),
             'sort' => 100
         ], $data));
     }
@@ -59,9 +72,8 @@ class UploadGroup extends BaseModel
     public function remove()
     {
         // 更新该分组下的所有文件
-        (new UploadFile())->where('group_id', '=', $this['group_id'])
-            ->update(['group_id' => 0]);
+        (new UploadFile())->where('group_uuid', '=', $this['uuid'])->update(['group_uuid' => 0]);
         // 删除分组
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }

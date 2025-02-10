@@ -140,7 +140,7 @@ class UserShiftLog extends BaseModel
 
         $orderSort = ['a.create_time' => 'desc'];
         $list = $model->with(['user' => function ($query) {
-            $query->field('shop_user_id, user_name, IF(real_name = "", user_name, real_name) as real_name');
+            $query->field('shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
         }])
             ->field("a.*")
             ->where('a.status', 1)

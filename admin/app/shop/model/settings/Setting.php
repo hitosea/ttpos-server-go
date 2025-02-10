@@ -7,6 +7,7 @@ use help\ImageHelp;
 use think\facade\Cache;
 use app\common\model\supplier\Supplier;
 use app\common\enum\settings\SettingEnum;
+use app\common\model\app\App;
 use app\common\model\settings\Setting as SettingModel;
 
 class Setting extends SettingModel
@@ -36,8 +37,6 @@ class Setting extends SettingModel
             'key' => $key,
             'describe' => SettingEnum::data()[$key]['describe'],
             'values' => $values = array_merge($model->values, $values),
-            'app_id' => $appId,
-            'shop_supplier_id' => $shopSupplierId
         ];
         $res = $model->save($data) !== false;
         // 向平台主表同步数据
@@ -51,8 +50,10 @@ class Setting extends SettingModel
                 'chain_number' => $values['chain_number'] ?? '',
                 'tax_number' => $values['tax_number'] ?? '',
             ];
-            (new Supplier)->where('shop_supplier_id', $shopSupplierId)->find()?->save($ayncData);
-            (new Supplier([], 0))->where('shop_supplier_id', $shopSupplierId)->find()?->save($ayncData);
+            (new App)->where('uuid', $shopSupplierId)->find()?->save($ayncData);
+            (new Supplier)->where('company_uuid', $shopSupplierId)->find()?->save($ayncData);
+            (new App([], 0))->where('uuid', $shopSupplierId)->find()?->save($ayncData);
+            (new Supplier([], 0))->where('company_uuid', $shopSupplierId)->find()?->save($ayncData);
             // 保存打印用的白底黑字的图片
             ImageHelp::whiteBackgroundWithBlackText('http://nginx/' . $values['logoUrl'], Supplier::getWhiteBackgroundWithBlackTextLogoPath($appId));
         }
@@ -98,8 +99,6 @@ class Setting extends SettingModel
                     $setting->save([
                         'key' => $enum,
                         'values' => $settingValues,
-                        'app_id' => $appId,
-                        'shop_supplier_id' => $shopSupplierId
                     ]);
                 }
             }

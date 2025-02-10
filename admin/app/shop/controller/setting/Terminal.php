@@ -57,13 +57,13 @@ class Terminal extends Controller
         // 判断用餐方式是否有未完成订单，有则不能关闭
         $orderModel = new Order();
         if ($order_method['is_cashier_order'] == 0) {
-            $count = $orderModel->where("order_status", '=', OrderStatusEnum::NORMAL)->where("table_id", '=', 0)->where("is_delete", '=', 0)->count();
+            $count = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '=', 0)->count();
             if ($count > 0) {
                 $orderModel->delStayOrder();
             }
         }
         if ($order_method['is_table_order'] == 0) {
-            $count = $orderModel->where("order_status", '=', OrderStatusEnum::NORMAL)->where("table_id", '>', 0)->where("is_delete", '=', 0)->count();
+            $count = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '>', 0)->count();
             if ($count > 0) {
                 $orderModel->delStayTableOrder();
             }
@@ -678,8 +678,8 @@ class Terminal extends Controller
             }
             // 收银/桌台未完成订单数
             $orderModel = new Order();
-            $cashierCount = $orderModel->where("order_status", '=', OrderStatusEnum::NORMAL)->where("table_id", '=', 0)->where("is_delete", '=', 0)->count();
-            $tableCount = $orderModel->where("order_status", '=', OrderStatusEnum::NORMAL)->where("table_id", '>', 0)->where("is_delete", '=', 0)->count();
+            $cashierCount = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '=', 0)->count();
+            $tableCount = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '>', 0)->count();
             $ret['cashier_count'] = $cashierCount;
             $ret['table_count'] = $tableCount;
             // 绑定设备列表
