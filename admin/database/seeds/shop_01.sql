@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     reason VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原因',
     is_lock TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
     meal_num INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
-    status TINYINT(2) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、3-已取消',
+    status TINYINT(2) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消',
     remark VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
     order_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单总金额，关联销售订单的总金额之和',
     product_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，关联销售订单的商品金额之和',
