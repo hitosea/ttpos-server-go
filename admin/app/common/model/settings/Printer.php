@@ -15,7 +15,28 @@ use app\common\enum\settings\PrinterTypeEnum;
 class Printer extends BaseModel
 {
     protected $name = 'printer';
-    protected $pk = 'printer_id';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['printer_id', 'printer_name'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getPrinterIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
+
+    /**
+     * 兼容字段
+     */
+    public function getPrinterNameAttr()
+    {
+        return $this->name ?? 0;
+    }
 
     /**
      * 获取打印机类型列表
@@ -116,27 +137,19 @@ class Printer extends BaseModel
      */
     public function getList($limit = 10, $shop_supplier_id = 0)
     {
-        $where = [];
-        if ($shop_supplier_id) {
-            $where['a.shop_supplier_id'] = $shop_supplier_id;
-        }
-        //
         $printer = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         $printerIds = array_column($printer['cashier_printer'] ?? [], 'printer_id');
-        $supplierPrinterIds = Printing::where('shop_supplier_id', '=', $shop_supplier_id)
-            ->where('is_delete', '0')
-            ->column('printer_id');
-        foreach ($supplierPrinterIds as $supplierPrinterId) {
-            foreach (json_decode($supplierPrinterId) ?: [] as $id) {
-                $printerIds[] = $id;
-            }
-        }
+        // todo 兼容
+        // $supplierPrinterIds = Printing::column('printer_id');
+        // foreach ($supplierPrinterIds as $supplierPrinterId) {
+        //     foreach (json_decode($supplierPrinterId) ?: [] as $id) {
+        //         $printerIds[] = $id;
+        //     }
+        // }
         $printerIds = implode(',', $printerIds);
         //
         return $this->alias('a')
-            ->field("a.*, IF(find_in_set(a.printer_id, '$printerIds'), 1, 0) as is_use")
-            ->where('a.is_delete', '=', 0)
-            ->where($where)
+            ->field("a.*, IF(find_in_set(a.uuid, '$printerIds'), 1, 0) as is_use")
             ->order(['a.sort' => 'asc'])
             ->paginate($limit, false, [
                 'query' => Request::instance()->request()
@@ -148,7 +161,7 @@ class Printer extends BaseModel
      */
     public static function detail($printer_id)
     {
-        return self::find($printer_id);
+        return self::where('uuid', $printer_id)->find();
     }
 
     /**
@@ -157,13 +170,11 @@ class Printer extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'printer_name' => $name,
-            'is_delete' => 0,
-            'shop_supplier_id' => $shop_supplier_id
+            'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['printer_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->where('is_delete', 0)->value('printer_id') ? true : false;
+        return static::where($filter)->value('uuid') ? true : false;
     }
 }
