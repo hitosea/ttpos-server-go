@@ -146,10 +146,11 @@ class Controller extends BaseController
             'user' => [
                 'uuid' => $user['uuid'],
                 'company_uuid' => $companyUuid,
-                'shop_supplier_id' => $companyUuid, // 保留，兼容旧版本
                 'user_name' => $user['username'],
                 'real_name' => $user['real_name'],
                 'user_type' => $user['user_type'],
+                'shop_user_id' => $user['uuid'], // 保留，兼容旧版本
+                'shop_supplier_id' => $companyUuid, // 保留，兼容旧版本
             ],
             'app' => $user->app,
             'supplier' => $user->supplier()->field('
@@ -196,11 +197,13 @@ class Controller extends BaseController
             $title = (new AuthService($this->store))::getAccessNameByApiPath($this->routeUri, $this->store['app']['app_id']);
             if ($title) {
                 (new OptLog)->save([
+                    'uuid' => createUuid(),
+                    'staff_uuid' => $this->store['user']['uuid'] ?? 0,
                     'ip' => \request()->ip(),
-                    'request_type' => $this->request->isGet() ? 'Get' : 'Post',
                     'url' => $this->routeUri,
-                    'content' => json_encode($this->request->param(), JSON_UNESCAPED_UNICODE),
-                    'browser' => SystemHelp::getClientBrowser(),
+                    'type' => $this->request->isGet() ? 'Get' : 'Post',
+                    'request_data' => json_encode($this->request->param(), JSON_UNESCAPED_UNICODE),
+                    'source' => SystemHelp::getClientBrowser(),
                     'agent' => $_SERVER['HTTP_USER_AGENT'],
                     'title' => $title,
                 ]);

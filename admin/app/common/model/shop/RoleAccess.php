@@ -10,8 +10,29 @@ use app\common\model\BaseModel;
  */
 class RoleAccess extends BaseModel
 {
-    protected $name = 'shop_role_access';
+    protected $name = 'role_access';
     protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['role_id', 'access_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getRoleIdAttr()
+    {
+        return $this->role_uuid ?? 0;
+    }
+
+    /**
+     * 兼容ID字段
+     */
+    public function getAccessIdAttr()
+    {
+        return $this->access_uuid ?? 0;
+    }
 
     /**
      * 权限
@@ -19,7 +40,7 @@ class RoleAccess extends BaseModel
      */
     public function shopAccess()
     {
-        return $this->belongsTo('Access', 'access_id', 'access_id');
+        return $this->belongsTo('Access', 'access_uuid', 'uuid');
     }
 
     /**
@@ -29,6 +50,6 @@ class RoleAccess extends BaseModel
     public static function getAccessIds($role_id)
     {
         $roleIds = is_array($role_id) ? $role_id : [(int)$role_id];
-        return (new self)->where('role_id', 'in', $roleIds)->column('access_id');
+        return (new self)->where('role_uuid', 'in', $roleIds)->column('access_uuid');
     }
 }

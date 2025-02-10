@@ -25,7 +25,7 @@ class Role extends RoleModel
      */
     private function getAll()
     {
-        $data = $this->order(['create_time' => 'desc'])->select();
+        $data = $this->field('*, name as role_name')->order(['create_time' => 'desc'])->select();
         return $data ? $data->toArray() : [];
     }
 
@@ -71,29 +71,28 @@ class Role extends RoleModel
         try {
             $roleAccessModel = new RoleAccess();
             // 检查是否存在
-            $role = self::where('role_name', $data['role_name'])->find();
+            $role = self::where('name', $data['name'])->find();
             if ($role) {
                 $role->save([
-                    'role_name' => $data['role_name'],
+                    'name' => $data['name'],
                     'sort' => max($data['sort'] ?? 1, 1),
                 ]);
                 // 先删后增
-                $roleAccessModel->where(['role_id' => $role['role_id']])->delete();
+                $roleAccessModel->where(['uuid' => $role['uuid']])->delete();
             } else {
                 $role = self::create([
-                    'role_name' => $data['role_name'],
+                    'uuid' => createUuid(),
+                    'name' => $data['name'],
                     'sort' => max($data['sort'] ?? 1, 1),
-                    'app_id' => $data['app_id']
                 ]);
             }
 
             $roleAccessData = array_map(function ($accessId) use ($role, $data) {
                 return [
-                    'role_id' => $role['role_id'],
-                    'access_id' => $accessId,
-                    'app_id' => $data['app_id']
+                    'role_uuid' => $role['uuid'],
+                    'access_uuid' => $accessId,
                 ];
-            }, $data['access_id']);
+            }, $data['access_uuid']);
 
             $roleAccessModel->saveAll($roleAccessData);
             $this->commit();
@@ -113,7 +112,7 @@ class Role extends RoleModel
      */
     public function add($data)
     {
-        $count = self::where('role_name', $data['role_name'])->count();
+        $count = self::where('name', $data['role_name'])->count();
         if ($count > 0) {
             $this->error = '角色名称已存在';
             return false;
@@ -122,18 +121,18 @@ class Role extends RoleModel
         $this->startTrans();
         try {
             $res = self::create([
-                'role_name' => $data['role_name'],
+                'uuid' => createUuid(),
+                'name' => $data['role_name'],
                 'sort' => max($data['sort'] ?? 1, 1),
-                'app_id' => self::$app_id
             ]);
-
+            trace($res);
             $model = new RoleAccess();
             $roleAccess = [];
             foreach ($data['access_id'] as $val) {
                 $roleAccess[] = [
-                    'role_id' => $res['role_id'],
-                    'access_id' => $val,
-                    'app_id' => self::$app_id
+                    'uuid' => createUuid(),
+                    'role_uuid' => $res['uuid'],
+                    'access_uuid' => $val,
                 ];
             }
             $model->saveAll($roleAccess);
@@ -154,7 +153,7 @@ class Role extends RoleModel
     public function edit($data)
     {
         $role_id = $data['role_id'] ?? 0;
-        $count = self::where('role_name', $data['role_name'])->where('role_id', '<>', $role_id)->count();
+        $count = self::where('name', $data['role_name'])->where('uuid', '<>', $role_id)->count();
         if ($count > 0) {
             $this->error = '角色名称已存在';
             return false;
@@ -163,7 +162,7 @@ class Role extends RoleModel
         $this->startTrans();
         try {
             $this->save([
-                'role_name' => $data['role_name'],
+                'name' => $data['role_name'],
                 'sort' => $data['sort'],
             ]);
             if (!isset($data['access_id'])) {
@@ -173,13 +172,13 @@ class Role extends RoleModel
 
             $access_list = [];
             $access_model = new RoleAccess();
-            $access_model->where(['role_id' => $role_id])->delete();
+            $access_model->where(['role_uuid' => $role_id])->delete();
 
             foreach ($data['access_id'] as $val) {
                 $access_list[] = [
-                    'role_id' => $role_id,
-                    'access_id' => $val,
-                    'app_id' => self::$app_id
+                    'uuid' => createUuid(),
+                    'role_uuid' => $role_id,
+                    'access_uuid' => $val,
                 ];
             }
 
@@ -205,7 +204,7 @@ class Role extends RoleModel
             $this->error = '当前角色下存在用户，不允许删除';
             return false;
         }
-        RoleAccess::destroy(['role_id', '=', $role_id]);
-        return self::destroy(['role_id', '=', $role_id]);
+        RoleAccess::destroy(['role_uuid', '=', $role_id]);
+        return self::destroy(['uuid', '=', $role_id]);
     }
 }

@@ -10,7 +10,7 @@ use app\common\model\BaseModel;
  */
 class UserRole extends BaseModel
 {
-    protected $name = 'shop_user_role';
+    protected $name = 'staff_role';
     protected $pk = 'id';
 
     /**
@@ -19,7 +19,7 @@ class UserRole extends BaseModel
      */
     public function role()
     {
-        return $this->belongsTo('Role', 'role_id', 'role_id');
+        return $this->belongsTo('Role', 'role_uuid', 'uuid')->field('*, name as role_name');
     }
 
     /**
@@ -29,6 +29,6 @@ class UserRole extends BaseModel
      */
     public static function getRoleIds($shop_user_id)
     {
-        return (new self)->where('shop_user_id', '=', $shop_user_id)->column('role_id');
+        return (new self)->column('role_uuid');
     }
 }

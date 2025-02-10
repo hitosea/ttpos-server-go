@@ -112,7 +112,7 @@ class User extends BaseModel
     public static function detail($where, $with = [])
     {
         !is_array($where) && $where = ['uuid' => (int)$where];
-        return static::where($where)->with($with)->find()?->hidden(['password']);
+        return static::with($with)->field('*, uuid as shop_user_id, username as user_name')->where($where)->find()?->hidden(['password']);
     }
 
     /**

@@ -13,6 +13,19 @@ class LoginLog extends BaseModel
     protected $pk = 'id';
 
     /**
+     * 追加属性
+     */
+    protected $append = ['login_log_id'];
+
+    /**
+     * 兼容ID字段
+     */
+    public function getLoginLogIdAttr()
+    {
+        return $this->id ?? 0;
+    }
+
+    /**
      * 结果兼容多语言
      */
     public function getResultAttr($value)
