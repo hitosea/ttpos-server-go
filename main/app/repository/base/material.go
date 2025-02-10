@@ -11,7 +11,7 @@ import (
 type IMaterialRepo interface {
 	GetMaterialList() ([]model.Material, error)
 	UpdateMaterial(id uint, material model.Material) error
-	CreateMaterial(material model.Material) (uint, error)
+	CreateMaterial(material model.Material) (uint64, error)
 	DeleteMaterial(id uint) error
 }
 
@@ -59,7 +59,7 @@ func (r *MaterialRepoImpl) UpdateMaterial(id uint, material model.Material) erro
 }
 
 // CreateMaterial 创建原料
-func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint, error) {
+func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

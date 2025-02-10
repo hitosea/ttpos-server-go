@@ -10,7 +10,7 @@ import (
 )
 
 type ProductUnit struct {
-	UnitID         uint   `gorm:"primaryKey;autoIncrement;comment:Uuid"`
+	UnitID         uint64 `gorm:"primaryKey;autoIncrement;comment:Uuid"`
 	UnitName       string `gorm:"default:'';comment:属性名"`
 	ShopSupplierID uint   `gorm:"default:0;comment:门店id"`
 	Sort           uint   `gorm:"default:0;comment:排序"`
@@ -57,13 +57,13 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 		fmt.Println(fmt.Sprintf("languageName: %+v", languageName))
 
 		unit := model.ProductUnit{
 			Uuid:                  productUnit.UnitID,
 			Name:                  names.Zh,
-			MultiLanguageNameUuid: uint(id),
+			MultiLanguageNameUuid: id,
 			CreateTime:            0,
 			UpdateTime:            0,
 			DeleteTime:            0,

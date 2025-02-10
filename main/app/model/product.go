@@ -95,7 +95,7 @@ type ProductPackageAttributeGroup struct {
 
 // ProductPackageAttribute 产品包属性表，定义产品包的属性信息
 type ProductPackageAttribute struct {
-	Id                               uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	ID                               uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                             uint64 `gorm:"default:0;comment:'UUID'"`
 	ProductPackageAttributeGroupUuid uint64 `gorm:"default:0;comment:'产品包属性组UUID'"`
 	AttributeUuid                    uint64 `gorm:"default:0;comment:'产品属性UUID'"`

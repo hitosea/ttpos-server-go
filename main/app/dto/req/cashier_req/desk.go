@@ -6,3 +6,7 @@ import "ttpos-server-go/app/dto"
 type DeskListReq struct {
 	dto.PageReq // 分页参数
 }
+
+type DeskInfoReq struct {
+	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
+}

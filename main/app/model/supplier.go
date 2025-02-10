@@ -2,7 +2,7 @@ package model
 
 // 供应商表
 type Supplier struct {
-	Id           uint   `gorm:"primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	ID           uint   `gorm:"primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid         uint64 `gorm:"default:0;comment:'供应商ID'"`
 	Name         string `gorm:"default:'';comment:'供应商名称'"`
 	Address      string `gorm:"default:'';comment:'供应商地址'"`

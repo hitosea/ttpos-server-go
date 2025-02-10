@@ -9,16 +9,16 @@ import (
 )
 
 type ProductAttributeGroup struct {
-	GroupAttributeID       uint  `gorm:"primaryKey;autoIncrement;comment:产品属性组ID"`
-	ProductID              uint  `gorm:"default:0;comment:关联产品ID"`
-	AttributeID            uint  `gorm:"default:0;comment:关联属性ID"`
-	AttributeRequired      uint  `gorm:"default:0;comment:属性组是否必填 0-否 1-是"`
-	AttributeOpenMaxSelect uint  `gorm:"default:0;comment:属性组最开启最多可选数量 0-否 1-是"`
-	AttributeMaxSelect     uint  `gorm:"default:0;comment:属性组最多可选数量"`
-	ShopSupplierID         uint  `gorm:"default:0;comment:店铺ID"`
-	AppID                  uint  `gorm:"default:0;comment:应用ID"`
-	CreateTime             int64 `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime             int64 `gorm:"autoUpdateTime;comment:更新时间"`
+	GroupAttributeID       uint64 `gorm:"primaryKey;autoIncrement;comment:产品属性组ID"`
+	ProductID              uint64 `gorm:"default:0;comment:关联产品ID"`
+	AttributeID            uint   `gorm:"default:0;comment:关联属性ID"`
+	AttributeRequired      uint   `gorm:"default:0;comment:属性组是否必填 0-否 1-是"`
+	AttributeOpenMaxSelect uint   `gorm:"default:0;comment:属性组最开启最多可选数量 0-否 1-是"`
+	AttributeMaxSelect     uint   `gorm:"default:0;comment:属性组最多可选数量"`
+	ShopSupplierID         uint   `gorm:"default:0;comment:店铺ID"`
+	AppID                  uint   `gorm:"default:0;comment:应用ID"`
+	CreateTime             int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime             int64  `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ProductAttributeGroupRepository interface {
@@ -48,7 +48,7 @@ func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 		fmt.Println(fmt.Sprintf("productAttributeGroup: %+v", productAttributeGroup))
 		group := model.ProductPackageAttributeGroup{
 			Uuid:               productAttributeGroup.GroupAttributeID,
-			IsMust:             uint(productAttributeGroup.AttributeRequired),
+			IsMust:             productAttributeGroup.AttributeRequired,
 			MaxSelection:       productAttributeGroup.AttributeMaxSelect,
 			ProductPackageUuid: productAttributeGroup.ProductID,
 		}

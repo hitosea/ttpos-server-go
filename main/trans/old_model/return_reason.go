@@ -56,7 +56,7 @@ func (s *ReturnReasonService) ConvertReturnReason() error {
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 
 		reason := model.ReturnFoodReason{
 			Uuid:                  returnReason.Id,

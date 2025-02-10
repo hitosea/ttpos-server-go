@@ -1,15 +1,15 @@
 package model
 
 type Material struct {
-	Id                    uint    `gorm:"primaryKey;AUTO_INCREMENT;comment:'原料唯一标识符'"`
-	Uuid                  uint    `gorm:"default:0;comment:'UUID'"`
+	ID                    uint    `gorm:"primaryKey;AUTO_INCREMENT;comment:'原料唯一标识符'"`
+	Uuid                  uint64  `gorm:"default:0;comment:'UUID'"`
 	Name                  string  `gorm:"default:'';comment:'原料名称'"`
 	MultiLanguageNameUuid uint    `gorm:"default:0;comment:'多语言名称ID'"`
-	CategoryUuid          uint    `gorm:"default:0;comment:'类别ID'"`
+	CategoryUuid          uint64  `gorm:"default:0;comment:'类别ID'"`
 	SupplierUuid          uint    `gorm:"default:0;comment:'供应商ID'"`
-	ImageUuid             uint    `gorm:"default:0;comment:'图片ID'"`
+	ImageUuid             uint64  `gorm:"default:0;comment:'图片ID'"`
 	ImageName             string  `gorm:"default:'';comment:'图片名称'"`
-	UnitUuid              uint    `gorm:"default:0;comment:'单位ID'"`
+	UnitUuid              uint64  `gorm:"default:0;comment:'单位ID'"`
 	Price                 float64 `gorm:"default:0;comment:'采购单价'"`
 	Num                   float64 `gorm:"default:0;comment:'库存数量'"`
 	BarcodeValue          string  `gorm:"default:'';comment:'条形码值'"`

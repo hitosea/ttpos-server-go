@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req/cashier_req"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -26,8 +27,9 @@ type DeskHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
+	companyId := helper.GetCompanyId(c)
 	// 处理获取收银台的区域和类型的逻辑
-	res, err := h.Service.GetDeskRegionAndTypeList(1)
+	res, err := h.Service.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -47,6 +49,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
+	companyId := helper.GetCompanyId(c)
 	// 绑定请求参数
 	req := cashier_req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -54,10 +57,35 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(
-		1,
-		req,
-	)
+	res, err := h.Service.GetDeskList(companyId, req)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetCashierDeskList 处理获取收银台列表
+// @Summary 获取收银台详情
+// @Description 获取收银台详情
+// @Tags 收银端
+// @Accept json
+// @Produce json
+// @Success 200 {object} nil "收银台详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/info [get]
+func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
+	companyId := helper.GetCompanyId(c)
+	// 绑定请求参数
+	req := cashier_req.DeskInfoReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 获取收银产品列表
+	res, err := h.Service.GetDeskInfo(companyId, req.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -68,8 +96,16 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 }
 
 // RegisterProductHandlers 注册收银产品路由
-func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager) {
-	// 创建收银产品处理程序
+func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	// captchaSrv := service.NewCaptchaSrv(cache)
+	// settingSrv := setting.NewSrv(dbm, cache)
+	// roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	// bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	// staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	// authSrv := service.NewAuthSrv(captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+
+	// 初始化处理器
 	wrapper := DeskHandler{
 		Service: service.NewDeskSrv(
 			dbm,                    // 数据库管理器
@@ -77,7 +113,12 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager) {
 		),
 	}
 
-	// 注册收银产品路由
-	router.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
-	router.GET("/desk/list", wrapper.GetDeskList) // 获取收银产品列表
+	// 需要认证
+	privateApi := router.Group("")
+	// privateApi := router.Group("", middleware.Auth(authSrv))
+	{
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
+		privateApi.GET("/desk/list", wrapper.GetDeskList)
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
+	}
 }

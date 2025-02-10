@@ -9,15 +9,15 @@ import (
 )
 
 type ProductAttribute struct {
-	ProductAttributeID uint  `gorm:"primaryKey;autoIncrement;comment:产品属性ID"`
-	ProductID          uint  `gorm:"default:0;comment:关联产品ID"`
-	GroupAttributeID   uint  `gorm:"default:0;comment:关联产品属性组ID"`
-	AttributeID        uint  `gorm:"default:0;comment:关联属性ID"`
-	DefaultSelect      uint  `gorm:"default:0;comment:默认勾选 0-否 1-是"`
-	ShopSupplierID     uint  `gorm:"default:0;comment:店铺ID"`
-	AppID              uint  `gorm:"default:0;comment:应用ID"`
-	CreateTime         int64 `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime         int64 `gorm:"autoUpdateTime;comment:更新时间"`
+	ProductAttributeID uint64 `gorm:"primaryKey;autoIncrement;comment:产品属性ID"`
+	ProductID          uint   `gorm:"default:0;comment:关联产品ID"`
+	GroupAttributeID   uint64 `gorm:"default:0;comment:关联产品属性组ID"`
+	AttributeID        uint64 `gorm:"default:0;comment:关联属性ID"`
+	DefaultSelect      uint   `gorm:"default:0;comment:默认勾选 0-否 1-是"`
+	ShopSupplierID     uint   `gorm:"default:0;comment:店铺ID"`
+	AppID              uint   `gorm:"default:0;comment:应用ID"`
+	CreateTime         int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime         int64  `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ProductAttributeRepository interface {
@@ -46,7 +46,7 @@ func (s *ProductAttributeService) ConvertProductAttribute() error {
 	for _, productAttribute := range productAttributes {
 		fmt.Println(fmt.Sprintf("productAttribute: %+v", productAttribute))
 		attribute := model.ProductPackageAttribute{
-			Id:                               0,
+			ID:                               0,
 			Uuid:                             productAttribute.ProductAttributeID,
 			ProductPackageAttributeGroupUuid: productAttribute.GroupAttributeID,
 			AttributeUuid:                    productAttribute.AttributeID,

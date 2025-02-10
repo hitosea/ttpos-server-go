@@ -10,7 +10,7 @@ import (
 )
 
 type ProductPrintLabel struct {
-	LabelID        uint   `gorm:"primaryKey;autoIncrement;comment:Uuid"`
+	LabelID        uint64 `gorm:"primaryKey;autoIncrement;comment:Uuid"`
 	LabelName      string `gorm:"default:'';comment:属性名"`
 	ShopSupplierID uint   `gorm:"default:0;comment:门店id"`
 	Sort           uint   `gorm:"default:0;comment:排序"`

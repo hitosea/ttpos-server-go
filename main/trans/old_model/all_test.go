@@ -6,23 +6,23 @@ import (
 )
 
 var conf = config.DatabaseConf{
-	Host:          "localhost",
-	Port:          3306,
-	User:          "root",
-	Password:      "5cd6a0408e9ccf92",
+	Host:          "192.168.100.117",
+	Port:          53306,
+	User:          "jajaja",
+	Password:      "123123",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var dbName = "shop_wang"
+var dbName = "shop1724054084"
 var targetConf = config.DatabaseConf{
-	Host:          "localhost",
-	Port:          3306,
-	User:          "root",
-	Password:      "5cd6a0408e9ccf92",
+	Host:          "192.168.100.117",
+	Port:          53306,
+	User:          "jajaja",
+	Password:      "123123",
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop_1"
+var targetDBName = "shop553026897454326901"
 
 func TestConvertAll(t *testing.T) {
 	testConvertAttribute()             // 商品属性

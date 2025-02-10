@@ -57,10 +57,10 @@ func (s *SpecService) ConvertSpec() error {
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 
 		flavor := model.ProductFlavor{
-			Uuid:                  spec.SpecID,
+			Uuid:                  uint64(spec.SpecID),
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),
 			CreateTime:            0,

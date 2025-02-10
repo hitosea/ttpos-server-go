@@ -11,9 +11,9 @@ import (
 )
 
 type Category struct {
-	CategoryID     uint   `gorm:"primaryKey;autoIncrement;comment:产品分类id"`
+	CategoryID     uint64 `gorm:"primaryKey;autoIncrement;comment:产品分类id"`
 	Name           string `gorm:"type:varchar(2000);not null;default:'';comment:分类名称"`
-	ParentID       uint   `gorm:"not null;default:0;comment:上级分类id"`
+	ParentID       uint64 `gorm:"not null;default:0;comment:上级分类id"`
 	ImageID        uint   `gorm:"not null;default:0;comment:分类图片id"`
 	IsSpecial      bool   `gorm:"not null;default:false;comment:0普通1特殊"`
 	Sort           uint   `gorm:"not null;default:0;comment:排序方式(数字越小越靠前)"`
@@ -46,7 +46,7 @@ func (n *Names) GetNames(jsonString string) error {
 	return nil
 }
 
-func (n *Names) CreateMultiLanguageName(nameId uint, targetDB *gorm.DB) error {
+func (n *Names) CreateMultiLanguageName(nameId uint64, targetDB *gorm.DB) error {
 	multiLanguageName := model.MultiLanguageName{
 		Uuid:     nameId,
 		EnName:   n.En,
@@ -66,7 +66,7 @@ func (n *Names) CreateMultiLanguageName(nameId uint, targetDB *gorm.DB) error {
 	return nil
 }
 
-func (n *Names) GenMultiLanguageName(nameId uint) model.MultiLanguageName {
+func (n *Names) GenMultiLanguageName(nameId uint64) model.MultiLanguageName {
 	multiLanguageName := model.MultiLanguageName{
 		Uuid:     nameId,
 		EnName:   n.En,
@@ -122,7 +122,7 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		fmt.Printf("uuid:%+v\n", id)
 		multiLanguageName := model.MultiLanguageName{
-			Uuid:     uint(id),
+			Uuid:     id,
 			EnName:   names.En,
 			ZhName:   names.Zh,
 			ZhTwName: names.ZhTw,

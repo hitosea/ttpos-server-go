@@ -11,7 +11,7 @@ import (
 type IDeskRegionRepo interface {
 	GetDeskRegionList() ([]model.DeskRegion, error)
 	UpdateDeskRegion(uuid uint, deskRegion model.DeskRegion) error
-	CreateDeskRegion(deskRegion model.DeskRegion) (uint, error)
+	CreateDeskRegion(deskRegion model.DeskRegion) (uint64, error)
 	DeleteDeskRegion(uuid uint) error
 }
 
@@ -44,7 +44,7 @@ func (r *DeskRegionRepoImpl) UpdateDeskRegion(uuid uint, deskRegion model.DeskRe
 }
 
 // CreateDeskRegion 创建桌台区域
-func (r *DeskRegionRepoImpl) CreateDeskRegion(deskRegion model.DeskRegion) (uint, error) {
+func (r *DeskRegionRepoImpl) CreateDeskRegion(deskRegion model.DeskRegion) (uint64, error) {
 	// 创建桌台区域
 	if err := r.db.Create(&deskRegion).Error; err != nil {
 		return 0, err

@@ -27,7 +27,7 @@ type SaleBill struct {
 	UpdateTime      uint    `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime      uint    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
-	SaleOrders []SaleOrder `gorm:"foreignKey:SaleBillUUID;references:UUID"`
+	SaleOrders []SaleOrder `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
 // 销售订单 SaleOrder

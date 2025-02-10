@@ -9,11 +9,11 @@ import (
 )
 
 type ShopRoleAccess struct {
-	ID         uint `gorm:"primaryKey;autoIncrement;comment:主键id"`
-	RoleID     uint `gorm:"not null;default:0;comment:角色id"`
-	AccessID   uint `gorm:"not null;default:0;comment:权限id"`
-	AppID      uint `gorm:"not null;default:0;comment:小程序id"`
-	CreateTime uint `gorm:"not null;default:0;comment:创建时间"`
+	ID         uint64 `gorm:"primaryKey;autoIncrement;comment:主键id"`
+	RoleID     uint64 `gorm:"not null;default:0;comment:角色id"`
+	AccessID   uint64 `gorm:"not null;default:0;comment:权限id"`
+	AppID      uint   `gorm:"not null;default:0;comment:小程序id"`
+	CreateTime int    `gorm:"not null;default:0;comment:创建时间"`
 }
 
 type ShopRoleAccessRepository interface {
@@ -45,7 +45,7 @@ func (s *ShopRoleAccessService) ConvertShopRoleAccess() error {
 			Uuid:       shopRoleAccess.ID,
 			RoleUuid:   shopRoleAccess.RoleID,
 			AccessUuid: shopRoleAccess.AccessID,
-			CreateTime: int64(shopRoleAccess.CreateTime),
+			CreateTime: shopRoleAccess.CreateTime,
 		}
 		_, err = repository.NewRoleAccessRepo(s.targetDB).CreateRoleAccess(roleAccess)
 		if err != nil {

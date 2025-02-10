@@ -41,7 +41,7 @@ func (r *MultiLanguageNameRepoImpl) GetMultiLanguageName(id uint) (model.MultiLa
 // CreateMultiLanguageName 创建多语言名称
 func (r *MultiLanguageNameRepoImpl) CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint, error) {
 	err := r.db.Create(&multiLanguageName).Error // 将多语言名称插入数据库
-	return multiLanguageName.Id, err
+	return multiLanguageName.ID, err
 }
 
 // UpdateMultiLanguageName 更新多语言名称

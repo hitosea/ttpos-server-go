@@ -9,12 +9,12 @@ import (
 )
 
 type ShopRole struct {
-	RoleID     uint   `gorm:"primaryKey;autoIncrement;comment:角色id"`
+	RoleID     uint64 `gorm:"primaryKey;autoIncrement;comment:角色id"`
 	RoleName   string `gorm:"default:'';comment:角色名称"`
 	Sort       uint   `gorm:"default:100;comment:排序(数字越小越靠前)"`
 	AppID      uint   `gorm:"default:0;comment:小程序id"`
-	CreateTime int64  `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime int64  `gorm:"autoUpdateTime;comment:更新时间"`
+	CreateTime int    `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime int    `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ShopRoleRepository interface {
@@ -44,7 +44,7 @@ func (s *ShopRoleService) ConvertShopRole() error {
 		model := model.Role{
 			Uuid:       shopRole.RoleID,
 			Name:       shopRole.RoleName,
-			Sort:       shopRole.Sort,
+			Sort:       int(shopRole.Sort),
 			CreateTime: shopRole.CreateTime,
 			UpdateTime: shopRole.UpdateTime,
 		}

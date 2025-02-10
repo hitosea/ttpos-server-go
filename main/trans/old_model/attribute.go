@@ -10,8 +10,8 @@ import (
 )
 
 type Attribute struct {
-	AttributeID    uint   `gorm:"column:attribute_id;primaryKey;autoIncrement;comment:'属性ID'"`
-	ParentID       int    `gorm:"column:parent_id;default:0;comment:'父级ID'"`
+	AttributeID    uint64 `gorm:"column:attribute_id;primaryKey;autoIncrement;comment:'属性ID'"`
+	ParentID       uint64 `gorm:"column:parent_id;default:0;comment:'父级ID'"`
 	AttributeName  string `gorm:"column:attribute_name;type:text;not null;default:'';comment:'属性名称'"`
 	ShopSupplierID int    `gorm:"column:shop_supplier_id;default:0;comment:'店铺ID'"`
 	AppID          int    `gorm:"column:app_id;default:0;comment:'应用ID'"`
@@ -19,7 +19,7 @@ type Attribute struct {
 	UpdateTime     int64  `gorm:"column:update_time;not null;default:0;comment:'更新时间'"`
 }
 
-type AtttributeInterface interface {
+type AttributeInterface interface {
 	GetAttributeList() ([]Attribute, error)
 	ConvertAttribute() error
 }
@@ -59,13 +59,13 @@ func (r *AttributeRepository) ConvertAttribute() error {
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 		if attribute.ParentID == 0 {
 			// 创建商品属性组
 			attributeGroup := model.ProductAttributeGroup{
 				Uuid:                  attribute.AttributeID,
 				Name:                  names.Zh,
-				MultiLanguageNameUuid: uint(id),
+				MultiLanguageNameUuid: id,
 				MultiLanguageName:     languageName,
 			}
 			fmt.Println(fmt.Sprintf("attribute_group: %+v", attributeGroup))
@@ -78,7 +78,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			productAttribute := model.ProductAttribute{
 				Uuid:               attribute.AttributeID,
 				Name:               names.Zh,
-				AttributeGroupUuid: uint(attribute.ParentID),
+				AttributeGroupUuid: attribute.ParentID,
 				MultiLanguageName:  languageName,
 			}
 			_, err = base.NewProductAttributeRepo(r.targetDB).CreateProductAttribute(productAttribute)

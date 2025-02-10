@@ -10,7 +10,7 @@ import (
 )
 
 type Product struct {
-	ProductID            uint    `gorm:"primaryKey;autoIncrement;comment:'产品id'"`
+	ProductID            uint64  `gorm:"primaryKey;autoIncrement;comment:'产品id'"`
 	ProductName          string  `gorm:"default:'';comment:'产品名称'"`
 	ImgName              string  `gorm:"comment:'图片名称（验证唯一性）'"`
 	Type                 uint    `gorm:"comment:'类型 10-成品 20-材料'"`
@@ -21,7 +21,7 @@ type Product struct {
 	ProductStock         int     `gorm:"default:0;comment:'产品总库存'"`
 	ProductMaterialStock float64 `gorm:"default:0.00;comment:'材料总库存（材料类型专用）'"`
 	SellingPoint         string  `gorm:"default:'';comment:'商品卖点'"`
-	CategoryID           uint    `gorm:"default:0;comment:'产品分类id'"`
+	CategoryID           uint64  `gorm:"default:0;comment:'产品分类id'"`
 	SpecType             uint8   `gorm:"default:0;comment:'产品规格(10单规格 20多规格)'"`
 	DeductStockType      uint8   `gorm:"default:20;comment:'库存计算方式(10下单减库存 20付款减库存)'"`
 	Content              string  `gorm:"default:'';comment:'产品详情'"`
@@ -37,7 +37,7 @@ type Product struct {
 	AloneGradeType       uint8   `gorm:"default:10;comment:'折扣金额类型(10百分比 20固定金额)'"`
 	ProductStatus        uint8   `gorm:"default:10;comment:'产品状态(10上架 20下架 )'"`
 	ViewTimes            uint    `gorm:"default:0;comment:'访问次数'"`
-	ShopSupplierID       uint    `gorm:"default:0;comment:'供应商id'"`
+	ShopSupplierID       uint64  `gorm:"default:0;comment:'供应商id'"`
 	SupplierPrice        float64 `gorm:"default:0.00;comment:'供应商价格'"`
 	LimitNum             uint    `gorm:"default:0;comment:'限购数量0为不限'"`
 	GradeIDs             string  `gorm:"default:'';comment:'可购买会员等级id，逗号隔开'"`
@@ -45,12 +45,12 @@ type Product struct {
 	ProductUnit          string  `gorm:"default:'';comment:'商品单位'"`
 	ProductAttr          string  `gorm:"default:'';comment:'商品属性'"`
 	ProductFeed          string  `gorm:"default:'';comment:'售卖加料'"`
-	SpecialID            uint    `gorm:"default:0;comment:'特殊分类id'"`
+	SpecialID            uint64  `gorm:"default:0;comment:'特殊分类id'"`
 	CostPrice            float64 `gorm:"default:0.00;comment:'成本价'"`
 	MinBuy               uint    `gorm:"default:1;comment:'最小购买量'"`
 	BagPrice             float64 `gorm:"default:0.00;comment:'包装费'"`
-	LabelID              uint    `gorm:"default:0;comment:'打印标签id'"`
-	UnitID               uint    `gorm:"default:0;comment:'单位ID'"`
+	LabelID              uint64  `gorm:"default:0;comment:'打印标签id'"`
+	UnitID               uint64  `gorm:"default:0;comment:'单位ID'"`
 	IsShowCashier        uint8   `gorm:"default:1;comment:'是否显示在收银端 1-显示 2-不显示'"`
 	IsShowTablet         uint8   `gorm:"default:1;comment:'是否显示在平板端 1-显示 2-不显示'"`
 	IsShowKitchen        uint8   `gorm:"default:1;comment:'是否显示在送厨端 1-显示 2-不显示'"`
@@ -69,21 +69,21 @@ type Product struct {
 }
 
 type ProductImage struct {
-	ID         uint  `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
-	ProductID  uint  `gorm:"default:0;comment:'商品id'"`
-	ImageID    uint  `gorm:"comment:'图片id(关联文件记录表)'"`
-	AppID      uint  `gorm:"default:0;comment:'应用id'"`
-	CreateTime int64 `gorm:"autoCreateTime;comment:'创建时间'"`
+	ID         uint   `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
+	ProductID  uint   `gorm:"default:0;comment:'商品id'"`
+	ImageID    uint64 `gorm:"comment:'图片id(关联文件记录表)'"`
+	AppID      uint   `gorm:"default:0;comment:'应用id'"`
+	CreateTime int64  `gorm:"autoCreateTime;comment:'创建时间'"`
 }
 
 type ProductTax struct {
-	ID             uint  `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
-	ProductID      uint  `gorm:"default:0;comment:'产品id'"`
-	ProductTaxType uint  `gorm:"default:1;comment:'产品税类类型，1-堂食税类，2-外带税类'"`
-	TaxCategoryID  uint  `gorm:"default:0;comment:'税类id'"`
-	AppID          uint  `gorm:"default:0;comment:'应用id'"`
-	CreateTime     int64 `gorm:"autoCreateTime;comment:'创建时间'"`
-	UpdateTime     int64 `gorm:"autoUpdateTime;comment:'更新时间'"`
+	ID             uint   `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
+	ProductID      uint   `gorm:"default:0;comment:'产品id'"`
+	ProductTaxType uint   `gorm:"default:1;comment:'产品税类类型，1-堂食税类，2-外带税类'"`
+	TaxCategoryID  uint64 `gorm:"default:0;comment:'税类id'"`
+	AppID          uint   `gorm:"default:0;comment:'应用id'"`
+	CreateTime     int64  `gorm:"autoCreateTime;comment:'创建时间'"`
+	UpdateTime     int64  `gorm:"autoUpdateTime;comment:'更新时间'"`
 }
 
 type ProductInterface interface {
@@ -106,7 +106,7 @@ func (s *ProductService) GetProductList() ([]Product, error) {
 	return products, nil
 }
 
-func (s *ProductService) GetProductTax(productID uint, taxType uint) (ProductTax, error) {
+func (s *ProductService) GetProductTax(productID uint64, taxType uint) (ProductTax, error) {
 	var productTax ProductTax
 	err := s.db.Where("product_id = ? AND product_tax_type = ?", productID, taxType).First(&productTax).Error
 	if err != nil {
@@ -134,7 +134,7 @@ func (s *ProductService) ConvertProduct() error {
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
-		languageName := names.GenMultiLanguageName(uint(id))
+		languageName := names.GenMultiLanguageName(id)
 
 		if product.Type == 10 {
 			// 成品

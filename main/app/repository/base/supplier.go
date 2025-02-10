@@ -42,7 +42,7 @@ func (r *SupplierRepoImpl) UpdateSupplier(id uint, supplier model.Supplier) erro
 
 // 创建供应商
 func (r *SupplierRepoImpl) CreateSupplier(supplier model.Supplier) (uint, error) {
-	return supplier.Id, r.db.Create(&supplier).Error
+	return supplier.ID, r.db.Create(&supplier).Error
 }
 
 // 软删除供应商
