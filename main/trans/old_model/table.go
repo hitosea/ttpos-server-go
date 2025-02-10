@@ -59,13 +59,17 @@ func (s *TableService) ConvertTable() error {
 		} else {
 			isDisable = 1
 		}
+		status := 0
+		if table.Status == 30 {
+			status = 1
+		}
 		desk := model.Desk{
 			Uuid:       table.TableID,
 			TableNo:    table.TableNo,
 			RegionUuid: table.AreaID,
 			TypeUuid:   table.TypeID,
 			OrderBy:    uint(table.Sort),
-			Status:     uint(table.Status),
+			Status:     uint(status),
 			IsDisable:  isDisable,
 			QrcodeUrl:  table.QRCodeValue,
 			IsBind:     uint(table.IsBind),
