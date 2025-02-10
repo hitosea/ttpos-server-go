@@ -23,19 +23,6 @@ type Handler struct {
 	authSrv    service.IAuthSrv
 }
 
-// GetCashierDeskRegionAndType 处理获取收银台的区域和类型
-// @Summary 获取收银台的区域和类型
-// @Description 获取收银台的区域和类型
-// @Tags 收银端
-// @Accept json
-// @Produce json
-// @Success 200 {array} nil "收银台区域和类型列表"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/region_and_type [get]
-func (h *Handler) GetCashierDeskRegionAndType(c *gin.Context) {
-	// 处理获取收银台的区域和类型的逻辑
-}
-
 // PostCashierLogin 收银端登录
 // @Summary 收银端登录
 // @Description 收银端登录
@@ -454,7 +441,6 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 
 	// 需要认证
-	router.GET("/desk/region_and_type", wrapper.GetCashierDeskRegionAndType)
 	router.GET("/member/info", wrapper.GetCashierMemberInfo)
 	router.GET("/member/search", wrapper.GetCashierMemberSearch)
 	router.GET("/payment/type_list", wrapper.GetCashierPaymentTypeList)

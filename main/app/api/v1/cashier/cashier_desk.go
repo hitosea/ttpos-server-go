@@ -16,6 +16,27 @@ type DeskHandler struct {
 	Service service.IDeskSrv // 桌台服务
 }
 
+// GetCashierDeskRegionAndType 处理获取收银台的区域和类型
+// @Summary 获取收银台的区域和类型
+// @Description 获取收银台的区域和类型
+// @Tags 收银端
+// @Accept json
+// @Produce json
+// @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/region_and_type [get]
+func (h *DeskHandler) GetCashierDeskRegionAndType(c *gin.Context) {
+	// 处理获取收银台的区域和类型的逻辑
+	res, err := h.Service.GetDeskRegionAndTypeList(1)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // GetCashierDeskList 处理获取收银台列表
 // @Summary 获取收银台列表
 // @Description 获取收银台列表
@@ -32,19 +53,16 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
 	}
-
 	// 获取收银产品列表
 	res, err := h.Service.GetDeskList(
 		1,
 		req,
 	)
-
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -60,5 +78,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager) {
 	}
 
 	// 注册收银产品路由
+	router.GET("/desk/region_and_type", wrapper.GetCashierDeskRegionAndType)
 	router.GET("/desk/list", wrapper.GetDeskList) // 获取收银产品列表
 }
