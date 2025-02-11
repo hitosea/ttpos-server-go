@@ -53,7 +53,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 
 		languageName := names.GenMultiLanguageName(id)
 
-		reason := model.GiftOrFreeOrderReason{
+		reason := model.FreeReason{
 			Uuid:                  freeTag.Id,
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),

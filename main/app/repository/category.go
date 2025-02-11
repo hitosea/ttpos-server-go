@@ -9,12 +9,12 @@ import (
 
 // IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
-	GetProductCategoryList() ([]model.ProductCategory, error)
-	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
-	CreateProductCategory(productCategory model.ProductCategory) (uint, error)
-	DeleteProductCategory(id uint) error
-	GetProductCategoryByIdWithMultiLanguageName(id uint) (*model.ProductCategory, error)
-	GetProductCategoryListWithMultiLanguageName() ([]model.ProductCategory, error)
+	//GetProductCategoryList() ([]model.ProductCategory, error)
+	//UpdateProductCategory(id uint64, productCategory model.ProductCategory) error
+	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
+	//DeleteProductCategory(id uint64) error
+	//GetProductCategoryByIdWithMultiLanguageName(id uint64) (*model.ProductCategory, error)
+	//GetProductCategoryListWithMultiLanguageName() ([]model.ProductCategory, error)
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
@@ -23,7 +23,7 @@ func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
 
 // ICategoryRepositorySrv 分类仓库接口
 type ICategoryRepositorySrv interface {
-	CreateCategory(params req.CreateCategoryRequest) (uint, error)
+	CreateCategory(params req.CreateCategoryRequest) (uint64, error)
 }
 
 func NewCategoryRepositoryService(db *gorm.DB) ICategoryRepositorySrv {
@@ -40,7 +40,7 @@ func NewCategoryRepositorySrvImpl(db *gorm.DB) *CategoryRepositoryService {
 }
 
 // CreateCategory 创建分类
-func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequest) (uint, error) {
+func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequest) (uint64, error) {
 	// 开始事务
 	tx := s.db.Begin()
 	defer func() {

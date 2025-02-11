@@ -9,10 +9,10 @@ import (
 
 // IGiftOrFreeOrderReasonRepo 赠品或免费订单原因仓库接口
 type IGiftOrFreeOrderReasonRepo interface {
-	GetGiftOrFreeOrderReasonList() ([]model.GiftOrFreeOrderReason, error)                         // 获取赠品或免费订单原因列表
-	UpdateGiftOrFreeOrderReason(id uint, giftOrFreeOrderReason model.GiftOrFreeOrderReason) error // 更新赠品或免费订单原因
-	CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.GiftOrFreeOrderReason) (uint, error)  // 创建赠品或免费订单原因
-	DeleteGiftOrFreeOrderReason(id uint) error                                                    // 删除赠品或免费订单原因
+	GetGiftOrFreeOrderReasonList() ([]model.FreeReason, error)                         // 获取赠品或免费订单原因列表
+	UpdateGiftOrFreeOrderReason(id uint, giftOrFreeOrderReason model.FreeReason) error // 更新赠品或免费订单原因
+	CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.FreeReason) (uint, error)  // 创建赠品或免费订单原因
+	DeleteGiftOrFreeOrderReason(id uint) error                                         // 删除赠品或免费订单原因
 }
 
 // NewGiftOrFreeOrderReasonRepo 创建新的赠品或免费订单原因仓库
@@ -30,14 +30,14 @@ type GiftOrFreeOrderReasonRepoImpl struct {
 }
 
 // GetGiftOrFreeOrderReasonList 获取赠品或免费订单原因列表，排除逻辑删除的原因
-func (r *GiftOrFreeOrderReasonRepoImpl) GetGiftOrFreeOrderReasonList() ([]model.GiftOrFreeOrderReason, error) {
-	var giftOrFreeOrderReasons []model.GiftOrFreeOrderReason
-	err := r.db.Model(&model.GiftOrFreeOrderReason{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&giftOrFreeOrderReasons).Error
+func (r *GiftOrFreeOrderReasonRepoImpl) GetGiftOrFreeOrderReasonList() ([]model.FreeReason, error) {
+	var giftOrFreeOrderReasons []model.FreeReason
+	err := r.db.Model(&model.FreeReason{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&giftOrFreeOrderReasons).Error
 	return giftOrFreeOrderReasons, err
 }
 
 // UpdateGiftOrFreeOrderReason 更新赠品或免费订单原因
-func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint, giftOrFreeOrderReason model.GiftOrFreeOrderReason) error {
+func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint, giftOrFreeOrderReason model.FreeReason) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {
@@ -45,7 +45,7 @@ func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint, gif
 		}
 	}()
 
-	if err := tx.Model(&model.GiftOrFreeOrderReason{}).Where("id = ?", id).Updates(giftOrFreeOrderReason).Error; err != nil {
+	if err := tx.Model(&model.FreeReason{}).Where("id = ?", id).Updates(giftOrFreeOrderReason).Error; err != nil {
 		tx.Rollback() // 更新失败，回滚事务
 		return err
 	}
@@ -59,7 +59,7 @@ func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint, gif
 }
 
 // CreateGiftOrFreeOrderReason 创建赠品或免费订单原因
-func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.GiftOrFreeOrderReason) (uint, error) {
+func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.FreeReason) (uint, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {
@@ -84,5 +84,5 @@ func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOr
 
 // DeleteGiftOrFreeOrderReason 软删除赠品或免费订单原因
 func (r *GiftOrFreeOrderReasonRepoImpl) DeleteGiftOrFreeOrderReason(id uint) error {
-	return r.db.Model(&model.GiftOrFreeOrderReason{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+	return r.db.Model(&model.FreeReason{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

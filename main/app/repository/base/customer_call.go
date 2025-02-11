@@ -9,10 +9,10 @@ import (
 
 // 客户呼叫记录
 type CustomerCallRepoInterface interface {
-	GetCustomerCallList() ([]model.CustomerCall, error)                // 获取客户呼叫记录列表
-	UpdateCustomerCall(id uint, customerCall model.CustomerCall) error // 更新客户呼叫记录
-	CreateCustomerCall(customerCall model.CustomerCall) (uint, error)  // 创建客户呼叫记录
-	DeleteCustomerCall(id uint) error                                  // 软删除客户呼叫记录
+	GetCustomerCallList() ([]model.CustomerCall, error)                  // 获取客户呼叫记录列表
+	UpdateCustomerCall(id uint64, customerCall model.CustomerCall) error // 更新客户呼叫记录
+	CreateCustomerCall(customerCall model.CustomerCall) (uint64, error)  // 创建客户呼叫记录
+	DeleteCustomerCall(id uint64) error                                  // 软删除客户呼叫记录
 }
 
 func NewCustomerCallRepo(db *gorm.DB) CustomerCallRepoInterface {
@@ -36,16 +36,16 @@ func (r *CustomerCallRepoImpl) GetCustomerCallList() ([]model.CustomerCall, erro
 }
 
 // 更新客户呼叫记录
-func (r *CustomerCallRepoImpl) UpdateCustomerCall(id uint, customerCall model.CustomerCall) error {
-	return r.db.Model(&model.CustomerCall{}).Where("id = ?", id).Updates(customerCall).Error
+func (r *CustomerCallRepoImpl) UpdateCustomerCall(id uint64, customerCall model.CustomerCall) error {
+	return r.db.Model(&model.CustomerCall{}).Where("uuid = ?", id).Updates(customerCall).Error
 }
 
 // 创建客户呼叫记录
-func (r *CustomerCallRepoImpl) CreateCustomerCall(customerCall model.CustomerCall) (uint, error) {
+func (r *CustomerCallRepoImpl) CreateCustomerCall(customerCall model.CustomerCall) (uint64, error) {
 	return customerCall.Uuid, r.db.Create(&customerCall).Error
 }
 
 // 软删除客户呼叫记录
-func (r *CustomerCallRepoImpl) DeleteCustomerCall(id uint) error {
-	return r.db.Model(&model.CustomerCall{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+func (r *CustomerCallRepoImpl) DeleteCustomerCall(id uint64) error {
+	return r.db.Model(&model.CustomerCall{}).Where("uuid = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

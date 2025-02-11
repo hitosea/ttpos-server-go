@@ -12,7 +12,7 @@ type ReturnFoodReason struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
-type GiftOrFreeOrderReason struct {
+type FreeReason struct {
 	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'赠品或免费订单原因唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
 	Name                  string `gorm:"default:'';comment:'名称'"`

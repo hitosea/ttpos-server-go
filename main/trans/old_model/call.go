@@ -9,7 +9,7 @@ import (
 )
 
 type Call struct {
-	ID             uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
+	ID             uint64 `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	TableID        uint   `gorm:"default:0;comment:'桌位ID'"`
 	TableNo        string `gorm:"default:'';comment:'桌位号'"`
 	CallType       uint   `gorm:"default:0;comment:'呼叫类型(1服务员,2收款)'"`
@@ -47,7 +47,7 @@ func (s *CallService) ConvertCall() error {
 		customerCall := model.CustomerCall{
 			ID:         0,
 			Uuid:       call.ID,
-			DeskUUID:   call.TableID,
+			DeskUUID:   uint64(call.TableID),
 			DeskNo:     call.TableNo,
 			Status:     call.Status,
 			IsSend:     call.IsSend,
