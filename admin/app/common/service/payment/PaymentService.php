@@ -110,7 +110,7 @@ class PaymentService extends BaseService
     public static function checkSignSalt($shop_supplier_id = 0)
     {
         // 不能合并，以saas端为准
-        return (new PaymentApp([], 0))->where('shop_supplier_id', $shop_supplier_id)->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
+        return (new PaymentApp([], 0))->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
     }
 
     /**
@@ -178,7 +178,7 @@ class PaymentService extends BaseService
         }
         //
         $paymentOrder = $this->addLianLianPromptPay($data, $response_arr['data']);
-        // 
+        //
         return $this->assembleLianLianPayResponse($paymentOrder, $response_arr['data']);
     }
 

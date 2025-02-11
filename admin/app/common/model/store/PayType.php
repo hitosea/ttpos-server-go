@@ -18,7 +18,7 @@ class PayType extends BaseModel
     use SoftDelete;
 
     protected $pk = 'id';
-    protected $name = 'pay_type';
+    protected $name = 'payment_method';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -62,7 +62,31 @@ class PayType extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = ['source_text'];
+    protected $append = ['source_text', 'remark', 'fee', 'value', 'img', 'qrcode', 'is_show_checkout', 'is_show_recharge'];
+
+    /**
+     * 兼容字段
+     */
+    public function getRemarkAttr($value, $data)
+    {
+        return $this->payment_name ?: '';
+    }
+    public function getFeeAttr($value, $data)
+    {
+        return $this->fee_percent ?: 0;
+    }
+    public function getValueAttr($value, $data)
+    {
+        return $this->code ?: 0;
+    }
+    public function getImgAttr($value, $data)
+    {
+        return $this->logo_url ?: '';
+    }
+    public function getQrcodeAttr($value, $data)
+    {
+        return $this->qrcode_url ?: '';
+    }
 
     /**
      * 渠道获取
@@ -77,7 +101,14 @@ class PayType extends BaseModel
      */
     public function getIsShowCheckoutAttr($value)
     {
-        return $value ? explode(',', $value) : [];
+        $str = '';
+        if ($this->is_show_cashier) {
+            $str .= self::CASHIER_SHOW_VALUE . ','; // 收银台
+        }
+        if ($this->is_show_assistant) {
+            $str .= self::ASSISTANT_SHOW_VALUE . ','; // 点餐助手端
+        }
+        return $str ? explode(',', trim($str, ',')) : [];
     }
 
     /**
@@ -85,7 +116,11 @@ class PayType extends BaseModel
      */
     public function getIsShowRechargeAttr($value)
     {
-        return $value ? explode(',', $value) : [];
+        $str = '';
+        if ($this->is_show_member_recharge) {
+            $str .= self::CASHIER_SHOW_VALUE . ','; // 收银台
+        }
+        return $str ? explode(',', trim($str, ',')) : [];
     }
 
     /**
@@ -125,6 +160,7 @@ class PayType extends BaseModel
     public static function listAll($shopSupplierId = 0, $appId = 0)
     {
         return self::orderRaw('CAST(sort AS UNSIGNED)')
+            ->field('*, code as value')
             ->order('create_time', 'desc')
             ->select()
             ->toArray();
@@ -231,11 +267,19 @@ class PayType extends BaseModel
             $this->error = '请输入排序';
             return false;
         }
+
+        //
         unset($param['id']);
-        $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('value');
-        $param['value'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
-        $param['img'] = ImgHelp::removeImageDomain($param['img'] ?? '');
-        $param['qrcode'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('code');
+        $param['code'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
+        $param['logo_url'] = ImgHelp::removeImageDomain($param['img'] ?? '');
+        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $param['payment_name'] = $remark;
+        $param['fee_percent'] = $param['fee'];
+        $param['is_show_cashier'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
+        $param['is_show_assistant'] = in_array(self::ASSISTANT_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
+        $param['is_show_member_recharge'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_recharge']) ? 1 : 0;
+        $param['uuid'] = createUuid();
         return $param;
     }
 
@@ -246,8 +290,7 @@ class PayType extends BaseModel
     {
         $LianLian_enable = (bool)PaymentService::checkSignSalt($shop_supplier_id);
         $filter = [
-            'remark' => $name,
-            'shop_supplier_id' => $shop_supplier_id
+            'payment_name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['id', '<>', $id];

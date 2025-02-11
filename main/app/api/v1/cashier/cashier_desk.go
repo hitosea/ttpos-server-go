@@ -47,7 +47,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body req.DeskListReq true "列表参数"
+// @param data query req.DeskListReq true "列表参数"
 // @Success 200 {array} resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
@@ -76,7 +76,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body req.DeskInfoReq true "详情参数"
+// @param data query req.DeskInfoReq true "详情参数"
 // @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
@@ -141,9 +141,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 初始化处理器
 	wrapper := DeskHandler{
 		Service: service.NewDeskSrv(
-			dbm,                      // 数据库管理器
-			service.NewLocaleSrv(),   // 多语言服务
-			service.NewOrderSrv(dbm), // 订单服务
+			dbm,                             // 数据库管理器
+			service.NewLocaleSrv(),          // 多语言服务
+			service.NewOrderSrv(dbm, cache), // 订单服务
 		),
 	}
 

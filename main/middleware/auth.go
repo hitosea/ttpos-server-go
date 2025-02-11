@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"slices"
 	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
@@ -35,14 +37,23 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			return
 		}
 
-		if claims.Source != constant.SourceCashier {
+		if !slices.Contains([]string{constant.SourceCashier, constant.SourceAssistant}, claims.Source) {
 			helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
 			c.Abort()
 			return
 		}
+ 
+		// 用户鉴权
+		company, companySetting, staff, err := authSrv.Auth(req.Authenticate{
+			Source:      claims.Source,
+			DeviceId:    claims.DeviceId,
+			CompanyUuid: claims.CompanyUuid,
+			StaffUuid:   claims.StaffUuid,
+			UrlPath:     c.Request.URL.Path,
 
-		// 认证用户
-		company, companySetting, staff, err := authSrv.AuthenticateStaff(claims.Source, claims.DeviceId, claims.CompanyUuid, claims.StaffUuid, c.Request.URL.Path)
+			AssistantDeviceId:  claims.Assistant.DeviceId,
+			AssistantStaffUuid: claims.Assistant.StaffUuid,
+		})
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
 			c.Abort()
@@ -50,13 +61,18 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		}
 
 		// 将用户信息存储到上下文
-		c.Set(jwt.Staff, staff)
-		c.Set(jwt.Company, company)
-		c.Set(jwt.CompanySetting, companySetting)
-		c.Set(jwt.CompanyUuid, claims.CompanyUuid)
-		c.Set(jwt.StaffUuid, claims.StaffUuid)
 		c.Set(jwt.Source, claims.Source)
-		c.Set(jwt.DeviceId, claims.DeviceId)
+		c.Set(jwt.Company, company)               // 商家信息
+		c.Set(jwt.CompanySetting, companySetting) // 商家设置信息
+		c.Set(jwt.Staff, staff)                   // 员工信息，如果是点餐助手，应该是收银员
+
+		c.Set(jwt.CompanyUuid, claims.CompanyUuid) // 商家Uuid
+		c.Set(jwt.DeviceId, claims.DeviceId)       // 设备ID，如果是点餐助手，应该是收银机设备ID
+		c.Set(jwt.StaffUuid, claims.StaffUuid)     // 员工Uuid，如果是点餐助手，应该是收银员Uuid
+
+		c.Set(jwt.AssistantStaffUuid, claims.Assistant.StaffUuid) // 点餐助手员工Uuid
+		c.Set(jwt.AssistantDeviceId, claims.Assistant.DeviceId)   // 点餐助手设备ID
+
 		c.Next()
 	}
 }

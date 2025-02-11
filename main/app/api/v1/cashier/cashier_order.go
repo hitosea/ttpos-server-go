@@ -25,8 +25,8 @@ type CashierOrderHandler struct {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
-// @param data body req.GetOrderListReq true "列表参数"
-// @Success 200 {array} resp.CashierOrderListPaginationResp "订单列表"
+// @param data query req.GetOrderListReq true "列表参数"
+// @Success 200 {object} resp.CashierOrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
 func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
@@ -60,7 +60,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := CashierOrderHandler{
-		orderService: service.NewOrderSrv(dbm), // 订单服务
+		orderService: service.NewOrderSrv(dbm, cache), // 订单服务
 	}
 
 	// 需要认证

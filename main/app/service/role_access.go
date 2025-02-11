@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sort"
 	"time"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/jinzhu/copier"
@@ -17,7 +17,7 @@ import (
 )
 
 type IRoleAccessSrv interface {
-	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*cashier_resp.Permission, error)
+	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
 	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
 }
 
@@ -55,7 +55,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 			where = append(where, accessRepo.WhereIsSupplier())
 		}
 	} else {
-		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuids(staff.Uuid)
+		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuidsByStaffUuid(staff.Uuid)
 		if err != nil {
 			return nil, companySetting, errors.New("获取用户角色失败")
 		}
@@ -66,7 +66,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 		where = append(where, accessRepo.WhereUuids(accessUuids))
 	}
 
-	dbPermissions, err := accessRepo.GetPermissions(staff.CompanyUuid, where...)
+	dbPermissions, err := accessRepo.GetPermissions(where...)
 
 	if err != nil {
 		return nil, companySetting, errors.New("获取权限失败")
@@ -76,20 +76,20 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*cashier_resp.Permission, error) {
+func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error) {
 
-	var permissions []cashier_resp.Permission
+	var permissions []resp.Permission
 	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, dbPermission := range dbPermissions {
-		var permission cashier_resp.Permission
+		var permission resp.Permission
 		copier.Copy(&permission, dbPermission)
 		permission.CreateTime = time.Unix(int64(dbPermission.CreateTime), 0).Format(time.DateTime)
 		permission.UpdateTime = time.Unix(int64(dbPermission.UpdateTime), 0).Format(time.DateTime)
-		permission.Children = []*cashier_resp.Permission{}
+		permission.Children = []*resp.Permission{}
 		permissions = append(permissions, permission)
 	}
 
@@ -99,8 +99,8 @@ func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 }
 
 // 筛选权限
-func (s *RoleAccessSrv) filterPermission(permissions []cashier_resp.Permission, companySetting model.CompanySetting) []cashier_resp.Permission {
-	var filteredPermissions []cashier_resp.Permission
+func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
+	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
 		if permission.ID == 1626688443 {
@@ -144,9 +144,9 @@ func (s *RoleAccessSrv) filterPermission(permissions []cashier_resp.Permission, 
 }
 
 // 构建权限树
-func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permission, routerName constant.RouteName) []*cashier_resp.Permission {
-	permissionMap := make(map[uint64]*cashier_resp.Permission)
-	var roots []*cashier_resp.Permission
+func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
+	permissionMap := make(map[uint64]*resp.Permission)
+	var roots []*resp.Permission
 	var accessIds []string
 	format := "%03d%020d"
 
@@ -173,7 +173,7 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []cashier_resp.Permissio
 		}
 	}
 
-	var filteredRoots []*cashier_resp.Permission
+	var filteredRoots []*resp.Permission
 	for _, root := range roots {
 		if root.Name == string(routerName) {
 			filteredRoots = append(filteredRoots, root.Children...)

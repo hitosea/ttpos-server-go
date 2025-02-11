@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
@@ -19,25 +22,28 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                       // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) // 创建桌台订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                                      // 创建订单编号
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
+	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
 }
 
 // orderSrv 收银服务结构体
 type orderSrv struct {
-	dbm *database.DBManager // 数据库管理器
+	dbm   *database.DBManager // 数据库管理器
+	cache cache.Cache
 }
 
 // NewOrderSrv 创建新的收银产品类别服务
-func NewOrderSrv(dbm *database.DBManager) IOrderSrv {
-	return NewOrderSrvImpl(dbm)
+func NewOrderSrv(dbm *database.DBManager, cache cache.Cache) IOrderSrv {
+	return NewOrderSrvImpl(dbm, cache)
 }
 
 // NewOrderSrvImpl 创建新的收银服务实现
-func NewOrderSrvImpl(dbm *database.DBManager) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, cache cache.Cache) IOrderSrv {
 	return &orderSrv{
-		dbm: dbm,
+		dbm:   dbm,
+		cache: cache,
 	}
 }
 
@@ -228,9 +234,85 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 				Query: "SaleOrders.PaymentOrders",
 			},
 		),
-		commonRepo.WhereByStatus(1),
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithID("DESC"),
+		// 额外条件
+		func() repository.DBOption {
+			return func(db *gorm.DB) *gorm.DB {
+				// 订单编号
+				if req.OrderNo != "" {
+					db = db.Where("order_no = ?", req.OrderNo)
+				}
+				// 账单类型
+				if req.BillType != -1 {
+					db = db.Where("bill_type = ?", req.BillType)
+				}
+				//  账单状态
+				if req.Status != -1 {
+					db = db.Where("status = ?", uint(req.Status))
+				}
+				//  日期类型 -1-全都 1-今天 2-昨天 3-本周
+				if req.DateType >= 0 && req.DateType <= 3 {
+					now := time.Now()
+					var startTime, endTime time.Time
+					switch req.DateType {
+					case 1: // 今天
+						startTime = now.Truncate(24 * time.Hour)
+						endTime = startTime.Add(24*time.Hour - time.Second)
+					case 2: // 昨天
+						startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
+						endTime = startTime.Add(24*time.Hour - time.Second)
+					case 3: // 本周
+						weekday := int(now.Weekday())
+						if weekday == 0 {
+							weekday = 7
+						}
+						startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
+						endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+					}
+					db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
+				}
+				// 日期范围
+				if len(req.QueryTimes) > 0 {
+					timeFields := []string{}
+					if slices.Contains(req.QueryTimeType, uint(0)) || len(req.QueryTimeType) == 0 {
+						timeFields = append(timeFields, "create_time")
+					}
+					if slices.Contains(req.QueryTimeType, uint(1)) {
+						timeFields = append(timeFields, "finish_time")
+					}
+					// 开始时间
+					startTime := req.QueryTimes[0]
+					endTime := uint(0)
+					if len(req.QueryTimes) > 1 {
+						endTime = req.QueryTimes[1] + 86399
+					}
+					//
+					query := ""
+					args := []interface{}{}
+					for i, field := range timeFields {
+						if i > 0 {
+							query += " OR "
+						}
+						if startTime > 0 && endTime > 0 {
+							query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
+							args = append(args, startTime, endTime)
+						} else if startTime > 0 {
+							query += fmt.Sprintf("(%s > ?)", field)
+							args = append(args, startTime)
+						} else if endTime > 0 {
+							query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
+							args = append(args, endTime)
+						}
+					}
+					if query != "" {
+						db = db.Where(query, args...)
+					}
+				}
+				//
+				return db
+			}
+		}(),
 	)
 	if err != nil {
 		return resp.CashierOrderListPaginationResp{}, err
@@ -249,7 +331,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 			}
 			orderList[i] = resp.CashierOrder{
 				SaleOrderUuid: order.Uuid,
-				BillType:      order.Type,
+				BillType:      bill.BillType,
 				SerialNo:      bill.SerialNo + "-" + strconv.Itoa(i+1),
 				OrderNo:       order.OrderNo,
 				Status:        order.Status,

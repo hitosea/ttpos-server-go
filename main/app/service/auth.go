@@ -2,18 +2,17 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/resp"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
@@ -22,15 +21,16 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 )
 
 type IAuthSrv interface {
-	Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error)
-	Logout(cc *gin.Context) error
-	Base(cc *gin.Context) (cashier_resp.Base, error)
-	AuthenticateStaff(source, deviceId string, companyUuid, staffUuid uint64, url string) (model.Company, model.CompanySetting, model.Staff, error)
+	Login(loginReq req.LoginReq, cc *gin.Context) (string, error)                            // 登录
+	Logout(cc *gin.Context) error                                                            // 退出登录
+	CashierBase(cc *gin.Context) (resp.CashierBase, error)                                   // 收银端基本信息
+	AssistantBase(cc *gin.Context) (resp.AssistantBase, error)                               // 点餐助手端基本信息
+	Auth(authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
+	BindCashier(token string, cashierReq req.BindCashierReq) (string, error)                 // 点餐助手绑定收银机
 }
 
 func NewAuthSrv(
@@ -53,6 +53,7 @@ type AuthSrv struct {
 	settingSrv    setting.ISrv
 
 	cashierOpenStatusActions []string
+	assistantRoutes          []string
 }
 
 func NewAuthSrvImpl(
@@ -71,7 +72,7 @@ func NewAuthSrvImpl(
 		shiftSrv:      staffShiftSrv,
 		settingSrv:    settingSrv,
 
-		cashierOpenStatusActions: []string{ // ToDo 待完善
+		cashierOpenStatusActions: []string{ // 开启收银端才能访问的接口 ToDo 待完善
 			//"/order/cart/add",
 			//"/order/cart/delProduct",
 			//"/order/cart/stay",
@@ -83,23 +84,29 @@ func NewAuthSrvImpl(
 			//"/order/order/buy",
 			//"/index/getAllProductImg",
 		},
+		assistantRoutes: []string{ // 登录点餐助手但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
+			//            '/index/getOnlineCashierList',
+			//            '/call/call/unprocessed',
+			//            '/store/table/table',
+			//            '/index/tablePing',
+			//            '/index/getAllProductImg'
+		},
 	}
 }
 
 // Login 登录
-func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captchaId, captchaCode string, cc *gin.Context) (string, error) {
-	companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
+func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) {
 	var token string
 	// 验证验证码
-	if !s.captchaSrv.Verify(captchaId, captchaCode) {
-		return token, apperrors.New("验证码错误")
+	if !s.captchaSrv.Verify(cc.GetHeader("X-Sign"), loginReq.Code) {
+		return token, errors.New("验证码错误")
 	}
-
 	var staff model.Staff
 	if config.Server.DeployMode == "cloud" { // 云上版本
-		companyStaff := companyStaffRepo.GetByUsername(loginReq.Username, companyStaffRepo.WithCompany())
+		companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
+		companyStaff := companyStaffRepo.GetByUsername(loginReq.Username)
 		if companyStaff.Uuid == 0 {
-			return token, errors.New("账号不存在")
+			return token, errors.New("账号或密码错误")
 		}
 		if companyStaff.CompanyUuid == 0 {
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
@@ -108,83 +115,95 @@ func (s *AuthSrv) Login(source string, loginReq req.CashierLoginRequest, captcha
 		staff = staffRepo.GetByUuid(companyStaff.Uuid, staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
-		staff = staffRepo.OfflineGetByUsername(loginReq.Username, staffRepo.WithCompany())
+		staff = staffRepo.GetByUsername(loginReq.Username, staffRepo.WithCompany())
 	}
-
-	if staff.Uuid == 0 {
-		return token, errors.New("用户不存在")
+	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
+		return token, errors.New("账号或密码错误")
 	}
-
-	if utils.EncryptPassword(loginReq.Password) != staff.Password {
-		return token, errors.New("密码错误")
-	}
+	// 检查员工状态
 	if staff.DeleteTime != 0 {
-		return token, apperrors.NewWithReplace("账号 %s 被删除，请联系管理员", []string{staff.Username})
+		return token, errors.New("账号被删除，请联系管理员")
 	}
 	if staff.IsDisable == 1 {
 		return token, errors.New("账号被禁用，请联系管理员")
 	}
-
-	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
-	if err != nil {
-		return token, err
-	}
-	if len(permissions) == 0 {
-		return token, errors.New("当前无权限，请联系管理员")
+	// 商家状态
+	if staff.Company == nil || staff.Company.Uuid == 0 || staff.Company.DeleteTime != 0 {
+		return token, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 
-	// 检查是否有未交班的收银员
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-	currentStaff := staffRepo.GetCurrentCashier(loginReq.DeviceId)
-	if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
-		return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
-	}
-
-	// 是否已在其他收银机登录
-	if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
-		cashierName := staff.RealName
-		if cashierName == "" {
-			cashierName = staff.Username
+	var authAssistant auth.Assistant
+	switch loginReq.Source {
+	case constant.SourceCashier: // 收银端登录
+		// 判断权限
+		permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
+		if err != nil {
+			return token, err
 		}
-		return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		if len(permissions) == 0 {
+			return token, errors.New("当前无权限，请联系管理员")
+		}
+		// 检查是否有未交班的收银员
+		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+		currentStaff := staffRepo.GetByDeviceId(loginReq.DeviceId)
+		if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
+			return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+		}
+		// 是否已在其他收银机登录
+		if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
+			cashierName := staff.RealName
+			if cashierName == "" {
+				cashierName = staff.Username
+			}
+			return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		}
+
+		// 更新员工信息
+		updates := map[string]any{
+			"cashier_online": 1,
+			"bind_key":       loginReq.DeviceId,
+		}
+		// 创建当班日志
+		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
+			shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
+			if err != nil {
+				return "", apperrors.ErrInternal
+			}
+			updates["cashier_login_time"] = shiftLog.ShiftStartTime
+			updates["duty_no"] = shiftLog.ShiftNo
+		}
+		err = staffRepo.Update(staff.Uuid, updates)
+		if err != nil {
+			return token, errors.New("更新信息失败")
+		}
+	case constant.SourceAssistant: // 点餐助手登录
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if companySetting.IsOpenAssistant != 1 {
+			return token, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+		}
+		authAssistant = auth.Assistant{
+			DeviceId:  loginReq.DeviceId,
+			StaffUuid: staff.Uuid,
+		}
+	default:
+		return token, errors.New("登录来源错误")
 	}
 
 	// 添加绑定记录
-	err = s.bindRecordSrv.Add(req.AddBindRecordReq{
+	err := s.bindRecordSrv.Add(req.AddBindRecordReq{
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
-		Source:           constant.SourceCashier,
+		Source:           loginReq.Source,
 		FinallyLoginUuid: staff.Uuid,
 		FinallyLoginTime: int(time.Now().Unix()),
 		CompanyUuid:      staff.CompanyUuid,
 	}, cc)
 	if err != nil {
-		logger.Logger.Error("绑定失败", zap.Error(err))
-		return token, errors.New("绑定失败")
-	}
-	// 更新员工信息
-	updates := map[string]any{
-		"cashier_online": 1,
-		"bind_key":       loginReq.DeviceId,
-	}
-	// 创建当班日志
-	if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
-		shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
-		if err != nil {
-			return "", apperrors.ErrInternal
-		}
-		updates["cashier_login_time"] = shiftLog.ShiftStartTime
-		updates["duty_no"] = shiftLog.ShiftNo
-	}
-	staffRepo = repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-	err = staffRepo.Update(staff.Uuid, updates)
-	if err != nil {
-		return token, errors.New("更新信息失败")
+		return token, err
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(constant.SourceCashier, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire)
+	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, authAssistant)
 	if err != nil {
 		return token, errors.New("生成token失败")
 	}
@@ -199,8 +218,8 @@ func (s *AuthSrv) Logout(cc *gin.Context) error {
 	return s.bindRecordSrv.Unbind(companyUuid, constant.SourceCashier, staff.BindKey, staff.Uuid)
 }
 
-// Base 获取基本信息
-func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
+// CashierBase 获取收银端基本信息
+func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 	company := helper.GetCompany(cc)
 	staff := helper.GetStaff(cc)
 	var (
@@ -211,14 +230,14 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
-		return cashier_resp.Base{}, err
+		return resp.CashierBase{}, err
 	}
 	if len(permissions) == 0 {
-		return cashier_resp.Base{}, errors.New("当前无权限，请联系管理员")
+		return resp.CashierBase{}, errors.New("当前无权限，请联系管理员")
 	}
 	languageList, _ := s.settingSrv.GetStoreLanguageList(company.Uuid, i18n.GetAcceptLanguage(cc), cc)
 	allSettings, _ := s.settingSrv.GetAll(company.Uuid, i18n.GetAcceptLanguage(cc), languageList, cc)
-	return cashier_resp.Base{
+	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
 		DeviceId:     deviceId,
@@ -228,23 +247,37 @@ func (s *AuthSrv) Base(cc *gin.Context) (cashier_resp.Base, error) {
 		Buffet:       allSettings[constant.SettingBuffet].(setting2.Buffet),
 		Currency:     allSettings[constant.SettingCurrency].(setting2.Currency),
 		Permissions:  permissions,
-		Company: cashier_resp.Company{
+		Company: resp.Company{
 			Uuid: company.Uuid,
 			Name: company.Name,
 		},
 	}, nil
 }
 
-// AuthenticateStaff 认证登录员工
-func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyUuid, staffUuid uint64, urlPath string) (model.Company, model.CompanySetting, model.Staff, error) {
+// AssistantBase 获取收银端基本信息
+func (s *AuthSrv) AssistantBase(cc *gin.Context) (resp.AssistantBase, error) {
+	company := helper.GetCompany(cc)
+	staff := helper.GetStaff(cc)
+	var (
+		source   = cc.GetString(jwt.Source)
+		deviceId = cc.GetString(jwt.DeviceId)
+	)
+	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	return resp.AssistantBase{
+		Username:      staff.Username,
+		AssistantUuid: staff.Uuid,
+	}, nil
+}
+
+// Auth 鉴权
+func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
 		staff          model.Staff
 	)
-
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staff = staffRepo.GetByUuid(staffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(auth.CompanyUuid))
+	staff = staffRepo.GetByUuid(auth.StaffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
@@ -265,38 +298,119 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyUuid, staffU
 	if company.Status == 0 {
 		return company, companySetting, staff, errors.New("商家被禁用")
 	}
-
-	// 判断权限
-	sourceMap := map[string]constant.RouteName{
-		constant.SourceCashier:   constant.CashierRouteName,
-		constant.SourceAssistant: constant.AssistantRouteName,
-	}
-	if _, exists := sourceMap[source]; exists {
-		// 判断权限
-		_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, companyUuid)
-		if err != nil {
-			return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
-		}
-		// ToDo 记得开放
-		//if !slices.Contains(permissions, urlPath) {
-		//	return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
-		//}
-	}
 	// 验证设备是否绑定
-	if !s.bindRecordSrv.IsDeviceBind(companyUuid, source, deviceId) {
+	deviceId := auth.DeviceId
+	if auth.Source == constant.SourceAssistant {
+		deviceId = auth.AssistantDeviceId
+	}
+	if !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
 		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
 	}
 
-	if source == constant.SourceCashier {
-		// 检查收银是否开启
-		cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
-		if err != nil {
-			return company, companySetting, staff, err
+	switch auth.Source {
+	case constant.SourceCashier: // 收银端
+		{
+			// 检查收银是否开启
+			if !s.isCashierOpen(auth.CompanyUuid, auth.UrlPath) {
+				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "收银用餐已关闭，请选择其他用餐方式")
+			}
+			// 判断权限
+			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
+			if err != nil {
+				return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+			}
+			// ToDo 记得开放
+			//if !slices.Contains(permissions, urlPath) {
+			//	return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+			//}
 		}
-		if cashierSetting.OrderMethod.IsCashierOrder == "0" && slices.Contains(s.cashierOpenStatusActions, urlPath) {
-			return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "收银用餐已关闭，请选择其他用餐方式")
+	case constant.SourceAssistant: // 点餐助手端
+		{
+			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
+				cashierBindRecord := repository.NewBindRecordRepo(s.dbm.GetDB(auth.CompanyUuid)).GetBySourceAndDeviceId(constant.SourceCashier, auth.DeviceId)
+
+				fmt.Println("11111")
+				fmt.Printf("%+v\n", cashierBindRecord)
+				fmt.Println("11111")
+
+				if cashierBindRecord.Uuid == 0 {
+					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenError, "收银员设备已解绑，请重新绑定")
+				}
+				if cashierBindRecord.FinallyLoginUuid == 0 {
+					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenErrorNotLogin, "收银员登录信息错误，请重新登录")
+				}
+			}
+			// 检查桌台功能是否开启
+			if !s.isTableOpen(auth.CompanyUuid) {
+				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "桌台用餐已关闭，请选择其他用餐方式")
+			}
 		}
 	}
 
 	return company, companySetting, staff, nil
+}
+
+// 检查收银是否开启
+func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
+	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
+	if err != nil {
+		return false
+	}
+	if cashierSetting.OrderMethod.IsCashierOrder == "0" && slices.Contains(s.cashierOpenStatusActions, pathUrl) {
+		return false
+	}
+	return true
+}
+
+// 检查桌台功能是否开启
+func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
+	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
+	if err != nil {
+		return false
+	}
+	return cashierSetting.OrderMethod.IsTableOrder != "0"
+}
+
+// BindCashier 绑定收银机
+func (s *AuthSrv) BindCashier(token string, bindReq req.BindCashierReq) (string, error) {
+	var newToken string
+	claims, err := auth.ParseToken(token, config.JWT.Secret)
+	if err != nil {
+		return newToken, errors.New("无效的token")
+	}
+	if claims.Source != constant.SourceAssistant {
+		return newToken, errors.New("用户信息错误")
+	}
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(claims.CompanyUuid))
+	staff := staffRepo.GetByUuidAndDeviceId(bindReq.CashierUuid, bindReq.DeviceId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	// 检查传递的收银设备
+	if staff.Uuid == 0 {
+		return newToken, errors.New("用户不存在")
+	}
+	if staff.CashierOnline != 1 {
+		return newToken, errors.New("收银设备不在线")
+	}
+	// 判断收银员状态
+	if staff.DeleteTime != 0 {
+		return newToken, errors.New("账号被删除，请联系管理员")
+	}
+	if staff.IsDisable == 1 {
+		return newToken, errors.New("账号被禁用，请联系管理员")
+	}
+	if staff.Company == nil || staff.Company.Uuid == 0 || staff.Company.DeleteTime != 0 {
+		return newToken, errors.New("未找到绑定的商家，请确认登录信息")
+	}
+	// 是否已开启点餐助手功能
+	if staff.Company.CompanySetting == nil || staff.Company.CompanySetting.IsOpenAssistant != 1 {
+		return newToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+	}
+	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
+	newToken, err = auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, claims.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{
+		DeviceId:  claims.DeviceId,
+		StaffUuid: claims.StaffUuid,
+	})
+	if err != nil {
+		return newToken, errors.New("生成token失败")
+	}
+	return newToken, nil
 }

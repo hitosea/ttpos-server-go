@@ -284,6 +284,29 @@ function createUuid()
 }
 
 /**
+ * 获取商家默认语言
+ * @return string
+ */
+function getDefaultLanguage()
+{
+    static $defaultLanguage = null;
+    if ($defaultLanguage !== null) {
+        return $defaultLanguage;
+    }
+    $language = getSettingLanguages();
+    $defaultLanguage = 'en'; // 默认值
+    if (!empty($language)) {
+        $keys = array_column($language, 'key');
+        if (in_array('zh', $keys)) {
+            $defaultLanguage = 'zh';
+        } else {
+            $defaultLanguage = $language[0]['key'];
+        }
+    }
+    return $defaultLanguage;
+}
+
+/**
  * php-fpm 响应完成, 关闭连接
  */
 if (!function_exists("fastcgi_finish_request")) {

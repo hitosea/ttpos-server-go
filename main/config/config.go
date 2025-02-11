@@ -121,7 +121,8 @@ func serverConf(opt copier.Option) {
 		DeployMode: "cloud",
 	}
 	copier.CopyWithOption(&Server, ServerConf{
-		Port: viper.GetString("SERVER_PORT"),
-		Mode: viper.GetString("SERVER_MODE"),
+		Port:       viper.GetString("SERVER_PORT"),
+		Mode:       viper.GetString("SERVER_MODE"),
+		DeployMode: viper.GetString("DEPLOY_MODE"),
 	}, opt)
 }

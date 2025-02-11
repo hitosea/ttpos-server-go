@@ -2,13 +2,14 @@ package service
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 
@@ -53,7 +54,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 
 	// 获取绑定
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(addReq.CompanyUuid))
-	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(addReq.Source, addReq.DeviceId)
+	existsBindRecord := bindRecordRepo.GetBySourceAndDeviceId(addReq.Source, addReq.DeviceId)
 	if existsBindRecord.ID != 0 {
 		printPortUuid := addReq.PrintPortUuid
 		remark := addReq.Remark
@@ -84,9 +85,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		return nil
 	}
 
-	// 获取 company setting
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(addReq.CompanyUuid))
-	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB()
+	// 判断设备绑定上限
+	companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(addReq.CompanyUuid)).Get()
 	type Source struct {
 		Name  string
 		Limit uint
@@ -97,17 +97,18 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit)},
 		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit)},
 	}
-	for sourceKey, source := range sources {
-		if sourceKey != addReq.Source {
+	for sourceName, source := range sources {
+		if sourceName != addReq.Source {
 			continue
 		}
-		count := bindRecordRepo.GetBindCount(sourceKey)
-		if count >= source.Limit { // 超过绑定上线
+		bindCount := bindRecordRepo.GetBindCountBySource(sourceName)
+		if bindCount >= source.Limit { // 超过绑定上线
 			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 
-	if slices.Contains(constant.BrandsPrints, addReq.Brand) {
+	// 绑定品牌，如果自带打印，默认更新收银打印配置
+	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
 		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), cc)
 		if err != nil {
 			return err
@@ -148,7 +149,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		DeviceIp:         addReq.DeviceId,
 		Remark:           addReq.Remark,
 		Brand:            addReq.Brand,
-		Platform:         platform,
+		Platform:         uint(platform),
 		UserAgent:        addReq.UserAgent,
 	})
 }
@@ -160,10 +161,10 @@ func (s *BindRecordSrv) Unbind(companyUuid uint64, source string, deviceId strin
 
 func (s *BindRecordSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
-	return bindRecordRepo.GetRemark(source, deviceId)
+	return bindRecordRepo.GetBySourceAndDeviceId(source, deviceId).Remark
 }
 
 func (s *BindRecordSrv) IsDeviceBind(companyUuid uint64, source string, deviceId string) bool {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
-	return bindRecordRepo.GetBindRecordUuid(source, deviceId) > 0
+	return bindRecordRepo.GetBySourceAndDeviceId(source, deviceId).Uuid > 0
 }

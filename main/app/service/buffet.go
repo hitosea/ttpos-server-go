@@ -51,9 +51,9 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 			ReminderOrderTime: buffet.ReminderOrderTime,
 			LocaleName:        s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
 			BuffetCustomerType: resp.BuffetCustomerType{
-				Uuid:       uint64(buffet.BuffetCustomerTypePrice.Uuid),
-				Price:      buffet.BuffetCustomerTypePrice.Price,
-				LocaleName: s.localeSrv.GetLocaleNames(buffet.BuffetCustomerTypePrice.BuffetCustomerType.MultiLanguageName),
+				Uuid:  uint64(buffet.BuffetCustomerTypePrice.Uuid),
+				Price: buffet.BuffetCustomerTypePrice.Price,
+				Name:  buffet.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 			},
 		}
 		respBuffets = append(respBuffets, respBuffet)

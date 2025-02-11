@@ -7,13 +7,11 @@ import (
 )
 
 type IBindRecordRepo interface {
-	Unbind(source string, deviceId string, staffUuid uint64) error
-	GetBindCount(source string) uint
-	GetRecordBySourceAndDeviceId(source string, deviceId string) model.BindRecord
-	Update(uuid uint64, vars map[string]interface{}) error
-	Create(bindRecord model.BindRecord) error
-	GetRemark(source string, deviceId string) string
-	GetBindRecordUuid(source string, deviceId string) uint64
+	Unbind(source string, deviceId string, staffUuid uint64) error          // 解绑
+	GetBindCountBySource(source string) uint                                // 根据来源获取绑定数量
+	GetBySourceAndDeviceId(source string, deviceId string) model.BindRecord // 根据来源和设备ID获取绑定记录
+	Update(uuid uint64, vars map[string]interface{}) error                  // 更新绑定记录
+	Create(bindRecord model.BindRecord) error                               // 创建绑定记录
 }
 
 type BindRecordRepo struct {
@@ -36,13 +34,13 @@ func (r *BindRecordRepo) Unbind(source string, deviceId string, staffUuid uint64
 		}).Error
 }
 
-func (r *BindRecordRepo) GetBindCount(source string) uint {
-	var c int64
-	r.db.Model(&model.BindRecord{}).Where("source = ? AND finally_login_id > 0", source).Count(&c)
-	return uint(c)
+func (r *BindRecordRepo) GetBindCountBySource(source string) uint {
+	var count int64
+	r.db.Model(&model.BindRecord{}).Where("source = ? AND finally_login_uuid > 0", source).Count(&count)
+	return uint(count)
 }
 
-func (r *BindRecordRepo) GetRecordBySourceAndDeviceId(source string, deviceId string) model.BindRecord {
+func (r *BindRecordRepo) GetBySourceAndDeviceId(source string, deviceId string) model.BindRecord {
 	var bindRecord model.BindRecord
 	r.db.Model(&model.BindRecord{}).Where("source = ? AND device_id = ?", source, deviceId).First(&bindRecord)
 	return bindRecord
@@ -54,16 +52,4 @@ func (r *BindRecordRepo) Update(uuid uint64, vars map[string]interface{}) error 
 
 func (r *BindRecordRepo) Create(bindRecord model.BindRecord) error {
 	return r.db.Create(&bindRecord).Error
-}
-
-func (r *BindRecordRepo) GetRemark(source string, deviceId string) string {
-	var remark string
-	r.db.Model(&model.BindRecord{}).Where("source = ? AND device_id = ?", source, deviceId).Select("remark").Scan(&remark)
-	return remark
-}
-
-func (r *BindRecordRepo) GetBindRecordUuid(source string, deviceId string) uint64 {
-	var uuid uint64
-	r.db.Model(&model.BindRecord{}).Where("source = ? AND device_id = ?", source, deviceId).Select("uuid").Scan(&uuid)
-	return uuid
 }

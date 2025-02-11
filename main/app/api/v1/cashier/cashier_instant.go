@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -34,10 +35,10 @@ func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 }
 
 // RegisterInstantHandlers 注册收银订单路由
-func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager) {
+func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 创建收银产品处理程序
 	wrapper := CashierInstantHandler{
-		orderService: service.NewOrderSrv(dbm), // 订单服务
+		orderService: service.NewOrderSrv(dbm, cache), // 订单服务
 	}
 
 	router.POST("/instant/order/create", wrapper.CreateInstantOrder)

@@ -7,12 +7,14 @@ import (
 )
 
 type IStaffRepo interface {
-	GetByUuid(uuid uint64, withs ...With) model.Staff
-	WithCompanySetting() With
 	WithCompany() With
-	OfflineGetByUsername(username string, withs ...With) model.Staff
+	WithCompanySetting() With
+
+	GetByUuid(uuid uint64, withs ...With) model.Staff
+	GetByUsername(username string, withs ...With) model.Staff
+	GetByDeviceId(bindKey string) model.Staff
+	GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff
 	CreateStaff(staff model.Staff) error
-	GetCurrentCashier(bindKey string) model.Staff
 	Update(uuid uint64, vars map[string]any) error
 }
 
@@ -50,15 +52,21 @@ func (r *StaffRepo) WithCompany() With {
 	}
 }
 
-func (r *StaffRepo) OfflineGetByUsername(username string, withs ...With) model.Staff {
+func (r *StaffRepo) GetByUsername(username string, withs ...With) model.Staff {
 	var staff model.Staff
-	r.handleWiths(r.db, withs).Where("username = ?", username).Debug().First(&staff)
+	r.handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&staff)
 	return staff
 }
 
-func (r *StaffRepo) GetCurrentCashier(bindKey string) model.Staff {
+func (r *StaffRepo) GetByDeviceId(bindKey string) model.Staff {
 	var staff model.Staff
 	r.db.Where("bind_key = ? AND cashier_online = 1", bindKey).Debug().First(&staff)
+	return staff
+}
+
+func (r *StaffRepo) GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff {
+	var staff model.Staff
+	r.handleWiths(r.db, withs).Where("uuid = ? AND bind_key = ?", uuid, bindKey).Debug().First(&staff)
 	return staff
 }
 
