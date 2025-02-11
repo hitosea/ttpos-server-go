@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付方式名称',
     code INT(11) NOT NULL DEFAULT 0 COMMENT '支付方式代号',
     payment_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付名称',
-    source TINYINT(1) NOT NULL DEFAULT 0 COMMENT '来源 0-系统 1-手动 2-LianLianPay',
+    source TINYINT(1) NOT NULL DEFAULT 1 COMMENT '来源 0-系统 1-手动 2-LianLianPay',
     logo_url VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo图片URL',
     qrcode_url VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL',
     fee_percent DECIMAL(5, 2) NOT NULL DEFAULT 0 COMMENT '手续费百分比',
