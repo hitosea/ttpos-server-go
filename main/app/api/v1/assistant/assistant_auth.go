@@ -1,0 +1,112 @@
+package assistant
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+)
+
+// AuthHandler 认证鉴权
+type AuthHandler struct {
+	authSrv service.IAuthSrv
+}
+
+// PostAssistantLogin 点餐助手登录
+// @Summary 点餐助手登录
+// @Description 点餐助手登录
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Param X-SIGN header string true "验证码sign"
+// @param data body req.LoginReq true "登录参数"
+// @Success 200 {object} dto.Response
+// @Router /assistant/login [post]
+func (h *AuthHandler) PostAssistantLogin(c *gin.Context) {
+	var loginRequest req.LoginReq
+	if err := c.ShouldBindJSON(&loginRequest); err != nil {
+		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
+		return
+	}
+	loginRequest.Source = constant.SourceAssistant
+	token, err := h.authSrv.Login(loginRequest, c.Copy())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, gin.H{"token": token})
+}
+
+// BindCashier 点餐助手绑定收银机
+// @Summary 点餐助手绑定收银机
+// @Description 点餐助手绑定收银机
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Param X-TOKEN header string true "登录时返回的token"
+// @param data body req.LoginReq true "登录参数"
+// @Success 200 {object} dto.Response
+// @Router /assistant/bind_cashier [post]
+func (h *AuthHandler) BindCashier(c *gin.Context) {
+	var bindReq req.BindCashierReq
+	if err := c.ShouldBindJSON(&bindReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	token, err := h.authSrv.BindCashier(c.GetHeader("x-token"), bindReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, gin.H{"token": token})
+}
+
+// GetAssistantBase 点餐助手端信息
+// @Summary 点餐助手端信息
+// @Description 点餐助手端信息
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=resp.AssistantBase}
+// @Router /cashier/base [get]
+func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
+	info, err := h.authSrv.AssistantBase(c.Copy())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, info)
+}
+
+func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+
+	wrapper := &AuthHandler{
+		authSrv: authSrv,
+	}
+
+	publicApi := router.Group("")
+	{
+		publicApi.POST("/login", wrapper.PostAssistantLogin)
+		publicApi.POST("/bind_cashier", wrapper.BindCashier)
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv))
+	{
+		privateApi.GET("/base", wrapper.GetAssistantBase)
+	}
+
+}

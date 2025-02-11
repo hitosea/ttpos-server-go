@@ -25,21 +25,17 @@ type Handler struct {
 // @Accept json
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
-// @param data body req.CashierLoginRequest true "登录参数"
+// @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/login [post]
 func (h *Handler) PostCashierLogin(c *gin.Context) {
-	var loginRequest req.CashierLoginRequest
+	var loginRequest req.LoginReq
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		helper.HandleValidationError(c, err, loginRequest, req.CashierLoginRequestMessage)
+		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
 		return
 	}
-	sign := c.GetHeader("X-Sign")
-	if sign == "" {
-		helper.Fail(c, constant.CodeBadRequest, "验证码签名不能为空")
-		return
-	}
-	token, err := h.authSrv.Login(constant.SourceCashier, loginRequest, sign, loginRequest.Code, c.Copy())
+	loginRequest.Source = constant.SourceCashier
+	token, err := h.authSrv.Login(loginRequest, c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -53,10 +49,10 @@ func (h *Handler) PostCashierLogin(c *gin.Context) {
 // @Tags 收银端
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=cashier_resp.Base}
+// @Success 200 {object} dto.Response{data=resp.CashierBase}
 // @Router /cashier/base [get]
 func (h *Handler) GetCashierBase(c *gin.Context) {
-	info, err := h.authSrv.Base(c.Copy())
+	info, err := h.authSrv.CashierBase(c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return

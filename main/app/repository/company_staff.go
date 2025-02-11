@@ -7,9 +7,9 @@ import (
 )
 
 type ICompanyStaffRepo interface {
-	GetById(Id uint, withs ...Where) model.CompanyStaff
-	WithCompany() Where
-	GetByUsername(username string, withs ...Where) model.CompanyStaff
+	WithCompanySetting() With
+	WithCompany() With
+	GetByUsername(username string, withs ...With) model.CompanyStaff
 }
 
 func NewCompanyStaffRepo(db *gorm.DB) ICompanyStaffRepo {
@@ -24,25 +24,25 @@ func NewCompanyStaffRepoImpl(db *gorm.DB) *CompanyStaffRepo {
 	return &CompanyStaffRepo{db: db}
 }
 
-func (r *CompanyStaffRepo) GetById(Id uint, withs ...Where) model.CompanyStaff {
-	var user model.CompanyStaff
-	r.handleWiths(r.db, withs).First(&user, Id)
-	return user
-}
-
-func (r *CompanyStaffRepo) WithCompany() Where {
+func (r *CompanyStaffRepo) WithCompany() With {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Company")
 	}
 }
 
-func (r *CompanyStaffRepo) GetByUsername(username string, withs ...Where) model.CompanyStaff {
-	var user model.CompanyStaff
-	r.handleWiths(r.db, withs).Where("username = ?", username).Debug().First(&user)
-	return user
+func (r *CompanyStaffRepo) WithCompanySetting() With {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("CompanySetting")
+	}
 }
 
-func (r *CompanyStaffRepo) handleWiths(db *gorm.DB, withs []Where) *gorm.DB {
+func (r *CompanyStaffRepo) GetByUsername(username string, withs ...With) model.CompanyStaff {
+	var companyStaff model.CompanyStaff
+	r.handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&companyStaff)
+	return companyStaff
+}
+
+func (r *CompanyStaffRepo) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
 	if len(withs) == 0 {
 		return db
 	}

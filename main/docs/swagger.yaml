@@ -1,81 +1,5 @@
 basePath: /
 definitions:
-  cashier_resp.Base:
-    properties:
-      buffet:
-        allOf:
-        - $ref: '#/definitions/setting.Buffet'
-        description: 自助餐设置
-      business:
-        allOf:
-        - $ref: '#/definitions/setting.Business'
-        description: 门店业务设置
-      cashier:
-        allOf:
-        - $ref: '#/definitions/setting.Cashier'
-        description: 收银机设置
-      cashier_uuid:
-        description: 收银员UUID
-        type: integer
-      company:
-        allOf:
-        - $ref: '#/definitions/cashier_resp.Company'
-        description: 商家信息
-      currency:
-        allOf:
-        - $ref: '#/definitions/setting.Currency'
-        description: 货币单位
-      device_id:
-        description: 设备ID
-        type: string
-      device_remark:
-        description: 设备备注
-        type: string
-      permissions:
-        description: 页面权限
-        items:
-          $ref: '#/definitions/cashier_resp.Permission'
-        type: array
-      username:
-        description: 登录账号
-        type: string
-    type: object
-  cashier_resp.Company:
-    properties:
-      name:
-        description: 商家名称
-        type: string
-      uuid:
-        description: 商家UUID
-        type: integer
-    type: object
-  cashier_resp.Permission:
-    properties:
-      alias:
-        type: string
-      children:
-        items:
-          $ref: '#/definitions/cashier_resp.Permission'
-        type: array
-      id:
-        type: integer
-      is_menu:
-        type: integer
-      is_route:
-        type: integer
-      is_show:
-        type: integer
-      name:
-        type: string
-      parent_id:
-        type: integer
-      path:
-        type: string
-      redirect_name:
-        type: string
-      uuid:
-        type: integer
-    type: object
   cashier_resp.Product:
     properties:
       attributes:
@@ -296,25 +220,61 @@ definitions:
       message:
         type: string
     type: object
-  req.CashierLoginRequest:
+  req.CreateDeskOrderReq:
+    properties:
+      desk_uuid:
+        description: 桌位uuid
+        type: integer
+      is_buffet:
+        description: 是否自助餐
+        type: boolean
+      meal_num:
+        description: '用餐人数: 自助餐必填, 范围1-999'
+        maximum: 999
+        minimum: 1
+        type: integer
+      remark:
+        description: '备注: 非必填, 最多50字符'
+        maxLength: 50
+        type: string
+    required:
+    - desk_uuid
+    - is_buffet
+    type: object
+  req.LoginReq:
     properties:
       brand:
+        description: 品牌名称
         type: string
       code:
+        description: 验证码
         type: string
       device_id:
-        type: string
-      device_ip:
+        description: 设备ID
         type: string
       password:
+        description: 密码
+        type: string
+      source:
+        description: 来源
         type: string
       username:
+        description: 用户名
         type: string
     required:
     - code
     - device_id
     - password
     - username
+    type: object
+  resp.AssistantBase:
+    properties:
+      assistant_uuid:
+        description: 点餐助手员工UUID
+        type: integer
+      username:
+        description: 登录账号
+        type: string
     type: object
   resp.Buffet:
     properties:
@@ -347,10 +307,9 @@ definitions:
     type: object
   resp.BuffetCustomerType:
     properties:
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
+      name:
         description: 自助餐客户类型名称
+        type: string
       price:
         description: 价格
         type: number
@@ -366,6 +325,46 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.CashierBase:
+    properties:
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cashier:
+        allOf:
+        - $ref: '#/definitions/setting.Cashier'
+        description: 收银机设置
+      cashier_uuid:
+        description: 收银员UUID
+        type: integer
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      device_id:
+        description: 设备ID
+        type: string
+      device_remark:
+        description: 设备备注
+        type: string
+      permissions:
+        description: 页面权限
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
+      username:
+        description: 登录账号
+        type: string
     type: object
   resp.CashierBillList:
     properties:
@@ -467,6 +466,21 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.CashierOrderListMeta'
         description: Meta信息
+    type: object
+  resp.Company:
+    properties:
+      name:
+        description: 商家名称
+        type: string
+      uuid:
+        description: 商家UUID
+        type: integer
+    type: object
+  resp.CreateDeskOrderResp:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
     type: object
   resp.CreateOrderResp:
     properties:
@@ -616,6 +630,33 @@ definitions:
         type: string
       uuid:
         description: 餐桌类型ID
+        type: integer
+    type: object
+  resp.Permission:
+    properties:
+      alias:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
+      id:
+        type: integer
+      is_menu:
+        type: integer
+      is_route:
+        type: integer
+      is_show:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      redirect_name:
+        type: string
+      uuid:
         type: integer
     type: object
   setting.AddClockItem:
@@ -888,6 +929,33 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /assistant/bind_cashier:
+    post:
+      consumes:
+      - application/json
+      description: 点餐助手绑定收银机
+      parameters:
+      - description: 登录时返回的token
+        in: header
+        name: X-TOKEN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 点餐助手绑定收银机
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/buffet/list:
     get:
       consumes:
@@ -937,13 +1005,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -976,6 +1044,33 @@ paths:
       summary: 获取桌台的区域和类型
       tags:
       - 点餐助手端.桌台
+  /assistant/login:
+    post:
+      consumes:
+      - application/json
+      description: 点餐助手登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 点餐助手登录
+      tags:
+      - 点餐助手端.认证鉴权
   /cashier/base:
     get:
       consumes:
@@ -991,7 +1086,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/cashier_resp.Base'
+                  $ref: '#/definitions/resp.CashierBase'
               type: object
       summary: 收银端信息
       tags:
@@ -1485,13 +1580,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -1505,6 +1600,30 @@ paths:
         "404":
           description: 未找到
       summary: 获取桌台列表
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建桌台订单
+      parameters:
+      - description: 创建桌台订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreateDeskOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建桌台订单成功
+          schema:
+            $ref: '#/definitions/resp.CreateDeskOrderResp'
+        "404":
+          description: 未找到
+      summary: 创建桌台订单
       tags:
       - 收银端.桌台
   /cashier/desk/region_and_type:
@@ -1555,7 +1674,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.CashierLoginRequest'
+          $ref: '#/definitions/req.LoginReq'
       produces:
       - application/json
       responses:
@@ -1639,40 +1758,38 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
-      - collectionFormat: csv
-        description: 查询时间类型 1-开台时间、2-支付时间
+      - description: 查询时间类型 1-开台时间、2-支付时间
         in: query
         items:
           type: integer
-        name: query_time_type
+        name: queryTimeType
         type: array
-      - collectionFormat: csv
-        description: 日期范围 [开始时间戳, 结束时间戳]
+      - description: 日期范围 [开始时间戳, 结束时间戳]
         in: query
         items:
           type: integer
-        name: query_times
+        name: queryTimes
         type: array
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query

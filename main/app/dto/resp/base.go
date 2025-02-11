@@ -1,10 +1,10 @@
-package cashier_resp
+package resp
 
 import (
 	"ttpos-server-go/app/dto/resp/setting"
 )
 
-type Base struct {
+type CashierBase struct {
 	Username     string           `json:"username"`      // 登录账号
 	CashierUuid  uint64           `json:"cashier_uuid"`  // 收银员UUID
 	DeviceId     string           `json:"device_id"`     // 设备ID
@@ -15,6 +15,11 @@ type Base struct {
 	Currency     setting.Currency `json:"currency"`      // 货币单位
 	Permissions  []*Permission    `json:"permissions"`   // 页面权限
 	Company      Company          `json:"company"`       // 商家信息
+}
+
+type AssistantBase struct {
+	Username      string `json:"username"`       // 登录账号
+	AssistantUuid uint64 `json:"assistant_uuid"` // 点餐助手员工UUID
 }
 
 type Company struct {

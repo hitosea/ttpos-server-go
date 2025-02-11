@@ -7,20 +7,27 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type Assistant struct {
+	DeviceId  string `json:"device_id"`  // 收银设备ID
+	StaffUuid uint64 `json:"staff_uuid"` // 收银员工ID
+}
+
 type Claims struct {
-	Source      string `json:"source"`       // 终端
-	CompanyUuid uint64 `json:"company_uuid"` // 集团ID
-	StaffUuid   uint64 `json:"staff_uuid"`   // 员工ID
-	DeviceId    string `json:"device_id"`    // 设备ID
+	Source      string    `json:"source"`       // 终端
+	CompanyUuid uint64    `json:"company_uuid"` // 集团ID
+	StaffUuid   uint64    `json:"staff_uuid"`   // 员工ID
+	DeviceId    string    `json:"device_id"`    // 设备ID
+	Assistant   Assistant `json:"assistant"`    // 点餐助手绑定的收银机信息
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int) (string, error) {
+func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int, cashier Assistant) (string, error) {
 	claims := Claims{
 		Source:      source,
 		CompanyUuid: companyUuid,
 		StaffUuid:   staffUuid,
 		DeviceId:    deviceId,
+		Assistant:   cashier,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expire))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

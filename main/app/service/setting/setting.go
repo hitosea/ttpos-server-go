@@ -27,6 +27,7 @@ type ISrv interface {
 	GetStoreLanguageList(companyUuid uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                // 获取商家语言
 	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Printer, error)                      // 获取打印机设置
 	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Cashier, error)                      // 获取收银机设置
+	GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Assistant, error)                  // 获取点餐助手设置
 	Updates(companyUuid uint64, settingKey string, values any) error                                                      // 更新设置
 }
 
@@ -80,7 +81,7 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 
 	// 获取company_setting
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
-	companySetting := companySettingRepo.GetByCompanyIdFromCompanyDB()
+	companySetting := companySettingRepo.Get()
 
 	var retSettings = make(map[string]any)
 	// 从缓存读取
@@ -507,6 +508,25 @@ func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Con
 	return s.getDefaultCashier(languageList), nil
 }
 
+// GetAssistantSetting 获取收银机设置
+func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Assistant, error) {
+	var assistantSetting setting.Assistant
+	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
+	if err != nil {
+		return assistantSetting, err
+	}
+	settings, err := s.GetAll(companyUuid, language, languageList, cc)
+	if err != nil {
+		return assistantSetting, err
+	}
+	if assistantSet, ok := settings[constant.SettingAssistant]; ok {
+		if assistant, yes := assistantSet.(setting.Assistant); yes {
+			return assistant, nil
+		}
+	}
+	return s.getDefaultAssistant(language, languageList), nil
+}
+
 // Updates 更新设置
 func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
 	value, err := json.Marshal(values)
@@ -514,9 +534,21 @@ func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
 		return errors.New("更新设置失败")
 	}
 	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
-	if err = settingRepo.Updates(settingKey, string(value)); err != nil {
-		return errors.New("更新设置失败")
+	set := settingRepo.GetByKey(settingKey)
+	if set.Key == "" {
+		if _, err = settingRepo.Create(model.Setting{
+			Key:         settingKey,
+			Description: "",
+			Values:      string(value),
+		}); err != nil {
+			return errors.New("更新设置失败")
+		}
+	} else {
+		if err = settingRepo.Updates(settingKey, string(value)); err != nil {
+			return errors.New("更新设置失败")
+		}
 	}
+
 	// 删除缓存
 	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
 	return nil

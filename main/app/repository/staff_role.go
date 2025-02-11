@@ -8,7 +8,7 @@ import (
 
 type IStaffRoleRepo interface {
 	CreateStaffRole(staffRole model.StaffRole) error
-	GetRoleUuids(staffUuid uint64) ([]uint64, error)
+	GetRoleUuidsByStaffUuid(staffUuid uint64) ([]uint64, error)
 }
 
 func NewStaffRoleRepo(db *gorm.DB) IStaffRoleRepo {
@@ -27,7 +27,7 @@ func (r *StaffRoleRepo) CreateStaffRole(staffRole model.StaffRole) error {
 	return r.db.Create(&staffRole).Error
 }
 
-func (r *StaffRoleRepo) GetRoleUuids(staffUuid uint64) ([]uint64, error) {
+func (r *StaffRoleRepo) GetRoleUuidsByStaffUuid(staffUuid uint64) ([]uint64, error) {
 	var roleIds []uint64
 	err := r.db.Model(&model.StaffRole{}).Where("staff_uuid = ?", staffUuid).Debug().Pluck("role_uuid", &roleIds).Error
 	return roleIds, err

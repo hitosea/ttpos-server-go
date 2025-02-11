@@ -7,7 +7,7 @@ import (
 )
 
 type IAccessRepo interface {
-	GetPermissions(companyUuid uint64, where ...Where) ([]model.Access, error)
+	GetPermissions(where ...Where) ([]model.Access, error)
 	GetAccessUuids(roleUuids []uint64) ([]uint64, error)
 	CreateAccess(access *model.Access) error
 	WhereUuids(accessUuids []uint64) Where
@@ -30,7 +30,7 @@ func (r *AccessRepo) CreateAccess(access *model.Access) error {
 	return r.db.Create(access).Error
 }
 
-func (r *AccessRepo) GetPermissions(companyId uint64, where ...Where) ([]model.Access, error) {
+func (r *AccessRepo) GetPermissions(where ...Where) ([]model.Access, error) {
 	var access []model.Access
 	for _, w := range where {
 		r.db = w(r.db)
