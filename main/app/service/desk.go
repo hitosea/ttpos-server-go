@@ -3,17 +3,17 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req/cashier_req"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
 
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
-	GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error)    // 获取桌台区域和类型列表
-	GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskInfoResp, error)                           // 获取桌台详情
+	GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)      // 获取桌台列表
+	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
+	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
 }
 
 // deskSrv 收银服务结构体
@@ -36,49 +36,49 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IDeskSrv {
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (cashier_resp.DeskRegionAndTypeListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
 	// 获取列表
 	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
 	types, _ := repository.NewDeskTypeRepo(s.dbm.GetDB(dbId)).GetDeskTypeList()
 
 	// 转换为响应对象
-	deskRegionResp := make([]cashier_resp.DeskRegion, len(regions))
+	deskRegionResp := make([]resp.DeskRegion, len(regions))
 	for i, region := range regions {
-		deskRegionResp[i] = cashier_resp.DeskRegion{
+		deskRegionResp[i] = resp.DeskRegion{
 			Uuid: region.Uuid,
 			Name: region.Name,
 		}
 	}
 
-	deskTypeResp := make([]cashier_resp.DeskType, len(types))
+	deskTypeResp := make([]resp.DeskType, len(types))
 	for i, type_ := range types {
-		deskTypeResp[i] = cashier_resp.DeskType{
+		deskTypeResp[i] = resp.DeskType{
 			Uuid: type_.Uuid,
 			Name: type_.Name,
 		}
 	}
 
 	// 返回响应对象
-	return cashier_resp.DeskRegionAndTypeListWithPaginationResp{
+	return resp.DeskRegionAndTypeListWithPaginationResp{
 		Region: struct {
-			List []cashier_resp.DeskRegion `json:"list"`
+			List []resp.DeskRegion `json:"list"`
 		}{List: deskRegionResp},
 		Type: struct {
-			List []cashier_resp.DeskType `json:"list"`
+			List []resp.DeskType `json:"list"`
 		}{List: deskTypeResp},
 	}, nil
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier_resp.DeskListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
 	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)
 	if err != nil {
-		return cashier_resp.DeskListWithPaginationResp{}, err
+		return resp.DeskListWithPaginationResp{}, err
 	}
 
 	// 初始化额外信息
-	var extra = cashier_resp.DeskExtra{
+	var extra = resp.DeskExtra{
 		AvailableNum:       0,
 		LockNum:            0,
 		OccupyBuffetNum:    0,
@@ -88,7 +88,7 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 	}
 
 	// 转换为响应对象
-	deskResp := make([]cashier_resp.Desk, len(desks))
+	deskResp := make([]resp.Desk, len(desks))
 	for i, desk := range desks {
 		// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
 		var deskStatus uint
@@ -135,7 +135,7 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 		extra.TotalNum++
 		//
 		// todo  desk.SaleBill.PaymentAmount 需要等后面业务缓存中取
-		deskResp[i] = cashier_resp.Desk{
+		deskResp[i] = resp.Desk{
 			Uuid:          desk.Uuid,
 			DeskNo:        desk.DeskNo,
 			TypeUuid:      desk.TypeUuid,
@@ -151,7 +151,7 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 	}
 
 	// 返回响应对象
-	return cashier_resp.DeskListWithPaginationResp{
+	return resp.DeskListWithPaginationResp{
 		Extra: extra,
 		List:  deskResp,
 		Meta: dto.PageResponse{
@@ -163,11 +163,11 @@ func (s *deskSrv) GetDeskList(dbId uint64, req cashier_req.DeskListReq) (cashier
 }
 
 // GetDeskInfo 获取桌台详情
-func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskInfoResp, error) {
+func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error) {
 	// 获取列表
 	desk, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetDeskInfo(deskUuid)
 	if err != nil {
-		return cashier_resp.DeskInfoResp{}, err
+		return resp.DeskInfoResp{}, err
 	}
 	// 转换为响应对象
 	// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
@@ -202,7 +202,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (cashier_resp.DeskIn
 		}
 	}
 	//
-	return cashier_resp.DeskInfoResp{
+	return resp.DeskInfoResp{
 		Uuid:         desk.Uuid,
 		SaleBillUuid: desk.SaleBill.Uuid,
 		DeskNo:       desk.DeskNo,

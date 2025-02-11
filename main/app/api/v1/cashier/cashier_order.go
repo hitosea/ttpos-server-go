@@ -1,6 +1,9 @@
 package cashier
 
 import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/database"
 
@@ -15,14 +18,30 @@ type CashierOrderHandler struct {
 // GetCashierOrderList 处理获取收银订单列表
 // @Summary 获取收银订单列表
 // @Description 获取收银订单列表
-// @Tags 收银端
+// @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @param data body req.GetOrderListReq true "列表参数"
 // @Success 200 {array} nil "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
 func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
-	// 处理获取收银订单列表的逻辑
+	// companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	req := req.GetOrderListReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+		return
+	}
+	// 获取收银产品列表
+	// res, err := h.orderService.GetOrderList(companyUuid, req)
+	// // 处理错误
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
+	// 	return
+	// }
+	// // 返回结果
+	// helper.Success(c, res)
 }
 
 // RegisterOrderHandlers 注册收银订单路由

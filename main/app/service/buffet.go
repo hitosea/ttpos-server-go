@@ -2,14 +2,14 @@ package service
 
 import (
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
 
 // IBuffetSrv 定义收银服务接口
 type IBuffetSrv interface {
-	GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginationResp, error) // 获取桌台列表
+	GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) // 获取桌台列表
 }
 
 // buffetSrv 收银服务结构体
@@ -32,17 +32,17 @@ func NewBuffetSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv 
 }
 
 // GetBuffetList 获取列表
-func (s *buffetSrv) GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginationResp, error) {
+func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) {
 	// 获取列表
 	buffets, total, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetList(1, 1000)
 	if err != nil {
-		return cashier_resp.BuffetListPaginationResp{}, err
+		return resp.BuffetListPaginationResp{}, err
 	}
 
 	// 转换为响应对象
-	respBuffets := make([]cashier_resp.Buffet, 0, len(buffets))
+	respBuffets := make([]resp.Buffet, 0, len(buffets))
 	for _, buffet := range buffets {
-		respBuffet := cashier_resp.Buffet{
+		respBuffet := resp.Buffet{
 			Uuid:              uint64(buffet.Uuid),
 			Price:             buffet.BuffetCustomerTypePrice.Price,
 			IsLimitTime:       buffet.IsLimitTime == 1,
@@ -50,7 +50,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginatio
 			NonOrderingTime:   buffet.NonOrderingTime,
 			ReminderOrderTime: buffet.ReminderOrderTime,
 			LocaleName:        s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
-			BuffetCustomerType: cashier_resp.BuffetCustomerType{
+			BuffetCustomerType: resp.BuffetCustomerType{
 				Uuid:       uint64(buffet.BuffetCustomerTypePrice.Uuid),
 				Price:      buffet.BuffetCustomerTypePrice.Price,
 				LocaleName: s.localeSrv.GetLocaleNames(buffet.BuffetCustomerTypePrice.BuffetCustomerType.MultiLanguageName),
@@ -60,7 +60,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (cashier_resp.BuffetListPaginatio
 	}
 
 	// 返回响应对象
-	return cashier_resp.BuffetListPaginationResp{
+	return resp.BuffetListPaginationResp{
 		List: respBuffets,
 		Meta: dto.PageResponse{
 			PageNo:   1,
