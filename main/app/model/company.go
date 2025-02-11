@@ -27,7 +27,7 @@ type CompanySetting struct {
 	SaleStock        int    `gorm:"column:sale_stock;type:int(11);default:0;comment:进销存: 0不开启, 1开启;NOT NULL" json:"sale_stock"`
 	IsOpenMember     int    `gorm:"column:is_open_member;type:int(11);default:0;comment:是否开启会员: 0不开启, 1开启;NOT NULL" json:"is_open_member"`
 	IsOpenTablet     int    `gorm:"column:is_open_tablet;type:int(11);default:0;comment:是否开启平板: 0不开启, 1开启;NOT NULL" json:"is_open_tablet"`
-	IsOpenScan       int    `gorm:"column:is_open_scan;type:int(11);default:0;comment:是否开启扫码H5: 0不开启, 1开启;NOT NULL" json:"is_open_scan"`
+	IsOpenH5         int    `gorm:"column:is_open_h5;type:int(11);default:0;comment:是否开启扫码H5: 0不开启, 1开启;NOT NULL" json:"is_open_scan"`
 	IsOpenAssistant  int    `gorm:"column:is_open_assistant;type:int(11);default:0;comment:是否开启点餐助手: 0不开启, 1开启;NOT NULL" json:"is_open_assistant"`
 	IsOpenKitchenKds int    `gorm:"column:is_open_kitchen_kds;type:int(11);default:0;comment:是否开启后厨KDS: 0不开启, 1开启;NOT NULL" json:"is_open_kitchen_kds"`
 	IsOpenBuffet     int    `gorm:"column:is_open_buffet;type:int(11);default:0;comment:是否开启自助餐: 0不开启, 1开启;NOT NULL" json:"is_open_buffet"`

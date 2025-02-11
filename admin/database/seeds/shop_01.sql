@@ -1089,7 +1089,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `sale_stock` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
     `is_open_member` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
     `is_open_tablet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
-    `is_open_scan` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
+    `is_open_h5` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
     `is_open_assistant` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
     `is_open_kitchen_kds` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
