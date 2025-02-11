@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售账单编号',
-    `duty_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号，用于标记该账单属于哪个当班',
+    `duty_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号,用于标记该账单属于哪个当班',
     `bill_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单',
     `dining_method` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食 1-打包',
     `is_buffet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
@@ -15,28 +15,28 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额，关联销售订单的总金额之和',
-    `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费，关联销售订单的服务费之和',
-    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费，关联销售订单的税费之和',
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '折扣费用，关联销售订单的折扣费用之和',
-    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用，关联销售订单的会员折扣费用之和',
-    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，关联销售订单的商品金额之和',
-    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额，支付金额-订单总金额=支付手续费',
-    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费，多次支付的支付手续费之和',
-    `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额，关联销售订单的赠菜金额之和',
-    `free_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额，关联销售订单的免单金额之和',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额,关联销售订单的总金额之和',
+    `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费,关联销售订单的服务费之和',
+    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费,关联销售订单的税费之和',
+    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '折扣费用,关联销售订单的折扣费用之和',
+    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用,关联销售订单的会员折扣费用之和',
+    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
+    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,支付金额-订单总金额=支付手续费',
+    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,多次支付的支付手续费之和',
+    `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,关联销售订单的赠菜金额之和',
+    `free_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额,关联销售订单的免单金额之和',
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     `buffet_order_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
-    `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长（秒）',
-    `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单（挂单）时间（时间戳）',
-    `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间（时间戳）,结账时间',
-    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）,开台时间',
-    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
+    `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
+    `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
+    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),开台时间',
+    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单表';
 
@@ -48,19 +48,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额',
     `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原始金额',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费',
-    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费，包括商品税费和服务费税费',
+    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费,包括商品税费和服务费税费',
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '折扣费用',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总金额',
-    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额，关联付款单的支付金额之和',
+    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,关联付款单的支付金额之和',
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     `sale_bill_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    `finish_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间（时间戳）,结账时间',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `finish_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单表';
 
@@ -69,16 +69,16 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单设置ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `service_fee_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费',
-    `service_fee_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值，服务费类型为1时，服务费值为固定金额，服务费类型为2和3时，服务费值为%比例',
+    `service_fee_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
     `tax_fee_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
     `zero` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
     `zero_checkout` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
     `is_stat_gift` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣',
     `is_stat_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费',
     `discount_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '打折类型, 0-百分比打折% 1-百分比直接减免% off',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单设置表';
 
@@ -91,13 +91,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     `sale_order_uuid` BIGINT UNSIGNED NULL DEFAULT 0 COMMENT '销售订单ID',
     `currency_unit` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '货币单位',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额',
-    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费，支付金额*支付手续费百分比',
+    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,支付金额*支付手续费百分比',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '金额',
     `transaction_number` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '交易号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '支付状态, 0-未支付 1-已支付 2-已退款',
-    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付记录表';
 
@@ -116,9 +116,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `is_show_member_recharge` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机会员充值显示',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态 0-禁用 1-启用',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
-    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付方式表';
 
@@ -130,12 +130,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_qrcode_order` (
     `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未接单 1-已接单 2-已拒单',
-    `handle_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `handle_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码（接单）订单表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码(接单)订单表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -147,36 +147,38 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `custom_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义价格',
     `unit_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价,商品原价+小料价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(折扣和优惠后)',
-    `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费，按比例收取时有值',
+    `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费,按比例收取时有值',
     `tax_rate` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.下单时单税率,结账时再重新核算',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费',
     `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原价销售额.包含加料、税费.',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退菜',
     `is_require` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否必点商品 0-否 1-是',
-    `deduct_stock_type` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '库存计算方式，0-下单减库存 1-付款减库存。创建商品后不变',
+    `deduct_stock_type` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '库存计算方式,0-下单减库存 1-付款减库存。创建商品后不变',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `is_gift` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否赠品, 0-否 1-是',
     `gift_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '赠品原因',
-    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品签名，规格属性加料相同的商品签名相同，用于取消拆单时合并商品',
+    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品签名,规格属性加料相同的商品签名相同,用于取消拆单时合并商品',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `qrcode_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品原料ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称，不随后台更新',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称,不随后台更新',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '原料用量,不随后台更新',
+    `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台更新',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'BOM ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `iunique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品原料表';
 
@@ -186,9 +188,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_attribute` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品属性名称,不随后台更新',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品属性记录表';
 
@@ -200,9 +202,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_discount_strategy` (
     `value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠策略值',
     `json_field` TEXT COMMENT 'JSON字段',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单优惠策略表';
 
@@ -212,9 +214,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order` (
     `table_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单表';
 
@@ -229,10 +231,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
     `first_category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '一级分类ID',
-    `finished_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `finished_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单商品表';
 
@@ -241,9 +243,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk_region` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '餐桌区域ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '餐桌区域名称',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序序号',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '餐桌区域表';
 
@@ -254,9 +256,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk_type` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序序号',
     `range_min` INT(11) NOT NULL DEFAULT 0 COMMENT '最少人数',
     `range_max` INT(11) NOT NULL DEFAULT 0 COMMENT '最多人数',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '餐桌类型表';
 
@@ -271,9 +273,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `is_disable` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否禁用, 0-否 1-是',
     `qrcode_url` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL',
     `is_bind` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '平板绑定状态 0-否 1-是',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台信息表';
 
@@ -287,9 +289,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_operation_record` (
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台账单操作记录';
 
@@ -301,13 +303,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
     `tax_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '税收ID',
     `is_limit_time` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否限时, 0-否 1-是',
-    `limit_time` INT(11) NOT NULL DEFAULT 0 COMMENT '限时时间（分钟）',
+    `limit_time` INT(11) NOT NULL DEFAULT 0 COMMENT '限时时间(分钟)',
     `can_combined` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否可合并, 0-否 1-是',
-    `non_ordering_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板不可下单时间（分钟）',
-    `reminder_order_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板提醒不可下单时间（分钟）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `non_ordering_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板不可下单时间(分钟)',
+    `reminder_order_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板提醒不可下单时间(分钟)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐套餐信息表';
 
@@ -315,12 +317,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_delay` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐加钟价格名称',
-    `delay_time` INT(11) NOT NULL DEFAULT 0 COMMENT '加钟时间（分钟）',
+    `delay_time` INT(11) NOT NULL DEFAULT 0 COMMENT '加钟时间(分钟)',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态 0-禁用 1-启用',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐加钟价格表';
 
@@ -330,9 +332,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_customer_type_price` (
     `buffet_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     `customer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '客户类型ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐顾客类型价格表';
 
@@ -340,9 +342,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐客户类型名称',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐客户类型表';
 
@@ -356,9 +358,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
     `is_show_kitchen` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否在厨房显示, 0-否 1-是',
     `is_show_assistant` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否在助手显示, 0-否 1-是',
     `limit` INT(11) NOT NULL DEFAULT 0 COMMENT '限购数量',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐商品表';
 
@@ -369,9 +371,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `buffet_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     `buffet_customer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单顾客类型表';
 
@@ -387,13 +389,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
-    `num` DECIMAL(12, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
+    `stock_num` DECIMAL(12, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
-    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时，实际销量增加',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料信息表';
 
@@ -413,9 +415,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_file` (
     `extension` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '文件扩展名',
     `is_user` INT(11) NOT NULL DEFAULT 0 COMMENT '是否为c端用户上传',
     `is_recycle` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否已回收',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `path_idx` (`file_name`),
     UNIQUE KEY `idx_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文件库记录表';
@@ -426,9 +428,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_file_group` (
     `group_type` varchar(10) NOT NULL DEFAULT '' COMMENT '文件类型',
     `group_name` varchar(30) NOT NULL DEFAULT '' COMMENT '分类名称',
     `sort` int(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '分类排序(数字越小越靠前)',
-    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = COMPACT COMMENT = '文件库分组记录表';
 
@@ -439,9 +441,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_attribute` (
     `historical_purchase_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '历史采购数量',
     `historical_loss_report_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '历史报损数量',
     `historical_sale_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '历史销售数量',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料扩展属性表';
 
@@ -455,9 +457,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     `is_special` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '特殊分类, 1-是 0-否',
     `category_key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关键字',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品类别表';
 
@@ -466,9 +468,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_unit` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品单位ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品单位表';
 
@@ -476,9 +478,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_tag` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机标签ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机标签表';
 
@@ -487,9 +489,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_flavor` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品规格表';
 
@@ -498,9 +500,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_attribute_group` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性组ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品属性组表';
 
@@ -510,9 +512,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_attribute` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '属性组ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品属性表';
 
@@ -521,9 +523,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '税率ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 COMMENT '税率',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '税率表';
 
@@ -555,10 +557,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `sauce_max_selection` INT(11) NOT NULL DEFAULT 0 COMMENT '小料最大选择数量',
     `description` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '卖点描述',
     `open_discount` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是',
-    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时，实际销量增加',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包表';
 
@@ -569,9 +571,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute_group` (
     `max_selection` INT(11) NOT NULL DEFAULT 0 COMMENT '最大选择数量',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `product_attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性组ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包属性组表';
 
@@ -581,9 +583,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute` (
     `product_package_attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包属性组ID',
     `attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
     `is_default_selected` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选中, 0-否 1-是',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包属性表';
 
@@ -591,14 +593,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称或小料名称（不用于业务显示）',
-    `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID（仅商品使用）',
-    `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID（仅小料使用）',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称或小料名称(不用于业务显示)',
+    `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
+    `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `is_default_select` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品BOM表';
 
@@ -607,10 +609,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联材料ID',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID或商品小料ID',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
-    `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料数量,可小数',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料用量,可小数',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '关联材料表';
 
@@ -620,9 +622,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `idx_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品小料表';
 
@@ -642,9 +644,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `gift_account_balance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送账户余额',
     `member_level_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员等级ID',
     `member_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡片ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员信息表';
 
@@ -653,7 +655,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员等级ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '等级名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `open_money` TINYINT(3) DEFAULT 0 COMMENT '是否开放0，否1是',
+    `open_money` TINYINT(3) DEFAULT 0 COMMENT '是否开放0,否1是',
     `upgrade_money` INT(11) NOT NULL DEFAULT 0 COMMENT '升级条件',
     `open_points` TINYINT(3) DEFAULT 0 COMMENT '积分是否开放0否1是',
     `upgrade_points` INT(11) DEFAULT 0 COMMENT '累计积分升级',
@@ -663,9 +665,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `priority` INT(11) NOT NULL DEFAULT 0 COMMENT '等级权重',
     `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认, 1-是 0-否',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员等级表';
 
@@ -683,9 +685,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `card_opening_gift` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '开卡赠送,0-point积分 1-balance余额',
     `gift_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送额',
     `description` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '使用须知',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡类型表';
 
@@ -694,12 +696,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡ID',
     `card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
-    `deadline` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期（时间戳）',
+    `deadline` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
     `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-exp到期 1-valid有效 2-delete删除',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡表';
 
@@ -711,9 +713,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `operation` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '加减操作,add加、sub减',
     `value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '数值',
     `description` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员余额变动记录表';
 
@@ -725,9 +727,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
     `operation` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '加减操作,add加、sub减',
     `value` INT(11) NOT NULL DEFAULT 0 COMMENT '数值',
     `description` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员积分变动记录表';
 
@@ -741,10 +743,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `gift_point` INT(11) NOT NULL DEFAULT 0 COMMENT '赠送积分',
     `member_uuid` BIGINT UNSIGNED NOT NULL COMMENT '会员ID',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID',
-    `payment_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `payment_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员充值订单表';
 
@@ -756,9 +758,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_operation_log` (
     `client` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '客户端信息',
     `message` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '消息内容',
     `recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员充值订单操作日志表';
 
@@ -771,9 +773,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `contact_phone` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '联系人电话',
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '供应商表';
 
@@ -787,10 +789,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     `material_uuid` BIGINT UNSIGNED NOT NULL COMMENT '物料ID',
     `purchase_order_uuid` BIGINT UNSIGNED NOT NULL COMMENT '采购订单ID',
     `operator_uuid` BIGINT UNSIGNED NOT NULL COMMENT '操作员ID',
-    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '库存交易表';
 
@@ -801,10 +803,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form` (
     `applicant_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '申请人ID',
     `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总金额',
-    `arrival_time` INT(10) DEFAULT NULL COMMENT '到达时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `arrival_time` INT(10) DEFAULT NULL COMMENT '到达时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单表';
 
@@ -816,9 +818,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_item` (
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '金额',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单明细表';
 
@@ -830,10 +832,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-success已出库 1-canceled已撤销',
     `operator_uuid` BIGINT UNSIGNED NOT NULL COMMENT '操作员ID',
     `associated_order_uuid` BIGINT UNSIGNED NOT NULL COMMENT '关联订单ID',
-    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单表';
 
@@ -844,9 +846,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,0-sales销售 1-adjust调整 2-loss损耗 3-lost丢失',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
@@ -861,10 +863,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
     `reject_reason` VARCHAR(255) DEFAULT NULL COMMENT '拒绝原因',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待审核 1-approved已通过 2-rejected已驳回',
     `operator_uuid` BIGINT UNSIGNED NOT NULL COMMENT '操作员ID',
-    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `revoke_time` INT(10) DEFAULT NULL COMMENT '撤销时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '报损单表';
 
@@ -873,9 +875,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机模板ID',
     `name` varchar(255) DEFAULT '' COMMENT '打印名称',
     `template` int(11) DEFAULT 1 COMMENT '模板选择',
-    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机模板表';
 
@@ -887,9 +889,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `config_json` TEXT DEFAULT "" COMMENT '打印机json配置',
     `copies` INT NOT NULL DEFAULT 0 COMMENT '打印份数',
     `sort` INT NOT NULL DEFAULT 0 COMMENT '排序',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机表';
 
@@ -899,9 +901,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型名称',
     `key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型key',
     `config_json` TEXT DEFAULT "" COMMENT '打印机类型json配置,描述需要填写的字段',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机类型表';
 
@@ -912,7 +914,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `cashier_device_key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银机绑定的key',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单id',
     `data` VARCHAR(255) DEFAULT NULL COMMENT '打印数据',
-    `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型：0系统默认队列，1云上服务下放',
+    `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型：0系统默认队列,1云上服务下放',
     `data_type` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
     `print_method` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '打印次数',
@@ -920,9 +922,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `reason` VARCHAR(255) DEFAULT '' COMMENT '原因',
     `printer_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印时间',
     `first_execution` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '是否首次执行打印 1-是 0-否',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 8 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印日志表';
 
@@ -935,42 +937,42 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     `print_method` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印方式,0-order整单打印 1-item按一菜一单打印',
     `print_product_select` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印商品选择,0-category按商品分类 1-tag按打印标签',
     `print_mode_scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '打印模式场景,0-merge合并 1-separate分开',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印（档口）表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印(档口)表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_region` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机区域ID',
     `product_printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机ID',
     `desk_region_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台区域ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印机区域表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_item` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印（档口）打印机ID',
-    `product_printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印（档口）ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印(档口)打印机ID',
+    `product_printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印(档口)ID',
     `printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印（档口）打印机关联表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印(档口)打印机关联表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer_product_item` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机商品关联ID',
     `product_printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机ID',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品打印机商品关联表';
 
@@ -978,12 +980,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sale_inventory` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售库存ID',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
-    `num` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '数量',
+    `stock_num` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '库存数量',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-unclear未沽清 1-clear已沽清',
     `inventory_count` INT(11) NOT NULL DEFAULT 0 COMMENT '库存数量,实际库存量',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售库存表';
 
@@ -994,14 +996,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan` (
     `use_channel` varchar(255) NOT NULL DEFAULT '' COMMENT '使用渠道 10-点餐方式 20-桌台方式',
     `must_type` int(11) DEFAULT 1 COMMENT '必点类型 1-每人必点1份 2-每笔订单必点1份',
     `must_rule` int(11) DEFAULT 1 COMMENT '必点规则 1-固定商品 2-可选商品',
-    `status` int(11) DEFAULT 1 COMMENT '状态，1-开启 0-关闭',
+    `status` int(11) DEFAULT 1 COMMENT '状态,1-开启 0-关闭',
     `auto_cart` int(11) DEFAULT 1 COMMENT '自动加入购物车 1-是 0-否',
     `auto_change` int(11) DEFAULT 1 COMMENT '顾客可修改必点数量 1-是 0-否',
     `auto_check` int(11) DEFAULT 1 COMMENT '下单时检查必点商品 1-是 0-否',
     `auto_checkout` int(11) DEFAULT 1 COMMENT '结账时检查必点商品 1-是 0-否',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品必点计划表';
 
@@ -1010,9 +1012,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan_region` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品必选商品计划区域明细ID',
     `product_must_plan_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品必选商品计划ID',
     `desk_region_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台区域ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品必点计划区域表';
 
@@ -1021,9 +1023,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan_item` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品必选商品计划商品明细ID',
     `product_must_plan_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品必选商品计划ID',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品必点计划商品表';
 
@@ -1032,9 +1034,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_free_reason` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠品或免费订单原因ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '赠品或免费订单原因表';
 
@@ -1043,9 +1045,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_food_reason` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜原因ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '退菜原因表';
 
@@ -1060,9 +1062,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
     `ja_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '日语名称',
     `ko_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '韩语名称',
     `tr_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '土耳其语名称',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '多语言名称表';
 
@@ -1074,10 +1076,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
     `expire_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '过期时间;not null',
     `auth_day` INT(11) NOT NULL DEFAULT 0 COMMENT '授权时间(天) 0为永不过期',
     `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态 1-启用 0-禁用;not null',
-    `auth_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '授权开始时间（时间戳）',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `auth_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '授权开始时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团表';
 
@@ -1106,9 +1108,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
 
@@ -1180,7 +1182,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff` (
     `real_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '姓名',
     `is_super` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否为超级管理员0不是,1是',
     `user_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账号类型0总台1门店',
-    `is_disable` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否禁用1禁用，0未禁用',
+    `is_disable` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否禁用1禁用,0未禁用',
     `bind_key` VARCHAR(255) DEFAULT '' COMMENT '绑定的设备key',
     `cashier_online` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '收银员当班 0-不在线 1-在线',
     `cashier_login_time` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '收银员当班登录时间',
@@ -1248,7 +1250,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '交班记录ID',
     `staff_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '员工ID',
     `shift_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '交班编号',
-    `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态： 0未交班，1已交班',
+    `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态： 0未交班,1已交班',
     `previous_shift_cash` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '上一班遗留备用金',
     `current_cash_total` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '当前钱箱现金总计',
     `incomes` VARCHAR(255) DEFAULT NULL COMMENT '收入详情',
@@ -1256,7 +1258,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `cash_taken_out` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班取出现金',
     `cash_left` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班遗留备用金',
     `cash_income` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班收入现金',
-    `total_business` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班营业总额（不包含退款）',
+    `total_business` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班营业总额(不包含退款)',
     `is_printed` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否打印 0-未打印 1-已打印',
     `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
     `withdraw_cash` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '中途取出现金',
@@ -1333,7 +1335,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货单唯一标识符',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售订单号',
-    `return_type` INT(11) NOT NULL DEFAULT 0 COMMENT '退货类型，1-整单退货，2-部分退货',
+    `return_type` INT(11) NOT NULL DEFAULT 0 COMMENT '退货类型,1-整单退货,2-部分退货',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额,包括税额',
     `refund_tax_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款税额',
     `refund_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因',
@@ -1368,7 +1370,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_refund_order` (
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售订单号',
     `payment_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付单ID',
-    `refund_type` INT(11) NOT NULL DEFAULT 0 COMMENT '退款类型，1-取消付款，2-反结账',
+    `refund_type` INT(11) NOT NULL DEFAULT 0 COMMENT '退款类型,1-取消付款,2-反结账',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
     `refund_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因',
     `refund_status` INT(11) NOT NULL DEFAULT 0 COMMENT '退款状态',
@@ -1411,7 +1413,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_cash_box_log` (
 CREATE TABLE IF NOT EXISTS `ttpos_setting` (
     `key` varchar(30) NOT NULL COMMENT '设置项标示',
     `description` varchar(255) NOT NULL DEFAULT '' COMMENT '设置项描述',
-    `values` mediumtext NOT NULL COMMENT '设置内容（json格式）',
+    `values` mediumtext NOT NULL COMMENT '设置内容(json格式)',
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
