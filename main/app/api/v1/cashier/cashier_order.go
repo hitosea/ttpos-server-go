@@ -48,6 +48,35 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetCashierDeskList 处理获取订单详情
+// @Summary 获取订单详情
+// @Description 获取订单详情
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @param data query req.GetOrderInfoReq true "详情参数"
+// @Success 200 {object} resp.CashierOrderInfoResp "订单详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/info [get]
+func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	req := req.GetOrderInfoReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 获取收银产品列表
+	res, err := h.orderService.GetCashierOrderInfo(companyUuid, req)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -60,12 +89,13 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := CashierOrderHandler{
-		orderService: service.NewOrderSrv(dbm, cache), // 订单服务
+		orderService: service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
+		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 	}
 }

@@ -112,9 +112,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 创建处理程序
 	wrapper := DeskHandler{
 		Service: service.NewDeskSrv(
-			dbm,                             // 数据库管理器
-			service.NewLocaleSrv(),          // 多语言服务
-			service.NewOrderSrv(dbm, cache), // 订单服务
+			dbm,                    // 数据库管理器
+			service.NewLocaleSrv(), // 多语言服务
+			service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
 		),
 	}
 
