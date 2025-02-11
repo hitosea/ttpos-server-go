@@ -2,7 +2,7 @@ package model
 
 type BuffetPackage struct {
 	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
-	UUID                  uint   `gorm:"default:0;comment:'自助餐ID'"`
+	Uuid                  uint64 `gorm:"default:0;comment:'自助餐ID'"`
 	Name                  string `gorm:"default:'';comment:'自助餐名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:NULL;comment:多语言名称ID"`
 	Sort                  uint   `gorm:"default:0;comment:排序顺序"`
@@ -22,7 +22,7 @@ type BuffetPackage struct {
 
 type BuffetCustomerType struct {
 	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
-	UUID                  uint   `gorm:"default:0;comment:'自助餐客户类型ID'"`
+	Uuid                  uint64 `gorm:"default:0;comment:'自助餐客户类型ID'"`
 	Name                  string `gorm:"default:'';comment:'自助餐客户类型名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:NULL;comment:多语言名称ID"`
 	CreateTime            int64  `gorm:"autoCreateTime;comment:'创建时间（时间戳）'"`
@@ -34,7 +34,7 @@ type BuffetCustomerType struct {
 
 type BuffetCustomerTypePrice struct {
 	ID                uint    `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid              uint    `gorm:"default:0;comment:'自助餐客户类型ID'"`
+	Uuid              uint64  `gorm:"default:0;comment:'自助餐客户类型ID'"`
 	BuffetPackageUuid uint64  `gorm:"default:NULL;comment:自助餐套餐信息表ID"`
 	CustomerTypeUuid  uint64  `gorm:"default:NULL;comment:自助餐客户类型信息表ID"`
 	Price             float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
@@ -47,7 +47,7 @@ type BuffetCustomerTypePrice struct {
 
 type BuffetProduct struct {
 	ID                 uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid               uint   `gorm:"default:0;comment:'自助餐产品ID'"`
+	Uuid               uint64 `gorm:"default:0;comment:'自助餐产品ID'"`
 	ProductPackageUuid uint64 `gorm:"default:NULL;comment:产品包ID"`
 	BuffetPackageUuid  uint64 `gorm:"default:NULL;comment:自助餐套餐信息表ID"`
 	DisplayCashier     uint   `gorm:"default:0;comment:是否在收银台显示, 0-否、1-是"`

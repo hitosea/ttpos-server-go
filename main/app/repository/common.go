@@ -19,6 +19,8 @@ type ICommonRepo interface {
 	WhereByIsShowCashier(isShowCashier uint) DBOption // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                      // 根据软删除查询
 	WhereByOrderNo(orderNo string) DBOption           // 根据订单编号查询
+	WhereByBillType(billType uint) DBOption           // 根据账单类型查询
+	WhereByIsHide(isHide bool) DBOption               // 根据是否隐藏查询
 	WhereLikeByName(name string) DBOption             // 根据名称查询
 	SortWithID(order string) DBOption                 // 根据ID排序
 	SortWithSort(order string) DBOption               // 根据Order By排序
@@ -71,6 +73,23 @@ func (r *commonRepo) WhereBySoftDelete() DBOption {
 func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("order_no = ?", orderNo)
+	}
+}
+
+// WhereByBillType 根据账单类型查询
+func (r *commonRepo) WhereByBillType(billType uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("bill_type = ?", billType)
+	}
+}
+
+// WhereByIsHide 根据是否隐藏查询
+func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if isHide {
+			return db.Where("hide_bill_time > 0")
+		}
+		return db.Where("hide_bill_time = 0")
 	}
 }
 

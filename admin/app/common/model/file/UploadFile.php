@@ -11,7 +11,8 @@ class UploadFile extends BaseModel
 {
     protected $name = 'file';
     protected $pk = 'id';
-     /**
+
+    /**
      * 追加属性
      */
     protected $append = ['file_path', 'file_id', 'group_id'];

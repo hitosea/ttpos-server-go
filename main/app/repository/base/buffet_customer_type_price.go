@@ -45,12 +45,12 @@ func (r *BuffetCustomerTypePriceRepoImpl) UpdateBuffetCustomerTypePrice(uuid uin
 
 // CreateBuffetCustomerTypePrice 创建自助餐客户类型
 func (r *BuffetCustomerTypePriceRepoImpl) CreateBuffetCustomerTypePrice(buffetCustomerTypePrice model.BuffetCustomerTypePrice) (uint64, error) {
-
 	// 创建自助餐客户类型
 	if err := r.db.Create(&buffetCustomerTypePrice).Error; err != nil {
 		return 0, err
 	}
-	return buffetCustomerTypePrice.UUID, nil
+
+	return buffetCustomerTypePrice.Uuid, nil
 }
 
 // DeleteBuffetCustomerTypePrice 软删除自助餐客户类型

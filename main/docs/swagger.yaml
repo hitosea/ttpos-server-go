@@ -203,6 +203,9 @@ definitions:
       remark:
         description: 桌台备注
         type: string
+      sale_bill_uuid:
+        description: 订单UUID
+        type: integer
       status:
         description: 桌台状态
         type: integer
@@ -1743,8 +1746,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/cashier_resp.CreateOrderResp'
-        "400":
-          description: 未找到
       summary: 创建点餐订单
       tags:
       - 收银端.点餐订单
@@ -1840,6 +1841,23 @@ paths:
       summary: 隐藏收银订单
       tags:
       - 收银端
+  /cashier/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银订单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单列表
+          schema:
+            type: array
+        "404":
+          description: 未找到
+      summary: 获取收银订单列表
+      tags:
+      - 收银端.订单
   /cashier/order/pack/{orderId}:
     post:
       consumes:
@@ -2310,7 +2328,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       summary: 处理呼叫
       tags:
-      - 呼叫
+      - 厨显端.呼叫
   /kitchen/call/list:
     get:
       consumes:
@@ -2329,7 +2347,7 @@ paths:
               type: object
       summary: 获取呼叫列表
       tags:
-      - 呼叫
+      - 厨显端.呼叫
   /kitchen/login:
     post:
       consumes:
@@ -2355,7 +2373,7 @@ paths:
               type: object
       summary: 用户登录
       tags:
-      - 登录
+      - 厨显端.登录
   /kitchen/production/finished_product/history:
     get:
       consumes:
@@ -2385,7 +2403,7 @@ paths:
               type: object
       summary: 获取上菜历史
       tags:
-      - 生产
+      - 厨显端.生产
   /kitchen/production/finished_product/latest:
     get:
       consumes:
@@ -2412,7 +2430,7 @@ paths:
               type: object
       summary: 获取最新成品
       tags:
-      - 生产
+      - 厨显端.生产
   /kitchen/production/order/category:
     get:
       consumes:
@@ -2446,7 +2464,7 @@ paths:
               type: object
       summary: 获取生产订单分类
       tags:
-      - 生产
+      - 厨显端.生产
   /kitchen/production/order/list:
     get:
       consumes:
@@ -2476,7 +2494,7 @@ paths:
               type: object
       summary: 获取生产订单列表
       tags:
-      - 生产
+      - 厨显端.生产
   /kitchen/production/order/list_by_category:
     get:
       consumes:
@@ -2511,7 +2529,7 @@ paths:
               type: object
       summary: 按分类获取生产订单列表
       tags:
-      - 生产
+      - 厨显端.生产
   /kitchen/setting/info:
     get:
       consumes:
@@ -2530,7 +2548,7 @@ paths:
               type: object
       summary: 获取设置信息
       tags:
-      - 设置
+      - 厨显端.设置
   /kitchen/setting/save:
     post:
       consumes:
@@ -2556,7 +2574,7 @@ paths:
               type: object
       summary: 保存设置
       tags:
-      - 设置
+      - 厨显端.设置
   /kitchen/setting/verify_advanced_password:
     post:
       consumes:
@@ -2577,7 +2595,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       summary: 验证高级密码
       tags:
-      - 设置
+      - 厨显端.设置
   /passport/captcha:
     get:
       produces:

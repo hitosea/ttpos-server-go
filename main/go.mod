@@ -6,7 +6,6 @@ replace github.com/ProtonMail/go-crypto v0.0.0-20230331115716-d34776aa93ec => gi
 
 require (
 	github.com/ProtonMail/gopenpgp/v2 v2.8.2
-	github.com/duke-git/lancet/v2 v2.3.4
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
@@ -43,7 +42,6 @@ require (
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/duke-git/lancet v1.4.6 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect

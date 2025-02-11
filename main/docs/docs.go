@@ -1001,9 +1001,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/cashier_resp.CreateOrderResp"
                         }
-                    },
-                    "400": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -1144,6 +1141,32 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/order/list": {
+            "get": {
+                "description": "获取收银订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "获取收银订单列表",
+                "responses": {
+                    "200": {
+                        "description": "订单列表",
+                        "schema": {
+                            "type": "array"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -1844,7 +1867,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "呼叫"
+                    "厨显端.呼叫"
                 ],
                 "summary": "处理呼叫",
                 "parameters": [
@@ -1877,7 +1900,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "呼叫"
+                    "厨显端.呼叫"
                 ],
                 "summary": "获取呼叫列表",
                 "responses": {
@@ -1911,7 +1934,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "登录"
+                    "厨显端.登录"
                 ],
                 "summary": "用户登录",
                 "parameters": [
@@ -1956,7 +1979,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "生产"
+                    "厨显端.生产"
                 ],
                 "summary": "获取上菜历史",
                 "parameters": [
@@ -2006,7 +2029,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "生产"
+                    "厨显端.生产"
                 ],
                 "summary": "获取最新成品",
                 "parameters": [
@@ -2052,7 +2075,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "生产"
+                    "厨显端.生产"
                 ],
                 "summary": "获取生产订单分类",
                 "parameters": [
@@ -2108,7 +2131,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "生产"
+                    "厨显端.生产"
                 ],
                 "summary": "获取生产订单列表",
                 "parameters": [
@@ -2158,7 +2181,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "生产"
+                    "厨显端.生产"
                 ],
                 "summary": "按分类获取生产订单列表",
                 "parameters": [
@@ -2215,7 +2238,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "设置"
+                    "厨显端.设置"
                 ],
                 "summary": "获取设置信息",
                 "responses": {
@@ -2249,7 +2272,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "设置"
+                    "厨显端.设置"
                 ],
                 "summary": "保存设置",
                 "parameters": [
@@ -2294,7 +2317,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "设置"
+                    "厨显端.设置"
                 ],
                 "summary": "验证高级密码",
                 "parameters": [
@@ -2676,6 +2699,10 @@ const docTemplate = `{
                 "remark": {
                     "description": "桌台备注",
                     "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "订单UUID",
+                    "type": "integer"
                 },
                 "status": {
                     "description": "桌台状态",

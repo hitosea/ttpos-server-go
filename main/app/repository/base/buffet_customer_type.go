@@ -11,7 +11,7 @@ import (
 type IBuffetCustomerTypeRepo interface {
 	GetBuffetCustomerTypeList() ([]model.BuffetCustomerType, error)
 	UpdateBuffetCustomerType(uuid uint, buffetCustomerType model.BuffetCustomerType) error
-	CreateBuffetCustomerType(buffetCustomerType model.BuffetCustomerType) (uint, error)
+	CreateBuffetCustomerType(buffetCustomerType model.BuffetCustomerType) (uint64, error)
 	DeleteBuffetCustomerType(uuid uint) error
 }
 
@@ -44,13 +44,13 @@ func (r *BuffetCustomerTypeRepoImpl) UpdateBuffetCustomerType(uuid uint, buffetC
 }
 
 // CreateBuffetCustomerType 创建自助餐客户类型
-func (r *BuffetCustomerTypeRepoImpl) CreateBuffetCustomerType(buffetCustomerType model.BuffetCustomerType) (uint, error) {
+func (r *BuffetCustomerTypeRepoImpl) CreateBuffetCustomerType(buffetCustomerType model.BuffetCustomerType) (uint64, error) {
 
 	// 创建自助餐客户类型
 	if err := r.db.Create(&buffetCustomerType).Error; err != nil {
 		return 0, err
 	}
-	return buffetCustomerType.UUID, nil
+	return buffetCustomerType.Uuid, nil
 }
 
 // DeleteProductFlavor 软删除商品规格

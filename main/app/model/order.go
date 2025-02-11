@@ -32,7 +32,7 @@ type SaleBill struct {
 	CashierUuid     uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
 	BuffetOrderUuid uint64 `gorm:"column:buffet_order_uuid;type:bigint(20);default:0;comment:自助餐订单ID" json:"buffet_order_uuid"`
 	DeskUuid        uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
-	DeskNo          string `gorm:"column:desk_no;type:varchar(255);default:'';comment:桌位编号" json:"desk_no"`
+	SerialNo        string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
 
 	// 时间相关字段
 	HideBillTime uint `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`

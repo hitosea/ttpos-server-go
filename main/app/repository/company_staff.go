@@ -38,7 +38,7 @@ func (r *CompanyStaffRepo) WithCompany() Where {
 
 func (r *CompanyStaffRepo) GetByUsername(username string, withs ...Where) model.CompanyStaff {
 	var user model.CompanyStaff
-	r.handleWiths(r.db, withs).Where("user_name = ?", username).Debug().First(&user)
+	r.handleWiths(r.db, withs).Where("username = ?", username).Debug().First(&user)
 	return user
 }
 

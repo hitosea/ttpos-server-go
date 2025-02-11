@@ -12,7 +12,7 @@ type Handler struct {
 
 // PostCallHandle 处理呼叫
 // @Summary 处理呼叫
-// @Tags 呼叫
+// @Tags 厨显端.呼叫
 // @Accept json
 // @Produce json
 // @param data body req.ParamCustomerInfo true "id"
@@ -24,7 +24,7 @@ func (h *Handler) PostCallHandle(c *gin.Context) {
 
 // GetCallList 获取呼叫列表
 // @Summary 获取呼叫列表
-// @Tags 呼叫
+// @Tags 厨显端.呼叫
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.Response{data=resp.CallList}
@@ -36,7 +36,7 @@ func (h *Handler) GetCallList(c *gin.Context) {
 
 // PostLogin 用户登录
 // @Summary 用户登录
-// @Tags 登录
+// @Tags 厨显端.登录
 // @Accept json
 // @Produce json
 // @param data body req.ParamLogin true "登陆参数"
@@ -48,7 +48,7 @@ func (h *Handler) PostLogin(c *gin.Context) {
 
 // GetProductionFinishedProductHistory 获取上菜历史
 // @Summary 获取上菜历史
-// @Tags 生产
+// @Tags 厨显端.生产
 // @Accept json
 // @Produce json
 // @param language query string true "语言"
@@ -61,7 +61,7 @@ func (h *Handler) GetProductionFinishedProductHistory(c *gin.Context) {
 
 // GetProductionFinishedProductLatest 获取最新成品
 // @Summary 获取最新成品
-// @Tags 生产
+// @Tags 厨显端.生产
 // @Accept json
 // @Produce json
 // @param language query string true "语言"
@@ -73,7 +73,7 @@ func (h *Handler) GetProductionFinishedProductLatest(c *gin.Context) {
 
 // GetProductionOrderCategory 获取生产订单分类
 // @Summary 获取生产订单分类
-// @Tags 生产
+// @Tags 厨显端.生产
 // @Accept json
 // @Produce json
 // @param categoryId query string true "分类ID。默认是0，全部"
@@ -87,7 +87,7 @@ func (h *Handler) GetProductionOrderCategory(c *gin.Context) {
 
 // GetProductionOrderList 获取生产订单列表
 // @Summary 获取生产订单列表
-// @Tags 生产
+// @Tags 厨显端.生产
 // @Accept json
 // @Produce json
 // @param pageNum query int true "页码"
@@ -100,7 +100,7 @@ func (h *Handler) GetProductionOrderList(c *gin.Context) {
 
 // GetProductionOrderListByCategory 按分类获取生产订单列表
 // @Summary 按分类获取生产订单列表
-// @Tags 生产
+// @Tags 厨显端.生产
 // @Accept json
 // @Produce json
 // @param categoryId query string true "分类ID。默认是0，全部"
@@ -114,7 +114,7 @@ func (h *Handler) GetProductionOrderListByCategory(c *gin.Context) {
 
 // GetSettingInfo 获取设置信息
 // @Summary 获取设置信息
-// @Tags 设置
+// @Tags 厨显端.设置
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.Response{data=resp.SettingInfo}
@@ -125,7 +125,7 @@ func (h *Handler) GetSettingInfo(c *gin.Context) {
 
 // PostSettingSave 保存设置
 // @Summary 保存设置
-// @Tags 设置
+// @Tags 厨显端.设置
 // @Accept json
 // @Produce json
 // @param data body req.KitchenSetting true "设置参数"
@@ -137,7 +137,7 @@ func (h *Handler) PostSettingSave(c *gin.Context) {
 
 // PostSettingVerifyAdvancedPassword 验证高级密码
 // @Summary 验证高级密码
-// @Tags 设置
+// @Tags 厨显端.设置
 // @Accept json
 // @Produce json
 // @param data body req.ParamVerifyAdvancedPassword true "验证参数"
