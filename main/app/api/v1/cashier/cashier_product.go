@@ -6,6 +6,9 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -72,7 +75,15 @@ func (h *CashierProductHandler) GetProductCategoryList(c *gin.Context) {
 }
 
 // RegisterProductHandlers 注册收银产品路由
-func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager) {
+func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+
 	// 创建收银产品处理程序
 	wrapper := CashierProductHandler{
 		productService: service.NewProductSrv(
@@ -81,7 +92,10 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager) {
 		),
 	}
 
-	// 注册收银产品路由
-	router.GET("/product/list", wrapper.GetProductList)                  // 获取收银产品列表
-	router.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取收银产品类别列表
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv))
+	{
+		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取收银产品列表
+		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取收银产品类别列表
+	}
 }

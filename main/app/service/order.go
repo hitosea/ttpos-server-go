@@ -336,7 +336,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 				OrderNo:       order.OrderNo,
 				Status:        order.Status,
 				FinishTime:    order.FinishTime,
-				OrderAmount:   order.OrderAmount,
+				OrderAmount:   order.Amount,
 				PaymentAmount: order.PaymentAmount,
 				PayTypeName:   strings.Join(payTypeNames, ","),
 			}
@@ -350,7 +350,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 			OrderNo:       bill.OrderNo,
 			Status:        bill.Status,
 			FinishTime:    bill.FinishTime,
-			OrderAmount:   bill.OrderAmount,
+			OrderAmount:   bill.Amount,
 			PaymentAmount: bill.PaymentAmount,
 			PayTypeName:   strings.Join(totalPayTypeNames, ","),
 			SaleOrders:    orderList,
