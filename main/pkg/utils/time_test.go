@@ -4,7 +4,8 @@ import "testing"
 
 func TestTimezone_Now(t *testing.T) {
 	//tz := Timezone(ZH_TIMEZONE)
-	tz := Timezone("Asia/Shanghai")
+	//tz := Timezone("Asia/Shanghai")
+	tz := SetTimezone("Asia/Shanghai")
 	t.Log(tz.Now())
 	t.Log(tz.NowUnix())
 	t.Log(tz.NowUnixMilli())
@@ -12,6 +13,9 @@ func TestTimezone_Now(t *testing.T) {
 	t.Log(tz.TodayStartEnd())
 	t.Log(tz.YesterdayStartEnd())
 	t.Log(tz.WeekStartEnd())
+	t.Log(tz.TodayStartEndUnix())
+	t.Log(tz.YesterdayStartEndUnix())
+	t.Log(tz.WeekStartEndUnix())
 	jp := Timezone(JP_TIMEZONE)
 	t.Log(jp.Now())
 	t.Log(jp.NowUnix())
