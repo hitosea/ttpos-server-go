@@ -3,9 +3,11 @@ package lock
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"sync"
 	"time"
+	"ttpos-server-go/pkg/logger"
 
 	"ttpos-server-go/pkg/cache"
 
@@ -74,7 +76,7 @@ func (d *RedSyncLock) getUuidLock(uuid uint64) *redsync.Mutex {
 func (d *RedSyncLock) LockUuid(uuid uint64) {
 	err := d.getUuidLock(uuid).Lock()
 	if err != nil {
-		panic(err)
+		logger.Logger.Warn("获取分布式并发锁失败", zap.Uint64("uuid", uuid), zap.Error(err))
 	}
 }
 
@@ -82,10 +84,10 @@ func (d *RedSyncLock) LockUuid(uuid uint64) {
 func (d *RedSyncLock) UnlockUuid(uuid uint64) {
 	unlock, err := d.getUuidLock(uuid).Unlock()
 	if err != nil {
-		panic(err)
+		logger.Logger.Warn("分布式并发锁释放失败", zap.Uint64("uuid", uuid), zap.Error(err))
 	}
 	if !unlock {
-		panic("unlock failed")
+		logger.Logger.Warn("分布式并发锁解锁失败", zap.Uint64("uuid", uuid), zap.Error(err))
 	}
 }
 
