@@ -43,8 +43,8 @@ var rootCommand = &cobra.Command{
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cache.Redis, cacheConfig)
 		// 初始化Redis分布式并发锁
+		lock.InitRedisLock(cacheConfig)
 		lock.NewSystemLock()
-		// lock.InitRedisLock(cacheConfig)
 
 		// 初始化雪花ID生成器
 		database.InitSonyFlakeId()
