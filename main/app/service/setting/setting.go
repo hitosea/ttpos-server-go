@@ -23,12 +23,17 @@ import (
 )
 
 type ISrv interface {
-	GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) // 获取所有设置
-	GetStoreLanguageList(companyUuid uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                // 获取商家语言
-	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Printer, error)                      // 获取打印机设置
-	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Cashier, error)                      // 获取收银机设置
-	GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Assistant, error)                  // 获取点餐助手设置
-	Updates(companyUuid uint64, settingKey string, values any) error                                                      // 更新设置
+	GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error)                 // 获取所有设置，性能问题慎用
+	GetStoreSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Store, error)                                          // 获取商家设置
+	GetStoreLanguageList(companyUuid uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                                // 获取商家语言
+	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Printer, error)     // 获取打印机设置
+	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Cashier, error)     // 获取收银机设置
+	GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Assistant, error) // 获取点餐助手设置
+	GetBusinessSetting(companyUuid uint64, language string) (setting.Business, error)                                                     // 获取门店业务设置
+	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                     // 获取自助餐设置
+	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                      // 获取货币单位设置
+	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
+	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -458,73 +463,269 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 
 // GetStoreLanguageList 获取商家语言列表
 func (s *Srv) GetStoreLanguageList(companyId uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
-	all, err := s.GetAll(companyId, language, []dto.LanguageItem{}, cc)
+	set, err := s.GetStoreSetting(companyId, language, cc)
 	if err != nil {
 		return nil, err
 	}
-	if storeSetting, ok := all[constant.SettingStore]; ok {
-		if store, yes := storeSetting.(setting.Store); yes {
-			return store.Language, nil
+	return set.Language, nil
+}
+
+func (s *Srv) getSettingByKey(companyUuid uint64, key string) model.Setting {
+	allSettings, _ := s.fromCache(companyUuid)
+	for _, set := range allSettings {
+		if set.Key == key {
+			return set
 		}
 	}
-	return []dto.LanguageItem{}, nil
+	return model.Setting{
+		Key:    key,
+		Values: "{}",
+	}
+}
+
+// GetStoreSetting 获取商家设置
+func (s *Srv) GetStoreSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Store, error) {
+	var store setting.Store
+	st := s.getSettingByKey(companyUuid, constant.SettingStore)
+	err := json.Unmarshal([]byte(st.Values), &store)
+	if err != nil {
+		logger.Logger.Error("解析商城设置失败", zap.Error(err))
+		return store, errors.New("解析商城设置失败")
+	}
+	if store.IPWhiteList != "" {
+		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
+	}
+
+	defaultStore := s.getDefaultStore(language)
+	err = copier.CopyWithOption(&defaultStore, store, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并商城设置失败", zap.Error(err))
+		return store, errors.New("合并商城设置失败")
+	}
+	if defaultStore.LogoURL != "" && cc != nil {
+		defaultStore.LogoURL = utils.GetBaseURL(cc.Request) + defaultStore.LogoURL
+	}
+	if defaultStore.AvatarURL != "" && cc != nil {
+		defaultStore.AvatarURL = utils.GetBaseURL(cc.Request) + defaultStore.AvatarURL
+	}
+	return defaultStore, nil
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Srv) GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Printer, error) {
-	var printerSetting setting.Printer
-	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
-	if err != nil {
-		return printerSetting, err
-	}
-	settings, err := s.GetAll(companyUuid, language, languageList, cc)
-	if err != nil {
-		return printerSetting, err
-	}
-	if printerSet, ok := settings[constant.SettingPrinter]; ok {
-		if printer, yes := printerSet.(setting.Printer); yes {
-			return printer, nil
+func (s *Srv) GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Printer, error) {
+	var (
+		err     error
+		printer setting.Printer
+	)
+	if len(languageList) == 0 {
+		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		if err != nil {
+			return printer, err
 		}
 	}
-	return s.getDefaultPrinter(language, languageList), nil
+	st := s.getSettingByKey(companyUuid, constant.SettingPrinter)
+	err = json.Unmarshal([]byte(st.Values), &printer)
+	if err != nil {
+		logger.Logger.Error("解析小票打印机设置失败", zap.Error(err))
+		return printer, errors.New("解析小票打印机设置失败")
+	}
+	// 过滤佛历、过滤打印方式，使用默认
+	printer.CalendarList = nil
+	printer.PrintList = nil
+	defaultPrinter := s.getDefaultPrinter(language, languageList)
+	err = copier.CopyWithOption(&defaultPrinter, printer, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并小票打印机设置失败", zap.Error(err))
+		return printer, errors.New("合并小票打印机设置失败")
+	}
+	return defaultPrinter, nil
+}
+
+// GetBusinessSetting 门店业务设置
+func (s *Srv) GetBusinessSetting(companyUuid uint64, language string) (setting.Business, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingBusiness)
+	var business setting.Business
+	err := json.Unmarshal([]byte(st.Values), &business)
+	if err != nil {
+		logger.Logger.Error("解析门店-业务设置失败", zap.Error(err))
+		return business, errors.New("解析门店-业务设置失败")
+	}
+	// 门店业务-过滤列表，使用默认
+	business.ZeroingMethodList = nil
+	business.CheckoutZeroingMethodList = nil
+	business.GiftMethodList = nil
+	business.FreeMethodList = nil
+	defaultBusiness := s.getDefaultBusiness(language)
+	err = copier.CopyWithOption(&defaultBusiness, business, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并门店-业务设置失败", zap.Error(err))
+		return business, errors.New("合并门店-业务设置失败")
+	}
+	return defaultBusiness, nil
+}
+
+// GetBuffetSetting 自助餐设置
+func (s *Srv) GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingBuffet)
+	var buffet setting.Buffet
+	err := json.Unmarshal([]byte(st.Values), &buffet)
+	if err != nil {
+		return buffet, errors.New("解析自助餐-自助餐设置失败")
+	}
+	if companySetting.IsOpenBuffet == 0 {
+		buffet.IsOpen = "0"
+	}
+	defaultBuffet := s.getDefaultBuffet()
+	err = copier.CopyWithOption(&defaultBuffet, buffet, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		return buffet, errors.New("解析自助餐-自助餐设置失败")
+	}
+	return defaultBuffet, nil
+}
+
+// GetCurrencySetting 货币单位设置
+func (s *Srv) GetCurrencySetting(companyUuid uint64) (setting.Currency, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingCurrency)
+	var currency setting.Currency
+	err := json.Unmarshal([]byte(st.Values), &currency)
+
+	if err != nil {
+		logger.Logger.Error("解析门店-货币单位失败", zap.Error(err))
+		return currency, errors.New("解析门店-货币单位失败")
+	}
+	defaultCurrency := s.getDefaultCurrency()
+	err = copier.CopyWithOption(&defaultCurrency, currency, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并门店-货币单位失败", zap.Error(err))
+		return currency, errors.New("合并门店-货币单位失败")
+	}
+	return defaultCurrency, nil
 }
 
 // GetCashierSetting 获取收银机设置
-func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Cashier, error) {
-	var cashierSetting setting.Cashier
-	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
-	if err != nil {
-		return cashierSetting, err
-	}
-	settings, err := s.GetAll(companyUuid, language, languageList, cc)
-	if err != nil {
-		return cashierSetting, err
-	}
-	if cashierSet, ok := settings[constant.SettingCashier]; ok {
-		if cashier, yes := cashierSet.(setting.Cashier); yes {
-			return cashier, nil
+func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Cashier, error) {
+	var (
+		err     error
+		cashier setting.Cashier
+	)
+	if len(languageList) == 0 {
+		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		if err != nil {
+			return cashier, err
 		}
 	}
-	return s.getDefaultCashier(languageList), nil
+	st := s.getSettingByKey(companyUuid, constant.SettingCashier)
+	err = json.Unmarshal([]byte(st.Values), &cashier)
+	if err != nil {
+		logger.Logger.Error("解析各端-收银机设置失败", zap.Error(err))
+		return cashier, errors.New("解析各端-收银机设置失败")
+	}
+
+	// 滚动图/视频处理
+	if len(cashier.Carousel) > 0 && cc != nil {
+		for i, item := range cashier.Carousel {
+			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(cc.Request), true)
+		}
+	}
+	defaultCashier := s.getDefaultCashier(languageList)
+	// 接单语音，设备本地处理，不需要合并
+	cashier.IsAutoVoice = ""
+	// 语言 不需要合并
+	defaultCashier.Language = nil
+
+	err = copier.CopyWithOption(&defaultCashier, cashier, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并各端-收银机设置失败", zap.Error(err))
+		return cashier, errors.New("合并各端-收银机设置失败")
+	}
+
+	return defaultCashier, nil
 }
 
-// GetAssistantSetting 获取收银机设置
-func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Assistant, error) {
-	var assistantSetting setting.Assistant
-	languageList, err := s.GetStoreLanguageList(companyUuid, language, cc)
-	if err != nil {
-		return assistantSetting, err
-	}
-	settings, err := s.GetAll(companyUuid, language, languageList, cc)
-	if err != nil {
-		return assistantSetting, err
-	}
-	if assistantSet, ok := settings[constant.SettingAssistant]; ok {
-		if assistant, yes := assistantSet.(setting.Assistant); yes {
-			return assistant, nil
+// GetAssistantSetting 获取点餐助手设置
+func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Assistant, error) {
+	var (
+		err       error
+		assistant setting.Assistant
+	)
+	if len(languageList) == 0 {
+		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		if err != nil {
+			return assistant, err
 		}
 	}
-	return s.getDefaultAssistant(language, languageList), nil
+	st := s.getSettingByKey(companyUuid, constant.SettingAssistant)
+	err = json.Unmarshal([]byte(st.Values), &assistant)
+	if err != nil {
+		logger.Logger.Error("解析各端-点餐助手设置失败", zap.Error(err))
+		return assistant, errors.New("解析各端-点餐助手设置失败")
+	}
+	if len(assistant.LanguageList) == 0 {
+		assistant.LanguageList = nil
+	}
+	defaultAssistant := s.getDefaultAssistant(language, languageList)
+	err = copier.CopyWithOption(&defaultAssistant, assistant, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并各端-点餐助手设置失败", zap.Error(err))
+		return assistant, errors.New("合并各端-点餐助手设置失败")
+	}
+
+	cashierSet := s.getSettingByKey(companyUuid, constant.SettingCashier)
+
+	// 如果设置了 is_show_assistant_sold_out，则读取解析后的数据，否则读取默认设置
+	if strings.Contains(cashierSet.Values, "\"is_show_assistant_sold_out\"") {
+		var cashier setting.Cashier
+		err = json.Unmarshal([]byte(st.Values), &cashier)
+		if err != nil {
+			logger.Logger.Error("解析各端-收银机设置失败", zap.Error(err))
+			return assistant, errors.New("解析各端-收银机设置失败")
+		}
+		defaultAssistant.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut
+	} else {
+		defaultAssistant.IsShowAssistantSoldOut = s.getDefaultCashier(languageList).IsShowAssistantSoldOut
+	}
+	return defaultAssistant, nil
+}
+
+// GetH5Setting 获取点餐助手设置
+func (s *Srv) GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error) {
+	var (
+		err error
+		h5  setting.H5
+	)
+	if len(languageList) == 0 {
+		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		if err != nil {
+			return h5, err
+		}
+	}
+	st := s.getSettingByKey(companyUuid, constant.SettingH5)
+	err = json.Unmarshal([]byte(st.Values), &h5)
+	if err != nil {
+		logger.Logger.Error("解析各端-扫码H5设置失败", zap.Error(err))
+		return h5, errors.New("解析各端-扫码H5设置失败")
+	}
+	defaultH5 := s.getDefaultH5(languageList)
+	err = copier.CopyWithOption(&defaultH5, h5, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并各端-扫码H5设置失败", zap.Error(err))
+		return h5, errors.New("合并各端-扫码H5设置失败")
+	}
+
+	// 如果设置了 is_show_scan_sold_out，则读取解析后的数据，否则读取默认设置
+	cashierSet := s.getSettingByKey(companyUuid, constant.SettingCashier)
+	if strings.Contains(cashierSet.Values, "\"is_show_scan_sold_out\"") {
+		var cashier setting.Cashier
+		err = json.Unmarshal([]byte(st.Values), &cashier)
+		if err != nil {
+			logger.Logger.Error("解析各端-收银机设置失败", zap.Error(err))
+			return h5, errors.New("解析各端-收银机设置失败")
+		}
+		defaultH5.IsShowScanSoldOut = cashier.IsShowScanSoldOut
+	} else {
+		defaultH5.IsShowScanSoldOut = s.getDefaultCashier(languageList).IsShowScanSoldOut
+	}
+	return defaultH5, nil
 }
 
 // Updates 更新设置
