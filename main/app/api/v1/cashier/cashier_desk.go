@@ -99,6 +99,35 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CreateDeskOrder 处理创建桌台订单
+// @Summary 创建桌台订单
+// @Description 创建桌台订单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.CreateDeskOrderReq true "创建桌台订单参数"
+// @Success 200 {object} resp.CreateDeskOrderResp "创建桌台订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/create [post]
+func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	req := req.CreateDeskOrderReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+		return
+	}
+	// 创建桌台订单
+	res, err := h.Service.CreateDeskOrder(companyUuid, req)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterProductHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -112,8 +141,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 初始化处理器
 	wrapper := DeskHandler{
 		Service: service.NewDeskSrv(
-			dbm,                    // 数据库管理器
-			service.NewLocaleSrv(), // 多语言服务
+			dbm,                      // 数据库管理器
+			service.NewLocaleSrv(),   // 多语言服务
+			service.NewOrderSrv(dbm), // 订单服务
 		),
 	}
 
@@ -123,5 +153,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
 		privateApi.GET("/desk/list", wrapper.GetDeskList)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
+		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
 	}
 }
