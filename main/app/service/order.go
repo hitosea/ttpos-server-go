@@ -217,14 +217,6 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	commonRepo := repository.NewCommonRepo()
 
-	// 设置golang的时区
-	setting := repository.NewCompanySettingRepo(s.dbm.GetDB(dbId)).GetByCompanyIdFromCompanyDB()
-	loc, err := time.LoadLocation(setting.Timezone)
-	if err != nil {
-		return resp.CashierOrderListPaginationResp{}, fmt.Errorf("failed to load timezone: %v", err)
-	}
-	time.Local = loc
-
 	// 获取列表
 	lists, total, err := orderRepo.GetOrderListWithPagination(
 		req.PageNo,
