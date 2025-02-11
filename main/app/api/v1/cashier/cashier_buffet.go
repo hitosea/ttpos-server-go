@@ -23,7 +23,7 @@ type BuffetHandler struct {
 // @Tags 收银端.自助餐
 // @Accept json
 // @Produce json
-// @Success 200 {object} cashier_resp.BuffetListPaginationResp "自助餐列表"
+// @Success 200 {object} resp.BuffetListPaginationResp "自助餐列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/buffet/list [get]
 func (h *BuffetHandler) GetBuffetList(c *gin.Context) {

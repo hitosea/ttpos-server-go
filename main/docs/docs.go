@@ -32,7 +32,7 @@ const docTemplate = `{
                     "200": {
                         "description": "自助餐列表",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.BuffetListPaginationResp"
+                            "$ref": "#/definitions/resp.BuffetListPaginationResp"
                         }
                     },
                     "404": {
@@ -61,7 +61,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/cashier_req.DeskInfoReq"
+                            "$ref": "#/definitions/req.DeskInfoReq"
                         }
                     }
                 ],
@@ -69,7 +69,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.DeskInfoResp"
                         }
                     },
                     "404": {
@@ -98,7 +98,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/cashier_req.DeskListReq"
+                            "$ref": "#/definitions/req.DeskListReq"
                         }
                     }
                 ],
@@ -108,7 +108,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/cashier_resp.DeskListWithPaginationResp"
+                                "$ref": "#/definitions/resp.DeskListWithPaginationResp"
                             }
                         }
                     },
@@ -135,7 +135,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台区域和类型列表",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp"
+                            "$ref": "#/definitions/resp.DeskRegionAndTypeListWithPaginationResp"
                         }
                     },
                     "404": {
@@ -870,7 +870,7 @@ const docTemplate = `{
                     "200": {
                         "description": "自助餐列表",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.BuffetListPaginationResp"
+                            "$ref": "#/definitions/resp.BuffetListPaginationResp"
                         }
                     },
                     "404": {
@@ -899,7 +899,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/cashier_req.DeskInfoReq"
+                            "$ref": "#/definitions/req.DeskInfoReq"
                         }
                     }
                 ],
@@ -907,7 +907,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.DeskInfoResp"
                         }
                     },
                     "404": {
@@ -936,7 +936,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/cashier_req.DeskListReq"
+                            "$ref": "#/definitions/req.DeskListReq"
                         }
                     }
                 ],
@@ -946,7 +946,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/cashier_resp.DeskListWithPaginationResp"
+                                "$ref": "#/definitions/resp.DeskListWithPaginationResp"
                             }
                         }
                     },
@@ -973,7 +973,7 @@ const docTemplate = `{
                     "200": {
                         "description": "收银台区域和类型列表",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.DeskRegionAndTypeListWithPaginationResp"
+                            "$ref": "#/definitions/resp.DeskRegionAndTypeListWithPaginationResp"
                         }
                     },
                     "404": {
@@ -999,7 +999,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/cashier_resp.CreateOrderResp"
+                            "$ref": "#/definitions/resp.CreateOrderResp"
                         }
                     }
                 }
@@ -1158,11 +1158,25 @@ const docTemplate = `{
                     "收银端.订单"
                 ],
                 "summary": "获取收银订单列表",
+                "parameters": [
+                    {
+                        "description": "列表参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetOrderListReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "订单列表",
                         "schema": {
-                            "type": "array"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/resp.CashierOrderListPaginationResp"
+                            }
                         }
                     },
                     "404": {
@@ -1875,10 +1889,7 @@ const docTemplate = `{
                         "description": "id",
                         "name": "data",
                         "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamCustomerInfo"
-                        }
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1907,19 +1918,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.CallList"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1942,29 +1941,14 @@ const docTemplate = `{
                         "description": "登陆参数",
                         "name": "data",
                         "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamLogin"
-                        }
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.LoginInfo"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2002,19 +1986,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ServedProductHistory"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2045,22 +2017,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/resp.ServedProduct"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2104,19 +2061,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductOrderListByCategory"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2154,19 +2099,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductOrderList"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2211,19 +2144,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductOrderListByCategory"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2245,19 +2166,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.SettingInfo"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2280,29 +2189,14 @@ const docTemplate = `{
                         "description": "设置参数",
                         "name": "data",
                         "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.KitchenSetting"
-                        }
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.SettingInfo"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -2325,10 +2219,7 @@ const docTemplate = `{
                         "description": "验证参数",
                         "name": "data",
                         "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ParamVerifyAdvancedPassword"
-                        }
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2397,34 +2288,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "cashier_req.DeskInfoReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "桌台uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_req.DeskListReq": {
-            "type": "object",
-            "properties": {
-                "page_no": {
-                    "description": "页码",
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer",
-                    "maximum": 1000,
-                    "minimum": 1
-                }
-            }
-        },
         "cashier_resp.Base": {
             "type": "object",
             "properties": {
@@ -2493,86 +2356,6 @@ const docTemplate = `{
                 }
             }
         },
-        "cashier_resp.Buffet": {
-            "type": "object",
-            "properties": {
-                "buffet_customer_type": {
-                    "description": "自助餐客户类型",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/cashier_resp.BuffetCustomerType"
-                        }
-                    ]
-                },
-                "can_combined": {
-                    "description": "是否可组合",
-                    "type": "integer"
-                },
-                "is_limit_time": {
-                    "description": "是否限时",
-                    "type": "integer"
-                },
-                "locale_name": {
-                    "description": "自助餐名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "non_ordering_time": {
-                    "description": "不可下单时间（分钟）",
-                    "type": "integer"
-                },
-                "price": {
-                    "description": "价格",
-                    "type": "number"
-                },
-                "reminder_order_time": {
-                    "description": "提醒下单时间（分钟）",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "自助餐UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.BuffetCustomerType": {
-            "type": "object",
-            "properties": {
-                "locale_name": {
-                    "description": "自助餐客户类型名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "price": {
-                    "description": "价格",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "自助餐客户类型UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.BuffetListPaginationResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/cashier_resp.Buffet"
-                    }
-                },
-                "meta": {
-                    "$ref": "#/definitions/dto.PageResponse"
-                }
-            }
-        },
         "cashier_resp.Company": {
             "type": "object",
             "properties": {
@@ -2582,223 +2365,6 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "商家UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.CreateOrderResp": {
-            "type": "object",
-            "properties": {
-                "uuid": {
-                    "description": "订单UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.Desk": {
-            "type": "object",
-            "properties": {
-                "customer_count": {
-                    "description": "桌台人数",
-                    "type": "integer"
-                },
-                "desk_no": {
-                    "description": "桌台名称",
-                    "type": "string"
-                },
-                "is_buffet": {
-                    "description": "是否自助餐\t0:否 1:是",
-                    "type": "integer"
-                },
-                "is_lock": {
-                    "description": "是否锁单\t0:否 1:是",
-                    "type": "integer"
-                },
-                "price": {
-                    "description": "桌台价格",
-                    "type": "number"
-                },
-                "region_uuid": {
-                    "description": "桌台区域ID",
-                    "type": "integer"
-                },
-                "remark": {
-                    "description": "桌台备注",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "桌台状态\t0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单",
-                    "type": "integer"
-                },
-                "time": {
-                    "description": "桌台用餐时间（秒）",
-                    "type": "integer"
-                },
-                "type_uuid": {
-                    "description": "桌台类型ID",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "桌台UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.DeskExtra": {
-            "type": "object",
-            "properties": {
-                "available_num": {
-                    "description": "桌台可用数量",
-                    "type": "integer"
-                },
-                "lock_num": {
-                    "description": "桌台锁定数量",
-                    "type": "integer"
-                },
-                "occupy_buffet_num": {
-                    "description": "桌台自助餐数量",
-                    "type": "integer"
-                },
-                "occupy_not_buffet_num": {
-                    "description": "桌台不是自助餐数量",
-                    "type": "integer"
-                },
-                "occupy_wait_num": {
-                    "description": "桌台等待数量",
-                    "type": "integer"
-                },
-                "total_num": {
-                    "description": "桌台总计数量",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.DeskInfoResp": {
-            "type": "object",
-            "properties": {
-                "customer_count": {
-                    "description": "桌台人数",
-                    "type": "integer"
-                },
-                "desk_no": {
-                    "description": "桌台名称",
-                    "type": "string"
-                },
-                "is_buffet": {
-                    "description": "是否自助餐",
-                    "type": "integer"
-                },
-                "is_lock": {
-                    "description": "是否锁单",
-                    "type": "integer"
-                },
-                "region_uuid": {
-                    "description": "桌台区域ID",
-                    "type": "integer"
-                },
-                "remark": {
-                    "description": "桌台备注",
-                    "type": "string"
-                },
-                "sale_bill_uuid": {
-                    "description": "订单UUID",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "桌台状态",
-                    "type": "integer"
-                },
-                "time": {
-                    "description": "桌台用餐时间（秒）",
-                    "type": "integer"
-                },
-                "type_uuid": {
-                    "description": "桌台类型ID",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "桌台UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.DeskListWithPaginationResp": {
-            "type": "object",
-            "properties": {
-                "extra": {
-                    "description": "桌台额外信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/cashier_resp.DeskExtra"
-                        }
-                    ]
-                },
-                "list": {
-                    "description": "桌台列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/cashier_resp.Desk"
-                    }
-                },
-                "meta": {
-                    "description": "分页信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.PageResponse"
-                        }
-                    ]
-                }
-            }
-        },
-        "cashier_resp.DeskRegion": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "description": "餐桌区域名称",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "餐桌区域ID",
-                    "type": "integer"
-                }
-            }
-        },
-        "cashier_resp.DeskRegionAndTypeListWithPaginationResp": {
-            "type": "object",
-            "properties": {
-                "region": {
-                    "type": "object",
-                    "properties": {
-                        "list": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/cashier_resp.DeskRegion"
-                            }
-                        }
-                    }
-                },
-                "type": {
-                    "type": "object",
-                    "properties": {
-                        "list": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/cashier_resp.DeskType"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "cashier_resp.DeskType": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "description": "餐桌类型名称",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "餐桌类型ID",
                     "type": "integer"
                 }
             }
@@ -3220,424 +2786,486 @@ const docTemplate = `{
                 }
             }
         },
-        "req.KitchenSetting": {
+        "req.DeskInfoReq": {
             "type": "object",
+            "required": [
+                "uuid"
+            ],
             "properties": {
-                "customerCallReminder": {
-                    "description": "顾客呼叫提醒",
-                    "type": "boolean"
-                },
-                "fontSize": {
-                    "description": "字体大小",
-                    "type": "integer"
-                },
-                "foodReminder": {
-                    "description": "来菜提醒",
-                    "type": "boolean"
-                },
-                "productPrint": {
-                    "description": "商品打印档口",
-                    "type": "integer"
-                },
-                "remark": {
-                    "description": "机器备注",
-                    "type": "string"
-                }
-            }
-        },
-        "req.ParamCustomerInfo": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "顾客呼叫ID",
+                "uuid": {
+                    "description": "桌台uuid",
                     "type": "integer"
                 }
             }
         },
-        "req.ParamLogin": {
+        "req.DeskListReq": {
             "type": "object",
             "properties": {
-                "captcha": {
-                    "description": "验证码",
-                    "type": "string"
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
                 },
-                "captchaKey": {
-                    "description": "验证码的签名",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "密码",
-                    "type": "string"
-                },
-                "username": {
-                    "description": "用户名",
-                    "type": "string"
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
                 }
             }
         },
-        "req.ParamVerifyAdvancedPassword": {
+        "req.GetOrderListReq": {
             "type": "object",
             "properties": {
-                "password": {
-                    "description": "高级密码",
-                    "type": "string"
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
                 }
             }
         },
-        "resp.Access": {
+        "resp.Buffet": {
             "type": "object",
             "properties": {
-                "apiPath": {
-                    "description": "后台api路径",
-                    "type": "string"
+                "buffet_customer_type": {
+                    "description": "自助餐客户类型",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BuffetCustomerType"
+                        }
+                    ]
                 },
-                "icon": {
-                    "description": "图标名",
-                    "type": "string"
-                },
-                "isMenu": {
-                    "description": "是否是菜单",
+                "can_combined": {
+                    "description": "是否可组合",
                     "type": "boolean"
                 },
-                "isRoute": {
-                    "description": "是否是路由",
+                "is_limit_time": {
+                    "description": "是否限时",
                     "type": "boolean"
                 },
-                "isShow": {
-                    "description": "是否展示",
-                    "type": "boolean"
+                "locale_name": {
+                    "description": "自助餐名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
-                "name": {
-                    "description": "权限名称",
-                    "type": "string"
+                "non_ordering_time": {
+                    "description": "不可下单时间（分钟）",
+                    "type": "integer"
                 },
-                "parentId": {
-                    "description": "父级id",
-                    "type": "string"
+                "price": {
+                    "description": "价格",
+                    "type": "number"
                 },
-                "path": {
-                    "description": "路径",
-                    "type": "string"
+                "reminder_order_time": {
+                    "description": "提醒下单时间（分钟）",
+                    "type": "integer"
                 },
-                "redirectName": {
-                    "description": "重定向名称",
-                    "type": "string"
-                },
-                "sort": {
-                    "description": "排序",
+                "uuid": {
+                    "description": "自助餐UUID",
                     "type": "integer"
                 }
             }
         },
-        "resp.CallInfo": {
+        "resp.BuffetCustomerType": {
             "type": "object",
             "properties": {
-                "deskName": {
-                    "description": "桌台名",
-                    "type": "string"
+                "locale_name": {
+                    "description": "自助餐客户类型名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
-                "id": {
-                    "description": "呼叫ID",
-                    "type": "string"
+                "price": {
+                    "description": "价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "自助餐客户类型UUID",
+                    "type": "integer"
                 }
             }
         },
-        "resp.CallList": {
+        "resp.BuffetListPaginationResp": {
             "type": "object",
             "properties": {
                 "list": {
-                    "description": "列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.CallInfo"
+                        "$ref": "#/definitions/resp.Buffet"
                     }
                 },
-                "pageNum": {
-                    "description": "页码",
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "description": "每页数量",
-                    "type": "integer"
-                },
-                "totalPage": {
-                    "description": "总页数",
-                    "type": "integer"
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },
-        "resp.CategoryProductInfo": {
+        "resp.CashierBillList": {
             "type": "object",
             "properties": {
-                "createTime": {
-                    "description": "送厨时间",
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
                     "type": "integer"
                 },
-                "description": {
-                    "description": "商品描述",
-                    "type": "string"
-                },
-                "id": {
-                    "description": "成品ID",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "商品名",
-                    "type": "string"
-                },
-                "num": {
-                    "description": "商品数量",
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
                     "type": "integer"
                 },
-                "orderNo": {
-                    "description": "订单编号",
-                    "type": "string"
-                }
-            }
-        },
-        "resp.CategoryProductList": {
-            "type": "object",
-            "properties": {
-                "categoryName": {
-                    "description": "分类名称",
-                    "type": "string"
+                "is_split": {
+                    "description": "是否拆单\tfalse:否 true:是",
+                    "type": "boolean"
                 },
-                "productList": {
-                    "description": "商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CategoryProductInfo"
-                    }
-                }
-            }
-        },
-        "resp.FinishedProductInfo": {
-            "type": "object",
-            "properties": {
-                "createTime": {
-                    "description": "送厨时间",
-                    "type": "integer"
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
                 },
-                "description": {
-                    "description": "商品描述",
-                    "type": "string"
-                },
-                "id": {
-                    "description": "成品ID",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "商品名称",
-                    "type": "string"
-                },
-                "num": {
-                    "description": "商品数量",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.HistoryProductionOrder": {
-            "type": "object",
-            "properties": {
-                "orderNo": {
+                "order_no": {
                     "description": "订单编号",
                     "type": "string"
                 },
-                "productList": {
-                    "description": "成品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ServedProductInfo"
-                    }
-                }
-            }
-        },
-        "resp.LoginInfo": {
-            "type": "object",
-            "properties": {
-                "access": {
-                    "description": "权限列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Access"
-                    }
-                },
-                "email": {
-                    "description": "用户邮箱",
+                "pay_type_name": {
+                    "description": "支付类型名称",
                     "type": "string"
                 },
-                "storeName": {
-                    "description": "门店名称",
-                    "type": "string"
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
                 },
-                "token": {
-                    "description": "用户token",
-                    "type": "string"
-                }
-            }
-        },
-        "resp.ProductOrderList": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "$ref": "#/definitions/resp.ProductionOder"
-                },
-                "pageNum": {
-                    "description": "页码",
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
                     "type": "integer"
                 },
-                "pageSize": {
-                    "description": "每页数量",
-                    "type": "integer"
-                },
-                "totalPage": {
-                    "description": "总页数",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.ProductOrderListByCategory": {
-            "type": "object",
-            "properties": {
-                "list": {
+                "sale_order": {
+                    "description": "订单列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.CategoryProductList"
+                        "$ref": "#/definitions/resp.CashierOrder"
                     }
                 },
-                "pageNum": {
-                    "description": "页码",
-                    "type": "integer"
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
                 },
-                "pageSize": {
-                    "description": "每页数量",
-                    "type": "integer"
-                },
-                "totalPage": {
-                    "description": "总页数",
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
                     "type": "integer"
                 }
             }
         },
-        "resp.ProductionOder": {
+        "resp.CashierOrder": {
             "type": "object",
             "properties": {
-                "orderNo": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "type": "integer"
+                },
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
+                    "type": "integer"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
                     "description": "订单编号",
                     "type": "string"
                 },
-                "productList": {
-                    "description": "商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.FinishedProductInfo"
-                    }
-                }
-            }
-        },
-        "resp.ServedProduct": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "成品ID",
+                "pay_type_name": {
+                    "description": "支付类型名称",
                     "type": "string"
                 },
-                "name": {
-                    "description": "商品名",
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
                     "type": "string"
                 },
-                "num": {
-                    "description": "商品数量",
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
                     "type": "integer"
                 }
             }
         },
-        "resp.ServedProductHistory": {
+        "resp.CashierOrderListMeta": {
             "type": "object",
             "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.HistoryProductionOrder"
-                    }
-                },
-                "pageNum": {
-                    "description": "页码",
+                "cancel_num": {
+                    "description": "已取消数量",
                     "type": "integer"
                 },
-                "pageSize": {
+                "complete_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
                     "description": "每页大小",
                     "type": "integer"
                 },
-                "totalPage": {
-                    "description": "总页数",
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                },
+                "unpaid_num": {
+                    "description": "待付款数量",
                     "type": "integer"
                 }
             }
         },
-        "resp.ServedProductInfo": {
+        "resp.CashierOrderListPaginationResp": {
             "type": "object",
             "properties": {
-                "description": {
-                    "description": "商品描述",
-                    "type": "string"
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CashierBillList"
+                    }
                 },
-                "finishedTime": {
-                    "description": "完成时间",
-                    "type": "integer"
-                },
-                "id": {
-                    "description": "成品ID",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "商品名",
-                    "type": "string"
-                },
-                "num": {
-                    "description": "商品数量",
+                "meta": {
+                    "description": "Meta信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CashierOrderListMeta"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.CreateOrderResp": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "订单UUID",
                     "type": "integer"
                 }
             }
         },
-        "resp.SettingInfo": {
+        "resp.Desk": {
             "type": "object",
             "properties": {
-                "clientVersion": {
-                    "description": "客户端版本",
-                    "type": "string"
-                },
-                "customerCallReminder": {
-                    "description": "是否开启顾客呼叫提醒",
-                    "type": "boolean"
-                },
-                "fontSize": {
-                    "description": "字体大小",
+                "customer_count": {
+                    "description": "桌台人数",
                     "type": "integer"
                 },
-                "foodReminder": {
-                    "description": "是否开启来菜提醒",
+                "desk_no": {
+                    "description": "桌台名称",
+                    "type": "string"
+                },
+                "is_buffet": {
+                    "description": "是否自助餐",
                     "type": "boolean"
                 },
-                "productPrint": {
-                    "description": "商品打印档口",
+                "is_lock": {
+                    "description": "是否锁单",
+                    "type": "boolean"
+                },
+                "price": {
+                    "description": "桌台价格",
+                    "type": "number"
+                },
+                "region_uuid": {
+                    "description": "桌台区域ID",
                     "type": "integer"
                 },
                 "remark": {
-                    "description": "机器备注",
+                    "description": "桌台备注",
                     "type": "string"
                 },
-                "serverVersion": {
-                    "description": "服务端版本",
+                "status": {
+                    "description": "桌台状态\t0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单",
+                    "type": "integer"
+                },
+                "time": {
+                    "description": "桌台用餐时间（秒）",
+                    "type": "integer"
+                },
+                "type_uuid": {
+                    "description": "桌台类型ID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskExtra": {
+            "type": "object",
+            "properties": {
+                "available_num": {
+                    "description": "桌台可用数量",
+                    "type": "integer"
+                },
+                "lock_num": {
+                    "description": "桌台锁定数量",
+                    "type": "integer"
+                },
+                "occupy_buffet_num": {
+                    "description": "桌台自助餐数量",
+                    "type": "integer"
+                },
+                "occupy_not_buffet_num": {
+                    "description": "桌台不是自助餐数量",
+                    "type": "integer"
+                },
+                "occupy_wait_num": {
+                    "description": "桌台等待数量",
+                    "type": "integer"
+                },
+                "total_num": {
+                    "description": "桌台总计数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskInfoResp": {
+            "type": "object",
+            "properties": {
+                "customer_count": {
+                    "description": "桌台人数",
+                    "type": "integer"
+                },
+                "desk_no": {
+                    "description": "桌台名称",
                     "type": "string"
                 },
-                "sn": {
-                    "description": "机器ID",
+                "is_buffet": {
+                    "description": "是否自助餐",
+                    "type": "boolean"
+                },
+                "is_lock": {
+                    "description": "是否锁单",
+                    "type": "boolean"
+                },
+                "region_uuid": {
+                    "description": "桌台区域ID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "桌台备注",
                     "type": "string"
                 },
-                "username": {
-                    "description": "用户名",
+                "sale_bill_uuid": {
+                    "description": "订单UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "桌台状态",
+                    "type": "integer"
+                },
+                "time": {
+                    "description": "桌台用餐时间（秒）",
+                    "type": "integer"
+                },
+                "type_uuid": {
+                    "description": "桌台类型ID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskListWithPaginationResp": {
+            "type": "object",
+            "properties": {
+                "extra": {
+                    "description": "桌台额外信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DeskExtra"
+                        }
+                    ]
+                },
+                "list": {
+                    "description": "桌台列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Desk"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.DeskRegion": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "餐桌区域名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "餐桌区域ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskRegionAndTypeListWithPaginationResp": {
+            "type": "object",
+            "properties": {
+                "region": {
+                    "type": "object",
+                    "properties": {
+                        "list": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/resp.DeskRegion"
+                            }
+                        }
+                    }
+                },
+                "type": {
+                    "type": "object",
+                    "properties": {
+                        "list": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/resp.DeskType"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "resp.DeskType": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "餐桌类型名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "餐桌类型ID",
+                    "type": "integer"
                 }
             }
         },

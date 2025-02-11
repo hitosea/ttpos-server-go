@@ -26,7 +26,7 @@ type CashierOrderHandler struct {
 // @Accept json
 // @Produce json
 // @param data body req.GetOrderListReq true "列表参数"
-// @Success 200 {array} nil "订单列表"
+// @Success 200 {array} resp.CashierOrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
 func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {

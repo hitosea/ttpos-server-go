@@ -21,7 +21,7 @@ type CashierInstantHandler struct {
 // @Tags 收银端.点餐订单
 // @Accept json
 // @Produce json
-// @Success 200 {object} cashier_resp.CreateOrderResp
+// @Success 200 {object} resp.CreateOrderResp
 // @Router /cashier/instant/order/create [post]
 func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 	// 创建订单

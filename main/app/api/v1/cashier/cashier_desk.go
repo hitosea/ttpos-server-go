@@ -25,7 +25,7 @@ type DeskHandler struct {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
+// @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
@@ -48,7 +48,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.DeskListReq true "列表参数"
-// @Success 200 {array} cashier_resp.DeskListWithPaginationResp "收银台列表"
+// @Success 200 {array} resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
@@ -77,7 +77,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.DeskInfoReq true "详情参数"
-// @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
+// @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
