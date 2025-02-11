@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单设置ID',
+    sale_bill_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     service_fee_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费',
     service_fee_value DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值，服务费类型为1时，服务费值为固定金额，服务费类型为2和3时，服务费值为%比例',
     tax_fee_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',

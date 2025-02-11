@@ -14,18 +14,19 @@ type WithPreload struct {
 
 // ICommonRepo 公共仓库接口
 type ICommonRepo interface {
-	WhereByID(id uint) DBOption                       // 根据ID查询
-	WhereByStatus(status uint) DBOption               // 根据状态查询
-	WhereByIsShowCashier(isShowCashier uint) DBOption // 根据是否显示收银机查询
-	WhereBySoftDelete() DBOption                      // 根据软删除查询
-	WhereByOrderNo(orderNo string) DBOption           // 根据订单编号查询
-	WhereByBillType(billType uint) DBOption           // 根据账单类型查询
-	WhereByIsHide(isHide bool) DBOption               // 根据是否隐藏查询
-	WhereLikeByName(name string) DBOption             // 根据名称查询
-	SortWithID(order string) DBOption                 // 根据ID排序
-	SortWithSort(order string) DBOption               // 根据Order By排序
-	SortWithIsSpecial(order string) DBOption          // 根据是否特殊排序
-	Preload(preloads ...WithPreload) DBOption         // 预加载
+	WhereByID(id uint) DBOption                                     // 根据ID查询
+	WhereByStatus(status uint) DBOption                             // 根据状态查询
+	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
+	WhereBySoftDelete() DBOption                                    // 根据软删除查询
+	WhereByOrderNo(orderNo string) DBOption                         // 根据订单编号查询
+	WhereByBillType(billType uint) DBOption                         // 根据账单类型查询
+	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
+	WhereLikeByName(name string) DBOption                           // 根据名称查询
+	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
+	SortWithID(order string) DBOption                               // 根据ID排序
+	SortWithSort(order string) DBOption                             // 根据Order By排序
+	SortWithIsSpecial(order string) DBOption                        // 根据是否特殊排序
+	Preload(preloads ...WithPreload) DBOption                       // 预加载
 }
 
 // commonRepo 公共仓库实现
@@ -97,6 +98,13 @@ func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
 func (r *commonRepo) WhereLikeByName(name string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("name LIKE ?", "%"+name+"%")
+	}
+}
+
+// WhereBetweenByCreateTime 根据创建时间查询
+func (r *commonRepo) WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
 	}
 }
 

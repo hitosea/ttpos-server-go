@@ -8,9 +8,9 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (uint64, error)   // 创建销售单
-	GetSaleBill(opts ...DBOption) (model.SaleBill, error)  // 获取销售单
-	CreateSaleOrder(model model.SaleOrder) (uint64, error) // 创建订单
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)    // 创建销售单
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)           // 获取销售单
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) // 创建订单
 }
 
 // orderRepo 订单仓库
@@ -29,12 +29,13 @@ func NewOrderRepoImpl(db *gorm.DB) IOrderRepo {
 }
 
 // CreateSaleBill 创建销售单
-func (r *orderRepo) CreateSaleBill(model model.SaleBill) (uint64, error) {
+func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return 0, err
+		return model, err
 	}
-	return model.Uuid, nil
+
+	return model, nil
 }
 
 // GetSaleBill 获取销售单
@@ -55,10 +56,10 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 }
 
 // CreateSaleOrder 创建销售订单
-func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (uint64, error) {
+func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return 0, err
+		return model, err
 	}
-	return model.Uuid, nil
+	return model, nil
 }
