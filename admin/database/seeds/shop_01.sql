@@ -1026,7 +1026,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan_product_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必选产品计划产品明细表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_gift_or_free_order_reason` (
+CREATE TABLE IF NOT EXISTS `ttpos_free_reason` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '赠品或免费订单原因ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
