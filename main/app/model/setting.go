@@ -1,6 +1,6 @@
 package model
 
-// Setting 设置表
+// Setting 设置表 ttpos_setting
 type Setting struct {
 	Key         string `gorm:"column:key;type:varchar(30);comment:设置项标示;NOT NULL" json:"key"`
 	Description string `gorm:"column:description;type:varchar(255);comment:设置项描述;NOT NULL" json:"description"`

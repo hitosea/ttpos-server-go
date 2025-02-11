@@ -1,6 +1,6 @@
 package model
 
-// Access 权限表
+// Access 权限表 ttpos_access
 type Access struct {
 	ID               uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid             uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:权限ID;NOT NULL" json:"uuid"`
@@ -22,7 +22,7 @@ type Access struct {
 	DeleteTime       int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }
 
-// Staff 员工表
+// Staff 员工表 ttpos_staff
 type Staff struct {
 	ID                  uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid                uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"uuid"`
@@ -46,7 +46,7 @@ type Staff struct {
 	Company *Company `gorm:"foreignKey:company_uuid;references:Uuid"`
 }
 
-// Role 角色表
+// Role 角色表 ttpos_role
 type Role struct {
 	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:角色ID;NOT NULL" json:"uuid"`
@@ -57,7 +57,7 @@ type Role struct {
 	DeleteTime int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }
 
-// StaffRole 员工角色
+// StaffRole 员工角色关系表 ttpos_staff_role
 type StaffRole struct {
 	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工角色关系ID;NOT NULL" json:"uuid"`
@@ -68,7 +68,7 @@ type StaffRole struct {
 	DeleteTime int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }
 
-// RoleAccess 角色权限
+// RoleAccess 角色权限关系表 ttpos_role_access
 type RoleAccess struct {
 	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:角色权限关系ID;NOT NULL" json:"uuid"`

@@ -1,6 +1,6 @@
 package model
 
-// 客户呼叫记录表
+// 客户呼叫记录表 ttpos_customer_call
 type CustomerCall struct {
 	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'客户呼叫记录ID'"`

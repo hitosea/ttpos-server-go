@@ -1,6 +1,6 @@
 package model
 
-// MultiLanguageName 结构体表示多语言名称
+// MultiLanguageName 结构体表示多语言名称 ttpos_multi_language_name
 type MultiLanguageName struct {
 	ID         uint64 `gorm:"primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid       uint64 `gorm:"default:0;comment:'唯一标识符'"`

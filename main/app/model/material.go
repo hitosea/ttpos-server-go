@@ -1,5 +1,6 @@
 package model
 
+// Material 原料信息表 ttpos_material
 type Material struct {
 	ID                    uint    `gorm:"primaryKey;AUTO_INCREMENT;comment:'原料唯一标识符'"`
 	Uuid                  uint64  `gorm:"default:0;comment:'UUID'"`

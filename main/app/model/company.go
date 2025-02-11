@@ -1,6 +1,6 @@
 package model
 
-// Company 集团表
+// Company 集团表 ttpos_company
 type Company struct {
 	ID            uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid          uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"uuid"`
@@ -17,7 +17,7 @@ type Company struct {
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
 
-// CompanySetting 公司设置表
+// CompanySetting 公司设置表 ttpos_company_setting
 type CompanySetting struct {
 	ID               int    `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
 	CompanyUuid      int64  `gorm:"column:company_uuid;type:bigint(20);default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
@@ -47,7 +47,7 @@ type CompanySetting struct {
 	DeleteTime       int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）;NOT NULL" json:"delete_time"`
 }
 
-// CompanyStaff saas库保存的集团员工关联表
+// CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff
 type CompanyStaff struct {
 	ID          int    `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
 	Uuid        uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"uuid"`

@@ -1,5 +1,6 @@
 package model
 
+// ReturnFoodReason 退菜原因表 ttpos_return_food_reason
 type ReturnFoodReason struct {
 	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'退菜原因唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`
@@ -12,6 +13,7 @@ type ReturnFoodReason struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
+// FreeReason 赠品或免费订单原因表 ttpos_free_reason
 type FreeReason struct {
 	ID                    uint   `gorm:"primaryKey;autoIncrement;comment:'赠品或免费订单原因唯一标识符'"`
 	Uuid                  uint   `gorm:"default:0;comment:'UUID'"`

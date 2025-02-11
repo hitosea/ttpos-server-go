@@ -1,5 +1,6 @@
 package model
 
+// 支付方式 PaymentMethod ttpos_payment_method
 type PaymentMethod struct {
 	ID                   uint    `gorm:"primaryKey;AUTO_INCREMENT;comment:自增ID" json:"id"`
 	Uuid                 uint64  `gorm:"default:0;comment:支付方式ID" json:"uuid"`
@@ -18,7 +19,7 @@ type PaymentMethod struct {
 	Provider             string  `gorm:"default:'';comment:提供者" json:"provider"`
 }
 
-// 支付订单 PaymentOrder
+// 支付订单 PaymentOrder ttpos_payment_order
 type PaymentOrder struct {
 	ID                uint    `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid              uint64  `gorm:"column:uuid;type:bigint(20);default:0;comment:支付订单ID" json:"uuid"`

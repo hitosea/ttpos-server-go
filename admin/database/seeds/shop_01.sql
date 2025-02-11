@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `unit_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价,商品原价+小料价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(折扣和优惠后)',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费，按比例收取时有值',
-    tax_rate TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.下单时单税率,结账时再重新核算',
+    `tax_rate` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.下单时单税率,结账时再重新核算',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费',
     `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原价销售额.包含加料、税费.',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退菜',
@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品原料ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称，不随后台更新',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'BOM ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -182,6 +183,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_material` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_attribute` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品属性名称,不随后台更新',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',

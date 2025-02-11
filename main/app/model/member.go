@@ -1,5 +1,6 @@
 package model
 
+// Member 会员信息表 ttpos_member
 type Member struct {
 	ID                 uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'" json:"id"`
 	Uuid               uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:'会员ID';NOT NULL" json:"uuid"`

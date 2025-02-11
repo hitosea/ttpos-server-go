@@ -1,5 +1,6 @@
 package model
 
+// Printer 打印机信息表 ttpos_printer
 type Printer struct {
 	ID              uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID            uint   `gorm:"default:0;unique;comment:'打印机ID'"`
@@ -13,6 +14,7 @@ type Printer struct {
 	DeleteTime      int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }
 
+// PrinterType 打印机类型信息表 ttpos_printer_type
 type PrinterType struct {
 	ID         uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint   `gorm:"default:0;unique;comment:'打印机类型ID'"`
@@ -24,6 +26,7 @@ type PrinterType struct {
 	DeleteTime int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }
 
+// ProductPrinter 产品打印机信息表 ttpos_product_printer
 type ProductPrinter struct {
 	ID                 uint   `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID               uint   `gorm:"default:0;comment:'产品打印机ID'"`
@@ -38,6 +41,7 @@ type ProductPrinter struct {
 	DeleteTime         int64  `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }
 
+// ProductPrinterRegion 产品打印机区域信息表 ttpos_product_printer_region
 type ProductPrinterRegion struct {
 	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID               uint  `gorm:"default:0;comment:'产品打印机区域ID'"`
@@ -48,6 +52,7 @@ type ProductPrinterRegion struct {
 	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }
 
+// ProductPrinterItem 商品打印（档口）打印机信息表 ttpos_product_printer_item
 type ProductPrinterItem struct {
 	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID               uint  `gorm:"default:0;comment:'商品打印（档口）打印机ID'"`
@@ -58,6 +63,7 @@ type ProductPrinterItem struct {
 	DeleteTime         int64 `gorm:"default:0;comment:'删除时间（时间戳）'"`
 }
 
+// ProductPrinterProductItem 产品打印机产品明细信息表 ttpos_product_printer_product_item
 type ProductPrinterProductItem struct {
 	ID                 uint  `gorm:"primaryKey;autoIncrement;comment:'自增ID'"`
 	UUID               uint  `gorm:"default:0;comment:'产品打印机产品明细ID'"`

@@ -1,6 +1,6 @@
 package model
 
-// 销售账单 SaleBill
+// 销售账单 SaleBill ttpos_sale_bill
 type SaleBill struct {
 	// 主键和标识字段
 	ID       uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -61,7 +61,7 @@ type SaleBill struct {
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
-// 销售订单 SaleOrder
+// 销售订单 SaleOrder ttpos_sale_order
 type SaleOrder struct {
 	// 基础标识字段
 	ID      uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -101,7 +101,7 @@ type SaleOrder struct {
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
-// 销售订单产品 SaleOrderProduct
+// 销售订单产品 SaleOrderProduct ttpos_sale_order_product
 type SaleOrderProduct struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -147,7 +147,7 @@ type SaleOrderProduct struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
-// 销售账单设置 SaleBillSetting
+// 销售账单设置 SaleBillSetting ttpos_sale_bill_setting
 type SaleBillSetting struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
