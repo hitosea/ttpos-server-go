@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/router"
 
@@ -41,6 +42,9 @@ var rootCommand = &cobra.Command{
 		var cacheConfig cache.Config
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cache.Redis, cacheConfig)
+		// 初始化Redis分布式并发锁
+		lock.NewSystemLock()
+		// lock.InitRedisLock(cacheConfig)
 
 		// 初始化雪花ID生成器
 		database.InitSonyFlakeId()

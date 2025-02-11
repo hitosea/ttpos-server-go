@@ -1,12 +1,21 @@
 package lock
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
+	"ttpos-server-go/pkg/cache"
 )
 
 func TestOpenDesk(t *testing.T) {
+	// 分布式锁时需要redis信息
+	InitRedisLock(cache.Config{
+		Host:     "192.168.100.59",
+		Port:     6379,
+		Password: "",
+		DB:       1,
+	})
 	var wg sync.WaitGroup
 	systemLock := NewSystemLock()
 
@@ -26,6 +35,13 @@ func TestOpenDesk(t *testing.T) {
 }
 
 func TestPay(t *testing.T) {
+	// 分布式锁时需要redis信息
+	InitRedisLock(cache.Config{
+		Host:     "192.168.100.59",
+		Port:     6379,
+		Password: "",
+		DB:       1,
+	})
 	var wg sync.WaitGroup
 	systemLock := NewSystemLock()
 
@@ -96,3 +112,18 @@ type Order struct {
 }
 
 var order = Order{payCash: nil}
+
+func TestLockUuid(t *testing.T) {
+
+	rs := NewRedSync()
+	mutex := rs.NewMutex("test-redsync")
+	ctx := context.Background()
+
+	if err := mutex.LockContext(ctx); err != nil {
+		panic(err)
+	}
+
+	if _, err := mutex.UnlockContext(ctx); err != nil {
+		panic(err)
+	}
+}
