@@ -23,27 +23,30 @@ import (
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
 	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
 	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
 }
 
 // orderSrv 收银服务结构体
 type orderSrv struct {
-	dbm   *database.DBManager // 数据库管理器
-	cache cache.Cache
+	dbm       *database.DBManager // 数据库管理器
+	localeSrv ILocaleSrv
+	cache     cache.Cache
 }
 
 // NewOrderSrv 创建新的收银产品类别服务
-func NewOrderSrv(dbm *database.DBManager, cache cache.Cache) IOrderSrv {
-	return NewOrderSrvImpl(dbm, cache)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.Cache) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, cache)
 }
 
 // NewOrderSrvImpl 创建新的收银服务实现
-func NewOrderSrvImpl(dbm *database.DBManager, cache cache.Cache) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.Cache) IOrderSrv {
 	return &orderSrv{
-		dbm:   dbm,
-		cache: cache,
+		dbm:       dbm,
+		localeSrv: localeSrv,
+		cache:     cache,
 	}
 }
 
@@ -117,7 +120,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 }
 
 // CreateDeskOrder 创建桌台订单
-func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) {
+func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	var uuid uint64
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -139,8 +142,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (res
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			IsBuffet:     utils.BoolToUint(req.IsBuffet),
-			MealNum:      req.MealNum,
+			IsBuffet:     utils.BoolToUint(*req.IsBuffet),
+			MealNum:      *req.MealNum,
 			Remark:       req.Remark,
 		})
 		if err != nil {
@@ -231,7 +234,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 				},
 			},
 			repository.WithPreload{
-				Query: "SaleOrders.PaymentOrders",
+				Query: "SaleOrders.PaymentOrders.PaymentMethod",
 			},
 		),
 		commonRepo.WhereBySoftDelete(),
@@ -326,8 +329,8 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 		for i, order := range bill.SaleOrders {
 			payTypeNames := []string{}
 			for _, payment := range order.PaymentOrders {
-				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
-				payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 			}
 			orderList[i] = resp.CashierOrder{
 				SaleOrderUuid: order.Uuid,
@@ -371,7 +374,12 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 	// 返回响应对象
 	return resp.CashierOrderListPaginationResp{
 		List: billList,
-		Meta: resp.CashierOrderListMeta{
+		Meta: struct {
+			dto.PageResponse
+			UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
+			CompleteNum int64 `json:"complete_num"` // 已完成数量
+			CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+		}{
 			PageResponse: dto.PageResponse{
 				PageNo:   req.PageNo,
 				PageSize: req.PageSize,
@@ -381,5 +389,115 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 			CancelNum:   cancelNum,
 			CompleteNum: completeNum,
 		},
+	}, nil
+}
+
+// GetOrderList 获取订单信息
+func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error) {
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+	commonRepo := repository.NewCommonRepo()
+	// 获取列表
+	info, err := orderRepo.GetSaleBill(
+		commonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("delete_time = ?", 0)
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.Member",
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+			},
+		),
+		// 额外条件
+		func() repository.DBOption {
+			return func(db *gorm.DB) *gorm.DB {
+				db = db.Where("uuid = ?", req.SaleBillUuid)
+				//
+				return db
+			}
+		}(),
+	)
+	if err != nil {
+		return resp.CashierOrderInfoResp{}, err
+	}
+	//
+	totalMemberNames := []string{}
+	payTypes := []resp.CashierOrderInfoPayTypes{}
+	orderList := make([]resp.CashierOrderInfo, len(info.SaleOrders))
+	for i, order := range info.SaleOrders {
+		payTypeNames := []string{}
+		for _, payment := range order.PaymentOrders {
+			payTypes = append(payTypes, resp.CashierOrderInfoPayTypes{
+				Uuid:              payment.Uuid,
+				PaymentMethodName: payment.PaymentMethodName,
+				CurrencyUnit:      payment.CurrencyUnit,
+				PaymentAmount:     payment.PaymentAmount,
+				Status:            payment.Status,
+				Source:            payment.PaymentMethod.Source,
+			})
+			payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+		}
+		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {
+			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
+		}
+		// todo 未完成
+		products := make([]resp.CashierOrderProduct, len(order.SaleOrderProducts))
+		for j, product := range order.SaleOrderProducts {
+			products[j] = resp.CashierOrderProduct{
+				Uuid:                  product.Uuid,
+				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
+				FlavorName:            product.FlavorName,
+				Num:                   product.Num,
+				CustomPrice:           product.CustomPrice,
+				UnitPrice:             product.UnitPrice,
+				Price:                 product.Price,
+				TaxRate:               product.TaxRate,
+				ProductOriginalAmount: product.ProductOriginalAmount,
+				Status:                product.Status,
+				Remark:                product.Remark,
+				IsGift:                product.IsGift == 1,
+				GiftReason:            product.GiftReason,
+				AttributeName:         "",
+			}
+		}
+		//
+		orderList[i] = resp.CashierOrderInfo{
+			SaleOrderUuid: order.Uuid,
+			BillType:      info.BillType,
+			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
+			OrderNo:       order.OrderNo,
+			Status:        order.Status,
+			FinishTime:    order.FinishTime,
+			OrderAmount:   order.Amount,
+			PaymentAmount: order.PaymentAmount,
+			PayTypeName:   strings.Join(payTypeNames, ","),
+			MemberName:    order.Member.Nickname,
+			Products:      products,
+		}
+	}
+	//
+	return resp.CashierOrderInfoResp{
+		SaleBillUuid:  info.Uuid,
+		BillType:      info.BillType,
+		IsSplit:       len(info.SaleOrders) > 1,
+		SerialNo:      info.SerialNo,
+		OrderNo:       info.OrderNo,
+		Status:        info.Status,
+		CreateTime:    info.CreateTime,
+		FinishTime:    info.FinishTime,
+		OrderAmount:   info.Amount,
+		PaymentAmount: info.PaymentAmount,
+		MemberNames:   strings.Join(totalMemberNames, ","),
+		PayTypes:      payTypes,
+		SaleOrders:    orderList,
 	}, nil
 }

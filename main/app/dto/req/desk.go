@@ -14,8 +14,8 @@ type DeskInfoReq struct {
 // 桌台订单创建
 type DeskOrderCreateReq struct {
 	DeskUuid uint64 `json:"desk_uuid" binding:"required"`                                // 桌台uuid
-	IsBuffet bool   `json:"is_buffet" binding:"required"`                                // 是否是自助餐: false-否, true-是
-	MealNum  uint   `json:"meal_num" binding:"required_if=IsBuffet false,min=1,max=999"` // 餐数: 非自助餐时必填, 最小1, 最大999
+	IsBuffet *bool  `json:"is_buffet" binding:"required"`                                // 是否是自助餐: false-否, true-是
+	MealNum  *uint  `json:"meal_num" binding:"required_if=IsBuffet false,min=1,max=999"` // 餐数: 非自助餐时必填, 最小1, 最大999
 	Remark   string `json:"remark" binding:"max=50"`                                     // 备注: 非必填, 最大50字符
 }
 

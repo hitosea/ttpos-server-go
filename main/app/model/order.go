@@ -96,7 +96,55 @@ type SaleOrder struct {
 	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联对象
-	PaymentOrders []PaymentOrder `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
+	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+// 销售订单产品 SaleOrderProduct
+type SaleOrderProduct struct {
+	// 主键和标识字段
+	ID   uint   `gorm:"column:id;primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
+	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单商品ID" json:"uuid"`
+
+	// 产品基本信息
+	Name                  string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
+	FlavorName            string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
+	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
+
+	// 产品数量和价格
+	Num         uint    `gorm:"column:num;type:int(11);default:0;comment:数量" json:"num"`
+	CustomPrice float64 `gorm:"column:custom_price;type:decimal(12,2);default:0.00;comment:自定义价格" json:"custom_price"`
+	UnitPrice   float64 `gorm:"column:unit_price;type:decimal(12,2);default:0.00;comment:单价" json:"unit_price"`
+	Price       float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:最终单价" json:"price"`
+
+	// 产品税率和原价
+	TaxRate               uint    `gorm:"column:tax_rate;type:tinyint(1);default:0;comment:税率,单位%.下单时单税率,结账时再重新核算" json:"tax_rate"`
+	ProductOriginalAmount float64 `gorm:"column:product_original_amount;type:decimal(12,2);default:0.00;comment:原价销售额.包含加料、税费." json:"product_original_amount"`
+
+	// 产品状态和备注
+	Status uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-正常 1-退菜" json:"status"`
+	Remark string `gorm:"column:remark;type:varchar(255);default:'';comment:备注" json:"remark"`
+
+	// 产品赠品信息
+	IsGift     uint   `gorm:"column:is_gift;type:tinyint(1);default:0;comment:是否赠品, 0-否 1-是" json:"is_gift"`
+	GiftReason string `gorm:"column:gift_reason;type:varchar(255);default:'';comment:赠品原因" json:"gift_reason"`
+
+	// 关联ID
+	OrderProductUuid    uint64 `gorm:"column:order_product_uuid;type:bigint(20);default:0;comment:订单产品ID" json:"order_product_uuid"`
+	ProductionOrderUuid uint64 `gorm:"column:production_order_uuid;type:bigint(20);default:0;comment:生产订单ID" json:"production_order_uuid"`
+	Sign                string `gorm:"column:sign;type:varchar(255);default:'';comment:商品签名" json:"sign"`
+	ProductPackageUuid  uint64 `gorm:"column:product_package_uuid;type:bigint(20);default:0;comment:产品包ID" json:"product_package_uuid"`
+	SaleBillUuid        uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	SaleOrderUuid       uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
+
+	// 时间相关字段
+	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+
+	// 多语言名称
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
 // 销售账单设置 SaleBillSetting
@@ -118,11 +166,4 @@ type SaleBillSetting struct {
 	// 抹零设置
 	Zero         uint `gorm:"column:zero;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero"`
 	ZeroCheckout uint `gorm:"column:zero_checkout;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout"`
-
-	// 统计设置
-	IsStatGift uint `gorm:"column:is_stat_gift;type:tinyint(1);default:0;comment:是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣" json:"is_stat_gift"`
-	IsStatFree uint `gorm:"column:is_stat_free;type:tinyint(1);default:0;comment:是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费" json:"is_stat_free"`
-
-	// 折扣设置
-	DiscountType uint `gorm:"column:discount_type;type:tinyint(1);default:0;comment:打折类型, 0-百分比打折% 1-百分比直接减免% off" json:"discount_type"`
 }

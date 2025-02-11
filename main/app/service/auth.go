@@ -8,7 +8,6 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/resp"
-	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 
@@ -220,7 +219,9 @@ func (s *AuthSrv) Logout(cc *gin.Context) error {
 
 // CashierBase 获取收银端基本信息
 func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
+	var cashierBase resp.CashierBase
 	company := helper.GetCompany(cc)
+	companySetting := helper.GetCompanySetting(cc)
 	staff := helper.GetStaff(cc)
 	var (
 		source   = cc.GetString(jwt.Source)
@@ -230,22 +231,37 @@ func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
-		return resp.CashierBase{}, err
+		return cashierBase, err
 	}
 	if len(permissions) == 0 {
-		return resp.CashierBase{}, errors.New("当前无权限，请联系管理员")
+		return cashierBase, errors.New("当前无权限，请联系管理员")
 	}
-	languageList, _ := s.settingSrv.GetStoreLanguageList(company.Uuid, i18n.GetAcceptLanguage(cc), cc)
-	allSettings, _ := s.settingSrv.GetAll(company.Uuid, i18n.GetAcceptLanguage(cc), languageList, cc)
+	language := i18n.GetAcceptLanguage(cc)
+	cashierSetting, err := s.settingSrv.GetCashierSetting(company.Uuid, language, cc, nil)
+	if err != nil {
+		return cashierBase, err
+	}
+	businessSetting, err := s.settingSrv.GetBusinessSetting(company.Uuid, language)
+	if err != nil {
+		return cashierBase, err
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(company.Uuid, companySetting)
+	if err != nil {
+		return cashierBase, err
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(company.Uuid)
+	if err != nil {
+		return cashierBase, err
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
 		DeviceId:     deviceId,
 		DeviceRemark: deviceRemark,
-		Cashier:      allSettings[constant.SettingCashier].(setting2.Cashier),
-		Business:     allSettings[constant.SettingBusiness].(setting2.Business),
-		Buffet:       allSettings[constant.SettingBuffet].(setting2.Buffet),
-		Currency:     allSettings[constant.SettingCurrency].(setting2.Currency),
+		Cashier:      cashierSetting,
+		Business:     businessSetting,
+		Buffet:       buffetSetting,
+		Currency:     currencySetting,
 		Permissions:  permissions,
 		Company: resp.Company{
 			Uuid: company.Uuid,
@@ -352,7 +368,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 
 // 检查收银是否开启
 func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
+	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil, nil)
 	if err != nil {
 		return false
 	}
@@ -364,7 +380,7 @@ func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
 
 // 检查桌台功能是否开启
 func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil)
+	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil, nil)
 	if err != nil {
 		return false
 	}
