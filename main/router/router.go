@@ -32,7 +32,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterProductHandlers(cashierGroup, dbm)
 			cashier.RegisterDeskHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterBuffetHandlers(cashierGroup, dbm, cache)
-			cashier.RegisterInstantHandlers(cashierGroup, dbm)
+			cashier.RegisterInstantHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterOrderHandlers(cashierGroup, dbm, cache)
 		}
 		// 点餐助手端

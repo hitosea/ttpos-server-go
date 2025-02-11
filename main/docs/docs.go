@@ -56,13 +56,11 @@ const docTemplate = `{
                 "summary": "获取桌台详情",
                 "parameters": [
                     {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeskInfoReq"
-                        }
+                        "type": "integer",
+                        "description": "桌台uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -93,13 +91,19 @@ const docTemplate = `{
                 "summary": "获取桌台列表",
                 "parameters": [
                     {
-                        "description": "列表参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeskListReq"
-                        }
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -894,13 +898,11 @@ const docTemplate = `{
                 "summary": "获取桌台详情",
                 "parameters": [
                     {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeskInfoReq"
-                        }
+                        "type": "integer",
+                        "description": "桌台uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -931,13 +933,19 @@ const docTemplate = `{
                 "summary": "获取桌台列表",
                 "parameters": [
                     {
-                        "description": "列表参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeskListReq"
-                        }
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1160,23 +1168,70 @@ const docTemplate = `{
                 "summary": "获取收银订单列表",
                 "parameters": [
                     {
-                        "description": "列表参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.GetOrderListReq"
-                        }
+                        "type": "integer",
+                        "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
+                        "name": "bill_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "name": "date_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "查询时间类型 1-开台时间、2-支付时间",
+                        "name": "query_time_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "日期范围 [开始时间戳, 结束时间戳]",
+                        "name": "query_times",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "账单状态, -1=全都、 0=待付款、1=已完成、2=已取消",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "订单列表",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/resp.CashierOrderListPaginationResp"
-                            }
+                            "$ref": "#/definitions/resp.CashierOrderListPaginationResp"
                         }
                     },
                     "404": {
@@ -2783,50 +2838,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "req.DeskInfoReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "桌台uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.DeskListReq": {
-            "type": "object",
-            "properties": {
-                "page_no": {
-                    "description": "页码",
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer",
-                    "maximum": 1000,
-                    "minimum": 1
-                }
-            }
-        },
-        "req.GetOrderListReq": {
-            "type": "object",
-            "properties": {
-                "page_no": {
-                    "description": "页码",
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer",
-                    "maximum": 1000,
-                    "minimum": 1
                 }
             }
         },
