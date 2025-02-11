@@ -2,6 +2,7 @@ package service
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -170,24 +171,23 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 		return resp.DeskInfoResp{}, err
 	}
 	// 转换为响应对象
-	// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
 	var deskStatus uint
 	var elapsedTime uint
 	if desk.SaleBill.ID == 0 {
 		if desk.Status == 1 {
-			deskStatus = 3
+			deskStatus = constant.DeskStatusWait
 		} else {
-			deskStatus = 0
+			deskStatus = constant.DeskStatusAvailable
 		}
-		elapsedTime = 0
+		elapsedTime = constant.DeskStatusAvailable
 	} else {
 		//
 		if desk.SaleBill.IsLock == 1 {
-			deskStatus = 4
+			deskStatus = constant.DeskStatusLock
 		} else if desk.SaleBill.IsBuffet == 1 {
-			deskStatus = 2
+			deskStatus = constant.DeskStatusBuffet
 		} else {
-			deskStatus = 1
+			deskStatus = constant.DeskStatusNotBuffet
 		}
 		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
 		passedTime := uint(time.Now().Unix()) - desk.SaleBill.CreateTime
