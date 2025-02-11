@@ -2,8 +2,12 @@ package service
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -15,10 +19,11 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)            // 创建点餐订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                           // 创建订单编号
-	CreateSaleBill(db *gorm.DB, orderSource string) (*model.SaleBill, error)        // 创建销售账单
-	CreateSaleOrder(db *gorm.DB, saleBill model.SaleBill) (*model.SaleOrder, error) // 创建销售订单
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
+	CreateSaleBill(db *gorm.DB, orderSource string) (*model.SaleBill, error)                               // 创建销售账单
+	CreateSaleOrder(db *gorm.DB, saleBill model.SaleBill) (*model.SaleOrder, error)                        // 创建销售订单
+	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取销售订单列表
 }
 
 // orderSrv 收银服务结构体
@@ -151,4 +156,100 @@ func (s *orderSrv) CreateSaleOrder(db *gorm.DB, saleBill model.SaleBill) (*model
 	}
 
 	return &saleOrder, nil
+}
+
+// GetOrderList 获取订单列表
+func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) {
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+	commonRepo := repository.NewCommonRepo()
+
+	// 获取列表
+	lists, total, err := orderRepo.GetOrderListWithPagination(
+		req.PageNo,
+		req.PageSize,
+		commonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("delete_time = ?", 0)
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+			},
+		),
+		commonRepo.WhereByStatus(1),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.SortWithID("DESC"),
+	)
+	if err != nil {
+		return resp.CashierOrderListPaginationResp{}, err
+	}
+
+	//
+	billList := make([]resp.CashierBillList, len(lists))
+	for i, bill := range lists {
+		totalPayTypeNames := []string{}
+		orderList := make([]resp.CashierOrder, len(bill.SaleOrders))
+		for i, order := range bill.SaleOrders {
+			payTypeNames := []string{}
+			for _, payment := range order.PaymentOrders {
+				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
+				payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+			}
+			orderList[i] = resp.CashierOrder{
+				SaleOrderUuid: order.Uuid,
+				BillType:      order.Type,
+				SerialNo:      bill.SerialNo + "-" + strconv.Itoa(i+1),
+				OrderNo:       order.OrderNo,
+				Status:        order.Status,
+				FinishTime:    order.FinishTime,
+				OrderAmount:   order.OrderAmount,
+				PaymentAmount: order.PaymentAmount,
+				PayTypeName:   strings.Join(payTypeNames, ","),
+			}
+		}
+		//
+		billList[i] = resp.CashierBillList{
+			SaleBillUuid:  bill.Uuid,
+			BillType:      bill.BillType,
+			IsSplit:       len(bill.SaleOrders) > 1,
+			SerialNo:      bill.SerialNo,
+			OrderNo:       bill.OrderNo,
+			Status:        bill.Status,
+			FinishTime:    bill.FinishTime,
+			OrderAmount:   bill.OrderAmount,
+			PaymentAmount: bill.PaymentAmount,
+			PayTypeName:   strings.Join(totalPayTypeNames, ","),
+			SaleOrders:    orderList,
+		}
+	}
+
+	// 获取数量
+	getOrderNum := func(status uint) (int64, error) {
+		return orderRepo.GetOrderNum(
+			commonRepo.WhereByStatus(status),
+			commonRepo.WhereBySoftDelete(),
+		)
+	}
+	unpaidNum, _ := getOrderNum(0)
+	completeNum, _ := getOrderNum(1)
+	cancelNum, _ := getOrderNum(2)
+
+	// 返回响应对象
+	return resp.CashierOrderListPaginationResp{
+		List: billList,
+		Meta: resp.CashierOrderListMeta{
+			PageResponse: dto.PageResponse{
+				PageNo:   req.PageNo,
+				PageSize: req.PageSize,
+				Total:    total,
+			},
+			UnpaidNum:   unpaidNum,
+			CancelNum:   cancelNum,
+			CompleteNum: completeNum,
+		},
+	}, nil
 }

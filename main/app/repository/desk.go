@@ -60,7 +60,7 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 	}
 
 	// 获取分页数据
-	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
+	err := query.Order("sort asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
 
 	return desks, total, err
 }

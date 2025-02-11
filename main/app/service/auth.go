@@ -242,11 +242,13 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyUuid, staffU
 		companySetting model.CompanySetting
 		staff          model.Staff
 	)
+
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staff = staffRepo.GetByUuid(staffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
+
 	if staff.DeleteTime != 0 {
 		return company, companySetting, staff, errors.New("用户被删除")
 	}
@@ -256,6 +258,7 @@ func (s *AuthSrv) AuthenticateStaff(source, deviceId string, companyUuid, staffU
 			companySetting = *staff.Company.CompanySetting
 		}
 	}
+
 	if company.Uuid == 0 || companySetting.ID == 0 {
 		return company, companySetting, staff, errors.New("商家不存在")
 	}

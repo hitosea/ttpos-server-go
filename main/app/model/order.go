@@ -52,6 +52,7 @@ type SaleOrder struct {
 	ID      uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid    uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单ID" json:"uuid"`
 	OrderNo string `gorm:"column:order_no;type:varchar(255);default:'';comment:订单编号" json:"order_no"`
+	Type    uint   `gorm:"column:type;type:tinyint(1);default:0;comment:订单类型, 0-桌台订单 1-扫码订单" json:"type"`
 
 	// 状态字段
 	Status uint `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-未结账 1-已结账" json:"status"`
@@ -64,7 +65,8 @@ type SaleOrder struct {
 	TaxFee                float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0;comment:税费" json:"tax_fee"`
 	DiscountFee           float64 `gorm:"column:discount_fee;type:decimal(12,2);default:0;comment:折扣费用" json:"discount_fee"`
 	MemberDiscountFee     float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用" json:"member_discount_fee"`
-	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:总金额" json:"amount"`
+	OrderAmount           float64 `gorm:"column:order_amount;type:decimal(12,2);default:0;comment:订单总金额，关联销售订单的总金额之和" json:"order_amount"`
+	PaymentAmount         float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额，支付金额-订单总金额=支付手续费" json:"payment_amount"`
 
 	// 关联ID字段
 	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -76,6 +78,9 @@ type SaleOrder struct {
 	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
 	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+
+	// 关联字段
+	PaymentOrders []PaymentOrder `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 // 销售账单设置 SaleBillSetting
