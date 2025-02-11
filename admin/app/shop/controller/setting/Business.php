@@ -148,6 +148,7 @@ class Business extends Controller
                     return $this->renderError('原因不能为空');
                 }
                 $id = $item['id'] ?? 0;
+                $languageUuid = $item['multi_language_name_uuid'] ?? 0;
                 $languageData = json_decode($reason, true);
                 $name = $languageData[$defaultLang] ?? '';
 
@@ -156,6 +157,7 @@ class Business extends Controller
                         $existing = $model->where('id', $id)->find();
                         if ($existing) {
                             $id = $existing['id'];
+                            $languageUuid = $existing['multi_language_name_uuid'];
                             $item['action'] = 'edit';
                         } else {
                             $item['app_id'] = $app_id;
@@ -168,20 +170,20 @@ class Business extends Controller
                         unset($item['action']);
                         //
                         $languageUuid = (new MultiLanguageName)->saveNames($languageData);
-                        $uuid = createUuid();
-                        $item['uuid'] = $uuid;
+                        $item['uuid'] = createUuid();
                         $item['name'] = $name;
                         $item['multi_language_name_uuid'] = $languageUuid;
                         (new FreeTag)->save($item);
                     } elseif ($item['action'] == 'delete') {
                         if ($id) {
-                            $model->multiLanguageName()->where('id', $id)->delete();
+                            (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
                             $model->where('id', $id)->delete();
                         }
                     } elseif ($item['action'] == 'edit') {
                         if ($id) {
                             unset($item['action']);
                             $item['name'] = $name;
+                            (new MultiLanguageName)->saveNames($languageData, $languageUuid);
                             $model->update($item, ['id' => $id]);
                         }
                     }
@@ -213,21 +215,27 @@ class Business extends Controller
         }
 
         $data = $this->request->param();
+        $defaultLang = getDefaultLanguage();
         if (isset($data['reason'])) {
             if (empty($data['reason'])) {
                 return $this->renderError('请输入退菜原因');
             }
             foreach ($data['reason'] as $item) {
-                if (ValidateHelp::hasEmptyValue($item['reason'] ?? '')) {
+                $reason = $item['reason'] ?? '';
+                if (ValidateHelp::hasEmptyValue($reason)) {
                     return $this->renderError('原因不能为空');
                 }
                 $id = $item['id'] ?? 0;
+                $languageUuid = $item['multi_language_name_uuid'] ?? 0;
+                $languageData = json_decode($reason, true);
+                $name = $languageData[$defaultLang] ?? '';
 
                 if (isset($item['action'])) {
                     if ($item['action'] == 'add' || $item['action'] == 'edit') {
                         $existing = $model->where('id', $id)->find();
                         if ($existing) {
                             $id = $existing['id'];
+                            $languageUuid = $existing['multi_language_name_uuid'];
                             $item['action'] = 'edit';
                         } else {
                             $item['app_id'] = $app_id;
@@ -238,14 +246,22 @@ class Business extends Controller
                     if ($item['action'] == 'add') {
                         unset($item['id']);
                         unset($item['action']);
+                        //
+                        $languageUuid = (new MultiLanguageName)->saveNames($languageData);
+                        $item['uuid'] = createUuid();
+                        $item['name'] = $name;
+                        $item['multi_language_name_uuid'] = $languageUuid;
                         (new ReturnReason)->save($item);
                     } elseif ($item['action'] == 'delete') {
                         if ($id) {
+                            (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
                             $model->where('id', $id)->delete();
                         }
                     } elseif ($item['action'] == 'edit') {
                         if ($id) {
                             unset($item['action']);
+                            $item['name'] = $name;
+                            (new MultiLanguageName)->saveNames($languageData, $languageUuid);
                             $model->update($item, ['id' => $id]);
                         }
                     }

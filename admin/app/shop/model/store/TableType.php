@@ -21,12 +21,10 @@ class TableType extends TableTypeModel
     {
         $model = $this;
         if (!empty($search)) {
-            $model = $model->like('type_name', $search);
+            $model = $model->like('name', $search);
         }
         // 查询列表数据
-        $list = $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['create_time' => 'desc'])
-            ->paginate($params);
+        $list = $model->order(['create_time' => 'desc'])->paginate($params);
         // 检查每个类型是否被桌台关联
         foreach ($list as &$type) {
             $isAssociated = $this->isTypeAssociatedWithTable($type['type_id']);
@@ -40,7 +38,7 @@ class TableType extends TableTypeModel
      */
     private function isTypeAssociatedWithTable($type_id)
     {
-        return Table::where('type_id', $type_id)->count() > 0;
+        return Table::where('uuid', $type_id)->count() > 0;
     }
 
     /**
@@ -52,7 +50,10 @@ class TableType extends TableTypeModel
         if (!$this->validateForm($data, self::FORM_SCENE_ADD)) {
             return false;
         }
-        $data['app_id'] = self::$app_id;
+        $data['uuid'] = createUuid();
+        $data['name'] = $data['type_name'] ?? '';
+        $data['range_min'] = $data['min_num'] ?? 0;
+        $data['range_max'] = $data['max_num'] ?? 0;
         return self::create($data);
     }
 
@@ -65,6 +66,9 @@ class TableType extends TableTypeModel
         if (!$this->validateForm($data, self::FORM_SCENE_EDIT)) {
             return false;
         }
+        $data['name'] = $data['type_name'] ?? '';
+        $data['range_min'] = $data['min_num'] ?? 0;
+        $data['range_max'] = $data['max_num'] ?? 0;
         return $this->save($data);
     }
 
@@ -73,7 +77,7 @@ class TableType extends TableTypeModel
      */
     public function setDelete()
     {
-        if ($this->isTypeAssociatedWithTable($this['type_id'])) {
+        if ($this->isTypeAssociatedWithTable($this['uuid'])) {
             $this->error = '该类型下存在桌台，不允许删除';
             return false;
         }
@@ -103,18 +107,13 @@ class TableType extends TableTypeModel
         }
         if ($scene === self::FORM_SCENE_ADD) {
             //查询桌号是否存在
-            $count = $this->where('shop_supplier_id', '=', $data['shop_supplier_id'])
-                ->where('type_name', '=', $data['type_name'])
-                ->count();
+            $count = $this->where('name', '=', $data['type_name'])->count();
             if ($count) {
                 $this->error = '桌号类型名已存在';
                 return false;
             }
         } else {
-            $count = $this->where('shop_supplier_id', '=', $this['shop_supplier_id'])
-                ->where('type_name', '=', $data['type_name'])
-                ->where('type_id', '<>', $data['type_id'])
-                ->count();
+            $count = $this->where('name', '=', $data['type_name'])->where('uuid', '<>', $data['type_id'])->count();
             if ($count) {
                 $this->error = '桌号类型名已存在';
                 return false;

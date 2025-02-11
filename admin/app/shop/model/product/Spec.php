@@ -92,8 +92,7 @@ class Spec extends SpecModel
             $this->error = '规格名称不能为空';
             return false;
         }
-        $isExist = $this->where('shop_supplier_id', '=', $this['shop_supplier_id'])
-            ->where('spec_name', '=', $data['spec_name'])
+        $isExist = $this->where('spec_name', '=', $data['spec_name'])
             ->where('spec_id', '<>', $this['spec_id'])
             ->count();
         if ($isExist) {

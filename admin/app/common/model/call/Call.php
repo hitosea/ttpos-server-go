@@ -19,7 +19,6 @@ class Call extends BaseModel
             ->field('call_type, create_time, id, is_send, status, table_id, table_no')
             ->alias('t1')
             ->where('status', $status)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->where('(SELECT MAX(create_time) as max_time FROM jjjfood_call t2  WHERE t2.table_id = t1.table_id) = create_time')
             ->order('create_time', 'desc')
             ->paginate($params);
@@ -45,7 +44,7 @@ class Call extends BaseModel
      */
     public function markAsProcessed(int $callId, int $shopSupplierId = 0)
     {
-        $call = self::withoutGlobalScope()->where('id', $callId)->where('shop_supplier_id', $shopSupplierId)->find();
+        $call = self::withoutGlobalScope()->where('id', $callId)->find();
         if ($call) {
             self::withoutGlobalScope()->where('table_id', $call['table_id'])->where('status', 0)->update(['status' => 1]);
         }
@@ -58,7 +57,6 @@ class Call extends BaseModel
     {
         return $this->withoutGlobalScope()
             ->where('status', 0)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->group('table_id')
             ->count();
     }
@@ -74,7 +72,6 @@ class Call extends BaseModel
             ->field('call_type, create_time, id, is_send, status, table_id, table_no')
             ->alias('t1')
             ->where('status', 0)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->where('(SELECT MAX(create_time) as max_time FROM jjjfood_call t2  WHERE t2.table_id = t1.table_id) = create_time')
             ->order('create_time', 'desc')
             ->limit(10)
@@ -98,7 +95,6 @@ class Call extends BaseModel
         return $this->withoutGlobalScope()
             ->alias('t1')
             ->where('status', 0)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->where('(SELECT MAX(create_time) as max_time FROM jjjfood_call t2  WHERE t2.table_id = t1.table_id) = create_time')
             ->count();
     }

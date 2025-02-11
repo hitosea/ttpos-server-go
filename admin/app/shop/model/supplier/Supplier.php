@@ -169,7 +169,7 @@ class Supplier extends SupplierModel
         $this->startTrans();
         try {
             $this->save(['is_delete' => 1]);
-            (new ShopUserModel)->where('shop_supplier_id', '=', $this['shop_supplier_id'])->update(['is_status' => 1]);
+            (new ShopUserModel)->update(['is_status' => 1]);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -189,7 +189,7 @@ class Supplier extends SupplierModel
         try {
             if ($is_recycle == 1) {
                 //产品下架
-                ProductModel::where('shop_supplier_id', '=', $this['shop_supplier_id'])->update(['product_status' => 20]);
+                ProductModel::update(['product_status' => 20]);
             }
             //更改店铺状态
             $this->save(['is_recycle' => $is_recycle]);

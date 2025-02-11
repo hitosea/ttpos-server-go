@@ -51,8 +51,7 @@ class Label extends LabelModel
      */
     public function edit($data)
     {
-        $isExist = $this->where('shop_supplier_id', '=', $this['shop_supplier_id'])
-            ->where('label_name', '=', $data['label_name'])
+        $isExist = $this->where('label_name', '=', $data['label_name'])
             ->where('label_id', '<>', $this['label_id'])
             ->count();
         if ($isExist) {
