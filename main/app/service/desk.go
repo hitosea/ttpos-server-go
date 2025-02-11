@@ -96,23 +96,23 @@ func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWi
 		var elapsedTime uint
 		if desk.SaleBill.ID == 0 {
 			if desk.Status == 1 {
-				deskStatus = 3
+				deskStatus = constant.DeskStatusWait
 				extra.OccupyWaitNum++
 			} else {
-				deskStatus = 0
+				deskStatus = constant.DeskStatusAvailable
 				extra.AvailableNum++
 			}
-			elapsedTime = 0
+			elapsedTime = constant.DeskStatusAvailable
 		} else {
 			extra.OccupyWaitNum++
 			//
 			if desk.SaleBill.IsLock == 1 {
-				deskStatus = 4
+				deskStatus = constant.DeskStatusLock
 				extra.LockNum++
 			} else if desk.SaleBill.IsBuffet == 1 {
-				deskStatus = 2
+				deskStatus = constant.DeskStatusBuffet
 			} else {
-				deskStatus = 1
+				deskStatus = constant.DeskStatusNotBuffet
 			}
 			//
 			if desk.SaleBill.IsBuffet == 1 {
