@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -15,24 +16,27 @@ type IDeskSrv interface {
 	GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)      // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
+	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
 }
 
 // deskSrv 收银服务结构体
 type deskSrv struct {
 	dbm       *database.DBManager // 数据库管理器
 	localeSrv ILocaleSrv          // 多语言名称服务
+	orderSrv  IOrderSrv           // 订单服务
 }
 
 // NewProductSrv 创建新的收银产品类别服务
-func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IDeskSrv {
-	return NewDeskSrvImpl(dbm, localeSrv)
+func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv) IDeskSrv {
+	return NewDeskSrvImpl(dbm, localeSrv, orderSrv)
 }
 
 // NewDeskSrvImpl 创建新的收银服务实现
-func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IDeskSrv {
+func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv) IDeskSrv {
 	return &deskSrv{
 		dbm:       dbm,
 		localeSrv: localeSrv,
+		orderSrv:  orderSrv,
 	}
 }
 
@@ -214,4 +218,21 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 		Remark:       desk.SaleBill.Remark,
 		Time:         elapsedTime,
 	}, nil
+}
+
+// CreateDeskOrder 创建桌台订单
+func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) {
+	// 判断桌台是否存在
+	desk, _ := s.GetDeskInfo(dbId, req.DeskUuid)
+	if desk.Uuid == 0 {
+		return resp.CreateDeskOrderResp{}, errors.New("桌台不存在")
+	}
+
+	// 判断桌台是否空闲
+	if desk.Status != constant.DeskStatusAvailable {
+		return resp.CreateDeskOrderResp{}, errors.New("桌台不空闲")
+	}
+
+	// 创建订单
+	return s.orderSrv.CreateDeskOrder(dbId, req)
 }

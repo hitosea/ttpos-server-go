@@ -25,7 +25,7 @@ type CashierInstantHandler struct {
 // @Router /cashier/instant/order/create [post]
 func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 	// 创建订单
-	res, err := h.orderService.CreateInstantOrder(1)
+	res, err := h.orderService.CreateInstantOrder(helper.GetCompanyUuid(c))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("创建订单失败"))
 		return

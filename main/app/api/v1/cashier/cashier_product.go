@@ -4,7 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req/cashier_req"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/database"
 
@@ -29,14 +29,14 @@ type CashierProductHandler struct {
 // @Router /cashier/product/list [get]
 func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 	// 绑定请求参数
-	req := cashier_req.ProductListReq{}
+	req := req.ProductListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
 	}
 
 	// 获取收银产品列表
-	res, err := h.productService.GetProductList(1, req)
+	res, err := h.productService.GetProductList(helper.GetCompanyUuid(c), req)
 
 	// 处理错误
 	if err != nil {
@@ -59,7 +59,7 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 // @Router /cashier/product/category/list [get]
 func (h *CashierProductHandler) GetProductCategoryList(c *gin.Context) {
 	// 获取收银产品类别列表
-	res, err := h.productService.GetProductCategoryList(1)
+	res, err := h.productService.GetProductCategoryList(helper.GetCompanyUuid(c))
 
 	// 处理错误
 	if err != nil {

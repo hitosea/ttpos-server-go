@@ -1,4 +1,4 @@
-package cashier_req
+package req
 
 import "ttpos-server-go/app/dto"
 
