@@ -985,7 +985,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sale_inventory` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售库存表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan` (
+CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划ID',
     `name` varchar(255) NOT NULL DEFAULT '' COMMENT '方案名称',
@@ -1001,29 +1001,29 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必点产品计划表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必点计划表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan_region` (
+CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan_region` (
     id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划区域明细ID',
-    product_must_product_plan_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划ID',
+    product_must_plan_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划ID',
     desk_region_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台区域ID',
     create_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必选产品计划区域明细表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必点计划区域表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan_product_item` (
+CREATE TABLE IF NOT EXISTS `ttpos_product_must_plan_item` (
     id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划产品明细ID',
-    product_must_product_plan_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划ID',
+    product_must_plan_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品必选产品计划ID',
     product_package_uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '产品包ID',
     create_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     update_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     delete_time INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必选产品计划产品明细表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必点计划产品表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_free_reason` (
     id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

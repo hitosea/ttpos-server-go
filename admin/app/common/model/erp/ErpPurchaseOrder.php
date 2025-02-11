@@ -549,9 +549,6 @@ class ErpPurchaseOrder extends BaseModel
         if ($status) {
             $model = $model->where('status', $status);
         }
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', $shop_supplier_id);
-        }
         return $model->count();
     }
 }

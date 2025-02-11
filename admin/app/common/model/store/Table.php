@@ -15,15 +15,21 @@ use app\common\model\settings\Setting as SettingModel;
  */
 class Table extends BaseModel
 {
-    protected $pk = 'table_id';
-    protected $name = 'table';
+    protected $name = 'desk';
+    protected $pk = 'id';
 
     /**
-     * 关联门店
+     * 追加字段
+     * @var string[]
      */
-    public function supplier()
+    protected $append = ['table_id'];
+
+    /**
+     * 兼容字段
+     */
+    public function getTableIdAttr($value, $data)
     {
-        return $this->BelongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->uuid ?: 0;
     }
 
     /**
@@ -84,8 +90,8 @@ class Table extends BaseModel
      */
     public static function getAreaType($shop_supplier_id)
     {
-        $areaList = (new TableArea)->where('shop_supplier_id', '=', $shop_supplier_id)->select();
-        $typeList = (new TableType)->where('shop_supplier_id', '=', $shop_supplier_id)->select();
+        $areaList = (new TableArea)->select();
+        $typeList = (new TableType)->select();
         return compact('areaList', 'typeList');
     }
 
@@ -277,12 +283,11 @@ class Table extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'table_no' => $name,
-            'shop_supplier_id' => $shop_supplier_id
+            'desk_no' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['table_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('table_id') ? true : false;
+        return static::where($filter)->value('id') ? true : false;
     }
 }

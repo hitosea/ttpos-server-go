@@ -10,15 +10,25 @@ use app\common\model\BaseModel;
  */
 class TableArea extends BaseModel
 {
-    protected $pk = 'area_id';
-    protected $name = 'table_area';
+    protected $name = 'desk_region';
+    protected $pk = 'id';
 
     /**
-     * 关联门店
+     * 追加字段
+     * @var string[]
      */
-    public function supplier()
+    protected $append = ['area_id', 'area_name'];
+
+    /**
+     * 兼容字段
+     */
+    public function getAreaIdAttr($value, $data)
     {
-        return $this->BelongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->uuid ?: 0;
+    }
+    public function getAreaNameAttr($value, $data)
+    {
+        return $this->getData('name') ?: '';
     }
 
     /**
@@ -26,7 +36,7 @@ class TableArea extends BaseModel
      */
     public static function detail($where)
     {
-        $filter = is_array($where) ? $where : ['area_id' => $where];
+        $filter = is_array($where) ? $where : ['uuid' => $where];
         return static::where($filter)->find();
     }
 
@@ -35,9 +45,7 @@ class TableArea extends BaseModel
      */
     public static function getAllList($shop_supplier_id)
     {
-        return (new self)->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['sort' => 'asc', 'create_time' => 'desc'])
-            ->select();
+        return (new self)->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**
@@ -46,13 +54,12 @@ class TableArea extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'area_name' => $name,
-            'shop_supplier_id' => $shop_supplier_id
+            'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['area_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('area_id') ? true : false;
+        return static::where($filter)->value('id') ? true : false;
     }
 
     /**
@@ -60,8 +67,6 @@ class TableArea extends BaseModel
      */
     public static function getSucList()
     {
-        return (new self)->field(['area_id', 'area_name'])
-            ->order(['sort' => 'asc', 'create_time' => 'desc'])
-            ->select()->toArray();
+        return (new self)->field('uuid as area_id, name as area_name')->order(['sort' => 'asc', 'create_time' => 'desc'])->select()->toArray();
     }
 }
