@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     order_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售账单编号',
+    duty_no VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号，用于标记该账单属于哪个当班',
     bill_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单',
     dining_method TINYINT(1) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食 1-打包',
     is_buffet TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
@@ -18,6 +19,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     product_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，关联销售订单的商品金额之和',
     payment_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额，支付金额-订单总金额=支付手续费',
     payment_commission_fee DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费，多次支付的支付手续费之和',
+    gift_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额，关联销售订单的赠菜金额之和',
+    free_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额，关联销售订单的免单金额之和',
     consumer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     cashier_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     buffet_order_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
@@ -55,6 +58,20 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单设置ID',
+    service_fee_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费',
+    service_fee_value DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值，服务费类型为1时，服务费值为固定金额，服务费类型为2和3时，服务费值为%比例',
+    tax_fee_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
+    zero TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
+    zero_checkout TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
+    is_stat_gift TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣',
+    is_stat_free TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费',
+    discount_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '打折类型, 0-百分比打折% 1-百分比直接减免% off',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单设置表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1279,7 +1296,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_cashier_duty_detail` (
     total_single_price_change_count INT(11) NOT NULL DEFAULT 0 COMMENT '单品改价次数',
     total_order_price_change_count INT(11) NOT NULL DEFAULT 0 COMMENT '整单改价次数',
     total_order_discout_count INT(11) NOT NULL DEFAULT 0 COMMENT '整单折扣次数',
-    total_remove_small_change_count INT(11) NOT NULL DEFAULT 0 COMMENT '整单抹零次数',
+    total_zero_checkout_count INT(11) NOT NULL DEFAULT 0 COMMENT '整单结账抹零次数',
     total_order_count INT(11) NOT NULL DEFAULT 0 COMMENT '所有订单数',
     total_table_count INT(11) NOT NULL DEFAULT 0 COMMENT '桌数',
     total_customer_count INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
