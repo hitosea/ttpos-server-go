@@ -28,12 +28,11 @@ type SaleBill struct {
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费，多次支付的支付手续费之和" json:"payment_commission_fee"`
 
 	// 关联ID字段
-	SaleBillSettingUuid uint64 `gorm:"column:sale_bill_setting_uuid;type:bigint(20);default:0;comment:销售账单设置ID" json:"sale_bill_setting_uuid"`
-	ConsumerUuid        uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
-	CashierUuid         uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
-	BuffetOrderUuid     uint64 `gorm:"column:buffet_order_uuid;type:bigint(20);default:0;comment:自助餐订单ID" json:"buffet_order_uuid"`
-	DeskUuid            uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
-	SerialNo            string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
+	ConsumerUuid    uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
+	CashierUuid     uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
+	BuffetOrderUuid uint64 `gorm:"column:buffet_order_uuid;type:bigint(20);default:0;comment:自助餐订单ID" json:"buffet_order_uuid"`
+	DeskUuid        uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
+	SerialNo        string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
 
 	// 时间相关字段
 	HideBillTime uint `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
@@ -44,7 +43,7 @@ type SaleBill struct {
 
 	// 关联字段
 	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillSettingUuid;references:uuid"`
+	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
 // 销售订单 SaleOrder
@@ -84,6 +83,9 @@ type SaleBillSetting struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单设置ID" json:"uuid"`
+
+	// 关联字段
+	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 
 	// 服务费相关设置
 	ServiceFeeType  uint    `gorm:"column:service_fee_type;type:tinyint(1);default:0;comment:服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费" json:"service_fee_type"`
