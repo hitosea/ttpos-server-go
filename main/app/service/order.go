@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
@@ -15,10 +15,10 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateOrderNo(db *gorm.DB, orderSource string) string                        // 创建订单编号
-	CreateInstantOrder(dbId uint64) (cashier_resp.CreateInstantOrderResp, error) // 创建点餐订单
-	CreateSaleBill(db *gorm.DB, orderSource string) (uint64, error)              // 创建销售账单
-	CreateSaleOrder(db *gorm.DB, saleBillUuid uint64) (uint64, error)            // 创建销售订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                // 创建订单编号
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) // 创建点餐订单
+	CreateSaleBill(db *gorm.DB, orderSource string) (uint64, error)      // 创建销售账单
+	CreateSaleOrder(db *gorm.DB, saleBillUuid uint64) (uint64, error)    // 创建销售订单
 }
 
 // orderSrv 收银服务结构体
@@ -74,7 +74,7 @@ func (s *orderSrv) CreateOrderNo(db *gorm.DB, orderSource string) string {
 }
 
 // CreateInstantOrder 创建点餐订单
-func (s *orderSrv) CreateInstantOrder(dbId uint64) (cashier_resp.CreateInstantOrderResp, error) {
+func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) {
 	var uuid uint64
 	db := s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -95,10 +95,10 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (cashier_resp.CreateInstantOr
 		return nil
 	})
 	if err != nil {
-		return cashier_resp.CreateInstantOrderResp{}, err
+		return resp.CreateInstantOrderResp{}, err
 	}
 
-	return cashier_resp.CreateInstantOrderResp{
+	return resp.CreateInstantOrderResp{
 		SaleBillUuid: uuid,
 	}, nil
 }

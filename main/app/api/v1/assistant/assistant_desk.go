@@ -4,7 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req/cashier_req"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -25,7 +25,7 @@ type DeskHandler struct {
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} cashier_resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
+// @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
@@ -47,14 +47,14 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @param data body cashier_req.DeskListReq true "列表参数"
-// @Success 200 {array} cashier_resp.DeskListWithPaginationResp "桌台列表"
+// @param data body req.DeskListReq true "列表参数"
+// @Success 200 {array} resp.DeskListWithPaginationResp "桌台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := cashier_req.DeskListReq{}
+	req := req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
@@ -76,14 +76,14 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
-// @param data body cashier_req.DeskInfoReq true "详情参数"
-// @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
+// @param data body req.DeskInfoReq true "详情参数"
+// @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := cashier_req.DeskInfoReq{}
+	req := req.DeskInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

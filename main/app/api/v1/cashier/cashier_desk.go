@@ -4,7 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req/cashier_req"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -47,14 +47,14 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body cashier_req.DeskListReq true "列表参数"
+// @param data body req.DeskListReq true "列表参数"
 // @Success 200 {array} cashier_resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := cashier_req.DeskListReq{}
+	req := req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
@@ -76,14 +76,14 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body cashier_req.DeskInfoReq true "详情参数"
+// @param data body req.DeskInfoReq true "详情参数"
 // @Success 200 {object} cashier_resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := cashier_req.DeskInfoReq{}
+	req := req.DeskInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
