@@ -105,20 +105,21 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body req.CreateDeskOrderReq true "创建桌台订单参数"
+// @param data body req.DeskOrderCreateReq true "创建桌台订单参数"
 // @Success 200 {object} resp.CreateDeskOrderResp "创建桌台订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/create [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.CreateDeskOrderReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+	params := req.DeskOrderCreateReq{}
+	message := req.DeskOrderCreateReqMessage
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, message)
 		return
 	}
+
 	// 创建桌台订单
-	res, err := h.Service.CreateDeskOrder(companyUuid, req)
+	res, err := h.Service.CreateDeskOrder(helper.GetCompanyUuid(c), params)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)

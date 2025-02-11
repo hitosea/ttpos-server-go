@@ -23,7 +23,7 @@ import (
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
 	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
 	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
 }
@@ -117,7 +117,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 }
 
 // CreateDeskOrder 创建桌台订单
-func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) {
+func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	var uuid uint64
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -139,8 +139,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (res
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			IsBuffet:     utils.BoolToUint(req.IsBuffet),
-			MealNum:      req.MealNum,
+			IsBuffet:     utils.BoolToUint(*req.IsBuffet),
+			MealNum:      *req.MealNum,
 			Remark:       req.Remark,
 		})
 		if err != nil {
