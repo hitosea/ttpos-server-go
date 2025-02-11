@@ -2,21 +2,22 @@ package model
 
 // 支付方式 PaymentMethod ttpos_payment_method
 type PaymentMethod struct {
-	ID                   uint    `gorm:"primaryKey;AUTO_INCREMENT;comment:自增ID" json:"id"`
-	Uuid                 uint64  `gorm:"default:0;comment:支付方式ID" json:"uuid"`
-	Name                 string  `gorm:"default:'';comment:支付方式名称" json:"name"`
-	PaymentName          string  `gorm:"default:'';comment:支付名称" json:"payment_name"`
-	LogoUrl              string  `gorm:"default:'';comment:logo图片URL" json:"logo_url"`
-	QrCodeUrl            string  `gorm:"default:'';comment:二维码图片URL" json:"qrcode_url"`
-	FeePercent           float64 `gorm:"default:0.00;comment:手续费百分比" json:"fee_percent"`
-	OrderBy              int     `gorm:"default:0;comment:排序" json:"order_by"`
-	IsShowCashier        bool    `gorm:"default:1;comment:是否在收银员界面显示" json:"is_show_cashier"`
-	IsShowAssistant      bool    `gorm:"default:1;comment:是否在助手界面显示" json:"is_show_assistant"`
-	IsShowMemberRecharge bool    `gorm:"default:1;comment:是否在会员充值界面显示" json:"is_show_member_recharge"`
-	Source               uint    `gorm:"default:0;comment:来源 0-系统 1-手动 2-LianLianPay" json:"source"`
-	Status               uint    `gorm:"default:0;comment:状态 0-禁用 1-启用" json:"status"`
-	CreateTime           int     `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	Provider             string  `gorm:"default:'';comment:提供者" json:"provider"`
+	ID                   uint    `gorm:"column:id;primaryKey;AUTO_INCREMENT;comment:自增ID" json:"id"`
+	Uuid                 uint64  `gorm:"default:0;column:uuid;comment:支付方式ID" json:"uuid"`
+	Name                 string  `gorm:"default:'';column:name;comment:支付方式名称" json:"name"`
+	PaymentName          string  `gorm:"default:'';column:payment_name;comment:支付名称" json:"payment_name"`
+	LogoUrl              string  `gorm:"default:'';column:logo_url;comment:logo图片URL" json:"logo_url"`
+	QrCodeUrl            string  `gorm:"default:'';column:qrcode_url;comment:二维码图片URL" json:"qrcode_url"`
+	FeePercent           float64 `gorm:"default:0.00;column:fee_percent;comment:手续费百分比" json:"fee_percent"`
+	OrderBy              int     `gorm:"default:0;column:order_by;comment:排序" json:"order_by"`
+	IsShowCashier        bool    `gorm:"default:1;column:is_show_cashier;comment:是否在收银员界面显示" json:"is_show_cashier"`
+	IsShowAssistant      bool    `gorm:"default:1;column:is_show_assistant;comment:是否在助手界面显示" json:"is_show_assistant"`
+	IsShowMemberRecharge bool    `gorm:"default:1;column:is_show_member_recharge;comment:是否在会员充值界面显示" json:"is_show_member_recharge"`
+	Source               uint    `gorm:"default:0;column:source;comment:来源 0-系统 1-手动 2-LianLianPay" json:"source"`
+	Status               uint    `gorm:"default:0;column:status;comment:状态 0-禁用 1-启用" json:"status"`
+	CreateTime           int     `gorm:"autoCreateTime;column:create_time;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime           int     `gorm:"autoUpdateTime;column:update_time;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime           int     `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
 
 // 支付订单 PaymentOrder ttpos_payment_order
