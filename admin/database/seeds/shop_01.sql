@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     payment_commission_fee DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费，多次支付的支付手续费之和',
     gift_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额，关联销售订单的赠菜金额之和',
     free_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额，关联销售订单的免单金额之和',
+    sale_bill_setting_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单设置ID',
     consumer_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     cashier_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     buffet_order_uuid BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
