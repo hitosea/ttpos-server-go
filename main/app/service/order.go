@@ -22,9 +22,10 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                       // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) // 创建桌台订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                                      // 创建订单编号
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
+	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
 }
 
 // orderSrv 收银服务结构体

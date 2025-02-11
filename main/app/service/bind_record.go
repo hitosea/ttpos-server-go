@@ -2,13 +2,14 @@ package service
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 
@@ -148,7 +149,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		DeviceIp:         addReq.DeviceId,
 		Remark:           addReq.Remark,
 		Brand:            addReq.Brand,
-		Platform:         platform,
+		Platform:         uint(platform),
 		UserAgent:        addReq.UserAgent,
 	})
 }
