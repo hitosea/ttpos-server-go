@@ -47,3 +47,24 @@ main/pkg/eventbus/event/sample_event.go
 引入这个包	     "ttpos-server-go/pkg/eventbus/event"
 订阅Sample事件 event.NewSystemBus().SubscribeSampleEvent(func(msg event.SamplePayload) {})
 ```
+13. 并发控制uuid锁。在并发场景下，当操作同一个uuid资源时需要先获取uuid锁，先得到锁的协程先执行而其他协程等待锁。
+```
+使用步骤：
+1. 导入包 ttpos-server-go/pkg/lock
+2. 获取单例系统锁。将系统锁作为Service的属性之一
+type Service struct {
+	systemLock Lock
+}
+func NewService(systemLock Lock) *Service {
+	return &Service{systemLock: lock.NewSystemLock()}
+}
+3. 使用锁。在需要并发控制的方法中添加如下两行代码
+func (s *Service) OpenDesk(deskUuid uint64) error {
+	s.systemLock.LockUuid(deskUuid)
+	defer s.systemLock.UnlockUuid(deskUuid)
+	return nil
+}
+4. 注意uuid资源的状态终止时，手动删除uuid锁资源
+比如，在桌台被删除时，执行ClearUuidLock方法删除锁资源以清空内存占用
+s.systemLock.ClearUuidLock(deskUuid)
+```
