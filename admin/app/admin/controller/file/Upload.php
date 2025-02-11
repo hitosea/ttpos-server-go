@@ -5,7 +5,7 @@ namespace app\admin\controller\file;
 use think\facade\Validate;
 use hg\apidoc\annotation as Apidoc;
 use app\admin\controller\Controller;
-use app\common\model\file\UploadFile;
+use app\admin\model\file\UploadFile;
 use app\common\model\settings\Setting as SettingModel;
 use app\common\library\storage\Driver as StorageDriver;
 

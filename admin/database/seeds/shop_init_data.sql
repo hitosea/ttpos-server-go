@@ -24,7 +24,7 @@ SET @nowTime = UNIX_TIMESTAMP(NOW());
 -- Records of ttpos_buffet_customer_type
 -- ----------------------------
 BEGIN;
-INSERT INTO `ttpos_buffet_customer_type` (`id`, `uuid`, `name`, `multi_language_name_uuid`, `create_time`, `update_time`) VALUES (1, 1, '大人', 0, @nowTime, @nowTime);
+INSERT INTO `ttpos_buffet_customer_type` (`id`, `uuid`, `name`, `create_time`, `update_time`) VALUES (1, 1, '大人', @nowTime, @nowTime);
 COMMIT;
 
 -- ----------------------------

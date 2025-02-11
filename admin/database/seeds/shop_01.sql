@@ -1,8 +1,6 @@
-SET
-    NAMES utf8mb4;
+SET NAMES utf8mb4;
 
-SET
-    FOREIGN_KEY_CHECKS = 0;
+SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -78,6 +76,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     is_stat_gift TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣',
     is_stat_free TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费',
     discount_type TINYINT(1) NOT NULL DEFAULT 0 COMMENT '打折类型, 0-百分比打折% 1-百分比直接减免% off',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单设置表';
 
@@ -114,8 +115,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     is_show_member_recharge TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否在会员充值界面显示',
     source TINYINT(1) NOT NULL DEFAULT 0 COMMENT '来源 0-系统 1-手动 2-LianLianPay',
     status TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态 0-禁用 1-启用',
-    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     provider VARCHAR(255) NOT NULL DEFAULT '' COMMENT '提供者',
+    create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    update_time INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付方式表';
 
@@ -1022,7 +1025,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_must_product_plan_product_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '产品必选产品计划产品明细表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_gift_or_free_order_reason` (
+CREATE TABLE IF NOT EXISTS `ttpos_free_reason` (
     id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     uuid BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠品或免费订单原因ID',
     name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
@@ -1419,9 +1422,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_login_log` (
     `username` varchar(50) NOT NULL DEFAULT '' COMMENT '用户名',
     `ip` varchar(128) NOT NULL DEFAULT '' COMMENT '登录ip',
     `result` varchar(128) NOT NULL DEFAULT '' COMMENT '登录结果',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '签到时间',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工登录日志表';
 

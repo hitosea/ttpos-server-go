@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// StructToJson 结构体转json
-func StructToJson(data interface{}) string {
+// ToJsonString 结构体转json
+func ToJsonString(data interface{}) string {
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
 		return ""
@@ -76,7 +76,7 @@ func JsonToStr(data interface{}) (string, error) {
 // StructToMap 结构体转map
 func StructToMap(data interface{}) (map[string]interface{}, error) {
 	var result map[string]interface{}
-	result, err := StrToMap(StructToJson(data))
+	result, err := StrToMap(ToJsonString(data))
 	return result, err
 }
 

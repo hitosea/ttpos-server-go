@@ -15,7 +15,7 @@ type Handler struct {
 // @Tags 厨显端.呼叫
 // @Accept json
 // @Produce json
-// @param data body req.ParamCustomerInfo true "id"
+// @param data body nil true "id"
 // @Success 200 {object} dto.Response
 // @Router /kitchen/call/handle [post]
 func (h *Handler) PostCallHandle(c *gin.Context) {
@@ -27,7 +27,7 @@ func (h *Handler) PostCallHandle(c *gin.Context) {
 // @Tags 厨显端.呼叫
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=resp.CallList}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/call/list [get]
 func (h *Handler) GetCallList(c *gin.Context) {
 	// 获取呼叫列表的逻辑
@@ -39,8 +39,8 @@ func (h *Handler) GetCallList(c *gin.Context) {
 // @Tags 厨显端.登录
 // @Accept json
 // @Produce json
-// @param data body req.ParamLogin true "登陆参数"
-// @Success 200 {object} dto.Response{data=resp.LoginInfo}
+// @param data body nil true "登陆参数"
+// @Success 200 {object} dto.Response
 // @Router /kitchen/login [post]
 func (h *Handler) PostLogin(c *gin.Context) {
 	// 用户登录的逻辑
@@ -53,7 +53,7 @@ func (h *Handler) PostLogin(c *gin.Context) {
 // @Produce json
 // @param language query string true "语言"
 // @param pageNum query int true "页码"
-// @Success 200 {object} dto.Response{data=resp.ServedProductHistory}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/production/finished_product/history [get]
 func (h *Handler) GetProductionFinishedProductHistory(c *gin.Context) {
 	// 获取成品历史的逻辑
@@ -65,7 +65,7 @@ func (h *Handler) GetProductionFinishedProductHistory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param language query string true "语言"
-// @Success 200 {object} dto.Response{data=resp.ServedProductList}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/production/finished_product/latest [get]
 func (h *Handler) GetProductionFinishedProductLatest(c *gin.Context) {
 	// 获取最新成品的逻辑
@@ -79,7 +79,7 @@ func (h *Handler) GetProductionFinishedProductLatest(c *gin.Context) {
 // @param categoryId query string true "分类ID。默认是0，全部"
 // @param pageNum query int false "页码"
 // @param language query string true "语言"
-// @Success 200 {object} dto.Response{data=resp.ProductOrderListByCategory}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/production/order/category [get]
 func (h *Handler) GetProductionOrderCategory(c *gin.Context) {
 	// 获取生产订单分类的逻辑
@@ -92,7 +92,7 @@ func (h *Handler) GetProductionOrderCategory(c *gin.Context) {
 // @Produce json
 // @param pageNum query int true "页码"
 // @param language query string true "语言"
-// @Success 200 {object} dto.Response{data=resp.ProductOrderList}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/production/order/list [get]
 func (h *Handler) GetProductionOrderList(c *gin.Context) {
 	// 获取生产订单列表的逻辑
@@ -106,7 +106,7 @@ func (h *Handler) GetProductionOrderList(c *gin.Context) {
 // @param categoryId query string true "分类ID。默认是0，全部"
 // @param pageNum query int true "页码"
 // @param language query string true "语言"
-// @Success 200 {object} dto.Response{data=resp.ProductOrderListByCategory}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/production/order/list_by_category [get]
 func (h *Handler) GetProductionOrderListByCategory(c *gin.Context) {
 	// 按分类获取生产订单列表的逻辑
@@ -117,7 +117,7 @@ func (h *Handler) GetProductionOrderListByCategory(c *gin.Context) {
 // @Tags 厨显端.设置
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=resp.SettingInfo}
+// @Success 200 {object} dto.Response
 // @Router /kitchen/setting/info [get]
 func (h *Handler) GetSettingInfo(c *gin.Context) {
 	// 获取设置信息的逻辑
@@ -128,8 +128,8 @@ func (h *Handler) GetSettingInfo(c *gin.Context) {
 // @Tags 厨显端.设置
 // @Accept json
 // @Produce json
-// @param data body req.KitchenSetting true "设置参数"
-// @Success 200 {object} dto.Response{data=resp.SettingInfo}
+// @param data body nil true "设置参数"
+// @Success 200 {object} dto.Response
 // @Router /kitchen/setting/save [post]
 func (h *Handler) PostSettingSave(c *gin.Context) {
 	// 保存设置的逻辑
@@ -140,7 +140,7 @@ func (h *Handler) PostSettingSave(c *gin.Context) {
 // @Tags 厨显端.设置
 // @Accept json
 // @Produce json
-// @param data body req.ParamVerifyAdvancedPassword true "验证参数"
+// @param data body nil true "验证参数"
 // @Success 200 {object} dto.Response
 // @Router /kitchen/setting/verify_advanced_password [post]
 func (h *Handler) PostSettingVerifyAdvancedPassword(c *gin.Context) {
