@@ -9,8 +9,8 @@ use app\common\model\BaseModel;
  */
 class ReturnReason extends BaseModel
 {
+    protected $name = 'return_food_reason';
     protected $pk   = 'id';
-    protected $name = 'return_reason';
 
     /**
      * 追加字段

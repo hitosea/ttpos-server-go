@@ -131,11 +131,12 @@ class Setting extends BaseModel
         is_null($app_id) && $app_id = $static::$app_id;
         is_null($shop_supplier_id) && $shop_supplier_id = $static::$app_id;
         $shop_supplier_id == 0 && $shop_supplier_id = $static::$app_id;
-        if (!$data = Cache::get('setting_' . $app_id . '_' . $shop_supplier_id)) {
+        // todo 兼容
+        // if (!$data = Cache::get('setting_' . $app_id . '_' . $shop_supplier_id)) {
             $setting = $static->select();
             $data = empty($setting) ? [] : array_column($static->collection($setting)->toArray(), null, 'key');
-            Cache::tag('cache')->set('setting_' . $app_id . '_' . $shop_supplier_id, $data);
-        }
+        //     Cache::tag('cache')->set('setting_' . $app_id . '_' . $shop_supplier_id, $data);
+        // }
         return $static->getMergeData($data, $languageList);
     }
 

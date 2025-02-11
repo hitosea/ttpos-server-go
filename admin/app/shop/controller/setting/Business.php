@@ -14,6 +14,7 @@ use app\common\model\order\OrderScheme;
 use app\common\model\store\ReturnReason;
 use app\common\enum\settings\SettingEnum;
 use app\common\service\qrcode\AuthService;
+use app\common\model\store\MultiLanguageName;
 use app\shop\model\settings\Setting as SettingModel;
 
 /**
@@ -136,15 +137,19 @@ class Business extends Controller
         }
 
         $data = $this->request->param();
+        $defaultLang = getDefaultLanguage();
         if (isset($data['free_tag'])) {
             if (empty($data['free_tag'])) {
                 return $this->renderError('请输入免单/赠菜原因');
             }
             foreach ($data['free_tag'] as $item) {
-                if (ValidateHelp::hasEmptyValue($item['free_tag'] ?? '')) {
+                $reason = $item['free_tag'] ?? '';
+                if (ValidateHelp::hasEmptyValue($reason)) {
                     return $this->renderError('原因不能为空');
                 }
                 $id = $item['id'] ?? 0;
+                $languageData = json_decode($reason, true);
+                $name = $languageData[$defaultLang] ?? '';
 
                 if (isset($item['action'])) {
                     if ($item['action'] == 'add' || $item['action'] == 'edit') {
@@ -161,14 +166,22 @@ class Business extends Controller
                     if ($item['action'] == 'add') {
                         unset($item['id']);
                         unset($item['action']);
+                        //
+                        $languageUuid = (new MultiLanguageName)->saveNames($languageData);
+                        $uuid = createUuid();
+                        $item['uuid'] = $uuid;
+                        $item['name'] = $name;
+                        $item['multi_language_name_uuid'] = $languageUuid;
                         (new FreeTag)->save($item);
                     } elseif ($item['action'] == 'delete') {
                         if ($id) {
+                            $model->multiLanguageName()->where('id', $id)->delete();
                             $model->where('id', $id)->delete();
                         }
                     } elseif ($item['action'] == 'edit') {
                         if ($id) {
                             unset($item['action']);
+                            $item['name'] = $name;
                             $model->update($item, ['id' => $id]);
                         }
                     }

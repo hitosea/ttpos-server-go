@@ -80,12 +80,7 @@ class Printer extends BaseModel
      */
     public static function getAll($shop_supplier_id = 0)
     {
-        $where = [];
-        if ($shop_supplier_id) {
-            $where['shop_supplier_id'] = $shop_supplier_id;
-        }
-        //
-        $printerList = (new static)->where('is_delete', '=', 0)->where($where)->order(['sort' => 'asc'])->select()->toArray();
+        $printerList = (new static)->order(['sort' => 'asc'])->select()->toArray();
         //
         $text = __('自带');
         //
@@ -93,8 +88,8 @@ class Printer extends BaseModel
             ->where('source', BindRecord::SOURCE_CASHIER)
             ->where('platform', 'Android')
             ->whereIn('brand', BindRecord::BRANDS_PRINTS)
-            ->field("a.key as printer_id")
-            ->field("CONCAT(if(remark='', a.key, remark), ' ($text)') printer_name")
+            ->field("a.device_id as printer_id")
+            ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
             ->order('id')
             ->select()
             ->toArray();
@@ -122,14 +117,7 @@ class Printer extends BaseModel
      */
     public static function getTagAll($shop_supplier_id = 0)
     {
-        $where = [];
-        if ($shop_supplier_id) {
-            $where['shop_supplier_id'] = $shop_supplier_id;
-        }
-        return (new static)->where('is_delete', '=', 0)
-            ->where('printer_type', '=', 'FEI_E_YUN_TAG')
-            ->where($where)
-            ->order(['sort' => 'asc'])->select();
+        return (new static)->where('printer_type', '=', 'FEI_E_YUN_TAG')->order(['sort' => 'asc'])->select();
     }
 
     /**

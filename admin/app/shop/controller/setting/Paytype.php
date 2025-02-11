@@ -122,9 +122,9 @@ class Paytype extends Controller
                     return $this->renderError($model->getError() ?: '数据验证失败');
                 }
             }
-            // 兼容快捷添加多个value一致
+            // 兼容快捷添加多个code一致
             foreach ($validatedItems as $key => $item) {
-                $validatedItems[$key]['value'] = $item['value'] + $key * 100;
+                $validatedItems[$key]['code'] = $item['code'] + $key * 100;
             }
             if ($model->saveAll($validatedItems)) {
                 return $this->renderSuccess('操作成功');
@@ -201,8 +201,13 @@ class Paytype extends Controller
             }
         }
         //
-        $param['img'] = ImgHelp::removeImageDomain($param['img'] ?? '');
-        $param['qrcode'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $param['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
+        $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
+        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_recharge']) ? 1 : 0;
+        $param['logo_url'] = ImgHelp::removeImageDomain($param['img'] ?? '');
+        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $param['payment_name'] = $remark;
+        $param['fee_percent'] = $param['fee'];
         $orderPayType->save($param);
         //
         return $this->renderSuccess('操作成功', $orderPayType);

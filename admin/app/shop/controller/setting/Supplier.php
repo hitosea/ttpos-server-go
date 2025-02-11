@@ -136,18 +136,19 @@ class Supplier extends Controller
                 if (isset($item['action']) && $item['action'] == 'add') {
                     $item['app_id'] = $this->store['app']['app_id'];
                     unset($item['action']);
+                    $item['uuid'] = createUuid();
                     $taxCategoryModel->save($item);
                     continue;
                 }
                 // 如果是删除 - 保留数据，只是修改状态
                 if (isset($item['action']) && $item['action'] == 'delete') {
                     if (isset($item['id'])) {
-                        // 如果在使用，则不能删除
-                        $productUse = (new ProductTax)->isUseTax($item['id']);
-                        $buffetUse = (new BuffetTax)->isUseTax($item['id']);
-                        if ($productUse || $buffetUse) {
-                            return $this->renderError('税类正在使用，不能删除');
-                        }
+                        // todo 兼容 - 如果在使用，则不能删除
+                        // $productUse = (new ProductTax)->isUseTax($item['id']);
+                        // $buffetUse = (new BuffetTax)->isUseTax($item['id']);
+                        // if ($productUse || $buffetUse) {
+                        //     return $this->renderError('税类正在使用，不能删除');
+                        // }
                         $taxCategoryModel->destroy(['id' => $item['id']]);
                     }
                     continue;
@@ -162,11 +163,11 @@ class Supplier extends Controller
                 }
             }
         }
-        // 如果开启后之前没有过税类的商品、自助餐默认选择第一个税类
-        if ($is_open) {
-            (new ProductTax)->getProductDefaultTaxCategory();
-            (new BuffetTax)->getBuffetDefaultTaxCategory();
-        }
+        // todo 兼容 - 如果开启后之前没有过税类的商品、自助餐默认选择第一个税类
+        // if ($is_open) {
+        //     (new ProductTax)->getProductDefaultTaxCategory();
+        //     (new BuffetTax)->getBuffetDefaultTaxCategory();
+        // }
         $arr = [
             'is_open' => $data['is_open'], // 是否开启税率
             'calc_type' => $data['calc_type'], // 计算类型 商品已含税价-1 商品未含税价-2

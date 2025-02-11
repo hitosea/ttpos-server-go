@@ -10,7 +10,7 @@ use app\common\model\BaseModel;
  */
 class TaxCategory extends BaseModel
 {
-    protected $name = 'tax_category';
+    protected $name = 'tax';
 
     /**
      * 追加字段

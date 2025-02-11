@@ -108,8 +108,8 @@ class Printing extends Controller
                 $q->where('platform', 'Android');
                 // ->whereIn('brand', BindRecord::BRANDS_ALL)
             })
-            ->field("a.key as cashier_key")
-            ->field("CONCAT(if(remark='', '-', remark), ' (', a.key, ')') cashier_name")
+            ->field("a.device_id as cashier_key")
+            ->field("CONCAT(if(remark='', '-', remark), ' (', a.device_id, ')') cashier_name")
             ->order('id')
             ->select()
             ->toArray();
