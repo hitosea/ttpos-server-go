@@ -14,7 +14,6 @@ class FreeTag extends BaseModel
     // 属性定义
     protected $name = 'free_reason';
     protected $pk   = 'id';
-    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段

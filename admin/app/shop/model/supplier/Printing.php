@@ -52,7 +52,7 @@ class Printing extends PrintingModel
      */
     public function edit($data)
     {
-        $detail = $this->where('name', '=', $data['name'])->where('shop_supplier_id', '=', $this['shop_supplier_id'])->where('id', '<>', $this['id'])->where('is_delete', '=', '0')->find();
+        $detail = $this->where('name', '=', $data['name'])->where('id', '<>', $this['id'])->find();
         if ($detail) {
             $this->error = '名称已存在';
             return false;

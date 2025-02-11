@@ -23,7 +23,7 @@ class Table extends TableModel
      */
     public function getAreaNameAttr($value, $data)
     {
-        return (new TableArea)->where('area_id', '=', $data['area_id'])->value('area_name');
+        return (new TableArea)->where('region_uuid', '=', $data['area_id'])->value('area_name');
     }
 
     /**
@@ -31,7 +31,7 @@ class Table extends TableModel
      */
     public function getTypeNameAttr($value, $data)
     {
-        return (new TableType)->where('type_id', '=', $data['type_id'])->value('type_name');
+        return (new TableType)->where('type_uuid', '=', $data['type_id'])->value('type_name');
     }
 
     /**
@@ -41,18 +41,16 @@ class Table extends TableModel
     {
         $model = $this;
         if (isset($params['area_id']) && $params['area_id']) {
-            $model = $model->where('area_id', '=', $params['area_id']);
+            $model = $model->where('region_uuid', '=', $params['area_id']);
         }
         if (isset($params['type_id']) && $params['type_id']) {
-            $model = $model->where('type_id', '=', $params['type_id']);
+            $model = $model->where('type_uuid', '=', $params['type_id']);
         }
         if (isset($params['search']) && $params['search'] != '') {
             $model = $model->like('table_no', $params['search']);
         }
         // 查询列表数据
-        return $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['create_time' => 'desc'])
-            ->paginate($params);
+        return $model->order(['create_time' => 'desc'])->paginate($params);
     }
 
     /**
@@ -62,7 +60,7 @@ class Table extends TableModel
     {
         $licenses = request()->licenses;
         $tl = ($licenses['z_l'] ?? 0);
-        if ($tl != -1 && $this->where('shop_supplier_id', '=', $data['shop_supplier_id'])->count() >= $tl) {
+        if ($tl != -1 && $this->count() >= $tl) {
             $this->error = '桌台数量已达上限，如有需要，请联系销售代表';
             return false;
         }
@@ -71,7 +69,7 @@ class Table extends TableModel
             return false;
         }
         $data = $this->sortData($data);
-        $data['app_id'] = self::$app_id;
+        $data['uuid'] = createUuid();
         return self::create($data);
     }
 
@@ -84,7 +82,7 @@ class Table extends TableModel
         if (!$this->validateForm($data, self::FORM_SCENE_EDIT)) {
             return false;
         }
-        $areaInfo = (new TableArea)->where('area_id', '=', $data['area_id'])->findOrEmpty();
+        $areaInfo = (new TableArea)->where('region_uuid', '=', $data['area_id'])->findOrEmpty();
         if ($areaInfo->isEmpty()) {
             $this->error = '区域不存在';
             return false;
@@ -101,7 +99,7 @@ class Table extends TableModel
                 $order->save();
             }
         }
-        // 
+        //
         return $this->save($data);
     }
 
@@ -159,19 +157,14 @@ class Table extends TableModel
     {
         if ($scene === self::FORM_SCENE_ADD) {
             //查询桌号是否存在
-            $count = $this->where('shop_supplier_id', '=', $data['shop_supplier_id'])
-                // ->where('area_id', '=', $data['area_id'])
-                ->where('table_no', '=', $data['table_no'])
-                ->count();
+            $count = $this->where('desk_no', '=', $data['table_no'])->count();
             if ($count) {
                 $this->error = '桌号已存在';
                 return false;
             }
         } else {
-            $count = $this->where('shop_supplier_id', '=', $this['shop_supplier_id'])
-                // ->where('area_id', '=', $data['area_id'])
-                ->where('table_no', '=', $data['table_no'])
-                ->where('table_id', '<>', $data['table_id'])
+            $count = $this->where('desk_no', '=', $data['table_no'])
+                ->where('uuid', '<>', $data['table_id'])
                 ->count();
             if ($count) {
                 $this->error = '桌号已存在';
@@ -188,11 +181,15 @@ class Table extends TableModel
      */
     public function sortData($data)
     {
-        $data['area_name'] = (new TableArea)->where('area_id', '=', $data['area_id'])->value('area_name');
-        $typeInfo = (new TableType)->where('type_id', '=', $data['type_id'])->field('type_name,min_num,max_num')->find();
-        $data['min_num'] = $typeInfo['min_num'];
-        $data['max_num'] = $typeInfo['max_num'];
-        $data['type_name'] = $typeInfo['type_name'];
+        $data['area_name'] = (new TableArea)->where('uuid', '=', $data['area_id'])->value('name');
+        $typeInfo = (new TableType)->where('uuid', '=', $data['type_id'])->field('name, range_min, range_max')->find();
+        $data['min_num'] = $typeInfo['range_min'];
+        $data['max_num'] = $typeInfo['range_max'];
+        $data['type_name'] = $typeInfo['name'];
+        //
+        $data['desk_no'] = $data['table_no'] ?? '';
+        $data['region_uuid'] = $data['area_id'] ?? 0;
+        $data['type_uuid'] = $data['type_id'] ?? 0;
         return $data;
     }
 

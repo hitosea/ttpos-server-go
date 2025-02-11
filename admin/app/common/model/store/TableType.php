@@ -10,15 +10,33 @@ use app\common\model\BaseModel;
  */
 class TableType extends BaseModel
 {
-    protected $pk = 'type_id';
-    protected $name = 'table_type';
+    protected $name = 'desk_type';
+    protected $pk = 'id';
 
     /**
-     * 关联门店
+     * 追加字段
+     * @var string[]
      */
-    public function supplier()
+    protected $append = ['type_id', 'type_name', 'min_num', 'max_num'];
+
+    /**
+     * 兼容字段
+     */
+    public function getTypeIdAttr($value, $data)
     {
-        return $this->BelongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->uuid ?: 0;
+    }
+    public function getTypeNameAttr($value, $data)
+    {
+        return $this->getData('name') ?: '';
+    }
+    public function getMinNumAttr($value, $data)
+    {
+        return $this->range_min ?: 0;
+    }
+    public function getMaxNumAttr($value, $data)
+    {
+        return $this->range_max ?: 0;
     }
 
     /**
@@ -26,7 +44,7 @@ class TableType extends BaseModel
      */
     public static function detail($where)
     {
-        $filter = is_array($where) ? $where : ['type_id' => $where];
+        $filter = is_array($where) ? $where : ['uuid' => $where];
         return static::where($filter)->find();
     }
 
@@ -35,8 +53,7 @@ class TableType extends BaseModel
      */
     public static function getAllList($shop_supplier_id)
     {
-        return (new self)->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['sort' => 'asc', 'create_time' => 'desc'])
+        return (new self)->order(['sort' => 'asc', 'create_time' => 'desc'])
             ->select();
     }
 
@@ -46,12 +63,11 @@ class TableType extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'type_name' => $name,
-            'shop_supplier_id' => $shop_supplier_id
+            'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['type_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('type_id') ? true : false;
+        return static::where($filter)->value('id') ? true : false;
     }
 }

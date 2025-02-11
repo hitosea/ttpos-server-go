@@ -16,14 +16,26 @@ class ReturnReason extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = ['reason_text'];
+    protected $append = ['reason'];
+
+    /**
+     * 关联多语言
+     */
+    public function multiLanguageName()
+    {
+        return $this->belongsTo('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
+    }
 
     /**
      * 原因
      */
-    public static function getReasonTextAttr($value, $data = [])
+    public function getReasonAttr($value, $data = [])
     {
-        return extractLanguage($value ?: $data['reason'] ?? '');
+        $langUuid = $this->multi_language_name_uuid;
+        if (!$langUuid) {
+            return '';
+        }
+        return (new MultiLanguageName)->getNames($langUuid);
     }
 
     /**

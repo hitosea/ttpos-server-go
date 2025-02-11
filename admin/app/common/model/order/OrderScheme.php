@@ -15,7 +15,7 @@ class OrderScheme extends BaseModel
 {
     use SoftDelete;
     protected $pk = 'id';
-    protected $name = 'order_scheme';
+    protected $name = 'product_must_plan';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -98,17 +98,16 @@ class OrderScheme extends BaseModel
     public function getList($params, $app_id, $shop_supplier_id)
     {
         return $this->alias('a')
-            ->leftJoin('table_area ta', 'FIND_IN_SET(ta.area_id, a.table_area_ids)')
+            ->leftJoin('product_must_plan_region pmpr', 'pmpr.product_must_plan_uuid = a.uuid')
+            ->leftJoin('desk_region ta', 'ta.uuid = pmpr.desk_region_uuid')
             ->when($params['name'] ?? '', function ($query) use ($params) {
                 $query->like('a.name', $params['name']);
             })
             ->when(isset($params['status']) && $params['status'] !== '', function ($query) use ($params) {
                 $query->where('a.status', $params['status']);
             })
-            ->where('a.app_id', $app_id)
-            ->where('a.shop_supplier_id', $shop_supplier_id)
-            ->field('a.*, IFNULL(GROUP_CONCAT(ta.area_name), "") as area_names')
-            ->group('a.id')
+            ->field('a.*, IFNULL(GROUP_CONCAT(ta.name), "") as area_names')
+            ->group('a.uuid')
             ->order('create_time', 'desc')
             ->paginate($params);
     }
@@ -272,7 +271,6 @@ class OrderScheme extends BaseModel
     {
         $filter = [
             'name' => $name,
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['id', '<>', $id];

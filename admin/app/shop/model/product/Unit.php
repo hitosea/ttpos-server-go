@@ -61,8 +61,7 @@ class Unit extends UnitModel
             $this->error = '单位名称不能为空';
             return false;
         }
-        $isExist = $this->where('shop_supplier_id', '=', $this['shop_supplier_id'])
-            ->where('unit_name', '=', $data['unit_name'])
+        $isExist = $this->where('unit_name', '=', $data['unit_name'])
             ->where('unit_id', '<>', $this['unit_id'])
             ->count();
         if ($isExist) {
