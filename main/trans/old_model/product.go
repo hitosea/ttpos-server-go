@@ -203,7 +203,7 @@ func (s *ProductService) ConvertProduct() error {
 				MultiLanguageNameUuid: uint(id),
 				ImageName:             product.ImgName,
 				ImageUuid:             product.ProductImage.ImageID,
-				StockDeductMethod:     uint(StockDeductMethod),
+				DeductStockType:       uint(StockDeductMethod),
 				UnitUuid:              product.UnitID,
 				DineTaxUuid:           productDineTax.TaxCategoryID,
 				CategoryUuid:          product.CategoryID,

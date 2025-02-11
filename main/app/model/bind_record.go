@@ -15,7 +15,7 @@ type BindRecord struct {
 	DeviceIp         string `gorm:"column:device_ip;type:varchar(50);comment:设备ip" json:"device_ip"`
 	Remark           string `gorm:"column:remark;type:varchar(255);comment:备注" json:"remark"`
 	Brand            string `gorm:"column:brand;type:varchar(255);comment:品牌名称" json:"brand"`
-	Platform         string `gorm:"column:platform;type:varchar(50);comment:平台,Web-网页, Android-安卓, iPhone-苹果, Mobile-移动端" json:"platform"`
+	Platform         uint   `gorm:"column:platform;type:tinyint(1);default:0;comment:平台,0-Web-网页, 1-Android-安卓, 2-iPhone-苹果, 3-Mobile-移动端" json:"platform"`
 	UserAgent        string `gorm:"column:user_agent;type:longtext;comment:请求头信息" json:"user_agent"`
 	CreateTime       int    `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
 	UpdateTime       int    `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`

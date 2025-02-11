@@ -21,32 +21,6 @@ func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
 	return NewProductCategoryRepoImpl(db)
 }
 
-// IMaterialCategoryRepo 原料类别
-type IMaterialCategoryRepo interface {
-	GetMaterialCategoryList() ([]model.MaterialCategory, error)
-	UpdateMaterialCategory(id uint, materialCategory model.MaterialCategory) error
-	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint, error)
-	DeleteMaterialCategory(id uint) error
-}
-
-func NewMaterialCategoryRepository(db *gorm.DB) IMaterialCategoryRepo {
-	return NewMaterialCategoryRepoImpl(db)
-}
-
-// IProductSpecialCategoryRepo 商品特殊类别
-type IProductSpecialCategoryRepo interface {
-	GetProductSpecialCategoryList() ([]model.ProductSpecialCategory, error)
-	UpdateProductSpecialCategory(id uint, productSpecialCategory model.ProductSpecialCategory) error
-	CreateProductSpecialCategory(productSpecialCategory model.ProductSpecialCategory) (uint, error)
-	DeleteProductSpecialCategory(id uint) error
-	GetProductSpecialCategoryByIdWithMultiLanguageName(id uint) (*model.ProductSpecialCategory, error)
-	GetProductSpecialCategoryListWithMultiLanguageName() ([]model.ProductSpecialCategory, error)
-}
-
-func NewProductSpecialCategoryRepo(db *gorm.DB) IProductSpecialCategoryRepo {
-	return NewProductSpecialCategoryRepoImpl(db)
-}
-
 // ICategoryRepositorySrv 分类仓库接口
 type ICategoryRepositorySrv interface {
 	CreateCategory(params req.CreateCategoryRequest) (uint, error)
