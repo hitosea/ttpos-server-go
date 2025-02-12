@@ -72,7 +72,7 @@ func (s *TableService) ConvertTable() error {
 			Status:      uint(status),
 			IsDisable:   isDisable,
 			QrcodeToken: table.QRCodeValue,
-			IsBind:      uint(table.IsBind),
+			DeviceUuid:  uint(table.IsBind),
 			CreateTime:  table.CreateTime,
 			UpdateTime:  table.UpdateTime,
 			DeleteTime:  0,

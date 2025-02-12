@@ -34,8 +34,8 @@ type Desk struct {
 	Sort        uint   `gorm:"default:0;column:sort;comment:'排序序号'"`
 	Status      uint   `gorm:"default:0;column:status;comment:'状态, 0-未开台 1-已开台'"`
 	IsDisable   uint   `gorm:"default:0;column:is_disable;comment:'是否禁用, 0-否 1-是'"`
-	QrcodeToken string `gorm:"default:'';column:qrcode_url;comment:'二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效'"`
-	IsBind      uint   `gorm:"default:0;column:is_bind;comment:'平板绑定状态 0-否 1-是'"`
+	QrcodeToken string `gorm:"default:'';column:qrcode_token;comment:'二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效'"`
+	DeviceUuid  uint64 `gorm:"default:0;column:device_uuid;comment:'平板设备uuid, 0-未绑定'"`
 	CreateTime  int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
 	UpdateTime  int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
 	DeleteTime  int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
