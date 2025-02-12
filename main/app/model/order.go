@@ -193,6 +193,7 @@ type SaleOrderProductBom struct {
 	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
 	Num                  uint   `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
 	Unit                 string `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
+	IsFlavorBom          uint   `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
 	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
