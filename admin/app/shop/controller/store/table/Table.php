@@ -79,6 +79,7 @@ class Table extends Controller
      */
     public function edit($table_id)
     {
+        /** @var TableModel $model */
         $model = TableModel::detail($table_id);
         //编辑店员的数据
         if ($model->edit($this->postData())) {
@@ -264,17 +265,17 @@ class Table extends Controller
         }
         //
         $shop_supplier_id = $this->store['user']['shop_supplier_id'];
-        // 
+        //
         foreach ($list as $key => &$val) {
             try {
                 // 验证参数
                 $validate->goCheck($mode, $val);
-                // 
+                //
                 if ($mode == 'get') {
                     $val['type_id'] = TableTypeModel::where('type_name', $val['type_name'])->value('type_id') ?: 0;
                     $val['area_id'] = TableAreaModel::where('area_name', $val['area_name'])->value('area_id') ?: 0;
                 }
-                // 
+                //
                 $val['table_no_is_exist'] = CheckService::checkNameExist('table', ['exist'=>$val['table_no']], $shop_supplier_id)['exist'];
             } catch (\Throwable $th) {
                 return $this->renderError(__('行').'[' . ($val['row'] ?? 1) .']: ' . __($th->getMessage()));
@@ -294,7 +295,7 @@ class Table extends Controller
         foreach ($list as $key => &$val) {
             // 传过来的信息
             $val['shop_supplier_id'] = $shop_supplier_id;
-            // 
+            //
             $tableType = TableTypeModel::where('type_id',  $val['type_id'])->find();
             if (!$tableType) {
                 return $this->renderError(__('行').'[' . ($val['row'] ?? 1) .']: ' . __('所属类型不存在'));
@@ -304,7 +305,7 @@ class Table extends Controller
                 return $this->renderError(__('行').'[' . ($val['row'] ?? 1) .']: ' . __('所属区域不存在'));
             }
         }
-        // 
+        //
         $model = new TableModel;
         $licenses = request()->licenses;
         $tl = ($licenses['z_l'] ?? 0);
@@ -317,7 +318,7 @@ class Table extends Controller
                 return $this->renderError($model->getError() ?: '添加失败');
             }
         }
-        // 
+        //
         return $this->renderSuccess('');
     }
 }

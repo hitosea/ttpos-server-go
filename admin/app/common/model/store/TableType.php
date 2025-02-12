@@ -53,8 +53,7 @@ class TableType extends BaseModel
      */
     public static function getAllList($shop_supplier_id)
     {
-        return (new self)->order(['sort' => 'asc', 'create_time' => 'desc'])
-            ->select();
+        return (new self)->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**

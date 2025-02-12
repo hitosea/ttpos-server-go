@@ -19,27 +19,15 @@ class Table extends TableModel
     const FORM_SCENE_EDIT = 'edit';
 
     /**
-     * 区域名称
-     */
-    public function getAreaNameAttr($value, $data)
-    {
-        return (new TableArea)->where('region_uuid', '=', $data['area_id'])->value('area_name');
-    }
-
-    /**
-     * 类型名称
-     */
-    public function getTypeNameAttr($value, $data)
-    {
-        return (new TableType)->where('type_uuid', '=', $data['type_id'])->value('type_name');
-    }
-
-    /**
      * 获取列表数据
      */
     public function getList($params, $shop_supplier_id)
     {
-        $model = $this;
+        $model = $this->alias('a')
+            ->field('a.*, a.uuid as org_uuid, dr.uuid as area_id, dr.name as area_name, dt.uuid as type_id, dt.name as type_name, dt.range_min as min_num, dt.range_max as max_num')
+            ->leftJoin('desk_region dr', 'dr.uuid = a.region_uuid')
+            ->leftJoin('desk_type dt', 'dt.uuid = a.type_uuid');
+
         if (isset($params['area_id']) && $params['area_id']) {
             $model = $model->where('region_uuid', '=', $params['area_id']);
         }
@@ -47,7 +35,7 @@ class Table extends TableModel
             $model = $model->where('type_uuid', '=', $params['type_id']);
         }
         if (isset($params['search']) && $params['search'] != '') {
-            $model = $model->like('table_no', $params['search']);
+            $model = $model->like('desk_no', $params['search']);
         }
         // 查询列表数据
         return $model->order(['create_time' => 'desc'])->paginate($params);
@@ -82,23 +70,23 @@ class Table extends TableModel
         if (!$this->validateForm($data, self::FORM_SCENE_EDIT)) {
             return false;
         }
-        $areaInfo = (new TableArea)->where('region_uuid', '=', $data['area_id'])->findOrEmpty();
+        $areaInfo = (new TableArea)->where('uuid', '=', $data['area_id'])->findOrEmpty();
         if ($areaInfo->isEmpty()) {
             $this->error = '区域不存在';
             return false;
         }
         $data = $this->sortData($data);
-        // 同步修改订单
-        if ($data['table_no'] ?? '') {
-            $order = Order::where('table_id', $this->table_id)
-                ->where("order_status", OrderStatusEnum::NORMAL)
-                ->where('pay_status', OrderPayStatusEnum::PENDING)
-                ->find();
-            if ($order) {
-                $order->table_no = $data['table_no'];
-                $order->save();
-            }
-        }
+        // todo 兼容 同步修改订单
+        // if ($data['table_no'] ?? '') {
+        //     $order = Order::where('table_id', $this->table_id)
+        //         ->where("order_status", OrderStatusEnum::NORMAL)
+        //         ->where('pay_status', OrderPayStatusEnum::PENDING)
+        //         ->find();
+        //     if ($order) {
+        //         $order->table_no = $data['table_no'];
+        //         $order->save();
+        //     }
+        // }
         //
         return $this->save($data);
     }
@@ -121,7 +109,7 @@ class Table extends TableModel
      */
     public function batchDelete($table_ids)
     {
-        $model = $this->whereIn('table_id', $table_ids);
+        $model = $this->whereIn('uuid', $table_ids);
         $list = $model->select();
         if ($list->isEmpty()) {
             $this->error = '数据不存在';
@@ -146,8 +134,8 @@ class Table extends TableModel
             return false;
         }
         // 解绑设备记录
-        (new BindRecord)->unbindByKey(BindRecord::SOURCE_TABLET, $this['bind_info']);
-        return $this->save(['is_bind' => 0, 'bind_info' => '']);
+        (new BindRecord)->unbindByKey(BindRecord::SOURCE_TABLET, $this['device_uuid']);
+        return $this->save(['is_bind' => 0, 'device_uuid' => '']);
     }
 
     /**
@@ -202,6 +190,6 @@ class Table extends TableModel
             $this->error = '当前桌位状态不允许该操作';
             return false;
         }
-        return $this->save(['switch_status' => $switch_status]);
+        return $this->save(['is_disable' => $switch_status]);
     }
 }

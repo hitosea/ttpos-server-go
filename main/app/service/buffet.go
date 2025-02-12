@@ -34,7 +34,19 @@ func NewBuffetSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv 
 // GetBuffetList 获取列表
 func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) {
 	// 获取列表
-	buffets, total, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetList(1, 1000)
+	buffets, total, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetList(
+		1,
+		1000,
+		repository.NewCommonRepo().Preload(repository.WithPreload{
+			Query: "MultiLanguageName",
+		}),
+		repository.NewCommonRepo().Preload(repository.WithPreload{
+			Query: "BuffetCustomerTypePrices",
+		}),
+		repository.NewCommonRepo().Preload(repository.WithPreload{
+			Query: "BuffetCustomerTypePrices.BuffetCustomerType",
+		}),
+	)
 	if err != nil {
 		return resp.BuffetListPaginationResp{}, err
 	}
@@ -42,19 +54,23 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 	// 转换为响应对象
 	respBuffets := make([]resp.Buffet, 0, len(buffets))
 	for _, buffet := range buffets {
+		buffetCustomerTypes := make([]resp.BuffetCustomerType, 0, len(buffet.BuffetCustomerTypePrices))
+		for _, buffetCustomerTypePrice := range buffet.BuffetCustomerTypePrices {
+			buffetCustomerTypes = append(buffetCustomerTypes, resp.BuffetCustomerType{
+				Uuid: uint64(buffetCustomerTypePrice.Uuid),
+				Name: buffetCustomerTypePrice.BuffetCustomerType.Name,
+			})
+		}
+
 		respBuffet := resp.Buffet{
-			Uuid:              uint64(buffet.Uuid),
-			Price:             buffet.BuffetCustomerTypePrice.Price,
-			IsLimitTime:       buffet.IsLimitTime == 1,
-			CanCombined:       buffet.CanCombined == 1,
-			NonOrderingTime:   buffet.NonOrderingTime,
-			ReminderOrderTime: buffet.ReminderOrderTime,
-			LocaleName:        s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
-			BuffetCustomerType: resp.BuffetCustomerType{
-				Uuid:  uint64(buffet.BuffetCustomerTypePrice.Uuid),
-				Price: buffet.BuffetCustomerTypePrice.Price,
-				Name:  buffet.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			},
+			Uuid:                buffet.Uuid,
+			Price:               buffet.BuffetCustomerTypePrices[0].Price,
+			IsLimitTime:         buffet.IsLimitTime == 1,
+			CanCombined:         buffet.CanCombined == 1,
+			NonOrderingTime:     buffet.NonOrderingTime,
+			ReminderOrderTime:   buffet.ReminderOrderTime,
+			LocaleName:          s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
+			BuffetCustomerTypes: resp.BuffetCustomerTypeList{List: buffetCustomerTypes},
 		}
 		respBuffets = append(respBuffets, respBuffet)
 	}
