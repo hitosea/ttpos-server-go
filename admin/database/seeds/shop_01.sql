@@ -345,6 +345,18 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_delay` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐加钟价格表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_delay_product` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `buffet_delay_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '自助餐加钟价格商品表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_buffet_customer_type_price` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐顾客类型价格ID',

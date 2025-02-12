@@ -73,3 +73,15 @@ type BuffetDelay struct {
 	UpdateTime int64   `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
 	DeleteTime int64   `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
+
+// SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`
+type SaleOrderBuffetDelayProduct struct {
+	ID              uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid            uint64 `gorm:"default:0;column:uuid;comment:'自助餐加钟价格ID'"`
+	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
+	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
+	Num             uint   `gorm:"default:0;column:num;comment:'数量'"`
+	CreateTime      int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
+	UpdateTime      int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
+	DeleteTime      int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
+}
