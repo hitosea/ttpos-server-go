@@ -55,7 +55,7 @@ class UserGrade
         if ($upgradeGrade &&  $user['grade_id'] != $upgradeGrade['grade_id']) {
             $this->dologs('setUserGrade', [
                 'user_id' => $user['user_id'],
-                'grade_id' => $upgradeGrade['grade_id'],
+                'uuid' => $upgradeGrade['grade_id'],
             ]);
             // 修改会员的等级
             (new UserModel())->upgradeGrade($user, $upgradeGrade);

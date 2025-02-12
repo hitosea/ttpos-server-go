@@ -44,7 +44,7 @@ class Order extends OrderModel
         // 获取数据列表
         return $model->field(self::$mainFields)->with([
             'user' => function ($query) {
-                $query->field(['user_id', 'nickName']);
+                $query->field(['user_id', 'nickname as nickName']);
             },
             'payType',
             'refundType',
@@ -57,7 +57,7 @@ class Order extends OrderModel
                 $query->field(self::$subFields)->with([
                     'payType',
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName']);
+                        $query->field(['user_id', 'nickname as nickName']);
                     },
                 ])->order('order_id', 'asc');
             }

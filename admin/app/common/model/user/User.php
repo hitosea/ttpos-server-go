@@ -24,14 +24,38 @@ class User extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['user_id'];
+    protected $append = ['user_id', 'points', 'gift_balance', 'mobile', 'grade_id', 'card_id'];
 
     /**
      * 兼容ID字段
      */
     public function getUserIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
+    }
+    public function getPointsAttr($value, $data)
+    {
+        if (isset($data['point'])) {
+            return floatval($data['point']);
+        } else {
+            return $value;
+        }
+    }
+    public function getGiftBalanceAttr()
+    {
+        return $this->gift_account_balance ?: 0;
+    }
+    public function getMobileAttr()
+    {
+        return $this->phone ?: '';
+    }
+    public function getGradeIdAttr()
+    {
+        return $this->member_level_uuid ?: 0;
+    }
+    public function getCardIdAttr()
+    {
+        return $this->member_card_uuid ?: 0;
     }
 
     /**
@@ -48,18 +72,6 @@ class User extends BaseModel
     public function getBirthdayAttr($value)
     {
         return $value ? date('Y-m-d', $value) : '';
-    }
-
-    /**
-     * 积分
-     */
-    public function getPointsAttr($value, $data)
-    {
-        if (isset($data['points'])) {
-            return floatval($data['points']);
-        } else {
-            return $value;
-        }
     }
 
     /**
@@ -93,7 +105,7 @@ class User extends BaseModel
      */
     public function grade()
     {
-        return $this->belongsTo('app\\common\\model\\user\\Grade', 'grade_id', 'grade_id');
+        return $this->belongsTo('app\\common\\model\\user\\Grade', 'member_level_uuid', 'uuid');
     }
 
     /**
@@ -101,7 +113,7 @@ class User extends BaseModel
      */
     public function card()
     {
-        return $this->hasOne('app\\common\\model\\user\\Card', 'card_id', 'card_id');
+        return $this->hasOne('app\\common\\model\\user\\Card', 'uuid', 'member_card_uuid');
     }
 
     /**
@@ -113,31 +125,15 @@ class User extends BaseModel
     }
 
     /**
-     * 关联收货地址表
-     */
-    public function address()
-    {
-        return $this->hasOne('app\\common\\model\\user\\UserAddress', 'address_id', 'address_id');
-    }
-
-    /**
-     * 关联收货地址表 (默认地址)
-     */
-    public function addressDefault()
-    {
-        return $this->belongsTo('app\\common\\model\\user\\UserAddress', 'address_id', 'address_id');
-    }
-
-    /**
      * 获取用户信息
      */
     public static function detail($where, $includeDeleted = false)
     {
         $model = new static;
         $filter = $includeDeleted ? [] : ['delete_time' => 0];
-        $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['user_id' => (int) $where]);
+        $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['uuid' => (int) $where]);
 
-        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['address', 'addressDefault', 'grade', 'card'])->find();
+        $info = $model->field(['*, (balance + gift_account_balance) as balance'])->where($filter)->with(['grade', 'card'])->find();
         if ($info) {
             $info->password = '';
         }
@@ -186,7 +182,7 @@ class User extends BaseModel
     public static function checkExistByGradeId($gradeId)
     {
         $model = new static;
-        return !!$model->where('grade_id', '=', (int) $gradeId)->value('user_id');
+        return !!$model->where('member_level_uuid', '=', (int) $gradeId)->value('user_id');
     }
 
     /**
@@ -357,7 +353,7 @@ class User extends BaseModel
                 'password' => $password != '' ? md5($password) : '',
                 'reg_source' => 'cashier',
                 'grade_id' => $grade_id,
-                'nickName' => $data['nick_name']
+                'nickname' => $data['nick_name']
             ]);
         } else {
             $this->error = '会员已存在';

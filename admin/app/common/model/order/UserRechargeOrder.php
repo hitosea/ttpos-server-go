@@ -184,7 +184,7 @@ class UserRechargeOrder extends BaseModel
             ->with([
                 'payType',
                 'user' => function ($query) {
-                    $query->field(['user_id', 'nickName', 'balance', 'gift_balance', 'points']);
+                    $query->field(['user_id', 'nickname as nickName', 'balance', 'gift_balance', 'points']);
                 },
                 'cashier' => function ($query) {
                     $query->field(['shop_user_id', 'IF(real_name != "", real_name, user_name) as real_name']);

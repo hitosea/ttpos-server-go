@@ -70,6 +70,7 @@ class Grade extends Controller
      */
     public function edit($grade_id)
     {
+        /** @var GradeModel $model */
         $model = GradeModel::detail($grade_id);
         // 修改记录
         if ($model->edit($this->postData())) {

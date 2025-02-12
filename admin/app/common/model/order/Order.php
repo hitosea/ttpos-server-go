@@ -223,7 +223,7 @@ class Order extends BaseModelOrder
         // 以下查询field指定返回了字段，可能会漏某些地方的字段导致问题 TODO
         return self::with([
             'user' => function ($query) {
-                $query->field(['user_id', 'nickName', 'balance', 'gift_balance', 'grade_id', 'card_id']);
+                $query->field(['user_id', 'nickname as nickName', 'balance', 'gift_balance', 'grade_id', 'card_id']);
             },
             'address',
             'buffet' => function ($query) {
@@ -249,7 +249,7 @@ class Order extends BaseModelOrder
             'mergeList' => function ($query) use ($orderField, $orderProductField, $buffetCustomerTypeField) {
                 $query->with([
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName', 'balance']);
+                        $query->field(['user_id', 'nickname as nickName', 'balance']);
                     },
                     'address',
                     'buffet' => function ($query) {
@@ -276,7 +276,7 @@ class Order extends BaseModelOrder
             'subOrder' => function ($query) use ($orderField, $orderProductField, $buffetCustomerTypeField) {
                 $query->with([
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName', 'balance']);
+                        $query->field(['user_id', 'nickname as nickName', 'balance']);
                     },
                     'address',
                     'buffet' => function ($query) {

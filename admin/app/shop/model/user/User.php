@@ -51,12 +51,12 @@ class User extends UserModel
         if (!empty($data['keyword'])) {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user_id|mobile|nickName', $keyword);
+                $query->like('uuid|phone|nickname', $keyword);
             });
         }
         // 检索：会员等级
         if (isset($data['grade_id']) && $data['grade_id'] > 0) {
-            $model = $model->where('grade_id', '=', (int)$data['grade_id']);
+            $model = $model->where('member_level_uuid', '=', (int)$data['grade_id']);
         }
         // 检索：注册时间
         if (!empty($data['reg_date'][0])) {
@@ -68,6 +68,7 @@ class User extends UserModel
         }
         // 获取用户列表
         return $model->with(['grade', 'card'])
+            ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
@@ -111,7 +112,7 @@ class User extends UserModel
             return false;
         }
 
-        $user = $this->where('mobile', '=', $mobile)->find();
+        $user = $this->where('phone', '=', $mobile)->find();
 
         if ($user) {
             $this->error = '会员已存在';
@@ -119,12 +120,12 @@ class User extends UserModel
         }
 
         return $this->save([
-            'nickName' => $nickName,
-            'mobile' => $mobile,
+            'uuid' => createUuid(),
+            'nickname' => $nickName,
+            'phone' => $mobile,
             'password' => $password ? md5($password) : '',
-            'reg_source' => 'home', //注册来源
             'gender' => $gender, //性别
-            'grade_id' => $gradeId, //默认等级
+            'member_level_uuid' => $gradeId, //默认等级
             'birthday' => $birthday ? strtotime($birthday) : 0, //生日
         ]);
     }
@@ -141,10 +142,7 @@ class User extends UserModel
             return false;
         }
         if ($data['mobile']) {
-            $mobile = $this->where('mobile', '=', $data['mobile'])
-                ->where('user_id', '<>', $this['user_id'])
-                ->where('reg_source', '=', $this['reg_source'])
-                ->count();
+            $mobile = $this->where('phone', '=', $data['mobile'])->where('uuid', '<>', $this['uuid'])->count();
             if ($mobile) {
                 $this->error = "手机号已存在";
                 return false;
@@ -158,7 +156,10 @@ class User extends UserModel
         if ($data['birthday']) {
             $data['birthday'] = strtotime($data['birthday']);
         }
-        $data['nickName'] = isset($data['nick_name']) ? $data['nick_name'] : $this['nickName'];
+        $data['nickname'] = isset($data['nick_name']) ? $data['nick_name'] : $this['nickName'];
+        //
+        $data['phone'] = $data['mobile'];
+        $data['member_level_uuid'] = $data['grade_id'];
         return $this->save($data);
     }
 

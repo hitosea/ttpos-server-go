@@ -185,7 +185,7 @@ class BaseModelOrder extends BaseModel
      */
     public function userBaseInfo()
     {
-        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id')->field(['user_id', 'mobile', 'nickName', 'real_name']);
+        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id')->field(['user_id', 'mobile', 'nickname as nickName', 'real_name']);
     }
 
     /**
