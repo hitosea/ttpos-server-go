@@ -60,3 +60,16 @@ type BuffetProduct struct {
 	UpdateTime         int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
 	DeleteTime         int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
+
+// BuffetDelay 自助餐加钟价格表 `ttpos_buffet_delay`
+type BuffetDelay struct {
+	ID         uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid       uint64  `gorm:"default:0;column:uuid;comment:'自助餐加钟价格ID'"`
+	Name       string  `gorm:"default:'';column:name;comment:'自助餐加钟价格名称'"`
+	DelayTime  uint    `gorm:"default:0;column:delay_time;comment:'加钟时间(分钟)'"`
+	Price      float64 `gorm:"default:0;column:price;comment:'价格'"`
+	Status     uint    `gorm:"default:0;column:status;comment:'状态 0-禁用 1-启用'"`
+	CreateTime int64   `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
+	UpdateTime int64   `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
+	DeleteTime int64   `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
+}
