@@ -42,6 +42,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 	products, total, err := productRepo.GetProductListWithPagination(
 		req.PageNo,
 		req.PageSize,
+		productRepo.WithMultiLanguageName(),
 		productRepo.WithProductUnit(),
 		productRepo.WithProductUnitMultiLanguageName(),
 		productRepo.WithProductBoms(),
