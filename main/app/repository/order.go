@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -19,6 +20,8 @@ type IOrderRepo interface {
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                    // 获取销售账单详细信息
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                 // 获取销售账单详细信息-丰富的
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
+	CancelOrder(saleBillUuid uint64) error                                                                                // 取消订单
+	CancelDeskOrder(deskUuid uint64) error                                                                                // 取消订单
 	IsPartiallyPaid(param any) bool                                                                                       // 判断是否存在部分支付
 }
 
@@ -259,7 +262,7 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 	return info, nil
 }
 
-// GetSaleBillDetail 获取销售账单详细信息 -
+// GetSaleBillDetail 获取销售账单详细信息
 func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
@@ -298,6 +301,28 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 		return model.SaleBill{}, err
 	}
 	return info, nil
+}
+
+// CancelOrder 关闭订单
+func (r *orderRepo) CancelOrder(saleBillUuid uint64) error {
+	r.db.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Update("status", constant.SaleBillStatusCanceled)
+	//
+	return r.db.Model(&model.SaleBill{}).
+		Where("uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Update("status", constant.SaleBillStatusCanceled).Error
+}
+
+// CancelDeskOrder 关闭桌台订单
+func (r *orderRepo) CancelDeskOrder(deskUuid uint64) error {
+	var saleBill model.SaleBill
+	if err := r.db.Model(&model.SaleBill{}).Where("status = ?", constant.SaleBillStatusPending).Where("desk_uuid = ?", deskUuid).First(&saleBill).Error; err != nil {
+		return err
+	}
+	return r.CancelOrder(saleBill.Uuid)
 }
 
 // isPartiallyPaid 是否已经被部分支付

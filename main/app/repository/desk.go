@@ -15,6 +15,7 @@ type IDeskRepo interface {
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
+	CloseDesk(deskUuid uint64) error
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -91,7 +92,16 @@ func (r *DeskRepoImpl) CreateDesk(desk model.Desk) (uint64, error) {
 	return desk.Uuid, nil
 }
 
-// DeleteProductFlavor 软删除商品规格
+// DeleteDesk 软删除桌台
 func (r *DeskRepoImpl) DeleteDesk(deskUuid uint64) error {
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// CloseDesk 关闭桌台
+func (r *DeskRepoImpl) CloseDesk(deskUuid uint64) error {
+	err := NewOrderRepo(r.db).CancelDeskOrder(deskUuid)
+	if err != nil {
+		return err
+	}
+	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("status", 1).Error
 }

@@ -91,8 +91,8 @@ func GetCompanyUuid(c *gin.Context) uint64 {
 }
 
 // GetSource 获取来源
-func GetSource(c *gin.Context) uint {
-	return c.GetUint(jwt.Source)
+func GetSource(c *gin.Context) string {
+	return c.GetString(jwt.Source)
 }
 
 // GetLanguage 获取语言

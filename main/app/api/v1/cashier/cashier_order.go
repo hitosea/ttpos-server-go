@@ -89,15 +89,16 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 // @Router /cashier/order/cancel [post]
 func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
 	// 绑定请求参数
 	req := req.OrderInfoReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 获取收银产品列表
-	err := h.orderService.CancelOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
-	// 处理错误
+	//
+	err := h.orderService.CancelOrder(companyUuid, staff, source, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
