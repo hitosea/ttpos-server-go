@@ -26,7 +26,6 @@ import (
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                // 创建点餐订单
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                                               // 创建订单编号
 	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
 	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
 	CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 取消订单
@@ -81,7 +80,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 创建订单编号
-		orderNo := s.CreateOrderNo(tx, constant.OrderSourceInstant)
+		orderNo := s.createOrderNo(tx, constant.OrderSourceInstant)
 		if orderNo == "" {
 			return errors.New("订单编号生成失败")
 		}
@@ -141,7 +140,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 创建订单编号
-		orderNo := s.CreateOrderNo(tx, constant.OrderSourceDesk)
+		orderNo := s.createOrderNo(tx, constant.OrderSourceDesk)
 		if orderNo == "" {
 			return errors.New("订单编号生成失败")
 		}
@@ -226,8 +225,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 	}, nil
 }
 
-// CreateOrderNo 创建订单编号
-func (s *orderSrv) CreateOrderNo(db *gorm.DB, orderSource string) string {
+// createOrderNo 创建订单编号
+func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 	var orderNo string
 
 	// 前八位是年月日
