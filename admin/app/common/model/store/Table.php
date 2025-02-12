@@ -22,7 +22,7 @@ class Table extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = ['table_id'];
+    protected $append = ['table_id', 'table_no', 'switch_status'];
 
     /**
      * 兼容字段
@@ -30,6 +30,14 @@ class Table extends BaseModel
     public function getTableIdAttr($value, $data)
     {
         return $this->uuid ?: 0;
+    }
+    public function getTableNoAttr($value, $data)
+    {
+        return $this->desk_no ?: '';
+    }
+    public function getSwitchStatusAttr($value, $data)
+    {
+        return $this->is_disable ?: 0;
     }
 
     /**
@@ -45,8 +53,10 @@ class Table extends BaseModel
      */
     public static function detail($where)
     {
-        $filter = is_array($where) ? $where : ['table_id' => $where];
-        return static::with(['underwayOrder'])->where($filter)->find();
+        $filter = is_array($where) ? $where : ['uuid' => $where];
+        // todo 兼容
+        // return static::with(['underwayOrder'])->where($filter)->find();
+        return static::where($filter)->find();
     }
 
     /**

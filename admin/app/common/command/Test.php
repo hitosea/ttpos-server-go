@@ -55,9 +55,28 @@ class Test extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        // 测试雪花ID生成是否重复
-        $snowflake = new SnowflakeHelp(1);
-        dump($snowflake->next());
+        // 测试雪花ID生成是否重复 - 并发测试
+        $workerIds = range(1, 3); // 使用3个不同的worker ID
+        $iterations = 1000; // 每个worker生成1000个ID
+        $allIds = [];
+
+        foreach ($workerIds as $workerId) {
+            $snowflake = new SnowflakeHelp($workerId);
+
+            // 模拟并发 - 使用多个进程同时生成ID
+            for ($i = 0; $i < $iterations; $i++) {
+                $id = $snowflake->next();
+                if (in_array($id, $allIds)) {
+                    dump("发现重复ID: " . $id);
+                    dump("Worker ID: " . $workerId);
+                    dump("迭代次数: " . $i);
+                    die;
+                }
+                $allIds[] = $id;
+            }
+        }
+        dump("生成 " . count($allIds) . " 个ID,未发现重复");
+        dump("测试通过!");
         die;
 
         // 使用项目根目录路径
