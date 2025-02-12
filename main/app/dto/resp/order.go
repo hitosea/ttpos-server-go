@@ -78,7 +78,7 @@ type CashierOrderProduct struct {
 	Remark                string             `json:"remark"`                  // 备注
 	IsGift                bool               `json:"is_gift"`                 // 是否赠品, fasle-否 true-是
 	GiftReason            string             `json:"gift_reason"`             // 赠品原因
-	AttributeName         string             `json:"attribute_name"`          // 属性名称
+	Attributes            string             `json:"attributes"`              // 规格属性加料
 	ImageUrl              string             `json:"image_url"`               // 图片地址
 }
 
