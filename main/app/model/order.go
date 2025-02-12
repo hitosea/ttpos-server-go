@@ -110,7 +110,7 @@ type SaleOrderProduct struct {
 	// 产品基本信息
 	Name                  string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
 	FlavorName            string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
-	ImageUrl              string `gorm:"column:image_url;type:varchar(255);default:'';comment:商品图片URL" json:"image_url"`
+	ImageFileUuid         uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:商品图片ID" json:"image_file_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 
 	// 产品数量和价格

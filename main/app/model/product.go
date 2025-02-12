@@ -114,8 +114,7 @@ type ProductPackage struct {
 	Name                  string `gorm:"default:'';column:name;comment:'产品包名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
-	ImageUrl              string `gorm:"default:'';column:image_url;comment:'图片URL'"`
-	ImageUuid             uint64 `gorm:"default:0;column:image_uuid;comment:'图片UUID'"`
+	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
 	DeductStockType       uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
 	UnitUuid              uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
 	DineTaxUuid           uint64 `gorm:"default:0;column:dine_tax_uuid;comment:'堂食税UUID'"`
