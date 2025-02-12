@@ -118,7 +118,6 @@ type SaleOrderProduct struct {
 	// 产品基本信息
 	Name                  string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
 	FlavorName            string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
-	ImageFileUuid         uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:商品图片ID" json:"image_file_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 
 	// 产品数量和价格
@@ -146,16 +145,32 @@ type SaleOrderProduct struct {
 	ProductPackageUuid  uint64 `gorm:"column:product_package_uuid;type:bigint(20);default:0;comment:产品包ID" json:"product_package_uuid"`
 	SaleBillUuid        uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid       uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
+	ImageFileUuid       uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:图片ID" json:"image_file_uuid"`
 
 	// 时间相关字段
 	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
 	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
-	// 多语言名称
+	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
-	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
+	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 销售订单产品属性记录表 SaleOrderProductAttribute
+type SaleOrderProductAttribute struct {
+	ID                    uint              `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
+	Uuid                  uint64            `gorm:"default:0;column:uuid;comment:'UUID'"`
+	Name                  string            `gorm:"default:'';column:name;comment:'名称'"`
+	MultiLanguageNameUuid uint64            `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
+	SaleOrderProductUuid  uint64            `gorm:"default:0;column:sale_order_product_uuid;comment:'销售订单产品UUID'"`
+	AttributeUuid         uint64            `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	CreateTime            int64             `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
+	UpdateTime            int64             `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
+	DeleteTime            int64             `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
+	MultiLanguageName     MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
 // GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料相同的商品签名相同,用于取消拆单时合并商品
@@ -171,7 +186,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	// 属性ID列表
 	for _, attributeGroup := range model.SaleOrderProductAttributes {
-		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.ProductAttributeUuid, 10))
+		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.AttributeUuid, 10))
 	}
 	// 物料ID列表和属性ID列表排序
 	sort.Slice(bomIdList, func(i, j int) bool {
@@ -195,18 +210,6 @@ type SaleOrderProductBom struct {
 	Unit                 string `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
-	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
-	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
-	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
-}
-
-// 销售订单产品属性 SaleOrderProductAttribute ttpos_sale_order_product_attribute
-type SaleOrderProductAttribute struct {
-	ID                   uint64 `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'商品属性ID'"`
-	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
-	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
-	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
 	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
 	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
 	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
