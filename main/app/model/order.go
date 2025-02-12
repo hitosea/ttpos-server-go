@@ -254,3 +254,18 @@ type SaleOrderBuffetCustomerType struct {
 	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
+
+// SaleOrderProductMaterial 销售订单产品原料
+type SaleOrderProductMaterial struct {
+	ID   uint   `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
+	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单产品原料ID" json:"uuid"`
+
+	// 关联ID字段
+	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20);default:0;comment:销售订单产品ID" json:"sale_order_product_uuid"`
+	BomUuid              uint64 `gorm:"column:bom_uuid;type:bigint(20);default:0;comment:BOM ID" json:"bom_uuid"`
+
+	// 时间字段
+	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+}

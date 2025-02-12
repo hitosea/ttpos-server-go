@@ -27,6 +27,7 @@ type IOrderSrv interface {
 	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
 	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
 	GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
+	GetInstantOrderInfo(dbId uint64, req req.GetInstantOrderInfoReq) (resp.GetInstantOrderInfoResp, error) // 获取点餐订单详情
 }
 
 // orderSrv 收银服务结构体
@@ -52,7 +53,8 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) {
-	var uuid uint64
+	var billUuid uint64
+	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 判断是否有待支付、未挂单的订单
@@ -100,7 +102,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 创建销售订单
-		_, err = repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
+		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
@@ -109,7 +111,8 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return err
 		}
 
-		uuid = saleBill.Uuid
+		billUuid = saleBill.Uuid
+		orderUuid = saleOrder.Uuid
 
 		return nil
 	})
@@ -118,13 +121,15 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 	}
 
 	return resp.CreateInstantOrderResp{
-		SaleBillUuid: uuid,
+		SaleBillUuid:  billUuid,
+		SaleOrderUuid: orderUuid,
 	}, nil
 }
 
 // CreateDeskOrder 创建桌台订单
 func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
-	var uuid uint64
+	var billUuid uint64
+	var orderUuid uint64
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 获取销售账单UUID
@@ -203,7 +208,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			}
 		}
 
-		uuid = saleBill.Uuid
+		billUuid = saleBill.Uuid
+		orderUuid = saleOrder.Uuid
 
 		return nil
 	})
@@ -213,7 +219,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 	}
 
 	return resp.CreateDeskOrderResp{
-		SaleBillUuid: uuid,
+		SaleBillUuid:  billUuid,
+		SaleOrderUuid: orderUuid,
 	}, nil
 }
 
@@ -423,4 +430,9 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 		PayTypes:      payTypes,
 		SaleOrders:    orderList,
 	}, nil
+}
+
+// GetInstantOrderInfo 获取点餐订单详情
+func (s *orderSrv) GetInstantOrderInfo(dbId uint64, req req.GetInstantOrderInfoReq) (resp.GetInstantOrderInfoResp, error) {
+	return resp.GetInstantOrderInfoResp{}, nil
 }
