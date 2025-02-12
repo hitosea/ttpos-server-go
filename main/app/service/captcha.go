@@ -15,7 +15,7 @@ import (
 )
 
 type ICaptchaSrv interface {
-	Generate() (*resp.CaptchaResponse, error)
+	Generate() (*resp.Captcha, error)
 	Verify(sign string, answer string) bool
 }
 
@@ -109,7 +109,7 @@ func generateSign() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (s *CaptchaSrv) Generate() (*resp.CaptchaResponse, error) {
+func (s *CaptchaSrv) Generate() (*resp.Captcha, error) {
 	// 生成随机标识
 	sign, err := generateSign()
 	if err != nil {
@@ -135,7 +135,7 @@ func (s *CaptchaSrv) Generate() (*resp.CaptchaResponse, error) {
 		return nil, fmt.Errorf("failed to store captcha: %v", err)
 	}
 
-	return &resp.CaptchaResponse{
+	return &resp.Captcha{
 		Sign:   sign,
 		Base64: b64s,
 	}, nil

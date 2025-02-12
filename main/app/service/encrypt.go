@@ -15,7 +15,7 @@ import (
 )
 
 type IEncryptSrv interface {
-	GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error)
+	GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKey, error)
 }
 
 func NewEncryptSrv(cache cache.Cache) IEncryptSrv {
@@ -33,7 +33,7 @@ func NewEncryptSrvImpl(cache cache.Cache) *EncryptSrv {
 }
 
 // GetServerPublicKey 获取服务端公钥
-func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKeyResponse, error) {
+func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKey, error) {
 	cacheKey := config.Encrypt.CachePrefix + clientId + "_" + encryptType
 	if data, ok := s.cache.Get(cacheKey); ok {
 		var keyPair encrypt.KeyPair
@@ -41,7 +41,7 @@ func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*r
 		if err != nil {
 			return nil, errors.New("获取服务端公钥失败")
 		}
-		return &resp.ServerKeyResponse{
+		return &resp.ServerKey{
 			Type:      encryptType,
 			ClientId:  clientId,
 			ServerKey: keyPair.PublicKey,
@@ -70,7 +70,7 @@ func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*r
 	b, _ := json.Marshal(keyPair)
 	s.cache.Set(cacheKey, string(b), 86400*90*time.Second)
 
-	return &resp.ServerKeyResponse{
+	return &resp.ServerKey{
 		Type:      encryptType,
 		ClientId:  clientId,
 		ServerKey: keyPair.PublicKey,
