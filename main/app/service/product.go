@@ -37,57 +37,32 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 // GetProductList 获取收银机点餐页面产品类别列表
 func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
 	// 获取产品列表
-	products, total, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductListWithPagination(
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
+	products, total, err := productRepo.GetProductListWithPagination(
 		req.PageNo,
 		req.PageSize,
-		repository.NewCommonRepo().Preload(
-			repository.WithPreload{
-				Query: "MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductUnit",
-			},
-			repository.WithPreload{
-				Query: "ProductUnit.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductBoms",
-			},
-			repository.WithPreload{
-				Query: "ProductBoms.ProductFlavor",
-			},
-			repository.WithPreload{
-				Query: "ProductBoms.ProductFlavor.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductBoms.ProductSauce",
-			},
-			repository.WithPreload{
-				Query: "ProductBoms.ProductSauce.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductAttributeGroup",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductAttributeGroup.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductPackageAttributes",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.Attribute",
-			},
-			repository.WithPreload{
-				Query: "ProductPackageAttributeGroup.ProductPackageAttributes.Attribute.MultiLanguageName",
-			},
-		),
-		repository.NewCommonRepo().WhereByIsShowCashier(1),
-		repository.NewCommonRepo().WhereByStatus(1),
-		repository.NewCommonRepo().WhereBySoftDelete(),
-		repository.NewCommonRepo().SortWithID("DESC"),
+		productRepo.WithProductUnit(),
+		productRepo.WithProductUnitMultiLanguageName(),
+		productRepo.WithProductBoms(),
+		productRepo.WithProductBomsProductFlavor(),
+		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
+		productRepo.WithProductBomsProductSauce(),
+		productRepo.WithProductBomsProductSauceMultiLanguageName(),
+		productRepo.WithProductPackageAttributeGroup(),
+		productRepo.WithProductPackageAttributeGroupProductAttributeGroup(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
+		productRepo.WithProductPackageAttributeGroupProductAttributeGroup(),
+		productRepo.WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
+		commonRepo.WhereByIsShowCashier(1),
+		commonRepo.WhereByStatus(1),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.SortWithID("DESC"),
 	)
 
 	// 处理错误

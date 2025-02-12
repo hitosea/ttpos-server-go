@@ -69,11 +69,11 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 		}
 		return
 	}
-	if config.Server.Mode == "debug" {
-		// 获取环境配置
-		Fail(c, constant.CodeBadRequest, err.Error())
-		return
-	}
+	// if config.Server.Mode == "debug" {
+	// 	// 获取环境配置
+	// 	Fail(c, constant.CodeBadRequest, err.Error())
+	// 	return
+	// }
 	for _, ve := range ves {
 		if jsonTag, jsonTagExists := structFieldJsonTagMaps[ve.StructField()]; jsonTagExists {
 			if message, messageExists := messages[jsonTag+"."+ve.Tag()]; messageExists {

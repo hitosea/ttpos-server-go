@@ -157,13 +157,45 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 创建销售订单
-		_, err = repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
+		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
 		})
 		if err != nil {
 			return err
+		}
+
+		if *req.IsBuffet {
+			// 创建销售订单自助餐顾客类型
+			for _, buffetUuid := range req.BuffetUuids {
+				for _, buffetCustomerType := range req.BuffetCustomerTypes {
+					// 获取自助餐顾客类型价格
+					_, err := repository.NewBuffetRepo(tx).GetBuffetCustomerTypePrice(
+						repository.NewCommonRepo().WhereByBuffetPackageUuid(buffetUuid),
+						repository.NewCommonRepo().WhereByCustomerTypeUuid(buffetCustomerType.Uuid),
+					)
+					if err != nil {
+						continue
+					}
+
+					saleOrderBuffetCustomerTypeUuid, err := database.GetID()
+					if err != nil {
+						return err
+					}
+
+					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(model.SaleOrderBuffetCustomerType{
+						Uuid:                   saleOrderBuffetCustomerTypeUuid,
+						SaleOrderUuid:          saleOrder.Uuid,
+						BuffetPackageUuid:      buffetUuid,
+						BuffetCustomerTypeUuid: buffetCustomerType.Uuid,
+						Num:                    *buffetCustomerType.MealNum,
+					})
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		uuid = saleBill.Uuid

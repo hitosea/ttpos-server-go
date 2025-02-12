@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -21,22 +22,24 @@ type IDeskSrv interface {
 
 // deskSrv 收银服务结构体
 type deskSrv struct {
-	dbm       *database.DBManager // 数据库管理器
-	localeSrv ILocaleSrv          // 多语言名称服务
-	orderSrv  IOrderSrv           // 订单服务
+	dbm        *database.DBManager // 数据库管理器
+	localeSrv  ILocaleSrv          // 多语言名称服务
+	orderSrv   IOrderSrv           // 订单服务
+	settingSrv setting.ISrv        // 设置服务
 }
 
 // NewProductSrv 创建新的收银产品类别服务
-func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv) IDeskSrv {
-	return NewDeskSrvImpl(dbm, localeSrv, orderSrv)
+func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
+	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv)
 }
 
 // NewDeskSrvImpl 创建新的收银服务实现
-func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv) IDeskSrv {
+func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
 	return &deskSrv{
-		dbm:       dbm,
-		localeSrv: localeSrv,
-		orderSrv:  orderSrv,
+		dbm:        dbm,
+		localeSrv:  localeSrv,
+		orderSrv:   orderSrv,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -222,6 +225,12 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 
 // CreateDeskOrder 创建桌台订单
 func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+	// 验证请求参数
+	err := s.validateCreateDeskOrderReq(req)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, err
+	}
+
 	// 判断桌台是否存在
 	desk, _ := s.GetDeskInfo(dbId, req.DeskUuid)
 	if desk.Uuid == 0 {
@@ -233,6 +242,77 @@ func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp
 		return resp.CreateDeskOrderResp{}, errors.New("桌台不空闲")
 	}
 
-	// 创建订单
+	// 判断是否自助餐订单
+	if !*req.IsBuffet {
+		if req.MealNum == nil || *req.MealNum == 0 {
+			return resp.CreateDeskOrderResp{}, errors.New("就餐人数不能小于1")
+		}
+	} else {
+		return s.createDeskBuffetOrder(dbId, req)
+	}
+
+	// 创建桌台-非自助餐订单
+	return s.orderSrv.CreateDeskOrder(dbId, req)
+}
+
+// validateCreateDeskOrderReq 验证请求参数
+func (s *deskSrv) validateCreateDeskOrderReq(req req.DeskOrderCreateReq) error {
+	if req.DeskUuid == 0 {
+		return errors.New("桌台uuid不能为0")
+	}
+	if req.IsBuffet == nil {
+		return errors.New("是否是自助餐不能为空")
+	}
+	if req.MealNum == nil {
+		return errors.New("就餐人数不能为空")
+	}
+	if !*req.IsBuffet {
+		if *req.MealNum < 1 || *req.MealNum > 999 {
+			return errors.New("就餐人数不能小于1或大于999")
+		}
+	}
+	if *req.IsBuffet {
+		if len(req.BuffetUuids) < 1 || len(req.BuffetUuids) > 2 {
+			return errors.New("自助餐uuid列表不能小于1或大于2")
+		}
+		if len(req.BuffetCustomerTypes) == 0 {
+			return errors.New("自助餐顾客类型列表不能为空")
+		}
+	}
+
+	return nil
+}
+
+// createDeskBuffetOrder 创建桌台自助餐订单
+func (s *deskSrv) createDeskBuffetOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+	// 验证自助餐是否开启
+	companySetting, err := s.settingSrv.GetCompanySetting(dbId)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, err
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(dbId, companySetting)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, err
+	}
+	if buffetSetting.IsOpen == "0" {
+		return resp.CreateDeskOrderResp{}, errors.New("自助餐未开启")
+	}
+
+	// 验证自助餐套餐是否存在
+	for _, buffetUuid := range req.BuffetUuids {
+		_, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetInfo(repository.NewCommonRepo().WhereByUuid(buffetUuid))
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, errors.New("自助餐套餐不存在")
+		}
+	}
+
+	// 验证自助餐顾客类型是否存在
+	for _, buffetCustomerType := range req.BuffetCustomerTypes {
+		_, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetCustomerTypeInfo(repository.NewCommonRepo().WhereByUuid(buffetCustomerType.Uuid))
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, errors.New("自助餐顾客类型不存在")
+		}
+	}
+
 	return s.orderSrv.CreateDeskOrder(dbId, req)
 }

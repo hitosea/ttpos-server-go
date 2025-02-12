@@ -22,6 +22,8 @@ type ICommonRepo interface {
 	WhereByOrderNo(orderNo string) DBOption                         // 根据订单编号查询
 	WhereByBillType(billType uint) DBOption                         // 根据账单类型查询
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
+	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption     // 根据自助餐套餐UUID查询
+	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption       // 根据顾客类型UUID查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	SortWithID(order string) DBOption                               // 根据ID排序
@@ -99,6 +101,20 @@ func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
 			return db.Where("hide_bill_time > 0")
 		}
 		return db.Where("hide_bill_time = 0")
+	}
+}
+
+// WhereByBuffetPackageUuid 根据自助餐套餐UUID查询
+func (r *commonRepo) WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("buffet_package_uuid = ?", buffetPackageUuid)
+	}
+}
+
+// WhereByCustomerTypeUuid 根据顾客类型UUID查询
+func (r *commonRepo) WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("customer_type_uuid = ?", customerTypeUuid)
 	}
 }
 
