@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `image_url` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品图片URL',
     `custom_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义价格',
     `unit_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价,商品原价+小料价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(折扣和优惠后)',
