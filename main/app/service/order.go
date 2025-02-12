@@ -320,9 +320,23 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {
 			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
 		}
-		// todo 未完成
+		//
 		products := make([]resp.CashierOrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
+			attributeNames := []string{}
+			for _, bom := range product.SaleOrderProductBoms {
+				if bom.IsFlavorBom == 1 {
+					attributeNames = append(attributeNames, bom.Name)
+				}
+			}
+			for _, attribute := range product.SaleOrderProductAttributes {
+				attributeNames = append(attributeNames, attribute.Name)
+			}
+			for _, bom := range product.SaleOrderProductBoms {
+				if bom.IsFlavorBom != 1 {
+					attributeNames = append(attributeNames, bom.Name)
+				}
+			}
 			products[j] = resp.CashierOrderProduct{
 				Uuid:                  product.Uuid,
 				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
@@ -338,7 +352,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 				IsGift:                product.IsGift == 1,
 				GiftReason:            product.GiftReason,
 				ImageUrl:              product.ImageFile.GetUrl(),
-				AttributeName:         "",
+				Attributes:            strings.Join(attributeNames, ";"),
 			}
 		}
 		//

@@ -251,6 +251,9 @@ func (r *orderRepo) GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64)
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+			},
 		),
 		commonRepo.WhereByUuid(saleBillUuid),
 	)
