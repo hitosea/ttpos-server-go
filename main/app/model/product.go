@@ -1,6 +1,6 @@
 package model
 
-// ProductFlavor 商品规格表，定义商品的规格信息
+// ProductFlavor 商品规格表，定义商品的规格信息 ttpos_product_flavor
 type ProductFlavor struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -13,7 +13,7 @@ type ProductFlavor struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
-// ProductSauce 商品小料表，定义商品小料的相关信息
+// ProductSauce 商品小料表，定义商品小料的相关信息 ttpos_product_sauce
 type ProductSauce struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -26,7 +26,7 @@ type ProductSauce struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
-// ProductUnit 商品单位表，定义商品的单位信息
+// ProductUnit 商品单位表，定义商品的单位信息 ttpos_product_unit
 type ProductUnit struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -39,7 +39,7 @@ type ProductUnit struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
-// PrinterTag 打印标签表，定义打印标签的相关信息
+// PrinterTag 打印标签表，定义打印标签的相关信息 ttpos_printer_tag
 type PrinterTag struct {
 	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -49,7 +49,7 @@ type PrinterTag struct {
 	DeleteTime int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
 
-// ProductAttributeGroup 产品属性组表，定义产品的属性分组信息
+// ProductAttributeGroup 产品属性组表，定义产品的属性分组信息 ttpos_product_attribute_group
 type ProductAttributeGroup struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -62,7 +62,7 @@ type ProductAttributeGroup struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
-// ProductAttribute 商品属性表，定义商品的属性信息
+// ProductAttribute 商品属性表，定义商品的属性信息 ttpos_product_attribute
 type ProductAttribute struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -77,7 +77,7 @@ type ProductAttribute struct {
 	AttributeGroup    ProductAttributeGroup `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 属性组
 }
 
-// ProductPackageAttributeGroup 产品包属性组表，定义产品包的属性分组信息
+// ProductPackageAttributeGroup 产品包属性组表，定义产品包的属性分组信息 ttpos_product_package_attribute_group
 type ProductPackageAttributeGroup struct {
 	ID                        uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                      uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -93,7 +93,7 @@ type ProductPackageAttributeGroup struct {
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"` // 产品包属性
 }
 
-// ProductPackageAttribute 产品包属性表，定义产品包的属性信息
+// ProductPackageAttribute 产品包属性表，定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
 	ID                               uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                             uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -107,7 +107,7 @@ type ProductPackageAttribute struct {
 	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
 }
 
-// ProductPackage 产品包表，定义产品包的相关信息
+// ProductPackage 产品包表，定义产品包的相关信息 ttpos_product_package
 type ProductPackage struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -146,7 +146,7 @@ type ProductPackage struct {
 	ProductPackageAttributeGroup []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
 }
 
-// ProductBom 产品BOM表，定义产品BOM的相关信息
+// ProductBom 产品BOM表，定义产品BOM的相关信息 ttpos_product_bom
 type ProductBom struct {
 	ID                 uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid               uint64  `gorm:"column:uuid;not null;default:0;comment:'UUID'"`

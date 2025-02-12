@@ -16,7 +16,7 @@ type IDeskSrv interface {
 	GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)      // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
-	CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
 }
 
 // deskSrv 收银服务结构体
@@ -221,7 +221,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 }
 
 // CreateDeskOrder 创建桌台订单
-func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.CreateDeskOrderReq) (resp.CreateDeskOrderResp, error) {
+func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	// 判断桌台是否存在
 	desk, _ := s.GetDeskInfo(dbId, req.DeskUuid)
 	if desk.Uuid == 0 {

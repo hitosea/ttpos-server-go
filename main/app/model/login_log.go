@@ -2,7 +2,7 @@ package model
 
 import "ttpos-server-go/config"
 
-// LoginLog 管理员登录记录表
+// LoginLog 管理员登录记录表 ttpos_login_log
 type LoginLog struct {
 	ID         int    `gorm:"column:id;type:int(11);AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid       uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:UUID;NOT NULL" json:"uuid"`

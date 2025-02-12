@@ -119,7 +119,7 @@ func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 授权无H5点餐权限
-		if companySetting.IsOpenScan == 0 && permission.ID == 1724220505 {
+		if companySetting.IsOpenH5 == 0 && permission.ID == 1724220505 {
 			continue
 		}
 		// 授权无点餐助手权限
@@ -135,7 +135,7 @@ func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 授权无扫码点餐接单权限
-		if companySetting.IsAcceptScanOrder == 0 && permission.ID == 1724320522 {
+		if companySetting.IsOpenScanOrder == 0 && permission.ID == 1724320522 {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)

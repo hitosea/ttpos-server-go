@@ -1,6 +1,6 @@
 package model
 
-// ShopOptLog 商家操作日志
+// ShopOptLog 商家操作日志 ttpos_shop_opt_log
 type ShopOptLog struct {
 	OptLogId    uint   `gorm:"column:opt_log_id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"opt_log_id"`
 	ShopUserId  uint   `gorm:"column:shop_user_id;type:int(10);default:0;comment:用户id;NOT NULL" json:"shop_user_id"`

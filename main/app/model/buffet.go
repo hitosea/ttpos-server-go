@@ -1,5 +1,6 @@
 package model
 
+// BuffetPackage 自助餐套餐信息表 ttpos_buffet_package
 type BuffetPackage struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'自助餐ID'"`
@@ -20,6 +21,7 @@ type BuffetPackage struct {
 	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 }
 
+// BuffetCustomerType 自助餐客户类型信息表 ttpos_buffet_customer_type
 type BuffetCustomerType struct {
 	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'自助餐客户类型ID'"`
@@ -29,6 +31,7 @@ type BuffetCustomerType struct {
 	DeleteTime int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
 
+// BuffetCustomerTypePrice 自助餐客户类型价格信息表 ttpos_buffet_customer_type_price
 type BuffetCustomerTypePrice struct {
 	ID                uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid              uint64  `gorm:"default:0;column:uuid;comment:'自助餐客户类型ID'"`
@@ -42,6 +45,7 @@ type BuffetCustomerTypePrice struct {
 	BuffetCustomerType BuffetCustomerType `gorm:"foreignKey:customer_type_uuid;references:uuid"`
 }
 
+// BuffetProduct 自助餐产品信息表 ttpos_buffet_product
 type BuffetProduct struct {
 	ID                 uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid               uint64 `gorm:"default:0;column:uuid;comment:'自助餐产品ID'"`

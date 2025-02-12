@@ -1,6 +1,6 @@
 package model
 
-// BindRecord 商家设备绑定记录表
+// BindRecord 商家设备绑定记录表 ttpos_bind_record
 type BindRecord struct {
 	ID               uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid             uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:绑定记录ID;NOT NULL" json:"uuid"`

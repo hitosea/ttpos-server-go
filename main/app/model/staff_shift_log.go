@@ -1,6 +1,6 @@
 package model
 
-// StaffShiftLog 员工交班记录表
+// StaffShiftLog 员工交班记录表 ttpos_staff_shift_log
 type StaffShiftLog struct {
 	ID                uint    `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
 	Uuid              uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:交班记录ID;NOT NULL" json:"uuid"`

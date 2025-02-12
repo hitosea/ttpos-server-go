@@ -21,7 +21,7 @@ type CashierInstantHandler struct {
 // CreateInstantOrder 创建点餐订单
 // @Summary 创建点餐订单
 // @Description 创建点餐订单
-// @Tags 收银端.点餐订单
+// @Tags 收银端.点餐
 // @Accept json
 // @Produce json
 // @Success 200 {object} resp.CreateOrderResp
@@ -48,7 +48,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 	// 创建收银产品处理程序
 	wrapper := CashierInstantHandler{
-		orderService: service.NewOrderSrv(dbm, cache), // 订单服务
+		orderService: service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
 	}
 
 	// 需要认证
