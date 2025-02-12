@@ -138,12 +138,12 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		logger.Logger.Error("生成雪花ID失败", zap.Error(err))
 		return apperrors.NewWithCode(constant.CodeFail, "系统内部错误")
 	}
-	return bindRecordRepo.Create(model.BindRecord{
+	return bindRecordRepo.Create(model.Device{
 		Uuid:             uuid,
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
-		DeviceId:         addReq.DeviceId,
+		DeviceKey:        addReq.DeviceId,
 		Address:          addReq.Address,
 		Port:             int(addReq.Port),
 		DeviceIp:         addReq.DeviceId,

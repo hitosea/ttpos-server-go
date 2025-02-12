@@ -4,8 +4,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for ttpos_admin_access
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_access`;
-CREATE TABLE `ttpos_admin_access` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_access` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `name` varchar(255) DEFAULT '' COMMENT '权限名称',
   `path` varchar(255) DEFAULT '' COMMENT '路由地址',
@@ -29,63 +28,62 @@ CREATE TABLE `ttpos_admin_access` (
 -- Records of ttpos_admin_access
 -- ----------------------------
 BEGIN;
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1, '商家管理', '/shop/Index', '/admin/shop/index', 101, 1, 'icon-shangpinguanli', '', 1, 1, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (2, '添加', '', '/admin/shop/add', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (3, '编辑', '', '/admin/shop/edit', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (4, '授权码', '', '/admin/shop/getLicense', 1, 0, '', '', 0, 0, 0, '', 0, 1733276795, 1733276795);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (5, '删除', '', '/admin/shop/delete', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (6, '状态', '', '/admin/shop/updateStatus', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (7, '进销存', '', '/admin/shop/updateSaleStock', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (8, '预定', '', '/admin/shop/updateReserve', 1, 0, '', '', 0, 0, 0, '', 0, 1733276795, 1733276795);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (9, '用户管理', '/user/Index', '', 101, 2, 'icon-shangpinguanli', '', 1, 1, 1, '', 101, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (10, '管理员', '', '/admin/admin.user/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (11, '添加', '', '/admin/admin.user/add', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (12, '编辑', '', '/admin/admin.user/edit', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (13, '删除', '', '/admin/admin.user/delete', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (14, '状态', '', '/admin/admin.user/updateStatus', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (15, '角色权限', '', '/admin/admin.role/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (16, '添加', '', '/admin/admin.role/add', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (17, '编辑', '', '/admin/admin.role/edit', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (18, '删除', '', '/admin/admin.role/delete', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (19, '登录日志', '', '/admin/admin.loginlog/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (20, '操作日志', '', '/admin/admin.optlog/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (21, '详情', '', '/admin/admin.optlog/detail', 20, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (22, '系统设置', '', '/admin/setting.service/index', 101, 30, '', '', 1, 1, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (30, '客户端管理', '/client/index', '', 101, 20, '', '', 1, 1, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (31, '收银端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (32, '新增', '', '/admin/client.client/add', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (33, '删除', '', '/admin/client.client/delete', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (34, '二维码', '', '/admin/client.client/qrcode', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (35, '下载', '', '/admin/client.client/download', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (41, '平板端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (42, '新增', '', '/admin/client.client/add', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (43, '删除', '', '/admin/client.client/delete', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (44, '二维码', '', '/admin/client.client/qrcode', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (45, '下载', '', '/admin/client.client/download', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (51, '厨显端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (52, '新增', '', '/admin/client.client/add', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (53, '删除', '', '/admin/client.client/delete', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (54, '二维码', '', '/admin/client.client/qrcode', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (55, '下载', '', '/admin/client.client/download', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (61, '商家后台端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (62, '新增', '', '/admin/client.client/add', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (63, '删除', '', '/admin/client.client/delete', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (64, '二维码', '', '/admin/client.client/qrcode', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (65, '下载', '', '/admin/client.client/download', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (71, '点餐助手', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (72, '新增', '', '/admin/client.client/add', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (73, '删除', '', '/admin/client.client/delete', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (74, '二维码', '', '/admin/client.client/qrcode', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (75, '下载', '', '/admin/client.client/download', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (101, '全选', '', '', 0, 1, 'icon-shangpinguanli', '', 1, 0, 1, '', 0, 1733276792, 1733276792);
-INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (201, '支付', '', '/admin/shop/payment', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 1, '商家管理', '/shop/Index', '/admin/shop/index', 101, 1, 'icon-shangpinguanli', '', 1, 1, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 2, '添加', '', '/admin/shop/add', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 3, '编辑', '', '/admin/shop/edit', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 4, '授权码', '', '/admin/shop/getLicense', 1, 0, '', '', 0, 0, 0, '', 0, 1733276795, 1733276795 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 5, '删除', '', '/admin/shop/delete', 1, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 6, '状态', '', '/admin/shop/updateStatus', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 7, '进销存', '', '/admin/shop/updateSaleStock', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 8, '预定', '', '/admin/shop/updateReserve', 1, 0, '', '', 0, 0, 0, '', 0, 1733276795, 1733276795 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 9, '用户管理', '/user/Index', '', 101, 2, 'icon-shangpinguanli', '', 1, 1, 1, '', 101, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 10, '管理员', '', '/admin/admin.user/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 11, '添加', '', '/admin/admin.user/add', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 12, '编辑', '', '/admin/admin.user/edit', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 13, '删除', '', '/admin/admin.user/delete', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 14, '状态', '', '/admin/admin.user/updateStatus', 10, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 15, '角色权限', '', '/admin/admin.role/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 16, '添加', '', '/admin/admin.role/add', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 17, '编辑', '', '/admin/admin.role/edit', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 18, '删除', '', '/admin/admin.role/delete', 15, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 19, '登录日志', '', '/admin/admin.loginlog/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 20, '操作日志', '', '/admin/admin.optlog/index', 9, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 21, '详情', '', '/admin/admin.optlog/detail', 20, 0, '', '', 0, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 22, '系统设置', '', '/admin/setting.service/index', 101, 30, '', '', 1, 1, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 30, '客户端管理', '/client/index', '', 101, 20, '', '', 1, 1, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 31, '收银端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 32, '新增', '', '/admin/client.client/add', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 33, '删除', '', '/admin/client.client/delete', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 34, '二维码', '', '/admin/client.client/qrcode', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 35, '下载', '', '/admin/client.client/download', 31, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 41, '平板端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 42, '新增', '', '/admin/client.client/add', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 43, '删除', '', '/admin/client.client/delete', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 44, '二维码', '', '/admin/client.client/qrcode', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 45, '下载', '', '/admin/client.client/download', 41, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 51, '厨显端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 52, '新增', '', '/admin/client.client/add', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 53, '删除', '', '/admin/client.client/delete', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 54, '二维码', '', '/admin/client.client/qrcode', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 55, '下载', '', '/admin/client.client/download', 51, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 61, '商家后台端', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 62, '新增', '', '/admin/client.client/add', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 63, '删除', '', '/admin/client.client/delete', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 64, '二维码', '', '/admin/client.client/qrcode', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 65, '下载', '', '/admin/client.client/download', 61, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 71, '点餐助手', '', '/admin/client.client/index', 30, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 72, '新增', '', '/admin/client.client/add', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 73, '删除', '', '/admin/client.client/delete', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 74, '二维码', '', '/admin/client.client/qrcode', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 75, '下载', '', '/admin/client.client/download', 71, 1, '', '', 0, 0, 1, '', 0, 1724054095, 1724054095 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 101, '全选', '', '', 0, 1, 'icon-shangpinguanli', '', 1, 0, 1, '', 0, 1733276792, 1733276792 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
+INSERT INTO `ttpos_admin_access` (`id`, `name`, `path`, `api_path`, `parent_id`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `remark`, `is_supplier`, `create_time`, `update_time`) SELECT 201, '支付', '', '/admin/shop/payment', 1, 0, '', '', 0, 0, 1, '', 0, 1733276795, 1733276795 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_access` WHERE `id` = 1);
 COMMIT;
 
 -- ----------------------------
 -- Table structure for ttpos_admin_role
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_role`;
-CREATE TABLE `ttpos_admin_role` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_role` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `role_name` varchar(2000) DEFAULT '' COMMENT '角色名称',
   `sort` int(11) DEFAULT 0 COMMENT '排序(数字越小越靠前)',
@@ -98,8 +96,7 @@ CREATE TABLE `ttpos_admin_role` (
 -- ----------------------------
 -- Table structure for ttpos_admin_role_access
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_role_access`;
-CREATE TABLE `ttpos_admin_role_access` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_role_access` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
   `access_id` int(11) DEFAULT NULL COMMENT '权限ID',
@@ -112,8 +109,7 @@ CREATE TABLE `ttpos_admin_role_access` (
 -- ----------------------------
 -- Table structure for ttpos_admin_user
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_user`;
-CREATE TABLE `ttpos_admin_user` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_user` (
   `admin_user_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '用户名',
   `phone` varchar(50) DEFAULT '' COMMENT '手机号',
@@ -132,14 +128,13 @@ CREATE TABLE `ttpos_admin_user` (
 -- Records of ttpos_admin_user
 -- ----------------------------
 BEGIN;
-INSERT INTO `ttpos_admin_user` (`admin_user_id`, `username`, `password`, `real_name`, `is_super`, `status`, `create_time`, `update_time`, `delete_time`) VALUES (1715247150, 'admin', 'eb94dea542ea69eb670b97b781d8f05d', '', 1, 1, 1529926348, 1595127602, 0);
+INSERT INTO `ttpos_admin_user` (`admin_user_id`, `username`, `password`, `real_name`, `is_super`, `status`, `create_time`, `update_time`, `delete_time`) SELECT 1715247150, 'admin', 'eb94dea542ea69eb670b97b781d8f05d', '', 1, 1, 1529926348, 1595127602, 0 WHERE NOT EXISTS (SELECT 1 FROM `ttpos_admin_user` WHERE `admin_user_id` = 1715247150);
 COMMIT;
 
 -- ----------------------------
 -- Table structure for ttpos_admin_user_login_log
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_user_login_log`;
-CREATE TABLE `ttpos_admin_user_login_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_user_login_log` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `admin_user_id` int(11) DEFAULT NULL COMMENT '用户ID',
   `username` varchar(255) DEFAULT '' COMMENT '用户名',
@@ -154,8 +149,7 @@ CREATE TABLE `ttpos_admin_user_login_log` (
 -- ----------------------------
 -- Table structure for ttpos_admin_user_opt_log
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_user_opt_log`;
-CREATE TABLE `ttpos_admin_user_opt_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_user_opt_log` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `admin_user_id` int(11) DEFAULT NULL COMMENT '用户ID',
   `title` varchar(255) DEFAULT '' COMMENT '标题',
@@ -174,8 +168,7 @@ CREATE TABLE `ttpos_admin_user_opt_log` (
 -- ----------------------------
 -- Table structure for ttpos_admin_user_role
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_admin_user_role`;
-CREATE TABLE `ttpos_admin_user_role` (
+CREATE TABLE IF NOT EXISTS `ttpos_admin_user_role` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `admin_user_id` int(11) DEFAULT NULL COMMENT '超管用户ID',
   `role_id` int(11) DEFAULT NULL COMMENT '角色ID',
@@ -188,8 +181,7 @@ CREATE TABLE `ttpos_admin_user_role` (
 -- ----------------------------
 -- Table structure for ttpos_company
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_company`;
-CREATE TABLE `ttpos_company` (
+CREATE TABLE IF NOT EXISTS `ttpos_company` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `name` varchar(255) NOT NULL DEFAULT '' COMMENT '集团名称',
@@ -208,8 +200,7 @@ CREATE TABLE `ttpos_company` (
 -- ----------------------------
 -- Table structure for ttpos_company_setting
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_company_setting`;
-CREATE TABLE `ttpos_company_setting` (
+CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
     `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
@@ -242,8 +233,7 @@ CREATE TABLE `ttpos_company_setting` (
 -- ----------------------------
 -- Table structure for ttpos_company
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_company_staff`;
-CREATE TABLE `ttpos_company_staff` (
+CREATE TABLE IF NOT EXISTS `ttpos_company_staff` (
   `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `uuid` BIGINT unsigned NOT NULL DEFAULT 0 COMMENT '员工ID',
   `company_uuid` BIGINT unsigned NOT NULL DEFAULT 0 COMMENT '集团ID',
@@ -260,8 +250,7 @@ CREATE TABLE `ttpos_company_staff` (
 -- ----------------------------
 -- Table structure for ttpos_client_version
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_client_version`;
-CREATE TABLE `ttpos_client_version` (
+CREATE TABLE IF NOT EXISTS `ttpos_client_version` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `type` int(11) DEFAULT 1 COMMENT '类型： 1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端',
   `brand` int(11) DEFAULT 1 COMMENT '品牌',
@@ -285,8 +274,7 @@ CREATE TABLE `ttpos_client_version` (
 -- ----------------------------
 -- Table structure for ttpos_payment_app
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_payment_app`;
-CREATE TABLE `ttpos_payment_app` (
+CREATE TABLE IF NOT EXISTS `ttpos_payment_app` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
   `ll_white_ip` varchar(255) NOT NULL DEFAULT '' COMMENT '白名单IP',
@@ -305,8 +293,7 @@ CREATE TABLE `ttpos_payment_app` (
 -- ----------------------------
 -- Table structure for ttpos_upload_file
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_upload_file`;
-CREATE TABLE `ttpos_upload_file` (
+CREATE TABLE IF NOT EXISTS `ttpos_upload_file` (
   `file_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `storage` varchar(20) NOT NULL DEFAULT '' COMMENT '存储方式',
   `group_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '文件分组ID',
@@ -330,8 +317,7 @@ CREATE TABLE `ttpos_upload_file` (
 -- ----------------------------
 -- Table structure for ttpos_upload_group
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_upload_group`;
-CREATE TABLE `ttpos_upload_group` (
+CREATE TABLE IF NOT EXISTS `ttpos_upload_group` (
   `group_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `group_type` varchar(10) NOT NULL DEFAULT '' COMMENT '文件类型',
   `group_name` varchar(30) NOT NULL DEFAULT '' COMMENT '分类名称',
@@ -346,8 +332,7 @@ CREATE TABLE `ttpos_upload_group` (
 -- ----------------------------
 -- Table structure for ttpos_setting
 -- ----------------------------
-DROP TABLE IF EXISTS `ttpos_setting`;
-CREATE TABLE `ttpos_setting` (
+CREATE TABLE IF NOT EXISTS `ttpos_setting` (
   `key` varchar(30) NOT NULL COMMENT '设置项标示',
   `describe` varchar(255) NOT NULL DEFAULT '' COMMENT '设置项描述',
   `values` mediumtext NOT NULL COMMENT '设置内容（json格式）',
@@ -360,7 +345,7 @@ CREATE TABLE `ttpos_setting` (
 -- ----------------------------
 -- Table structure for ttpos_web_socket_msg
 -- ----------------------------
-CREATE TABLE `ttpos_web_socket_msg` (
+CREATE TABLE IF NOT EXISTS `ttpos_web_socket_msg` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uid` varchar(150) NOT NULL DEFAULT '' COMMENT '设备uid',
   `type` varchar(50) NOT NULL DEFAULT '' COMMENT '消息类型',

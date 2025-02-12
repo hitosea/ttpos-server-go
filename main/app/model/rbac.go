@@ -43,8 +43,8 @@ type Staff struct {
 	UpdateTime          int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
 	DeleteTime          int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 
-	Company *Company    `gorm:"foreignKey:CompanyUuid;references:Uuid"`
-	Device  *BindRecord `gorm:"foreignKey:BindKey;references:DeviceId"`
+	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
+	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceKey"`
 }
 
 // Role 角色表 ttpos_role
