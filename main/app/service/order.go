@@ -276,19 +276,18 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 					db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
 				}
 				// 日期范围
-				if len(req.QueryTimes) > 0 {
+				if req.QueryStartTime != 0 || req.QueryEndTime != 0 {
 					timeFields := []string{}
-					if slices.Contains(req.QueryTimeType, uint(0)) || len(req.QueryTimeType) == 0 {
+					if req.EnableCreateTime || !req.EnablePayTime {
 						timeFields = append(timeFields, "create_time")
 					}
-					if slices.Contains(req.QueryTimeType, uint(1)) {
+					if req.EnablePayTime {
 						timeFields = append(timeFields, "finish_time")
 					}
 					// 开始时间
-					startTime := req.QueryTimes[0]
 					endTime := uint(0)
-					if len(req.QueryTimes) > 1 {
-						endTime = req.QueryTimes[1] + 86399
+					if req.QueryEndTime != 0 {
+						endTime = req.QueryEndTime + 86399
 					}
 					//
 					query := ""
@@ -297,12 +296,12 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 						if i > 0 {
 							query += " OR "
 						}
-						if startTime > 0 && endTime > 0 {
+						if req.QueryStartTime > 0 && endTime > 0 {
 							query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
-							args = append(args, startTime, endTime)
-						} else if startTime > 0 {
+							args = append(args, req.QueryStartTime, endTime)
+						} else if req.QueryStartTime > 0 {
 							query += fmt.Sprintf("(%s > ?)", field)
-							args = append(args, startTime)
+							args = append(args, req.QueryStartTime)
 						} else if endTime > 0 {
 							query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
 							args = append(args, endTime)
