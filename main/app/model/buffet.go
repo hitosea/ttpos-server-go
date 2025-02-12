@@ -17,8 +17,8 @@ type BuffetPackage struct {
 	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
 	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
-	MultiLanguageName       MultiLanguageName       `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
+	MultiLanguageName        MultiLanguageName         `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	BuffetCustomerTypePrices []BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 }
 
 // BuffetCustomerType 自助餐客户类型信息表 ttpos_buffet_customer_type

@@ -8,7 +8,7 @@ import (
 
 // IBuffetRepo 桌台
 type IBuffetRepo interface {
-	GetBuffetList(pageNo, pageSize int) ([]model.BuffetPackage, int64, error)
+	GetBuffetList(pageNo, pageSize int, opts ...DBOption) ([]model.BuffetPackage, int64, error)
 }
 
 func NewBuffetRepo(db *gorm.DB) IBuffetRepo {
@@ -25,18 +25,21 @@ type BuffetRepoImpl struct {
 }
 
 // GetBuffetList 获取
-func (r *BuffetRepoImpl) GetBuffetList(pageNo, pageSize int) ([]model.BuffetPackage, int64, error) {
+func (r *BuffetRepoImpl) GetBuffetList(pageNo, pageSize int, opts ...DBOption) ([]model.BuffetPackage, int64, error) {
 	var buffets []model.BuffetPackage
 	var total int64
 
-	query := r.db.Model(&model.BuffetPackage{}).Preload("BuffetCustomerTypePrice.BuffetCustomerType.MultiLanguageName").Preload("MultiLanguageName").Where("delete_time = ?", 0)
+	db := r.db.Model(&model.BuffetPackage{}).Session(&gorm.Session{})
 
-	// 获取总数
-	if err := query.Count(&total).Error; err != nil {
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Count(&total).Error
+	if err != nil {
 		return nil, 0, err
 	}
 
-	// 获取分页数据
-	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&buffets).Error
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&buffets).Error
 	return buffets, total, err
 }
