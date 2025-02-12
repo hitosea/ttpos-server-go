@@ -102,7 +102,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 			continue
 		}
 		bindCount := bindRecordRepo.GetBindCountBySource(sourceName)
-		if bindCount >= source.Limit { // 超过绑定上线
+		if bindCount >= source.Limit { // 超过绑定上限
 			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
@@ -149,7 +149,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		DeviceIp:         addReq.DeviceId,
 		Remark:           addReq.Remark,
 		Brand:            addReq.Brand,
-		Platform:         uint(platform),
+		Platform:         platform,
 		UserAgent:        addReq.UserAgent,
 	})
 }

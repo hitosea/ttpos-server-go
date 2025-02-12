@@ -19,13 +19,16 @@ var LoginRequestMessage = map[string]string{
 	"password.required": "密码不能为空",
 }
 
+type Assistant struct {
+	DeviceId  string `json:"device_id"`  // 收银设备ID
+	StaffUuid uint64 `json:"staff_uuid"` // 收银员工ID
+}
+
 type Authenticate struct {
 	Source      string
 	DeviceId    string
 	CompanyUuid uint64
 	StaffUuid   uint64
 	UrlPath     string
-
-	AssistantDeviceId  string
-	AssistantStaffUuid uint64
+	Assistant   Assistant
 }

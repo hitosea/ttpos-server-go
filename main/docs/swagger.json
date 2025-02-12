@@ -11,6 +11,11 @@
     "paths": {
         "/assistant/bind_cashier": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "点餐助手绑定收银机",
                 "consumes": [
                     "application/json"
@@ -129,7 +134,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -137,7 +142,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -224,8 +229,56 @@
                 }
             }
         },
+        "/assistant/online_cashiers": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取在线收银机",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.认证鉴权"
+                ],
+                "summary": "获取在线收银机",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "list": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.OnlineCashier"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/base": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "收银端信息",
                 "consumes": [
                     "application/json"
@@ -1012,7 +1065,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -1020,7 +1073,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -1060,7 +1113,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.CreateDeskOrderReq"
+                            "$ref": "#/definitions/req.DeskOrderCreateReq"
                         }
                     }
                 ],
@@ -1113,7 +1166,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.点餐订单"
+                    "收银端.点餐"
                 ],
                 "summary": "创建点餐订单",
                 "responses": {
@@ -1283,13 +1336,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -1323,26 +1376,26 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -1350,7 +1403,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     },
                     {
@@ -1358,9 +1411,8 @@
                         "items": {
                             "type": "integer"
                         },
-                        "collectionFormat": "csv",
                         "description": "查询时间类型 1-开台时间、2-支付时间",
-                        "name": "query_time_type",
+                        "name": "queryTimeType",
                         "in": "query"
                     },
                     {
@@ -1368,9 +1420,8 @@
                         "items": {
                             "type": "integer"
                         },
-                        "collectionFormat": "csv",
                         "description": "日期范围 [开始时间戳, 结束时间戳]",
-                        "name": "query_times",
+                        "name": "queryTimes",
                         "in": "query"
                     },
                     {
@@ -2843,7 +2894,7 @@
                 }
             }
         },
-        "req.CreateDeskOrderReq": {
+        "req.DeskOrderCreateReq": {
             "type": "object",
             "required": [
                 "desk_uuid",
@@ -2851,21 +2902,21 @@
             ],
             "properties": {
                 "desk_uuid": {
-                    "description": "桌位uuid",
+                    "description": "桌台uuid",
                     "type": "integer"
                 },
                 "is_buffet": {
-                    "description": "是否自助餐",
+                    "description": "是否是自助餐: false-否, true-是",
                     "type": "boolean"
                 },
                 "meal_num": {
-                    "description": "用餐人数: 自助餐必填, 范围1-999",
+                    "description": "餐数: 非自助餐时必填, 最小1, 最大999",
                     "type": "integer",
                     "maximum": 999,
                     "minimum": 1
                 },
                 "remark": {
-                    "description": "备注: 非必填, 最多50字符",
+                    "description": "备注: 非必填, 最大50字符",
                     "type": "string",
                     "maxLength": 50
                 }
@@ -3098,7 +3149,7 @@
                     "description": "销售账单UUID",
                     "type": "integer"
                 },
-                "sale_order": {
+                "sale_orders": {
                     "description": "订单列表",
                     "type": "array",
                     "items": {
@@ -3156,7 +3207,7 @@
                 }
             }
         },
-        "resp.CashierOrderInfoResp": {
+        "resp.CashierOrderInfo": {
             "type": "object",
             "properties": {
                 "bill_type": {
@@ -3167,9 +3218,9 @@
                     "description": "完成时间（支付时间）（时间戳）",
                     "type": "integer"
                 },
-                "is_split": {
-                    "description": "是否拆单\tfalse:否 true:是",
-                    "type": "boolean"
+                "member_name": {
+                    "description": "会员名称",
+                    "type": "string"
                 },
                 "order_amount": {
                     "description": "订单总金额",
@@ -3187,16 +3238,16 @@
                     "description": "支付金额",
                     "type": "number"
                 },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order": {
-                    "description": "订单列表",
+                "products": {
+                    "description": "产品列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.CashierOrder"
+                        "$ref": "#/definitions/resp.CashierOrderProduct"
                     }
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
                 },
                 "serial_no": {
                     "description": "桌位编号 (点餐流水号)",
@@ -3208,31 +3259,94 @@
                 }
             }
         },
-        "resp.CashierOrderListMeta": {
+        "resp.CashierOrderInfoPayTypes": {
             "type": "object",
             "properties": {
-                "cancel_num": {
-                    "description": "已取消数量",
+                "currency_unit": {
+                    "description": "货币单位",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_method_name": {
+                    "description": "支付类型名称",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "支付单UUID",
                     "type": "integer"
                 },
-                "complete_num": {
-                    "description": "已完成数量",
+                "source": {
+                    "description": "支付状态, 来源 0-系统 1-手动 2-LianLianPay",
                     "type": "integer"
                 },
-                "page_no": {
-                    "description": "当前页码",
+                "status": {
+                    "description": "支付状态, 0-未支付 1-已支付 2-已退款",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CashierOrderInfoResp": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
                     "type": "integer"
                 },
-                "page_size": {
-                    "description": "每页大小",
+                "create_time": {
+                    "description": "创建时间",
                     "type": "integer"
                 },
-                "total": {
-                    "description": "总数",
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
                     "type": "integer"
                 },
-                "unpaid_num": {
-                    "description": "待付款数量",
+                "is_split": {
+                    "description": "是否拆单\tfalse:否 true:是",
+                    "type": "boolean"
+                },
+                "member_names": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_types": {
+                    "description": "支付类型",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CashierOrderInfoPayTypes"
+                    }
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_orders": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CashierOrderInfo"
+                    }
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
                     "type": "integer"
                 }
             }
@@ -3249,11 +3363,98 @@
                 },
                 "meta": {
                     "description": "Meta信息",
+                    "type": "object",
+                    "properties": {
+                        "cancel_num": {
+                            "description": "已取消数量",
+                            "type": "integer"
+                        },
+                        "complete_num": {
+                            "description": "已完成数量",
+                            "type": "integer"
+                        },
+                        "page_no": {
+                            "description": "当前页码",
+                            "type": "integer"
+                        },
+                        "page_size": {
+                            "description": "每页大小",
+                            "type": "integer"
+                        },
+                        "total": {
+                            "description": "总数",
+                            "type": "integer"
+                        },
+                        "unpaid_num": {
+                            "description": "待付款数量",
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "resp.CashierOrderProduct": {
+            "type": "object",
+            "properties": {
+                "attribute_name": {
+                    "description": "属性名称",
+                    "type": "string"
+                },
+                "custom_price": {
+                    "description": "自定义价格",
+                    "type": "number"
+                },
+                "flavor_name": {
+                    "description": "口味名称",
+                    "type": "string"
+                },
+                "gift_reason": {
+                    "description": "赠品原因",
+                    "type": "string"
+                },
+                "is_gift": {
+                    "description": "是否赠品, fasle-否 true-是",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "产品名称",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.CashierOrderListMeta"
+                            "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "最终单价",
+                    "type": "number"
+                },
+                "product_original_amount": {
+                    "description": "原价销售额.包含加料、税费.",
+                    "type": "number"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态, 0-正常 1-退菜",
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "税率,单位%.下单时单税率,结账时再重新核算",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "单价",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "销售订单商品ID",
+                    "type": "integer"
                 }
             }
         },
@@ -3493,6 +3694,27 @@
                 "uuid": {
                     "description": "餐桌类型ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.OnlineCashier": {
+            "type": "object",
+            "properties": {
+                "cashier_uuid": {
+                    "description": "收银员Uuid",
+                    "type": "integer"
+                },
+                "device_id": {
+                    "description": "收银机设备ID",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "收银机备注",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "收银员账号",
+                    "type": "string"
                 }
             }
         },

@@ -1,6 +1,6 @@
 package model
 
-// 商品类别 ttpos_product_category
+// ProductCategory 商品类别 ttpos_product_category
 type ProductCategory struct {
 	ID                    uint   `gorm:"column:id;primaryKey;comment:记录唯一标识符"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:UUID"`

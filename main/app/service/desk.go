@@ -125,15 +125,15 @@ func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWi
 				extra.OccupyNotBuffetNum++
 			}
 			// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-			passedTime := uint(time.Now().Unix()) - desk.SaleBill.CreateTime
+			passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
 			if desk.SaleBill.IsBuffet == 1 {
-				if passedTime >= desk.SaleBill.BuffetDuration {
+				if uint(passedTime) >= desk.SaleBill.BuffetDuration {
 					elapsedTime = 0
 				} else {
-					elapsedTime = desk.SaleBill.BuffetDuration - passedTime
+					elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
 				}
 			} else {
-				elapsedTime = passedTime
+				elapsedTime = uint(passedTime)
 			}
 		}
 		//
@@ -194,15 +194,15 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 			deskStatus = constant.DeskStatusNotBuffet
 		}
 		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-		passedTime := uint(time.Now().Unix()) - desk.SaleBill.CreateTime
+		passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
 		if desk.SaleBill.IsBuffet == 1 {
-			if passedTime >= desk.SaleBill.BuffetDuration {
+			if uint(passedTime) >= desk.SaleBill.BuffetDuration {
 				elapsedTime = 0
 			} else {
-				elapsedTime = desk.SaleBill.BuffetDuration - passedTime
+				elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
 			}
 		} else {
-			elapsedTime = passedTime
+			elapsedTime = uint(passedTime)
 		}
 	}
 	//

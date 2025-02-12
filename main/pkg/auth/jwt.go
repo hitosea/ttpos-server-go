@@ -21,13 +21,13 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int, cashier Assistant) (string, error) {
+func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int, assistant Assistant) (string, error) {
 	claims := Claims{
 		Source:      source,
 		CompanyUuid: companyUuid,
 		StaffUuid:   staffUuid,
 		DeviceId:    deviceId,
-		Assistant:   cashier,
+		Assistant:   assistant,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expire))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

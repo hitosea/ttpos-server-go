@@ -15,9 +15,9 @@ type Material struct {
 	Num                   float64 `gorm:"default:0;column:num;comment:'库存数量'"`
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
-	CreateTime            int     `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int     `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int     `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
+	CreateTime            int64   `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
+	UpdateTime            int64   `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
+	DeleteTime            int64   `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }

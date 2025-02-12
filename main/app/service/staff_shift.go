@@ -39,7 +39,7 @@ func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog
 	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash()
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
-		startTime = int(time.Now().Unix())
+		startTime = time.Now().Unix()
 	}
 	uuid, err := database.GetID()
 	if err != nil {
