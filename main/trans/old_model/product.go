@@ -242,7 +242,7 @@ func (s *ProductService) ConvertProduct() error {
 				ImageName:             product.ImgName,
 				UnitUuid:              product.UnitID,
 				Price:                 product.ProductPrice, // todo 确认“采购单价”是对应旧表的哪个字段
-				Num:                   product.ProductMaterialStock,
+				StockNum:              product.ProductMaterialStock,
 				BarcodeValue:          product.ProductNo,
 				Status:                product.ProductStatus == 10,
 				MultiLanguageName:     languageName,

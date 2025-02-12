@@ -25,8 +25,8 @@ type ShopAccess struct {
 	Remark         string `gorm:"default:'';comment:描述"`
 	IsSupplier     uint   `gorm:"default:0;comment:是否门店菜单0否1是"`
 	AppID          uint   `gorm:"default:0;comment:app_id"`
-	CreateTime     int    `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime     int    `gorm:"autoUpdateTime;comment:更新时间"`
+	CreateTime     int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime     int64  `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ShopAccessRepository interface {

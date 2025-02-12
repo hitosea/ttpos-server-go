@@ -23,10 +23,10 @@ type ShopUser struct {
 	AppID            uint64 `gorm:"default:0;comment:程序id"`
 	BindKey          string `gorm:"default:'';comment:绑定的设备key"`
 	CashierOnline    uint   `gorm:"default:0;comment:收银员当班 0-不在线 1-在线"`
-	CashierLoginTime uint   `gorm:"default:0;comment:收银员当班登录时间"`
+	CashierLoginTime int64  `gorm:"default:0;comment:收银员当班登录时间"`
 	DutyNo           string `gorm:"default:'';comment:当班编号"`
-	CreateTime       int    `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime       int    `gorm:"autoUpdateTime;comment:更新时间"`
+	CreateTime       int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime       int64  `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ShopUserRepository interface {
@@ -65,11 +65,11 @@ func (s *ShopUserService) ConvertShopUser() error {
 			IsDisable:           int(shopUser.IsStatus),
 			BindKey:             shopUser.BindKey,
 			CashierOnline:       int(shopUser.CashierOnline),
-			CashierLoginTime:    int(shopUser.CashierLoginTime),
+			CashierLoginTime:    shopUser.CashierLoginTime,
 			DutyNo:              shopUser.DutyNo,
 			CreateTime:          shopUser.CreateTime,
 			UpdateTime:          shopUser.UpdateTime,
-			DeleteTime:          int(shopUser.IsDelete),
+			DeleteTime:          shopUser.IsDelete,
 		}
 		err := repository.NewStaffRepo(s.targetDB).CreateStaff(staff)
 		if err != nil {

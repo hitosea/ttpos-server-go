@@ -13,8 +13,8 @@ type ShopRole struct {
 	RoleName   string `gorm:"default:'';comment:角色名称"`
 	Sort       uint   `gorm:"default:100;comment:排序(数字越小越靠前)"`
 	AppID      uint   `gorm:"default:0;comment:小程序id"`
-	CreateTime int    `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime int    `gorm:"autoUpdateTime;comment:更新时间"`
+	CreateTime int64  `gorm:"autoCreateTime;comment:创建时间"`
+	UpdateTime int64  `gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 type ShopRoleRepository interface {

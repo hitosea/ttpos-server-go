@@ -13,7 +13,7 @@ type ShopRoleAccess struct {
 	RoleID     uint64 `gorm:"not null;default:0;comment:角色id"`
 	AccessID   uint64 `gorm:"not null;default:0;comment:权限id"`
 	AppID      uint   `gorm:"not null;default:0;comment:小程序id"`
-	CreateTime int    `gorm:"not null;default:0;comment:创建时间"`
+	CreateTime int64  `gorm:"not null;default:0;comment:创建时间"`
 }
 
 type ShopRoleAccessRepository interface {

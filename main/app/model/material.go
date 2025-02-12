@@ -12,7 +12,7 @@ type Material struct {
 	ImageName             string  `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	UnitUuid              uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
 	Price                 float64 `gorm:"default:0;column:price;comment:'采购单价'"`
-	Num                   float64 `gorm:"default:0;column:num;comment:'库存数量'"`
+	StockNum              float64 `gorm:"default:0;column:stock_num;comment:'库存数量'"`
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 	CreateTime            int64   `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
