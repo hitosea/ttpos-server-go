@@ -207,9 +207,16 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 // Logout 退出登录
 func (s *AuthSrv) Logout(cc *gin.Context) error {
 	companyUuid := cc.GetUint64(jwt.CompanyUuid)
+	source := cc.GetString(jwt.Source)
+	staffUuid := cc.GetUint64(jwt.StaffUuid)
+	assistantUuid := cc.GetUint64(jwt.AssistantStaffUuid)
+
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staff := staffRepo.GetByUuid(cc.GetUint64(jwt.StaffUuid))
-	return s.bindRecordSrv.Unbind(companyUuid, constant.SourceCashier, staff.BindKey, staff.Uuid)
+	if source == constant.SourceAssistant && assistantUuid != 0 {
+		staffUuid = assistantUuid
+	}
+	staff := staffRepo.GetByUuid(staffUuid)
+	return s.bindRecordSrv.Unbind(companyUuid, source, staff.BindKey, staff.Uuid)
 }
 
 // CashierBase 获取收银端基本信息

@@ -18,17 +18,17 @@ type Handler struct {
 	authSrv service.IAuthSrv
 }
 
-// PostCashierLogin 收银端登录
+// Login 收银端登录
 // @Summary 收银端登录
 // @Description 收银端登录
-// @Tags 收银端
+// @Tags 收银端.认证
 // @Accept json
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/login [post]
-func (h *Handler) PostCashierLogin(c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) {
 	var loginRequest req.LoginReq
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
@@ -43,10 +43,28 @@ func (h *Handler) PostCashierLogin(c *gin.Context) {
 	helper.Success(c, gin.H{"token": token})
 }
 
+// Logout 收银端退出登录
+// @Summary 收银端退出登录
+// @Description 收银端退出登录
+// @Tags 收银端.认证
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response
+// @Router /cashier/logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	err := h.authSrv.Logout(c.Copy())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, "退出成功")
+}
+
 // GetCashierBase 收银端信息
 // @Summary 收银端信息
 // @Description 收银端信息
-// @Tags 收银端
+// @Tags 收银端.认证
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -394,13 +412,14 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 
 	publicApi := router.Group("")
 	{
-		publicApi.POST("/login", wrapper.PostCashierLogin)
+		publicApi.POST("/login", wrapper.Login)
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/base", wrapper.GetCashierBase)
+		privateApi.GET("/base", wrapper.GetCashierBase) // 获取基本信息
+		privateApi.POST("/logout", wrapper.Logout)      // 退出登录
 	}
 
 	// 需要认证

@@ -35,13 +35,6 @@ const docTemplate = `{
                 "summary": "点餐助手绑定收银机",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "登录时返回的token",
-                        "name": "X-TOKEN",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
                         "description": "登录参数",
                         "name": "data",
                         "in": "body",
@@ -235,6 +228,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "点餐助手退出登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.认证鉴权"
+                ],
+                "summary": "点餐助手退出登录",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/online_cashiers": {
             "get": {
                 "security": [
@@ -293,7 +314,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "收银端.认证"
                 ],
                 "summary": "收银端信息",
                 "responses": {
@@ -1195,7 +1216,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "收银端.认证"
                 ],
                 "summary": "收银端登录",
                 "parameters": [
@@ -1216,6 +1237,34 @@ const docTemplate = `{
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "收银端退出登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.认证"
+                ],
+                "summary": "收银端退出登录",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1392,6 +1441,18 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "启用开台时间 false-不启用，true-启用",
+                        "name": "enableCreateTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用支付时间 false-不启用，true-启用",
+                        "name": "enablePayTime",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "订单编号",
                         "name": "orderNo",
@@ -1413,21 +1474,15 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "array",
-                        "items": {
-                            "type": "integer"
-                        },
-                        "description": "查询时间类型 1-开台时间、2-支付时间",
-                        "name": "queryTimeType",
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
-                        "type": "array",
-                        "items": {
-                            "type": "integer"
-                        },
-                        "description": "日期范围 [开始时间戳, 结束时间戳]",
-                        "name": "queryTimes",
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -2983,7 +3038,7 @@ const docTemplate = `{
                     "description": "自助餐客户类型",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.BuffetCustomerType"
+                            "$ref": "#/definitions/resp.BuffetCustomerTypeList"
                         }
                     ]
                 },
@@ -3028,13 +3083,20 @@ const docTemplate = `{
                     "description": "自助餐客户类型名称",
                     "type": "string"
                 },
-                "price": {
-                    "description": "价格",
-                    "type": "number"
-                },
                 "uuid": {
                     "description": "自助餐客户类型UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.BuffetCustomerTypeList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.BuffetCustomerType"
+                    }
                 }
             }
         },
@@ -3402,8 +3464,8 @@ const docTemplate = `{
         "resp.CashierOrderProduct": {
             "type": "object",
             "properties": {
-                "attribute_name": {
-                    "description": "属性名称",
+                "attributes": {
+                    "description": "规格属性加料",
                     "type": "string"
                 },
                 "custom_price": {
@@ -3416,6 +3478,10 @@ const docTemplate = `{
                 },
                 "gift_reason": {
                     "description": "赠品原因",
+                    "type": "string"
+                },
+                "image_url": {
+                    "description": "图片地址",
                     "type": "string"
                 },
                 "is_gift": {

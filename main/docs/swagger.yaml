@@ -280,7 +280,7 @@ definitions:
     properties:
       buffet_customer_type:
         allOf:
-        - $ref: '#/definitions/resp.BuffetCustomerType'
+        - $ref: '#/definitions/resp.BuffetCustomerTypeList'
         description: 自助餐客户类型
       can_combined:
         description: 是否可组合
@@ -310,12 +310,16 @@ definitions:
       name:
         description: 自助餐客户类型名称
         type: string
-      price:
-        description: 价格
-        type: number
       uuid:
         description: 自助餐客户类型UUID
         type: integer
+    type: object
+  resp.BuffetCustomerTypeList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.BuffetCustomerType'
+        type: array
     type: object
   resp.BuffetListPaginationResp:
     properties:
@@ -571,8 +575,8 @@ definitions:
     type: object
   resp.CashierOrderProduct:
     properties:
-      attribute_name:
-        description: 属性名称
+      attributes:
+        description: 规格属性加料
         type: string
       custom_price:
         description: 自定义价格
@@ -582,6 +586,9 @@ definitions:
         type: string
       gift_reason:
         description: 赠品原因
+        type: string
+      image_url:
+        description: 图片地址
         type: string
       is_gift:
         description: 是否赠品, fasle-否 true-是
@@ -1098,11 +1105,6 @@ paths:
       - application/json
       description: 点餐助手绑定收银机
       parameters:
-      - description: 登录时返回的token
-        in: header
-        name: X-TOKEN
-        required: true
-        type: string
       - description: 登录参数
         in: body
         name: data
@@ -1236,6 +1238,23 @@ paths:
       summary: 点餐助手登录
       tags:
       - 点餐助手端.认证鉴权
+  /assistant/logout:
+    post:
+      consumes:
+      - application/json
+      description: 点餐助手退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 点餐助手退出登录
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/online_cashiers:
     get:
       consumes:
@@ -1281,7 +1300,7 @@ paths:
       - JwtToken: []
       summary: 收银端信息
       tags:
-      - 收银端
+      - 收银端.认证
   /cashier/bill/cancel/{id}:
     delete:
       consumes:
@@ -1875,7 +1894,24 @@ paths:
             $ref: '#/definitions/dto.Response'
       summary: 收银端登录
       tags:
-      - 收银端
+      - 收银端.认证
+  /cashier/logout:
+    post:
+      consumes:
+      - application/json
+      description: 收银端退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 收银端退出登录
+      tags:
+      - 收银端.认证
   /cashier/member/info/{memberId}:
     get:
       consumes:
@@ -1981,6 +2017,14 @@ paths:
         in: query
         name: dateType
         type: integer
+      - description: 启用开台时间 false-不启用，true-启用
+        in: query
+        name: enableCreateTime
+        type: boolean
+      - description: 启用支付时间 false-不启用，true-启用
+        in: query
+        name: enablePayTime
+        type: boolean
       - description: 订单编号
         in: query
         name: orderNo
@@ -1996,18 +2040,14 @@ paths:
         minimum: 1
         name: pageSize
         type: integer
-      - description: 查询时间类型 1-开台时间、2-支付时间
+      - description: 查询结束时间戳
         in: query
-        items:
-          type: integer
-        name: queryTimeType
-        type: array
-      - description: 日期范围 [开始时间戳, 结束时间戳]
+        name: queryEndTime
+        type: integer
+      - description: 查询开始时间戳
         in: query
-        items:
-          type: integer
-        name: queryTimes
-        type: array
+        name: queryStartTime
+        type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
