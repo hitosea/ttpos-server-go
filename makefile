@@ -76,3 +76,15 @@ restart:
 # 翻译
 translate:
 	cd main && go run ./main.go translate
+
+# 迁移模版文件
+template:
+	cd main && go run ./main.go migrate-template --name=$(name)
+
+# 迁移shop库
+go-migrate-shop:
+	cd main && go run ./main.go migrate-shop --op=up
+
+# 迁移saas库
+go-migrate-saas:
+	cd main && go run ./main.go migrate-saas --op=up
