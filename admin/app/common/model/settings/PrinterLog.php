@@ -228,7 +228,7 @@ class PrinterLog extends BaseModel
             } else {
                 $printerLogData['print_method'] = ($printerConfig['print_method'] ?? 1) ?: 1;
             }
-            // 
+            //
             if (!$isQueueService) {
                 // 直接打印
                 if ($printerLogData['printer_id'] && $printerLogData['type'] == 0 && $printerLogData['first_execution'] == 1) {
@@ -249,7 +249,7 @@ class PrinterLog extends BaseModel
             }
         }
 
-        // 保存数据 
+        // 保存数据
         $printerLogData['printer_time'] = time();
         $printerLog = new self;
         $printerLog->save($printerLogData, 'id');
@@ -288,7 +288,7 @@ class PrinterLog extends BaseModel
     public static function getStaticPrinterConfig($appId, $shopSupplierId, $deviceId)
     {
         $setting = SettingModel::getAll($appId, $shopSupplierId);
-        // 获取打印信息 
+        // 获取打印信息
         $printerInfo = SettingModel::getPrinterInfo($setting[SettingEnum::PRINTER]['values'], $deviceId);
         $printer = $printerInfo['printer'];
         if (!$printer) {
@@ -339,7 +339,6 @@ class PrinterLog extends BaseModel
         return $this->withoutGlobalScope()
             ->with(['printerName', "noName"])
             ->field('id, reason, printer_id, order_id, create_time')
-            ->where('shop_supplier_id', $shopSupplierId)
             ->where('status', 0)
             ->where('type', 0)
             ->order('create_time', 'desc')
@@ -354,7 +353,6 @@ class PrinterLog extends BaseModel
         return $this->withoutGlobalScope()
             ->where('status', 0)
             ->where('type', 0)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->count();
     }
 
@@ -369,7 +367,6 @@ class PrinterLog extends BaseModel
             ->where('status', 0)
             ->where('first_execution', 0)
             ->where('type', 0)
-            ->where('shop_supplier_id', $shopSupplierId)
             ->limit(10)
             ->select();
     }
@@ -396,7 +393,7 @@ class PrinterLog extends BaseModel
             ->limit(50)
             ->order('a.id')
             ->select();
-        // 
+        //
         $results = $result->toArray();
         //
         $logs = [];
@@ -408,13 +405,13 @@ class PrinterLog extends BaseModel
             //
             $val->num = $val->num + 1;
             $val->status = $val->num > 5 ? 0 : 2;
-            // 去除开箱指令 
+            // 去除开箱指令
             if (substr($val->data, -10) === '1b700019fa') {
                 $val->data = substr($val->data, 0, -10);
             } else if (substr($val->data, -10) === '1014010001') {
                 $val->data = substr($val->data, 0, -10);
             }
-            // 
+            //
             $val->save();
         }
         if (!empty($logs)) {
@@ -503,7 +500,7 @@ class PrinterLog extends BaseModel
             return false;
         }
 
-        // 去除开箱指令 
+        // 去除开箱指令
         if (substr($this->data, -10) === '1b700019fa') {
             $this->data = substr($this->data, 0, -10);
             $this->save();

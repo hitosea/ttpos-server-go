@@ -15,8 +15,7 @@ class UserRankingService
     public function getUserRanking($type)
     {
         $model = new UserModel();
-        $model = $model->field(['user_id', 'nickName', 'avatarUrl', 'expend_money', 'total_points', 'total_invite'])
-            ->where('is_delete', '=', 0);
+        $model = $model->field(['user_id', 'nickName', 'avatarUrl', 'expend_money', 'total_points', 'total_invite']);
         if ($type == 'pay') {
             $model = $model->order(['expend_money' => 'DESC']);
         } else if ($type == 'points') {

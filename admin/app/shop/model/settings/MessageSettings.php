@@ -29,7 +29,6 @@ class MessageSettings extends MessageSettingsModel
                 $this->save([
                     'mp_status' => 1,
                     'mp_template' => json_encode($mp_data),
-                    'app_id' => self::$app_id,
                     'message_id' => $data['message_id']
                 ]);
             } else if ($data['message_type'] == 'wx') {
@@ -38,7 +37,6 @@ class MessageSettings extends MessageSettingsModel
                 $this->save([
                     'wx_status' => 1,
                     'wx_template' => json_encode($wx_data),
-                    'app_id' => self::$app_id,
                     'message_id' => $data['message_id']
                 ]);
             } else if ($data['message_type'] == 'sms') {
@@ -47,7 +45,6 @@ class MessageSettings extends MessageSettingsModel
                 $this->save([
                     'sms_status' => 1,
                     'sms_template' => json_encode($sms_data),
-                    'app_id' => self::$app_id,
                     'message_id' => $data['message_id']
                 ]);
             }

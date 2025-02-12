@@ -26,9 +26,7 @@ class Card extends CardModel
         if ($data['status'] >= 0) {
             $model = $model->where('status', '=', $data['status']);
         }
-        $list = $model->where('is_delete', '=', 0)
-            ->order(['create_time' => 'desc'])
-            ->paginate($data);
+        $list = $model->order(['create_time' => 'desc'])->paginate($data);
         return $list;
     }
 
@@ -41,9 +39,7 @@ class Card extends CardModel
         if (isset($data['card_name']) && $data['card_name']) {
             $model = $model->like('card_name', $data['card_name']);
         }
-        $list = $model->where('is_delete', '=', 1)
-            ->order(['create_time' => 'desc'])
-            ->paginate($data);
+        $list = $model->order(['create_time' => 'desc'])->paginate($data);
         return $list;
     }
 
@@ -67,7 +63,7 @@ class Card extends CardModel
                     continue;
                 }
                 // 删除原有的会员卡
-                (new CardRecord())->where('user_id', $userId)->save(['is_delete' => 1]);
+                (new CardRecord())->where('user_id', $userId)->delete();
             }
 
             $detail = self::detail($data['card_id']);
@@ -90,7 +86,6 @@ class Card extends CardModel
                     'pay_status' => 20,
                     'pay_type' => 30,
                     'pay_time' => time(),
-                    'app_id' => self::$app_id,
                 ];
                 $CardRecordModel = new CardRecordModel;
                 $CardRecordModel->save($record);
@@ -143,7 +138,7 @@ class Card extends CardModel
         //
         $this->startTrans();
         try {
-            $detail->save(['is_delete' => 1]);
+            $detail->delete();
             $user = (new User)::detail($detail['user_id'], true);
             // 撤销会员卡id
             $user?->setCardId(0);
@@ -283,7 +278,7 @@ class Card extends CardModel
         if (CardRecordModel::checkExistByRecordId($this['card_id'])) {
             return false;
         }
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 
     /**

@@ -49,12 +49,11 @@ class CompaxHandoverTemplate extends BaseTemplate
         $categorys = (new UserShiftLog)->getSalesInfo($data['shift_user_id'], $data['shop_supplier_id'], $startTime, $endTime);
         $businessData = (new CashierOrderModel)->businessData([
             'mode' => 0,
-            'shop_supplier_id' => $data['shop_supplier_id'],
             'cashier_id' => $data['shift_user_id'],
             'time' => [date('Y-m-d H:i:s', $startTime), date('Y-m-d H:i:s', $endTime)]
         ]);
         $abnormalData = $data['abnormal'] ?? [];
-        
+
         // 佛历
         $startTime = date('Y/m/d H:i:s', $startTime);
         $endTime = date('Y/m/d H:i:s', $endTime);

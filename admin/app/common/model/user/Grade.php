@@ -63,10 +63,7 @@ class Grade extends BaseModel
      */
     public function getLists()
     {
-        return $this->where('is_delete', '=', 0)
-            ->field('grade_id, name, weight, create_time')
-            ->order(['weight' => 'asc', 'create_time' => 'asc'])
-            ->select();
+        return $this->field('grade_id, name, weight, create_time')->order(['weight' => 'asc', 'create_time' => 'asc'])->select();
     }
 
     /**

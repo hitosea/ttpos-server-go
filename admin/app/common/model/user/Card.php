@@ -87,9 +87,7 @@ class Card extends BaseModel
     public static function getCardList()
     {
         $model = new static;
-        return $model->where('is_delete', '=', '0')
-            ->order(['sort' => 'desc', 'create_time' => 'asc'])
-            ->select();
+        return $model->order(['sort' => 'desc', 'create_time' => 'asc'])->select();
     }
 
     /**

@@ -34,7 +34,6 @@ class Cart extends CartModel
         if ($order_id > 0) {
             // 购物车商品列表
             $cartList = (new static())->with('product')
-                ->where('shop_supplier_id', '=', $shop_supplier_id)
                 ->where('order_id', '=', $order_id)
                 ->select();
             // 是否存在订单
@@ -42,7 +41,6 @@ class Cart extends CartModel
         } else {
             // 购物车商品列表
             $cartList = (new static())->with('product')
-                ->where('shop_supplier_id', '=', $shop_supplier_id)
                 ->where('table_id', '=', $table_id)
                 ->select();
             // 是否存在订单
@@ -151,7 +149,6 @@ class Cart extends CartModel
     {
         return (new ProductModel)->where('product_id', '=', $product_id)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->count();
     }
 

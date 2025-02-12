@@ -47,6 +47,6 @@ class FullReduce extends FullReduceModel
      */
     public function setDelete()
     {
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }

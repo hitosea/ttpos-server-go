@@ -1247,9 +1247,6 @@ class OrderBusinessDataRepository
                     THEN 1
                 END) AS recharge_reverse_settle_times
             ")
-            ->when($shopSupplierId, function ($q) use ($shopSupplierId) {
-                $q->where('shop_supplier_id', '=', $shopSupplierId);
-            })
             ->when($shopCashierId, function ($q) use ($shopCashierId) {
                 $q->where('shop_user_id', '=', $shopCashierId);
             })

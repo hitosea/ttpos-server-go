@@ -100,7 +100,6 @@ class Cash extends CashModel
                 'user_id' => $this['user_id'],
                 'card_id' => User::detail($this['user_id'])?->card_id,
                 'money' => -$this['money'],
-                'app_id' => self::$app_id,
             ], '');
             // 事务提交
             $this->commit();

@@ -317,8 +317,6 @@ class PaymentService extends BaseService
             'pay_type_price' => $request_params['pay_type_price'],
             'pay_type_fee' => $request_params['pay_type_fee'],
             'pay_type_fee_money' => $request_params['pay_type_fee_money'],
-            'shop_supplier_id' => $request_params['shop_supplier_id'],
-            'app_id' => $request_params['shop_supplier_id'],
         ];
         $paymentOrder->save($saveArr);
         return $paymentOrder;
@@ -351,8 +349,6 @@ class PaymentService extends BaseService
             'pay_type_price' => $request_params['pay_type_price'],
             'pay_type_fee' => $request_params['pay_type_fee'],
             'pay_type_fee_money' => $request_params['pay_type_fee_money'],
-            'shop_supplier_id' => $request_params['shop_supplier_id'],
-            'app_id' => $request_params['shop_supplier_id'],
         ];
         $paymentOrder->save($saveArr);
         return $paymentOrder;
@@ -384,8 +380,6 @@ class PaymentService extends BaseService
             'pay_type_price' => $request_params['pay_type_price'],
             'pay_type_fee' => $request_params['pay_type_fee'],
             'pay_type_fee_money' => $request_params['pay_type_fee_money'],
-            'shop_supplier_id' => $request_params['shop_supplier_id'],
-            'app_id' => $request_params['shop_supplier_id'],
         ];
         $paymentOrder->save($saveArr);
         return $paymentOrder;

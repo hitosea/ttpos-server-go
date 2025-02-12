@@ -297,8 +297,6 @@ class OrderBuffetCustomer extends BaseModel
                 'product_service_consumption_tax' => $orderBuffetCustomer->product_service_consumption_tax,
                 'product_service_fee' => $orderBuffetCustomer->product_service_fee,
                 'product_service_rate' => $orderBuffetCustomer->product_service_rate,
-                'app_id' => $orderBuffetCustomer->app_id,
-                'shop_supplier_id' => $orderBuffetCustomer->shop_supplier_id,
             ]);
         }
     }

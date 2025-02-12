@@ -19,9 +19,7 @@ class Unit extends UnitModel
         if (isset($data['unit_name']) && $data['unit_name'] != '') {
             $model = $model->jsonLike('unit_name', $data['unit_name']);
         }
-        $list = $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['create_time' => 'desc'])
-            ->paginate($data)?->append(['product_ids'], true);
+        $list = $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
 
         // 是否关联产品
         foreach ($list as &$item) {
@@ -39,9 +37,7 @@ class Unit extends UnitModel
             $this->error = '单位名称不能为空';
             return false;
         }
-        $isExist = $this->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->where('unit_name', '=', $data['unit_name'])
-            ->count();
+        $isExist = $this->where('unit_name', '=', $data['unit_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;

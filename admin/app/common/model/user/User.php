@@ -109,7 +109,7 @@ class User extends BaseModel
      */
     public function cardRecord()
     {
-        return $this->hasOne('app\\common\\model\\user\\CardRecord', 'user_id', 'user_id')->where('is_delete', 0);
+        return $this->hasOne('app\\common\\model\\user\\CardRecord', 'user_id', 'user_id');
     }
 
     /**
@@ -134,7 +134,7 @@ class User extends BaseModel
     public static function detail($where, $includeDeleted = false)
     {
         $model = new static;
-        $filter = $includeDeleted ? [] : ['is_delete' => 0];
+        $filter = $includeDeleted ? [] : ['delete_time' => 0];
         $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['user_id' => (int) $where]);
 
         $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['address', 'addressDefault', 'grade', 'card'])->find();
@@ -150,7 +150,7 @@ class User extends BaseModel
     public static function cardDetail($where)
     {
         $model = new static;
-        $filter = ['is_delete' => 0];
+        $filter = ['delete_time' => 0];
         if (is_array($where)) {
             $filter = array_merge($filter, $where);
         } else {
@@ -170,7 +170,7 @@ class User extends BaseModel
     public static function detailByUnionid($unionid)
     {
         $model = new static;
-        $filter = ['is_delete' => 0];
+        $filter = ['delete_time' => 0];
         $filter = array_merge($filter, ['union_id' => $unionid]);
         //
         $info = $model->where($filter)->with(['address', 'addressDefault', 'grade', 'card'])->find();
@@ -186,9 +186,7 @@ class User extends BaseModel
     public static function checkExistByGradeId($gradeId)
     {
         $model = new static;
-        return !!$model->where('grade_id', '=', (int) $gradeId)
-            ->where('is_delete', '=', 0)
-            ->value('user_id');
+        return !!$model->where('grade_id', '=', (int) $gradeId)->value('user_id');
     }
 
     /**
@@ -287,7 +285,6 @@ class User extends BaseModel
             'user_id' => $this['user_id'],
             'value' => $points,
             'describe' => $custom_dec ? $describe : vsprintf(PointsLogSceneEnum::data()[$scene]['describe'], [$describe]),
-            'app_id' => $this['app_id'],
         ]);
 
         // 更新用户可用积分
@@ -352,16 +349,13 @@ class User extends BaseModel
             $this->error = '密码必须为4-16位纯数字';
             return false;
         }
-        $user = $this->where('mobile', '=', $data['mobile'])
-            ->where('is_delete', '=', 0)
-            ->find();
+        $user = $this->where('mobile', '=', $data['mobile'])->find();
 
         if (!$user) {
             return $this->save([
                 'mobile' => $data['mobile'],
                 'password' => $password != '' ? md5($password) : '',
                 'reg_source' => 'cashier',
-                'app_id' => self::$app_id,
                 'grade_id' => $grade_id,
                 'nickName' => $data['nick_name']
             ]);
@@ -606,7 +600,7 @@ class User extends BaseModel
                 $q->like('mobile', $mobile);
                 $q->orLike('user_id', $mobile);
             })
-            ->where(['is_delete' => 0])
+            ->where(['delete_time' => 0])
             ->limit(100) // 最多返回100条 v1.1.0
             ->select();
     }
@@ -616,9 +610,7 @@ class User extends BaseModel
      */
     public function storeOverview($data)
     {
-        $detail = $this->field(['sum(balance) as balance', 'sum(gift_balance) as gift_balance'])
-            ->where('is_delete', '=', 0)
-            ->find();
+        $detail = $this->field(['sum(balance) as balance', 'sum(gift_balance) as gift_balance'])->find();
         return $detail;
     }
 

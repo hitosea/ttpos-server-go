@@ -53,9 +53,7 @@ class Spec extends SpecModel
             $this->error = '规格名称不能为空';
             return false;
         }
-        $isExist = $this->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->where('spec_name', '=', $data['spec_name'])
-            ->count();
+        $isExist = $this->where('spec_name', '=', $data['spec_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
@@ -74,8 +72,6 @@ class Spec extends SpecModel
                     'product_sku_id' => 0,
                     'material_id' => $data['product_id'],
                     'material_num' => $data['material_num'] ?? 0,
-                    'shop_supplier_id' => $shop_supplier_id,
-                    'app_id' => self::$app_id,
                 ];
                 (new ProductSkuMaterial)->save($material);
             }
@@ -110,8 +106,6 @@ class Spec extends SpecModel
                     'product_sku_id' => 0,
                     'material_id' => $data['product_id'],
                     'material_num' => $data['material_num'] ?? 0,
-                    'shop_supplier_id' => $this['shop_supplier_id'],
-                    'app_id' => self::$app_id,
                 ];
                 (new ProductSkuMaterial)->save($material);
             }
@@ -164,7 +158,6 @@ class Spec extends SpecModel
                         'spec_sku_id' => $spec_id,
                         'spec_name' => $this['spec_name'],
                         'stock_num' => 99999999,
-                        'app_id' => $this['app_id'],
                         'create_time' => time(),
                         'update_time' => time(),
                     ];

@@ -98,9 +98,9 @@ class Survey extends Controller
         $shopSupplierId = $this->store['user']['shop_supplier_id'];
         $model = new OrderModel();
         // 店內概況
-        $detail = $model->storeOverview(array_merge($data, ['shop_supplier_id' => $shopSupplierId]));
+        $detail = $model->storeOverview($data);
         // 区域数据
-        $regionData = $model->regionData(array_merge($data, ['shop_supplier_id' => $shopSupplierId]));
+        $regionData = $model->regionData($data);
         // 销量排行
         $salesNumRank = $model->getProductRank(0, 1, $shopSupplierId, $data);
         // 销售额排行

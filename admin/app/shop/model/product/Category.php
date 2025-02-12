@@ -100,7 +100,7 @@ class Category extends CategoryModel
         $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
         //
         if ($res && $this->category_id) {
-            foreach (Product::where($where)->where('is_delete', '=', 0)->select() as $product) {
+            foreach (Product::where($where)->select() as $product) {
                 if ($product->is_special == 1 && $product->special_id == $this->category_id) {
                     $product->update(['special_id' => 0]);
                 }

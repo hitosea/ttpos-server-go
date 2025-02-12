@@ -31,7 +31,7 @@ class Unit extends BaseModel
      */
     public function getProductIdsAttr($value, $data = [])
     {
-        return $this->product()->where('is_delete', 0)->column('product_id');
+        return $this->product()->column('product_id');
     }
 
     /**
@@ -52,14 +52,10 @@ class Unit extends BaseModel
     {
         // todo 不用再次校验单位新增，单位添加是已固定单位，先注释掉
         // if ($unit_name) {
-        //     $isExit = $this->where('unit_name', '=', $unit_name)
-        //         ->where('shop_supplier_id', '=', $shop_supplier_id)
-        //         ->count();
+        //     $isExit = $this->where('unit_name', '=', $unit_name)->count();
         //     if ($isExit == 0) {
         //         $addData = [
         //             'unit_name'        => $unit_name,
-        //             'shop_supplier_id' => $shop_supplier_id,
-        //             'app_id'           => self::$app_id
         //         ];
         //         $this->save($addData);
         //     }
@@ -71,7 +67,7 @@ class Unit extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->where('shop_supplier_id', '=', $shop_supplier_id)->order(['sort' => 'asc', 'create_time' => 'desc'])->select()?->append(['product_ids'], true);
+        return $this->order(['sort' => 'asc', 'create_time' => 'desc'])->select()?->append(['product_ids'], true);
     }
 
     /**
@@ -79,7 +75,7 @@ class Unit extends BaseModel
      */
     public function getLists($shop_supplier_id)
     {
-        return $this->where('shop_supplier_id', '=', $shop_supplier_id)->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
+        return $this->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**
@@ -95,7 +91,7 @@ class Unit extends BaseModel
      */
     public function isUseWithProduct($unit_id)
     {
-        return Product::where('unit_id', 'in', $unit_id)->where('is_delete', 0)->count() > 0;
+        return Product::where('unit_id', 'in', $unit_id)->count() > 0;
     }
 
     /**
@@ -105,7 +101,6 @@ class Unit extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(unit_name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['unit_id', '<>', $id];

@@ -52,8 +52,6 @@ class UserShiftSnapshot extends BaseModel
         $this->save([
             'shift_log_id' => $shiftLogId,
             'content' => $content,
-            'shop_supplier_id' => $detail['shop_supplier_id'],
-            'app_id' => $detail['app_id'],
         ]);
     }
 }

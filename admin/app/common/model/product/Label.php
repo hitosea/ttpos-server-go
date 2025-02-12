@@ -30,7 +30,7 @@ class Label extends BaseModel
      */
     public function getProductIdsAttr($value, $data = [])
     {
-        return $this->product()->where('is_delete', 0)->column('product_id');
+        return $this->product()->column('product_id');
     }
 
     /**
@@ -55,7 +55,6 @@ class Label extends BaseModel
                 if ($isExit == 0) {
                     $addData[] = [
                         'label_name' => $item['label_name'],
-                        'app_id' => self::$app_id
                     ];
                 }
             }
@@ -68,7 +67,7 @@ class Label extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->where('shop_supplier_id', '=', $shop_supplier_id)->order(['sort' => 'asc', 'create_time' => 'desc'])->select()?->append(['product_ids'], true);
+        return $this->order(['sort' => 'asc', 'create_time' => 'desc'])->select()?->append(['product_ids'], true);
     }
 
     /**
@@ -84,7 +83,7 @@ class Label extends BaseModel
      */
     public function isUseWithProduct($label_id)
     {
-        return Product::where('label_id', 'in', $label_id)->where('is_delete', 0)->count() > 0;
+        return Product::where('label_id', 'in', $label_id)->count() > 0;
     }
 
     /**
@@ -94,7 +93,6 @@ class Label extends BaseModel
     {
         $filter = [
             'label_name' => $name,
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['label_id', '<>', $id];

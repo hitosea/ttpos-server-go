@@ -11,7 +11,7 @@ use app\common\model\settings\Printer;
  */
 class Printing extends BaseModel
 {
-    protected $name = 'supplier_printing';
+    protected $name = 'product_printer';
     protected $pk = 'id';
 
     // 打印类型
@@ -32,7 +32,7 @@ class Printing extends BaseModel
     public function getPrinterNameTextAttr($value, $data)
     {
         $printerIds = $data['printer_id'] ? json_decode($data['printer_id'], true) : [];
-        $printer = Printer::where('printer_id', 'in', $printerIds)->where('is_delete', 0)->select()->toArray();
+        $printer = Printer::where('printer_id', 'in', $printerIds)->select()->toArray();
         $printer = array_column($printer, 'printer_name');
         if (count($printer) !== count($printerIds)) {
             $printer[] = '-';
@@ -51,7 +51,6 @@ class Printing extends BaseModel
             ->leftJoin('category c', 'c.category_id = product.category_id')
             ->leftJoin('category pc', 'pc.category_id = c.parent_id')
             ->where('product_id', 'in', $product_ids)
-            ->where('is_delete', 0)
             ->select()?->append([]);
         return $list->toArray();
     }
@@ -158,12 +157,7 @@ class Printing extends BaseModel
      */
     public function getList($print_type, $shop_supplier_id, $product_type)
     {
-        return $this->where('print_type', '=', $print_type)
-            ->where('shop_supplier_id', '=', $shop_supplier_id)
-            // ->where('product_type', '=', $product_type)
-            ->where('is_open', '=', 1)
-            ->where('is_delete', '=', 0)
-            ->select();
+        return $this->where('print_type', '=', $print_type)->where('is_open', '=', 1)->select();
     }
 
     /**
@@ -171,7 +165,7 @@ class Printing extends BaseModel
      */
     public function getPrintPortList($shop_supplier_id = 0)
     {
-        return $this->where('is_open', '1')->where('is_delete', '0')->where('shop_supplier_id', $shop_supplier_id)->order(['create_time' => 'desc'])->select();
+        return $this->where('is_open', '1')->order(['create_time' => 'desc'])->select();
     }
 
     /**
@@ -189,12 +183,10 @@ class Printing extends BaseModel
     {
         $filter = [
             'name' => $name,
-            'is_delete' => 0,
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['id', '<>', $id];
         }
-        return static::where($filter)->where('is_delete', 0)->value('id') ? true : false;
+        return static::where($filter)->value('id') ? true : false;
     }
 }

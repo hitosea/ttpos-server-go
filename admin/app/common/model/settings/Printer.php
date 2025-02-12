@@ -102,14 +102,7 @@ class Printer extends BaseModel
      */
     public static function getNoteAll($shop_supplier_id = 0)
     {
-        $where = [];
-        if ($shop_supplier_id) {
-            $where['shop_supplier_id'] = $shop_supplier_id;
-        }
-        return (new static)->where('is_delete', '=', 0)
-            ->where('printer_type', '<>', 'FEI_E_YUN_TAG')
-            ->where($where)
-            ->order(['sort' => 'asc'])->select();
+        return (new static)->where('printer_type', '<>', 'FEI_E_YUN_TAG')->order(['sort' => 'asc'])->select();
     }
 
     /**

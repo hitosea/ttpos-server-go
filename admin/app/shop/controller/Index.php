@@ -505,7 +505,6 @@ class Index extends Controller
                     $q->where('p.type', ProductModel::TYPE_MATERIAL);
                 }
             })
-            ->where('is_delete', '=', 0)
             ->when($categoryIds, function ($q) use ($categoryIds) {
                 $q->whereIn('p.category_id', explode(',', $categoryIds));
             })

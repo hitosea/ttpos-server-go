@@ -28,7 +28,7 @@ class User extends UserModel
             $model = $model->where('create_time', '>=', $startTime)
                 ->where('create_time', '<', $startTime + 86400);
         }
-        return $model->where('is_delete', '=', '0')->count();
+        return $model->count();
     }
 
     /**
@@ -38,11 +38,7 @@ class User extends UserModel
     public function getUsers($where = null)
     {
         // 获取用户列表
-        return $this->where('is_delete', '=', '0')
-            ->where($where)
-            ->order(['user_id' => 'asc'])
-            ->field(['user_id'])
-            ->select();
+        return $this->where($where)->order(['user_id' => 'asc'])->field(['user_id'])->select();
     }
 
     /**
@@ -71,7 +67,7 @@ class User extends UserModel
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
         // 获取用户列表
-        return $model->with(['grade', 'card'])->where('is_delete', '=', '0')
+        return $model->with(['grade', 'card'])
             ->order(['create_time' => 'desc'])
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
@@ -83,7 +79,7 @@ class User extends UserModel
     public function setDelete()
     {
         return $this->transaction(function () {
-            return $this->save(['is_delete' => 1]);
+            return $this->delete();
         });
     }
 
@@ -115,9 +111,7 @@ class User extends UserModel
             return false;
         }
 
-        $user = $this->where('mobile', '=', $mobile)
-            ->where('is_delete', '=', 0)
-            ->find();
+        $user = $this->where('mobile', '=', $mobile)->find();
 
         if ($user) {
             $this->error = '会员已存在';
@@ -132,7 +126,6 @@ class User extends UserModel
             'gender' => $gender, //性别
             'grade_id' => $gradeId, //默认等级
             'birthday' => $birthday ? strtotime($birthday) : 0, //生日
-            'app_id' => self::$app_id,
         ]);
     }
 
@@ -151,7 +144,6 @@ class User extends UserModel
             $mobile = $this->where('mobile', '=', $data['mobile'])
                 ->where('user_id', '<>', $this['user_id'])
                 ->where('reg_source', '=', $this['reg_source'])
-                ->where('is_delete', '=', 0)
                 ->count();
             if ($mobile) {
                 $this->error = "手机号已存在";
@@ -191,7 +183,6 @@ class User extends UserModel
                     'new_grade_id' => $data['grade_id'],
                     'change_type' => ChangeTypeEnum::ADMIN_USER,
                     'remark' => $data['remark'],
-                    'app_id' => $this['app_id']
                 ]);
             }
             return $status !== false;

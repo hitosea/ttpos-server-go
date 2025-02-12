@@ -33,8 +33,6 @@ class Call extends BaseModel
             'table_id' => $tableId,
             'table_no' => $tableNo,
             'call_type' => $callType,
-            'app_id' => $appId,
-            'shop_supplier_id' => $shopSupplierId,
             'status' => 0, // 设置初始状态为未处理
         ]);
     }

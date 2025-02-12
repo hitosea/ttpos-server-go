@@ -49,7 +49,7 @@ class PointsLog extends BaseModel
     public static function add($data)
     {
         $static = new static;
-        $static->save(array_merge(['app_id' => $static::$app_id], $data));
+        $static->save($data);
     }
 
     /**

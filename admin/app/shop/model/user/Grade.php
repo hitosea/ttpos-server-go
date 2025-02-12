@@ -17,8 +17,7 @@ class Grade extends GradeModel
      */
     public function getList($data)
     {
-        return $this->where('is_delete', '=', 0)
-            ->order(['weight' => 'asc', 'create_time' => 'asc'])
+        return $this->order(['weight' => 'asc', 'create_time' => 'asc'])
             ->paginate($data, false, [
                 'query' => request()->request()
             ]);
@@ -123,6 +122,6 @@ class Grade extends GradeModel
         if (UserModel::checkExistByGradeId($this['grade_id'])) {
             return false;
         }
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }

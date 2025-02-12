@@ -132,11 +132,9 @@ class UserRechargeOrderOperationLog extends BaseModel
         $source = app('http')->getName();
         //
         self::create([
-            'app_id' => $appId,
             'order_id' => $orderId,
             'source' => $source,
             'shop_user_id' => $userInfoId,
-            'shop_supplier_id' => $shopSupplierId,
             'action' => $action,
             'remark' => $remark,
             'data' => json_encode($data, JSON_UNESCAPED_UNICODE),

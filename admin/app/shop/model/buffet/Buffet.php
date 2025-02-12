@@ -345,7 +345,6 @@ class Buffet extends BuffetModel
                 'is_show_kitchen' => $item['is_show_kitchen'] ?? 0,
                 'is_show_assistant' => $item['is_show_assistant'] ?? 0,
                 'is_show_h5' => $item['is_show_h5'] ?? 0,
-                'app_id' => self::$app_id,
             ];
         }
         $buffetProducts->saveAll($data);
@@ -366,8 +365,6 @@ class Buffet extends BuffetModel
                 'buffet_id' => $buffet_id,
                 'customer_type_id' => $customerTypeId,
                 'price' => $item['price'] ?? 0,
-                'shop_supplier_id' => $item['shop_supplier_id'] ?? 0,
-                'app_id' => self::$app_id,
             ];
         }
         $buffetCustomerType->saveAll($data);
@@ -389,7 +386,6 @@ class Buffet extends BuffetModel
                 'buffet_id' => $buffetId,
                 'buffet_tax_type' => $item['buffet_tax_type'] ?? 0,
                 'tax_category_id' => $item['tax_category_id'] ?? 0,
-                'app_id' => self::$app_id,
             ];
         }
         $model->saveAll($data);

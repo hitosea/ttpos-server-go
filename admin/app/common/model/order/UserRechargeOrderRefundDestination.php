@@ -108,8 +108,6 @@ class UserRechargeOrderRefundDestination extends BaseModel
                 'source' => $pay['source'],
                 'payment_order_id' => $pay['payment_order_id'] ?? 0,
                 'refund_money' => $payTypeRefundMoney,
-                'shop_supplier_id' => $order['shop_supplier_id'],
-                'app_id' => $order['app_id'],
                 'status' => in_array($pay['value'], array_keys(PayType::SOURCE_LIANLIAN_PAY_METHOD)) ? 0 : 1,
             ];
             $refundDestination = self::create($saveData);
@@ -129,8 +127,6 @@ class UserRechargeOrderRefundDestination extends BaseModel
                     'refund_type' => $refund_type,
                     'refund_method' => $refund_method,
                     'refund_money' => $available_pay_price,
-                    'shop_supplier_id' => $order['shop_supplier_id'],
-                    'app_id' => $order['app_id'],
                     'cashier_id' => $cashier_id,
                 ];
                 $orderRefundLog = UserRechargeOrderRefund::create($saveData);

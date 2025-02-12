@@ -945,7 +945,6 @@ class BaseModelOrder extends BaseModel
             $allProductList = ProductModel::with(['sku.material', 'feed'])
                 ->where('product_id', 'in', $allProductIds)
                 ->where('product_status', '=', 10)
-                ->where('is_delete', '=', 0)
                 ->select()->toArray();
             $allProductList = array_column($allProductList, null, 'product_id');
             //
@@ -1050,7 +1049,6 @@ class BaseModelOrder extends BaseModel
             $allProductList = ProductModel::with(['sku.material', 'feed'])
                 ->where('product_id', 'in', $allProductIds)
                 ->where('product_status', '=', 10)
-                ->where('is_delete', '=', 0)
                 ->select()->toArray();
             $allProductList = array_column($allProductList, null, 'product_id');
             //

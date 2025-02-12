@@ -62,7 +62,6 @@ class OrderScheme extends BaseModel
         $list = Product::alias('product')
             ->field(['product.product_id', 'product.product_name'])
             ->where('product_id', 'in', $product_ids)
-            ->where('is_delete', 0)
             ->where('product_status', 10)
             ->select()?->append(['product_name_text']);
         return $list->toArray();
@@ -197,7 +196,6 @@ class OrderScheme extends BaseModel
             $productModel = new Product();
             $productList = $productModel->where('product_id', 'in', $productIds)
                 ->where('type', 10)
-                ->where('is_delete', 0)
                 ->select();
             if (count($productList) != count($productIds)) {
                 $this->error = '商品参数错误';
@@ -229,8 +227,6 @@ class OrderScheme extends BaseModel
             'auto_change' => $params['auto_change'] ?? 1,
             'auto_check' => $params['auto_check'] ?? 1,
             'auto_checkout' => $params['auto_checkout'] ?? 1,
-            'shop_supplier_id' => $params['shop_supplier_id'] ?? '',
-            'app_id' => $params['app_id'] ?? ''
         ];
 
         return $this->save($data);

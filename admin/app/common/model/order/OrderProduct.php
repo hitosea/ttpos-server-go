@@ -411,7 +411,6 @@ class OrderProduct extends BaseModel
     {
         return (new ProductModel)->where('product_id', '=', $product_id)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->count();
     }
 
@@ -517,7 +516,6 @@ class OrderProduct extends BaseModel
             $product = ProductModel::with(['sku.material', 'feed'])
                 ->where('product_id', $this->product_id)
                 ->where('product_status', '=', 10)
-                ->where('is_delete', '=', 0)
                 ->find()?->append([]);
             if (!$product && $param['type'] != 'down') {
                 $this->errorData = ['product_id' => $this->product_id];
@@ -1312,8 +1310,6 @@ class OrderProduct extends BaseModel
             // 非结账送厨下单合单重新生成
             if ($order['merge_id'] && $type != 'payment') {
                 $param = [
-                    'app_id' => $order['app_id'],
-                    'shop_supplier_id' => $order['shop_supplier_id'],
                     'settle_device_id' => $order['device_id'],
                     'device_id' => $order['device_id'],
                 ];
@@ -1392,11 +1388,11 @@ class OrderProduct extends BaseModel
             ->leftJoin('product p', 'op.product_id = p.product_id')
             ->leftJoin(
                 "(
-                    select 
-                        tos.order_id, 
-                        tos.batch_no, 
-                        tos.reject_time, 
-                        count(1) as reject_count 
+                    select
+                        tos.order_id,
+                        tos.batch_no,
+                        tos.reject_time,
+                        count(1) as reject_count
                     from (
                         SELECT tos.order_id, tos.batch_no, tos.reject_time
                         FROM {$prefix}take_order AS tos
@@ -1569,7 +1565,6 @@ class OrderProduct extends BaseModel
                             'order_product_id' => $this->order_product_id,
                             'product_id' => $this->product_id,
                             'product_sku_id' => $this->product_sku_id,
-                            'app_id' => $this->app_id,
                         ];
                     }
                     (new OrderProductFree)->saveAll($saveAllArr);
@@ -1669,7 +1664,6 @@ class OrderProduct extends BaseModel
             $newOrderProductModel->save([
                 'order_id' => $orderProduct->order_id,
                 'main_order_product_id' => $orderProduct->main_order_product_id,
-                'app_id' => $orderProduct->app_id,
                 'product_id' => $orderProduct->product_id,
                 'product_name' => $orderProduct->product_name,
                 'image_id' => $orderProduct->image_id,

@@ -61,8 +61,6 @@ class OrderPeakTime extends BaseModel
             'date' => $date,
             'hour' => $hour,
             'cashier_id' => $cashierId,
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => $appId
         ];
 
         // 现有记录

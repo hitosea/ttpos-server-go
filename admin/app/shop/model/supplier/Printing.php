@@ -16,10 +16,7 @@ class Printing extends PrintingModel
     {
         $model = $this;
         // 查询列表数据
-        return $model->where('shop_supplier_id', '=', $user['shop_supplier_id'])
-            ->where('is_delete', '=', '0')
-            ->order(['create_time' => 'desc'])
-            ->paginate($params);
+        return $model->order(['create_time' => 'desc'])->paginate($params);
     }
 
     /**
@@ -27,7 +24,7 @@ class Printing extends PrintingModel
      */
     public function add($data, $user)
     {
-        $detail = $this->where('name', '=', $data['name'])->where('shop_supplier_id', '=', $user['shop_supplier_id'])->where('is_delete', '=', '0')->find();
+        $detail = $this->where('name', '=', $data['name'])->find();
         if ($detail) {
             $this->error = '名称已存在';
             return false;
@@ -35,8 +32,6 @@ class Printing extends PrintingModel
         // 开启事务
         $this->startTrans();
         try {
-            $data['app_id'] = self::$app_id;
-            $data['shop_supplier_id'] = $user['shop_supplier_id'];
             $this->save($data);
             $this->commit();
             return true;
@@ -81,6 +76,6 @@ class Printing extends PrintingModel
      */
     public function setDelete()
     {
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }

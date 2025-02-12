@@ -12,9 +12,7 @@ class AppUpdate extends AppUpdateModel
 
     public function getList($data)
     {
-        return $this->where('is_delete', '=', 0)
-            ->order(['create_time' => 'desc'])
-            ->paginate($data);
+        return $this->order(['create_time' => 'desc'])->paginate($data);
     }
 
     /**
@@ -39,8 +37,6 @@ class AppUpdate extends AppUpdateModel
      */
     public function setDelete()
     {
-        return $this->save([
-            'is_delete' => 1
-        ]);
+        return $this->delete();
     }
 }

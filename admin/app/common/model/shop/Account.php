@@ -18,7 +18,7 @@ class Account extends BaseModel
 
     /**
      * 获取金额
-     * 
+     *
      * @param User|null $shopUser
      * @param float $current_cash_income
      * @return float
@@ -50,7 +50,7 @@ class Account extends BaseModel
 
     /**
      * 更新金额
-     * 
+     *
      * @param int $pm
      * @param float $amount
      * @param int $dutyNo
@@ -93,8 +93,6 @@ class Account extends BaseModel
             'after_amount' => $afterAmount,
             'duty_no' => $dutyNo,
             'cashier_id' => $cashierId,
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => $appId,
             'source' => $source,
         ]);
         //
@@ -110,8 +108,6 @@ class Account extends BaseModel
     {
         return self::create([
             'amount' => $amount,
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => $appId,
             'create_time' => time(),
             'update_time' => time()
         ]);

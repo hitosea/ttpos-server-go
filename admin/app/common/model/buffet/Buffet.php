@@ -163,7 +163,6 @@ class Buffet extends BaseModel
         //
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['id', '<>', $id];

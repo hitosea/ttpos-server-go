@@ -19,14 +19,8 @@ class Supplier extends SupplierModel
     public function getList($params, $user)
     {
         $model = $this;
-        if ($user['user_type'] == 1) {
-            $model = $model->where('shop_supplier_id', '=', $user['shop_supplier_id']);
-        }
         // 查询列表数据
-        return $model->with(['superUser'])
-            ->where('is_delete', '=', '0')
-            ->order(['create_time' => 'desc'])
-            ->paginate($params);
+        return $model->with(['superUser'])->order(['create_time' => 'desc'])->paginate($params);
     }
 
     /**
@@ -45,9 +39,7 @@ class Supplier extends SupplierModel
             }
             //是否绑定用户
             if ($supplier['user_id'] > 0) {
-                $user = $this->where('user_id', '=', $supplier['user_id'])
-                    ->where('is_delete', '=', 0)
-                    ->count();
+                $user = $this->where('user_id', '=', $supplier['user_id'])->count();
                 if ($user > 0) {
                     $this->error = '该用户已绑定';
                     return false;
@@ -70,10 +62,8 @@ class Supplier extends SupplierModel
                 'user_name' => $supplier['user_name'],
                 'password' => salt_hash($supplier['password']),
                 'real_name' => $supplier['user_name'],
-                'shop_supplier_id' => $this['shop_supplier_id'],
                 'is_super' => 1,
                 'user_type' => 1,
-                'app_id' => self::$app_id,
             ];
             //添加管理员账号
             (new ShopUserModel)->save($add);
@@ -106,10 +96,7 @@ class Supplier extends SupplierModel
             }
             //是否绑定用户
             if ($supplier['user_id'] > 0) {
-                $user = $this->where('user_id', '=', $supplier['user_id'])
-                    ->where('shop_supplier_id', '<>', $this['shop_supplier_id'])
-                    ->where('is_delete', '=', 0)
-                    ->count();
+                $user = $this->where('user_id', '=', $supplier['user_id'])->count();
                 if ($user > 0) {
                     $this->error = '该用户已绑定';
                     return false;
@@ -168,7 +155,7 @@ class Supplier extends SupplierModel
         // 开启事务
         $this->startTrans();
         try {
-            $this->save(['is_delete' => 1]);
+            $this->delete();
             (new ShopUserModel)->update(['is_status' => 1]);
             $this->commit();
             return true;
@@ -209,9 +196,7 @@ class Supplier extends SupplierModel
     {
         $model = new static();
         // 查询列表数据
-        return $model->field(['shop_supplier_id,name'])->where('is_delete', '=', '0')
-            ->order(['create_time' => 'asc'])
-            ->select();
+        return $model->field(['shop_supplier_id,name'])->order(['create_time' => 'asc'])->select();
     }
 
 
@@ -253,7 +238,7 @@ class Supplier extends SupplierModel
      */
     public function getSupplierTotal()
     {
-        return $this->where(['is_delete' => 0])->count();
+        return $this->count();
     }
 
     /**

@@ -87,8 +87,6 @@ class PaymentApp extends BaseModel
             'll_merchant_private_key' => $param['ll_merchant_private_key'] ?? '',
             'll_token' => $param['ll_token'] ?? '',
             'll_store_id' => $param['ll_store_id'] ?? '',
-            'shop_supplier_id' => $param['shop_supplier_id'] ?? 0,
-            'app_id' => $param['app_id'] ?? 0,
         ];
 
         return $encryptor->pubEncrypt(json_encode($data), $publicKeyPem);

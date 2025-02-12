@@ -20,10 +20,8 @@ class LoginLog extends BaseModel
         $model = new self();
         $model->save([
             'username' => $user['user_name'],
-            'shop_supplier_id' => $user['shop_supplier_id'],
             'ip' => $ip,
             'result' => $result,
-            'app_id' => self::$app_id
         ]);
     }
 }

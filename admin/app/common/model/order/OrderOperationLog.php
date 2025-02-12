@@ -331,12 +331,10 @@ class OrderOperationLog extends BaseModel
         $subOrderId = $parentId > 0 ? $orderId : 0;
         //
         self::create([
-            'app_id' => $appId,
             'order_id' => $newOrderId,
             'sub_order_id' => $subOrderId,
             'source' => $source,
             'shop_user_id' => $userInfoId,
-            'shop_supplier_id' => $shopSupplierId,
             'action' => $action,
             'remark' => $remark,
             'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
