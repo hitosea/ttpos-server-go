@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '原料数量',
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台改变',
     `production_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -1,0 +1,77 @@
+package old_model
+
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+)
+
+type User struct {
+	UserID         uint    `gorm:"primaryKey;autoIncrement;not null" json:"user_id" comment:"用户id"`
+	OpenID         string  `gorm:"type:varchar(255);not null;default:''" json:"open_id" comment:"微信openid(唯一标示)"`
+	MpOpenID       string  `gorm:"type:varchar(255);default:''" json:"mpopen_id" comment:"微信公众号openid"`
+	AppOpenID      string  `gorm:"type:varchar(255);default:''" json:"appopen_id" comment:"openappid"`
+	UnionID        string  `gorm:"type:varchar(255);default:''" json:"union_id" comment:"微信开放平台id"`
+	AlipayID       string  `gorm:"type:varchar(50);default:'0'" json:"alipay_id" comment:"支付宝用户id"`
+	RegSource      string  `gorm:"type:varchar(50);default:''" json:"reg_source" comment:"注册来源"`
+	NickName       string  `gorm:"type:varchar(255);not null;default:''" json:"nickName" comment:"微信昵称"`
+	Mobile         string  `gorm:"type:varchar(20);default:''" json:"mobile" comment:"手机号"`
+	Password       string  `gorm:"type:varchar(120);not null;default:''" json:"password" comment:"密码"`
+	AvatarUrl      string  `gorm:"type:varchar(255);not null;default:''" json:"avatarUrl" comment:"微信头像"`
+	Gender         uint8   `gorm:"type:tinyint(3) unsigned;not null;default:2" json:"gender" comment:"性别0=女1=男2=未知"`
+	Country        string  `gorm:"type:varchar(50);not null;default:''" json:"country" comment:"国家"`
+	Province       string  `gorm:"type:varchar(50);not null;default:''" json:"province" comment:"省份"`
+	City           string  `gorm:"type:varchar(50);not null;default:''" json:"city" comment:"城市"`
+	AddressID      uint    `gorm:"type:int(11) unsigned;not null;default:0" json:"address_id" comment:"默认收货地址"`
+	Balance        float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"balance" comment:"用户可用余额"`
+	GiftBalance    float64 `gorm:"type:decimal(12,2);default:0.00" json:"gift_balance" comment:"赠送余额"`
+	Points         float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"points" comment:"用户可用积分"`
+	PayMoney       float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"pay_money" comment:"用户总支付的金额"`
+	ExpendMoney    float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"expend_money" comment:"实际消费的金额(不含退款)"`
+	GradeID        uint    `gorm:"type:int(11) unsigned;not null;default:1" json:"grade_id" comment:"会员等级id"`
+	CardID         uint    `gorm:"type:int(11) unsigned;not null;default:0" json:"card_id" comment:"会员卡id"`
+	RefereeID      int     `gorm:"type:int(11);not null;default:0" json:"referee_id" comment:"推荐人id"`
+	TotalPoints    float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"total_points" comment:"累计积分"`
+	TotalInvite    int     `gorm:"type:int(11);default:0" json:"total_invite" comment:"总邀请人数"`
+	UserType       uint8   `gorm:"type:tinyint(2);not null;default:1" json:"user_type" comment:"供应商状态1普通用户2供应商"`
+	GiftMoney      int     `gorm:"type:int(11);default:0" json:"gift_money" comment:"虚拟币，刷礼物"`
+	GiftSupplierID string  `gorm:"type:varchar(255);not null;default:''" json:"gift_supplier_id" comment:"新人礼包门店id"`
+	Birthday       int     `gorm:"type:int(11);not null;default:0" json:"birthday" comment:"生日"`
+	ReceiveTime    int     `gorm:"type:int(11);not null;default:0" json:"receive_time" comment:"生日礼物领取时间"`
+	SendTime       int     `gorm:"type:int(11);not null;default:0" json:"send_time" comment:"发送时间"`
+	FreezeMoney    float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"freeze_money" comment:"已冻结佣金"`
+	CashMoney      float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"cash_money" comment:"累积提现佣金"`
+	RealName       string  `gorm:"type:varchar(30);default:''" json:"real_name" comment:"姓名"`
+	IsDelete       uint8   `gorm:"type:tinyint(3) unsigned;not null;default:0" json:"is_delete" comment:"是否删除"`
+	AppID          uint    `gorm:"type:int(11) unsigned;not null;default:0" json:"app_id" comment:"小程序id"`
+	CreateTime     int64   `gorm:"type:int(11) unsigned;not null;default:0" json:"create_time" comment:"创建时间"`
+	UpdateTime     int64   `gorm:"type:int(11) unsigned;not null;default:0" json:"update_time" comment:"更新时间"`
+}
+
+type UserRepository interface {
+	GetUserList() ([]*User, error)
+	ConvertUser() error
+}
+
+type UserService struct {
+	db       *gorm.DB
+	targetDB *gorm.DB
+}
+
+func (s *UserService) GetUserList() ([]*User, error) {
+	var users []*User
+	err := s.db.Find(&users).Error
+	return users, err
+}
+
+func (s *UserService) ConvertUser() error {
+	users, err := s.GetUserList()
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		fmt.Println(fmt.Sprintf("user: %+v", user))
+
+	}
+	return nil
+}
