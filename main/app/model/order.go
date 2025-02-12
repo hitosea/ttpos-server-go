@@ -1,5 +1,13 @@
 package model
 
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+)
+
 // 销售账单 SaleBill ttpos_sale_bill
 type SaleBill struct {
 	// 主键和标识字段
@@ -145,7 +153,63 @@ type SaleOrderProduct struct {
 	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 多语言名称
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+}
+
+// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料相同的商品签名相同,用于取消拆单时合并商品
+func (model *SaleOrderProduct) GenerateProductSign() string {
+	bomIdList := make([]string, 0)
+	attributeIdList := make([]string, 0)
+
+	json, _ := json.Marshal(model)
+	fmt.Println(string(json))
+	// 物料ID列表
+	for _, bom := range model.SaleOrderProductBoms {
+		bomIdList = append(bomIdList, strconv.FormatUint(bom.ProductBomUuid, 10))
+	}
+	// 属性ID列表
+	for _, attributeGroup := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.ProductAttributeUuid, 10))
+	}
+	// 物料ID列表和属性ID列表排序
+	sort.Slice(bomIdList, func(i, j int) bool {
+		return bomIdList[i] < bomIdList[j]
+	})
+	sort.Slice(attributeIdList, func(i, j int) bool {
+		return attributeIdList[i] < attributeIdList[j]
+	})
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性
+	bomIdListStr := strings.Join(bomIdList, ",")
+	attributeIdListStr := strings.Join(attributeIdList, ",")
+	return bomIdListStr + "-" + attributeIdListStr
+}
+
+// 销售订单产品原料 SaleOrderProductBom ttpos_sale_order_product_bom
+type SaleOrderProductBom struct {
+	ID                   uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'销售订单商品原料ID'"`
+	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
+	Num                  uint   `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
+	Unit                 string `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
+	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
+	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
+	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
+}
+
+// 销售订单产品属性 SaleOrderProductAttribute ttpos_sale_order_product_attribute
+type SaleOrderProductAttribute struct {
+	ID                   uint64 `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'商品属性ID'"`
+	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
+	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
+	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
+	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
+	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
 }
 
 // 销售账单设置 SaleBillSetting ttpos_sale_bill_setting

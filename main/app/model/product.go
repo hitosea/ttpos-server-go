@@ -107,7 +107,7 @@ type ProductPackageAttribute struct {
 	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
 }
 
-// ProductPackage 产品包表，定义产品包的相关信息 ttpos_product_package
+// ProductPackage 产品包表，定义产品包的相关信息 `ttpos_product_package`
 type ProductPackage struct {
 	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
@@ -160,4 +160,14 @@ type ProductBom struct {
 
 	ProductFlavor ProductFlavor `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce  ProductSauce  `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+}
+
+// IsFlavorProduct 判断是否为商品规格
+func (model *ProductBom) IsFlavorProduct() bool {
+	return model.ProductFlavorUuid != 0
+}
+
+// IsSauceProduct 判断是否为商品小料
+func (model *ProductBom) IsSauce() bool {
+	return model.ProductSauceUuid != 0
 }
