@@ -24,12 +24,12 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                                               // 创建订单编号
-	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
-	CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 取消订单
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                        // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                                                       // 创建订单编号
+	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)         // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                   // 获取收银订单详情
+	CancelOrder(dbId uint64, staff model.Staff, source string, saleBillUuid uint64, saleOrderUuid uint64) error // 取消订单
 }
 
 // orderSrv 收银服务结构体
@@ -341,11 +341,13 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 // GetOrderList 获取订单信息
 func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+
 	// 获取信息源
 	info, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return resp.CashierOrderInfoResp{}, err
 	}
+
 	// 组合信息
 	totalMemberNames := []string{}
 	payTypes := []resp.CashierOrderInfoPayTypes{}
@@ -416,6 +418,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 			Products:      products,
 		}
 	}
+
 	// 返回响应对象
 	return resp.CashierOrderInfoResp{
 		Detail: resp.CashierOrderInfos{
@@ -442,28 +445,36 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 }
 
 // CancelOrder 取消订单
-func (s *orderSrv) CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error {
+func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, saleBillUuid uint64, saleOrderUuid uint64) error {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(saleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 	productRepo := repository.NewOrderProductRepo(db)
+	deskRepo := repository.NewDeskRepo(db)
+	qrcodeOrderRepo := repository.NewQrcodeOrderRepo(db)
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
+
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
 	if err != nil {
 		return err
 	}
+
 	// 验证状态
 	if err = billInfo.ValidateOrderStatus("cancel"); err != nil {
 		return err
 	}
+
 	// 检查是否部分支付
 	isPartially := orderRepo.IsPartiallyPaid(billInfo)
 	if isPartially {
 		return errors.New("当前订单已被部分支付，不支持取消")
 	}
+
 	// 开始事务
 	tx := db.Begin()
 	defer func() {
@@ -478,12 +489,77 @@ func (s *orderSrv) CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 		productRepo.WhereSaleBillUuids([]uint64{saleBillUuid}),
 	)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
-	// todo 未完成
+
+	// todo 未完成 - 退回商品库存
 	// for _, po := range products {
-	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);   // 退回商品库存
+	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
 	// }
+
+	// if ($force) {
+	// 	$detail->force()->delete();
+	// 	// 子数据删除
+	// 	$orderBuffetList = OrderBuffet::where('order_id', '=', $order_id)->select();
+	// 	foreach ($orderBuffetList as $item) {
+	// 		$item->delete();
+	// 	}
+	// 	$orderBuffetCustomerList = OrderBuffetCustomer::where('order_id', '=', $order_id)->select();
+	// 	foreach ($orderBuffetCustomerList as $item) {
+	// 		$item->delete();
+	// 	}
+	// 	$orderDelayList = OrderDelay::where('order_id', '=', $order_id)->select();
+	// 	foreach ($orderDelayList as $item) {
+	// 		$item->delete();
+	// 	}
+	// 	// 子单数据
+	// 	$subOrderList = (new self)->where('parent_id', $order_id)->select();
+	// 	foreach ($subOrderList as $item) {
+	// 		$item->force()->delete();
+	// 	}
+	// 	$opList = OrderProduct::where('order_id', '=', $order_id)->select();
+	// 	foreach ($opList as $item) {
+	// 		$item->force()->delete();
+	// 	}
+	// } else {
+	// 	/** @var OrderModel $detail */
+	// 	$detail->CashierOrderCancels($remark);
+	// }
+
+	// 如果是桌台订单
+	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
+		// 拒绝所有待接单 - doto 待对应的服务层实现
+		err := qrcodeOrderRepo.Reject(billInfo.DeskUuid)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		// 关闭桌台
+		err = deskRepo.CloseDesk(billInfo.DeskUuid)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	} else {
+		err = orderRepo.CancelOrder(saleBillUuid)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// todo - 添加操作记录
+	// 'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+	orderRecordRepo.CreateRecord(model.SaleBillOperationRecord{
+		Source:        source,
+		Action:        constant.OrderOrderCancel,
+		Message:       "整单取消",
+		Remark:        "取消订单",
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
+		OperatorUuid:  staff.Uuid,
+	})
 
 	fmt.Println(products)
 	fmt.Println(billInfo)

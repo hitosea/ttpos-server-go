@@ -312,3 +312,19 @@ type SaleOrderProductMaterial struct {
 	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
+
+// 桌台账单操作记录
+type SaleBillOperationRecord struct {
+	ID            uint   `gorm:"column:id;type:int(11) unsigned;primaryKey;autoIncrement;comment:自增ID" json:"id"`
+	Uuid          uint64 `gorm:"column:uuid;type:bigint(20) unsigned;not null;default:0;comment:账单操作记录ID" json:"uuid"`
+	Source        string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
+	Action        string `gorm:"column:action;type:varchar(150);not null;default:'';comment:操作行为" json:"action"`
+	Message       string `gorm:"column:message;type:varchar(255);not null;default:'';comment:消息内容" json:"message"`
+	Remark        string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:备注" json:"remark"`
+	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
+	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
+	CreateTime    int64  `gorm:"column:create_time;type:int(10) unsigned;not null;default:0;comment:创建时间(时间戳)" json:"create_time"`
+	UpdateTime    int64  `gorm:"column:update_time;type:int(10) unsigned;not null;default:0;comment:更新时间(时间戳)" json:"update_time"`
+	DeleteTime    int64  `gorm:"column:delete_time;type:int(10) unsigned;not null;default:0;comment:删除时间(时间戳)" json:"delete_time"`
+}
