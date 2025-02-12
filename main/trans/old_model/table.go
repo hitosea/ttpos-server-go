@@ -64,18 +64,18 @@ func (s *TableService) ConvertTable() error {
 			status = 1
 		}
 		desk := model.Desk{
-			Uuid:       table.TableID,
-			DeskNo:     table.TableNo,
-			RegionUuid: table.AreaID,
-			TypeUuid:   table.TypeID,
-			Sort:       uint(table.Sort),
-			Status:     uint(status),
-			IsDisable:  isDisable,
-			QrcodeUrl:  table.QRCodeValue,
-			IsBind:     uint(table.IsBind),
-			CreateTime: table.CreateTime,
-			UpdateTime: table.UpdateTime,
-			DeleteTime: 0,
+			Uuid:        table.TableID,
+			DeskNo:      table.TableNo,
+			RegionUuid:  table.AreaID,
+			TypeUuid:    table.TypeID,
+			Sort:        uint(table.Sort),
+			Status:      uint(status),
+			IsDisable:   isDisable,
+			QrcodeToken: table.QRCodeValue,
+			IsBind:      uint(table.IsBind),
+			CreateTime:  table.CreateTime,
+			UpdateTime:  table.UpdateTime,
+			DeleteTime:  0,
 		}
 
 		_, err := repository.NewDeskRepo(s.targetDB).CreateDesk(desk)

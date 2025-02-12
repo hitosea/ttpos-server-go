@@ -3,11 +3,11 @@ package model
 // 支付方式 PaymentMethod ttpos_payment_method
 type PaymentMethod struct {
 	ID                   uint    `gorm:"column:id;primaryKey;AUTO_INCREMENT;comment:自增ID" json:"id"`
-	Uuid                 uint64  `gorm:"default:0;column:uuid;comment:支付方式ID" json:"uuid"`
+	Uuid                 uint64  `gorm:"default:0;column:uuid;comment:支付方式UUID" json:"uuid"`
 	Name                 string  `gorm:"default:'';column:name;comment:支付方式名称" json:"name"`
 	PaymentName          string  `gorm:"default:'';column:payment_name;comment:支付名称" json:"payment_name"`
-	LogoUrl              string  `gorm:"default:'';column:logo_url;comment:logo图片URL" json:"logo_url"`
-	QrCodeUrl            string  `gorm:"default:'';column:qrcode_url;comment:二维码图片URL" json:"qrcode_url"`
+	LogoFileUuid         uint64  `gorm:"default:0;column:logo_file_uuid;comment:logo图片UUID" json:"logo_file_uuid"`
+	QrCodeFileUuid       uint64  `gorm:"default:0;column:qrcode_file_uuid;comment:二维码图片UUID" json:"qrcode_file_uuid"`
 	FeePercent           float64 `gorm:"default:0.00;column:fee_percent;comment:手续费百分比" json:"fee_percent"`
 	OrderBy              int     `gorm:"default:0;column:order_by;comment:排序" json:"order_by"`
 	IsShowCashier        bool    `gorm:"default:1;column:is_show_cashier;comment:是否在收银员界面显示" json:"is_show_cashier"`
