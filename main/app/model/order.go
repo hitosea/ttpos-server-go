@@ -234,3 +234,23 @@ type SaleBillSetting struct {
 	Zero         uint `gorm:"column:zero;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero"`
 	ZeroCheckout uint `gorm:"column:zero_checkout;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout"`
 }
+
+// SaleOrderBuffetCustomerType 销售订单顾客类型
+type SaleOrderBuffetCustomerType struct {
+	// 主键字段
+	ID   uint   `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
+	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单顾客类型ID" json:"uuid"`
+
+	// 关联ID字段
+	SaleOrderUuid          uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
+	BuffetPackageUuid      uint64 `gorm:"column:buffet_package_uuid;type:bigint(20);default:0;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetCustomerTypeUuid uint64 `gorm:"column:buffet_customer_type_uuid;type:bigint(20);default:0;comment:自助餐客户类型ID" json:"buffet_customer_type_uuid"`
+
+	// 数值字段
+	Num uint `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
+
+	// 时间字段
+	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+}

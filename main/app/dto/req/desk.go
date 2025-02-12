@@ -11,20 +11,18 @@ type DeskInfoReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
 }
 
-// 桌台订单创建
-type DeskOrderCreateReq struct {
-	DeskUuid uint64 `json:"desk_uuid" binding:"required"`                                // 桌台uuid
-	IsBuffet *bool  `json:"is_buffet" binding:"required"`                                // 是否是自助餐: false-否, true-是
-	MealNum  *uint  `json:"meal_num" binding:"required_if=IsBuffet false,min=1,max=999"` // 餐数: 非自助餐时必填, 最小1, 最大999
-	Remark   string `json:"remark" binding:"max=50"`                                     // 备注: 非必填, 最大50字符
+// 自助餐顾客类型
+type DeskBuffetCustomerType struct {
+	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
+	MealNum *uint  `json:"meal_num"` // 就餐人数
 }
 
-// 桌台订单创建错误信息
-var DeskOrderCreateReqMessage = map[string]string{
-	"desk_uuid.required":   "桌台uuid不能为空",
-	"is_buffet.required":   "是否是自助餐不能为空",
-	"meal_num.required_if": "餐数不能为空",
-	"meal_num.min":         "餐数不能小于1",
-	"meal_num.max":         "餐数不能大于999",
-	"remark.max":           "备注不能大于50字符",
+// 桌台订单创建
+type DeskOrderCreateReq struct {
+	DeskUuid            uint64                   `json:"desk_uuid"`             // 桌台uuid, 必填
+	IsBuffet            *bool                    `json:"is_buffet"`             // 是否是自助餐: false-否, true-是
+	MealNum             *uint                    `json:"meal_num"`              // 就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0
+	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
+	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
+	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
 }

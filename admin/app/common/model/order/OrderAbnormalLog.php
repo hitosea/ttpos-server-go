@@ -42,8 +42,6 @@ class OrderAbnormalLog extends BaseModel
             'sub_action' => '',
             'remark' => $remark,
             'key' => '',
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => $appId,
         ];
         // 唯一键值处理
         $key = md5(json_encode($data, JSON_UNESCAPED_UNICODE));

@@ -17,8 +17,7 @@ class Grade extends GradeModel
      */
     public function getList($data)
     {
-        return $this->where('is_delete', '=', 0)
-            ->order(['weight' => 'asc', 'create_time' => 'asc'])
+        return $this->order(['priority' => 'asc', 'create_time' => 'asc'])
             ->paginate($data, false, [
                 'query' => request()->request()
             ]);
@@ -37,7 +36,7 @@ class Grade extends GradeModel
             $this->error = "等级权重范围1-99";
             return false;
         }
-        $exist = self::where('weight', $data['weight'])->count();
+        $exist = self::where('priority', $data['weight'])->count();
         if ($exist > 0) {
             $this->error = "等级权重不能重复";
             return false;
@@ -51,9 +50,12 @@ class Grade extends GradeModel
             $this->error = "累计积分范围为：0~100000000";
             return false;
         }
-        $data['app_id'] = self::$app_id;
         $data['is_default'] = 0;
         $data['remark'] = $this->setRemark($data);
+        //
+        $data['uuid'] = createUuid();
+        $data['discount'] = $data['equity'];
+        $data['priority'] = $data['weight'];
         return $this->save($data);
     }
 
@@ -80,15 +82,17 @@ class Grade extends GradeModel
             return false;
         }
         //
-        $exist = self::where('weight', $data['weight'])->where('grade_id', '<>', $data['grade_id'])->findOrEmpty();
+        $exist = self::where('priority', $data['weight'])->where('uuid', '<>', $data['grade_id'])->findOrEmpty();
         if (!$exist->isEmpty()) {
             $this->error = "等级权重不能重复";
             return false;
         }
         if ($this['is_default'] == 0) {
-
             $data['remark'] = $this->setRemark($data);
         }
+        //
+        $data['discount'] = $data['equity'];
+        $data['priority'] = $data['weight'];
         return $this->save($data);
     }
 
@@ -123,6 +127,6 @@ class Grade extends GradeModel
         if (UserModel::checkExistByGradeId($this['grade_id'])) {
             return false;
         }
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 }

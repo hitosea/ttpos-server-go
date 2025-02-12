@@ -38,7 +38,6 @@ class ProductRankingService
                 'sales_actual',
                 "$totalSaleSql AS total_sales_num"
             ])
-            ->where('is_delete', '=', 0)
             ->order(['total_sales_num' => 'DESC'])
             ->limit(10)
             ->select();
@@ -50,13 +49,9 @@ class ProductRankingService
     public function getViewRanking($shop_supplier_id = 0)
     {
         $model = new ProductModel();
-        if ($shop_supplier_id > 0) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         return $model->with(['image.file'])
             ->hidden(['content'])
             ->where('view_times', '>', 0)
-            ->where('is_delete', '=', 0)
             ->order(['view_times' => 'DESC'])
             ->limit(10)
             ->select();

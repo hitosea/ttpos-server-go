@@ -10,13 +10,14 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                    // 创建销售单
-	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                           // 获取销售单
-	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                 // 创建订单
-	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)         // 获取订单列表
-	GetOrderNum(opts ...DBOption) (int64, error)                                                                    // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error) // 获取收银的订单列表
-	GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                            // 获取销售账单详细信息
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                          // 创建销售单
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                 // 获取销售单
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                       // 创建订单
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
+	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)               // 获取订单列表
+	GetOrderNum(opts ...DBOption) (int64, error)                                                                          // 获取订单数量
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)       // 获取收银的订单列表
+	GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                  // 获取销售账单详细信息
 }
 
 // orderRepo 订单仓库
@@ -63,6 +64,15 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 
 // CreateSaleOrder 创建销售订单
 func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) {
+	err := r.db.Create(&model).Error
+	if err != nil {
+		return model, err
+	}
+	return model, nil
+}
+
+// CreateSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型
+func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, err

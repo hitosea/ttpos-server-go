@@ -18,9 +18,7 @@ class Label extends LabelModel
         if (isset($data['label_name']) && $data['label_name'] != '') {
             $model = $model->like('label_name', trim($data['label_name']));
         }
-        $list =  $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['create_time' => 'desc'])
-            ->paginate($data)?->append(['product_ids'], true);
+        $list =  $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
 
         // 是否关联产品
         foreach ($list as &$item) {
@@ -34,9 +32,7 @@ class Label extends LabelModel
      */
     public function add($data, $shop_supplier_id)
     {
-        $isExist = $this->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->where('label_name', '=', $data['label_name'])
-            ->count();
+        $isExist = $this->where('label_name', '=', $data['label_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;

@@ -59,7 +59,7 @@ class TakeOrder extends BaseModel
     {
         $area_id = isset($params['area_id']) ? $params['area_id'] : 0;
         $status = isset($params['status']) ? $params['status'] : 0;
-        // 
+        //
         $model =  $this->alias('to')
             ->leftJoin('table t', 'to.table_id = t.table_id')
             ->field(['to.*', 't.table_no'])
@@ -76,7 +76,7 @@ class TakeOrder extends BaseModel
                     });
                 });
             });
-        // 
+        //
         $time = time() - 60 * 60 * 24 * 7;
         // 已处理未按最新处理的在最上方, 已处理页面此处只保留7天
         if ($status == 1) {
@@ -89,13 +89,13 @@ class TakeOrder extends BaseModel
                 ->paginate($params)
                 ->toArray();
         }
-        // 
+        //
         $area_list = $status == -1 ? [] : TableArea::getSucList();
         $notice = self::where('status', '=', 0)->count();   // 待接单数量
         $done = self::where('create_time', '>', $time)->where(function ($q) {
             $q->where('status', '=', 1)->whereOr('status', '=', -1);
         })->count();
-        // 
+        //
         return [
             'notice' => $notice,
             'done' => $done,
@@ -173,8 +173,6 @@ class TakeOrder extends BaseModel
             'status' => $status,
             'take_time' => $take_time,
             'source' => $source,
-            'shop_supplier_id' => request()->shopSupplierId,
-            'app_id' => self::$app_id,
             'cashier_id' => $is_auto ? -1 : $cashier_id,
         ];
         $this->save($updateData);

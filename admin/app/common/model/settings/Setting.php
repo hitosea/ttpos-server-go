@@ -312,8 +312,6 @@ class Setting extends BaseModel
                 'key' => $key,
                 'describe' => SettingEnum::data()[$key]['describe'],
                 'values' => $values,
-                'app_id' => self::$app_id,
-                'shop_supplier_id' => $shop_supplier_id
             ]
         );
         // 删除系统设置缓存
@@ -363,7 +361,6 @@ class Setting extends BaseModel
             ],
             'shop' => [
                 'expire_time_text' => "",
-                'shop_supplier_id' => "",
                 'name' => $data['name'],
                 'chain_number' => $data['c_n'] ?? '',
                 'sale_stock' => $data['sale'],
@@ -381,8 +378,6 @@ class Setting extends BaseModel
             'key' => SettingEnum::CLOUD_BASIC,
             'describe' => SettingEnum::data()[SettingEnum::CLOUD_BASIC]['describe'],
             'values' => json_encode($values),
-            'app_id' => $appId,
-            'shop_supplier_id' => $shopSupplierId
         ]);
         // 删除系统设置缓存
         Cache::set('setting_' . $appId . '_' . $shopSupplierId, null);

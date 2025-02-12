@@ -36,7 +36,7 @@ class Product extends Controller
         }
         $param['order_id'] = $order['order_id'];
         $param['product_source'] = Order::SCAN_PRODUCT_SOURCE;
-        $list = $model->list(array_merge(['shop_supplier_id' => $this->table['shop_supplier_id']], $param));
+        $list = $model->list($param);
         if ($order) {
             $buffetProductArr = Order::getOrderBuffetProductArr($order['order_id']);    // 自助餐商品
             $list = Order::handleBuffetProductIndex($list, $buffetProductArr, $order['meal_num']);

@@ -12,9 +12,7 @@ class MessageField extends MessageFieldModel
     public static function getAll($message_id)
     {
         $model = new static;
-        return $model->where('message_id', '=', $message_id)
-            ->where('is_delete', '=', 0)
-            ->order(['sort' => 'asc'])->select();
+        return $model->where('message_id', '=', $message_id)->order(['sort' => 'asc'])->select();
     }
 
     /**
@@ -42,7 +40,7 @@ class MessageField extends MessageFieldModel
             }
             //删除
             if (isset($data['deleteIds']) && count($data['deleteIds']) > 0) {
-                $this->where('message_field_id', 'in', $data['deleteIds'])->update(['is_delete' => 1]);
+                $this->where('message_field_id', 'in', $data['deleteIds'])->delete();
             }
             //删除
             $this->commit();

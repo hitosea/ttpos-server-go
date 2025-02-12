@@ -105,8 +105,8 @@ class ErpMonthlyStatistics extends BaseModel
         $total = self::where('year', $year)->where('month', $month)->where('record_type', self::MONTH_END)->value('stock') ?? 0;
         if ($total == 0) {
             // 当月为当前商品库存
-            $productNum = Product::where('type', 10)->where('is_delete', 0)->sum('product_stock');
-            $productMaterialNum = Product::where('type', 20)->where('is_delete', 0)->sum('product_material_stock');
+            $productNum = Product::where('type', 10)->sum('product_stock');
+            $productMaterialNum = Product::where('type', 20)->sum('product_material_stock');
             $total = helper::bcadd($productNum, $productMaterialNum, 4);
         }
         return floatval($total);

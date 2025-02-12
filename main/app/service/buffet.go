@@ -9,7 +9,7 @@ import (
 
 // IBuffetSrv 定义收银服务接口
 type IBuffetSrv interface {
-	GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) // 获取桌台列表
+	GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) // 获取自助餐列表
 }
 
 // buffetSrv 收银服务结构体
@@ -57,14 +57,19 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 		buffetCustomerTypes := make([]resp.BuffetCustomerType, 0, len(buffet.BuffetCustomerTypePrices))
 		for _, buffetCustomerTypePrice := range buffet.BuffetCustomerTypePrices {
 			buffetCustomerTypes = append(buffetCustomerTypes, resp.BuffetCustomerType{
-				Uuid: uint64(buffetCustomerTypePrice.Uuid),
+				Uuid: buffetCustomerTypePrice.CustomerTypeUuid,
 				Name: buffetCustomerTypePrice.BuffetCustomerType.Name,
 			})
 		}
-
+		//
+		price := float64(0)
+		if len(buffet.BuffetCustomerTypePrices) > 0 {
+			price = buffet.BuffetCustomerTypePrices[0].Price
+		}
+		//
 		respBuffet := resp.Buffet{
 			Uuid:                buffet.Uuid,
-			Price:               buffet.BuffetCustomerTypePrices[0].Price,
+			Price:               price,
 			IsLimitTime:         buffet.IsLimitTime == 1,
 			CanCombined:         buffet.CanCombined == 1,
 			NonOrderingTime:     buffet.NonOrderingTime,

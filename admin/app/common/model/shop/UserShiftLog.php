@@ -283,7 +283,6 @@ class UserShiftLog extends BaseModel
             'deposit_cash' => $shopUser->working?->deposit_cash,                    // 中途存入现金
             'exception_remark' => $shopUser->working?->exception_remark,            // 异常报备
             'remark' => $params['remark'] ?? '',                                    // 备注
-            'shop_supplier_id' => $params['shop_supplier_id'] ?? 0,
             'cashier_login_time' => $startTime,
             'abnormalData' => $abnormalData,                                        // 异常数据
         ];
@@ -420,8 +419,6 @@ class UserShiftLog extends BaseModel
             'previous_shift_cash' => $previousShiftCash,              // 上一班遗留备用金
             'current_cash_total' => $previousShiftCash,               // 当前钱箱现金总计(现金收入+上一班遗留备用金)
             'cash_left' => $previousShiftCash,                        // 本班遗留备用金
-            'app_id' => $shopUser->app_id,
-            'shop_supplier_id' => $shopUser->shop_supplier_id,
             'shift_start_time' => $shopUser->cashier_login_time ?: time(),
             'shift_end_time' => 0,
             'status' => 0,

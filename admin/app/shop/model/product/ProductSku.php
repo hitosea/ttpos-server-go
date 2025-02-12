@@ -72,7 +72,6 @@ class ProductSku extends ProductSkuModel
                         'product_id' => $product_id,
                         'spec_id' => $val['group_id'],
                         'spec_value_id' => $item['item_id'],
-                        'app_id' => self::$app_id,
                     ];
                 }
             }, $val['spec_items']);

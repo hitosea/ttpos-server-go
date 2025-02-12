@@ -68,7 +68,7 @@ class ProductSoldOut extends BaseModel
             $data[$key]['app_id'] = $user['app_id'];
             $data[$key]['shop_supplier_id'] = $user['shop_supplier_id'];
         }
-        foreach ($this->where('shop_supplier_id', $user['shop_supplier_id'])->select() as $m) {
+        foreach ($this->select() as $m) {
             $m->delete();
         }
         return $this->saveAll($data);
@@ -83,8 +83,6 @@ class ProductSoldOut extends BaseModel
             if ($val['is_sold_out'] == 1) {
                 if (!self::where('product_id', $val['product_id'])->where('product_sku_id', $val['product_sku_id'])->find()) {
                     (new self)->save([
-                        'app_id' => $user['app_id'],
-                        'shop_supplier_id' => $user['shop_supplier_id'],
                         'product_id' => $val['product_id'],
                         'product_sku_id' => $val['product_sku_id']
                     ]);

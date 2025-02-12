@@ -104,18 +104,16 @@ class Attribute extends BaseModel
                 // 属性组
                 $group_attribute_id = 0;
                 if (isset($item['parent_id']) && $item['parent_id']) {
-                    $attribute = ProductAttributeGroup::where('attribute_id', $item['parent_id'])->where('product_id', $product_id)->where('shop_supplier_id', $shop_supplier_id)->find();
+                    $attribute = ProductAttributeGroup::where('attribute_id', $item['parent_id'])->where('product_id', $product_id)->find();
                 } else {
-                    $parent_attribute = Attribute::where('attribute_name', $item['attribute_name'])->where('parent_id', 0)->where('shop_supplier_id', $shop_supplier_id)->find();
+                    $parent_attribute = Attribute::where('attribute_name', $item['attribute_name'])->where('parent_id', 0)->find();
                     $item['parent_id'] = $parent_attribute ? $parent_attribute['attribute_id'] : 0;
-                    $attribute = ProductAttributeGroup::where('attribute_id', $item['parent_id'])->where('product_id', $product_id)->where('shop_supplier_id', $shop_supplier_id)->find();
+                    $attribute = ProductAttributeGroup::where('attribute_id', $item['parent_id'])->where('product_id', $product_id)->find();
                 }
                 $updateData = [
                     'attribute_required' => $item['attribute_required'] ?? 0,
                     'attribute_open_max_select' => $item['attribute_open_max_select'] ?? 0,
                     'attribute_max_select' => $item['attribute_max_select'] ?? 0,
-                    'shop_supplier_id' => $shop_supplier_id,
-                    'app_id' => self::$app_id
                 ];
                 if ($attribute) {
                     $attribute->save($updateData);
@@ -133,12 +131,10 @@ class Attribute extends BaseModel
                 if (isset($item['attribute_ids']) && $item['attribute_ids']) {
                     $del_attribute_ids = array_merge($del_attribute_ids, $item['attribute_ids']);
                     foreach ($item['attribute_ids'] as $key => $child_attribute_id) {
-                        $child = ProductAttribute::where('attribute_id', $child_attribute_id)->where('product_id', $product_id)->where('shop_supplier_id', $shop_supplier_id)->find();
+                        $child = ProductAttribute::where('attribute_id', $child_attribute_id)->where('product_id', $product_id)->find();
                         $childUpdateData = [
                             'group_attribute_id' => $group_attribute_id,
                             'default_select' => $item['default_select'][$key] ?? 0,
-                            'shop_supplier_id' => $shop_supplier_id,
-                            'app_id' => self::$app_id
                         ];
 
                         if ($child) {
@@ -154,14 +150,14 @@ class Attribute extends BaseModel
             }
         }
         // 删除多余的产品关联属性组
-        $groupQuery = ProductAttributeGroup::where('product_id', $product_id)->where('shop_supplier_id', $shop_supplier_id);
+        $groupQuery = ProductAttributeGroup::where('product_id', $product_id);
         if (!empty($del_group_attribute_ids)) {
             $groupQuery->whereNotIn('group_attribute_id', $del_group_attribute_ids);
         }
         $groupQuery->delete();
 
         // 删除多余的产品关联属性值
-        $attributeQuery = ProductAttribute::where('product_id', $product_id)->where('shop_supplier_id', $shop_supplier_id);
+        $attributeQuery = ProductAttribute::where('product_id', $product_id);
         if (!empty($del_attribute_ids)) {
             $attributeQuery->whereNotIn('attribute_id', $del_attribute_ids);
         }
@@ -217,11 +213,11 @@ class Attribute extends BaseModel
     {
         // 兼容旧数据，先删除产品已删除的关联数据
         ProductAttribute::where('product_id', 'in', function ($query) {
-            $query->name('product')->where('is_delete', '=', 1)->field('product_id');
+            $query->name('product')->field('product_id');
         })->delete();
         // 兼容旧数据，先删除产品已删除的关联属性组
         ProductAttributeGroup::where('product_id', 'in', function ($query) {
-            $query->name('product')->where('is_delete', '=', 1)->field('product_id');
+            $query->name('product')->field('product_id');
         })->delete();
         return ProductAttribute::where('attribute_id', 'in', $attribute_id)->count() > 0;
     }
@@ -233,7 +229,6 @@ class Attribute extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(attribute_name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['attribute_id', '<>', $id];

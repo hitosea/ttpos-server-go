@@ -33,7 +33,6 @@ class BuffetDiscount extends BuffetDiscountModel
                 $rel_data[] = [
                     'buffet_id' => $buffet_id,
                     'buffet_discount_id' => $discount_id,
-                    'app_id' => self::$app_id,
                 ];
             }
             $rel_model->saveAll($rel_data);
@@ -74,7 +73,6 @@ class BuffetDiscount extends BuffetDiscountModel
                 $rel_data[] = [
                     'buffet_id' => $buffet_id,
                     'buffet_discount_id' => $discount_id,
-                    'app_id' => self::$app_id,
                 ];
             }
             if (!empty($rel_data)) {

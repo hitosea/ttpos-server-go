@@ -12,7 +12,7 @@ class Message extends MessageModel
     public static function getAll()
     {
         $model = new static;
-        return $model->where('is_delete', '=', 0)->order(['sort' => 'asc'])->select();
+        return $model->order(['sort' => 'asc'])->select();
     }
 
     /**
@@ -29,7 +29,7 @@ class Message extends MessageModel
      */
     public function setDelete()
     {
-        return $this->save(['is_delete' => 1]);
+        return $this->delete();
     }
 
     /**

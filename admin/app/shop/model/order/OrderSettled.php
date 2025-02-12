@@ -89,9 +89,6 @@ class OrderSettled extends OrderSettledModel
             $model = new Order;
             $model = $model->where('pay_status', '=', 20);
         }
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         if ($startDate && $endDate) {
             $model = $model->where('create_time', 'between', [strtotime($startDate), strtotime($endDate) + 86399]);
         } else if ($startDate) {

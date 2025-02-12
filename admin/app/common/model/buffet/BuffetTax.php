@@ -93,7 +93,6 @@ class BuffetTax extends BaseModel
                 'buffet_id' => $buffet['id'],
                 'buffet_tax_type' => 1, //自助餐税率类型，1-堂食税类
                 'tax_category_id' => $taxCategory['id'],
-                'app_id' => $buffet['app_id'],
             ];
         }
         $this->saveAll($buffetTax);

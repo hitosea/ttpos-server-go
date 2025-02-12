@@ -10,6 +10,20 @@ import (
 type IProductRepo interface {
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
+	WithMultiLanguageName() DBOption                                                                                // 预加载多语言名称
+	WithProductUnit() DBOption                                                                                      // 预加载产品单位
+	WithProductUnitMultiLanguageName() DBOption                                                                     // 预加载产品单位多语言名称
+	WithProductBoms() DBOption                                                                                      // 预加载产品Boms
+	WithProductBomsProductFlavor() DBOption                                                                         // 预加载产品Boms产品口味
+	WithProductBomsProductFlavorMultiLanguageName() DBOption                                                        // 预加载产品Boms产品口味多语言名称
+	WithProductBomsProductSauce() DBOption                                                                          // 预加载产品Boms产品酱料
+	WithProductBomsProductSauceMultiLanguageName() DBOption                                                         // 预加载产品Boms产品酱料多语言名称
+	WithProductPackageAttributeGroup() DBOption                                                                     // 预加载产品包装属性组
+	WithProductPackageAttributeGroupProductAttributeGroup() DBOption                                                // 预加载产品包装属性组产品属性组
+	WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName() DBOption                               // 预加载产品包装属性组产品属性组多语言名称
+	WithProductPackageAttributeGroupProductPackageAttributes() DBOption                                             // 预加载产品包装属性组产品包装属性
+	WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption                                    // 预加载产品包装属性组产品包装属性属性
+	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption                   // 预加载产品包装属性组产品包装属性属性多语言名称
 }
 
 // productRepo 商品仓库
@@ -66,4 +80,102 @@ func (r *productRepo) GetProductCategoryList(opts ...DBOption) ([]model.ProductC
 	}
 
 	return categories, nil
+}
+
+// WithMultiLanguageName 预加载多语言名称
+func (r *productRepo) WithMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName")
+	}
+}
+
+// WithProductUnit 预加载产品单位
+func (r *productRepo) WithProductUnit() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductUnit")
+	}
+}
+
+// WithProductUnitMultiLanguageName 预加载产品单位多语言名称
+func (r *productRepo) WithProductUnitMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductUnit.MultiLanguageName")
+	}
+}
+
+// WithProductBoms 预加载产品Boms
+func (r *productRepo) WithProductBoms() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms")
+	}
+}
+
+// WithProductBomsProductFlavor 预加载产品Boms产品口味
+func (r *productRepo) WithProductBomsProductFlavor() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductFlavor")
+	}
+}
+
+// WithProductBomsProductFlavorMultiLanguageName 预加载产品Boms产品口味多语言名称
+func (r *productRepo) WithProductBomsProductFlavorMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductFlavor.MultiLanguageName")
+	}
+}
+
+// WithProductBomsProductSauce 预加载产品Boms产品酱料
+func (r *productRepo) WithProductBomsProductSauce() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductSauce")
+	}
+}
+
+// WithProductBomsProductSauceMultiLanguageName 预加载产品Boms产品酱料多语言名称
+func (r *productRepo) WithProductBomsProductSauceMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductSauce.MultiLanguageName")
+	}
+}
+
+// WithProductPackageAttributeGroup 预加载产品包装属性组
+func (r *productRepo) WithProductPackageAttributeGroup() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup")
+	}
+}
+
+// WithProductPackageAttributeGroupProductAttributeGroup 预加载产品包装属性组产品属性组
+func (r *productRepo) WithProductPackageAttributeGroupProductAttributeGroup() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup.ProductAttributeGroup")
+	}
+}
+
+// WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName 预加载产品包装属性组产品属性组多语言名称
+func (r *productRepo) WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup.ProductAttributeGroup.MultiLanguageName")
+	}
+}
+
+// WithProductPackageAttributeGroupProductPackageAttributes 预加载产品包装属性组产品包装属性
+func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup.ProductPackageAttributes")
+	}
+}
+
+// WithProductPackageAttributeGroupProductPackageAttributesAttribute 预加载产品包装属性组产品包装属性属性
+func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup.ProductPackageAttributes.Attribute")
+	}
+}
+
+// WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName 预加载产品包装属性组产品包装属性属性多语言名称
+func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributeGroup.ProductPackageAttributes.Attribute.MultiLanguageName")
+	}
 }

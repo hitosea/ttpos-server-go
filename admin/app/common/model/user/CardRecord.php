@@ -127,7 +127,7 @@ class CardRecord extends BaseModel
     public static function checkExistByRecordId($card_id)
     {
         $model = new static;
-        return !!$model->where('card_id', '=', (int)$card_id)->where('is_delete', '=', 0)->count();
+        return !!$model->where('card_id', '=', (int)$card_id)->count();
     }
 
     /**
@@ -135,7 +135,7 @@ class CardRecord extends BaseModel
      */
     public static function checkExistByUserId($user_id, $order_id = 0)
     {
-        $model = (new static)->where('is_delete', '=', 0)->where('pay_status', '=', 20)->where('user_id', '=', $user_id);
+        $model = (new static)->where('pay_status', '=', 20)->where('user_id', '=', $user_id);
         if ($order_id) {
             $model = $model->where('order_id', '=', $order_id);
         }

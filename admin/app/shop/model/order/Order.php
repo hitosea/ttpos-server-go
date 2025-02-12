@@ -44,7 +44,7 @@ class Order extends OrderModel
         // 获取数据列表
         return $model->field(self::$mainFields)->with([
             'user' => function ($query) {
-                $query->field(['user_id', 'nickName']);
+                $query->field(['user_id', 'nickname as nickName']);
             },
             'payType',
             'refundType',
@@ -57,7 +57,7 @@ class Order extends OrderModel
                 $query->field(self::$subFields)->with([
                     'payType',
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName']);
+                        $query->field(['user_id', 'nickname as nickName']);
                     },
                 ])->order('order_id', 'asc');
             }
@@ -194,10 +194,6 @@ class Order extends OrderModel
         if (isset($data['order_type'])) {
             $model = $model->where('order_type', '=', $data['order_type']);
         }
-        // 店铺ID
-        if (isset($data['shop_supplier_id']) && $data['shop_supplier_id']) {
-            $model = $model->where('shop_supplier_id', '=', $data['shop_supplier_id']);
-        }
         // 搜索时间段
         if (isset($data['date']) && is_array($data['date']) && isset($data['date'][0]) && isset($data['date'][1])) {
             $model = $model->where('create_time', 'between', [strtotime($data['date'][0]), strtotime($data['date'][1]) + 86399]);
@@ -326,9 +322,6 @@ class Order extends OrderModel
         $filter['pay_status'] = OrderPayStatusEnum::SUCCESS;
         $filter['delivery_status'] = 10;
         $filter['order_status'] = 10;
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         return $model->where($filter)->count();
     }
 
@@ -345,12 +338,8 @@ class Order extends OrderModel
         } else if ($endDate) {
             $model = $model->where('pay_time', '<', strtotime($endDate) + 86400);
         }
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         return $model->where('pay_status', '=', 20)
             ->where('order_status', '<>', 20)
-            ->where('is_delete', '=', 0)
             ->where('is_merge', '=', 0)
             ->value('sum(pay_price - refund_money)');
     }
@@ -370,7 +359,6 @@ class Order extends OrderModel
         }
         return $model->where('pay_status', '=', 20)
             ->where('order_status', '<>', 20)
-            ->where('is_delete', '=', 0)
             ->avg('pay_price');
     }
 
@@ -381,14 +369,10 @@ class Order extends OrderModel
     {
         $model = $this;
         $startTime = strtotime($day);
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         $userIds = $model->distinct(true)
             ->where('pay_time', '>=', $startTime)
             ->where('pay_time', '<', $startTime + 86400)
             ->where('pay_status', '=', 20)
-            ->where('is_delete', '=', 0)
             ->column('user_id');
         return count($userIds);
     }
@@ -399,9 +383,7 @@ class Order extends OrderModel
     public function getTotalMoney($type, $is_settled = -1)
     {
         $model = $this;
-        $model = $model->where('pay_status', '=', 20)
-            ->where('order_status', '<>', 20)
-            ->where('is_delete', '=', 0);
+        $model = $model->where('pay_status', '=', 20)->where('order_status', '<>', 20);
         if ($is_settled == 0) {
             $model = $model->where('is_settled', '=', 0);
         }

@@ -58,17 +58,17 @@ class Printing extends Controller
     {
         $model = new PrintingModel;
         if ($this->request->isGet()) {
-            // 获取打印机列表
-            $printerList = PrinterModel::getNoteAll($this->store['user']['shop_supplier_id']);
-            // 获取标签打印机列表
-            $printerTagList = PrinterModel::getTagAll($this->store['user']['shop_supplier_id']);
-            // 店内商品分类
-            $storeList = (new CategoryModel)->getAllCategory(1, $this->store['user']['shop_supplier_id'], 0, 0, true);
-            // 外卖商品分类
-            $takeList = (new CategoryModel)->getAllCategory(0, $this->store['user']['shop_supplier_id'], true);
-            // 打印标签
-            $labelList = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
-            return $this->renderSuccess('', compact('printerList', 'printerTagList', 'storeList', 'takeList', 'labelList'));
+            // todo 兼容 获取打印机列表
+            // $printerList = PrinterModel::getNoteAll($this->store['user']['shop_supplier_id']);
+            // todo 兼容 获取标签打印机列表
+            // $printerTagList = PrinterModel::getTagAll($this->store['user']['shop_supplier_id']);
+            // todo 兼容 店内商品分类
+            // $storeList = (new CategoryModel)->getAllCategory(1, $this->store['user']['shop_supplier_id'], 0, 0, true);
+            // todo 兼容 外卖商品分类
+            // $takeList = (new CategoryModel)->getAllCategory(0, $this->store['user']['shop_supplier_id'], true);
+            // todo 兼容 打印标签
+            // $labelList = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
+            return $this->renderSuccess('');
         }
         //
         $param = $this->postData();

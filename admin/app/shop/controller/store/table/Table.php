@@ -81,6 +81,9 @@ class Table extends Controller
     {
         /** @var TableModel $model */
         $model = TableModel::detail($table_id);
+        if (!$model) {
+            return $this->renderError('桌位不存在');
+        }
         //编辑店员的数据
         if ($model->edit($this->postData())) {
             return $this->renderSuccess('更新成功');
@@ -99,6 +102,9 @@ class Table extends Controller
     {
         /** @var TableModel $model */
         $model = TableModel::detail($table_id);
+        if (!$model) {
+            return $this->renderError('桌位不存在');
+        }
         if ($model->setDelete()) {
             return $this->renderSuccess('', '删除成功');
         }
@@ -203,6 +209,9 @@ class Table extends Controller
     {
         /** @var TableModel $model */
         $model = TableModel::detail($table_id);
+        if (!$model) {
+            return $this->renderError('桌位不存在');
+        }
         if ($model->setUnbind()) {
             return $this->renderSuccess('', '解绑成功');
         }
@@ -224,6 +233,9 @@ class Table extends Controller
         $switch_status = $data['switch_status'] ?? 0;
         /** @var TableModel $model */
         $model = TableModel::detail($table_id);
+        if (!$model) {
+            return $this->renderError('桌位不存在');
+        }
         if ($model->setSwitchStatus($switch_status)) {
             return $this->renderSuccess('', '操作成功');
         }
@@ -309,7 +321,7 @@ class Table extends Controller
         $model = new TableModel;
         $licenses = request()->licenses;
         $tl = ($licenses['z_l'] ?? 0);
-        $thatnum = $model->where('shop_supplier_id', '=',$shop_supplier_id)->count();
+        $thatnum = $model->count();
         if ($tl != -1 && ($thatnum + count($list)) > $tl) {
             return $this->renderError(__('桌台数量已达上限，最大可导入数量：') . $tl - $thatnum);
         }

@@ -191,8 +191,7 @@ class Supplier extends BaseModel
     public function onBatchIncSupplierMoney($data)
     {
         foreach ($data as $supplierId => $supplierMoney) {
-            $this->where(['shop_supplier_id' => $supplierId])
-                ->inc('total_money', $supplierMoney)
+            $this->inc('total_money', $supplierMoney)
                 ->inc('money', $supplierMoney)
                 ->update();
         }
@@ -333,7 +332,7 @@ class Supplier extends BaseModel
     // 平板端获取基础信息
     public static function getTabletBaseInfo()
     {
-        $detail = (new self)->withoutGlobalScope()->where('is_delete', '=', 0)->find();
+        $detail = (new self)->withoutGlobalScope()->find();
         //
         $shopSupplierId = $detail['shop_supplier_id'] ?? 0;
         $appId = $detail['app_id'] ?? 0;
@@ -398,7 +397,7 @@ class Supplier extends BaseModel
     public static function getScanBaseInfo()
     {
         $detail = [];
-        $shop_detail = (new self)->withoutGlobalScope()->where('is_delete', '=', 0)->find();
+        $shop_detail = (new self)->withoutGlobalScope()->find();
         //
         $shopSupplierId = $shop_detail['shop_supplier_id'] ?? 0;
         $appId = $shop_detail['app_id'] ?? 0;
@@ -456,7 +455,7 @@ class Supplier extends BaseModel
     public static function getMenuBaseInfo()
     {
         $detail = [];
-        $shop_detail = (new self)->withoutGlobalScope()->where('is_delete', '=', 0)->find();
+        $shop_detail = (new self)->withoutGlobalScope()->find();
         //
         $shopSupplierId = $shop_detail['shop_supplier_id'] ?? 0;
         $appId = $shop_detail['app_id'] ?? 0;

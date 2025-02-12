@@ -69,7 +69,7 @@ class Attribute extends AttributeModel
         }
         $parent_id = $data['parent_id'] ?? 0;
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist        = $this->where('shop_supplier_id', $shop_supplier_id)->where('parent_id', $parent_id > 0 ? '>' : '=', 0)->where('attribute_name', $attribute_name)->count();
+        $isExist        = $this->where('parent_id', $parent_id > 0 ? '>' : '=', 0)->where('attribute_name', $attribute_name)->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
@@ -90,7 +90,7 @@ class Attribute extends AttributeModel
         }
         $parent_id = $this['parent_id'] ?? 0;
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist        = $this->where('shop_supplier_id', $this['shop_supplier_id'])->where('parent_id', $parent_id)->where('attribute_name', $attribute_name)->where('attribute_id', '<>', $this['attribute_id'])->count();
+        $isExist        = $this->where('parent_id', $parent_id)->where('attribute_name', $attribute_name)->where('attribute_id', '<>', $this['attribute_id'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
@@ -159,8 +159,6 @@ class Attribute extends AttributeModel
                         $group_attribute_insert_data = [
                             'product_id'       => $product_id,
                             'attribute_id'     => $parent_attribute_id,
-                            'shop_supplier_id' => $this['shop_supplier_id'],
-                            'app_id'           => $this['app_id'],
                             'create_time'      => time(),
                             'update_time'      => time(),
                         ];

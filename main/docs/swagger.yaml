@@ -220,26 +220,39 @@ definitions:
       message:
         type: string
     type: object
+  req.DeskBuffetCustomerType:
+    properties:
+      meal_num:
+        description: 就餐人数
+        type: integer
+      uuid:
+        description: 自助餐顾客类型uuid
+        type: integer
+    type: object
   req.DeskOrderCreateReq:
     properties:
+      buffet_customer_types:
+        description: '自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1'
+        items:
+          $ref: '#/definitions/req.DeskBuffetCustomerType'
+        type: array
+      buffet_uuids:
+        description: '自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2'
+        items:
+          type: integer
+        type: array
       desk_uuid:
-        description: 桌台uuid
+        description: 桌台uuid, 必填
         type: integer
       is_buffet:
         description: '是否是自助餐: false-否, true-是'
         type: boolean
       meal_num:
-        description: '餐数: 非自助餐时必填, 最小1, 最大999'
-        maximum: 999
-        minimum: 1
+        description: '就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0'
         type: integer
       remark:
-        description: '备注: 非必填, 最大50字符'
-        maxLength: 50
+        description: '备注: 最小空字符串,最大50字符'
         type: string
-    required:
-    - desk_uuid
-    - is_buffet
     type: object
   req.LoginReq:
     properties:
@@ -280,7 +293,7 @@ definitions:
     properties:
       buffet_customer_type:
         allOf:
-        - $ref: '#/definitions/resp.BuffetCustomerType'
+        - $ref: '#/definitions/resp.BuffetCustomerTypeList'
         description: 自助餐客户类型
       can_combined:
         description: 是否可组合
@@ -310,12 +323,16 @@ definitions:
       name:
         description: 自助餐客户类型名称
         type: string
-      price:
-        description: 价格
-        type: number
       uuid:
         description: 自助餐客户类型UUID
         type: integer
+    type: object
+  resp.BuffetCustomerTypeList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.BuffetCustomerType'
+        type: array
     type: object
   resp.BuffetListPaginationResp:
     properties:
@@ -571,8 +588,8 @@ definitions:
     type: object
   resp.CashierOrderProduct:
     properties:
-      attribute_name:
-        description: 属性名称
+      attributes:
+        description: 规格属性加料
         type: string
       custom_price:
         description: 自定义价格
@@ -582,6 +599,9 @@ definitions:
         type: string
       gift_reason:
         description: 赠品原因
+        type: string
+      image_url:
+        description: 图片地址
         type: string
       is_gift:
         description: 是否赠品, fasle-否 true-是
@@ -780,6 +800,21 @@ definitions:
         description: 餐桌类型ID
         type: integer
     type: object
+  resp.MemberLevel:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      name:
+        description: 等级名称
+        type: string
+      priority:
+        description: 等级优先级
+        type: integer
+      uuid:
+        description: 等级Uuid
+        type: integer
+    type: object
   resp.OnlineCashier:
     properties:
       cashier_uuid:
@@ -820,6 +855,18 @@ definitions:
       redirect_name:
         type: string
       uuid:
+        type: integer
+    type: object
+  resp.SearchMember:
+    properties:
+      nickname:
+        description: 会员昵称
+        type: string
+      phone:
+        description: 手机
+        type: string
+      uuid:
+        description: 会员Uuid
         type: integer
     type: object
   setting.AddClockItem:
@@ -1092,17 +1139,34 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /assistant/base:
+    get:
+      consumes:
+      - application/json
+      description: 点餐助手端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.AssistantBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 点餐助手端信息
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/bind_cashier:
     post:
       consumes:
       - application/json
       description: 点餐助手绑定收银机
       parameters:
-      - description: 登录时返回的token
-        in: header
-        name: X-TOKEN
-        required: true
-        type: string
       - description: 登录参数
         in: body
         name: data
@@ -1236,6 +1300,23 @@ paths:
       summary: 点餐助手登录
       tags:
       - 点餐助手端.认证鉴权
+  /assistant/logout:
+    post:
+      consumes:
+      - application/json
+      description: 点餐助手退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 点餐助手退出登录
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/online_cashiers:
     get:
       consumes:
@@ -1281,7 +1362,7 @@ paths:
       - JwtToken: []
       summary: 收银端信息
       tags:
-      - 收银端
+      - 收银端.认证
   /cashier/bill/cancel/{id}:
     delete:
       consumes:
@@ -1875,51 +1956,77 @@ paths:
             $ref: '#/definitions/dto.Response'
       summary: 收银端登录
       tags:
-      - 收银端
-  /cashier/member/info/{memberId}:
-    get:
+      - 收银端.认证
+  /cashier/logout:
+    post:
       consumes:
       - application/json
-      description: 获取收银员会员信息
-      parameters:
-      - description: 会员ID
-        in: path
-        name: memberId
-        required: true
-        type: string
+      description: 收银端退出登录
       produces:
       - application/json
       responses:
         "200":
-          description: 会员详情
-        "404":
-          description: 未找到
-      summary: 获取收银员会员信息
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 收银端退出登录
       tags:
-      - 收银端
+      - 收银端.认证
+  /cashier/member/levels:
+    get:
+      consumes:
+      - application/json
+      description: 会员等级列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                list:
+                  items:
+                    $ref: '#/definitions/resp.MemberLevel'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 会员等级列表
+      tags:
+      - 收银端.会员
   /cashier/member/search:
     get:
       consumes:
       - application/json
-      description: 搜索收银员会员
+      description: 模糊搜索会员
       parameters:
-      - description: 搜索查询
+      - description: 关键字搜索：uuid\phone，前端处理前后空格
         in: query
-        name: query
-        required: true
+        name: keyword
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 会员列表
+          description: OK
           schema:
-            type: array
-        "404":
-          description: 未找到
-      summary: 搜索收银员会员
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                list:
+                  items:
+                    $ref: '#/definitions/resp.SearchMember'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 模糊搜索会员
       tags:
-      - 收银端
+      - 收银端.会员
   /cashier/order/hide_order/{orderId}:
     post:
       consumes:
@@ -1981,6 +2088,14 @@ paths:
         in: query
         name: dateType
         type: integer
+      - description: 启用开台时间 false-不启用，true-启用
+        in: query
+        name: enableCreateTime
+        type: boolean
+      - description: 启用支付时间 false-不启用，true-启用
+        in: query
+        name: enablePayTime
+        type: boolean
       - description: 订单编号
         in: query
         name: orderNo
@@ -1996,18 +2111,14 @@ paths:
         minimum: 1
         name: pageSize
         type: integer
-      - description: 查询时间类型 1-开台时间、2-支付时间
+      - description: 查询结束时间戳
         in: query
-        items:
-          type: integer
-        name: queryTimeType
-        type: array
-      - description: 日期范围 [开始时间戳, 结束时间戳]
+        name: queryEndTime
+        type: integer
+      - description: 查询开始时间戳
         in: query
-        items:
-          type: integer
-        name: queryTimes
-        type: array
+        name: queryStartTime
+        type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
@@ -2196,23 +2307,6 @@ paths:
       summary: 拆包收银订单
       tags:
       - 收银端
-  /cashier/payment/type_list:
-    get:
-      consumes:
-      - application/json
-      description: 获取收银支付类型列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 支付类型列表
-          schema:
-            type: array
-        "404":
-          description: 未找到
-      summary: 获取收银支付类型列表
-      tags:
-      - 收银端
   /cashier/product/category/list:
     get:
       consumes:
@@ -2230,27 +2324,6 @@ paths:
       summary: 获取收银产品类别列表
       tags:
       - 收银端.产品
-  /cashier/product/info/{productId}:
-    get:
-      consumes:
-      - application/json
-      description: 获取收银产品信息
-      parameters:
-      - description: 产品ID
-        in: path
-        name: productId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 产品详情
-        "404":
-          description: 未找到
-      summary: 获取收银产品信息
-      tags:
-      - 收银端
   /cashier/product/list:
     get:
       consumes:
@@ -2279,201 +2352,6 @@ paths:
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
-  /cashier/production/create:
-    post:
-      consumes:
-      - application/json
-      description: 创建收银生产
-      parameters:
-      - description: 生产详情
-        in: body
-        name: production
-        required: true
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 已创建
-        "400":
-          description: 错误请求
-      summary: 创建收银生产
-      tags:
-      - 收银端
-  /cashier/production/return/{productionId}:
-    post:
-      consumes:
-      - application/json
-      description: 返回收银生产
-      parameters:
-      - description: 生产ID
-        in: path
-        name: productionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      summary: 返回收银生产
-      tags:
-      - 收银端
-  /cashier/production/return/return_foodReason:
-    get:
-      consumes:
-      - application/json
-      description: 获取退货原因
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 退货原因列表
-          schema:
-            type: array
-        "404":
-          description: 未找到
-      summary: 获取退货原因
-      tags:
-      - 收银端
-  /cashier/reason/gift_food:
-    get:
-      consumes:
-      - application/json
-      description: 获取赠送食物的原因
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 赠送原因列表
-          schema:
-            type: array
-        "404":
-          description: 未找到
-      summary: 获取赠送食物的原因
-      tags:
-      - 收银端
-  /cashier/shopping_cart/info:
-    get:
-      consumes:
-      - application/json
-      description: 获取收银购物车信息
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 购物车详情
-        "404":
-          description: 未找到
-      summary: 获取收银购物车信息
-      tags:
-      - 收银端
-  /cashier/shopping_cart/product/{productId}:
-    delete:
-      consumes:
-      - application/json
-      description: 从购物车中删除产品
-      parameters:
-      - description: 产品ID
-        in: path
-        name: productId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: 无内容
-        "400":
-          description: 错误请求
-      summary: 从购物车中删除产品
-      tags:
-      - 收银端
-  /cashier/shopping_cart/product/create:
-    post:
-      consumes:
-      - application/json
-      description: 在购物车中创建产品
-      parameters:
-      - description: 产品详情
-        in: body
-        name: product
-        required: true
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 已创建
-        "400":
-          description: 错误请求
-      summary: 在购物车中创建产品
-      tags:
-      - 收银端
-  /cashier/shopping_cart/product/number/{productId}:
-    post:
-      consumes:
-      - application/json
-      description: 更新购物车中产品的数量
-      parameters:
-      - description: 产品ID
-        in: path
-        name: productId
-        required: true
-        type: string
-      - description: 新数量
-        in: body
-        name: number
-        required: true
-        schema:
-          type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      summary: 更新购物车中产品的数量
-      tags:
-      - 收银端
-  /cashier/shopping_cart/sub_bill:
-    get:
-      consumes:
-      - application/json
-      description: 获取购物车的子账单
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 子账单详情
-        "404":
-          description: 未找到
-      summary: 获取购物车的子账单
-      tags:
-      - 收银端
-  /cashier/verify_advanced_password:
-    post:
-      consumes:
-      - application/json
-      description: 验证收银员的高级密码
-      parameters:
-      - description: 高级密码
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      summary: 验证收银员的高级密码
-      tags:
-      - 收银端
   /kitchen/call/handle:
     post:
       consumes:

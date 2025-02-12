@@ -19,12 +19,12 @@ class Product extends Controller
     {
         // 获取全部商品列表
         $model = new ProductModel;
-        $list = $model->getList(array_merge(['status' => -1, 'product_type' => 0, 'shop_supplier_id' => $this->store['user']['shop_supplier_id']], $this->postData()));
+        $list = $model->getList(array_merge(['status' => -1, 'product_type' => 0], $this->postData()));
         // 商品分类
         $category = CategoryModel::getCacheTree(0, 0, $this->store);
         // 数量
         $product_count = [
-            'lower' => $model->getCount('lower', $this->store['user']['shop_supplier_id'], 0),
+            'lower' => $model->getCount('lower', 0, 0),
         ];
         return $this->renderSuccess('', compact('list', 'category', 'product_count'));
     }

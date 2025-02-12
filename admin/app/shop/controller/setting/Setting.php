@@ -31,7 +31,6 @@ class Setting extends SettingModel
             'key' => $key,
             'describe' => SettingEnum::data()[$key]['describe'],
             'values' => $values,
-            'app_id' => self::$app_id,
         ]);
 
         return $result !== false;

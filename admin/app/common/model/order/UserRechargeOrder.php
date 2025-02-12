@@ -184,7 +184,7 @@ class UserRechargeOrder extends BaseModel
             ->with([
                 'payType',
                 'user' => function ($query) {
-                    $query->field(['user_id', 'nickName', 'balance', 'gift_balance', 'points']);
+                    $query->field(['user_id', 'nickname as nickName', 'balance', 'gift_balance', 'points']);
                 },
                 'cashier' => function ($query) {
                     $query->field(['shop_user_id', 'IF(real_name != "", real_name, user_name) as real_name']);
@@ -264,8 +264,6 @@ class UserRechargeOrder extends BaseModel
                         'gift_point' => $gift_point,
                         'device_id' => $device_id,
                         'cashier_id' => $cashier_id,
-                        'app_id' => $app_id,
-                        'shop_supplier_id' => $shop_supplier_id,
                     ];
                     $order->save($updateData);
                     $reloadOrder = $order->reloadRechargePrice($order->id);
@@ -303,8 +301,6 @@ class UserRechargeOrder extends BaseModel
                 'gift_point' => $gift_point,
                 'device_id' => $device_id,
                 'cashier_id' => $cashier_id,
-                'app_id' => $app_id,
-                'shop_supplier_id' => $shop_supplier_id,
                 'order_status' => 0,
             ];
             $order = new self;
@@ -422,8 +418,6 @@ class UserRechargeOrder extends BaseModel
                     'price' => $price,
                     'fee' => $fee,
                     'fee_money' => $pay_type_fee_money,
-                    'app_id' => $order['app_id'],
-                    'shop_supplier_id' => $order['shop_supplier_id'],
                     'pay_status' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 0 : 1, //  手动添加在线支付标为0
                     'disabled_cancel' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 1 : 0, //  在线支付不可撤销
                 ];
@@ -917,8 +911,6 @@ class UserRechargeOrder extends BaseModel
                     'refund_type'      => $refundType,
                     'refund_method'    => $refundMethod,
                     'refund_money'     => $totalRefundMoney,
-                    'shop_supplier_id' => $order['shop_supplier_id'],
-                    'app_id'           => $order['app_id'],
                     'cashier_id'       => $cashierId,
                 ];
 
@@ -947,8 +939,6 @@ class UserRechargeOrder extends BaseModel
                     'refund_type'      => $refundType,
                     'refund_method'    => $refundMethod,
                     'refund_money'     => $totalRefundMoney,
-                    'shop_supplier_id' => $order['shop_supplier_id'],
-                    'app_id'           => $order['app_id'],
                     'cashier_id'       => $cashierId,
                 ];
 

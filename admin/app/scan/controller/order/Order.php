@@ -86,7 +86,6 @@ class Order extends Controller
             'user_name' => '',
             'account' => '',
             'mobile' => NULL,
-            'shop_supplier_id' => $this->table['shop_supplier_id'],
             'name' => '',
         ];
         $orderService = new CashierOrderSettledService($user, [], $params);

@@ -42,7 +42,6 @@ class UploadFileToGoogle extends Command
             ->where(function ($query) {
                 $query->whereNull('url_param')->whereOr('url_param', '');
             })
-            ->where('is_delete', 0)
             ->select();
 
         // 批量上传文件到谷歌云
@@ -78,7 +77,7 @@ class UploadFileToGoogle extends Command
         }
 
         // 处理商户
-        $apps = Db::name('app')->where('is_delete', 0)->select();
+        $apps = Db::name('app')->select();
         foreach ($apps as $app) {
             request()->appId = $appId = $app['app_id'];
             dump("---------------------------------------------------");
@@ -89,7 +88,6 @@ class UploadFileToGoogle extends Command
                 ->where(function ($query) {
                     $query->whereNull('url_param')->whereOr('url_param', '');
                 })
-                ->where('is_delete', 0)
                 ->select();
             // 批量上传文件到谷歌云
             foreach ($uploadFiles as $file) {

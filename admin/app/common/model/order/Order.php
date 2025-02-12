@@ -223,7 +223,7 @@ class Order extends BaseModelOrder
         // 以下查询field指定返回了字段，可能会漏某些地方的字段导致问题 TODO
         return self::with([
             'user' => function ($query) {
-                $query->field(['user_id', 'nickName', 'balance', 'gift_balance', 'grade_id', 'card_id']);
+                $query->field(['user_id', 'nickname as nickName', 'balance', 'gift_balance', 'grade_id', 'card_id']);
             },
             'address',
             'buffet' => function ($query) {
@@ -249,7 +249,7 @@ class Order extends BaseModelOrder
             'mergeList' => function ($query) use ($orderField, $orderProductField, $buffetCustomerTypeField) {
                 $query->with([
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName', 'balance']);
+                        $query->field(['user_id', 'nickname as nickName', 'balance']);
                     },
                     'address',
                     'buffet' => function ($query) {
@@ -276,7 +276,7 @@ class Order extends BaseModelOrder
             'subOrder' => function ($query) use ($orderField, $orderProductField, $buffetCustomerTypeField) {
                 $query->with([
                     'user' => function ($query) {
-                        $query->field(['user_id', 'nickName', 'balance']);
+                        $query->field(['user_id', 'nickname as nickName', 'balance']);
                     },
                     'address',
                     'buffet' => function ($query) {
@@ -423,10 +423,7 @@ class Order extends BaseModelOrder
      */
     private function getListByInArray($field, $data, $with = [])
     {
-        return $this->with($with)
-            ->where($field, 'in', $data)
-            ->where('is_delete', '=', 0)
-            ->select();
+        return $this->with($with)->where($field, 'in', $data)->select();
     }
 
     /**
@@ -496,17 +493,11 @@ class Order extends BaseModelOrder
             $model = $model->where('pay_time', '<', strtotime($endDate) + 86400);
         }
 
-        if ($shop_supplier_id > 0) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
-
         if ($order_type >= 0) {
             $model = $model->where('order_type', '=', $order_type);
         }
 
-        $model = $model->where('is_delete', '=', 0)
-            ->where('pay_status', '=', 20)
-            ->where('order_status', '<>', 20);
+        $model = $model->where('pay_status', '=', 20)->where('order_status', '<>', 20);
 
         if ($type != 'order_refund_money' && $type != 'order_refund_total') {
             $model = $model->where('is_merge', '=', 0);
@@ -542,10 +533,7 @@ class Order extends BaseModelOrder
     public function getRecordList($data, $type = 0)
     {
         $model = $this;
-        //门店
-        if (isset($data['shop_supplier_id']) && $data['shop_supplier_id']) {
-            $model = $model->where('shop_supplier_id', '=', $data['shop_supplier_id']);
-        }
+
         //订单状态
         if (isset($data['order_status']) && $data['order_status']) {
             switch ($data['order_status']) {
@@ -627,13 +615,10 @@ class Order extends BaseModelOrder
                     break;
             }
         }
-        if ($shop_supplier_id) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
+
         $model = $model->where('pay_status', '=', 20)
             ->where('order_status', '<>', 20)
-            ->where('order_type', '=', $order_type)
-            ->where('is_delete', '=', 0);
+            ->where('order_type', '=', $order_type);
         $detail['express_price'] = helper::number2($model->sum('express_price') ?: 0); //配送费
         $detail['bag_price'] = helper::number2($model->sum('bag_price') ?: 0); //包装费
         $detail['product_price'] = helper::number2($model->sum('total_price') ?: 0); //商品总金额
@@ -1732,7 +1717,6 @@ class Order extends BaseModelOrder
          */
         $productDetail = ProductModel::where('product_id', '=', $productId)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->find();
         if (!$productDetail) {
             $this->errorData = ['product_id' => $productId];
@@ -1849,7 +1833,6 @@ class Order extends BaseModelOrder
                 //
                 $inArr = [
                     'order_id' => $orderId,
-                    'app_id' => self::$app_id,
                     'product_id' => $productDetail['product_id'],
                     'product_name' => $productDetail['product_name'],
                     'image_id' => isset($productDetail['logo']['image_id']) ? $productDetail['logo']['image_id'] : 0,
@@ -1936,7 +1919,6 @@ class Order extends BaseModelOrder
         // 判断商品
         $productDetail = ProductModel::where('product_id', '=', $productId)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->find();
         if (!$productDetail) {
             $this->error = __('商品') . ' ' . ($data['product_name_text'] ?? '') . ' ' . __('已下架，请选择其他商品');
@@ -1975,7 +1957,6 @@ class Order extends BaseModelOrder
         //
         $inArr = [
             'order_id' => $order_id,
-            'app_id' => self::$app_id,
             'product_id' => $productDetail['product_id'],
             'product_name' => $productDetail['product_name'],
             'image_id' => isset($productDetail['logo']['image_id']) ? $productDetail['logo']['image_id'] : 0,
@@ -2000,9 +1981,9 @@ class Order extends BaseModelOrder
         ];
         $orderProductModel = (new OrderProductModel);
         $orderProductModel->save($inArr);
-        // 
+        //
         OrderProductModel::where('order_product_id', $orderProductModel->order_product_id)->update(['main_order_product_id' => $orderProductModel->order_product_id ]);
-        // 
+        //
         if ($price != $front_price) {
             $data['tablet_product_name_text'] = ProductSkuModel::getNameById($data['product_sku_id']);
             return $data;
@@ -2019,7 +2000,6 @@ class Order extends BaseModelOrder
     {
         return (new ProductModel)->where('product_id', '=', $product_id)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->count();
     }
 
@@ -2070,7 +2050,6 @@ class Order extends BaseModelOrder
         ])
             ->where('table_id', '=', $table_id)
             ->where('order_status', '=', OrderStatusEnum::NORMAL)
-            ->where('is_delete', '=', 0)
             ->order('order_id desc')
             ->find();
     }
@@ -2128,7 +2107,6 @@ class Order extends BaseModelOrder
         ])
             ->where('table_id', '=', $table_id)
             ->where('order_status', '=', OrderStatusEnum::NORMAL)
-            ->where('is_delete', '=', 0)
             ->order('order_id desc')
             ->find();
     }
@@ -2186,7 +2164,6 @@ class Order extends BaseModelOrder
         ])
             ->where('table_id', '=', $table_id)
             ->where('order_status', '=', OrderStatusEnum::NORMAL)
-            ->where('is_delete', '=', 0)
             ->order('order_id desc')
             ->find();
     }
@@ -2221,8 +2198,6 @@ class Order extends BaseModelOrder
                         $inArr = [
                             'order_id' => $order_id,
                             'buffet_customer_id' => $buffet_customer['id'],
-                            'app_id' => self::$app_id,
-                            'shop_supplier_id' => $shop_supplier_id,
                             'buffet_id' => $buffet_id,
                             'customer_type_id' => $buffet_customer['customer_type_id'],
                             'buffet_name' => $buffet['name'],
@@ -2241,7 +2216,6 @@ class Order extends BaseModelOrder
                 if ($customer_type_num > 0) {
                     $inArr = [
                         'order_id' => $order_id,
-                        'app_id' => self::$app_id,
                         'buffet_id' => $buffet_id,
                         'name' => $buffet['name'],
                         'price' => $buffet['price'],
@@ -2365,7 +2339,6 @@ class Order extends BaseModelOrder
                     $inArr = [
                         'order_id' => $orderId,
                         'sub_order_id' => $subOrderId,
-                        'app_id' => self::$app_id,
                         'delay_id' => $delay_id,
                         'name' => $delay['name'],
                         'price' => $delay['price'],
@@ -2676,7 +2649,6 @@ class Order extends BaseModelOrder
                     'price' => $price,
                     'num' => $item['num'],
                     'total_price' => helper::bcmul($price, $item['num']),
-                    'app_id' => self::$app_id,
                 ];
                 (new OrderBuffetDiscount)->save($saveArr);
                 $after_total_num = (new OrderBuffetDiscount)->where('order_id', '=', $this->order_id)->where('buffet_id', '=', $buffet_id)->sum('num');
@@ -3125,7 +3097,6 @@ class Order extends BaseModelOrder
     public static function delStayOrder()
     {
         $list = Order::field(['order_id'])
-            ->where('is_delete', 0)
             ->where('order_status', OrderStatusEnum::NORMAL)
             ->where('pay_status', OrderPayStatusEnum::PENDING)
             ->where(function ($q) {
@@ -3146,7 +3117,6 @@ class Order extends BaseModelOrder
     public static function delStayTableOrder()
     {
         $list = Order::field(['order_id', 'table_id'])
-            ->where('is_delete', 0)
             ->where('order_status', OrderStatusEnum::NORMAL)
             ->where('pay_status', OrderPayStatusEnum::PENDING)
             ->where('table_id', '<>', 0)
@@ -3950,8 +3920,6 @@ class Order extends BaseModelOrder
             'meal_num' => $meal_num,
             'settle_device_id' => $settle_device_id,
             'device_id' => $device_id,
-            'app_id' => $app_id,
-            'shop_supplier_id' => $shop_supplier_id,
             'buyer_remark' => '',
             'order_type' => 1,  // 用餐方式 0-外卖 1-店内
             'delivery_type' => 40,  //30-打包 40-堂食
@@ -4229,8 +4197,6 @@ class Order extends BaseModelOrder
                     'price' => $price,
                     'fee' => $fee,
                     'fee_money' => $pay_type_fee_money,
-                    'app_id' => $order['app_id'],
-                    'shop_supplier_id' => $order['shop_supplier_id'],
                     'pay_status' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 0 : 1, //  手动添加在线支付标为0
                     'disabled_cancel' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 1 : 0, //  在线支付不可撤销
                     'pay_hash' => OrderPayType::generateUniqueHash($order['order_id'] . '_0', $value),
@@ -4248,8 +4214,6 @@ class Order extends BaseModelOrder
                         'price' => $price,
                         'fee' => $fee,
                         'fee_money' => $pay_type_fee_money,
-                        'app_id' => $order['app_id'],
-                        'shop_supplier_id' => $order['shop_supplier_id'],
                         'pay_status' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 0 : 1, //  手动添加在线支付标为0
                         'disabled_cancel' => in_array($value, [PayType::SOURCE_LIANLIAN_WECHAT_PAY, PayType::SOURCE_LIANLIAN_ALI_PAY, PayType::SOURCE_LIANLIAN_QR_PROMPT_PAY]) ? 1 : 0, //  在线支付不可撤销
                         'pay_hash' => OrderPayType::generateUniqueHash($order['parent_id'] . '_' . $orderPayType->id, $value),
@@ -4308,8 +4272,6 @@ class Order extends BaseModelOrder
                     'fee_money' => $paymentOrderModel->pay_type_fee_money,
                     'pay_status' => 1,
                     'disabled_cancel' => 1,
-                    'app_id' => $paymentOrderModel->app_id,
-                    'shop_supplier_id' => $paymentOrderModel->shop_supplier_id,
                     'pay_hash' => OrderPayType::generateUniqueHash($order_id, $paymentOrderModel->pay_type_value),
                 ];
                 //
@@ -4336,8 +4298,6 @@ class Order extends BaseModelOrder
                     'fee_money' => $paymentOrderModel->pay_type_fee_money,
                     'pay_status' => 1,
                     'disabled_cancel' => 1,
-                    'app_id' => $paymentOrderModel->app_id,
-                    'shop_supplier_id' => $paymentOrderModel->shop_supplier_id,
                 ];
                 //
                 return $orderPayType->save($inArr);
@@ -4421,8 +4381,6 @@ class Order extends BaseModelOrder
             }
             // 生成主单
             $param = [
-                'app_id' => $cashier['user']['app_id'],
-                'shop_supplier_id' => $cashier['user']['shop_supplier_id'],
                 'settle_device_id' => $cashier['device_id'],
                 'device_id' => $cashier['device_id'],
             ];
@@ -4592,8 +4550,6 @@ class Order extends BaseModelOrder
                     'refund_type' => $refund_type,
                     'refund_method' => $refund_method,
                     'refund_money' => $total_refund_money,
-                    'shop_supplier_id' => $order['shop_supplier_id'],
-                    'app_id' => $order['app_id'],
                     'cashier_id' => $cashier_id,
                 ];
                 $orderRefundLog = (new OrderRefund)->create($saveData);
@@ -4797,8 +4753,6 @@ class Order extends BaseModelOrder
                     'refund_type' => $refund_type,
                     'refund_method' => $refund_method,
                     'refund_money' => $total_refund_money,
-                    'shop_supplier_id' => $order['shop_supplier_id'],
-                    'app_id' => $order['app_id'],
                     'cashier_id' => $cashier_id,
                 ];
                 $orderRefundLog = (new OrderRefund)->create($saveData);
@@ -5307,7 +5261,6 @@ class Order extends BaseModelOrder
                                     'free_tag_id' => $item['id'],
                                     'free_tag' => $item['free_tag'],
                                     'order_id' => $masterOrder->order_id,
-                                    'app_id' => $masterOrder->app_id,
                                 ];
                             }
                             (new OrderFree)->saveAll($saveAllArr);
@@ -5360,7 +5313,6 @@ class Order extends BaseModelOrder
                                     'free_tag_id' => $item['id'],
                                     'free_tag' => $item['free_tag'],
                                     'order_id' => $subOrder->order_id,
-                                    'app_id' => $subOrder->app_id,
                                 ];
                             }
                             (new OrderFree)->saveAll($saveAllArr);
@@ -5398,8 +5350,6 @@ class Order extends BaseModelOrder
             'order_id' => $this->order_id,
             'pay_status' => 1,
             'value' => $value,
-            'shop_supplier_id' => $this->shop_supplier_id,
-            'app_id' => $this->app_id,
             'price' => $this->pay_price,
             'pay_hash' => OrderPayType::generateUniqueHash($this->order_id . '_0', $value),
         ];
@@ -5416,8 +5366,6 @@ class Order extends BaseModelOrder
                 'sub_id' => $orderPayType->id,
                 'pay_status' => 1,
                 'value' => $value,
-                'shop_supplier_id' => $this->shop_supplier_id,
-                'app_id' => $this->app_id,
                 'price' => $this->pay_price,
                 'pay_hash' => OrderPayType::generateUniqueHash($this->order_id . '_' . $orderPayType->id, $value),
             ];
@@ -6070,7 +6018,7 @@ class Order extends BaseModelOrder
         $productList = [];
         if (!empty($scheme_product_ids)) {
             $order_id = 0;
-            $list = (new ProductModel)->getBaseList(['shop_supplier_id' => $order->shop_supplier_id, 'order_id' => $order_id], false, array_keys($scheme_must_page_product_ids));
+            $list = (new ProductModel)->getBaseList(['order_id' => $order_id], false, array_keys($scheme_must_page_product_ids));
             $buffetProductArr = Order::getOrderBuffetProductArr($order_id);
             $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num); // TODO
         }
@@ -6081,7 +6029,7 @@ class Order extends BaseModelOrder
         $param['product_source'] = Order::TABLET_PRODUCT_SOURCE;
         $getParamChangeList = [];
         if ($order->is_buffet) {
-            $list = $model->getBuffetChangeList(array_merge(['shop_supplier_id' => $order->shop_supplier_id], $param), false);
+            $list = $model->getBuffetChangeList($param, false);
             $deleteIds = $model->getDeleteProductIds();
             $getParamChangeList = compact('list', 'deleteIds');
         }
@@ -6311,7 +6259,7 @@ class Order extends BaseModelOrder
             // 商品全信息
             if ($return_base_data) {
                 $order_id = 0;
-                $list = (new ProductModel)->getBaseList(['shop_supplier_id' => $order->shop_supplier_id, 'order_id' => $order_id], false, array_keys($scheme_product_ids));
+                $list = (new ProductModel)->getBaseList(['order_id' => $order_id], false, array_keys($scheme_product_ids));
                 $buffetProductArr = Order::getOrderBuffetProductArr($order_id);
                 $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num);
             }
@@ -6324,7 +6272,7 @@ class Order extends BaseModelOrder
         $param['filter_product_ids'] = array_keys($scheme_product_ids);
         $getParamChangeList = [];
         if ($order->is_buffet) {
-            $list = $model->getBuffetChangeList(array_merge(['shop_supplier_id' => $order->shop_supplier_id], $param), false);
+            $list = $model->getBuffetChangeList($param, false);
             $deleteIds = $model->getDeleteProductIds();
             $getParamChangeList = compact('list', 'deleteIds');
         }
@@ -7548,7 +7496,7 @@ class Order extends BaseModelOrder
             //
             $cache_price = Cache::get('order_pay_price_' . $subOrderId . '_' . $appId);
             if ($cache_price == null) {
-                $subOrderPrice =  (new \app\cashier\model\order\Cart())->getOrderCartDetail(['shop_supplier_id' => $shopSupplierId], $tableId, $subOrderId);
+                $subOrderPrice =  (new \app\cashier\model\order\Cart())->getOrderCartDetail([], $tableId, $subOrderId);
                 $cache_price =  $subOrderPrice['sumInfo']['total_pay_price'] ?? 0;
             }
             //

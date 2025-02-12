@@ -41,7 +41,6 @@ class ImgHandoverTemplate extends BaseTemplate
         $categorys = (new UserShiftLog)->getSalesInfo($data['shift_user_id'], $data['shop_supplier_id'], $startTime, $endTime);
         $businessData = (new CashierOrderModel)->businessData([
             'mode' => 0,
-            'shop_supplier_id' => $data['shop_supplier_id'],
             'cashier_id' => $data['shift_user_id'],
             'time' => [date('Y-m-d H:i:s', $startTime), date('Y-m-d H:i:s', $endTime)]
         ]);
@@ -52,8 +51,8 @@ class ImgHandoverTemplate extends BaseTemplate
             $startTime = DateHelp::changeBuddhistCalendar($startTime);
             $endTime = DateHelp::changeBuddhistCalendar($endTime);
         }
-      
-        // 
+
+        //
         $abnormalData = $data['abnormal'] ?? [];
 
         /* *
@@ -233,7 +232,7 @@ class ImgHandoverTemplate extends BaseTemplate
                 $printer->setFontWeight(1);
                 $printer->lineFeed(1);
                 $printer->setAlignment(ImgFont::ALIGN_LEFT);
-                // 
+                //
                 $printer->printInColumns(
                     [__("充值金额"), 320, ImgFont::ALIGN_LEFT, 1],
                     [$this->getPriceAndUnit($businessData['all']['recharge_amount']), 0, ImgFont::ALIGN_RIGHT, 1],
@@ -250,7 +249,7 @@ class ImgHandoverTemplate extends BaseTemplate
                 $printer->appendSplitline(true);
                 $printer->setTextLineHeight(45);
             }
-            // 
+            //
             $printer->setTextLineHeight(45);
             // 合计
             $printer->printInColumns(
@@ -329,7 +328,7 @@ class ImgHandoverTemplate extends BaseTemplate
         }
         /* *
         * 模版 一
-        */ 
+        */
         else {
             $printer->setFontSize(28);
             $printer->appendText(__("交班单"));
@@ -595,9 +594,9 @@ class ImgHandoverTemplate extends BaseTemplate
                 [$this->getPriceAndUnit($cashLeft), 0, ImgFont::ALIGN_RIGHT, 1],
             );
         }
-        // 
+        //
         $printer->lineFeed(3);
-        // 
+        //
         $openMoneybox = false;
         if (!$isPrePrint) {
             $openMoneybox =  $this->isSunmi ? 2 : true;

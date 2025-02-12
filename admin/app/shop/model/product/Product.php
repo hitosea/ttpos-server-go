@@ -255,7 +255,6 @@ class Product extends ProductModel
         $data = array_map(function ($images) {
             return [
                 'image_id' => isset($images['file_id']) ? $images['file_id'] : $images['image_id'],
-                'app_id' => self::$app_id
             ];
         }, $images);
         return $this->image()->saveAll($data);
@@ -449,7 +448,6 @@ class Product extends ProductModel
                 'product_id' => $productId,
                 'product_tax_type' => $item['product_tax_type'] ?? 0,
                 'tax_category_id' => $item['tax_category_id'] ?? 0,
-                'app_id' => self::$app_id,
             ];
         }
         $model->saveAll($data);
@@ -535,8 +533,6 @@ class Product extends ProductModel
                             'product_sku_id' => $item['product_sku_id'] ?? 0,
                             'material_id' => $material['product_id'],
                             'material_num' => $material['material_num'] ?? 0,
-                            'shop_supplier_id' => $shopSupplierId,
-                            'app_id' => self::$app_id,
                         ];
                         (new ProductSkuMaterial)->save($material);
                     }
@@ -603,8 +599,6 @@ class Product extends ProductModel
                         'product_sku_id' => $productSkuId,
                         'material_id' => $material['product_id'],
                         'material_num' => $material['material_num'] ?? 0,
-                        'shop_supplier_id' => $shopSupplierId,
-                        'app_id' => self::$app_id,
                     ];
                     (new ProductSkuMaterial)->save($material);
                 }
@@ -618,8 +612,6 @@ class Product extends ProductModel
                 'product_sku_name' => $item['spec_name'],
                 'operator_id' => $shopUserId ?? 0,
                 'remark' => $stockRemark ?? '',
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => self::$app_id,
             ];
 
             $oldStockNum = 0;
@@ -659,8 +651,6 @@ class Product extends ProductModel
             'product_sku_name' => $productSku['spec_name'],
             'operator_id' => $shopUserId,
             'remark' => $stockRemark ?? '',
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => self::$app_id,
         ];
         $inventoryRecordData['num'] = $productSku['stock_num'];
         $inventoryRecordData['type'] = ErpInventoryRecord::TYPE_ADJUST_OUT_DEL;
@@ -700,7 +690,7 @@ class Product extends ProductModel
                     }
                 }
                 //
-                $this->where('product_id', '=', $product_id)->save(['is_delete' => 1]);
+                $this->where('product_id', '=', $product_id)->delete();
                 // 删除自助餐关联产品
                 (new BuffetProductModel)->where('product_id', '=', $product_id)->delete();
                 // 删除的规格材料
@@ -775,12 +765,7 @@ class Product extends ProductModel
         if ($type == 'lower') {
             $model = $model->where('product_status', '=', 20);
         }
-        if ($shop_supplier_id != 0) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
-        return $model->where('product_type', '=', $product_type)
-            ->where('is_delete', '=', 0)
-            ->count();
+        return $model->where('product_type', '=', $product_type)->count();
     }
 
     /**
@@ -798,18 +783,13 @@ class Product extends ProductModel
      */
     public function transmit($data)
     {
-        $product_list = $this->where('product_id', 'in', $data['product_id'])
-            ->where('is_delete', '=', 0)
-            ->with(['image', 'sku'])
-            ->select();
+        $product_list = $this->where('product_id', 'in', $data['product_id'])->with(['image', 'sku'])->select();
         // 开启事务
         $this->startTrans();
         try {
             foreach ($product_list as $item) {
                 foreach ($data['shop_supplier_id'] as $value) {
-                    $product = $this->where('product_id', '=', $item['product_id'])
-                        ->where('shop_supplier_id', 'in', $value)
-                        ->where('is_delete', '=', 0)->find();
+                    $product = $this->where('product_id', '=', $item['product_id'])->find();
                     if ($product) {
                         $product->update($item);
                         $this->addImages($item['image']);
@@ -846,7 +826,6 @@ class Product extends ProductModel
         $data = array_map(function ($images) {
             return [
                 'image_id' => $images['image_id'],
-                'app_id' => self::$app_id
             ];
         }, $images);
         return $this->image()->saveAll($data);

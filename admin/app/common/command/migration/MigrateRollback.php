@@ -66,7 +66,7 @@ EOT
         if (in_array($mysql['prefix'] . 'app', $tables)) {
             $this->rollback($version, $force, 1);
             //
-            foreach (Db::name('app')->where('is_delete', 0)->column('app_id') as $appid) {
+            foreach (Db::name('app')->column('app_id') as $appid) {
                 $mysql['database'] = 'shop' . $appid;
                 $mysql['username'] = 'root';
                 $mysql['password'] = env('DB_ROOT_PASSWORD');

@@ -16,13 +16,13 @@ class Table extends TableModel
      */
     public function getAll(int $shopSupplierId = 0)
     {
-        return $this->where('shop_supplier_id', $shopSupplierId)->where('is_bind', 0)->select();
+        return $this->where('is_bind', 0)->select();
     }
 
     // 绑定桌位
     public function bindTable($shop_supplier_id, $table_id, $key = '')
     {
-        $table = $this->where('shop_supplier_id', $shop_supplier_id)->where('table_id', $table_id)->where('is_bind', 0)->find();
+        $table = $this->where('table_id', $table_id)->where('is_bind', 0)->find();
         if (!$table) {
             $this->error = "桌台已被占用";
             return false;
@@ -33,7 +33,7 @@ class Table extends TableModel
     // 解绑桌位
     public function unbindTable($shop_supplier_id, $table_id)
     {
-        $table = $this->where('shop_supplier_id', $shop_supplier_id)->where('table_id', $table_id)->find();
+        $table = $this->where('table_id', $table_id)->find();
         if ($table) {
             return $table->save(['is_bind' => 0, 'bind_info' => '']);
         }

@@ -92,8 +92,6 @@ class Passport extends Controller
                 'version' => get_version(),
                 'logoUrl' => $setting['logoUrl'],
                 'currency' => $userInfo['currency'],
-                'app_id' => $companyUuid,
-                'shop_supplier_id' => $companyUuid,
             ]);
         }
         return $this->renderError($model->getError() ?: '登录失败');

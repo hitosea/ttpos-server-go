@@ -27,7 +27,6 @@ class User extends UserModel
             'new_grade_id' => $upgradeGrade['grade_id'],
             'change_type' => ChangeTypeEnum::AUTO_UPGRADE,
             'user_id' => $user['user_id'],
-            'app_id' => $user['app_id']
         ]);
         return true;
     }

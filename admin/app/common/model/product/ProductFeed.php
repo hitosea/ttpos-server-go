@@ -63,13 +63,11 @@ class ProductFeed extends BaseModel
                 $data['shop_supplier_id'] = $shopSupplierId;
                 $data['app_id'] = self::$app_id;
                 // todo 加料库， v1.0.8需求变更，暂时不需要
-                // $feedExists = feed::where('feed_name', '=', $item['feed_name'])->where('shop_supplier_id', '=', $shopSupplierId)->count();
+                // $feedExists = feed::where('feed_name', '=', $item['feed_name'])->count();
                 // if ($feedExists == 0) {
                 //     $newFeedData = [
                 //         'feed_name' => $item['feed_name'],
                 //         'price' => $item['price'],
-                //         'shop_supplier_id' => $shopSupplierId,
-                //         'app_id' => self::$app_id
                 //     ];
                 //     $feedModel = new Feed;
                 //     $feedModel->save($newFeedData);
@@ -138,8 +136,6 @@ class ProductFeed extends BaseModel
                     'product_feed_id' => $productFeedId,
                     'material_id' => $item['material_id'] ?? $item['materialProduct']['product_id'] ?? 0,
                     'material_num' => $item['material_num'] ?? 0,
-                    'shop_supplier_id' => $shopSupplierId,
-                    'app_id' => self::$app_id,
                 ];
             }
 

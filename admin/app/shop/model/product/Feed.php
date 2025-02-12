@@ -76,8 +76,6 @@ class Feed extends FeedModel
                     'product_feed_id'  => 0,
                     'material_id'      => $data['product_id'],
                     'material_num'     => $material_num,
-                    'shop_supplier_id' => $shop_supplier_id,
-                    'app_id'           => self::$app_id,
                 ];
                 (new ProductFeedMaterial)->save($material);
             }
@@ -117,8 +115,6 @@ class Feed extends FeedModel
                     'product_feed_id'  => 0,
                     'material_id'      => $item['product_id'],
                     'material_num'     => $material_num,
-                    'shop_supplier_id' => $this['shop_supplier_id'],
-                    'app_id'           => self::$app_id,
                 ];
                 (new ProductFeedMaterial)->save($material);
             }
@@ -185,8 +181,6 @@ class Feed extends FeedModel
                         'feed_name'        => $this['feed_name'],
                         'price'            => $this['price'],
                         'stock_num'        => $min_stock_num,
-                        'shop_supplier_id' => $this['shop_supplier_id'],
-                        'app_id'           => $this['app_id'],
                         'create_time'      => time(),
                         'update_time'      => time(),
                     ];

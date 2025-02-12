@@ -44,7 +44,7 @@ class OrderPrinterService
         if ($timezone = ($this->setting[SettingEnum::STORE]['values']['time_zone'] ?? '')) {
             date_default_timezone_set($timezone);
         }
-        // 获取打印信息 
+        // 获取打印信息
         $printerInfo = SettingModel::getPrinterInfo($this->setting[SettingEnum::PRINTER]['values'], $deviceId ?: $order['settle_device_id']);
         $printer = $printerInfo['printer'];
         $printerId = $printerInfo['printerId'];
@@ -161,7 +161,7 @@ class OrderPrinterService
         if ($printType == PrintingModel::PRINT_TYPE_ADD_ORDER) {
             return true;
         }
-        // 
+        //
         $this->setting = SettingModel::getAll($order['app_id'], $order['shop_supplier_id']);
         // 设置时区
         if ($timezone = ($this->setting[SettingEnum::STORE]['values']['time_zone'] ?? '')) {
@@ -173,7 +173,7 @@ class OrderPrinterService
         request()->language = $printerConfig['kitchen_language'] ?? $printerConfig['default_language'] ?? '';
         // 格式化数据
         if (!is_array($order)) {
-            $products = []; 
+            $products = [];
             foreach ($order['product'] ?? [] as $key => $p) {
                 if (!is_array($p) && (($p['is_return'] ?? 0) != 1) || $printType == PrintingModel::PRINT_TYPE_BACK_FOOD) {
                     $productAttr = $p->getData('product_attr') ?? $p['product_attr'];
@@ -195,9 +195,7 @@ class OrderPrinterService
         $printerList = PrintingModel::when($printType , function ($query) use ($printType) {
                 $query->where('print_type', '=', $printType);
             })
-            ->where('shop_supplier_id', '=', $order['shop_supplier_id'])
             ->where('is_open', '=', 1)
-            ->where('is_delete', '=', 0)
             ->select();
         //
         if (count($printerList) > 0) {
@@ -254,7 +252,7 @@ class OrderPrinterService
                                 "data_type" => PrinterLog::DATA_TYPE[9]['value'],
                             ]));
                         }
-                    } 
+                    }
                     // 送厨单打印
                     else {
                         // 10整单打印  20按商品分类打印 30按标签打印 40一菜一單打印
@@ -319,7 +317,7 @@ class OrderPrinterService
     private function getPrintProductContent($printerConfig, $printerItem, $order = null, $products = null)
     {
         $printerType = $printerItem->printer['printer_type']['value'] ?? '';
-        // 
+        //
         if (($printerConfig['kitchen_print_method'] ?? 1) == 2) {
             return (new ImgDishesTemplate(null, $this->allSourceProductList))->completeOrder($printerConfig, $printerItem, $order, $products);
         }
@@ -344,7 +342,7 @@ class OrderPrinterService
     private function getPrintProductOneContent($printerConfig, $printerItem, $order, $products = null)
     {
         $printerType = $printerItem->printer['printer_type']['value'] ?? '';
-        // 
+        //
         if (($printerConfig['kitchen_print_method'] ?? 1) == 2) {
             return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
         }

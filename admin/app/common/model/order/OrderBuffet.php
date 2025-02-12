@@ -189,7 +189,6 @@ class OrderBuffet extends BaseModel
                 'buy_limit_status' => $orderBuffet->buy_limit_status,
                 'is_comb' => $orderBuffet->is_comb,
                 'time_limit' => $orderBuffet->time_limit,
-                'app_id' => $orderBuffet->app_id,
             ]);
         }
     }

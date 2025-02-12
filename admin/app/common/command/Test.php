@@ -55,27 +55,62 @@ class Test extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        // 测试雪花ID生成是否重复 - 并发测试
+        // 测试雪花ID生成是否重复 - 真实并发测试
         $workerIds = range(1, 3); // 使用3个不同的worker ID
         $iterations = 1000; // 每个worker生成1000个ID
-        $allIds = [];
+        $processes = [];
+        $tempFiles = [];
 
+        // 为每个worker创建一个临时文件存储生成的ID
         foreach ($workerIds as $workerId) {
-            $snowflake = new SnowflakeHelp($workerId);
+            $tempFiles[$workerId] = tempnam(sys_get_temp_dir(), 'snowflake_');
+        }
 
-            // 模拟并发 - 使用多个进程同时生成ID
+        // 创建多个并发进程
+        foreach ($workerIds as $workerId) {
+            $pid = pcntl_fork();
+
+            if ($pid == -1) {
+            die('无法创建进程');
+            } else if ($pid == 0) {
+            // 子进程
+            $snowflake = new SnowflakeHelp($workerId);
+            $ids = [];
+
             for ($i = 0; $i < $iterations; $i++) {
-                $id = $snowflake->next();
-                if (in_array($id, $allIds)) {
-                    dump("发现重复ID: " . $id);
-                    dump("Worker ID: " . $workerId);
-                    dump("迭代次数: " . $i);
-                    die;
-                }
-                $allIds[] = $id;
+                $ids[] = $snowflake->next();
+            }
+
+            // 将生成的ID写入临时文件
+            file_put_contents($tempFiles[$workerId], implode("\n", $ids));
+            exit(0);
+            } else {
+            // 父进程记录进程ID
+            $processes[] = $pid;
             }
         }
-        dump("生成 " . count($allIds) . " 个ID,未发现重复");
+
+        // 等待所有子进程完成
+        foreach ($processes as $pid) {
+            pcntl_waitpid($pid, $status);
+        }
+
+        // 收集并检查所有生成的ID
+        $allIds = [];
+        foreach ($tempFiles as $file) {
+            $ids = explode("\n", file_get_contents($file));
+            foreach ($ids as $id) {
+            if (empty($id)) continue;
+            if (in_array($id, $allIds)) {
+                dump("发现重复ID: " . $id);
+                die;
+            }
+            $allIds[] = $id;
+            }
+            unlink($file); // 删除临时文件
+        }
+        dump($allIds);
+        dump("并发生成 " . count($allIds) . " 个ID,未发现重复");
         dump("测试通过!");
         die;
 

@@ -70,7 +70,7 @@ class ProductTax extends BaseModel
     {
         // 查询所有商品成品
         $product = new Product();
-        $productList = $product->where('type', Product::TYPE_PRODUCT)->where('is_delete', 0)->select();
+        $productList = $product->where('type', Product::TYPE_PRODUCT)->select();
         // 如果没有商品成品，直接返回
         if (count($productList) == 0) {
             return;
@@ -93,13 +93,11 @@ class ProductTax extends BaseModel
                 'product_id' => $product['product_id'],
                 'product_tax_type' => 1, //产品税率类型，1-堂食税类，2-外带税类
                 'tax_category_id' => $taxCategory['id'],
-                'app_id' => $product['app_id'],
             ];
             $productTax[] = [
                 'product_id' => $product['product_id'],
                 'product_tax_type' => 2, //产品税率类型，1-堂食税类，2-外带税类
                 'tax_category_id' => $taxCategory['id'],
-                'app_id' => $product['app_id'],
             ];
         }
         $this->saveAll($productTax);

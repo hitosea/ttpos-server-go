@@ -699,7 +699,6 @@ class Product extends BaseModel
             'sortType' => 'all',    // 排序类型
             'list_rows' => 15,       // 每页数量
             'special_id' => 0,        //特殊分类id
-            'shop_supplier_id' => 0,
         ], $param);
 
         // 筛选条件
@@ -824,7 +823,6 @@ class Product extends BaseModel
         }
         $list = $model
             ->with(['category', 'image.file'])
-            ->where('is_delete', '=', 0)
             ->where('product_status', '=', $params['product_status'])
             ->paginate($params);
         // 整理列表数据并返回
@@ -992,7 +990,7 @@ class Product extends BaseModel
      */
     public function getProductTotal($where = [])
     {
-        return $this->where('is_delete', '=', 0)->where($where)->count();
+        return $this->where($where)->count();
     }
 
     /**
@@ -1001,16 +999,13 @@ class Product extends BaseModel
     public function getSupplierProductTotal($shop_supplier_id, $product_type, $product_status = 0)
     {
         $model = $this;
-        if ($shop_supplier_id > 0) {
-            $model = $model->where('shop_supplier_id', '=', $shop_supplier_id);
-        }
         if ($product_type >= 0) {
             $model = $model->where('product_type', '=', $product_type);
         }
         if ($product_status > 0) {
             $model = $model->where('product_status', '=', $product_status);
         }
-        return $model->where('is_delete', '=', 0)->count();
+        return $model->count();
     }
 
     /**
@@ -1019,10 +1014,8 @@ class Product extends BaseModel
     public static function getProductSales($shop_supplier_id)
     {
         $model = new static();
-        $sales_initial = $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->sum('sales_initial');
-        $sales_actual = $model->where('shop_supplier_id', '=', $shop_supplier_id)
-            ->sum('sales_actual');
+        $sales_initial = $model->sum('sales_initial');
+        $sales_actual = $model->sum('sales_actual');
         return $sales_initial + $sales_actual;
     }
 
@@ -1084,7 +1077,7 @@ class Product extends BaseModel
     {
         return (new self)->where('product_id', '=', $product_id)
             ->where('product_status', '=', 10)
-            ->where('is_delete', '=', 0)
+
             ->value('limit_num');
     }
 
@@ -1247,8 +1240,6 @@ class Product extends BaseModel
             'order_id' => $orderId,
             'operator_id' => $shopUserId ?? 0,
             'remark' => '',
-            'shop_supplier_id' => $shopSupplierId,
-            'app_id' => self::$app_id,
         ];
 
         // 减少库存 出库记录
@@ -1569,8 +1560,6 @@ class Product extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(product_name, '$.$lang'))"), '=', $name],
-            'is_delete' => 0,
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['product_id', '<>', $id];
@@ -1585,8 +1574,6 @@ class Product extends BaseModel
     {
         $filter = [
             'img_name' => $name,
-            'is_delete' => 0,
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['product_id', '<>', $id];

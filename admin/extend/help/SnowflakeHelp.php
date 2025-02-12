@@ -12,7 +12,7 @@ define('MAXWORKERID', (-1 ^ (-1 << NUMWORKERBITS)));    // 集群ID + 机器ID�
 define('MAXSEQUENCE', (-1 ^ (-1 << NUMSEQUENCEBITS)));  // 序列，12位，每台机器每毫秒内最多产生4096个序列号
 
 /**
- * Snowflake 生成唯一ID算法，固定返回18位整数
+ * Snowflake 生成唯一ID算法，固定返回16位整数
  */
 class SnowflakeHelp
 {
@@ -48,8 +48,7 @@ class SnowflakeHelp
         $this->_lastTimestamp = $ts;
 
         $return_pack = $this->pack();
-        if (strlen($return_pack) < 18) $return_pack = str_pad($return_pack, 18, '0');
-        return $return_pack;
+        return substr(str_pad($return_pack, 16, '0', STR_PAD_LEFT), -16);
     }
 
     private function pack()

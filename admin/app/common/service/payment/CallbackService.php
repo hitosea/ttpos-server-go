@@ -50,7 +50,7 @@ class CallbackService extends BaseService
             trace('处理LianLian回调: shop_supplier_id不存在');
             throw new BaseException(['msg' => 'shop_supplier_id不存在']);
         }
-        $supplier = (new Supplier([], 0))->setAppId(0)->where('shop_supplier_id', $shopSupplierId)->field('shop_supplier_id, app_id')->find();
+        $supplier = (new Supplier([], 0))->setAppId(0)->field('shop_supplier_id, app_id')->find();
         if (empty($supplier) || empty($supplier['app_id'])) {
             trace('处理LianLian回调: supplier 不存在');
             throw new BaseException(['msg' => 'supplier 不存在']);
@@ -140,17 +140,17 @@ class CallbackService extends BaseService
             trace('处理LianLian回调: shop_supplier_id不存在');
             throw new BaseException(['msg' => 'shop_supplier_id不存在']);
         }
-        $supplier = (new Supplier([], 0))->setAppId(0)->where('shop_supplier_id', $shopSupplierId)->field('shop_supplier_id, app_id')->find();
+        $supplier = (new Supplier([], 0))->setAppId(0)->field('shop_supplier_id, app_id')->find();
         if (empty($supplier) || empty($supplier['app_id'])) {
             trace('处理LianLian回调: supplier 不存在');
             throw new BaseException(['msg' => 'supplier 不存在']);
         }
-        
+
         // 设置id
         request()->appId = $supplier['app_id'];
         request()->shopSupplierId = $supplier['shop_supplier_id'];
 
-        // 
+        //
         $paymentOrderType = 1;
         if (isset($params['payment_order_id'])) {
             $paymentOrder = PaymentOrder::where('id', $params['payment_order_id'])->find();
@@ -165,7 +165,7 @@ class CallbackService extends BaseService
         // 订单
         if ($paymentOrderType == 1) {
             $orderRefundDestination = OrderRefundDestination::where('refund_order_id', $params['refund_order_id'])->find();
-        } 
+        }
         // 充值订单
         else {
             $orderRefundDestination = UserRechargeOrderRefundDestination::where('refund_order_id', $params['refund_order_id'])->find();
@@ -182,7 +182,7 @@ class CallbackService extends BaseService
         $status = $params['refund_status'] == 'RS' ? 1 : -1;
         $orderRefundDestination->save(['status' => $status]);
 
-        // 
+        //
         return true;
     }
 }

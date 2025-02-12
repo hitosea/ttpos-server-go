@@ -38,7 +38,6 @@ class UploadGroup extends BaseModel
     public function add($data)
     {
         return $this->save(array_merge([
-            'app_id' => self::$app_id,
             'sort' => 100
         ], $data));
     }

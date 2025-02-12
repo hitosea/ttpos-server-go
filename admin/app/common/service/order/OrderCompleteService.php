@@ -112,7 +112,6 @@ class OrderCompleteService
             if (in_array($order['pay_type']['value'], [10, 20, 30])) {
                 $orderSettledData[] = [
                     'order_id' => $order['order_id'],
-                    'shop_supplier_id' => $order['shop_supplier_id'],
                     'order_money' => $order['pay_price'],
                     'pay_money' => $order['pay_price'],
                     'express_money' => $order['express_price'],
@@ -120,14 +119,11 @@ class OrderCompleteService
                     'real_supplier_money' => $supplierMoney,
                     'sys_money' => $order['sys_money'],
                     'refund_money' => $order['refund_money'],
-                    'app_id' => $order['app_id']
                 ];
                 // 商家结算记录
                 $supplierCapitalData[] = [
-                    'shop_supplier_id' => $order['shop_supplier_id'],
                     'money' => $supplierMoney,
                     'describe' => '订单结算，订单号：' . $order['order_no'],
-                    'app_id' => $order['app_id']
                 ];
                 !isset($supplierData[$order['shop_supplier_id']]) && $supplierData[$order['shop_supplier_id']] = 0.00;
                 $supplierMoney > 0 && $supplierData[$order['shop_supplier_id']] += $supplierMoney;
@@ -185,7 +181,6 @@ class OrderCompleteService
                 'value' => $type == 'inc' ? +$pointsBonus : -$pointsBonus,
                 'describe' => $type == 'inc' ? vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::CONSUME]['describe'], [$order['order_no']]) : vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::REVERSE]['describe'], [$order['order_no']]),
                 'order_id' => $order['order_id'],
-                'app_id' => $order['app_id'],
             ];
         }
         if (!empty($userData)) {

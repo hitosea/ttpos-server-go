@@ -29,7 +29,7 @@ class Product extends Controller
         $param = $this->postData();
         $model = new ProductModel;
         $table_id = $this->table['table_id'] ?? 0;
-        $list = $model->list(array_merge(['shop_supplier_id' => $this->table['shop_supplier_id']], $param));
+        $list = $model->list($param);
         return $this->renderSuccess('', compact('list'));
     }
 }

@@ -209,8 +209,6 @@ class ErpPurchaseOrder extends BaseModel
                 'total_amount' => $total_amount,
                 'arrival_time' => strtotime($params['arrival_time']),
                 'remark' => $params['remark'],
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => self::$app_id,
             ];
             $model->save($data);
             //
@@ -240,8 +238,6 @@ class ErpPurchaseOrder extends BaseModel
                 'username' => $shopUser->real_name ?: $shopUser->user_name,
                 'status' => 10, // 待审核
                 'operation' => '添加',
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => self::$app_id,
             ];
             (new ErpPurchaseOperationLog)->save($data);
             $this->commit();
@@ -298,7 +294,6 @@ class ErpPurchaseOrder extends BaseModel
                 'total_amount' => $total_amount,
                 'arrival_time' => strtotime($params['arrival_time']),
                 'remark' => $params['remark'],
-                'app_id' => $this->app_id,
             ];
             $this->save($data);
 
@@ -313,8 +308,6 @@ class ErpPurchaseOrder extends BaseModel
                 'username' => $shopUser->real_name ?: $shopUser->user_name,
                 'status' => $this->status,
                 'operation' => '编辑',
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => $this->app_id,
             ];
             (new ErpPurchaseOperationLog)->save($data);
             //
@@ -380,8 +373,6 @@ class ErpPurchaseOrder extends BaseModel
                 'username' => $params['username'] ?? $shopUser?->real_name ?: $shopUser?->user_name,
                 'status' => $this->status,
                 'operation' => '调整数据',
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => $this->app_id,
             ];
             //
             if ($params['operation_log_id'] ?? '') {
@@ -454,8 +445,6 @@ class ErpPurchaseOrder extends BaseModel
                 'status' => $this->status,
                 'operation' => ErpPurchaseOperationLog::statusOperation[$this->status],
                 'remark' => $params['remark'] ?? '',
-                'shop_supplier_id' => $shopSupplierId,
-                'app_id' => $this->app_id,
             ];
             //
             if ($params['operation_log_id'] ?? '') {
@@ -495,7 +484,6 @@ class ErpPurchaseOrder extends BaseModel
                     'operator_id' => $operationLogData['operator_id'],
                     'username' => $operationLogData['username'],
                     'remark' => $this->remark ?: '',
-                    'shop_supplier_id' => $shopSupplierId,
                 ];
                 //
                 if ($params['erp_inventory_record_id'] ?? '') {

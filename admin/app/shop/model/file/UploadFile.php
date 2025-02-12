@@ -15,7 +15,7 @@ class UploadFile extends UploadFileModel
      */
     public function softDelete($fileIds)
     {
-        return $this->where('file_id', 'in', $fileIds)->update(['is_delete' => 1]);
+        return $this->where('file_id', 'in', $fileIds)->delete();
     }
 
     /**

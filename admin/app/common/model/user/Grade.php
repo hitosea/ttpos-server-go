@@ -10,8 +10,29 @@ use app\common\library\helper;
  */
 class Grade extends BaseModel
 {
-    protected $pk = 'grade_id';
-    protected $name = 'user_grade';
+    protected $name = 'member_level';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['grade_id', 'weight', 'equity'];
+
+    /**
+     * 兼容字段
+     */
+    public function getGradeIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
+    public function getWeightAttr()
+    {
+        return $this->priority ?? 0;
+    }
+    public function getEquityAttr()
+    {
+        return $this->discount ?? '';
+    }
 
     /**
      * 用户等级模型初始化
@@ -55,7 +76,7 @@ class Grade extends BaseModel
      */
     public static function detail($grade_id)
     {
-        return self::find($grade_id);
+        return self::where('uuid', $grade_id)->find();
     }
 
     /**
@@ -63,10 +84,7 @@ class Grade extends BaseModel
      */
     public function getLists()
     {
-        return $this->where('is_delete', '=', 0)
-            ->field('grade_id, name, weight, create_time')
-            ->order(['weight' => 'asc', 'create_time' => 'asc'])
-            ->select();
+        return $this->field('uuid, name, priority, create_time')->order(['priority' => 'asc', 'create_time' => 'asc'])->select();
     }
 
     /**
@@ -76,7 +94,7 @@ class Grade extends BaseModel
     {
         $model = new static;
         $appId = $appId ? $appId : $model::$app_id;
-        return $model->order(['weight' => 'asc', 'create_time' => 'asc'])->select();
+        return $model->order(['priority' => 'asc', 'create_time' => 'asc'])->select();
     }
 
     /**
@@ -86,7 +104,7 @@ class Grade extends BaseModel
     {
         $model = new static;
         $appId = $appId ? $appId : $model::$app_id;
-        return $model->order(['weight' => 'desc'])->select();
+        return $model->order(['priority' => 'desc'])->select();
     }
 
     /**

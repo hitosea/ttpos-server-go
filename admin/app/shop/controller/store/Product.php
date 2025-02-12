@@ -55,7 +55,7 @@ class Product extends Controller
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?? 0;
         $model = new OrderModel();
         // 商品销售列表
-        $list = $model->productSales(array_merge($data, ['shop_supplier_id' => $shop_supplier_id]));
+        $list = $model->productSales($data);
         // 区域列表
         $area_list = TableArea::getAllList($shop_supplier_id);
         // 商品分类列表

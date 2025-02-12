@@ -33,6 +33,7 @@ type ISrv interface {
 	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                     // 获取自助餐设置
 	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                      // 获取货币单位设置
 	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
+	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
 }
 
@@ -726,6 +727,12 @@ func (s *Srv) GetH5Setting(companyUuid uint64, language string, cc *gin.Context,
 		defaultH5.IsShowScanSoldOut = s.getDefaultCashier(languageList).IsShowScanSoldOut
 	}
 	return defaultH5, nil
+}
+
+// GetCompanySetting 获取公司设置
+func (s *Srv) GetCompanySetting(companyUuid uint64) (model.CompanySetting, error) {
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
+	return companySettingRepo.Get(), nil
 }
 
 // Updates 更新设置

@@ -112,9 +112,8 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
-	message := req.DeskOrderCreateReqMessage
 	if err := c.ShouldBind(&params); err != nil {
-		helper.HandleValidationError(c, err, params, message)
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 
@@ -138,13 +137,16 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, cache)
 
 	// 初始化处理器
 	wrapper := DeskHandler{
 		Service: service.NewDeskSrv(
-			dbm,                    // 数据库管理器
-			service.NewLocaleSrv(), // 多语言服务
-			service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
+			dbm,        // 数据库管理器
+			localeSrv,  // 多语言服务
+			orderSrv,   // 订单服务
+			settingSrv, // 设置服务
 		),
 	}
 

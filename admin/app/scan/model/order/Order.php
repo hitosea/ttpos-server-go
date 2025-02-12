@@ -41,9 +41,6 @@ class Order extends OrderModel
     public function getList($params)
     {
         $model = $this;
-        if (isset($params['shop_supplier_id']) && $params['shop_supplier_id']) {
-            $model = $model->where('shop_supplier_id', '=', $params['shop_supplier_id']);
-        }
         if (isset($params['eat_type']) && $params['eat_type']) {
             $model = $model->where('eat_type', '=', $params['eat_type']);
         }
@@ -92,7 +89,6 @@ class Order extends OrderModel
                 break;
         }
         return $model->with(['product.image', 'supplier'])
-            ->where('is_delete', '=', 0)
             ->where('delivery_type', 'in', [30, 40])
             ->where('eat_type', '<>', 0)
             ->order(['create_time' => 'desc'])
@@ -151,7 +147,7 @@ class Order extends OrderModel
     public static function getPayDetail($orderNo)
     {
         $model = new static();
-        return $model->where(['order_no' => $orderNo, 'pay_status' => 10, 'is_delete' => 0])->with(['product', 'user', 'supplier'])->find();
+        return $model->where(['order_no' => $orderNo, 'pay_status' => 10])->with(['product', 'user', 'supplier'])->find();
     }
 
     /**
@@ -189,7 +185,6 @@ class Order extends OrderModel
     public static function getTableInfo($table_id)
     {
         return (new static())->where('table_id', '=', $table_id)
-            ->where('is_delete', '=', 0)
             ->order('order_id desc')
             ->find();
     }
@@ -200,7 +195,6 @@ class Order extends OrderModel
         return (new static())->with('product')
             ->where('table_id', '=', $table_id)
             ->where('order_status', '=', 10)
-            ->where('is_delete', '=', 0)
             ->find();
     }
 

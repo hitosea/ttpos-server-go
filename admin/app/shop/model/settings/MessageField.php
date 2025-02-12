@@ -15,7 +15,6 @@ class MessageField extends MessageFieldModel
     public function getAll($message_id)
     {
         return $this->withoutGlobalScope()->where('message_id', '=', $message_id)
-            ->where('is_delete', '=', 0)
             ->order(['sort' => 'asc'])
             ->select();
     }

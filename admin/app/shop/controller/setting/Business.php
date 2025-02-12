@@ -317,7 +317,7 @@ class Business extends Controller
         //
         $model = new OrderScheme;
         $data = $this->request->param();
-        if ($model->add(array_merge($data, ['shop_supplier_id' => $shop_supplier_id, 'app_id' => $app_id]))) {
+        if ($model->add($data)) {
             return $this->renderSuccess('');
         }
         return $this->renderError($model->getError() ?: '操作失败');

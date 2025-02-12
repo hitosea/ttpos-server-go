@@ -218,7 +218,7 @@ class ExportService
             $sheet->setCellValue('E' . ($index + 2), $order['express_price']);
             $sheet->setCellValue('F' . ($index + 2), $order['pay_type']['text']);
             $sheet->setCellValue('G' . ($index + 2), $order['create_time']);
-            $sheet->setCellValue('H' . ($index + 2), $order['user']['nickName']);
+            $sheet->setCellValue('H' . ($index + 2), $order['user']['nickname']);
             $sheet->setCellValue('I' . ($index + 2), $order['delivery_type']['text']);
             $sheet->setCellValue('J' . ($index + 2), $order['store'] ? $order['store']['name'] : '');
             $sheet->setCellValue('K' . ($index + 2), $order['store'] ? "\t" . $order['store']['link_phone'] . "\t" : '');
@@ -469,7 +469,7 @@ class ExportService
             $sheet->setCellValue('F' . ($index + 2), $item['pay_price']);
             $sheet->setCellValue('G' . ($index + 2), $item['pay_type']['text']);
             $sheet->setCellValue('H' . ($index + 2), $item['create_time']);
-            $sheet->setCellValue('I' . ($index + 2), $item['user']['nickName']);
+            $sheet->setCellValue('I' . ($index + 2), $item['user']['nickname']);
             $sheet->setCellValue('J' . ($index + 2), $item['user']['mobile']);
             $sheet->setCellValue('K' . ($index + 2), $this->filterTime($item['pay_time']));
             $sheet->setCellValue('L' . ($index + 2), $this->filterTime($item['settled_time']));
@@ -519,7 +519,7 @@ class ExportService
         foreach ($list as $cash) {
             $sheet->setCellValue('A' . ($index + 2), $cash['id']);
             $sheet->setCellValue('B' . ($index + 2), $cash['user_id']);
-            $sheet->setCellValue('C' . ($index + 2), $cash['nickName']);
+            $sheet->setCellValue('C' . ($index + 2), $cash['nickname']);
             $sheet->setCellValue('D' . ($index + 2), "\t" . $cash['mobile'] . "\t");
             $sheet->setCellValue('E' . ($index + 2), $cash['money']);
             $sheet->setCellValue('F' . ($index + 2), $cash['real_money']);

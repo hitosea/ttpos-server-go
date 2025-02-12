@@ -41,7 +41,7 @@ class RefundService extends BaseService
     public static function checkSignSalt($shop_supplier_id = 0)
     {
         // 不能合并，以saas端为准
-        return (new PaymentApp([], 0))->where('shop_supplier_id', $shop_supplier_id)->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
+        return (new PaymentApp([], 0))->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
     }
 
     /**
@@ -75,7 +75,7 @@ class RefundService extends BaseService
         if (!$callbackUrl = env('PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL')) {
             throw new BaseException(['msg' => '未配置 PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL']);
         }
-        // 
+        //
         $requestData = [
             'shop_supplier_id' => $paymentOrder->shop_supplier_id,
             'merchant_order_no' => $paymentOrder->merchant_order_no,
@@ -85,13 +85,13 @@ class RefundService extends BaseService
             'refund_currency' => $paymentOrder->order_currency,
             'callback_url' => $callbackUrl . '?payment_order_id=' . $payment_order_id,
         ];
-        // 
+        //
         if ($paymentOrder->pay_type_value == OrderPayTypeEnum::LIANLIAN_QR_PROMPT_PAY) {
             $requestData['bank_code'] = $bank_code;
             $requestData['account_no'] = $account_no;
             $requestData['account_name'] = $account_name;
         }
-        // 
+        //
         return $this->LianLianRefund($requestData);
     }
 

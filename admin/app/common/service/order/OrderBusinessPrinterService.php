@@ -79,7 +79,7 @@ class OrderBusinessPrinterService
         $setting = SettingModel::getAll($data['supplier']['app_id'], $data['supplier']['shop_supplier_id']);
         $currency = $setting[SettingEnum::STORE]['values'];
         $shopName = $currency['name'] ?? $data['supplier']['name'];
-        
+
         // 是否商米打印机
         $isSunmi = in_array($printers, BindRecord::BRANDS_SUNMI_ALL_PRINTS) || in_array($printerType, [PrinterTypeEnum::SUNMI_LAN, PrinterTypeEnum::SUNMI_CLOUD]);
 

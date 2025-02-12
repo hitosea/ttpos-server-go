@@ -206,7 +206,6 @@ class BalanceLog extends BaseModel
         $model->save(array_merge([
             'scene' => $scene,
             'describe' => $custom_dec ? $describeParam : vsprintf(BalanceLogSceneEnum::data()[$scene]['describe'], $describeParam),
-            'app_id' => $model::$app_id,
             'version' => self::VERSION
         ], $data));
     }

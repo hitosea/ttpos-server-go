@@ -39,7 +39,6 @@ class SunmiHandoverTemplate extends BaseTemplate
         $categorys = (new UserShiftLog)->getSalesInfo($data['shift_user_id'], $data['shop_supplier_id'], $startTime, $endTime);
         $businessData = (new CashierOrderModel)->businessData([
             'mode' => 0,
-            'shop_supplier_id' => $data['shop_supplier_id'],
             'cashier_id' => $data['shift_user_id'],
             'time' => [date('Y-m-d H:i:s', $startTime), date('Y-m-d H:i:s', $endTime)]
         ]);
@@ -217,14 +216,14 @@ class SunmiHandoverTemplate extends BaseTemplate
                 $printer->setLineSpacing($lineSpacing);
                 $printer->appendText("------------------------------------------------");
             }
-            // 
+            //
             $printer->setupColumns(
                 [320, SunmiCloudPrinter::ALIGN_LEFT, 0],
                 [0, SunmiCloudPrinter::ALIGN_RIGHT, 0],
             );
             // 会员充值
             if ($is_balance == 1 || $businessData['all']['recharge_amount'] > 0) {
-                $printer->lineFeed(2); 
+                $printer->lineFeed(2);
                 $printer->setAlignment(SunmiCloudPrinter::ALIGN_CENTER);
                 $printer->setPrintModes(true, false, false);
                 $printer->appendText(__('会员数据'));
@@ -327,7 +326,7 @@ class SunmiHandoverTemplate extends BaseTemplate
         }
         /* *
         * 模版一
-        */ 
+        */
         else {
             $printer->lineFeed();
             $printer->setPrintModes(true, true, false);

@@ -153,8 +153,7 @@ class Category extends BaseModel
                 ->where('parent_id', '=', 0)
                 ->where('type', '=', $type)
                 ->where('is_special', '=', $is_special)
-                ->order(['create_time' => 'desc'])
-                ->where('shop_supplier_id', '=', $shop_supplier_id);
+                ->order(['create_time' => 'desc']);
             // 过滤按钮分类
             if ($filter_button) {
                 $model = $model->where('is_button', 0);
@@ -185,7 +184,6 @@ class Category extends BaseModel
                 ->where('status', '=', 1)
                 ->where('is_special', '=', $is_special)
                 ->order(['create_time' => 'desc'])
-                ->where('shop_supplier_id', '=', $shop_supplier_id)
                 ->select();
             $all = !empty($data) ? $data->toArray() : [];
             Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
@@ -215,7 +213,6 @@ class Category extends BaseModel
                 ->where('type', '=', $type)
                 ->where('status', '=', 1)
                 ->order(['is_special' => 'desc', 'sort' => 'asc', 'create_time' => 'desc'])
-                ->where('shop_supplier_id', '=', $shop_supplier_id)
                 ->select();
             $all = !empty($data) ? $data->toArray() : [];
             Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
@@ -454,12 +451,12 @@ class Category extends BaseModel
     public function addSpecial($app_id, $shop_supplier_id)
     {
         $data = [
-            ['name' => '新品', 'is_special' => 1, 'type' => 0, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
-            ['name' => '热卖', 'is_special' => 1, 'type' => 0, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
-            ['name' => '套餐', 'is_special' => 1, 'type' => 0, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
-            ['name' => '新品', 'is_special' => 1, 'type' => 1, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
-            ['name' => '热卖', 'is_special' => 1, 'type' => 1, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
-            ['name' => '套餐', 'is_special' => 1, 'type' => 1, 'app_id' => $app_id, 'shop_supplier_id' => $shop_supplier_id],
+            ['name' => '新品', 'is_special' => 1, 'type' => 0],
+            ['name' => '热卖', 'is_special' => 1, 'type' => 0],
+            ['name' => '套餐', 'is_special' => 1, 'type' => 0],
+            ['name' => '新品', 'is_special' => 1, 'type' => 1],
+            ['name' => '热卖', 'is_special' => 1, 'type' => 1],
+            ['name' => '套餐', 'is_special' => 1, 'type' => 1],
         ];
         $this->saveAll($data);
     }
@@ -480,7 +477,6 @@ class Category extends BaseModel
             ->when($parentId !== '', function ($q) use ($parentId) {
                 $q->where('parent_id', '=', $parentId);
             })
-            ->where('shop_supplier_id', '=', $shop_supplier_id)
             ->order('is_special desc, sort asc')
             ->select();
         return self::handleButtonList($list->toArray(), $button_filter);
@@ -521,9 +517,7 @@ class Category extends BaseModel
 
         $level = $model->where('category_id', $category_id)->value('parent_id') != 0;
         if ($level) {
-            return Product::where('category_id', $category_id)
-                ->where('is_delete', 0)
-                ->count();
+            return Product::where('category_id', $category_id)->count();
         } else {
             return $model->alias('a')
                 ->leftJoin("
@@ -549,7 +543,6 @@ class Category extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['category_id', '<>', $id];

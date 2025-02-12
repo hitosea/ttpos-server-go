@@ -81,8 +81,6 @@ class Spec extends BaseModel
         //             if ($isExit == 0) {
         //                 $addData[] = [
         //                     'spec_name' => $item['spec_name'],
-        //                     'app_id' => self::$app_id,
-        //                     'shop_supplier_id' => self::$app_id,
         //                 ];
         //             }
         //         }
@@ -111,7 +109,6 @@ class Spec extends BaseModel
                 GROUP BY psku.spec_sku_id
             ) psku
         ", 'sku.spec_id = psku.spec_sku_id')
-        ->where('shop_supplier_id', '=', $shop_supplier_id)
         ->order(['create_time' => 'desc'])
         ->select();
     }
@@ -121,7 +118,7 @@ class Spec extends BaseModel
      */
     public function getLists($shop_supplier_id)
     {
-        return $this->where('shop_supplier_id', '=', $shop_supplier_id)->order(['create_time' => 'desc'])->select();
+        return $this->order(['create_time' => 'desc'])->select();
     }
 
     /**
@@ -139,7 +136,7 @@ class Spec extends BaseModel
     {
         // 兼容旧数据，先删除产品已删除的关联数据
         ProductSku::where('product_id', 'in', function ($query) {
-            $query->name('product')->where('is_delete', '=', 1)->field('product_id');
+            $query->name('product')->field('product_id');
         })->delete();
         return ProductSku::where('spec_sku_id', 'in', $spec_id)->count() > 0;
     }
@@ -151,7 +148,6 @@ class Spec extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(spec_name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['spec_id', '<>', $id];

@@ -56,9 +56,12 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 	db := s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 判断是否有待支付、未挂单的订单
-		order, err := repository.NewOrderRepo(tx).GetSaleBill(
-			repository.NewCommonRepo().WhereByStatus(constant.SaleBillStatusPending),
-			repository.NewCommonRepo().WhereByIsHide(false),
+		commonRepo := repository.NewCommonRepo()
+		orderRepo := repository.NewOrderRepo(tx)
+		order, err := orderRepo.GetSaleBill(
+			commonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
+			commonRepo.WhereByStatus(constant.SaleBillStatusPending),
+			commonRepo.WhereByIsHide(false),
 		)
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -157,13 +160,47 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 创建销售订单
-		_, err = repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
+		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
 		})
 		if err != nil {
 			return err
+		}
+
+		if *req.IsBuffet {
+			commonRepo := repository.NewCommonRepo()
+			buffetRepo := repository.NewBuffetRepo(tx)
+			// 创建销售订单自助餐顾客类型
+			for _, buffetUuid := range req.BuffetUuids {
+				for _, buffetCustomerType := range req.BuffetCustomerTypes {
+					// 获取自助餐顾客类型价格
+					_, err := buffetRepo.GetBuffetCustomerTypePrice(
+						commonRepo.WhereByBuffetPackageUuid(buffetUuid),
+						commonRepo.WhereByCustomerTypeUuid(buffetCustomerType.Uuid),
+					)
+					if err != nil {
+						continue
+					}
+
+					saleOrderBuffetCustomerTypeUuid, err := database.GetID()
+					if err != nil {
+						return err
+					}
+
+					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(model.SaleOrderBuffetCustomerType{
+						Uuid:                   saleOrderBuffetCustomerTypeUuid,
+						SaleOrderUuid:          saleOrder.Uuid,
+						BuffetPackageUuid:      buffetUuid,
+						BuffetCustomerTypeUuid: buffetCustomerType.Uuid,
+						Num:                    *buffetCustomerType.MealNum,
+					})
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		uuid = saleBill.Uuid

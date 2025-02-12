@@ -14,9 +14,7 @@ class BalancePlan extends BalancePlanModel
      */
     public function getList($params)
     {
-        return $this->where('is_delete', '=', 0)
-            ->order(['create_time' => 'desc'])
-            ->select();
+        return $this->order(['create_time' => 'desc'])->select();
     }
 
     /**
@@ -41,6 +39,6 @@ class BalancePlan extends BalancePlanModel
      */
     public function setDelete($where)
     {
-        return self::update(['is_delete' => 1], $where);
+        return self::where($where)->delete();
     }
 }

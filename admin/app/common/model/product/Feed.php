@@ -89,7 +89,7 @@ class Feed extends BaseModel
                 GROUP BY pf.feed_id
             ) pf
         ", 'feed.feed_id = pf.feed_id')
-        ->where('shop_supplier_id', '=', $shop_supplier_id)->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
+        ->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**
@@ -107,7 +107,7 @@ class Feed extends BaseModel
     {
         // 兼容旧数据，先删除产品已删除的关联数据
         ProductFeed::where('product_id', 'in', function ($query) {
-            $query->name('product')->where('is_delete', '=', 1)->field('product_id');
+            $query->name('product')->field('product_id');
         })->delete();
         return ProductFeed::where('feed_id', 'in', $feed_id)->count() > 0;
     }
@@ -119,7 +119,6 @@ class Feed extends BaseModel
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(feed_name, '$.$lang'))"), '=', $name],
-            'shop_supplier_id' => $shop_supplier_id
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['feed_id', '<>', $id];

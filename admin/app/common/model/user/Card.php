@@ -13,17 +13,26 @@ use app\common\model\user\BalanceLog as BalanceLogModel;
  */
 class Card extends BaseModel
 {
+    protected $name = 'member_card';
     protected $pk = 'card_id';
-    protected $name = 'user_card';
 
     /**
      * 追加字段
      * @var string[]
      */
     protected $append = [
+        'card_id',
         'card_style_url',
         'expire_time_text',
     ];
+
+    /**
+     * 兼容字段
+     */
+    public function getCardIdAttr()
+    {
+        return $this->uuid ?? 0;
+    }
 
     /**
      * 会员卡有效期
@@ -87,9 +96,7 @@ class Card extends BaseModel
     public static function getCardList()
     {
         $model = new static;
-        return $model->where('is_delete', '=', '0')
-            ->order(['sort' => 'desc', 'create_time' => 'asc'])
-            ->select();
+        return $model->order(['sort' => 'desc', 'create_time' => 'asc'])->select();
     }
 
     /**

@@ -19,7 +19,7 @@ type AuthHandler struct {
 	authSrv service.IAuthSrv
 }
 
-// PostAssistantLogin 点餐助手登录
+// Login 点餐助手登录
 // @Summary 点餐助手登录
 // @Description 点餐助手登录
 // @Tags 点餐助手端.认证鉴权
@@ -29,7 +29,7 @@ type AuthHandler struct {
 // @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
 // @Router /assistant/login [post]
-func (h *AuthHandler) PostAssistantLogin(c *gin.Context) {
+func (h *AuthHandler) Login(c *gin.Context) {
 	var loginRequest req.LoginReq
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
@@ -44,6 +44,24 @@ func (h *AuthHandler) PostAssistantLogin(c *gin.Context) {
 	helper.Success(c, gin.H{"token": token})
 }
 
+// Logout 点餐助手退出登录
+// @Summary 点餐助手退出登录
+// @Description 点餐助手退出登录
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response
+// @Router /assistant/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	err := h.authSrv.Logout(c.Copy())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, "退出成功")
+}
+
 // BindCashier 点餐助手绑定收银机
 // @Summary 点餐助手绑定收银机
 // @Description 点餐助手绑定收银机
@@ -51,7 +69,6 @@ func (h *AuthHandler) PostAssistantLogin(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param X-TOKEN header string true "登录时返回的token"
 // @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
 // @Router /assistant/bind_cashier [post]
@@ -90,7 +107,7 @@ func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
-// @Router /cashier/base [get]
+// @Router /assistant/base [get]
 func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
 	info, err := h.authSrv.AssistantBase(c.Copy())
 	if err != nil {
@@ -115,7 +132,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	publicApi := router.Group("")
 	{
-		publicApi.POST("/login", wrapper.PostAssistantLogin) // 登录
+		publicApi.POST("/login", wrapper.Login) // 登录
 	}
 
 	// 需要认证
@@ -124,5 +141,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers) // 获取在线的收银机
 		privateApi.POST("/bind_cashier", wrapper.BindCashier)         // 绑定收银机
 		privateApi.GET("/base", wrapper.GetAssistantBase)             // 获取基本信息
+		privateApi.POST("/logout", wrapper.Logout)                    // 获取基本信息
 	}
 }

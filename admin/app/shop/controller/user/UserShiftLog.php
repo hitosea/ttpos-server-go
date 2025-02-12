@@ -145,12 +145,11 @@ class UserShiftLog extends Controller
         // 当班订单数据统计
         $params = [
             'cashier_id' => $detail['shift_user_id'],
-            'shop_supplier_id' => $detail['shop_supplier_id'],
             'date' => [$detail['shift_start_time'], $detail['shift_end_time']],
         ];
         $detail['order'] = (new OrderModel)->storeOverview($params);
         // 销售信息
-        $salesInfo = $model->getSalesInfo($detail['shift_user_id'], $detail['shop_supplier_id'], $detail['shift_start_time'], $detail['shift_end_time']);
+        $salesInfo = $model->getSalesInfo($detail['shift_user_id'], 0, $detail['shift_start_time'], $detail['shift_end_time']);
         return $this->renderSuccess('', compact('detail', 'salesInfo'));
     }
 
