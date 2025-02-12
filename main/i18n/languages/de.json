@@ -1,6 +1,6 @@
 {
-  "用户名不能为空": "Benutzername darf nicht leer sein",
-  "用户充值：%s": "Benutzeraufladung: %s",
   "client_id不能为空": "client_id darf nicht leer sein",
+  "用户充值：%s": "Benutzeraufladung: %s",
+  "用户名不能为空": "Benutzername darf nicht leer sein",
   "账号 %s 被删除，请联系管理员": "Konto %s wurde gelöscht, bitte kontaktieren Sie den Administrator"
 }

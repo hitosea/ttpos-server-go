@@ -2,10 +2,12 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"ttpos-server-go/app/constant"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -69,6 +71,34 @@ type SaleBill struct {
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
+/**
+* 判断订单是否可操作
+ */
+func (model *SaleBill) ValidateOrderStatus(operation string) error {
+	if operation != "payment" && model.IsLock == 1 {
+		return errors.New("订单已被锁定，请解锁后重新操作")
+	}
+	if model.Status == constant.SaleBillStatusCanceled {
+		return errors.New("订单已取消")
+	}
+	if model.Status == constant.SaleBillStatusComplete {
+		return errors.New("订单已结账")
+	}
+	if len(model.SaleOrders) > 0 {
+		// 拆单没有取消权限
+		if operation == "cancel" && len(model.SaleOrders) > 1 {
+			return errors.New("拆单不可操作")
+		}
+		// 单个订单不能操作
+		for _, so := range model.SaleOrders {
+			if err := so.ValidateOrderStatus(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // SaleOrder 销售订单 ttpos_sale_order
 type SaleOrder struct {
 	// 基础标识字段
@@ -107,6 +137,19 @@ type SaleOrder struct {
 	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+/**
+* 判断订单是否可操作
+ */
+func (model *SaleOrder) ValidateOrderStatus() error {
+	if model.Status == constant.SaleBillStatusCanceled {
+		return errors.New("订单已取消")
+	}
+	if model.Status == constant.SaleBillStatusComplete {
+		return errors.New("订单已结账")
+	}
+	return nil
 }
 
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`

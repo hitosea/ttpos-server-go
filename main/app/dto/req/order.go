@@ -3,7 +3,7 @@ package req
 import "ttpos-server-go/app/dto"
 
 // 订单列表查询
-type GetOrderListReq struct {
+type OrderListReq struct {
 	dto.PageReq             // 分页参数
 	OrderNo          string `form:"order_no"`             // 订单编号
 	DateType         int    `form:"date_type,default=-1"` // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
@@ -16,7 +16,7 @@ type GetOrderListReq struct {
 }
 
 // 订单信息查询
-type GetOrderInfoReq struct {
-	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID
-	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
+type OrderInfoReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`   // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" json:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
 }

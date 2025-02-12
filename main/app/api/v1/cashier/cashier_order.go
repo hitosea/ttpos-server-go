@@ -25,14 +25,14 @@ type CashierOrderHandler struct {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
-// @param data query req.GetOrderListReq true "列表参数"
+// @param data query req.OrderListReq true "列表参数"
 // @Success 200 {object} resp.CashierOrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
 func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.GetOrderListReq{}
+	req := req.OrderListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
@@ -48,20 +48,20 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetCashierDeskList 处理获取订单详情
+// GetOrderInfo 处理获取订单详情
 // @Summary 获取订单详情
 // @Description 获取订单详情
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
-// @param data query req.GetOrderInfoReq true "详情参数"
+// @param data query req.OrderInfoReq true "详情参数"
 // @Success 200 {object} resp.CashierOrderInfoResp "订单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/info [get]
 func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.GetOrderInfoReq{}
+	req := req.OrderInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -75,6 +75,35 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// CancelOrder 处理取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @param data body req.OrderInfoReq true "详情参数"
+// @Success 200 {object} resp.CashierOrderInfoResp "订单详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/cancel [post]
+func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	req := req.OrderInfoReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 获取收银产品列表
+	err := h.orderService.CancelOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
 }
 
 // RegisterOrderHandlers 注册收银订单路由
@@ -97,5 +126,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	{
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)
 	}
 }
