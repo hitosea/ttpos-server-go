@@ -14,7 +14,7 @@ type SaleBill struct {
 	ID       uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid     uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单ID" json:"uuid"`
 	OrderNo  string `gorm:"column:order_no;type:varchar(255);default:'';comment:销售账单编号" json:"order_no"`
-	DutyNo   string `gorm:"column:duty_no;type:varchar(255);default:'';comment:当班编号，用于标记该账单属于哪个当班" json:"duty_no"`
+	DutyNo   string `gorm:"column:duty_no;type:varchar(255);default:'';comment:当班编号,用于标记该账单属于哪个当班" json:"duty_no"`
 	SerialNo string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
 
 	// 状态相关字段
@@ -40,22 +40,22 @@ type SaleBill struct {
 	DeskUuid        uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
 
 	// 金额字段 - 主要金额
-	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额，关联销售订单的总金额之和" json:"amount"`
-	ProductAmount float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额，关联销售订单的商品金额之和" json:"product_amount"`
+	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
+	ProductAmount float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额,关联销售订单的商品金额之和" json:"product_amount"`
 
 	// 金额字段 - 支付相关
-	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额，支付金额-订单总金额=支付手续费" json:"payment_amount"`
-	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费，多次支付的支付手续费之和" json:"payment_commission_fee"`
+	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
+	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,多次支付的支付手续费之和" json:"payment_commission_fee"`
 
 	// 金额字段 - 费用相关
-	ServiceFee float64 `gorm:"column:service_fee;type:decimal(12,2);default:0;comment:服务费，关联销售订单的服务费之和" json:"service_fee"`
-	TaxFee     float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0;comment:税费，关联销售订单的税费之和" json:"tax_fee"`
+	ServiceFee float64 `gorm:"column:service_fee;type:decimal(12,2);default:0;comment:服务费,关联销售订单的服务费之和" json:"service_fee"`
+	TaxFee     float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0;comment:税费,关联销售订单的税费之和" json:"tax_fee"`
 
 	// 金额字段 - 优惠相关
-	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);default:0;comment:折扣费用，关联销售订单的折扣费用之和" json:"discount_fee"`
-	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用，关联销售订单的会员折扣费用之和" json:"member_discount_fee"`
-	GiftAmount        float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额，关联销售订单的赠菜金额之和" json:"gift_amount"`
-	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额，关联销售订单的免单金额之和" json:"free_amount"`
+	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);default:0;comment:折扣费用,关联销售订单的折扣费用之和" json:"discount_fee"`
+	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用,关联销售订单的会员折扣费用之和" json:"member_discount_fee"`
+	GiftAmount        float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,关联销售订单的赠菜金额之和" json:"gift_amount"`
+	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额,关联销售订单的免单金额之和" json:"free_amount"`
 
 	// 时间相关字段
 	CreateTime   int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
@@ -94,8 +94,8 @@ type SaleOrder struct {
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用" json:"member_discount_fee"`
 
 	// 订单总额相关字段
-	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额，关联销售订单的总金额之和" json:"amount"`
-	PaymentAmount float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额，支付金额-订单总金额=支付手续费" json:"payment_amount"`
+	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
+	PaymentAmount float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
 
 	// 时间相关字段
 	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
@@ -109,7 +109,7 @@ type SaleOrder struct {
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
-// SaleOrderProduct 销售订单产品 ttpos_sale_order_product
+// SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
 type SaleOrderProduct struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -186,7 +186,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	return bomIdListStr + "-" + attributeIdListStr
 }
 
-// 销售订单产品原料 SaleOrderProductBom ttpos_sale_order_product_bom
+// 销售订单产品原料 SaleOrderProductBom `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	ID                   uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'销售订单商品原料ID'"`
@@ -200,7 +200,7 @@ type SaleOrderProductBom struct {
 	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
 }
 
-// 销售订单产品属性 SaleOrderProductAttribute ttpos_sale_order_product_attribute
+// 销售订单产品属性 SaleOrderProductAttribute `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
 	ID                   uint64 `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'商品属性ID'"`
@@ -223,7 +223,7 @@ type SaleBillSetting struct {
 
 	// 服务费相关设置
 	ServiceFeeType  uint    `gorm:"column:service_fee_type;type:tinyint(1);default:0;comment:服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费" json:"service_fee_type"`
-	ServiceFeeValue float64 `gorm:"column:service_fee_value;type:decimal(12,2);default:0;comment:服务费值，服务费类型为1时，服务费值为固定金额，服务费类型为2和3时，服务费值为%比例" json:"service_fee_value"`
+	ServiceFeeValue float64 `gorm:"column:service_fee_value;type:decimal(12,2);default:0;comment:服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例" json:"service_fee_value"`
 
 	// 税费设置
 	TaxFeeType uint `gorm:"column:tax_fee_type;type:tinyint(1);default:0;comment:税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税" json:"tax_fee_type"`

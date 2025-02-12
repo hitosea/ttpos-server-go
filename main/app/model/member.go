@@ -4,6 +4,7 @@ package model
 type Member struct {
 	ID                 uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'" json:"id"`
 	Uuid               uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:'会员ID';NOT NULL" json:"uuid"`
+	MemberNo           string  `gorm:"column:member_no;type:varchar(255);comment:'会员编号';NOT NULL" json:"member_no"`
 	Nickname           string  `gorm:"column:nickname;type:varchar(255);comment:'昵称';NOT NULL" json:"nickname"`
 	Gender             string  `gorm:"column:gender;type:varchar(10);comment:'性别';NOT NULL" json:"gender"`
 	Phone              string  `gorm:"column:phone;type:varchar(20);comment:'电话号码';NOT NULL" json:"phone"`

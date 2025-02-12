@@ -1,6 +1,6 @@
 package model
 
-// DeskRegion 餐桌区域表，定义餐桌的区域信息 ttpos_desk_region
+// DeskRegion 餐桌区域表,定义餐桌的区域信息 ttpos_desk_region
 type DeskRegion struct {
 	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'餐桌区域ID'"`
@@ -11,7 +11,7 @@ type DeskRegion struct {
 	DeleteTime int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
 
-// DeskType 餐桌类型表，定义餐桌的类型信息 ttpos_desk_type
+// DeskType 餐桌类型表,定义餐桌的类型信息 ttpos_desk_type
 type DeskType struct {
 	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'餐桌类型ID'"`
@@ -24,7 +24,7 @@ type DeskType struct {
 	DeleteTime int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 }
 
-// Desk 桌台信息表，定义桌台的相关信息 ttpos_desk
+// Desk 桌台信息表,定义桌台的相关信息 ttpos_desk
 type Desk struct {
 	ID          uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
 	Uuid        uint64 `gorm:"default:0;column:uuid;comment:'桌台ID'"`

@@ -34,7 +34,7 @@ type Staff struct {
 	RealName            string `gorm:"column:real_name;type:varchar(255);comment:姓名;NOT NULL" json:"real_name"`
 	IsSuper             int    `gorm:"column:is_super;type:tinyint(3);default:0;comment:是否为超级管理员0不是,1是;NOT NULL" json:"is_super"`
 	UserType            int    `gorm:"column:user_type;type:tinyint(1);default:0;comment:账号类型0总台1门店;NOT NULL" json:"user_type"`
-	IsDisable           int    `gorm:"column:is_disable;type:tinyint(3);default:0;comment:是否禁用1禁用，0未禁用;NOT NULL" json:"is_disable"`
+	IsDisable           int    `gorm:"column:is_disable;type:tinyint(3);default:0;comment:是否禁用1禁用,0未禁用;NOT NULL" json:"is_disable"`
 	BindKey             string `gorm:"column:bind_key;type:varchar(255);comment:绑定的设备key" json:"bind_key"`
 	CashierOnline       int    `gorm:"column:cashier_online;type:tinyint(1);default:0;comment:收银员当班 0-不在线 1-在线;NOT NULL" json:"cashier_online"`
 	CashierLoginTime    int64  `gorm:"column:cashier_login_time;type:int(11);default:0;comment:收银员当班登录时间;NOT NULL" json:"cashier_login_time"`

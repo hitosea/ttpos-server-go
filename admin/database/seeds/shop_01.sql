@@ -225,18 +225,36 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
-    `finished_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '完成数量',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称,不随后台改变',
+    `product_attribute_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品属性名称,多个属性名用逗号分隔,不随后台改变',
+    `product_sauces_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品加料名称,多个加料名用逗号分隔,不随后台改变',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-待制作 1-制作中 2-已完成 3-已退菜',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品备注',
+    `has_material` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否无原料, 0-无原料,商品没有关联原料 1-有原料',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
     `first_category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '一级分类ID',
     `finished_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳)',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单商品表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单原料ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称,不随后台改变',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '原料数量',
+    `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台改变',
+    `production_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单原料表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_desk_region` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -630,6 +648,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
 CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
+    `member_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员编号',
     `nickname` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '昵称',
     `gender` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '性别',
     `phone` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '电话号码',
@@ -696,13 +715,31 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `deadline` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
-    `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%',
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-exp到期 1-valid有效 2-delete删除',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%,不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时，不改变此字段',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-exp到期 1-valid有效 2-repeal作废,管理员点击作废按钮 3-cover覆盖,领取了新的会员卡',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡领取记录ID',
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格,会员卡价格,不随后台改变，记录领取时的价格',
+    `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%,不随后台改变，记录领取时的折扣',
+    `period` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变，记录领取时的有效期限',
+    `member_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
+    `member_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
+    `member_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员编号,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
+    `member_card_type_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员卡类型名称,不随后台改变,当无法用member_card_type_uuid获取会员卡类型信息时,用此字段',
+    `member_card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡领取记录表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1117,7 +1154,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_customer_call` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '客户呼叫记录ID',
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台ID',
-    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
+    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号，不随后台改变',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-unhandled未处理 1-handled已处理',
     `is_send` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '消息发送状态 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
