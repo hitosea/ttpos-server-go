@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 )
 
@@ -218,109 +218,14 @@ func (s *orderSrv) CreateOrderNo(db *gorm.DB, orderSource string) string {
 // GetOrderList 获取订单列表
 func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
-	commonRepo := repository.NewCommonRepo()
-
-	// 获取列表
-	lists, total, err := orderRepo.GetOrderListWithPagination(
-		req.PageNo,
-		req.PageSize,
-		commonRepo.Preload(
-			repository.WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", 0)
-					},
-				},
-			},
-			repository.WithPreload{
-				Query: "SaleOrders.PaymentOrders.PaymentMethod",
-			},
-		),
-		commonRepo.WhereBySoftDelete(),
-		commonRepo.SortWithID("DESC"),
-		// 额外条件
-		func() repository.DBOption {
-			return func(db *gorm.DB) *gorm.DB {
-				// 订单编号
-				if req.OrderNo != "" {
-					db = db.Where("order_no = ?", req.OrderNo)
-				}
-				// 账单类型
-				if req.BillType != -1 {
-					db = db.Where("bill_type = ?", req.BillType)
-				}
-				//  账单状态
-				if req.Status != -1 {
-					db = db.Where("status = ?", uint(req.Status))
-				}
-				//  日期类型 -1-全都 1-今天 2-昨天 3-本周
-				if req.DateType >= 0 && req.DateType <= 3 {
-					now := time.Now()
-					var startTime, endTime time.Time
-					switch req.DateType {
-					case 1: // 今天
-						startTime = now.Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-					case 2: // 昨天
-						startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-					case 3: // 本周
-						weekday := int(now.Weekday())
-						if weekday == 0 {
-							weekday = 7
-						}
-						startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
-						endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
-					}
-					db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
-				}
-				// 日期范围
-				if req.QueryStartTime != 0 || req.QueryEndTime != 0 {
-					timeFields := []string{}
-					if req.EnableCreateTime || !req.EnablePayTime {
-						timeFields = append(timeFields, "create_time")
-					}
-					if req.EnablePayTime {
-						timeFields = append(timeFields, "finish_time")
-					}
-					// 开始时间
-					endTime := uint(0)
-					if req.QueryEndTime != 0 {
-						endTime = req.QueryEndTime + 86399
-					}
-					//
-					query := ""
-					args := []interface{}{}
-					for i, field := range timeFields {
-						if i > 0 {
-							query += " OR "
-						}
-						if req.QueryStartTime > 0 && endTime > 0 {
-							query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
-							args = append(args, req.QueryStartTime, endTime)
-						} else if req.QueryStartTime > 0 {
-							query += fmt.Sprintf("(%s > ?)", field)
-							args = append(args, req.QueryStartTime)
-						} else if endTime > 0 {
-							query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
-							args = append(args, endTime)
-						}
-					}
-					if query != "" {
-						db = db.Where(query, args...)
-					}
-				}
-				//
-				return db
-			}
-		}(),
-	)
+	// 获取列表源数据
+	var reqs repository.GetCashierOrderListWithPaginationType
+	copier.Copy(&reqs, req)
+	lists, total, err := orderRepo.GetCashierOrderListWithPagination(reqs)
 	if err != nil {
 		return resp.CashierOrderListPaginationResp{}, err
 	}
-
-	//
+	// 组合列表源数据
 	billList := make([]resp.CashierBillList, len(lists))
 	for i, bill := range lists {
 		totalPayTypeNames := []string{}
@@ -358,35 +263,31 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 			SaleOrders:    orderList,
 		}
 	}
-
 	// 获取数量
-	getOrderNum := func(status uint) (int64, error) {
-		return orderRepo.GetOrderNum(
-			commonRepo.WhereByStatus(status),
-			commonRepo.WhereBySoftDelete(),
+	getOrderNum := func(status uint) int64 {
+		num, _ := orderRepo.GetOrderNum(
+			repository.NewCommonRepo().WhereByStatus(status),
+			repository.NewCommonRepo().WhereBySoftDelete(),
 		)
+		return num
 	}
-	unpaidNum, _ := getOrderNum(0)
-	completeNum, _ := getOrderNum(1)
-	cancelNum, _ := getOrderNum(2)
-
 	// 返回响应对象
 	return resp.CashierOrderListPaginationResp{
 		List: billList,
 		Meta: struct {
 			dto.PageResponse
-			UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
-			CompleteNum int64 `json:"complete_num"` // 已完成数量
-			CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+			UnpaidNum   int64 `json:"unpaid_num"`
+			CompleteNum int64 `json:"complete_num"`
+			CancelNum   int64 `json:"cancel_num"`
 		}{
 			PageResponse: dto.PageResponse{
 				PageNo:   req.PageNo,
 				PageSize: req.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   unpaidNum,
-			CancelNum:   cancelNum,
-			CompleteNum: completeNum,
+			UnpaidNum:   getOrderNum(0),
+			CancelNum:   getOrderNum(1),
+			CompleteNum: getOrderNum(2),
 		},
 	}, nil
 }
@@ -394,41 +295,12 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 // GetOrderList 获取订单信息
 func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
-	commonRepo := repository.NewCommonRepo()
-	// 获取列表
-	info, err := orderRepo.GetSaleBill(
-		commonRepo.Preload(
-			repository.WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", 0)
-					},
-				},
-			},
-			repository.WithPreload{
-				Query: "SaleOrders.PaymentOrders",
-			},
-			repository.WithPreload{
-				Query: "SaleOrders.Member",
-			},
-			repository.WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
-			},
-		),
-		// 额外条件
-		func() repository.DBOption {
-			return func(db *gorm.DB) *gorm.DB {
-				db = db.Where("uuid = ?", req.SaleBillUuid)
-				//
-				return db
-			}
-		}(),
-	)
+	// 获取信息源
+	info, err := orderRepo.GetSaleBillDetail(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return resp.CashierOrderInfoResp{}, err
 	}
-	//
+	// 组合信息
 	totalMemberNames := []string{}
 	payTypes := []resp.CashierOrderInfoPayTypes{}
 	orderList := make([]resp.CashierOrderInfo, len(info.SaleOrders))
@@ -465,6 +337,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 				Remark:                product.Remark,
 				IsGift:                product.IsGift == 1,
 				GiftReason:            product.GiftReason,
+				ImageUrl:              product.ImageFile.GetUrl(),
 				AttributeName:         "",
 			}
 		}
@@ -483,7 +356,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 			Products:      products,
 		}
 	}
-	//
+	// 返回响应对象
 	return resp.CashierOrderInfoResp{
 		SaleBillUuid:  info.Uuid,
 		BillType:      info.BillType,
