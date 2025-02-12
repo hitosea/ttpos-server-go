@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -22,11 +24,12 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)             // 创建桌台订单
-	CreateOrderNo(db *gorm.DB, orderSource string) string                                                  // 创建订单编号
-	GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
+	CreateOrderNo(db *gorm.DB, orderSource string) string                                               // 创建订单编号
+	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
+	CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 取消订单
 }
 
 // orderSrv 收银服务结构体
@@ -52,7 +55,8 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) {
-	var uuid uint64
+	var billUuid uint64
+	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 判断是否有待支付、未挂单的订单
@@ -100,7 +104,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 创建销售订单
-		_, err = repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
+		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
@@ -109,7 +113,8 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return err
 		}
 
-		uuid = saleBill.Uuid
+		billUuid = saleBill.Uuid
+		orderUuid = saleOrder.Uuid
 
 		return nil
 	})
@@ -118,13 +123,15 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 	}
 
 	return resp.CreateInstantOrderResp{
-		SaleBillUuid: uuid,
+		SaleBillUuid:  billUuid,
+		SaleOrderUuid: orderUuid,
 	}, nil
 }
 
 // CreateDeskOrder 创建桌台订单
 func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
-	var uuid uint64
+	var billUuid uint64
+	var orderUuid uint64
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 获取销售账单UUID
@@ -203,7 +210,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			}
 		}
 
-		uuid = saleBill.Uuid
+		billUuid = saleBill.Uuid
+		orderUuid = saleOrder.Uuid
 
 		return nil
 	})
@@ -213,7 +221,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 	}
 
 	return resp.CreateDeskOrderResp{
-		SaleBillUuid: uuid,
+		SaleBillUuid:  billUuid,
+		SaleOrderUuid: orderUuid,
 	}, nil
 }
 
@@ -253,7 +262,7 @@ func (s *orderSrv) CreateOrderNo(db *gorm.DB, orderSource string) string {
 }
 
 // GetOrderList 获取订单列表
-func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (resp.CashierOrderListPaginationResp, error) {
+func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
@@ -303,8 +312,8 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 	// 获取数量
 	getOrderNum := func(status uint) int64 {
 		num, _ := orderRepo.GetOrderNum(
-			repository.NewCommonRepo().WhereByStatus(status),
-			repository.NewCommonRepo().WhereBySoftDelete(),
+			repository.CommonRepo.WhereByStatus(status),
+			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		return num
 	}
@@ -330,10 +339,10 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.GetOrderListReq) (re
 }
 
 // GetOrderList 获取订单信息
-func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (resp.CashierOrderInfoResp, error) {
+func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	// 获取信息源
-	info, err := orderRepo.GetSaleBillDetail(req.SaleBillUuid, req.SaleOrderUuid)
+	info, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return resp.CashierOrderInfoResp{}, err
 	}
@@ -409,18 +418,80 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.GetOrderInfoReq) (re
 	}
 	// 返回响应对象
 	return resp.CashierOrderInfoResp{
-		SaleBillUuid:  info.Uuid,
-		BillType:      info.BillType,
-		IsSplit:       len(info.SaleOrders) > 1,
-		SerialNo:      info.SerialNo,
-		OrderNo:       info.OrderNo,
-		Status:        info.Status,
-		CreateTime:    info.CreateTime,
-		FinishTime:    info.FinishTime,
-		OrderAmount:   info.Amount,
-		PaymentAmount: info.PaymentAmount,
-		MemberNames:   strings.Join(totalMemberNames, ","),
-		PayTypes:      payTypes,
-		SaleOrders:    orderList,
+		Detail: resp.CashierOrderInfos{
+			SaleBillUuid:  info.Uuid,
+			BillType:      info.BillType,
+			IsSplit:       len(info.SaleOrders) > 1,
+			SerialNo:      info.SerialNo,
+			OrderNo:       info.OrderNo,
+			Status:        info.Status,
+			CreateTime:    info.CreateTime,
+			FinishTime:    info.FinishTime,
+			OrderAmount:   info.Amount,
+			PaymentAmount: info.PaymentAmount,
+			MemberNames:   strings.Join(totalMemberNames, ","),
+			PayTypes:      payTypes,
+			SaleOrders:    orderList,
+		},
+		OperationLog: struct {
+			List []resp.CashierOrderOperationLog
+		}{
+			List: []resp.CashierOrderOperationLog{},
+		},
 	}, nil
+}
+
+// CancelOrder 取消订单
+func (s *orderSrv) CancelOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error {
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+	productRepo := repository.NewOrderProductRepo(db)
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	if err != nil {
+		return err
+	}
+	// 验证状态
+	if err = billInfo.ValidateOrderStatus("cancel"); err != nil {
+		return err
+	}
+	// 检查是否部分支付
+	isPartially := orderRepo.IsPartiallyPaid(billInfo)
+	if isPartially {
+		return errors.New("当前订单已被部分支付，不支持取消")
+	}
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
+	// 获取订单已送厨产品，退回商品库存
+	products, err := productRepo.GetProductList(
+		repository.CommonRepo.WhereByStatus(1),
+		productRepo.WhereSaleBillUuids([]uint64{saleBillUuid}),
+	)
+	if err != nil {
+		return err
+	}
+	// todo 未完成
+	// for _, po := range products {
+	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);   // 退回商品库存
+	// }
+
+	fmt.Println(products)
+	fmt.Println(billInfo)
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
 }

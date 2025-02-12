@@ -45,6 +45,12 @@ type ICommonRepo interface {
 // commonRepo 公共仓库实现
 type commonRepo struct{}
 
+var CommonRepo ICommonRepo
+
+func init() {
+	CommonRepo = NewCommonRepo()
+}
+
 // NewCommonRepo 创建新的公共仓库
 func NewCommonRepo() ICommonRepo {
 	return NewCommonRepoImpl()

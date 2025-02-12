@@ -2,16 +2,6 @@ package resp
 
 import "ttpos-server-go/app/dto"
 
-// 创建点餐订单响应
-type CreateInstantOrderResp struct {
-	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
-}
-
-// 创建桌台订单响应
-type CreateDeskOrderResp struct {
-	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
-}
-
 // 创建订单响应
 type CreateOrderResp struct {
 	Uuid uint64 `json:"uuid"` // 订单UUID
@@ -97,7 +87,7 @@ type CashierOrderInfo struct {
 }
 
 // 订单信息响应
-type CashierOrderInfoResp struct {
+type CashierOrderInfos struct {
 	SaleBillUuid  uint64                     `json:"sale_bill_uuid"` // 销售账单UUID
 	BillType      uint                       `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
 	IsSplit       bool                       `json:"is_split"`       // 是否拆单	false:否 true:是
@@ -111,4 +101,18 @@ type CashierOrderInfoResp struct {
 	MemberNames   string                     `json:"member_names"`   // 会员名称
 	PayTypes      []CashierOrderInfoPayTypes `json:"pay_types"`      // 支付类型
 	SaleOrders    []CashierOrderInfo         `json:"sale_orders"`    // 订单列表
+}
+
+type CashierOrderOperationLog struct {
+	Source     uint   `json:"source"`      // 来源
+	CreateTime int64  `json:"create_time"` // 创建时间
+	Username   string `json:"username"`    // 会员名称
+	UserEmail  string `json:"user_email"`  // 会员邮箱
+}
+
+type CashierOrderInfoResp struct {
+	Detail       CashierOrderInfos `json:"detail"` // 明细
+	OperationLog struct {
+		List []CashierOrderOperationLog
+	} `json:"operation_log"` // 操作日志
 }

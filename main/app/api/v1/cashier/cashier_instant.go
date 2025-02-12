@@ -45,10 +45,12 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, cache)
 
 	// 创建收银产品处理程序
 	wrapper := CashierInstantHandler{
-		orderService: service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
+		orderService: orderSrv, // 订单服务
 	}
 
 	// 需要认证

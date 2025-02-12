@@ -13,11 +13,13 @@ type IOrderRepo interface {
 	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                          // 创建销售单
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                 // 获取销售单
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                       // 创建订单
-	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)               // 获取订单列表
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                          // 获取订单数量
 	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)       // 获取收银的订单列表
-	GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                  // 获取销售账单详细信息
+	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                    // 获取销售账单详细信息
+	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                 // 获取销售账单详细信息-丰富的
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
+	IsPartiallyPaid(param any) bool                                                                                       // 判断是否存在部分支付
 }
 
 // orderRepo 订单仓库
@@ -132,11 +134,10 @@ type GetCashierOrderListWithPaginationType struct {
 
 // GetCashierOrderListWithPagination 获取收银台订单列表
 func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) (lists []model.SaleBill, total int64, err error) {
-	commonRepo := NewCommonRepo()
 	lists, total, err = r.GetOrderListWithPagination(
 		param.PageNo,
 		param.PageSize,
-		commonRepo.Preload(
+		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
 				Args: []interface{}{
@@ -149,8 +150,8 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 				Query: "SaleOrders.PaymentOrders.PaymentMethod",
 			},
 		),
-		commonRepo.WhereBySoftDelete(),
-		commonRepo.SortWithID("DESC"),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.SortWithID("DESC"),
 		// 额外条件
 		func() DBOption {
 			return func(db *gorm.DB) *gorm.DB {
@@ -232,11 +233,36 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 	return lists, total, err
 }
 
-// GetSaleBillDetail 获取销售账单详细信息
-func (r *orderRepo) GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
-	commonRepo := NewCommonRepo()
+// GetSaleBillInfo 获取销售账单详细信息
+func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
-		commonRepo.Preload(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
+						if saleOrderUuid > 0 {
+							db = db.Where("uuid = ?", saleOrderUuid)
+						}
+						return db
+					},
+				},
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+	return info, nil
+}
+
+// GetSaleBillDetail 获取销售账单详细信息 -
+func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
 				Args: []interface{}{
@@ -265,10 +291,45 @@ func (r *orderRepo) GetSaleBillDetail(saleBillUuid uint64, saleOrderUuid uint64)
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
 			},
 		),
-		commonRepo.WhereByUuid(saleBillUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
 		return model.SaleBill{}, err
 	}
 	return info, nil
+}
+
+// isPartiallyPaid 是否已经被部分支付
+func (r *orderRepo) IsPartiallyPaid(param any) bool {
+	var info model.SaleBill
+	var ok bool
+	switch v := param.(type) {
+	case model.SaleBill:
+		info = v
+		ok = true
+	case uint64:
+		info, _ = r.GetSaleBillInfo(v, 0)
+		ok = true
+	default:
+		return false
+	}
+	if !ok || len(info.SaleOrders) == 0 {
+		return false
+	}
+	uuids := make([]uint64, len(info.SaleOrders))
+	for i, v := range info.SaleOrders {
+		uuids[i] = v.Uuid
+	}
+	repo := NewPaymentOrderRepo(r.db)
+	paymentOrders, err := repo.GetPaymentOrderList(repo.WhereSaleOrderUuids(uuids))
+	if err != nil {
+		return false
+	}
+	for _, v := range paymentOrders {
+		if v.Status != 2 {
+			return true
+		}
+	}
+	return false
 }
