@@ -1,7 +1,5 @@
 package model
 
-import "ttpos-server-go/config"
-
 // File 文件
 type File struct {
 	ID             int    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
@@ -26,8 +24,7 @@ type File struct {
 	UpdateTime     int    `gorm:"autoUpdateTime;comment:'更新时间'"`
 }
 
-// todo 植焕
-// GetUrl 获取地址
-func (File) GetUrl() string {
-	return config.Database.TablePrefix + "file"
+// GetUrl 获取地址。file_url + save_name + url_param
+func (model *File) GetUrl() string {
+	return model.FileUrl + model.SaveName + model.UrlParam
 }
