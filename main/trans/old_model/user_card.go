@@ -2,6 +2,8 @@ package old_model
 
 import (
 	"fmt"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository/base"
 
 	"gorm.io/gorm"
 )
@@ -34,6 +36,7 @@ type UserCard struct {
 
 type UserCardRepository interface {
 	GetUserCardList() ([]*UserCard, error)
+	GetUserCardByID(id int) (*UserCard, error)
 	ConvertUserCard() error
 }
 
@@ -48,6 +51,12 @@ func (s *UserCardService) GetUserCardList() ([]*UserCard, error) {
 	return userCards, err
 }
 
+func (s *UserCardService) GetUserCardByID(id int) (*UserCard, error) {
+	var userCard UserCard
+	err := s.db.Where("card_id = ?", id).First(&userCard).Error
+	return &userCard, err
+}
+
 func (s *UserCardService) ConvertUserCard() error {
 	userCards, err := s.GetUserCardList()
 	if err != nil {
@@ -56,6 +65,26 @@ func (s *UserCardService) ConvertUserCard() error {
 	for _, userCard := range userCards {
 		fmt.Println(fmt.Sprintf("userCard: %+v", userCard))
 
+		memberCardType := model.MemberCardType{
+			Uuid:            uint64(userCard.CardID),
+			Name:            userCard.CardName,
+			Period:          userCard.Expire,
+			Price:           userCard.Money,
+			Discount:        int(userCard.Discount),
+			Count:           userCard.ReceiveNum,
+			Sort:            userCard.Sort,
+			Status:          userCard.Status,
+			CardOpeningGift: userCard.OpenMoney,
+			GiftValue:       userCard.OpenMoneyNum,
+			Description:     userCard.Content,
+			CreateTime:      userCard.CreateTime,
+			UpdateTime:      userCard.UpdateTime,
+			DeleteTime:      int64(userCard.IsDelete),
+		}
+		_, err := base.NewMemberCardTypeRepo(s.targetDB).CreateMemberCardType(memberCardType)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

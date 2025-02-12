@@ -9,6 +9,7 @@ import (
 type IMemberRepo interface {
 	GetMemberLevels() []model.MemberLevel
 	SearchMember(keyword string) []model.Member
+	CreateMember(member model.Member) error
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {
@@ -34,4 +35,8 @@ func (r *MemberRepo) SearchMember(keyword string) []model.Member {
 	keyword = Like(keyword)
 	r.db.Scopes(UnDelete).Model(&model.Member{}).Select("uuid, nickname, phone").Where("phone LIKE ? OR uuid LIKE ?", keyword, keyword).Find(&members)
 	return members
+}
+
+func (r *MemberRepo) CreateMember(member model.Member) error {
+	return r.db.Create(&member).Error
 }

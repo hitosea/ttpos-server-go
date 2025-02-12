@@ -1,7 +1,11 @@
 package old_model
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository/base"
 
 	"gorm.io/gorm"
 )
@@ -57,6 +61,43 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 	for _, userCardRecord := range userCardRecords {
 		fmt.Println(fmt.Sprintf("userCardRecord: %+v", userCardRecord))
 
+		userService := UserService{
+			db:       s.db,
+			targetDB: s.targetDB,
+		}
+		user, err := userService.GetUserByID(uint(userCardRecord.UserID))
+		if err != nil {
+			return err
+		}
+		json, _ := json.Marshal(user)
+		fmt.Println("NickName:", user.NickName, "===========", string(json))
+		userCardService := UserCardService{
+			db:       s.db,
+			targetDB: s.targetDB,
+		}
+		userCard, err := userCardService.GetUserCardByID(userCardRecord.CardID)
+		if err != nil {
+			return err
+		}
+		memberCardLog := model.MemberCardLog{
+			Uuid:               uint64(userCardRecord.OrderID),
+			Price:              userCardRecord.PayPrice,
+			Discount:           int(userCardRecord.Discount),
+			Period:             int(userCardRecord.ExpireTime),
+			MemberName:         user.NickName,
+			MemberPhone:        user.Mobile,
+			MemberNo:           strconv.Itoa(userCardRecord.UserID),
+			MemberCardTypeName: userCard.CardName,
+			MemberCardTypeUuid: uint64(userCardRecord.CardID),
+			MemberUuid:         uint64(userCardRecord.UserID),
+			CreateTime:         int64(userCardRecord.CreateTime),
+			UpdateTime:         int64(userCardRecord.UpdateTime),
+			DeleteTime:         int64(userCardRecord.IsDelete),
+		}
+		_, err = base.NewMemberCardLogRepo(s.targetDB).CreateMemberCardLog(memberCardLog)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

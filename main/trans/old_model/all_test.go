@@ -49,4 +49,11 @@ func TestConvertAll(t *testing.T) {
 	testConvertCustomerType()          // 自助餐顾客类型
 	testConvertBuffetCustomer()        // 自助餐顾客类型价格
 	testConvertBuffetDelay()           // 自助餐加钟
+	testConvertUserCard()              // 会员卡类型
+	testConvertUser()                  // 会员
+	testConvertUserGrade()             // 会员等级
+	testConvertUserCardRecord()        // 会员卡领取记录
+	testConvertUserPointsLog()         // 会员积分变动记录
+	testConvertUserBalanceLog()        // 会员余额变动记录
+
 }

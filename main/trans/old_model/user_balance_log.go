@@ -2,6 +2,8 @@ package old_model
 
 import (
 	"fmt"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository/base"
 
 	"gorm.io/gorm"
 )
@@ -47,7 +49,20 @@ func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
 	}
 	for _, userBalanceLog := range userBalanceLogs {
 		fmt.Println(fmt.Sprintf("userBalanceLog: %+v", userBalanceLog))
-
+		log := model.MemberBalanceLog{
+			Uuid:        uint64(userBalanceLog.LogID),
+			MemberUuid:  uint64(userBalanceLog.UserID),
+			Scene:       int(userBalanceLog.Scene),
+			Money:       userBalanceLog.Money,
+			GiftMoney:   userBalanceLog.GiftMoney,
+			Description: userBalanceLog.Describe,
+			CreateTime:  userBalanceLog.CreateTime,
+			UpdateTime:  userBalanceLog.CreateTime,
+		}
+		_, err := base.NewMemberBalanceLogRepo(s.targetDB).CreateMemberBalanceLog(log)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
