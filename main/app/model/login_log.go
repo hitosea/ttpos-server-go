@@ -1,7 +1,5 @@
 package model
 
-import "ttpos-server-go/config"
-
 // LoginLog 管理员登录记录表 ttpos_login_log
 type LoginLog struct {
 	ID         int    `gorm:"column:id;type:int(11);AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
@@ -11,8 +9,4 @@ type LoginLog struct {
 	Ip         string `gorm:"column:ip;type:varchar(128);comment:登录ip;NOT NULL" json:"ip"`
 	Result     string `gorm:"column:result;type:varchar(128);comment:登录结果;NOT NULL" json:"result"`
 	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10) unsigned;comment:签到时间;NOT NULL" json:"create_time"`
-}
-
-func (LoginLog) TableName() string {
-	return config.Database.TablePrefix + "shop_login_log"
 }

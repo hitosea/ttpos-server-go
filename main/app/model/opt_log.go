@@ -12,5 +12,5 @@ type ShopOptLog struct {
 	Content     string `gorm:"column:content;type:longtext;comment:操作内容" json:"content"`
 	Ip          string `gorm:"column:ip;type:varchar(128);comment:登录ip;NOT NULL" json:"ip"`
 	AppId       uint   `gorm:"column:app_id;type:int(10);default:0;comment:小程序id;NOT NULL" json:"app_id"`
-	CreateTime  uint   `gorm:"autoCreateTime;column:create_time;type:int(10);comment:签到时间;NOT NULL" json:"create_time"`
+	CreateTime  int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:签到时间;NOT NULL" json:"create_time"`
 }

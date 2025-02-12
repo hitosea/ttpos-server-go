@@ -49,6 +49,7 @@ func (h *Handler) PostCashierLogin(c *gin.Context) {
 // @Tags 收银端
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.CashierBase}
 // @Router /cashier/base [get]
 func (h *Handler) GetCashierBase(c *gin.Context) {

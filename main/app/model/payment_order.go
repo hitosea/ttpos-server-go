@@ -1,6 +1,6 @@
 package model
 
-// 支付方式 PaymentMethod ttpos_payment_method
+// PaymentMethod 支付方式 ttpos_payment_method
 type PaymentMethod struct {
 	ID                   uint    `gorm:"column:id;primaryKey;AUTO_INCREMENT;comment:自增ID" json:"id"`
 	Uuid                 uint64  `gorm:"default:0;column:uuid;comment:支付方式ID" json:"uuid"`
@@ -15,12 +15,12 @@ type PaymentMethod struct {
 	IsShowMemberRecharge bool    `gorm:"default:1;column:is_show_member_recharge;comment:是否在会员充值界面显示" json:"is_show_member_recharge"`
 	Source               uint    `gorm:"default:0;column:source;comment:来源 0-系统 1-手动 2-LianLianPay" json:"source"`
 	Status               uint    `gorm:"default:0;column:status;comment:状态 0-禁用 1-启用" json:"status"`
-	CreateTime           int     `gorm:"autoCreateTime;column:create_time;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime           int     `gorm:"autoUpdateTime;column:update_time;comment:更新时间（时间戳）" json:"update_time"`
-	DeleteTime           int     `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+	CreateTime           int64   `gorm:"autoCreateTime;column:create_time;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime           int64   `gorm:"autoUpdateTime;column:update_time;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime           int64   `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
 
-// 支付订单 PaymentOrder ttpos_payment_order
+// PaymentOrder 支付订单 ttpos_payment_order
 type PaymentOrder struct {
 	ID                uint    `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
 	Uuid              uint64  `gorm:"column:uuid;type:bigint(20);default:0;comment:支付订单ID" json:"uuid"`
@@ -37,9 +37,9 @@ type PaymentOrder struct {
 	SaleOrderUuid     uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
 
 	// 时间相关字段
-	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联字段
 	PaymentMethod PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:uuid"`

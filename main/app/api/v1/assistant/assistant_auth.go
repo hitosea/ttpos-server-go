@@ -3,6 +3,7 @@ package assistant
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -49,6 +50,7 @@ func (h *AuthHandler) PostAssistantLogin(c *gin.Context) {
 // @Tags 点餐助手端.认证鉴权
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Param X-TOKEN header string true "登录时返回的token"
 // @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
@@ -59,12 +61,25 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	token, err := h.authSrv.BindCashier(c.GetHeader("x-token"), bindReq)
+	token, err := h.authSrv.BindCashier(bindReq, c.Copy())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
 	helper.Success(c, gin.H{"token": token})
+}
+
+// GetOnlineCashiers 获取在线收银机
+// @Summary 获取在线收银机
+// @Description 获取在线收银机
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{list=[]resp.OnlineCashier}
+// @Router /assistant/online_cashiers [get]
+func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
+	helper.Success(c, gin.H{"list": h.authSrv.GetOnlineCashiers(c.GetUint64(jwt.CompanyUuid))})
 }
 
 // GetAssistantBase 点餐助手端信息
@@ -73,6 +88,7 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 // @Tags 点餐助手端.认证鉴权
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
 // @Router /cashier/base [get]
 func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
@@ -99,14 +115,14 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	publicApi := router.Group("")
 	{
-		publicApi.POST("/login", wrapper.PostAssistantLogin)
-		publicApi.POST("/bind_cashier", wrapper.BindCashier)
+		publicApi.POST("/login", wrapper.PostAssistantLogin) // 登录
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/base", wrapper.GetAssistantBase)
+		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers) // 获取在线的收银机
+		privateApi.POST("/bind_cashier", wrapper.BindCashier)         // 绑定收银机
+		privateApi.GET("/base", wrapper.GetAssistantBase)             // 获取基本信息
 	}
-
 }

@@ -1,6 +1,6 @@
 package model
 
-// 销售账单 SaleBill ttpos_sale_bill
+// SaleBill 销售账单 ttpos_sale_bill
 type SaleBill struct {
 	// 主键和标识字段
 	ID       uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -50,18 +50,18 @@ type SaleBill struct {
 	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额，关联销售订单的免单金额之和" json:"free_amount"`
 
 	// 时间相关字段
-	CreateTime   uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime   uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	FinishTime   uint `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
-	HideBillTime uint `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
-	DeleteTime   uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+	CreateTime   int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime   int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	FinishTime   int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
+	HideBillTime int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
+	DeleteTime   int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联字段
 	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
-// 销售订单 SaleOrder ttpos_sale_order
+// SaleOrder 销售订单 ttpos_sale_order
 type SaleOrder struct {
 	// 基础标识字段
 	ID      uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -90,10 +90,10 @@ type SaleOrder struct {
 	PaymentAmount float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额，支付金额-订单总金额=支付手续费" json:"payment_amount"`
 
 	// 时间相关字段
-	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	FinishTime uint `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
-	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
+	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
+	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
+	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
+	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联对象
 	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
@@ -101,7 +101,7 @@ type SaleOrder struct {
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
-// 销售订单产品 SaleOrderProduct ttpos_sale_order_product
+// SaleOrderProduct 销售订单产品 ttpos_sale_order_product
 type SaleOrderProduct struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
@@ -148,7 +148,7 @@ type SaleOrderProduct struct {
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
-// 销售账单设置 SaleBillSetting ttpos_sale_bill_setting
+// SaleBillSetting 销售账单设置 ttpos_sale_bill_setting
 type SaleBillSetting struct {
 	// 主键和标识字段
 	ID   uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`

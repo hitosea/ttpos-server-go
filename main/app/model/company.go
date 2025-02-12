@@ -9,10 +9,10 @@ type Company struct {
 	ExpireTime    int    `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
 	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
 	Status        int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
-	AuthStartTime int    `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
-	CreateTime    int    `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime    int    `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime    int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
+	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
+	CreateTime    int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
+	UpdateTime    int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
+	DeleteTime    int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
@@ -42,9 +42,9 @@ type CompanySetting struct {
 	Timezone         string `gorm:"column:timezone;type:varchar(50);default:Asia/Shanghai;comment:时区;NOT NULL" json:"timezone"`
 	Languages        string `gorm:"column:languages;type:varchar(255);comment:支持语言;NOT NULL" json:"languages"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
-	CreateTime       int    `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间（时间戳）;NOT NULL" json:"create_time"`
-	UpdateTime       int    `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间（时间戳）;NOT NULL" json:"update_time"`
-	DeleteTime       int    `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）;NOT NULL" json:"delete_time"`
+	CreateTime       int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间（时间戳）;NOT NULL" json:"create_time"`
+	UpdateTime       int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间（时间戳）;NOT NULL" json:"update_time"`
+	DeleteTime       int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）;NOT NULL" json:"delete_time"`
 }
 
 // CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff

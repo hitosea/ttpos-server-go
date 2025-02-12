@@ -9,13 +9,16 @@ import (
 type IStaffRepo interface {
 	WithCompany() With
 	WithCompanySetting() With
+	WithDevice(source string) With
 
-	GetByUuid(uuid uint64, withs ...With) model.Staff
-	GetByUsername(username string, withs ...With) model.Staff
-	GetByDeviceId(bindKey string) model.Staff
-	GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff
-	CreateStaff(staff model.Staff) error
-	Update(uuid uint64, vars map[string]any) error
+	GetByUuid(uuid uint64, withs ...With) model.Staff                            // 根据Uuid查询员工
+	GetByUsername(username string, withs ...With) model.Staff                    // 根据用户名查询员工
+	GetByDeviceId(bindKey string) model.Staff                                    // 根据员工绑定的设备ID查询员工
+	GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff // 根据员工Uuid和绑定的设备ID查询员工
+	GetOnlineCashiers(withs ...With) []model.Staff                               // 获取在线收银机
+
+	CreateStaff(staff model.Staff) error           // 创建员工
+	Update(uuid uint64, vars map[string]any) error // 更新员工
 }
 
 func NewStaffRepo(db *gorm.DB) IStaffRepo {
@@ -52,6 +55,12 @@ func (r *StaffRepo) WithCompany() With {
 	}
 }
 
+func (r *StaffRepo) WithDevice(source string) With {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Device", "source = ?", source)
+	}
+}
+
 func (r *StaffRepo) GetByUsername(username string, withs ...With) model.Staff {
 	var staff model.Staff
 	r.handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&staff)
@@ -67,6 +76,11 @@ func (r *StaffRepo) GetByDeviceId(bindKey string) model.Staff {
 func (r *StaffRepo) GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff {
 	var staff model.Staff
 	r.handleWiths(r.db, withs).Where("uuid = ? AND bind_key = ?", uuid, bindKey).Debug().First(&staff)
+	return staff
+}
+func (r *StaffRepo) GetOnlineCashiers(withs ...With) []model.Staff {
+	var staff []model.Staff
+	r.handleWiths(r.db, withs).Where("cashier_online = 1").Debug().Find(&staff)
 	return staff
 }
 

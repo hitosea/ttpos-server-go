@@ -42,7 +42,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
- 
+
 		// 用户鉴权
 		company, companySetting, staff, err := authSrv.Auth(req.Authenticate{
 			Source:      claims.Source,
@@ -50,9 +50,10 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			CompanyUuid: claims.CompanyUuid,
 			StaffUuid:   claims.StaffUuid,
 			UrlPath:     c.Request.URL.Path,
-
-			AssistantDeviceId:  claims.Assistant.DeviceId,
-			AssistantStaffUuid: claims.Assistant.StaffUuid,
+			Assistant: req.Assistant{
+				DeviceId:  claims.Assistant.DeviceId,
+				StaffUuid: claims.Assistant.StaffUuid,
+			},
 		})
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeBadRequest, err)

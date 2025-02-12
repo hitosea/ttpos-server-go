@@ -1,6 +1,6 @@
 package model
 
-// 供应商表 ttpos_supplier
+// Supplier 供应商表 ttpos_supplier
 type Supplier struct {
 	ID           uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 	Uuid         uint64 `gorm:"default:0;column:uuid;comment:'供应商ID'"`

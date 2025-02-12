@@ -17,7 +17,7 @@ type Member struct {
 	GiftAccountBalance float64 `gorm:"column:gift_account_balance;type:decimal(12,2);default:0.00;comment:'赠送账户余额';NOT NULL" json:"gift_account_balance"`
 	MemberLevelUuid    uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:'会员等级ID';NOT NULL" json:"member_level_uuid"`
 	MemberCardUuid     uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:'会员卡片ID';NOT NULL" json:"member_card_uuid"`
-	CreateTime         int     `gorm:"autoCreateTime;comment:'创建时间（时间戳）'" json:"create_time"`
-	UpdateTime         int     `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'" json:"update_time"`
-	DeleteTime         int     `gorm:"default:0;comment:'删除时间（时间戳）'" json:"delete_time"`
+	CreateTime         int64   `gorm:"autoCreateTime;comment:'创建时间（时间戳）'" json:"create_time"`
+	UpdateTime         int64   `gorm:"autoUpdateTime;comment:'更新时间（时间戳）'" json:"update_time"`
+	DeleteTime         int64   `gorm:"default:0;comment:'删除时间（时间戳）'" json:"delete_time"`
 }

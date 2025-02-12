@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -29,7 +28,8 @@ type IAuthSrv interface {
 	CashierBase(cc *gin.Context) (resp.CashierBase, error)                                   // 收银端基本信息
 	AssistantBase(cc *gin.Context) (resp.AssistantBase, error)                               // 点餐助手端基本信息
 	Auth(authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
-	BindCashier(token string, cashierReq req.BindCashierReq) (string, error)                 // 点餐助手绑定收银机
+	BindCashier(cashierReq req.BindCashierReq, cc *gin.Context) (string, error)              // 点餐助手绑定收银机
+	GetOnlineCashiers(companyUuid uint64) []resp.OnlineCashier                               // 获取在线收银机
 }
 
 func NewAuthSrv(
@@ -83,7 +83,7 @@ func NewAuthSrvImpl(
 			//"/order/order/buy",
 			//"/index/getAllProductImg",
 		},
-		assistantRoutes: []string{ // 登录点餐助手但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
+		assistantRoutes: []string{ // 已登录点餐助手，但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
 			//            '/index/getOnlineCashierList',
 			//            '/call/call/unprocessed',
 			//            '/store/table/table',
@@ -131,7 +131,6 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 		return token, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 
-	var authAssistant auth.Assistant
 	switch loginReq.Source {
 	case constant.SourceCashier: // 收银端登录
 		// 判断权限
@@ -180,10 +179,6 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 		if companySetting.IsOpenAssistant != 1 {
 			return token, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 		}
-		authAssistant = auth.Assistant{
-			DeviceId:  loginReq.DeviceId,
-			StaffUuid: staff.Uuid,
-		}
 	default:
 		return token, errors.New("登录来源错误")
 	}
@@ -194,7 +189,7 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 		Brand:            loginReq.Brand,
 		Source:           loginReq.Source,
 		FinallyLoginUuid: staff.Uuid,
-		FinallyLoginTime: int(time.Now().Unix()),
+		FinallyLoginTime: time.Now().Unix(),
 		CompanyUuid:      staff.CompanyUuid,
 	}, cc)
 	if err != nil {
@@ -202,7 +197,7 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, authAssistant)
+	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{})
 	if err != nil {
 		return token, errors.New("生成token失败")
 	}
@@ -316,8 +311,8 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 	}
 	// 验证设备是否绑定
 	deviceId := auth.DeviceId
-	if auth.Source == constant.SourceAssistant {
-		deviceId = auth.AssistantDeviceId
+	if auth.Source == constant.SourceAssistant && auth.Assistant.DeviceId != "" { // 登录了点餐助手，且绑定了收银机
+		deviceId = auth.Assistant.DeviceId
 	}
 	if !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
 		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
@@ -344,11 +339,6 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 		{
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
 				cashierBindRecord := repository.NewBindRecordRepo(s.dbm.GetDB(auth.CompanyUuid)).GetBySourceAndDeviceId(constant.SourceCashier, auth.DeviceId)
-
-				fmt.Println("11111")
-				fmt.Printf("%+v\n", cashierBindRecord)
-				fmt.Println("11111")
-
 				if cashierBindRecord.Uuid == 0 {
 					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenError, "收银员设备已解绑，请重新绑定")
 				}
@@ -388,16 +378,13 @@ func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
 }
 
 // BindCashier 绑定收银机
-func (s *AuthSrv) BindCashier(token string, bindReq req.BindCashierReq) (string, error) {
+func (s *AuthSrv) BindCashier(bindReq req.BindCashierReq, cc *gin.Context) (string, error) {
 	var newToken string
-	claims, err := auth.ParseToken(token, config.JWT.Secret)
-	if err != nil {
-		return newToken, errors.New("无效的token")
-	}
-	if claims.Source != constant.SourceAssistant {
+	companyUuid := cc.GetUint64(jwt.CompanyUuid)
+	if cc.GetString(jwt.Source) != constant.SourceAssistant {
 		return newToken, errors.New("用户信息错误")
 	}
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(claims.CompanyUuid))
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staff := staffRepo.GetByUuidAndDeviceId(bindReq.CashierUuid, bindReq.DeviceId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	// 检查传递的收银设备
 	if staff.Uuid == 0 {
@@ -421,12 +408,33 @@ func (s *AuthSrv) BindCashier(token string, bindReq req.BindCashierReq) (string,
 		return newToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 	}
 	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
-	newToken, err = auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, claims.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{
-		DeviceId:  claims.DeviceId,
-		StaffUuid: claims.StaffUuid,
+	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{
+		DeviceId:  cc.GetString(jwt.DeviceId),
+		StaffUuid: cc.GetUint64(jwt.StaffUuid),
 	})
 	if err != nil {
 		return newToken, errors.New("生成token失败")
 	}
 	return newToken, nil
+}
+
+// GetOnlineCashiers 获取在线收银机
+func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) []resp.OnlineCashier {
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
+	staffs := staffRepo.GetOnlineCashiers(staffRepo.WithDevice(constant.SettingCashier))
+
+	var cashiers []resp.OnlineCashier
+	for _, staff := range staffs {
+		var remark string
+		if staff.Device != nil {
+			remark = staff.Device.Remark
+		}
+		cashiers = append(cashiers, resp.OnlineCashier{
+			CashierUuid: staff.Uuid,
+			Username:    staff.Username,
+			DeviceId:    staff.BindKey,
+			Remark:      remark,
+		})
+	}
+	return cashiers
 }

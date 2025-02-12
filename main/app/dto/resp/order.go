@@ -23,7 +23,7 @@ type CashierOrder struct {
 	SerialNo      string  `json:"serial_no"`       // 桌位编号 (点餐流水号)
 	OrderNo       string  `json:"order_no"`        // 订单编号
 	Status        uint    `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    uint    `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	FinishTime    int64   `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64 `json:"order_amount"`    // 订单总金额
 	PaymentAmount float64 `json:"payment_amount"`  // 支付金额
 	PayTypeName   string  `json:"pay_type_name"`   // 支付类型名称
@@ -37,7 +37,7 @@ type CashierBillList struct {
 	SerialNo      string         `json:"serial_no"`      // 桌位编号 (点餐流水号)
 	OrderNo       string         `json:"order_no"`       // 订单编号
 	Status        uint           `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    uint           `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
+	FinishTime    int64          `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64        `json:"order_amount"`   // 订单总金额
 	PaymentAmount float64        `json:"payment_amount"` // 支付金额
 	PayTypeName   string         `json:"pay_type_name"`  // 支付类型名称
@@ -87,7 +87,7 @@ type CashierOrderInfo struct {
 	SerialNo      string                `json:"serial_no"`       // 桌位编号 (点餐流水号)
 	OrderNo       string                `json:"order_no"`        // 订单编号
 	Status        uint                  `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    uint                  `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	FinishTime    int64                 `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64               `json:"order_amount"`    // 订单总金额
 	PaymentAmount float64               `json:"payment_amount"`  // 支付金额
 	PayTypeName   string                `json:"pay_type_name"`   // 支付类型名称
@@ -103,8 +103,8 @@ type CashierOrderInfoResp struct {
 	SerialNo      string                     `json:"serial_no"`      // 桌位编号 (点餐流水号)
 	OrderNo       string                     `json:"order_no"`       // 订单编号
 	Status        uint                       `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	CreateTime    uint                       `json:"create_time"`    // 创建时间
-	FinishTime    uint                       `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
+	CreateTime    int64                      `json:"create_time"`    // 创建时间
+	FinishTime    int64                      `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64                    `json:"order_amount"`   // 订单总金额
 	PaymentAmount float64                    `json:"payment_amount"` // 支付金额
 	MemberNames   string                     `json:"member_names"`   // 会员名称
