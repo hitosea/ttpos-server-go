@@ -61,10 +61,15 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 				Name: buffetCustomerTypePrice.BuffetCustomerType.Name,
 			})
 		}
-
+		//
+		price := float64(0)
+		if len(buffet.BuffetCustomerTypePrices) > 0 {
+			price = buffet.BuffetCustomerTypePrices[0].Price
+		}
+		//
 		respBuffet := resp.Buffet{
 			Uuid:                buffet.Uuid,
-			Price:               buffet.BuffetCustomerTypePrices[0].Price,
+			Price:               price,
 			IsLimitTime:         buffet.IsLimitTime == 1,
 			CanCombined:         buffet.CanCombined == 1,
 			NonOrderingTime:     buffet.NonOrderingTime,
