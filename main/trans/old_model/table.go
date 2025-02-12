@@ -63,6 +63,7 @@ func (s *TableService) ConvertTable() error {
 		if table.Status == 30 {
 			status = 1
 		}
+		deviceId := 0 // todo 通过bind_info获取设备ID
 		desk := model.Desk{
 			Uuid:        table.TableID,
 			DeskNo:      table.TableNo,
@@ -72,7 +73,7 @@ func (s *TableService) ConvertTable() error {
 			Status:      uint(status),
 			IsDisable:   isDisable,
 			QrcodeToken: table.QRCodeValue,
-			DeviceUuid:  uint(table.IsBind),
+			DeviceUuid:  uint64(deviceId),
 			CreateTime:  table.CreateTime,
 			UpdateTime:  table.UpdateTime,
 			DeleteTime:  0,
