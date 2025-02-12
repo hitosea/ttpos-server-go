@@ -47,7 +47,7 @@ var rootCommand = &cobra.Command{
 		lock.NewSystemLock()
 
 		// 初始化雪花ID生成器
-		database.InitSonyFlakeId()
+		//database.InitSonyFlakeId()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()

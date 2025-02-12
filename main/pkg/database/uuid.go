@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	goid "github.com/ace-zhaoy/go-id"
 
 	"github.com/sony/sonyflake"
 )
@@ -20,10 +21,16 @@ func InitSonyFlakeId() {
 }
 
 // GetID 获取全局 Uuid 的函数
-func GetID() (id uint64, err error) {
+func GetID18() (id uint64, err error) {
 	if sonyFlake == nil {
 		err = fmt.Errorf("需要先初始化以后再执行 GetID 函数 err: %#v \n", err)
 		return
 	}
 	return sonyFlake.NextID()
+}
+
+// todo 修复当启动多个程序时id重复的问题
+func GetID() (uint64, error) {
+	id := goid.GenID()
+	return uint64(id), nil
 }
