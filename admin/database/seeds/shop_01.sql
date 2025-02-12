@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台类型ID',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序序号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未开台 1-已开台',
-    `is_disable` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否禁用, 0-否 1-是',
+    `is_disable` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否禁用, 0-否 1-是',
     `qrcode_token` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效',
     `device_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '平板设备uuid, 0-未绑定',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
