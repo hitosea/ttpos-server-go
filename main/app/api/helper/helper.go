@@ -62,7 +62,11 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 	var ves validator.ValidationErrors
 	ok := errors.As(err, &ves)
 	if !ok {
-		Fail(c, constant.CodeBadRequest, "参数错误")
+		if config.Server.Mode == "debug" {
+			Fail(c, constant.CodeBadRequest, err.Error())
+		} else {
+			Fail(c, constant.CodeBadRequest, "参数错误")
+		}
 		return
 	}
 	if config.Server.Mode == "debug" {
