@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/assistant/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "点餐助手端信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.认证鉴权"
+                ],
+                "summary": "点餐助手端信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.AssistantBase"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/bind_cashier": {
             "post": {
                 "security": [
@@ -1275,9 +1315,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/member/info/{memberId}": {
+        "/cashier/member/levels": {
             "get": {
-                "description": "获取收银员会员信息",
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员等级列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -1285,31 +1330,42 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "收银端.会员"
                 ],
-                "summary": "获取收银员会员信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "会员ID",
-                        "name": "memberId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "会员等级列表",
                 "responses": {
                     "200": {
-                        "description": "会员详情"
-                    },
-                    "404": {
-                        "description": "未找到"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "list": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.MemberLevel"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
         },
         "/cashier/member/search": {
             "get": {
-                "description": "搜索收银员会员",
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "模糊搜索会员",
                 "consumes": [
                     "application/json"
                 ],
@@ -1317,27 +1373,38 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端"
+                    "收银端.会员"
                 ],
-                "summary": "搜索收银员会员",
+                "summary": "模糊搜索会员",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "搜索查询",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
+                        "description": "关键字搜索：uuid\\phone，前端处理前后空格",
+                        "name": "keyword",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "会员列表",
+                        "description": "OK",
                         "schema": {
-                            "type": "array"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "list": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.SearchMember"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
-                    },
-                    "404": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -1767,32 +1834,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/payment/type_list": {
-            "get": {
-                "description": "获取收银支付类型列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银支付类型列表",
-                "responses": {
-                    "200": {
-                        "description": "支付类型列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/product/category/list": {
             "get": {
                 "description": "获取收银产品类别列表",
@@ -1815,38 +1856,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/product/info/{productId}": {
-            "get": {
-                "description": "获取收银产品信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银产品信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "产品详情"
-                    },
-                    "404": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -1886,305 +1895,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/cashier_resp.ProductListWithPaginationResp"
                         }
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/production/create": {
-            "post": {
-                "description": "创建收银生产",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "创建收银生产",
-                "parameters": [
-                    {
-                        "description": "生产详情",
-                        "name": "production",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/production/return/return_foodReason": {
-            "get": {
-                "description": "获取退货原因",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取退货原因",
-                "responses": {
-                    "200": {
-                        "description": "退货原因列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/production/return/{productionId}": {
-            "post": {
-                "description": "返回收银生产",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "返回收银生产",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "生产ID",
-                        "name": "productionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/reason/gift_food": {
-            "get": {
-                "description": "获取赠送食物的原因",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取赠送食物的原因",
-                "responses": {
-                    "200": {
-                        "description": "赠送原因列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/shopping_cart/info": {
-            "get": {
-                "description": "获取收银购物车信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银购物车信息",
-                "responses": {
-                    "200": {
-                        "description": "购物车详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/shopping_cart/product/create": {
-            "post": {
-                "description": "在购物车中创建产品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "在购物车中创建产品",
-                "parameters": [
-                    {
-                        "description": "产品详情",
-                        "name": "product",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/shopping_cart/product/number/{productId}": {
-            "post": {
-                "description": "更新购物车中产品的数量",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "更新购物车中产品的数量",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "新数量",
-                        "name": "number",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/shopping_cart/product/{productId}": {
-            "delete": {
-                "description": "从购物车中删除产品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "从购物车中删除产品",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/shopping_cart/sub_bill": {
-            "get": {
-                "description": "获取购物车的子账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取购物车的子账单",
-                "responses": {
-                    "200": {
-                        "description": "子账单详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/verify_advanced_password": {
-            "post": {
-                "description": "验证收银员的高级密码",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "验证收银员的高级密码",
-                "parameters": [
-                    {
-                        "description": "高级密码",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -2955,15 +2665,38 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DeskBuffetCustomerType": {
+            "type": "object",
+            "properties": {
+                "meal_num": {
+                    "description": "就餐人数",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "自助餐顾客类型uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.DeskOrderCreateReq": {
             "type": "object",
-            "required": [
-                "desk_uuid",
-                "is_buffet"
-            ],
             "properties": {
+                "buffet_customer_types": {
+                    "description": "自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.DeskBuffetCustomerType"
+                    }
+                },
+                "buffet_uuids": {
+                    "description": "自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "desk_uuid": {
-                    "description": "桌台uuid",
+                    "description": "桌台uuid, 必填",
                     "type": "integer"
                 },
                 "is_buffet": {
@@ -2971,15 +2704,12 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "meal_num": {
-                    "description": "餐数: 非自助餐时必填, 最小1, 最大999",
-                    "type": "integer",
-                    "maximum": 999,
-                    "minimum": 1
+                    "description": "就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0",
+                    "type": "integer"
                 },
                 "remark": {
-                    "description": "备注: 非必填, 最大50字符",
-                    "type": "string",
-                    "maxLength": 50
+                    "description": "备注: 最小空字符串,最大50字符",
+                    "type": "string"
                 }
             }
         },
@@ -3769,6 +3499,27 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberLevel": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "等级名称",
+                    "type": "string"
+                },
+                "priority": {
+                    "description": "等级优先级",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "等级Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.OnlineCashier": {
             "type": "object",
             "properties": {
@@ -3827,6 +3578,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SearchMember": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "会员Uuid",
                     "type": "integer"
                 }
             }

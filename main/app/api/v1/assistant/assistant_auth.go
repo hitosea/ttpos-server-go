@@ -107,7 +107,7 @@ func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
-// @Router /cashier/base [get]
+// @Router /assistant/base [get]
 func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
 	info, err := h.authSrv.AssistantBase(c.Copy())
 	if err != nil {

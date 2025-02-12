@@ -1,6 +1,8 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type Where func(*gorm.DB) *gorm.DB
 type With func(*gorm.DB) *gorm.DB
@@ -10,6 +12,14 @@ type DBOption func(*gorm.DB) *gorm.DB
 type WithPreload struct {
 	Query string
 	Args  []interface{}
+}
+
+func UnDelete(db *gorm.DB) *gorm.DB {
+	return db.Where("delete_time = 0")
+}
+
+func Like(keyword string) string {
+	return "%" + keyword + "%"
 }
 
 // ICommonRepo 公共仓库接口
