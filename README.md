@@ -96,3 +96,4 @@ type ProductCategory struct {
 	ID uint `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
 }
 ```
+18. func方法的参数如果超过3个，要定义参数结构体，3个以下包括3个可以直接写参数名
