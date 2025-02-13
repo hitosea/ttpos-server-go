@@ -1284,6 +1284,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/product/delete": {
+            "delete": {
+                "description": "删除桌台订单商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "删除桌台订单商品",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/region_and_type": {
             "get": {
                 "description": "获取桌台的区域和类型",
@@ -1346,7 +1380,7 @@ const docTemplate = `{
         },
         "/cashier/instant/order/close": {
             "post": {
-                "description": "关闭桌台订单",
+                "description": "关闭点餐订单",
                 "consumes": [
                     "application/json"
                 ],
@@ -1354,9 +1388,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.点餐"
                 ],
-                "summary": "关闭桌台订单",
+                "summary": "关闭点餐订单",
                 "parameters": [
                     {
                         "type": "string",
@@ -1406,6 +1440,40 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.CreateOrderResp"
                         }
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/product/delete": {
+            "delete": {
+                "description": "删除点餐订单商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "删除点餐订单商品",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -3207,6 +3275,28 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderProductDeleteReq": {
+            "type": "object",
+            "required": [
+                "order_product_uuid",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "order_product_uuid": {
+                    "description": "订单商品UUID",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }

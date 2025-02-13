@@ -67,10 +67,10 @@ func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// CloseDesk 处理关闭桌台订单
-// @Summary 关闭桌台订单
-// @Description 关闭桌台订单
-// @Tags 收银端.订单
+// CloseOrder 处理关闭点餐订单
+// @Summary 关闭点餐订单
+// @Description 关闭点餐订单
+// @Tags 收银端.点餐
 // @Accept json
 // @Produce json
 // @param data query req.OrderCancelReq true "详情参数"
@@ -89,6 +89,34 @@ func (h *CashierInstantHandler) CloseOrder(c *gin.Context) {
 	}
 	//
 	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderProductDelete 处理删除点餐订单商品
+// @Summary 删除点餐订单商品
+// @Description 删除点餐订单商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderProductDeleteReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/product/delete [delete]
+func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	params := req.OrderProductDeleteReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductDelete(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -120,5 +148,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)
 		privateApi.POST("/instant/order/close", wrapper.CloseOrder)
+		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)
 	}
 }

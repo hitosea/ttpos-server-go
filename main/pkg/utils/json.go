@@ -7,7 +7,7 @@ import (
 
 // ToJsonString 结构体转json
 func ToJsonString(data interface{}) string {
-	jsonBytes, err := json.Marshal(data)
+	jsonBytes, err := json.MarshalIndent(data, "", "   ")
 	if err != nil {
 		return ""
 	}

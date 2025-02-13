@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -66,7 +67,7 @@ type SaleBill struct {
 }
 
 // ValidateOrderStatus 判断订单是否可操作
-func (model *SaleBill) ValidateOrderStatus(operation string) error {
+func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
 	if operation != constant.OrderSettle && model.IsLock == 1 {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
@@ -83,8 +84,10 @@ func (model *SaleBill) ValidateOrderStatus(operation string) error {
 		}
 		// 单个订单不能操作
 		for _, so := range model.SaleOrders {
-			if err := so.ValidateOrderStatus(); err != nil {
-				return err
+			if len(saleOrderUuid) == 0 || slices.Contains(saleOrderUuid, so.Uuid) {
+				if err := so.ValidateOrderStatus(); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -125,6 +128,11 @@ type SaleOrder struct {
 	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+// TableName 指定表名
+func (SaleOrder) TableName() string {
+	return "ttpos_sale_order"
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -278,11 +286,25 @@ type SaleOrderProductMaterial struct {
 // SaleBillOperationRecord 桌台账单操作记录
 type SaleBillOperationRecord struct {
 	BaseModel
-	Source        string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
-	Action        string `gorm:"column:action;type:varchar(150);not null;default:'';comment:操作行为" json:"action"`
-	Message       string `gorm:"column:message;type:varchar(255);not null;default:'';comment:消息内容" json:"message"`
-	Remark        string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:备注" json:"remark"`
+	// 基本信息
+	Source  string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
+	Action  string `gorm:"column:action;type:varchar(150);not null;default:'';comment:操作行为" json:"action"`
+	Message string `gorm:"column:message;type:varchar(255);not null;default:'';comment:消息内容" json:"message"`
+	Remark  string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:备注" json:"remark"`
+	// 关联ID字段
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
+}
+
+// 销售订单优惠策略表
+type SaleOrderDiscountStrategy struct {
+	BaseModel
+	// 基本信息
+	Type      uint    `gorm:"column:type;type:tinyint(2);not null;default:0;comment:优惠策略类型,0-整单折扣、1-会员折扣" json:"type"`
+	Name      string  `gorm:"column:name;type:varchar(50);not null;default:'';comment:优惠策略名称" json:"name"`
+	Value     float64 `gorm:"column:value;type:decimal(12,2);not null;default:0.00;comment:优惠策略值" json:"value"`
+	JsonField string  `gorm:"column:json_field;type:text;default:null;comment:JSON字段" json:"json_field"`
+	// 关联ID字段
+	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 }

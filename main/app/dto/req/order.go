@@ -2,6 +2,13 @@ package req
 
 import "ttpos-server-go/app/dto"
 
+var OrderReqMessage = map[string]string{
+	"uuid.required":               "桌台uuid不能为空",
+	"sale_bill_uuid.required":     "销售账单UUID不能为空",
+	"sale_order_uuid.required":    "销售订单UUID不能为空",
+	"order_product_uuid.required": "订单商品UUID不能为空",
+}
+
 // 订单列表查询
 type OrderListReq struct {
 	dto.PageReq             // 分页参数
@@ -38,4 +45,11 @@ type OrderDeleteReq struct {
 type OrderIsCellCloseReq struct {
 	DeskUuid     uint64 `form:"desk_uuid"`      // 桌台UUID	   二选一, 销售账单UUID权重最大
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
+}
+
+// 删除订单商品
+type OrderProductDeleteReq struct {
+	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
+	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
+	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
 }

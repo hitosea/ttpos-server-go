@@ -24,13 +24,14 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
-	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
-	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error            // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 删除订单
-	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                         // 判断桌台是否可取消
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                        // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                  // 创建桌台订单
+	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)                         // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                                   // 获取收银订单详情
+	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                    // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                   // 删除订单
+	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                 // 判断桌台是否可取消
+	OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error) // 删除订单商品
 }
 
 // orderSrv 收银服务结构
@@ -574,4 +575,60 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 	}
 
 	return nil
+}
+
+// OrderProductDelete 删除订单商品
+func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error) {
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(saleBillUuid, saleOrderUuid, orderProductUuid)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// 判断订单状态
+	if err := billInfo.ValidateOrderStatus(constant.OrderDeleteProduct, saleOrderUuid); err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// 判断订单商品状态
+	if len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
+	for _, product := range billInfo.SaleOrders[0].SaleOrderProducts {
+		if product.Status == constant.OrderProductStatusSentKitchen {
+			return model.SaleBill{}, errors.New("商品已送厨，禁止删除")
+		}
+	}
+
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
+	// 删除订单商品
+	err = orderRepo.DeleteOrderProduct(saleBillUuid, saleOrderUuid, orderProductUuid)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// todo - 重算价格 - 等王总的逻辑
+	// (new OrderModel)->reloadPrice($order_id);
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return model.SaleBill{}, err
+	}
+
+	return billInfo, nil
 }

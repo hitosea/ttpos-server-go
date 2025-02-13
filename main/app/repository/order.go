@@ -11,20 +11,22 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                          // 创建销售单
-	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                 // 获取销售单
-	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                       // 创建订单
-	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)               // 获取订单列表
-	GetOrderNum(opts ...DBOption) (int64, error)                                                                          // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)       // 获取收银的订单列表
-	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                    // 获取销售账单详细信息
-	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                 // 获取销售账单详细信息-丰富的
-	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
-	CancelOrder(saleBillUuid uint64, reason string) error                                                                 // 取消订单
-	CancelDeskOrder(deskUuid uint64, reason string) error                                                                 // 取消桌台订单
-	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                          // 删除订单
-	IsPartiallyPaid(param any) bool                                                                                       // 判断是否存在部分支付
-	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                        // 查询销售订单的所有bom
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                              // 创建销售单
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                     // 获取销售单
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
+	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
+	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)           // 获取收银的订单列表
+	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
+	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
+	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
+	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
+	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
+	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
+	IsPartiallyPaid(param any) bool                                                                                           // 判断是否存在部分支付
+	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                          // 删除订单产品
+	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
 }
 
 // orderRepo 订单仓库
@@ -264,7 +266,45 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 	return info, nil
 }
 
-// GetSaleBillDetails 获取销售账单详细信息
+// GetSaleBillInfoAndProduct 获取销售账单详细信息-包含商品信息
+func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
+						if saleOrderUuid > 0 {
+							db = db.Where("uuid = ?", saleOrderUuid)
+						}
+						return db
+					},
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
+						if saleOrderProductUuid > 0 {
+							db = db.Where("uuid = ?", saleOrderProductUuid)
+						}
+						return db
+					},
+				},
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+	return info, nil
+}
+
+// GetSaleBillDetails 获取销售账单详细信息 - 几乎包含所有的关联
 func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
@@ -305,20 +345,49 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 	return info, nil
 }
 
-// CancelOrder 关闭订单
+// CancelOrder 取消订单
 func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
-	r.db.Model(&model.SaleOrder{}).
-		Where("sale_bill_uuid = ?", saleBillUuid).
-		Where("status = ?", constant.SaleBillStatusPending).
-		Update("status", constant.SaleBillStatusCanceled)
+	timeNow := uint(time.Now().Unix())
+	where := "sale_order_uuid in (select uuid from " + model.SaleOrder{}.TableName() + " where sale_bill_uuid = ?)"
 	//
-	return r.db.Model(&model.SaleBill{}).
-		Where("uuid = ?", saleBillUuid).
-		Where("status = ?", constant.SaleBillStatusPending).
-		Updates(map[string]interface{}{
-			"status": constant.SaleBillStatusCanceled,
-			"reason": reason,
-		}).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductionOrder{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error // TODO: 有可能会有多个生产单).Error
+		if err != nil {
+			return err
+		}
+		//
+		return tx.Model(&model.SaleBill{}).
+			Where("uuid = ?", saleBillUuid).
+			Where("status = ?", constant.SaleBillStatusPending).
+			Updates(map[string]interface{}{
+				"status": constant.SaleBillStatusCanceled,
+				"reason": reason,
+			}).Error
+	})
 }
 
 // CancelDeskOrder 关闭桌台订单
@@ -400,4 +469,31 @@ func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrder
 		return nil, err
 	}
 	return saleOrderProductBoms, nil
+}
+
+// DeleteOrderProduct 删除订单产品
+func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error {
+	timeNow := uint(time.Now().Unix())
+	// 删除关联关系
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.SaleOrderProductBom{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductAttribute{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		//
+		return tx.Model(&model.SaleOrderProduct{}).
+			Where("status != ?", constant.OrderProductStatusSentKitchen).
+			Where("delete_time = ?", 0).
+			Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
+			Update("delete_time", uint(time.Now().Unix())).
+			Error
+	})
 }
