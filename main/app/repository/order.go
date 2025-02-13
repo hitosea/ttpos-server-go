@@ -350,38 +350,44 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 	timeNow := uint(time.Now().Unix())
 	where := "sale_order_uuid in (select uuid from " + model.SaleOrder{}.TableName() + " where sale_bill_uuid = ?)"
 	//
-	err := r.db.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
-	if err != nil {
-		return err
-	}
-	err = r.db.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-	if err != nil {
-		return err
-	}
-	err = r.db.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-	if err != nil {
-		return err
-	}
-	err = r.db.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-	if err != nil {
-		return err
-	}
-	err = r.db.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-	if err != nil {
-		return err
-	}
-	err = r.db.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-	if err != nil {
-		return err
-	}
-	//
-	return r.db.Model(&model.SaleBill{}).
-		Where("uuid = ?", saleBillUuid).
-		Where("status = ?", constant.SaleBillStatusPending).
-		Updates(map[string]interface{}{
-			"status": constant.SaleBillStatusCanceled,
-			"reason": reason,
-		}).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductionOrder{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error // TODO: 有可能会有多个生产单).Error
+		if err != nil {
+			return err
+		}
+		//
+		return tx.Model(&model.SaleBill{}).
+			Where("uuid = ?", saleBillUuid).
+			Where("status = ?", constant.SaleBillStatusPending).
+			Updates(map[string]interface{}{
+				"status": constant.SaleBillStatusCanceled,
+				"reason": reason,
+			}).Error
+	})
 }
 
 // CancelDeskOrder 关闭桌台订单
@@ -467,10 +473,27 @@ func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrder
 
 // DeleteOrderProduct 删除订单产品
 func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error {
-	return r.db.Model(&model.SaleOrderProduct{}).
-		Where("status != ?", constant.OrderProductStatusSentKitchen).
-		Where("delete_time = ?", 0).
-		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
-		Update("delete_time", uint(time.Now().Unix())).
-		Error
+	timeNow := uint(time.Now().Unix())
+	// 删除关联关系
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.SaleOrderProductBom{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.SaleOrderProductAttribute{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return err
+		}
+		//
+		return tx.Model(&model.SaleOrderProduct{}).
+			Where("status != ?", constant.OrderProductStatusSentKitchen).
+			Where("delete_time = ?", 0).
+			Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
+			Update("delete_time", uint(time.Now().Unix())).
+			Error
+	})
 }

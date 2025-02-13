@@ -608,6 +608,14 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 		}
 	}
 
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
 	// 删除订单商品
 	err = orderRepo.DeleteOrderProduct(saleBillUuid, saleOrderUuid, orderProductUuid)
 	if err != nil {
@@ -616,6 +624,11 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return model.SaleBill{}, err
+	}
 
 	return billInfo, nil
 }
