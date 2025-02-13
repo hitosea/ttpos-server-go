@@ -7,8 +7,16 @@ type MemberLevel struct {
 	CreateTime int64  `json:"create_time"` // 创建时间
 }
 
+type MemberLevelList struct {
+	List []MemberLevel `json:"list"`
+}
+
 type SearchMember struct {
 	Uuid     uint64 `json:"uuid"`     // 会员Uuid
 	Nickname string `json:"nickname"` // 会员昵称
 	Phone    string `json:"phone"`    // 手机
+}
+
+type SearchMemberList struct {
+	List []SearchMember `json:"list"`
 }

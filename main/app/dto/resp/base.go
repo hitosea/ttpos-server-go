@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
 )
 
@@ -48,4 +49,14 @@ type Permission struct {
 	CreateTime       string        `json:"-"`
 	UpdateTime       string        `json:"-"`
 	Children         []*Permission `json:"children"`
+}
+
+type LanguageResp struct {
+	Languages       []string           `json:"languages"`        // 语言列表
+	LanguageList    []dto.LanguageItem `json:"language_list"`    // 语言列表
+	DefaultLanguage string             `json:"default_language"` // 默认语言
+}
+
+type Ads struct {
+	List []setting.CarouselItem `json:"list"`
 }

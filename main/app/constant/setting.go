@@ -19,3 +19,7 @@ const SettingKitchen = "kitchen"                 // 各端-厨显设置
 const SettingAssistant = "assistant"             // 各端-点餐助手设置
 const SettingBuffet = "buffet"                   // 自助餐-自助餐设置
 const SettingCloudBasic = "cloud_basic"          // 云端-基础信息
+
+const CashierPasswordTypeCashBox = "cash_box"  // 收银机钱箱密码
+const CashierPasswordTypeAdvanced = "advanced" // 收银机高级密码
+const CashierPasswordTypeLock = "lock"         // 收银机锁屏密码

@@ -25,10 +25,10 @@ type MemberHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{list=[]resp.MemberLevel}
+// @Success 200 {object} dto.Response{data=resp.MemberLevelList}
 // @Router /cashier/member/levels [get]
 func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
-	helper.Success(c, gin.H{"list": h.memberSrv.GetLevels(c.GetUint64(jwt.CompanyUuid))})
+	helper.Success(c, h.memberSrv.GetLevels(c.GetUint64(jwt.CompanyUuid)))
 }
 
 // SearchMember 模糊搜索会员
@@ -39,10 +39,10 @@ func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param keyword query string false "关键字搜索：uuid\phone，前端处理前后空格"
-// @Success 200 {object} dto.Response{list=[]resp.SearchMember}
+// @Success 200 {object} dto.Response{data=resp.SearchMemberList}
 // @Router /cashier/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
-	helper.Success(c, gin.H{"list": h.memberSrv.SearchMember(c.GetUint64(jwt.CompanyUuid), c.Query("keyword"))})
+	helper.Success(c, h.memberSrv.SearchMember(c.GetUint64(jwt.CompanyUuid), c.Query("keyword")))
 }
 
 func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

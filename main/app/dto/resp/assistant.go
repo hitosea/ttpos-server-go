@@ -6,3 +6,7 @@ type OnlineCashier struct {
 	DeviceId    string `json:"device_id"`    // 收银机设备ID
 	Remark      string `json:"remark"`       // 收银机备注
 }
+
+type OnlineCashierList struct {
+	List []OnlineCashier `json:"list"`
+}
