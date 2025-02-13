@@ -22,14 +22,13 @@ type SaleBill struct {
 	IsLock uint `gorm:"column:is_lock;type:tinyint(1);default:0;comment:是否锁单, 0-否 1-是" json:"is_lock"`
 
 	// 订单类型字段
-	BillType       uint `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
+	BillType       uint `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
 	DiningMethod   uint `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	IsBuffet       uint `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
 	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒）" json:"buffet_duration"`
 
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
-	TaxType uint   `gorm:"column:tax_type;type:tinyint(1);default:0;comment:税费类型, 0-商品未含税 1-商品已含税,下单后不变" json:"tax_type"`
 	Remark  string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
 	Reason  string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
 
@@ -223,8 +222,8 @@ type SaleOrderProductBom struct {
 	BaseModel
 	Name                 string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
 	Num                  uint    `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
-	Unit                 string  `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
-	Price                float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'原料价格,不随后台更新'"`
+	FlavorName           string  `gorm:"column:flavor_name	;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
+	Price                float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
 	IsFlavorBom          uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 	SaleOrderUuid        uint64  `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
 	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`

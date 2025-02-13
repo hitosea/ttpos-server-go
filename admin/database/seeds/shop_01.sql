@@ -171,10 +171,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品原料ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称,不随后台更新',
-    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '原料用量,不随后台更新',
-    `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台更新',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品规格或小料ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格或小料名称,不随后台更新',
+    `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格或小料规格名称,不随后台更新',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动',
     `sale_order_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
