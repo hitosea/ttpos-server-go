@@ -2351,7 +2351,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 判断是否可关闭
+      description: 判断订单是否可关闭
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
@@ -2366,7 +2366,7 @@ paths:
       responses:
         "404":
           description: 未找到
-      summary: 判断是否可关闭
+      summary: 判断订单是否可关闭
       tags:
       - 收银端.订单
   /cashier/order/list:

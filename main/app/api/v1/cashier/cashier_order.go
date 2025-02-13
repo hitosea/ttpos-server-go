@@ -138,9 +138,9 @@ func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// IsCellCloseDesk 判断是否可关闭
-// @Summary 判断是否可关闭
-// @Description 判断是否可关闭
+// IsCellCloseDesk 判断订单是否可关闭
+// @Summary 判断订单是否可关闭
+// @Description 判断订单是否可关闭
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json

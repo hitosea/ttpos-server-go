@@ -1715,7 +1715,7 @@ const docTemplate = `{
         },
         "/cashier/order/is_cell_close": {
             "get": {
-                "description": "判断是否可关闭",
+                "description": "判断订单是否可关闭",
                 "consumes": [
                     "application/json"
                 ],
@@ -1725,7 +1725,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.订单"
                 ],
-                "summary": "判断是否可关闭",
+                "summary": "判断订单是否可关闭",
                 "parameters": [
                     {
                         "type": "integer",
