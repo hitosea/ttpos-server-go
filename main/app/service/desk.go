@@ -19,8 +19,7 @@ type IDeskSrv interface {
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
-	IsCellCloseDesk(dbId uint64, deskUuid uint64) (desk model.Desk, err error)                  // 判断桌台是否可关闭
-	CloseDesk(dbId uint64, deskUuid uint64, reason string) error                                // 关闭桌台
+	CloseDesk(dbId uint64, staff model.Staff, source string, req req.DeskCloseReq) error        // 关闭桌台
 }
 
 // deskSrv 收银服务结构体
@@ -320,33 +319,28 @@ func (s *deskSrv) createDeskBuffetOrder(dbId uint64, req req.DeskOrderCreateReq)
 	return s.orderSrv.CreateDeskOrder(dbId, req)
 }
 
-// 判断桌台是否可关闭
-func (s *deskSrv) IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, error) {
+// 关闭桌台
+func (s *deskSrv) CloseDesk(dbId uint64, staff model.Staff, source string, reqs req.DeskCloseReq) error {
 	db := s.dbm.GetDB(dbId)
-	desk, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
+	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
-		return model.Desk{}, errors.New("桌台不存在")
-	}
-	if desk.Status == 0 {
-		return model.Desk{}, errors.New("桌台已关闭")
+		return err
 	}
 	if desk.SaleBill.ID == 0 {
-		return model.Desk{}, nil
+		return nil
 	}
-	if repository.NewOrderRepo(db).IsPartiallyPaid(desk.SaleBill.Uuid) {
-		return model.Desk{}, errors.New("当前订单已被部分支付，不支持取消")
-	}
-	return desk, nil
-}
-
-// 关闭桌台
-func (s *deskSrv) CloseDesk(dbId uint64, deskUuid uint64, reason string) error {
-	_, err := s.IsCellCloseDesk(dbId, deskUuid)
-	if err != nil {
+	// 验证高级密码
+	if err := s.settingSrv.VerifyAdvancedPassword(dbId, reqs.Password); err != nil {
 		return err
 	}
-	if err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).CloseDesk(deskUuid, reason); err != nil {
+	// 取消订单
+	if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(dbId, staff, source, req.OrderCancelReq{
+		SaleBillUuid: desk.SaleBill.Uuid,
+		CancelReason: reqs.Reason,
+		Password:     reqs.Password,
+	}); err != nil {
 		return err
 	}
+	//
 	return nil
 }

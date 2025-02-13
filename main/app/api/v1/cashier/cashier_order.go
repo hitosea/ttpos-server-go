@@ -135,6 +135,31 @@ func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// IsCellCloseDesk 判断桌台是否可关闭
+// @Summary 判断桌台是否可关闭
+// @Description 判断桌台是否可关闭
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data query req.DeskInfoReq true "详情参数"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/is_cell_close [get]
+func (h *CashierOrderHandler) IsCellCloseDesk(c *gin.Context) {
+	params := req.OrderIsCellCloseReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	// if _, err := h.service.IsCellCloseDesk(helper.GetCompanyUuid(c), params.Uuid); err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
+	// 	return
+	// }
+	// todo 获取已经送厨的商品 - 等王总写完拿来用
+
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -147,7 +172,11 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := CashierOrderHandler{
-		orderService: service.NewOrderSrv(dbm, service.NewLocaleSrv(), cache), // 订单服务
+		orderService: service.NewOrderSrv( // 订单服务
+			dbm,
+			service.NewLocaleSrv(),
+			settingSrv,
+		),
 	}
 
 	// 需要认证

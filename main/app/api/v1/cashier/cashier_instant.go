@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -36,6 +37,66 @@ func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CancelOrder 处理取消点餐订单
+// @Summary 取消点餐订单
+// @Description 取消点餐订单
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCancelReq true "详情参数"
+// @Success 200 {object} nil "取消点餐订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cancel [post]
+func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
+	// 绑定请求参数
+	req := req.OrderCancelReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	//
+	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// CloseDesk 处理关闭桌台订单
+// @Summary 关闭桌台订单
+// @Description 关闭桌台订单
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @param data query req.OrderCancelReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/close [post]
+func (h *CashierInstantHandler) CloseOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
+	// 绑定请求参数
+	req := req.OrderCancelReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	//
+	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -46,7 +107,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, cache)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
 
 	// 创建收银产品处理程序
 	wrapper := CashierInstantHandler{
@@ -57,5 +118,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)
+		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)
+		privateApi.POST("/instant/order/close", wrapper.CloseOrder)
 	}
 }

@@ -3,7 +3,9 @@ package req
 import "ttpos-server-go/app/dto"
 
 var DeskReqMessage = map[string]string{
-	"uuid.required": "桌台uuid不能为空",
+	"uuid.required":            "桌台uuid不能为空",
+	"sale_bill_uuid.required":  "销售账单UUID不能为空",
+	"sale_order_uuid.required": "销售订单UUID不能为空",
 }
 
 // 桌台列表查询
@@ -11,13 +13,24 @@ type DeskListReq struct {
 	dto.PageReq // 分页参数
 }
 
+// 桌台信息
 type DeskInfoReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
 }
 
+// 关闭桌台
 type DeskCloseReq struct {
-	Uuid   uint64 `form:"uuid" binding:"required"` // 桌台uuid
-	Reason string `form:"reason"`                  // 关闭原因
+	Uuid     uint64 `form:"uuid" binding:"required"` // 桌台uuid
+	Reason   string `form:"reason"`                  // 关闭原因
+	Password string `form:"password"`                // 密码 后台开启的时候才传
+}
+
+// 关闭桌台订单
+type DeskOrderCloseReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"  binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"  binding:"required"` // 销售订单UUID
+	Reason        string `form:"reason"`                              // 关闭原因
+	Password      string `form:"password"`                            // 密码 后台开启的时候才传
 }
 
 // 自助餐顾客类型
