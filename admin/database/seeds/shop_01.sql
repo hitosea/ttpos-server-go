@@ -707,7 +707,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%',
-    `count` INT(11) NOT NULL DEFAULT 0 COMMENT '领取数量',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-开启 1-关闭',
     `open_point` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送积分,0-否 1-是',
