@@ -1144,7 +1144,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_assistant` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
     `is_open_kitchen_kds` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
-    `is_open_scan_order` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
+    `is_open_h5_order` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
     `is_open_local_print` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
     `cash_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',
     `kitchen_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '厨显上限',

@@ -211,6 +211,7 @@ CREATE TABLE `ttpos_company` (
 DROP TABLE IF EXISTS `ttpos_company_setting`;
 CREATE TABLE `ttpos_company_setting` (
     `id` INT(11) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '集团设置ID',
     `company_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '集团ID',
     `real_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '真实姓名',
     `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
@@ -218,11 +219,11 @@ CREATE TABLE `ttpos_company_setting` (
     `sale_stock` INT(11) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
     `is_open_member` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
     `is_open_tablet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
-    `is_open_scan` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
+    `is_open_h5` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
     `is_open_assistant` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
     `is_open_kitchen_kds` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
-    `is_accept_scan_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
+    `is_open_h5_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
     `is_open_local_print` INT(11) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
     `cash_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',
     `kitchen_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '厨显上限',
