@@ -189,6 +189,34 @@ func (h *DeskHandler) CloseDeskOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderProductDelete 处理删除桌台订单商品
+// @Summary 删除桌台订单商品
+// @Description 删除桌台订单商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderProductDeleteReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/product/delete [delete]
+func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	params := req.OrderProductDeleteReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductDelete(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterProductHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -221,5 +249,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/close", wrapper.CloseDesk)
 		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
 		privateApi.POST("/desk/order/close", wrapper.CloseDeskOrder)
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)
 	}
 }

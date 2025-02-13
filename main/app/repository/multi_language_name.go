@@ -51,5 +51,5 @@ func (r *MultiLanguageNameRepoImpl) UpdateMultiLanguageName(id uint64, multiLang
 
 // DeleteMultiLanguageName 删除多语言名称
 func (r *MultiLanguageNameRepoImpl) DeleteMultiLanguageName(id uint64) error {
-	return r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", id).Update("delete_time", time.Now().Unix()).Error // 逻辑删除多语言名称
+	return r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", id).Update("delete_time", uint(time.Now().Unix())).Error // 逻辑删除多语言名称
 }
