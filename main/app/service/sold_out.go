@@ -1,0 +1,112 @@
+package service
+
+import (
+	"errors"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/database"
+)
+
+// ISoldOutSrv 定义沽清服务接口
+type ISoldOutSrv interface {
+	GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutListReq) (resp.SoldOutPaginationResp, error) // 获取沽清商品列表
+	CancelSoldOut(companyUuid uint64, productBomUuid uint64) error                                        // 取消单个沽清商品
+	CancelAllSoldOut(companyUuid uint64) error                                                            // 取消全部沽清商品
+	AddSoldOut(companyUuid uint64, items []req.SoldOutItem) error                                         // 添加商品沽清
+}
+
+// soldOutSrv 沽清服务结构体
+type soldOutSrv struct {
+	dbm       *database.DBManager // 数据库管理
+	localeSrv ILocaleSrv          // 多语言名称服务
+}
+
+// NewSoldOutSrv 创建新的收银产品类别服务
+func NewSoldOutSrv(dbm *database.DBManager, localSrv ILocaleSrv) ISoldOutSrv {
+	return NewSoldOutSrvImpl(dbm, localSrv)
+}
+
+// NewSoldOutSrvImpl 创建新的收银服务实现
+func NewSoldOutSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) ISoldOutSrv {
+	return &soldOutSrv{
+		dbm:       dbm,
+		localeSrv: localeSrv,
+	}
+}
+
+// GetSoldOutList 获取沽清商品列表
+func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutListReq) (resp.SoldOutPaginationResp, error) {
+
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
+
+	boms, total, err := productRepo.GetSoldOutWithPagination(soldOutReq.PageNo, soldOutReq.PageSize,
+		productRepo.WithProductPackage(),
+		productRepo.WithProductPackageMultiLanguageName(),
+		productRepo.WithProductFlavor(),
+		productRepo.WithProductFlavorMultiLanguageName())
+
+	if err != nil {
+		return resp.SoldOutPaginationResp{}, errors.New("获取沽清商品列表失败")
+	}
+
+	soldOuts := make([]resp.SoldOut, 0, len(boms))
+
+	for _, bom := range boms {
+		soldOuts = append(soldOuts, resp.SoldOut{
+			LocaleProductName:    s.localeSrv.GetLocaleNames(bom.ProductPackage.MultiLanguageName),
+			ProductBomUuid:       bom.Uuid,
+			LocaleProductBomName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
+		})
+	}
+
+	return resp.SoldOutPaginationResp{
+		List: soldOuts,
+		Meta: dto.PageResponse{
+			PageNo:   soldOutReq.PageNo,
+			PageSize: soldOutReq.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+// CancelSoldOut 取消单个沽清商品
+func (s *soldOutSrv) CancelSoldOut(companyUuid uint64, productBomUuid uint64) error {
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
+	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(productBomUuid)}, map[string]any{
+		"is_sold_out": 0,
+	}); err != nil {
+		return errors.New("取消沽清商品失败")
+	}
+	return nil
+}
+
+// CancelAllSoldOut 取消全部沽清商品
+func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
+
+	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomIsSoldOut()}, map[string]any{
+		"is_sold_out": 0,
+	}); err != nil {
+		return errors.New("全部取消沽清商品失败")
+	}
+	return nil
+}
+
+// AddSoldOut 添加商品沽清
+func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) error {
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
+	for _, item := range items {
+		soldOutMap := map[bool]uint{
+			true:  1,
+			false: 0,
+		}
+		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, map[string]any{
+			"is_sold_out": soldOutMap[*item.IsSoldOut],
+		}); err != nil {
+			return errors.New("沽清商品失败")
+		}
+	}
+	return nil
+}
