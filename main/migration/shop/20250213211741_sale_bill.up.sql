@@ -1,0 +1,1 @@
+ALTER TABLE `ttpos_sale_bill` DROP COLUMN `bill_type`;

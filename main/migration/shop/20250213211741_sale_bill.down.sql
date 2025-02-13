@@ -1,0 +1,1 @@
+ALTER TABLE `ttpos_sale_bill` ADD COLUMN `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变';
