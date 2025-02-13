@@ -26,6 +26,7 @@ func Like(keyword string) string {
 type ICommonRepo interface {
 	WhereByID(id uint) DBOption                                     // 根据ID查询
 	WhereByUuid(uuid uint64) DBOption                               // 根据UUID查询
+	WhereBySaleBillUuid(uuid uint64) DBOption                       // 根据销售单UUID查询
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
@@ -70,6 +71,13 @@ func (r *commonRepo) WhereByID(id uint) DBOption {
 
 // WhereByUuid 根据UUID查询
 func (r *commonRepo) WhereByUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereBySaleBillUuid 根据销售单UUID查询
+func (r *commonRepo) WhereBySaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
 	}

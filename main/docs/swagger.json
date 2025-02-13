@@ -1073,6 +1073,45 @@
                 }
             }
         },
+        "/cashier/desk/close": {
+            "post": {
+                "description": "关闭桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "关闭桌台",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关闭原因",
+                        "name": "reason",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "桌台uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/info": {
             "get": {
                 "description": "获取桌台详情",
@@ -1102,6 +1141,35 @@
                             "$ref": "#/definitions/resp.DeskInfoResp"
                         }
                     },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/is_cell_close": {
+            "get": {
+                "description": "判断桌台是否可关闭",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "判断桌台是否可关闭",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "桌台uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
                     "404": {
                         "description": "未找到"
                     }
@@ -3311,21 +3379,41 @@
         "resp.CashierOrderOperationLog": {
             "type": "object",
             "properties": {
+                "action": {
+                    "description": "操作行为",
+                    "type": "string"
+                },
                 "create_time": {
-                    "description": "创建时间",
+                    "description": "创建时间(时间戳)",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "消息数据",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "消息内容",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单ID",
                     "type": "integer"
                 },
                 "source": {
-                    "description": "来源",
+                    "description": "操作来源 cashier-收银 assistant-助手 shop-商家后台",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "账单操作记录ID",
                     "type": "integer"
-                },
-                "user_email": {
-                    "description": "会员邮箱",
-                    "type": "string"
-                },
-                "username": {
-                    "description": "会员名称",
-                    "type": "string"
                 }
             }
         },

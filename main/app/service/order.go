@@ -308,7 +308,8 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 
 // GetOrderList 获取订单信息
 func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error) {
-	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
 	info, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
@@ -407,12 +408,43 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 		OperationLog: struct {
 			List []resp.CashierOrderOperationLog
 		}{
-			List: []resp.CashierOrderOperationLog{},
+			List: func() []resp.CashierOrderOperationLog {
+				logs, err := s.GetRecordList(dbId, req.SaleBillUuid, 0)
+				if err != nil {
+					return []resp.CashierOrderOperationLog{}
+				}
+				return logs
+			}(),
 		},
 	}, nil
 }
 
-// CancelOrder 删除订单
+// GetRecordList 获取操作记录
+func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.CashierOrderOperationLog, error) {
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(s.dbm.GetDB(dbId))
+	orderRecordLists, err := orderRecordRepo.GetRecordLists(saleBillUuid)
+	if err != nil {
+		return []resp.CashierOrderOperationLog{}, err
+	}
+	// doto - 数据格式待处理
+	logs := make([]resp.CashierOrderOperationLog, 0)
+	for _, record := range orderRecordLists {
+		logs = append(logs, resp.CashierOrderOperationLog{
+			Uuid:          record.Uuid,
+			Source:        record.Source,
+			Action:        record.Action,
+			Message:       record.Message,
+			Data:          "",
+			Remark:        record.Remark,
+			SaleBillUuid:  record.SaleBillUuid,
+			SaleOrderUuid: record.SaleOrderUuid,
+			CreateTime:    record.CreateTime,
+		})
+	}
+	return logs, nil
+}
+
+// CancelOrder 取消订单
 func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)

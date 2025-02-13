@@ -2,6 +2,10 @@ package req
 
 import "ttpos-server-go/app/dto"
 
+var DeskReqMessage = map[string]string{
+	"uuid.required": "桌台uuid不能为空",
+}
+
 // 桌台列表查询
 type DeskListReq struct {
 	dto.PageReq // 分页参数
@@ -9,6 +13,11 @@ type DeskListReq struct {
 
 type DeskInfoReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
+}
+
+type DeskCloseReq struct {
+	Uuid   uint64 `form:"uuid" binding:"required"` // 桌台uuid
+	Reason string `form:"reason"`                  // 关闭原因
 }
 
 // 自助餐顾客类型
