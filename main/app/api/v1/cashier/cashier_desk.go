@@ -128,6 +128,57 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// IsCellCloseDesk 判断桌台是否可关闭
+// @Summary 判断桌台是否可关闭
+// @Description 判断桌台是否可关闭
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data query req.DeskInfoReq true "详情参数"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/is_cell_close [get]
+func (h *DeskHandler) IsCellCloseDesk(c *gin.Context) {
+	params := req.DeskInfoReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	if _, err := h.Service.IsCellCloseDesk(helper.GetCompanyUuid(c), params.Uuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// todo 获取已经送厨的商品 - 等王总写完拿来用
+
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// CloseDesk 处理关闭桌台
+// @Summary 关闭桌台
+// @Description 关闭桌台
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data query req.DeskCloseReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/close [post]
+func (h *DeskHandler) CloseDesk(c *gin.Context) {
+	// 绑定请求参数
+	params := req.DeskCloseReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	err := h.Service.CloseDesk(helper.GetCompanyUuid(c), params.Uuid, params.Reason)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterProductHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -156,6 +207,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
 		privateApi.GET("/desk/list", wrapper.GetDeskList)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
+		privateApi.GET("/desk/is_cell_close", wrapper.IsCellCloseDesk)
+		privateApi.POST("/desk/close", wrapper.CloseDesk)
 		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
 	}
 }

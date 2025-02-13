@@ -444,7 +444,7 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 	return logs, nil
 }
 
-// CancelOrder 删除订单
+// CancelOrder 取消订单
 func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)

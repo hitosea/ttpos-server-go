@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
-	GetDeskInfo(deskUuid uint64) (model.Desk, error)
+	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
@@ -67,12 +68,21 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 }
 
 // GetDeskInfo 获取桌台信息
-func (r *DeskRepoImpl) GetDeskInfo(deskUuid uint64) (model.Desk, error) {
-	var desk model.Desk
-	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).First(&desk).Error; err != nil {
-		return model.Desk{}, err
+func (r *DeskRepoImpl) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) {
+	var model model.Desk
+
+	db := r.db.Where("uuid = ?", deskUuid)
+
+	for _, opt := range opts {
+		db = opt(db)
 	}
-	return desk, nil
+
+	result := db.Preload("SaleBill", "status = ?", constant.SaleBillStatusPending).First(&model)
+	if result.Error != nil {
+		return model, result.Error
+	}
+
+	return model, nil
 }
 
 // UpdateDesk 更新桌台
