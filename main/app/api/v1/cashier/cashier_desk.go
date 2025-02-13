@@ -16,22 +16,23 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	Service service.IDeskSrv // 主服务
+	service      service.IDeskSrv // 主服务
+	orderService service.IOrderSrv
 }
 
-// GetCashierDeskRegionAndType 处理获取收银台的区域和类型
-// @Summary 获取收银台的区域和类型
-// @Description 获取收银台的区域和类型
+// GetCashierDeskRegionAndType 处理获取桌台的区域和类型
+// @Summary 获取桌台的区域和类型
+// @Description 获取桌台的区域和类型
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "收银台区域和类型列表"
+// @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
-	// 处理获取收银台的区域和类型的逻辑
-	res, err := h.Service.GetDeskRegionAndTypeList(companyId)
+	// 处理获取桌台的区域和类型的逻辑
+	res, err := h.service.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -60,7 +61,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(companyUuid, req)
+	res, err := h.service.GetDeskList(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -89,7 +90,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskInfo(companyUuid, req.Uuid)
+	res, err := h.service.GetDeskInfo(companyUuid, req.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -118,7 +119,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	}
 
 	// 创建桌台订单
-	res, err := h.Service.CreateDeskOrder(helper.GetCompanyUuid(c), params)
+	res, err := h.service.CreateDeskOrder(helper.GetCompanyUuid(c), params)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -126,31 +127,6 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
-}
-
-// IsCellCloseDesk 判断桌台是否可关闭
-// @Summary 判断桌台是否可关闭
-// @Description 判断桌台是否可关闭
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @param data query req.DeskInfoReq true "详情参数"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/is_cell_close [get]
-func (h *DeskHandler) IsCellCloseDesk(c *gin.Context) {
-	params := req.DeskInfoReq{}
-	if err := c.ShouldBind(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
-		return
-	}
-	if _, err := h.Service.IsCellCloseDesk(helper.GetCompanyUuid(c), params.Uuid); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	// todo 获取已经送厨的商品 - 等王总写完拿来用
-
-	// 返回结果
-	helper.Success(c, gin.H{})
 }
 
 // CloseDesk 处理关闭桌台
@@ -164,13 +140,47 @@ func (h *DeskHandler) IsCellCloseDesk(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/close [post]
 func (h *DeskHandler) CloseDesk(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
 	// 绑定请求参数
 	params := req.DeskCloseReq{}
 	if err := c.ShouldBind(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
 		return
 	}
-	err := h.Service.CloseDesk(helper.GetCompanyUuid(c), params.Uuid, params.Reason)
+	//
+	err := h.service.CloseDesk(companyUuid, staff, source, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// CloseDesk 处理关闭桌台订单
+// @Summary 关闭桌台订单
+// @Description 关闭桌台订单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data query req.OrderCancelReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/close [post]
+func (h *DeskHandler) CloseDeskOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
+	// 绑定请求参数
+	req := req.OrderCancelReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	//
+	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -189,16 +199,17 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, cache)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
 
 	// 初始化处理器
 	wrapper := DeskHandler{
-		Service: service.NewDeskSrv(
+		service: service.NewDeskSrv(
 			dbm,        // 数据库管理器
 			localeSrv,  // 多语言服务
 			orderSrv,   // 订单服务
 			settingSrv, // 设置服务
 		),
+		orderService: orderSrv,
 	}
 
 	// 需要认证
@@ -207,8 +218,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
 		privateApi.GET("/desk/list", wrapper.GetDeskList)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
-		privateApi.GET("/desk/is_cell_close", wrapper.IsCellCloseDesk)
 		privateApi.POST("/desk/close", wrapper.CloseDesk)
 		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
+		privateApi.POST("/desk/order/close", wrapper.CloseDeskOrder)
 	}
 }

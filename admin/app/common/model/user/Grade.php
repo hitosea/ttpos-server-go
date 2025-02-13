@@ -16,22 +16,26 @@ class Grade extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['grade_id', 'weight', 'equity'];
+    protected $append = ['grade_id', 'weight', 'equity', 'open_points'];
 
     /**
      * 兼容字段
      */
     public function getGradeIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
     }
     public function getWeightAttr()
     {
-        return $this->priority ?? 0;
+        return $this->priority ?: 0;
     }
     public function getEquityAttr()
     {
-        return $this->discount ?? '';
+        return $this->discount ?: '';
+    }
+    public function getOpenPointsAttr()
+    {
+        return $this->open_point ?: 0;
     }
 
     /**
@@ -56,17 +60,11 @@ class Grade extends BaseModel
             $money = Helper::amountPermillage($data['upgrade_money']);
             $remark .= __("会员消费满") . " {$money} " . __("可升级到此等级");
         }
-        if ($data['open_points'] == 1) {
+        if ($data['open_point'] == 1) {
             if (!empty($remark)) {
                 $remark .= '\r\n';
             }
-            $remark .= __("会员积分满") . " {$data['upgrade_points']} " . __("可升级到此等级");
-        }
-        if ($data['open_invite'] == 1) {
-            if (!empty($remark)) {
-                $remark .= '\r\n';
-            }
-            $remark .= __("会员邀请人数满") . " {$data['upgrade_invite']} " . __("可升级到此等级");
+            $remark .= __("会员积分满") . " {$data['upgrade_point']} " . __("可升级到此等级");
         }
         return $remark;
     }

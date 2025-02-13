@@ -144,18 +144,15 @@ class OrderRefundDestination extends BaseModel
                     $points = round($points, 2);
 
                     // 扣除积分
-                    $user = UserModel::where('user_id', '=', $order['user_id'])->find();
+                    $user = UserModel::where('uuid', '=', $order['user_id'])->find();
                     if ($user) {
                         $diffMoney = $user?->points - $points <= 0 ? 0 : $user?->points - $points;
                         $countPoints = -$points;
-                        $totalPoints = $user?->total_points + $countPoints <= 0 ? 0 : $user?->total_points + $countPoints;
                         $user->points = $diffMoney;
-                        $user->total_points = $totalPoints;
                         $user->save();
                     }
                     PointsLog::add([
-                        'user_id' => $order['user_id'],
-                        'card_id' => $user?->card_id ?? 0,
+                        'member_uuid' => $order['user_id'],
                         'order_id' => $order['order_id'] ?? 0,
                         'scene' => PointsLogSceneEnum::REFUND,
                         'value' => -$points,

@@ -35,6 +35,8 @@ type ICommonRepo interface {
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
 	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption     // 根据自助餐套餐UUID查询
 	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption       // 根据顾客类型UUID查询
+	WhereByProductPackageUuid(productPackUuid uint64) DBOption      // 根据产品套餐UUID查询
+	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption     // 根据产品口味UUID查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	SortWithID(order string) DBOption                               // 根据ID排序
@@ -139,6 +141,20 @@ func (r *commonRepo) WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption
 func (r *commonRepo) WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("customer_type_uuid = ?", customerTypeUuid)
+	}
+}
+
+// WhereByProductPackageUuid 根据产品套餐UUID查询
+func (r *commonRepo) WhereByProductPackageUuid(productPackUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_uuid = ?", productPackUuid)
+	}
+}
+
+// WhereByProductFlavorUuid 根据产品口味UUID查询
+func (r *commonRepo) WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_flavor_uuid = ?", productFlavorUuid)
 	}
 }
 

@@ -1095,10 +1095,15 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "密码 后台开启的时候才传",
+                        "name": "password",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "关闭原因",
                         "name": "reason",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -1153,35 +1158,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/is_cell_close": {
-            "get": {
-                "description": "判断桌台是否可关闭",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "判断桌台是否可关闭",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "桌台uuid",
-                        "name": "uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/list": {
             "get": {
                 "description": "获取桌台列表",
@@ -1228,6 +1204,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/close": {
+            "post": {
+                "description": "关闭桌台订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "关闭桌台订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "取消原因",
+                        "name": "cancel_reason",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "高级密码 后台开启的时候才传",
+                        "name": "password",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/create": {
             "post": {
                 "description": "创建桌台订单",
@@ -1267,7 +1286,7 @@ const docTemplate = `{
         },
         "/cashier/desk/region_and_type": {
             "get": {
-                "description": "获取收银台的区域和类型",
+                "description": "获取桌台的区域和类型",
                 "consumes": [
                     "application/json"
                 ],
@@ -1277,13 +1296,90 @@ const docTemplate = `{
                 "tags": [
                     "收银端.桌台"
                 ],
-                "summary": "获取收银台的区域和类型",
+                "summary": "获取桌台的区域和类型",
                 "responses": {
                     "200": {
-                        "description": "收银台区域和类型列表",
+                        "description": "桌台区域和类型列表",
                         "schema": {
                             "$ref": "#/definitions/resp.DeskRegionAndTypeListWithPaginationResp"
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/cancel": {
+            "post": {
+                "description": "取消点餐订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "取消点餐订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "取消点餐订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/close": {
+            "post": {
+                "description": "关闭桌台订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "关闭桌台订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "取消原因",
+                        "name": "cancel_reason",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "高级密码 后台开启的时候才传",
+                        "name": "password",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "404": {
                         "description": "未找到"
@@ -1617,9 +1713,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/order/list": {
+        "/cashier/order/is_cell_close": {
             "get": {
-                "description": "获取收银订单列表",
+                "description": "判断订单是否可关闭",
                 "consumes": [
                     "application/json"
                 ],
@@ -1629,7 +1725,41 @@ const docTemplate = `{
                 "tags": [
                     "收银端.订单"
                 ],
-                "summary": "获取收银订单列表",
+                "summary": "判断订单是否可关闭",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
+                        "name": "desk_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/list": {
+            "get": {
+                "description": "获取订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "获取订单列表",
                 "parameters": [
                     {
                         "type": "integer",
@@ -2034,6 +2164,146 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/cashier/sold_out/add": {
+            "post": {
+                "description": "添加沽清商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.沽清"
+                ],
+                "summary": "添加沽清商品",
+                "parameters": [
+                    {
+                        "description": "添加沽清商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddSoldOutReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/sold_out/cancel": {
+            "post": {
+                "description": "取消沽清商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.沽清"
+                ],
+                "summary": "取消沽清商品",
+                "parameters": [
+                    {
+                        "description": "取消沽清商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CancelSoldOutReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/sold_out/cancel_all": {
+            "post": {
+                "description": "全部取消沽清商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.沽清"
+                ],
+                "summary": "全部取消沽清商品",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/sold_out/list": {
+            "get": {
+                "description": "沽清售罄列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.沽清"
+                ],
+                "summary": "沽清售罄列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SoldOutPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -2801,6 +3071,33 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AddSoldOutReq": {
+            "type": "object",
+            "required": [
+                "sold_out_data"
+            ],
+            "properties": {
+                "sold_out_data": {
+                    "description": "设置售罄数据",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.SoldOutItem"
+                    }
+                }
+            }
+        },
+        "req.CancelSoldOutReq": {
+            "type": "object",
+            "required": [
+                "product_bom_uuid"
+            ],
+            "properties": {
+                "product_bom_uuid": {
+                    "description": "商品规格Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.DeskBuffetCustomerType": {
             "type": "object",
             "properties": {
@@ -2891,12 +3188,12 @@ const docTemplate = `{
                     "description": "取消原因",
                     "type": "string"
                 },
+                "password": {
+                    "description": "高级密码 后台开启的时候才传",
+                    "type": "string"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -2910,6 +3207,23 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.SoldOutItem": {
+            "type": "object",
+            "required": [
+                "is_sold_out",
+                "product_bom_uuid"
+            ],
+            "properties": {
+                "is_sold_out": {
+                    "description": "是否售罄：true-是；false-否",
+                    "type": "boolean"
+                },
+                "product_bom_uuid": {
+                    "description": "商品规格Uuid",
                     "type": "integer"
                 }
             }
@@ -3832,6 +4146,45 @@ const docTemplate = `{
                 "uuid": {
                     "description": "会员Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.SoldOut": {
+            "type": "object",
+            "properties": {
+                "locale_product_bom_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_product_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_bom_uuid": {
+                    "description": "商品规格Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SoldOutPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SoldOut"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },

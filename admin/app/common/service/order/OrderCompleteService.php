@@ -176,8 +176,7 @@ class OrderCompleteService
             // 整理用户积分变动明细
             $logData[] = [
                 'scene' => $type == 'inc' ? PointsLogSceneEnum::CONSUME : PointsLogSceneEnum::REVERSE,
-                'user_id' => $order['user_id'],
-                'card_id' => UserModel::detail($order['user_id'])?->card_id,
+                'member_uuid' => $order['user_id'],
                 'value' => $type == 'inc' ? +$pointsBonus : -$pointsBonus,
                 'describe' => $type == 'inc' ? vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::CONSUME]['describe'], [$order['order_no']]) : vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::REVERSE]['describe'], [$order['order_no']]),
                 'order_id' => $order['order_id'],

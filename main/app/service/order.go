@@ -13,7 +13,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
@@ -30,27 +30,27 @@ type IOrderSrv interface {
 	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
 	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error            // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 删除订单
+	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                         // 判断桌台是否可取消
 }
 
 // orderSrv 收银服务结构
-// orderSrv 收银服务结构体
 type orderSrv struct {
-	dbm       *database.DBManager // 数据库管理器
-	localeSrv ILocaleSrv
-	cache     cache.Cache
+	dbm        *database.DBManager // 数据库管理器
+	localeSrv  ILocaleSrv
+	settingSrv setting.ISrv
 }
 
 // NewOrderSrv 创建新的收银产品类别服务
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.Cache) IOrderSrv {
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache setting.ISrv) IOrderSrv {
 	return NewOrderSrvImpl(dbm, localeSrv, cache)
 }
 
 // NewOrderSrvImpl 创建新的收银服务实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, cache cache.Cache) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IOrderSrv {
 	return &orderSrv{
-		dbm:       dbm,
-		localeSrv: localeSrv,
-		cache:     cache,
+		dbm:        dbm,
+		localeSrv:  localeSrv,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -319,7 +319,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 
 	// 组合信息
 	totalMemberNames := []string{}
-	payTypes := []resp.CashierOrderInfoPayTypes{}
+	payTypes := make([]resp.CashierOrderInfoPayTypes, 0)
 	orderList := make([]resp.CashierOrderInfo, len(info.SaleOrders))
 	for i, order := range info.SaleOrders {
 		payTypeNames := []string{}
@@ -444,6 +444,23 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 	return logs, nil
 }
 
+// IsCellCancelOrder 判断订单是否可以取消
+func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error) {
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+	if err := billInfo.ValidateOrderStatus(constant.OrderOrderCancel); err != nil {
+		return model.SaleBill{}, err
+	}
+	if orderRepo.IsPartiallyPaid(saleBillUuid) {
+		return model.SaleBill{}, errors.New("当前订单已被部分支付，不支持取消")
+	}
+	return billInfo, nil
+}
+
 // CancelOrder 取消订单
 func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error {
 	// 禁止并发操作
@@ -459,19 +476,14 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
+	billInfo, err := s.IsCellCancelOrder(dbId, req.SaleBillUuid)
 	if err != nil {
 		return err
 	}
 
-	// 验证状态
-	if err = billInfo.ValidateOrderStatus(constant.OrderOrderCancel); err != nil {
+	// 验证高级密码
+	if err := s.settingSrv.VerifyAdvancedPassword(dbId, req.Password); err != nil {
 		return err
-	}
-
-	// 检查是否部分支付
-	if orderRepo.IsPartiallyPaid(billInfo) {
-		return errors.New("当前订单已被部分支付，不支持取消")
 	}
 
 	// 开始事务

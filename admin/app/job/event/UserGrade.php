@@ -54,7 +54,7 @@ class UserGrade
         }
         if ($upgradeGrade &&  $user['grade_id'] != $upgradeGrade['grade_id']) {
             $this->dologs('setUserGrade', [
-                'user_id' => $user['user_id'],
+                'member_uuid' => $user['user_id'],
                 'uuid' => $upgradeGrade['grade_id'],
             ]);
             // 修改会员的等级
@@ -69,7 +69,7 @@ class UserGrade
     {
         // 按积分与消费升级
         if ($grade['open_money'] == 1 && $grade['open_points'] == 1) {
-            if ($user['expend_money'] >= $grade['upgrade_money'] && $user['total_points'] >= $grade['upgrade_points']) {
+            if ($user['expend_money'] >= $grade['upgrade_money'] && $user['point'] >= $grade['upgrade_points']) {
                 return true;
             }
         }
@@ -81,7 +81,7 @@ class UserGrade
         }
         // 按积分升级
         if ($grade['open_points'] == 1) {
-            if ($user['total_points'] >= $grade['upgrade_points']) {
+            if ($user['point'] >= $grade['upgrade_points']) {
                 return true;
             }
         }

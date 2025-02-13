@@ -35,6 +35,7 @@ type ISrv interface {
 	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
 	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
+	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                     // 验证高级密码
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {

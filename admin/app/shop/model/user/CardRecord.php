@@ -18,14 +18,12 @@ class CardRecord extends CardRecordModel
         $model = $this->alias('r')
             ->field('r.*')
             ->with(['card', 'user'])
-            ->join('user u', 'u.user_id=r.user_id')
-            ->join('user_card c', 'c.card_id=r.card_id')
-            ->where('pay_status', '=', 20)
-            // ->where('r.is_delete', '=', 0)
+            ->join('member u', 'u.uuid=r.member_uuid')
+            ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
             ->order(['r.create_time' => 'desc']);
 
         if (isset($data['card_name']) && $data['card_name'] != '') {
-            $model = $model->like('c.card_name', $data['card_name']);
+            $model = $model->like('c.name', $data['card_name']);
         }
 
         if (isset($data['status']) && $data['status'] >= 0) {

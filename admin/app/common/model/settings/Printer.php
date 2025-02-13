@@ -27,7 +27,7 @@ class Printer extends BaseModel
      */
     public function getPrinterIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
     }
 
     /**
@@ -35,7 +35,7 @@ class Printer extends BaseModel
      */
     public function getPrinterNameAttr()
     {
-        return $this->name ?? 0;
+        return $this->name ?: 0;
     }
 
     /**

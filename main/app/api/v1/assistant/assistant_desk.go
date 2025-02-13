@@ -109,7 +109,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, cache)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
 
 	// 创建处理程序
 	wrapper := DeskHandler{

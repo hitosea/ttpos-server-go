@@ -31,7 +31,7 @@ COMMIT;
 -- Records of ttpos_member_level
 -- ----------------------------
 BEGIN;
-INSERT INTO `ttpos_member_level` (`id`, `uuid`, `name`, `multi_language_name_uuid`, `open_money`, `upgrade_money`, `open_point`, `upgrade_point`, `discount`, `priority`, `is_default`, `remark`, `create_time`, `update_time`) VALUES (1, 1, 'VIP', 0, 0, 1000, 0, 0, 100, 0, 1, '新会员即为该等级', @nowTime, @nowTime);
+INSERT INTO `ttpos_member_level` (`id`, `uuid`, `name`, `open_money`, `upgrade_money`, `open_point`, `upgrade_point`, `discount`, `priority`, `is_default`, `remark`, `create_time`, `update_time`) VALUES (1, 1, 'VIP', 0, 1000, 0, 0, 100, 0, 1, '新会员即为该等级', @nowTime, @nowTime);
 COMMIT;
 
 -- ----------------------------

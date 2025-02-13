@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrorWithDetail 返回错误
 func ErrorWithDetail(c *gin.Context, code int, err error) {
 	messages := []string{err.Error()}
 	var appErr apperrors.AppError
@@ -28,6 +29,20 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 	Fail(c, code, messages...)
 }
 
+// ErrorWithData 返回错误携带数据
+func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
+	messages := []string{err.Error()}
+	var appErr apperrors.AppError
+	if errors.As(err, &appErr) {
+		code = appErr.GetCode()
+		if len(appErr.Replace) > 0 {
+			messages = append(messages, appErr.Replace...)
+		}
+	}
+	FailWithData(c, code, data, messages...)
+}
+
+// Success 返回成功
 func Success(c *gin.Context, data interface{}, message ...string) {
 	msg := "success"
 	if len(message) == 1 {
@@ -42,6 +57,7 @@ func Success(c *gin.Context, data interface{}, message ...string) {
 	})
 }
 
+// Fail 返回失败
 func Fail(c *gin.Context, code int, message ...string) {
 	msg := "fail"
 	if len(message) == 1 {
@@ -53,6 +69,21 @@ func Fail(c *gin.Context, code int, message ...string) {
 		Code:    code,
 		Message: msg,
 		Data:    gin.H{},
+	})
+}
+
+// FailWithData 返回失败携带数据
+func FailWithData(c *gin.Context, code int, data interface{}, message ...string) {
+	msg := "fail"
+	if len(message) == 1 {
+		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])
+	} else if len(message) > 1 {
+		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0], message[1:]...)
+	}
+	c.JSON(http.StatusOK, dto.Response{
+		Code:    code,
+		Message: msg,
+		Data:    data,
 	})
 }
 

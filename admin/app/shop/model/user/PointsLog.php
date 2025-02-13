@@ -25,7 +25,7 @@ class PointsLog extends PointsLogModel
         if (!empty($query['keyword'])) {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.user_id|user.mobile|user.nickName', $keyword);
+                $query->like('user.uuid|user.phone|user.nickname', $keyword);
             });
         }
         // 搜索时间段
@@ -36,7 +36,7 @@ class PointsLog extends PointsLogModel
         $list = $model->with(['user'])
             ->alias('log')
             ->field('log.*')
-            ->join('user', 'user.user_id = log.user_id')
+            ->join('member user', 'user.uuid = log.member_uuid')
             ->order(['log.create_time' => 'desc'])
             ->paginate($query);
         foreach ($list as &$item) {
@@ -56,15 +56,15 @@ class PointsLog extends PointsLogModel
     {
         // 设置默认的检索数据
         $params = $this->setQueryDefaultValue($query, [
-            'user_id' => 0,
+            'member_uuid' => 0,
             'search' => '',
             'start_time' => '',
             'end_time' => '',
         ]);
         // 用户ID
-        $params['user_id'] > 0 && $this->where('log.user_id', '=', $params['user_id']);
+        $params['user_id'] > 0 && $this->where('log.member_uuid', '=', $params['user_id']);
         // 用户昵称
-        !empty($params['search']) && $this->like('user.nickName', $params['search']);
+        !empty($params['search']) && $this->like('user.nickname', $params['search']);
         // 起始时间
         !empty($params['start_time']) && $this->where('log.create_time', '>=', strtotime($params['start_time']));
         // 截止时间

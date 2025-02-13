@@ -39,7 +39,7 @@ class Supplier extends SupplierModel
             }
             //是否绑定用户
             if ($supplier['user_id'] > 0) {
-                $user = $this->where('user_id', '=', $supplier['user_id'])->count();
+                $user = $this->where('member_uuid', '=', $supplier['user_id'])->count();
                 if ($user > 0) {
                     $this->error = '该用户已绑定';
                     return false;
@@ -96,7 +96,7 @@ class Supplier extends SupplierModel
             }
             //是否绑定用户
             if ($supplier['user_id'] > 0) {
-                $user = $this->where('user_id', '=', $supplier['user_id'])->count();
+                $user = $this->where('member_uuid', '=', $supplier['user_id'])->count();
                 if ($user > 0) {
                     $this->error = '该用户已绑定';
                     return false;

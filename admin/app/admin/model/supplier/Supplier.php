@@ -19,6 +19,8 @@ class Supplier extends SupplierModel
     {
         //添加门店
         $data['company_uuid'] = $data['uuid'] ?? 0;
+        $data['is_open_h5'] = $data['is_open_scan'] ?? 0;
+        $data['is_open_h5_order'] = $data['is_accept_scan_order'] ?? 0;
         $data['real_name'] = $data['user_name'] ?? '';
         $data['name'] = $data['name'] ?? '';
         $data['expire_time'] = $data['expire_time'] ?? 0;

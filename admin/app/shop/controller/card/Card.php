@@ -221,6 +221,7 @@ class Card extends Controller
      */
     public function delete($card_id)
     {
+        /** @var CardModel $model */
         $model = CardModel::detail($card_id);
         if (!$model->setDelete()) {
             return $this->renderError($model->getError() ?: '已存在用户，删除失败');

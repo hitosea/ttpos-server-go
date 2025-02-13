@@ -23,13 +23,19 @@ type OrderInfoReq struct {
 
 // 订单取消
 type OrderCancelReq struct {
-	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
-	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
-	CancelReason  string `json:"cancel_reason"`   // 取消原因
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
+	CancelReason string `json:"cancel_reason"`  // 取消原因
+	Password     string `form:"password"`       // 高级密码 后台开启的时候才传
 }
 
 // 订单删除
 type OrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
+}
+
+// 是否可关闭订单
+type OrderIsCellCloseReq struct {
+	DeskUuid     uint64 `form:"desk_uuid"`      // 桌台UUID	   二选一, 销售账单UUID权重最大
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
 }

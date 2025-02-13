@@ -24,7 +24,7 @@ class User extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['user_id', 'points', 'gift_balance', 'mobile', 'grade_id', 'card_id'];
+    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id'];
 
     /**
      * 兼容ID字段
@@ -40,10 +40,6 @@ class User extends BaseModel
         } else {
             return $value;
         }
-    }
-    public function getGiftBalanceAttr()
-    {
-        return $this->gift_account_balance ?: 0;
     }
     public function getMobileAttr()
     {
@@ -81,6 +77,18 @@ class User extends BaseModel
     {
         if (isset($data['balance'])) {
             return floatval($data['balance']);
+        } else {
+            return $value;
+        }
+    }
+
+    /**
+     * 赠送余额
+     */
+    public function getGiftBalanceAttr($value, $data)
+    {
+        if (isset($data['gift_balance'])) {
+            return floatval($data['gift_balance']);
         } else {
             return $value;
         }
@@ -133,7 +141,7 @@ class User extends BaseModel
         $filter = $includeDeleted ? [] : ['delete_time' => 0];
         $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['uuid' => (int) $where]);
 
-        $info = $model->field(['*, (balance + gift_account_balance) as balance'])->where($filter)->with(['grade', 'card'])->find();
+        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['grade', 'card'])->find();
         if ($info) {
             $info->password = '';
         }
@@ -182,7 +190,7 @@ class User extends BaseModel
     public static function checkExistByGradeId($gradeId)
     {
         $model = new static;
-        return !!$model->where('member_level_uuid', '=', (int) $gradeId)->value('user_id');
+        return !!$model->where('member_level_uuid', '=', (int) $gradeId)->value('uuid');
     }
 
     /**
@@ -190,7 +198,7 @@ class User extends BaseModel
      */
     public function setIncPayMoney($money)
     {
-        return $this->where('user_id', '=', $this['user_id'])->inc('pay_money', $money)->update();
+        return $this->where('uuid', '=', $this['user_id'])->inc('pay_money', $money)->update();
     }
 
     /**
@@ -198,7 +206,7 @@ class User extends BaseModel
      */
     public function setDecPayMoney($money)
     {
-        return $this->where('user_id', '=', $this['user_id'])->dec('pay_money', $money)->update();
+        return $this->where('uuid', '=', $this['user_id'])->dec('pay_money', $money)->update();
     }
 
     /**
@@ -207,7 +215,7 @@ class User extends BaseModel
     public function onBatchIncExpendMoney($data)
     {
         foreach ($data as $userId => $expendMoney) {
-            $this->where(['user_id' => $userId])->inc('expend_money', $expendMoney)->update();
+            $this->where(['uuid' => $userId])->inc('expend_money', $expendMoney)->update();
             event('UserGrade', $userId);
         }
         return true;
@@ -218,7 +226,7 @@ class User extends BaseModel
     public function onBatchDecExpendMoney($data)
     {
         foreach ($data as $userId => $expendMoney) {
-            $this->where(['user_id' => $userId])->dec('expend_money', $expendMoney)->update();
+            $this->where(['uuid' => $userId])->dec('expend_money', $expendMoney)->update();
         }
         return true;
     }
@@ -228,7 +236,7 @@ class User extends BaseModel
      */
     public function IncExpendMoney($data)
     {
-        $this->where(['user_id' => $data['user_id']])->inc('expend_money', $data['money'])->update();
+        $this->where(['uuid' => $data['user_id']])->inc('expend_money', $data['money'])->update();
         event('UserGrade', $data['user_id']);
         return true;
     }
@@ -239,7 +247,7 @@ class User extends BaseModel
     public function onBatchIncPoints($data)
     {
         foreach ($data as $userId => $expendPoints) {
-            $this->where(['user_id' => $userId])->inc('points', $expendPoints)->inc('total_points', $expendPoints)->update();
+            $this->where(['uuid' => $userId])->inc('point', $expendPoints)->update();
             event('UserGrade', $userId);
         }
         return true;
@@ -252,15 +260,14 @@ class User extends BaseModel
     {
         foreach ($data as $userId => $expendPoints) {
             // 获取当前用户的积分
-            $user = $this->where(['user_id' => $userId])->find();
+            $user = $this->where(['uuid' => $userId])->find();
             if ($user) {
                 // 计算新的积分值，确保不小于0
-                $newPoints = max(0, $user->points - $expendPoints);
-                $newTotalPoints = max(0, $user->total_points - $expendPoints);
+                $newPoints = max(0, $user->point - $expendPoints);
 
                 // 更新用户的积分
-                $this->where(['user_id' => $userId])
-                    ->update(['points' => $newPoints, 'total_points' => $newTotalPoints]);
+                $this->where(['uuid' => $userId])
+                    ->update(['point' => $newPoints]);
 
                 // 触发用户等级事件
                 event('UserGrade', $userId);
@@ -277,20 +284,15 @@ class User extends BaseModel
         // 新增积分变动明细
         PointsLogModel::add([
             'scene' => $scene,
-            'card_id' => $this['card_id'],
-            'user_id' => $this['user_id'],
+            'member_uuid' => $this['uuid'],
             'value' => $points,
             'describe' => $custom_dec ? $describe : vsprintf(PointsLogSceneEnum::data()[$scene]['describe'], [$describe]),
         ]);
 
         // 更新用户可用积分
-        $data['points'] = ($this['points'] + $points <= 0) ? 0 : $this['points'] + $points;
-        // 用户总积分
-        if ($points > 0) {
-            $data['total_points'] = $this['total_points'] + $points;
-        }
-        $this->where('user_id', '=', $this['user_id'])->update($data);
-        event('UserGrade', $this['user_id']);
+        $data['point'] = ($this['point'] + $points <= 0) ? 0 : $this['point'] + $points;
+        $this->where('uuid', '=', $this['uuid'])->update($data);
+        event('UserGrade', $this['uuid']);
         return true;
     }
 
@@ -299,7 +301,7 @@ class User extends BaseModel
      */
     public function setIncInvite($user_id)
     {
-        $this->where('user_id', '=', $user_id)->inc('total_invite')->update();
+        $this->where('uuid', '=', $user_id)->inc('total_invite')->update();
         event('UserGrade', $user_id);
     }
 
@@ -318,7 +320,7 @@ class User extends BaseModel
     {
         $grade_id = $data['grade_id'] ?? Grade::getDefaultGradeId();
         $password = $data['password'] ?? '';
-        if (empty($grade_id)){
+        if (empty($grade_id)) {
             $this->error = '请选择会员等级';
             return false;
         }
@@ -421,8 +423,7 @@ class User extends BaseModel
         $this->transaction(function () use ($storeUserName, $data, $diffMoney, $money) {
             // 新增余额变动记录
             BalanceLogModel::add(SceneEnum::ADMIN, [
-                'user_id' => $this['user_id'],
-                'card_id' => $this['card_id'],
+                'member_uuid' => $this['uuid'],
                 'money' => $money,
                 'remark' => $data['remark'] ?? '',
             ], [$storeUserName]);
@@ -451,12 +452,12 @@ class User extends BaseModel
         $points = 0;
         // 判断充值方式，计算最终积分
         if ($data['mode'] === 'inc') {
-            $diffMoney = $this['points'] + $data['recharge_value'];
+            $diffMoney = $this['point'] + $data['recharge_value'];
             $points = $data['recharge_value'];
         } elseif ($data['mode'] === 'dec') {
-            $diffMoney = $this['points'] - $data['recharge_value'];
+            $diffMoney = $this['point'] - $data['recharge_value'];
             if ($diffMoney < 0) {
-                if ($this['points'] > 0) {
+                if ($this['point'] > 0) {
                     $this->error = '减少积分不能大于当前积分';
                 } else {
                     $this->error = '积分不能小于0';
@@ -466,7 +467,7 @@ class User extends BaseModel
             $points = -$data['recharge_value'];
         } else {
             $diffMoney = $data['recharge_value'];
-            $points = $data['recharge_value'] - $this['points'];
+            $points = $data['recharge_value'] - $this['point'];
         }
         $maxLimit = 999999999;
         if ($diffMoney > $maxLimit) {
@@ -475,24 +476,21 @@ class User extends BaseModel
         }
         // 更新记录
         $this->transaction(function () use ($storeUserName, $data, $diffMoney, $points) {
-            $totalPoints = $this['total_points'] + $points <= 0 ? 0 : $this['total_points'] + $points;
             // 更新账户积分
-            $this->where('user_id', '=', $this['user_id'])->update([
-                'points' => $diffMoney,
-                'total_points' => $totalPoints
+            $this->where('uuid', '=', $this['uuid'])->update([
+                'point' => $diffMoney,
             ]);
             // 新增积分变动记录
             $scene = $data['mode'] === 'dec' ? PointsLogSceneEnum::DEDUCT : PointsLogSceneEnum::ADMIN;
             PointsLogModel::add([
                 'scene' => $scene,
-                'user_id' => $this['user_id'],
-                'card_id' => $this['card_id'],
+                'member_uuid' => $this['uuid'],
                 'value' => $points,
                 'describe' => vsprintf(PointsLogSceneEnum::data()[$scene]['describe'], [$storeUserName]),
                 'remark' => $data['remark'] ?? '',
             ]);
         });
-        event('UserGrade', $this['user_id']);
+        event('UserGrade', $this['uuid']);
         return true;
     }
 
@@ -560,8 +558,7 @@ class User extends BaseModel
             // 新增余额变动记录
             $scene = $data['mode'] === 'dec' ? SceneEnum::DEDUCT : SceneEnum::ADMIN;
             BalanceLogModel::add($scene, [
-                'user_id' => $this['user_id'],
-                'card_id' => $this['card_id'],
+                'member_uuid' => $this['uuid'],
                 'money' => $giftMoney,
                 'gift_money' => $giftMoney,
                 'remark' => $data['remark'] ?? '',
@@ -577,7 +574,7 @@ class User extends BaseModel
      */
     public static function getUser($user_id)
     {
-        return self::where('user_id', $user_id)->find();
+        return self::where('uuid', $user_id)->find();
     }
 
     /**
@@ -591,10 +588,10 @@ class User extends BaseModel
             return [];
         }
         return (new self)
-            ->field("user_id, nickName, mobile")
+            ->field("uuid as user_id, nickname as nickName, phone as mobile")
             ->where(function ($q) use ($mobile) {
-                $q->like('mobile', $mobile);
-                $q->orLike('user_id', $mobile);
+                $q->like('phone', $mobile);
+                $q->orLike('uuid', $mobile);
             })
             ->where(['delete_time' => 0])
             ->limit(100) // 最多返回100条 v1.1.0
@@ -625,37 +622,35 @@ class User extends BaseModel
             BalanceLogSceneEnum::DEDUCT
         ];
         $rechargeRank = self::alias('a')
-            ->leftJoin('user_balance_log ubl', 'a.user_id = ubl.user_id')
+            ->leftJoin('member_balance_log ubl', 'a.uuid = ubl.member_uuid')
             ->field([
-                'a.user_id',
+                'a.uuid',
+                'a.uuid as user_id',
                 'COALESCE(SUM(ubl.money), 0) as tatal_amount',
                 'COALESCE(SUM(ubl.gift_money), 0) as gift_amount',
                 '(COALESCE(SUM(ubl.money), 0) - COALESCE(SUM(ubl.gift_money), 0)) as recharge_amount',
                 'a.nickName as nickname'
             ])
-            ->where('a.is_delete', '=', 0)
             ->whereIn('ubl.scene', $rechargeScenes)
-            ->group('a.user_id')
-            ->order(['recharge_amount' => 'desc', 'gift_amount' => 'desc', 'user_id' => 'desc'])
+            ->group('a.uuid')
+            ->order(['recharge_amount' => 'desc', 'gift_amount' => 'desc', 'uuid' => 'desc'])
             ->paginate($data)?->appends([]);
         return $rechargeRank;
     }
 
     /**
-     * 消费排行榜
+     * todo 兼容 消费排行榜
      */
     public function getConsumerRank($data)
     {
         $sort = ($data['sort'] ??  0) == 2 ? 'consumption_amount' : 'consumption_num';
         $consumerRank = Order::alias('a')
-            ->leftjoin('user b', 'a.user_id = b.user_id')
-            ->field('a.user_id, count(a.order_id) as consumption_num, sum(a.pay_price) - sum(a.refund_money) as consumption_amount, b.nickName as nickname')
-            ->where('a.order_status', '=', 30)
-            ->where('a.pay_status', '=', 20)
+            ->leftjoin('member b', 'a.consumer_uuid = b.uuid')
+            ->field('a.uuid, count(a.uuid) as consumption_num, sum(a.pay_price) as consumption_amount, b.nickname')
+            ->where('a.status', '=', 1)
             ->where('a.delete_time', '=', 0)
-            ->where('a.user_id', '>', 0)
-            ->where('b.is_delete', '=', 0)
-            ->group('a.user_id')
+            ->where('a.uuid', '>', 0)
+            ->group('a.uuid')
             ->order($sort, 'desc')
             ->paginate($data)?->append([]);
         return $consumerRank;

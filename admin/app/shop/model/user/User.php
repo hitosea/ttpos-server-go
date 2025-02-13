@@ -38,7 +38,7 @@ class User extends UserModel
     public function getUsers($where = null)
     {
         // 获取用户列表
-        return $this->where($where)->order(['user_id' => 'asc'])->field(['user_id'])->select();
+        return $this->where($where)->order(['uuid' => 'asc'])->field(['uuid'])->select();
     }
 
     /**
@@ -179,7 +179,7 @@ class User extends UserModel
             // 新增用户等级修改记录
             if ($status) {
                 (new GradeLogModel)->save([
-                    'user_id' => $this['user_id'],
+                    'member_uuid' => $this['uuid'],
                     'old_grade_id' => $oldGradeId,
                     'new_grade_id' => $data['grade_id'],
                     'change_type' => ChangeTypeEnum::ADMIN_USER,
@@ -195,7 +195,7 @@ class User extends UserModel
      */
     public function setDecUserExpend($userId, $expendMoney)
     {
-        return $this->where(['user_id' => $userId])->dec('expend_money', $expendMoney)->update();
+        return $this->where(['uuid' => $userId])->dec('expend_money', $expendMoney)->update();
     }
 
     /**
@@ -270,8 +270,7 @@ class User extends UserModel
         $this->transaction(function () use ($storeUserName, $data, $diffMoney, $money) {
             // 新增余额变动记录
             BalanceLogModel::add(SceneEnum::ADMIN, [
-                'user_id' => $this['user_id'],
-                'card_id' => $this['user_id'],
+                'member_uuid' => $this['uuid'],
                 'money' => $money,
                 'gift_money' => $data['gift_balance'] ?? 0,
                 'remark' => $data['remark'],
@@ -306,22 +305,22 @@ class User extends UserModel
         $points = 0;
         // 判断充值方式，计算最终积分
         if ($data['mode'] === 'inc') {
-            $diffMoney = $this['points'] + $data['value'];
+            $diffMoney = $this['point'] + $data['value'];
             $points = $data['value'];
         } elseif ($data['mode'] === 'dec') {
-            if ($this['points'] == 0) {
+            if ($this['point'] == 0) {
                 $this->error = '积分不能小于0';
                 return false;
             }
-            if ($this['points'] - $data['value'] < 0) {
+            if ($this['point'] - $data['value'] < 0) {
                 $this->error = '减少积分不能大于当前积分';
                 return false;
             }
-            $diffMoney = $this['points'] - $data['value'] <= 0 ? 0 : $this['points'] - $data['value'];
+            $diffMoney = $this['point'] - $data['value'] <= 0 ? 0 : $this['point'] - $data['value'];
             $points = -$data['value'];
         } else {
             $diffMoney = $data['value'];
-            $points = $data['value'] - $this['points'];
+            $points = $data['value'] - $this['point'];
         }
         $maxLimit = 999999999;
         if ($diffMoney > $maxLimit) {
@@ -330,23 +329,20 @@ class User extends UserModel
         }
         // 更新记录
         $this->transaction(function () use ($storeUserName, $data, $diffMoney, $points) {
-            $totalPoints = $this['total_points'] + $points <= 0 ? 0 : $this['total_points'] + $points;
             // 更新账户积分
-            $this->where('user_id', '=', $this['user_id'])->update([
-                'points' => $diffMoney,
-                'total_points' => $totalPoints
+            $this->where('uuid', '=', $this['uuid'])->update([
+                'point' => $diffMoney,
             ]);
             // 新增积分变动记录
             PointsLogModel::add([
-                'user_id' => $this['user_id'],
-                'card_id' => $this['user_id'],
+                'member_uuid' => $this['uuid'],
                 'scene' => PointsLogSceneEnum::RECHARGE_GIVE,
                 'value' => $points,
                 'describe' => vsprintf("后台管理员 [%s] 操作", [$storeUserName]),
                 'remark' => $data['remark'],
             ]);
         });
-        event('UserGrade', $this['user_id']);
+        event('UserGrade', $this['uuid']);
         return true;
     }
 

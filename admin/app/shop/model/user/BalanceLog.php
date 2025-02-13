@@ -31,7 +31,7 @@ class BalanceLog extends BalanceLogModel
         if (!empty($query['keyword'])) {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.user_id|user.mobile|user.nickName', $keyword);
+                $query->like('user.uuid|user.phone|user.nickname', $keyword);
             });
         }
         // 搜索时间段
@@ -48,7 +48,7 @@ class BalanceLog extends BalanceLogModel
         }
         // 获取列表数据
         $list = $model->with(['user'])
-            ->join('user', 'user.user_id = log.user_id')
+            ->join('member user', 'user.uuid = log.member_uuid')
             ->order(['log.create_time' => 'desc'])
             ->paginate($query);
         foreach ($list as &$item) {
@@ -72,7 +72,7 @@ class BalanceLog extends BalanceLogModel
         }
         // 设置默认的检索数据
         $params = $this->setQueryDefaultValue($query, [
-            'user_id' => 0,
+            'member_uuid' => 0,
             'search' => '',
             'scene' => -1,
             'start_time' => '',
@@ -80,9 +80,9 @@ class BalanceLog extends BalanceLogModel
         ]);
 
         // 用户ID
-        $params['user_id'] > 0 && $this->where('log.user_id', '=', $params['user_id']);
+        $params['user_id'] > 0 && $this->where('log.member_uuid', '=', $params['user_id']);
         // 用户昵称
-        !empty($params['search']) && $this->like('user.nickName', $params['search']);
+        !empty($params['search']) && $this->like('user.nickname', $params['search']);
         // 余额变动场景
         $params['scene'] > -1 && $this->where('log.scene', '=', (int)$params['scene']);
         // 起始时间

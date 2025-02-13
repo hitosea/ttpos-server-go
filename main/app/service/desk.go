@@ -19,8 +19,8 @@ type IDeskSrv interface {
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
-	IsCellCloseDesk(dbId uint64, deskUuid uint64) (desk model.Desk, err error)                  // 判断桌台是否可关闭
-	CloseDesk(dbId uint64, deskUuid uint64, reason string) error                                // 关闭桌台
+	CloseDesk(dbId uint64, staff model.Staff, source string, req req.DeskCloseReq) error        // 关闭桌台
+	IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, error)                           // 判断桌台是否可以关闭
 }
 
 // deskSrv 收银服务结构体
@@ -31,7 +31,7 @@ type deskSrv struct {
 	settingSrv setting.ISrv        // 设置服务
 }
 
-// NewProductSrv 创建新的收银产品类别服务
+// NewDeskSrv 创建新的收银产品类别服务
 func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
 	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv)
 }
@@ -46,7 +46,7 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrd
 	}
 }
 
-// GetProductList 获取收银机点餐页面产品类别列表
+// GetDeskRegionAndTypeList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
 	// 获取列表
 	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
@@ -80,7 +80,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 	}, nil
 }
 
-// GetProductList 获取收银机点餐页面产品类别列表
+// GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
 	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)
@@ -333,20 +333,30 @@ func (s *deskSrv) IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, err
 	if desk.SaleBill.ID == 0 {
 		return model.Desk{}, nil
 	}
-	if repository.NewOrderRepo(db).IsPartiallyPaid(desk.SaleBill.Uuid) {
-		return model.Desk{}, errors.New("当前订单已被部分支付，不支持取消")
+	if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(dbId, desk.SaleBill.Uuid); err != nil {
+		return model.Desk{}, err
 	}
 	return desk, nil
 }
 
 // 关闭桌台
-func (s *deskSrv) CloseDesk(dbId uint64, deskUuid uint64, reason string) error {
-	_, err := s.IsCellCloseDesk(dbId, deskUuid)
+func (s *deskSrv) CloseDesk(dbId uint64, staff model.Staff, source string, reqs req.DeskCloseReq) error {
+	db := s.dbm.GetDB(dbId)
+	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
 		return err
 	}
-	if err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).CloseDesk(deskUuid, reason); err != nil {
+	if desk.SaleBill.ID == 0 {
+		return nil
+	}
+	// 取消订单
+	if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(dbId, staff, source, req.OrderCancelReq{
+		SaleBillUuid: desk.SaleBill.Uuid,
+		CancelReason: reqs.Reason,
+		Password:     reqs.Password,
+	}); err != nil {
 		return err
 	}
+	//
 	return nil
 }

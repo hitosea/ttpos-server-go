@@ -103,10 +103,10 @@ type ProductPackage struct {
 	SauceMaxSelection     uint   `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount          uint   `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 
-	MultiLanguageName            MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	ProductUnit                  ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
-	ProductBoms                  []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
-	ProductPackageAttributeGroup []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
+	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
+	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
+	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
 }
 
 func (model *ProductPackage) IsDown() bool {
@@ -131,10 +131,11 @@ type ProductBom struct {
 	ProductSauceUuid   uint64  `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
 	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
 	IsDefaultSelect    uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
+	IsSoldOut          uint    `gorm:"column:is_sold_out;not null;default:0;comment:'是否售罄：0-否 1-是'"`
 
+	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
-	ProductPackage ProductPackage `gorm:"foreignKey:product_package_uuid;references:uuid"`
 }
 
 // IsFlavorProduct 判断是否为商品规格

@@ -1173,8 +1173,8 @@ class OrderProduct extends BaseModel
             $sendKitchenTime = time();
             $stock_update = true; //
             // 处理未送厨商品
-            $is_accept_scan_order = isset(request()->licenses['is_accept_scan_order']) ? request()->licenses['is_accept_scan_order'] : 0;
-            if ($sendKitchenSource == OrderProduct::SCAN_ADD_PRODUCT && $is_accept_scan_order == 1) {
+            $is_open_h5_order = isset(request()->licenses['is_open_h5_order']) ? request()->licenses['is_open_h5_order'] : 0;
+            if ($sendKitchenSource == OrderProduct::SCAN_ADD_PRODUCT && $is_open_h5_order == 1) {
                 $cashierSetting = SettingModel::getSupplierItem(SettingEnum::CASHIER, $this['shop_supplier_id']);
                 /** 1.0.9 扫码下单需要受到商家接单功能影响 **/
                 $batch_time = time(); // 下单时间
@@ -1198,7 +1198,7 @@ class OrderProduct extends BaseModel
                     $price += $order_product->total_price;
                 }
                 /**
-                 * is_accept_scan_order 收银端是否开启扫码点餐接单（不开启下单直接送厨） 0-不开启 1-开启
+                 * is_open_h5_order 收银端是否开启扫码点餐接单（不开启下单直接送厨） 0-不开启 1-开启
                  * is_auto_order 自动接单是否开启
                  */
                 if ($cashierSetting['is_auto_order'] == 1 && $price < $cashierSetting['auto_order_limit']) {
@@ -1326,7 +1326,7 @@ class OrderProduct extends BaseModel
                         }
                         TakeOrder::where('batch_no', $batch_no)->update(['price' => $update_total_price, 'status' => 1, 'take_time' => time()]);
                     }
-                    if ($is_accept_scan_order && ($isAutoOrder || $sendKitchenSource == OrderProduct::CASHIER_ADD_PRODUCT)) {
+                    if ($is_open_h5_order && ($isAutoOrder || $sendKitchenSource == OrderProduct::CASHIER_ADD_PRODUCT)) {
                         OrderOperationLog::createLog($order_id, OrderOperationLog::ACTION_ORDER_TAKING, ['is_auto_order' => $isAutoOrder], $batch_no);
                     }
                 }

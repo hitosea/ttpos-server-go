@@ -258,7 +258,7 @@ class UserRechargeOrder extends BaseModel
                 $this->startTrans();
                 try {
                     $updateData = [
-                        'user_id' => $user_id,
+                        'member_uuid' => $user_id,
                         'recharge_money' => $recharge_money,
                         'gift_money' => $gift_money,
                         'gift_point' => $gift_point,
@@ -295,7 +295,7 @@ class UserRechargeOrder extends BaseModel
         try {
             $newData = [
                 'order_no' => self::createRechargeOrderNo(),
-                'user_id' => $user_id,
+                'member_uuid' => $user_id,
                 'recharge_money' => $recharge_money,
                 'gift_money' => $gift_money,
                 'gift_point' => $gift_point,
@@ -527,7 +527,7 @@ class UserRechargeOrder extends BaseModel
             $change_due = helper::bcsub($total_pay_type_price, $this->pay_price);
             $pay_time = time();
             $orderSaveArr = [
-                'user_id' => $user_id,
+                'member_uuid' => $user_id,
                 'order_status' => 1,
                 'change_due' => $change_due,
                 'pay_time' => $pay_time,
@@ -543,7 +543,7 @@ class UserRechargeOrder extends BaseModel
             if ($total_money > 0) {
                 BalanceLogModel::add(BalanceLogSceneEnum::RECHARGE, [
                     'recharge_order_id' => $this->id,
-                    'user_id' => $user['user_id'],
+                    'member_uuid' => $user['user_id'],
                     'money' => $total_money,
                     'gift_money' => $gift_money,
                 ], vsprintf("收银机管理员操作 [%s]", [$cashier_name]), true);
@@ -993,7 +993,7 @@ class UserRechargeOrder extends BaseModel
                 $this->transaction(function () use ($refundMoney) {
                     BalanceLogModel::add(BalanceLogSceneEnum::RECHARGE_REFUND, [
                         'recharge_order_id' => $this->id,
-                        'user_id' => $this->user_id,
+                        'member_uuid' => $this->member_uuid,
                         'money' => -$refundMoney,
                     ], [$this->order_no]);
                 });
@@ -1160,7 +1160,7 @@ class UserRechargeOrder extends BaseModel
             if ($total_money > 0) {
                 BalanceLogModel::add(BalanceLogSceneEnum::RECHARGE_REVERSE, [
                     'recharge_order_id' => $this->id,
-                    'user_id' => $this->user_id,
+                    'member_uuid' => $this->member_uuid,
                     'money' => -$total_money,
                     'gift_money' => -$gift_money,
                 ], [$this->order_no]);

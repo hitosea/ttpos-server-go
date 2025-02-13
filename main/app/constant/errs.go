@@ -2,9 +2,10 @@ package constant
 
 // TODO 部分错误码直接拿重构前的，是否需要更换
 const (
-	CodeSuccess   = 1   // 成功
-	CodeFail      = 500 // 失败
-	CodeForceFail = 501 // 强调失败
+	CodeSuccess    = 1   // 成功
+	CodeFail       = 500 // 失败
+	CodeForceFail  = 501 // 强调失败
+	CodeDialogFail = 502 // 模态框异常
 
 	CodeBadRequest   = 400 // 参数错误
 	CodeUnauthorized = 401 // 登录失败
