@@ -52,7 +52,9 @@ func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
 		tag := model.PrinterTag{
-			Uuid: productPrintLabel.LabelID,
+			BaseModel: model.BaseModel{
+				Uuid: uint64(productPrintLabel.LabelID),
+			},
 			Name: productPrintLabel.LabelName,
 		}
 		_, err = base.NewPrinterTagRepo(s.targetDB).CreatePrinterTag(tag)

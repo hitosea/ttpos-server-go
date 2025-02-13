@@ -49,15 +49,17 @@ func (s *ErpSupplierService) ConvertErpSupplier() error {
 	for _, erpSupplier := range erpSuppliers {
 		fmt.Println(fmt.Sprintf("erpSupplier: %+v", erpSupplier))
 		supplier := model.Supplier{
-			Uuid:         uint64(erpSupplier.ID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(erpSupplier.ID),
+				CreateTime: erpSupplier.CreateTime,
+				UpdateTime: erpSupplier.UpdateTime,
+			},
 			Name:         erpSupplier.Name,
 			Address:      erpSupplier.Address,
 			ContactName:  erpSupplier.ContactPerson,
 			ContactPhone: erpSupplier.ContactPhone,
 			Position:     erpSupplier.Position,
 			StaffUuid:    uint64(erpSupplier.PurchaserID),
-			CreateTime:   erpSupplier.CreateTime,
-			UpdateTime:   erpSupplier.UpdateTime,
 		}
 		_, err := base.NewSupplierRepo(s.targetDB).CreateSupplier(supplier)
 		if err != nil {

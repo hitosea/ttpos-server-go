@@ -66,7 +66,12 @@ func (s *UserCardService) ConvertUserCard() error {
 		fmt.Println(fmt.Sprintf("userCard: %+v", userCard))
 
 		memberCardType := model.MemberCardType{
-			Uuid:            uint64(userCard.CardID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(userCard.CardID),
+				CreateTime: int64(userCard.CreateTime),
+				UpdateTime: int64(userCard.UpdateTime),
+				DeleteTime: int64(userCard.IsDelete),
+			},
 			Name:            userCard.CardName,
 			Period:          userCard.Expire,
 			Price:           userCard.Money,
@@ -77,9 +82,6 @@ func (s *UserCardService) ConvertUserCard() error {
 			CardOpeningGift: userCard.OpenMoney,
 			GiftValue:       userCard.OpenMoneyNum,
 			Description:     userCard.Content,
-			CreateTime:      userCard.CreateTime,
-			UpdateTime:      userCard.UpdateTime,
-			DeleteTime:      int64(userCard.IsDelete),
 		}
 		_, err := base.NewMemberCardTypeRepo(s.targetDB).CreateMemberCardType(memberCardType)
 		if err != nil {

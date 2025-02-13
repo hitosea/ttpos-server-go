@@ -45,14 +45,14 @@ func (s *UserPointsLogService) ConvertUserPointsLog() error {
 	for _, userPointsLog := range userPointsLogs {
 		fmt.Println(fmt.Sprintf("userPointsLog: %+v", userPointsLog))
 		memberPointLog := model.MemberPointLog{
-			Uuid:        uint64(userPointsLog.LogID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(userPointsLog.LogID),
+				CreateTime: int64(userPointsLog.CreateTime),
+			},
 			MemberUuid:  uint64(userPointsLog.UserID),
 			Scene:       int(userPointsLog.Scene),
 			Value:       int(userPointsLog.Value),
 			Description: userPointsLog.Describe,
-			CreateTime:  int64(userPointsLog.CreateTime),
-			UpdateTime:  int64(userPointsLog.CreateTime),
-			DeleteTime:  0,
 		}
 		_, err := base.NewMemberPointLogRepo(s.targetDB).CreateMemberPointLog(memberPointLog)
 		if err != nil {

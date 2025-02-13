@@ -51,7 +51,11 @@ func (s *UserGradeService) ConvertUserGrade() error {
 	for _, userGrade := range userGrades {
 		fmt.Println(fmt.Sprintf("userGrade: %+v", userGrade))
 		memberLevel := model.MemberLevel{
-			Uuid:          uint64(userGrade.GradeID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(userGrade.GradeID),
+				CreateTime: int64(userGrade.CreateTime),
+				UpdateTime: int64(userGrade.UpdateTime),
+			},
 			Name:          userGrade.Name,
 			OpenMoney:     int(userGrade.OpenMoney),
 			UpgradeMoney:  userGrade.UpgradeMoney,
@@ -63,8 +67,6 @@ func (s *UserGradeService) ConvertUserGrade() error {
 			Priority:      int(userGrade.Weight),
 			IsDefault:     int(userGrade.IsDefault),
 			Remark:        userGrade.Remark,
-			CreateTime:    int64(userGrade.CreateTime),
-			UpdateTime:    int64(userGrade.UpdateTime),
 		}
 		_, err = base.NewMemberLevelRepo(s.targetDB).CreateMemberLevel(memberLevel)
 		if err != nil {

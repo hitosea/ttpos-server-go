@@ -2,10 +2,11 @@ package old_model
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 type FreeTag struct {
@@ -54,7 +55,11 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		languageName := names.GenMultiLanguageName(id)
 
 		reason := model.FreeReason{
-			Uuid:                  freeTag.Id,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(freeTag.Id),
+				CreateTime: freeTag.CreateTime,
+				UpdateTime: freeTag.UpdateTime,
+			},
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),
 			MultiLanguageName:     languageName,

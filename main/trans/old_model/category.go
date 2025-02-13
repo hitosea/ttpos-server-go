@@ -48,7 +48,9 @@ func (n *Names) GetNames(jsonString string) error {
 
 func (n *Names) CreateMultiLanguageName(nameId uint64, targetDB *gorm.DB) error {
 	multiLanguageName := model.MultiLanguageName{
-		Uuid:     nameId,
+		BaseModel: model.BaseModel{
+			Uuid: nameId,
+		},
 		EnName:   n.En,
 		ZhName:   n.Zh,
 		ZhTwName: n.ZhTw,
@@ -68,7 +70,9 @@ func (n *Names) CreateMultiLanguageName(nameId uint64, targetDB *gorm.DB) error 
 
 func (n *Names) GenMultiLanguageName(nameId uint64) model.MultiLanguageName {
 	multiLanguageName := model.MultiLanguageName{
-		Uuid:     nameId,
+		BaseModel: model.BaseModel{
+			Uuid: nameId,
+		},
 		EnName:   n.En,
 		ZhName:   n.Zh,
 		ZhTwName: n.ZhTw,
@@ -122,7 +126,9 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		fmt.Printf("uuid:%+v\n", id)
 		multiLanguageName := model.MultiLanguageName{
-			Uuid:     id,
+			BaseModel: model.BaseModel{
+				Uuid: id,
+			},
 			EnName:   names.En,
 			ZhName:   names.Zh,
 			ZhTwName: names.ZhTw,
@@ -151,9 +157,11 @@ func (s *CategoryService) ConvertCategory() error {
 		//}
 		//} else {
 		productCategory := model.ProductCategory{
-			Uuid:                  category.CategoryID,
+			BaseModel: model.BaseModel{
+				Uuid: uint64(category.CategoryID),
+			},
 			Name:                  names.Zh,
-			ParentUuid:            category.ParentID,
+			ParentUuid:            uint64(category.ParentID),
 			MultiLanguageNameUuid: uint64(id),
 			Status:                category.Status,
 			Sort:                  category.Sort,

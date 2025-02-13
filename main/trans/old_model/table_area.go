@@ -42,12 +42,13 @@ func (s *TableAreaService) ConvertTableArea() error {
 	for _, tableArea := range tableAreas {
 		fmt.Println(fmt.Sprintf("tableArea: %+v", tableArea))
 		deskRegion := model.DeskRegion{
-			Uuid:       tableArea.AreaID,
-			Name:       tableArea.AreaName,
-			Sort:       uint(tableArea.Sort),
-			CreateTime: int64(tableArea.CreateTime),
-			UpdateTime: int64(tableArea.UpdateTime),
-			DeleteTime: 0,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(tableArea.AreaID),
+				CreateTime: int64(tableArea.CreateTime),
+				UpdateTime: int64(tableArea.UpdateTime),
+			},
+			Name: tableArea.AreaName,
+			Sort: uint(tableArea.Sort),
 		}
 
 		_, err := repository.NewDeskRegionRepo(s.targetDB).CreateDeskRegion(deskRegion)

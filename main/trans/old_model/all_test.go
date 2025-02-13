@@ -22,7 +22,7 @@ var targetConf = config.DatabaseConf{
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop_1"
+var targetDBName = "shop1"
 
 func TestConvertAll(t *testing.T) {
 	testConvertAttribute()             // 商品属性

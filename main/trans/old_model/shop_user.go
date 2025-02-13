@@ -53,7 +53,12 @@ func (s *ShopUserService) ConvertShopUser() error {
 	for _, shopUser := range shopUsers {
 		fmt.Println(fmt.Sprintf("shopUser: %+v", shopUser))
 		staff := model.Staff{
-			Uuid:                shopUser.ShopUserID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopUser.ShopUserID),
+				CreateTime: shopUser.CreateTime,
+				UpdateTime: shopUser.UpdateTime,
+				DeleteTime: shopUser.IsDelete,
+			},
 			CompanyUuid:         shopUser.AppID,
 			Username:            shopUser.UserName,
 			Password:            shopUser.Password,
@@ -67,9 +72,6 @@ func (s *ShopUserService) ConvertShopUser() error {
 			CashierOnline:       int(shopUser.CashierOnline),
 			CashierLoginTime:    shopUser.CashierLoginTime,
 			DutyNo:              shopUser.DutyNo,
-			CreateTime:          shopUser.CreateTime,
-			UpdateTime:          shopUser.UpdateTime,
-			DeleteTime:          shopUser.IsDelete,
 		}
 		err := repository.NewStaffRepo(s.targetDB).CreateStaff(staff)
 		if err != nil {

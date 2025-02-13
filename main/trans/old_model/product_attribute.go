@@ -46,13 +46,14 @@ func (s *ProductAttributeService) ConvertProductAttribute() error {
 	for _, productAttribute := range productAttributes {
 		fmt.Println(fmt.Sprintf("productAttribute: %+v", productAttribute))
 		attribute := model.ProductPackageAttribute{
-			ID:                               0,
-			Uuid:                             productAttribute.ProductAttributeID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(productAttribute.ProductAttributeID),
+				CreateTime: productAttribute.CreateTime,
+				UpdateTime: productAttribute.UpdateTime,
+			},
 			ProductPackageAttributeGroupUuid: productAttribute.GroupAttributeID,
 			AttributeUuid:                    productAttribute.AttributeID,
 			IsDefaultSelected:                uint(productAttribute.DefaultSelect),
-			CreateTime:                       productAttribute.CreateTime,
-			UpdateTime:                       productAttribute.UpdateTime,
 		}
 		_, err := base.NewProductPackageAttributeRepo(s.targetDB).CreateProductPackageAttribute(attribute)
 		if err != nil {

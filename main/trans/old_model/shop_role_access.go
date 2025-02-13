@@ -42,10 +42,12 @@ func (s *ShopRoleAccessService) ConvertShopRoleAccess() error {
 	for _, shopRoleAccess := range shopRoleAccesses {
 		fmt.Println(fmt.Sprintf("shopRoleAccess: %+v", shopRoleAccess))
 		roleAccess := model.RoleAccess{
-			Uuid:       shopRoleAccess.ID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopRoleAccess.ID),
+				CreateTime: shopRoleAccess.CreateTime,
+			},
 			RoleUuid:   shopRoleAccess.RoleID,
 			AccessUuid: shopRoleAccess.AccessID,
-			CreateTime: shopRoleAccess.CreateTime,
 		}
 		_, err = repository.NewRoleAccessRepo(s.targetDB).CreateRoleAccess(roleAccess)
 		if err != nil {

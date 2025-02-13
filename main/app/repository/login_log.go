@@ -22,12 +22,10 @@ func NewLoginLogRepoImpl(dbm *database.DBManager) *LoginLogRepo {
 }
 
 func (r *LoginLogRepo) Save(companyId uint64, username, ip, result string) error {
-	return r.dbm.GetDB(companyId).Debug().Create(&model.LoginLog{
-		Uuid:       0, // todo 生成uuid
-		StaffUuid:  0,
-		Username:   "",
-		Ip:         "",
-		Result:     "",
-		CreateTime: 0,
+	return r.dbm.GetDB(companyId).Debug().Create(&model.StaffLoginLog{
+		StaffUuid: 0, // todo
+		Username:  "",
+		Ip:        "",
+		Result:    "",
 	}).Error
 }

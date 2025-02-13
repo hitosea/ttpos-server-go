@@ -65,7 +65,11 @@ func (s *TableService) ConvertTable() error {
 		}
 		deviceId := 0 // todo 通过bind_info获取设备ID
 		desk := model.Desk{
-			Uuid:        table.TableID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(table.TableID),
+				CreateTime: table.CreateTime,
+				UpdateTime: table.UpdateTime,
+			},
 			DeskNo:      table.TableNo,
 			RegionUuid:  table.AreaID,
 			TypeUuid:    table.TypeID,
@@ -74,9 +78,6 @@ func (s *TableService) ConvertTable() error {
 			IsDisable:   isDisable,
 			QrcodeToken: table.QRCodeValue,
 			DeviceUuid:  uint64(deviceId),
-			CreateTime:  table.CreateTime,
-			UpdateTime:  table.UpdateTime,
-			DeleteTime:  0,
 		}
 
 		_, err := repository.NewDeskRepo(s.targetDB).CreateDesk(desk)

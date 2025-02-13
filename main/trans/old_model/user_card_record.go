@@ -80,7 +80,12 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 			return err
 		}
 		memberCardLog := model.MemberCardLog{
-			Uuid:               uint64(userCardRecord.OrderID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(userCardRecord.OrderID),
+				CreateTime: int64(userCardRecord.CreateTime),
+				UpdateTime: int64(userCardRecord.UpdateTime),
+				DeleteTime: int64(userCardRecord.IsDelete),
+			},
 			Price:              userCardRecord.PayPrice,
 			Discount:           int(userCardRecord.Discount),
 			Period:             int(userCardRecord.ExpireTime),
@@ -90,9 +95,6 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 			MemberCardTypeName: userCard.CardName,
 			MemberCardTypeUuid: uint64(userCardRecord.CardID),
 			MemberUuid:         uint64(userCardRecord.UserID),
-			CreateTime:         int64(userCardRecord.CreateTime),
-			UpdateTime:         int64(userCardRecord.UpdateTime),
-			DeleteTime:         int64(userCardRecord.IsDelete),
 		}
 		_, err = base.NewMemberCardLogRepo(s.targetDB).CreateMemberCardLog(memberCardLog)
 		if err != nil {

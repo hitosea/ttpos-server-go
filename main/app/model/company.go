@@ -2,24 +2,20 @@ package model
 
 // Company 集团表 ttpos_company
 type Company struct {
-	ID            uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid          uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"uuid"`
+	BaseModel
 	Name          string `gorm:"column:name;type:varchar(255);comment:集团名称;NOT NULL" json:"name"`
 	Logo          string `gorm:"column:logo;type:varchar(255);comment:logo;NOT NULL" json:"logo"`
 	ExpireTime    int    `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
 	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
 	Status        int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
-	CreateTime    int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime    int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime    int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
 
 // CompanySetting 公司设置表 ttpos_company_setting
 type CompanySetting struct {
-	ID               int    `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
+	BaseModel
 	CompanyUuid      int64  `gorm:"column:company_uuid;type:bigint(20);default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	RealName         string `gorm:"column:real_name;type:varchar(50);comment:真实姓名;NOT NULL" json:"real_name"`
 	LinkName         string `gorm:"column:link_name;type:varchar(50);comment:联系人;NOT NULL" json:"link_name"`
@@ -42,21 +38,14 @@ type CompanySetting struct {
 	Timezone         string `gorm:"column:timezone;type:varchar(50);default:Asia/Shanghai;comment:时区;NOT NULL" json:"timezone"`
 	Languages        string `gorm:"column:languages;type:varchar(255);comment:支持语言;NOT NULL" json:"languages"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
-	CreateTime       int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间（时间戳）;NOT NULL" json:"create_time"`
-	UpdateTime       int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间（时间戳）;NOT NULL" json:"update_time"`
-	DeleteTime       int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）;NOT NULL" json:"delete_time"`
 }
 
 // CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff
 type CompanyStaff struct {
-	ID          int    `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
-	Uuid        uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"uuid"`
+	BaseModel
 	CompanyUuid uint64 `gorm:"column:company_uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
 	Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
-	CreateTime  int64  `gorm:"autoCreateTime;comment:创建时间（时间戳）"`
-	UpdateTime  int64  `gorm:"autoUpdateTime;comment:更新时间（时间戳）"`
-	DeleteTime  int64  `gorm:"default:0;comment:删除时间（时间戳）"`
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 }

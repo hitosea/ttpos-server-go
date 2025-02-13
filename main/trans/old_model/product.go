@@ -198,7 +198,11 @@ func (s *ProductService) ConvertProduct() error {
 			}
 
 			productPackage := model.ProductPackage{
-				Uuid:                  product.ProductID,
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(product.ProductID),
+					CreateTime: product.CreateTime,
+					UpdateTime: product.UpdateTime,
+				},
 				Name:                  names.Zh,
 				MultiLanguageNameUuid: uint(id),
 				ImageName:             product.ImgName,
@@ -233,7 +237,9 @@ func (s *ProductService) ConvertProduct() error {
 			// 材料
 			fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
 			material := model.Material{
-				Uuid:                  product.ProductID,
+				BaseModel: model.BaseModel{
+					Uuid: uint64(product.ProductID),
+				},
 				Name:                  names.Zh,
 				MultiLanguageNameUuid: uint(id),
 				CategoryUuid:          product.CategoryID,

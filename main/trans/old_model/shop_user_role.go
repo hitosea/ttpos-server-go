@@ -38,11 +38,13 @@ func (s *ShopUserRoleService) ConvertShopUserRole() error {
 	}
 	for _, shopUserRole := range shopUserRoles {
 		staffRole := model.StaffRole{
-			Uuid:       uint64(shopUserRole.ID),
-			StaffUuid:  int64(shopUserRole.ShopUserID),
-			RoleUuid:   int64(shopUserRole.RoleID),
-			CreateTime: shopUserRole.CreateTime,
-			UpdateTime: shopUserRole.UpdateTime,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopUserRole.ID),
+				CreateTime: shopUserRole.CreateTime,
+				UpdateTime: shopUserRole.UpdateTime,
+			},
+			StaffUuid: int64(shopUserRole.ShopUserID),
+			RoleUuid:  int64(shopUserRole.RoleID),
 		}
 		err = repository.NewStaffRoleRepo(s.targetDB).CreateStaffRole(staffRole)
 		if err != nil {

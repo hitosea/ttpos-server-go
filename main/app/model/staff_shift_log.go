@@ -2,8 +2,7 @@ package model
 
 // StaffShiftLog 员工交班记录表 ttpos_staff_shift_log
 type StaffShiftLog struct {
-	ID                uint    `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid              uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:交班记录ID;NOT NULL" json:"uuid"`
+	BaseModel
 	StaffUuid         uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"staff_uuid"`
 	ShiftNo           string  `gorm:"column:shift_no;type:varchar(64);comment:交班编号;NOT NULL" json:"shift_no"`
 	Status            int     `gorm:"column:status;type:int(11);default:1;comment:状态： 0未交班,1已交班;NOT NULL" json:"status"`
@@ -23,7 +22,4 @@ type StaffShiftLog struct {
 	Abnormal          string  `gorm:"column:abnormal;type:varchar(255);comment:异常信息-json字符串" json:"abnormal"`
 	ShiftStartTime    int64   `gorm:"column:shift_start_time;type:int(10);default:0;comment:当班开始时间;NOT NULL" json:"shift_start_time"`
 	ShiftEndTime      int64   `gorm:"column:shift_end_time;type:int(10);default:0;comment:当班结束时间;NOT NULL" json:"shift_end_time"`
-	CreateTime        int64   `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime        int64   `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime        int64   `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }

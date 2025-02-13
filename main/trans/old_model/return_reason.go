@@ -59,7 +59,11 @@ func (s *ReturnReasonService) ConvertReturnReason() error {
 		languageName := names.GenMultiLanguageName(id)
 
 		reason := model.ReturnFoodReason{
-			Uuid:                  returnReason.Id,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(returnReason.Id),
+				CreateTime: returnReason.CreateTime,
+				UpdateTime: returnReason.UpdateTime,
+			},
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),
 			MultiLanguageName:     languageName,

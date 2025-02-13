@@ -89,12 +89,14 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口产品关联数据
 			productPrinterProductItem := model.ProductPrinterProductItem{
-				UUID:               uint(id),
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(id),
+					CreateTime: supplierPrinting.CreateTime,
+					UpdateTime: supplierPrinting.UpdateTime,
+					DeleteTime: int64(supplierPrinting.IsDelete),
+				},
 				ProductPrinterUuid: uint(supplierPrinting.ID),
 				ProductPackageUuid: productID,
-				CreateTime:         supplierPrinting.CreateTime,
-				UpdateTime:         supplierPrinting.UpdateTime,
-				DeleteTime:         int64(supplierPrinting.IsDelete),
 			}
 			_, err = base.NewProductPrinterProductItemRepo(s.targetDB).CreateProductPrinterProductItem(productPrinterProductItem)
 			if err != nil {
@@ -115,12 +117,14 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口打印机数据
 			productPrinterItem := model.ProductPrinterItem{
-				UUID:               uint(id),
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(id),
+					CreateTime: supplierPrinting.CreateTime,
+					UpdateTime: supplierPrinting.UpdateTime,
+					DeleteTime: int64(supplierPrinting.IsDelete),
+				},
 				ProductPrinterUuid: uint(supplierPrinting.ID),
 				PrinterUuid:        printerID,
-				CreateTime:         supplierPrinting.CreateTime,
-				UpdateTime:         supplierPrinting.UpdateTime,
-				DeleteTime:         int64(supplierPrinting.IsDelete),
 			}
 			_, err = base.NewProductPrinterItemRepo(s.targetDB).CreateProductPrinterItem(productPrinterItem)
 			if err != nil {
@@ -140,11 +144,13 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口区域数据
 			productPrinterRegion := model.ProductPrinterRegion{
-				UUID:               uint(id),
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(id),
+					CreateTime: supplierPrinting.CreateTime,
+					UpdateTime: supplierPrinting.UpdateTime,
+				},
 				ProductPrinterUuid: uint(supplierPrinting.ID),
 				DeskRegionUuid:     regionID,
-				CreateTime:         supplierPrinting.CreateTime,
-				UpdateTime:         supplierPrinting.UpdateTime,
 			}
 			_, err = base.NewProductPrinterRegionRepo(s.targetDB).CreateProductPrinterRegion(productPrinterRegion)
 			if err != nil {
@@ -153,15 +159,17 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		}
 		// 档口打印机. 转换商品打印（档口）数据
 		productPrinter := model.ProductPrinter{
-			UUID:               supplierPrinting.ID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(supplierPrinting.ID),
+				CreateTime: supplierPrinting.CreateTime,
+				UpdateTime: supplierPrinting.UpdateTime,
+			},
 			Name:               supplierPrinting.Name,
 			Status:             supplierPrinting.IsOpen,
 			PrintMode:          uint(printType),
 			PrintMethod:        uint(printMethod),
 			PrintProductSelect: uint(printProductSelect),
 			PrintModeScene:     uint(printModeScene),
-			CreateTime:         supplierPrinting.CreateTime,
-			UpdateTime:         supplierPrinting.UpdateTime,
 		}
 		_, err = base.NewProductPrinterRepo(s.targetDB).CreateProductPrinter(productPrinter)
 		if err != nil {

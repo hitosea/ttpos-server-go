@@ -44,14 +44,15 @@ func (s *TableTypeService) ConvertTableType() error {
 	for _, tableType := range tableTypes {
 		fmt.Println(fmt.Sprintf("tableType: %+v", tableType))
 		deskType := model.DeskType{
-			Uuid:       tableType.TypeID,
-			Name:       tableType.TypeName,
-			Sort:       uint(tableType.Sort),
-			RangeMin:   uint(tableType.MinNum),
-			RangeMax:   uint(tableType.MaxNum),
-			CreateTime: int64(tableType.CreateTime),
-			UpdateTime: int64(tableType.UpdateTime),
-			DeleteTime: 0,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(tableType.TypeID),
+				CreateTime: int64(tableType.CreateTime),
+				UpdateTime: int64(tableType.UpdateTime),
+			},
+			Name:     tableType.TypeName,
+			Sort:     uint(tableType.Sort),
+			RangeMin: uint(tableType.MinNum),
+			RangeMax: uint(tableType.MaxNum),
 		}
 
 		_, err := repository.NewDeskTypeRepo(s.targetDB).CreateDeskType(deskType)

@@ -54,7 +54,11 @@ func (s *ShopAccessService) ConvertShopAccess() error {
 	for _, shopAccess := range shopAccesses {
 		fmt.Println(fmt.Sprintf("shopAccess: %+v", shopAccess))
 		model := &model.Access{
-			Uuid:             shopAccess.AccessID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopAccess.AccessID),
+				CreateTime: shopAccess.CreateTime,
+				UpdateTime: shopAccess.UpdateTime,
+			},
 			Name:             shopAccess.Name,
 			Path:             shopAccess.Path,
 			ApiPath:          shopAccess.APIPath,
@@ -68,8 +72,6 @@ func (s *ShopAccessService) ConvertShopAccess() error {
 			PlusCategoryUuid: shopAccess.PlusCategoryID,
 			Remark:           shopAccess.Remark,
 			IsSupplier:       int(shopAccess.IsSupplier),
-			CreateTime:       shopAccess.CreateTime,
-			UpdateTime:       shopAccess.UpdateTime,
 		}
 		err := repository.NewAccessRepo(s.targetDB).CreateAccess(model)
 		if err != nil {

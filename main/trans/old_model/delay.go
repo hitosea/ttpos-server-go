@@ -43,13 +43,15 @@ func (s *BuffetDelayService) ConvertBuffetDelay() error {
 	for _, buffetDelay := range buffetDelays {
 		fmt.Println(fmt.Sprintf("buffetDelay: %+v", buffetDelay))
 		buffetDelay := model.BuffetDelay{
-			Uuid:       uint64(buffetDelay.ID),
-			Name:       buffetDelay.Name,
-			DelayTime:  buffetDelay.DelayTime,
-			Price:      buffetDelay.Price,
-			Status:     buffetDelay.Status,
-			CreateTime: buffetDelay.CreateTime,
-			UpdateTime: buffetDelay.UpdateTime,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(buffetDelay.ID),
+				CreateTime: buffetDelay.CreateTime,
+				UpdateTime: buffetDelay.UpdateTime,
+			},
+			Name:      buffetDelay.Name,
+			DelayTime: buffetDelay.DelayTime,
+			Price:     buffetDelay.Price,
+			Status:    buffetDelay.Status,
 		}
 		_, err := base.NewBuffetDelayRepo(s.targetDB).CreateBuffetDelay(buffetDelay)
 		if err != nil {

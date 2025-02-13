@@ -60,12 +60,12 @@ func (s *SpecService) ConvertSpec() error {
 		languageName := names.GenMultiLanguageName(id)
 
 		flavor := model.ProductFlavor{
-			Uuid:                  uint64(spec.SpecID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(spec.SpecID),
+				CreateTime: spec.CreateTime,
+			},
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),
-			CreateTime:            0,
-			UpdateTime:            0,
-			DeleteTime:            0,
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewProductFlavorRepo(s.targetDB).CreateProductFlavor(flavor)

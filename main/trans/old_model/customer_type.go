@@ -47,11 +47,13 @@ func (s *CustomerTypeService) ConvertCustomerType() error {
 			isDelete = 1
 		}
 		customerType := model.BuffetCustomerType{
-			Uuid:       customerType.ID,
-			Name:       customerType.Name,
-			CreateTime: customerType.CreateTime,
-			UpdateTime: customerType.UpdateTime,
-			DeleteTime: int64(isDelete),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(customerType.ID),
+				CreateTime: customerType.CreateTime,
+				UpdateTime: customerType.UpdateTime,
+				DeleteTime: int64(isDelete),
+			},
+			Name: customerType.Name,
 		}
 		_, err = base.NewBuffetCustomerTypeRepo(s.targetDB).CreateBuffetCustomerType(customerType)
 		if err != nil {

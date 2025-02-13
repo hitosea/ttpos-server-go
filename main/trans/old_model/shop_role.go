@@ -42,11 +42,13 @@ func (s *ShopRoleService) ConvertShopRole() error {
 	for _, shopRole := range shopRoles {
 		fmt.Println(fmt.Sprintf("shopRole: %+v", shopRole))
 		model := model.Role{
-			Uuid:       shopRole.RoleID,
-			Name:       shopRole.RoleName,
-			Sort:       int(shopRole.Sort),
-			CreateTime: shopRole.CreateTime,
-			UpdateTime: shopRole.UpdateTime,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopRole.RoleID),
+				CreateTime: shopRole.CreateTime,
+				UpdateTime: shopRole.UpdateTime,
+			},
+			Name: shopRole.RoleName,
+			Sort: int(shopRole.Sort),
 		}
 		_, err = repository.NewRoleRepo(s.targetDB).CreateRole(model)
 		if err != nil {

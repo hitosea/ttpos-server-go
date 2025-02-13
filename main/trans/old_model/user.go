@@ -82,7 +82,11 @@ func (s *UserService) ConvertUser() error {
 	for _, user := range users {
 		fmt.Println(fmt.Sprintf("user: %+v", user))
 		member := model.Member{
-			Uuid:               uint64(user.UserID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(user.UserID),
+				CreateTime: int64(user.CreateTime),
+				UpdateTime: int64(user.UpdateTime),
+			},
 			MemberNo:           strconv.FormatUint(uint64(user.UserID), 10),
 			Nickname:           user.NickName,
 			Gender:             int(user.Gender),
@@ -97,8 +101,6 @@ func (s *UserService) ConvertUser() error {
 			GiftAccountBalance: user.GiftBalance,
 			MemberLevelUuid:    uint64(user.GradeID),
 			MemberCardUuid:     uint64(user.CardID),
-			CreateTime:         user.CreateTime,
-			UpdateTime:         user.UpdateTime,
 		}
 		err := repository.NewMemberRepo(s.targetDB).CreateMember(member)
 		if err != nil {

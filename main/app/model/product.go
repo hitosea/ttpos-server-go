@@ -2,76 +2,52 @@ package model
 
 // ProductFlavor 商品规格表,定义商品的规格信息 ttpos_product_flavor
 type ProductFlavor struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
 // ProductSauce 商品小料表,定义商品小料的相关信息 ttpos_product_sauce
 type ProductSauce struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
 type ProductUnit struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'单位名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
 // PrinterTag 打印标签表,定义打印标签的相关信息 ttpos_printer_tag
 type PrinterTag struct {
-	ID         uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid       uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
-	Name       string `gorm:"default:'';column:name;comment:'名称'"`
-	CreateTime int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
+	BaseModel
+	Name string `gorm:"default:'';column:name;comment:'名称'"`
 }
 
 // ProductAttributeGroup 产品属性组表,定义产品的属性分组信息 ttpos_product_attribute_group
 type ProductAttributeGroup struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
 
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
 type ProductAttribute struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName MultiLanguageName     `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	AttributeGroup    ProductAttributeGroup `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 属性组
@@ -79,15 +55,11 @@ type ProductAttribute struct {
 
 // ProductPackageAttributeGroup 产品包属性组表,定义产品包的属性分组信息 ttpos_product_package_attribute_group
 type ProductPackageAttributeGroup struct {
-	ID                        uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                      uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	IsMust                    uint   `gorm:"default:0;column:is_must;comment:'是否必选, 0-否 1-是'"`
 	MaxSelection              uint   `gorm:"default:0;column:max_selection;comment:'最大选择数量'"`
 	ProductPackageUuid        uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包UUID'"`
 	ProductAttributeGroupUuid uint64 `gorm:"default:0;column:product_attribute_group_uuid;comment:'商品属性组UUID'"`
-	CreateTime                int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime                int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime                int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	ProductAttributeGroup    ProductAttributeGroup     `gorm:"foreignKey:product_attribute_group_uuid;references:uuid"`         // 商品属性组
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"` // 产品包属性
@@ -95,22 +67,17 @@ type ProductPackageAttributeGroup struct {
 
 // ProductPackageAttribute 产品包属性表,定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
-	ID                               uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                             uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	ProductPackageAttributeGroupUuid uint64 `gorm:"default:0;column:product_package_attribute_group_uuid;comment:'产品包属性组UUID'"`
 	AttributeUuid                    uint64 `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
 	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
-	CreateTime                       int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime                       int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime                       int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
 }
 
 // ProductPackage 产品包表,定义产品包的相关信息 `ttpos_product_package`
 type ProductPackage struct {
-	ID                    uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid                  uint64 `gorm:"default:0;column:uuid;comment:'UUID'"`
+	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'产品包名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
@@ -135,9 +102,6 @@ type ProductPackage struct {
 	SauceRequired         uint8  `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection     uint   `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount          uint   `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
-	CreateTime            int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime            int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime            int64  `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	MultiLanguageName            MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductUnit                  ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
@@ -147,16 +111,12 @@ type ProductPackage struct {
 
 // ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom
 type ProductBom struct {
-	ID                 uint    `gorm:"column:id;primaryKey;autoIncrement;comment:'记录唯一标识符'"`
-	Uuid               uint64  `gorm:"column:uuid;not null;default:0;comment:'UUID'"`
+	BaseModel
 	Price              float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
 	ProductFlavorUuid  uint64  `gorm:"column:product_flavor_uuid;not null;default:0;comment:'商品规格UUID（仅商品使用）'"`
 	ProductSauceUuid   uint64  `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
 	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
 	IsDefaultSelect    uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
-	CreateTime         int64   `gorm:"autoCreateTime;column:create_time;comment:'创建时间（时间戳）'"`
-	UpdateTime         int64   `gorm:"autoUpdateTime;column:update_time;comment:'更新时间（时间戳）'"`
-	DeleteTime         int64   `gorm:"default:0;column:delete_time;comment:'删除时间（时间戳）'"`
 
 	ProductFlavor ProductFlavor `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce  ProductSauce  `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料

@@ -1,9 +1,8 @@
 package model
 
-// File 文件
+// File 文件表 ttpos_file
 type File struct {
-	ID             int    `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid           uint64 `gorm:"column:uuid;not null;default:0;comment:'文件ID'"`
+	BaseModel
 	Storage        string `gorm:"column:storage;not null;default:'';comment:'存储方式'"`
 	GroupID        int    `gorm:"column:group_id;not null;default:0;comment:'文件分组id'"`
 	FileUrl        string `gorm:"column:file_url;not null;default:'';comment:'存储域名'"`
@@ -20,8 +19,6 @@ type File struct {
 	ShopSupplierID int    `gorm:"column:shop_supplier_id;default:0;comment:'供应商id'"`
 	IsDelete       int    `gorm:"column:is_delete;not null;default:0;comment:'软删除'"`
 	AppID          int    `gorm:"column:app_id;default:0;comment:'应用id'"`
-	CreateTime     int    `gorm:"autoCreateTime;comment:'创建时间'"`
-	UpdateTime     int    `gorm:"autoUpdateTime;comment:'更新时间'"`
 }
 
 // GetUrl 获取地址。file_url + save_name + url_param

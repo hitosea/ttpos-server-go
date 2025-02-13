@@ -9,10 +9,10 @@ import (
 
 // IReturnFoodReasonRepo 退菜原因仓库接口
 type IReturnFoodReasonRepo interface {
-	GetReturnFoodReasonList() ([]model.ReturnFoodReason, error)                    // 获取退菜原因列表
-	UpdateReturnFoodReason(id uint, returnFoodReason model.ReturnFoodReason) error // 更新退菜原因
-	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint, error)  // 创建退菜原因
-	DeleteReturnFoodReason(id uint) error                                          // 删除退菜原因
+	GetReturnFoodReasonList() ([]model.ReturnFoodReason, error)                     // 获取退菜原因列表
+	UpdateReturnFoodReason(id uint, returnFoodReason model.ReturnFoodReason) error  // 更新退菜原因
+	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error) // 创建退菜原因
+	DeleteReturnFoodReason(id uint) error                                           // 删除退菜原因
 }
 
 // NewReturnFoodReasonRepo 创建新的退菜原因仓库
@@ -59,7 +59,7 @@ func (r *ReturnFoodReasonRepoImpl) UpdateReturnFoodReason(id uint, returnFoodRea
 }
 
 // CreateReturnFoodReason 创建退菜原因
-func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint, error) {
+func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {

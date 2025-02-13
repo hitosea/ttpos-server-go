@@ -43,37 +43,49 @@ func (s *PrinterService) ConvertPrinter() error {
 	// 创建打印机类型数据
 	printerTypes := []model.PrinterType{
 		{
-			Uuid:       1,
+			BaseModel: model.BaseModel{
+				Uuid: 1,
+			},
 			Name:       "Codesoft（网口）80mm",
 			Key:        "CODESOFT_LAN",
 			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
 		},
 		{
-			Uuid:       2,
+			BaseModel: model.BaseModel{
+				Uuid: 2,
+			},
 			Name:       "Codesoft（WIFI）80mm",
 			Key:        "CODESOFT_WIFI",
 			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
 		},
 		{
-			Uuid:       3,
+			BaseModel: model.BaseModel{
+				Uuid: 3,
+			},
 			Name:       "商米打印机（云打印）80mm",
 			Key:        "SUNMI_CLOUD",
 			ConfigJson: `[{"key":"APP_ID","name":"打印机APPID"},{"key":"APP_KEY","name":"打印机APPKEY"},{"key":"SN","name":"打印机SN"}]`,
 		},
 		{
-			Uuid:       4,
+			BaseModel: model.BaseModel{
+				Uuid: 4,
+			},
 			Name:       "商米打印机（局域网）80mm",
 			Key:        "SUNMI_LAN",
 			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"SN","name":"打印机SN"}]`,
 		},
 		{
-			Uuid:       5,
+			BaseModel: model.BaseModel{
+				Uuid: 5,
+			},
 			Name:       "芯烨打印机（有线）80mm",
 			Key:        "XPRINTER_LAN",
 			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
 		},
 		{
-			Uuid:       6,
+			BaseModel: model.BaseModel{
+				Uuid: 6,
+			},
 			Name:       "芯烨打印机（WIFI）80mm",
 			Key:        "XPRINTER_WIFI",
 			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
@@ -93,16 +105,17 @@ func (s *PrinterService) ConvertPrinter() error {
 	for _, printer := range printers {
 		// 档口打印机. 转换商品打印（档口）数据
 		printer := model.Printer{
-			ID:              0,
-			UUID:            printer.PrinterID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(printer.PrinterID),
+				CreateTime: printer.CreateTime,
+				UpdateTime: printer.UpdateTime,
+				DeleteTime: int64(printer.IsDelete),
+			},
 			Name:            printer.PrinterName,
 			PrinterTypeUuid: s.parsePrinterType(printer.PrinterType),
 			ConfigJson:      printer.PrinterConfig,
 			Copies:          printer.PrintTimes,
 			Sort:            printer.Sort,
-			CreateTime:      printer.CreateTime,
-			UpdateTime:      printer.UpdateTime,
-			DeleteTime:      int64(printer.IsDelete),
 		}
 		_, err = base.NewPrinterRepo(s.targetDB).CreatePrinter(printer)
 		if err != nil {

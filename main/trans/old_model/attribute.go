@@ -63,7 +63,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 		if attribute.ParentID == 0 {
 			// 创建商品属性组
 			attributeGroup := model.ProductAttributeGroup{
-				Uuid:                  attribute.AttributeID,
+				BaseModel:             model.BaseModel{Uuid: attribute.AttributeID},
 				Name:                  names.Zh,
 				MultiLanguageNameUuid: id,
 				MultiLanguageName:     languageName,
@@ -76,7 +76,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 		} else {
 			// 创建商品属性
 			productAttribute := model.ProductAttribute{
-				Uuid:               attribute.AttributeID,
+				BaseModel:          model.BaseModel{Uuid: attribute.AttributeID},
 				Name:               names.Zh,
 				AttributeGroupUuid: attribute.ParentID,
 				MultiLanguageName:  languageName,

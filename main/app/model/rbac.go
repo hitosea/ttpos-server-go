@@ -2,8 +2,7 @@ package model
 
 // Access 权限表 ttpos_access
 type Access struct {
-	ID               uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid             uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:权限ID;NOT NULL" json:"uuid"`
+	BaseModel
 	Name             string `gorm:"column:name;type:varchar(255);comment:权限名称;NOT NULL" json:"name"`
 	Path             string `gorm:"column:path;type:varchar(255);comment:路由地址" json:"path"`
 	ApiPath          string `gorm:"column:api_path;type:varchar(255);comment:后端路由地址" json:"api_path"`
@@ -17,15 +16,11 @@ type Access struct {
 	PlusCategoryUuid uint64 `gorm:"column:plus_category_uuid;type:bigint(20) unsigned;default:0;comment:插件分类ID" json:"plus_category_uuid"`
 	Remark           string `gorm:"column:remark;type:varchar(255);comment:描述" json:"remark"`
 	IsSupplier       int    `gorm:"column:is_supplier;type:tinyint(1);default:0;comment:是否门店菜单0否1是;NOT NULL" json:"is_supplier"`
-	CreateTime       int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime       int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime       int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }
 
 // Staff 员工表 ttpos_staff
 type Staff struct {
-	ID                  uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid                uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"uuid"`
+	BaseModel
 	CompanyUuid         uint64 `gorm:"column:company_uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	Username            string `gorm:"column:username;type:varchar(255);comment:用户名;NOT NULL" json:"username"`
 	Password            string `gorm:"column:password;type:varchar(255);comment:登录密码;NOT NULL" json:"password"`
@@ -39,9 +34,6 @@ type Staff struct {
 	CashierOnline       int    `gorm:"column:cashier_online;type:tinyint(1);default:0;comment:收银员当班 0-不在线 1-在线;NOT NULL" json:"cashier_online"`
 	CashierLoginTime    int64  `gorm:"column:cashier_login_time;type:int(11);default:0;comment:收银员当班登录时间;NOT NULL" json:"cashier_login_time"`
 	DutyNo              string `gorm:"column:duty_no;type:varchar(64);comment:当班编号" json:"duty_no"`
-	CreateTime          int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime          int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime          int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceKey"`
@@ -49,33 +41,21 @@ type Staff struct {
 
 // Role 角色表 ttpos_role
 type Role struct {
-	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:角色ID;NOT NULL" json:"uuid"`
-	Name       string `gorm:"column:name;type:varchar(255);comment:角色名称;NOT NULL" json:"name"`
-	Sort       int    `gorm:"column:sort;type:int(11);default:100;comment:排序(数字越小越靠前);NOT NULL" json:"sort"`
-	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
+	BaseModel
+	Name string `gorm:"column:name;type:varchar(255);comment:角色名称;NOT NULL" json:"name"`
+	Sort int    `gorm:"column:sort;type:int(11);default:100;comment:排序(数字越小越靠前);NOT NULL" json:"sort"`
 }
 
 // StaffRole 员工角色关系表 ttpos_staff_role
 type StaffRole struct {
-	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:员工角色关系ID;NOT NULL" json:"uuid"`
-	StaffUuid  int64  `gorm:"column:staff_uuid;type:bigint(20);default:0;comment:超管用户ID;NOT NULL" json:"staff_uuid"`
-	RoleUuid   int64  `gorm:"column:role_uuid;type:bigint(20);default:0;comment:角色ID;NOT NULL" json:"role_uuid"`
-	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
+	BaseModel
+	StaffUuid int64 `gorm:"column:staff_uuid;type:bigint(20);default:0;comment:超管用户ID;NOT NULL" json:"staff_uuid"`
+	RoleUuid  int64 `gorm:"column:role_uuid;type:bigint(20);default:0;comment:角色ID;NOT NULL" json:"role_uuid"`
 }
 
 // RoleAccess 角色权限关系表 ttpos_role_access
 type RoleAccess struct {
-	ID         uint   `gorm:"column:id;type:int(11) unsigned;AUTO_INCREMENT;primary_key;comment:自增ID" json:"id"`
-	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:角色权限关系ID;NOT NULL" json:"uuid"`
+	BaseModel
 	RoleUuid   uint64 `gorm:"column:role_uuid;type:bigint(20) unsigned;default:0;comment:角色ID;NOT NULL" json:"role_uuid"`
 	AccessUuid uint64 `gorm:"column:access_uuid;type:bigint(20) unsigned;default:0;comment:权限ID;NOT NULL" json:"access_uuid"`
-	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:创建时间(时间戳);NOT NULL" json:"create_time"`
-	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:更新时间(时间戳);NOT NULL" json:"update_time"`
-	DeleteTime int64  `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间(时间戳);NOT NULL" json:"delete_time"`
 }

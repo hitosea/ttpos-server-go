@@ -49,13 +49,14 @@ func (r *BuffetCustomerRepository) ConvertBuffetCustomer() error {
 
 		// 创建自助餐顾客类型
 		price := model.BuffetCustomerTypePrice{
-			ID:                0,
-			Uuid:              buffetCustomer.ID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(buffetCustomer.ID),
+				CreateTime: buffetCustomer.CreateTime,
+				UpdateTime: buffetCustomer.UpdateTime,
+			},
 			BuffetPackageUuid: buffetCustomer.BuffetID,
 			CustomerTypeUuid:  buffetCustomer.CustomerTypeID,
 			Price:             buffetCustomer.Price,
-			CreateTime:        buffetCustomer.CreateTime,
-			UpdateTime:        buffetCustomer.UpdateTime,
 		}
 		_, err := base.NewBuffetCustomerTypePriceRepo(r.targetDB).CreateBuffetCustomerTypePrice(price)
 		if err != nil {

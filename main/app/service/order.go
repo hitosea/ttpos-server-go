@@ -74,12 +74,6 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return errors.New("有待支付、未挂单的订单")
 		}
 
-		// 获取销售账单UUID
-		saleBillUuid, err := utils.GetID()
-		if err != nil {
-			return err
-		}
-
 		// 创建订单编号
 		orderNo := s.createOrderNo(tx, constant.OrderSourceInstant)
 		if orderNo == "" {
@@ -88,7 +82,6 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-			Uuid:         saleBillUuid,
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
@@ -97,15 +90,8 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return err
 		}
 
-		// 获取销售订单UUID
-		saleOrderUuid, err := utils.GetID()
-		if err != nil {
-			return err
-		}
-
 		// 创建销售订单
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
-			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
 		})
@@ -134,11 +120,6 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 	var orderUuid uint64
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// 获取销售账单UUID
-		saleBillUuid, err := utils.GetID()
-		if err != nil {
-			return err
-		}
 
 		// 创建订单编号
 		orderNo := s.createOrderNo(tx, constant.OrderSourceDesk)
@@ -148,7 +129,6 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-			Uuid:         saleBillUuid,
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
@@ -160,15 +140,8 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			return err
 		}
 
-		// 获取销售订单UUID
-		saleOrderUuid, err := utils.GetID()
-		if err != nil {
-			return err
-		}
-
 		// 创建销售订单
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
-			Uuid:         saleOrderUuid,
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
 		})
@@ -191,13 +164,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 						continue
 					}
 
-					saleOrderBuffetCustomerTypeUuid, err := utils.GetID()
-					if err != nil {
-						return err
-					}
-
 					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(model.SaleOrderBuffetCustomerType{
-						Uuid:                   saleOrderBuffetCustomerTypeUuid,
 						SaleOrderUuid:          saleOrder.Uuid,
 						BuffetPackageUuid:      buffetUuid,
 						BuffetCustomerTypeUuid: buffetCustomerType.Uuid,

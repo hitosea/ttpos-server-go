@@ -45,14 +45,15 @@ func (s *CallService) ConvertCall() error {
 	for _, call := range calls {
 		fmt.Println(fmt.Sprintf("call: %+v", call))
 		customerCall := model.CustomerCall{
-			ID:         0,
-			Uuid:       call.ID,
-			DeskUUID:   uint64(call.TableID),
-			DeskNo:     call.TableNo,
-			Status:     call.Status,
-			IsSend:     call.IsSend,
-			CreateTime: call.CreateTime,
-			UpdateTime: call.UpdateTime,
+			BaseModel: model.BaseModel{
+				Uuid:       call.ID,
+				CreateTime: call.CreateTime,
+				UpdateTime: call.UpdateTime,
+			},
+			DeskUUID: uint64(call.TableID),
+			DeskNo:   call.TableNo,
+			Status:   call.Status,
+			IsSend:   call.IsSend,
 		}
 		_, err := base.NewCustomerCallRepo(s.targetDB).CreateCustomerCall(customerCall)
 		if err != nil {

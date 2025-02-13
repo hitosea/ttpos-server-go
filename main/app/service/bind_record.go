@@ -2,16 +2,12 @@ package service
 
 import (
 	"errors"
+	"github.com/gin-gonic/gin"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
-	"ttpos-server-go/pkg/logger"
-
-	"go.uber.org/zap"
-
-	"github.com/gin-gonic/gin"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -133,13 +129,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		}
 	}
 
-	uuid, err := utils.GetID()
-	if err != nil {
-		logger.Logger.Error("生成雪花ID失败", zap.Error(err))
-		return apperrors.NewWithCode(constant.CodeFail, "系统内部错误")
-	}
 	return bindRecordRepo.Create(model.Device{
-		Uuid:             uuid,
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,

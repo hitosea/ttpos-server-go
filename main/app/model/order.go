@@ -12,9 +12,8 @@ import (
 
 // SaleBill 销售账单 `ttpos_sale_bill`
 type SaleBill struct {
+	BaseModel
 	// 主键和标识字段
-	ID       uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
-	Uuid     uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单ID" json:"uuid"`
 	OrderNo  string `gorm:"column:order_no;type:varchar(255);default:'';comment:销售账单编号" json:"order_no"`
 	DutyNo   string `gorm:"column:duty_no;type:varchar(255);default:'';comment:当班编号,用于标记该账单属于哪个当班" json:"duty_no"`
 	SerialNo string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
@@ -60,11 +59,8 @@ type SaleBill struct {
 	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额,关联销售订单的免单金额之和" json:"free_amount"`
 
 	// 时间相关字段
-	CreateTime   int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime   int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	FinishTime   int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 	HideBillTime int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
-	DeleteTime   int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联字段
 	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -101,9 +97,8 @@ func (model *SaleBill) ValidateOrderStatus(operation string) error {
 
 // SaleOrder 销售订单 ttpos_sale_order
 type SaleOrder struct {
+	BaseModel
 	// 基础标识字段
-	ID      uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
-	Uuid    uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单ID" json:"uuid"`
 	OrderNo string `gorm:"column:order_no;type:varchar(255);default:'';comment:订单编号" json:"order_no"`
 	Status  uint   `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-未结账 1-已结账" json:"status"`
 	IsFree  uint   `gorm:"column:is_free;type:tinyint(1);default:0;comment:是否免单, 0-否 1-是" json:"is_gift"`
@@ -128,10 +123,7 @@ type SaleOrder struct {
 	PaymentAmount float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
 
 	// 时间相关字段
-	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
 	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
-	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 
 	// 关联对象
 	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
@@ -155,8 +147,7 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
 type SaleOrderProduct struct {
 	// 主键和标识字段
-	ID   uint   `gorm:"column:id;primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
-	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单商品ID" json:"uuid"`
+	BaseModel
 
 	// 产品基本信息
 	Name                  string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
@@ -190,11 +181,6 @@ type SaleOrderProduct struct {
 	SaleOrderUuid       uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
 	ImageFileUuid       uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:图片ID" json:"image_file_uuid"`
 
-	// 时间相关字段
-	CreateTime uint `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime uint `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	DeleteTime uint `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
-
 	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
@@ -204,14 +190,10 @@ type SaleOrderProduct struct {
 
 // 销售订单产品属性 SaleOrderProductAttribute `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
-	ID                   uint64 `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'商品属性ID'"`
+	BaseModel
 	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
-	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
-	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
-	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
 }
 
 // GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料相同的商品签名相同,用于取消拆单时合并商品
@@ -244,24 +226,19 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 
 // 销售订单产品原料 SaleOrderProductBom `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
-	ID                   uint   `gorm:"column:id;primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid                 uint64 `gorm:"column:uuid;not null;default:0;comment:'销售订单商品原料ID'"`
+	BaseModel
 	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
 	Num                  uint   `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
 	Unit                 string `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
 	IsFlavorBom          uint   `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
-	CreateTime           int64  `gorm:"autoCreateTime;column:create_time;comment:'创建时间(时间戳)'"`
-	UpdateTime           int64  `gorm:"autoUpdateTime;column:update_time;comment:'更新时间(时间戳)'"`
-	DeleteTime           int64  `gorm:"column:delete_time;not null;default:0;comment:'删除时间(时间戳)'"`
 }
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting
 type SaleBillSetting struct {
 	// 主键和标识字段
-	ID   uint   `gorm:"column:id;type:int(10);primary_key;AUTO_INCREMENT;comment:主键id" json:"id"`
-	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售账单设置ID" json:"uuid"`
+	BaseModel
 
 	// 关联字段
 	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
@@ -281,8 +258,7 @@ type SaleBillSetting struct {
 // SaleOrderBuffetCustomerType 销售订单顾客类型
 type SaleOrderBuffetCustomerType struct {
 	// 主键字段
-	ID   uint   `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
-	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单顾客类型ID" json:"uuid"`
+	BaseModel
 
 	// 关联ID字段
 	SaleOrderUuid          uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
@@ -291,32 +267,19 @@ type SaleOrderBuffetCustomerType struct {
 
 	// 数值字段
 	Num uint `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
-
-	// 时间字段
-	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
 
 // SaleOrderProductMaterial 销售订单产品原料
 type SaleOrderProductMaterial struct {
-	ID   uint   `gorm:"column:id;type:int(11);primary_key;AUTO_INCREMENT;comment:自增ID" json:"id"`
-	Uuid uint64 `gorm:"column:uuid;type:bigint(20);default:0;comment:销售订单产品原料ID" json:"uuid"`
-
+	BaseModel
 	// 关联ID字段
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20);default:0;comment:销售订单产品ID" json:"sale_order_product_uuid"`
 	BomUuid              uint64 `gorm:"column:bom_uuid;type:bigint(20);default:0;comment:BOM ID" json:"bom_uuid"`
-
-	// 时间字段
-	CreateTime int64 `gorm:"autoCreateTime;comment:创建时间（时间戳）" json:"create_time"`
-	UpdateTime int64 `gorm:"autoUpdateTime;comment:更新时间（时间戳）" json:"update_time"`
-	DeleteTime int64 `gorm:"column:delete_time;type:int(10);default:0;comment:删除时间（时间戳）" json:"delete_time"`
 }
 
 // 桌台账单操作记录
 type SaleBillOperationRecord struct {
-	ID            uint   `gorm:"column:id;type:int(11) unsigned;primaryKey;autoIncrement;comment:自增ID" json:"id"`
-	Uuid          uint64 `gorm:"column:uuid;type:bigint(20) unsigned;not null;default:0;comment:账单操作记录ID" json:"uuid"`
+	BaseModel
 	Source        string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
 	Action        string `gorm:"column:action;type:varchar(150);not null;default:'';comment:操作行为" json:"action"`
 	Message       string `gorm:"column:message;type:varchar(255);not null;default:'';comment:消息内容" json:"message"`
@@ -324,7 +287,4 @@ type SaleBillOperationRecord struct {
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
-	CreateTime    int64  `gorm:"column:create_time;type:int(10) unsigned;not null;default:0;comment:创建时间(时间戳)" json:"create_time"`
-	UpdateTime    int64  `gorm:"column:update_time;type:int(10) unsigned;not null;default:0;comment:更新时间(时间戳)" json:"update_time"`
-	DeleteTime    int64  `gorm:"column:delete_time;type:int(10) unsigned;not null;default:0;comment:删除时间(时间戳)" json:"delete_time"`
 }

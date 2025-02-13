@@ -50,14 +50,16 @@ func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
 	for _, userBalanceLog := range userBalanceLogs {
 		fmt.Println(fmt.Sprintf("userBalanceLog: %+v", userBalanceLog))
 		log := model.MemberBalanceLog{
-			Uuid:        uint64(userBalanceLog.LogID),
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(userBalanceLog.LogID),
+				CreateTime: int64(userBalanceLog.CreateTime),
+				UpdateTime: int64(userBalanceLog.CreateTime),
+			},
 			MemberUuid:  uint64(userBalanceLog.UserID),
 			Scene:       int(userBalanceLog.Scene),
 			Money:       userBalanceLog.Money,
 			GiftMoney:   userBalanceLog.GiftMoney,
 			Description: userBalanceLog.Describe,
-			CreateTime:  userBalanceLog.CreateTime,
-			UpdateTime:  userBalanceLog.CreateTime,
 		}
 		_, err := base.NewMemberBalanceLogRepo(s.targetDB).CreateMemberBalanceLog(log)
 		if err != nil {

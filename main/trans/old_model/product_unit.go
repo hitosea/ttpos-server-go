@@ -61,12 +61,13 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 		fmt.Println(fmt.Sprintf("languageName: %+v", languageName))
 
 		unit := model.ProductUnit{
-			Uuid:                  productUnit.UnitID,
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(productUnit.UnitID),
+				CreateTime: productUnit.CreateTime,
+				UpdateTime: productUnit.UpdateTime,
+			},
 			Name:                  names.Zh,
-			MultiLanguageNameUuid: id,
-			CreateTime:            0,
-			UpdateTime:            0,
-			DeleteTime:            0,
+			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewProductUnitRepo(s.targetDB).CreateProductUnit(unit)
