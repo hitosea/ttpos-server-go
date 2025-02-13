@@ -20,8 +20,9 @@ type IOrderRepo interface {
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                    // 获取销售账单详细信息
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                 // 获取销售账单详细信息-丰富的
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) // 创建销售订单自助餐顾客类型
-	CancelOrder(saleBillUuid uint64) error                                                                                // 取消订单
-	CancelDeskOrder(deskUuid uint64) error                                                                                // 取消订单
+	CancelOrder(saleBillUuid uint64, reason string) error                                                                 // 取消订单
+	CancelDeskOrder(deskUuid uint64, reason string) error                                                                 // 取消桌台订单
+	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                          // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                       // 判断是否存在部分支付
 }
 
@@ -304,7 +305,7 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 }
 
 // CancelOrder 关闭订单
-func (r *orderRepo) CancelOrder(saleBillUuid uint64) error {
+func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 	r.db.Model(&model.SaleOrder{}).
 		Where("sale_bill_uuid = ?", saleBillUuid).
 		Where("status = ?", constant.SaleBillStatusPending).
@@ -313,16 +314,47 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).
 		Where("uuid = ?", saleBillUuid).
 		Where("status = ?", constant.SaleBillStatusPending).
-		Update("status", constant.SaleBillStatusCanceled).Error
+		Updates(map[string]interface{}{
+			"status": constant.SaleBillStatusCanceled,
+			"reason": reason,
+		}).Error
 }
 
 // CancelDeskOrder 关闭桌台订单
-func (r *orderRepo) CancelDeskOrder(deskUuid uint64) error {
+func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string) error {
 	var saleBill model.SaleBill
 	if err := r.db.Model(&model.SaleBill{}).Where("status = ?", constant.SaleBillStatusPending).Where("desk_uuid = ?", deskUuid).First(&saleBill).Error; err != nil {
 		return err
 	}
-	return r.CancelOrder(saleBill.Uuid)
+	return r.CancelOrder(saleBill.Uuid, reason)
+}
+
+// DeleteOrder 软删除订单
+func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error {
+	now := uint(time.Now().Unix())
+	tx := r.db.Begin()
+
+	// 删除销售订单
+	if err := tx.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusPending).
+		Where(map[string]interface{}{"uuid": saleOrderUuid}).
+		Update("delete_time", now).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 如果是删除全部订单或只剩最后一个订单,则同时删除主订单
+	var count int64
+	if saleOrderUuid == 0 || tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ? AND delete_time = 0", saleBillUuid).Count(&count).Error == nil && count <= 1 {
+		if err := tx.Model(&model.SaleBill{}).
+			Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusCanceled).
+			Update("delete_time", now).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
 
 // isPartiallyPaid 是否已经被部分支付
@@ -342,6 +374,7 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 	if !ok || len(info.SaleOrders) == 0 {
 		return false
 	}
+	//
 	uuids := make([]uint64, len(info.SaleOrders))
 	for i, v := range info.SaleOrders {
 		uuids[i] = v.Uuid

@@ -9,7 +9,7 @@ type Member struct {
 	Phone              string  `gorm:"column:phone;type:varchar(20);comment:'电话号码';" json:"phone"`
 	Password           string  `gorm:"column:password;type:varchar(200);comment:'密码';" json:"password"`
 	Birthday           int64   `gorm:"column:birthday;type:int(10);comment:'生日,时间戳';" json:"birthday"`
-	Point              int     `gorm:"column:point;type:int(11);default:0;comment:'积分';" json:"point"`
+	Point              float64 `gorm:"column:point;type:decimal(12,2);default:0.00;comment:'积分';" json:"point"`
 	ConsumptionAmount  float64 `gorm:"column:accumulated_consumption_amount;type:decimal(12,2);default:0.00;comment:'累计消费金额';" json:"consumption_amount"`
 	ConsumptionCount   int     `gorm:"column:consumption_count;type:int(11);default:0;comment:'消费次数';" json:"consumption_count"`
 	Balance            float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:'余额';" json:"balance"`

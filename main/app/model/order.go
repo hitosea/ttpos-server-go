@@ -71,7 +71,7 @@ type SaleBill struct {
 * 判断订单是否可操作
  */
 func (model *SaleBill) ValidateOrderStatus(operation string) error {
-	if operation != "payment" && model.IsLock == 1 {
+	if operation != constant.OrderSettle && model.IsLock == 1 {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {
@@ -82,7 +82,7 @@ func (model *SaleBill) ValidateOrderStatus(operation string) error {
 	}
 	if len(model.SaleOrders) > 0 {
 		// 拆单没有取消权限
-		if operation == "cancel" && len(model.SaleOrders) > 1 {
+		if operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
 			return errors.New("拆单不可操作")
 		}
 		// 单个订单不能操作

@@ -13,7 +13,7 @@ type IOrderOperationRecordRepo interface {
 	GetRecordList(pageNo, pageSize int) ([]model.SaleBillOperationRecord, int64, error)
 	GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error)
 	UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error
-	CreateRecord(record model.SaleBillOperationRecord) (uint64, error)
+	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error)
 	DeleteRecord(saleBillUuid uint64) error
 }
 
@@ -65,8 +65,10 @@ func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record 
 }
 
 // CreateOrderOperationRecord 创建订单操作记录
-func (r *OrderOperationRecordRepoImpl) CreateRecord(record model.SaleBillOperationRecord) (uint64, error) {
+func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error) {
 	record.Uuid, _ = utils.GetID()
+	record.Action = Action
+	record.SaleBillUuid = saleBillUuid
 	//
 	if err := r.db.Create(&record).Error; err != nil {
 		return 0, err

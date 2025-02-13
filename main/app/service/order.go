@@ -24,11 +24,12 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                        // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
-	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)         // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                   // 获取收银订单详情
-	CancelOrder(dbId uint64, staff model.Staff, source string, saleBillUuid uint64, saleOrderUuid uint64) error // 取消订单
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
+	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
+	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error            // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 删除订单
 }
 
 // orderSrv 收银服务结构
@@ -411,11 +412,11 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 	}, nil
 }
 
-// CancelOrder 取消订单
-func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, saleBillUuid uint64, saleOrderUuid uint64) error {
+// CancelOrder 删除订单
+func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error {
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(saleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
@@ -426,19 +427,18 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, sa
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
 	if err != nil {
 		return err
 	}
 
 	// 验证状态
-	if err = billInfo.ValidateOrderStatus("cancel"); err != nil {
+	if err = billInfo.ValidateOrderStatus(constant.OrderOrderCancel); err != nil {
 		return err
 	}
 
 	// 检查是否部分支付
-	isPartially := orderRepo.IsPartiallyPaid(billInfo)
-	if isPartially {
+	if orderRepo.IsPartiallyPaid(billInfo) {
 		return errors.New("当前订单已被部分支付，不支持取消")
 	}
 
@@ -453,7 +453,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, sa
 	// 获取订单已送厨产品，退回商品库存
 	products, err := productRepo.GetProductList(
 		repository.CommonRepo.WhereByStatus(1),
-		productRepo.WhereSaleBillUuids([]uint64{saleBillUuid}),
+		productRepo.WhereSaleBillUuids([]uint64{req.SaleBillUuid}),
 	)
 	if err != nil {
 		tx.Rollback()
@@ -461,38 +461,10 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, sa
 	}
 
 	// todo 未完成 - 退回商品库存
-	// for _, po := range products {
-	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
-	// }
-
-	// if ($force) {
-	// 	$detail->force()->delete();
-	// 	// 子数据删除
-	// 	$orderBuffetList = OrderBuffet::where('order_id', '=', $order_id)->select();
-	// 	foreach ($orderBuffetList as $item) {
-	// 		$item->delete();
-	// 	}
-	// 	$orderBuffetCustomerList = OrderBuffetCustomer::where('order_id', '=', $order_id)->select();
-	// 	foreach ($orderBuffetCustomerList as $item) {
-	// 		$item->delete();
-	// 	}
-	// 	$orderDelayList = OrderDelay::where('order_id', '=', $order_id)->select();
-	// 	foreach ($orderDelayList as $item) {
-	// 		$item->delete();
-	// 	}
-	// 	// 子单数据
-	// 	$subOrderList = (new self)->where('parent_id', $order_id)->select();
-	// 	foreach ($subOrderList as $item) {
-	// 		$item->force()->delete();
-	// 	}
-	// 	$opList = OrderProduct::where('order_id', '=', $order_id)->select();
-	// 	foreach ($opList as $item) {
-	// 		$item->force()->delete();
-	// 	}
-	// } else {
-	// 	/** @var OrderModel $detail */
-	// 	$detail->CashierOrderCancels($remark);
-	// }
+	for _, po := range products {
+		fmt.Println(po)
+		// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
+	}
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
@@ -503,36 +475,57 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, sa
 			return err
 		}
 		// 关闭桌台
-		err = deskRepo.CloseDesk(billInfo.DeskUuid)
+		err = deskRepo.CloseDesk(billInfo.DeskUuid, req.CancelReason)
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
 	} else {
-		err = orderRepo.CancelOrder(saleBillUuid)
+		err = orderRepo.CancelOrder(req.SaleBillUuid, req.CancelReason)
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
 	}
 
-	// todo - 添加操作记录
-	// 'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
-	orderRecordRepo.CreateRecord(model.SaleBillOperationRecord{
+	// 添加操作记录
+	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderOrderCancel, model.SaleBillOperationRecord{
 		Source:        source,
-		Action:        constant.OrderOrderCancel,
-		Message:       "整单取消",
 		Remark:        "取消订单",
-		SaleBillUuid:  saleBillUuid,
 		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
 		OperatorUuid:  staff.Uuid,
 	})
 
-	fmt.Println(products)
-	fmt.Println(billInfo)
-
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteOrder 删除订单, saleOrderUuid = 等于0的时候删除主单，并且主单下的子单也会被删除， saleOrderUuid > 0 的时候删除子单
+func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error {
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	if err != nil {
+		return err
+	}
+
+	if billInfo.Status != constant.SaleBillStatusCanceled {
+		return errors.New("订单状态不允许删除")
+	}
+
+	err = orderRepo.DeleteOrder(saleBillUuid, saleOrderUuid)
+	if err != nil {
 		return err
 	}
 
