@@ -24,14 +24,15 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                        // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                  // 创建桌台订单
-	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)                         // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                                   // 获取收银订单详情
-	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                    // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                   // 删除订单
-	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                 // 判断桌台是否可取消
-	OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error) // 删除订单商品
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                                            // 创建点餐订单
+	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                      // 创建桌台订单
+	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)                                             // 获取收银订单列表
+	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                                                       // 获取收银订单详情
+	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                                        // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                       // 删除订单
+	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                                     // 判断桌台是否可取消
+	OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error)                     // 删除订单商品
+	OrderProductChangePrice(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, price float64) (model.SaleBill, error) // 修改订单商品价格
 }
 
 // orderSrv 订单服务结构
@@ -603,7 +604,7 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 	for _, product := range billInfo.SaleOrders[0].SaleOrderProducts {
-		if product.Status == constant.OrderProductStatusSentKitchen {
+		if product.Uuid == orderProductUuid && product.Status == constant.OrderProductStatusSentKitchen {
 			return model.SaleBill{}, errors.New("商品已送厨，禁止删除")
 		}
 	}
@@ -625,10 +626,70 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
 
+	// todo - 添加操作日志
+
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		return model.SaleBill{}, err
 	}
+
+	return billInfo, nil
+}
+
+// OrderProductChangePrice  修改订单商品价格
+func (s *orderSrv) OrderProductChangePrice(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, price float64) (model.SaleBill, error) {
+	if price < 0 || price > 1000000 {
+		return model.SaleBill{}, errors.New("价格错误")
+	}
+
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(saleBillUuid, saleOrderUuid, orderProductUuid)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// 判断商品
+	if len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
+
+	// 判断订单状态
+	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, saleOrderUuid); err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// 修改订单商品价格
+	if err := orderRepo.ChangeProductPrice(saleBillUuid, saleOrderUuid, orderProductUuid, price); err != nil {
+		return model.SaleBill{}, err
+	}
+
+	//
+	// $p->product_price = $money;
+	// $p->is_change_price = 1;
+	// $p->total_price = helper::bcmul($money, $p->total_num);
+
+	// todo - 重算价格 - 等王总的逻辑
+	// (new OrderModel)->reloadPrice($order_id);
+
+	// todo - 添加操作日志
+	// OrderOperationLog::createLog($p['order_id'], OrderOperationLog::ACTION_CHANGE_PRICE, [
+	// 	'order_product_id' => $p->order_product_id,
+	// 	'product_id' => $p->product_id,
+	// 	'product_name' => $p->product_name,
+	// 	'product_attr' => $p->getData('product_attr'),
+	// 	'total_num' => $p->total_num,
+	// 	'price' => $money,
+	// 	'parent_id' => $splitOrder->parent_id,         // 拆单主单ID
+	// 	'order_name' => $splitOrder->order_name,       // 订单名称
+	// ], '改价');
 
 	return billInfo, nil
 }

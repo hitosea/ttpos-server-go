@@ -125,6 +125,34 @@ func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderProductDelete 处理删除点餐订单商品改价
+// @Summary 删除点餐订单商品改价
+// @Description 删除点餐订单商品改价
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderProductChangePriceReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/product/price [post]
+func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	params := req.OrderProductChangePriceReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductChangePrice(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid, params.Price)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -149,5 +177,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)
 		privateApi.POST("/instant/order/close", wrapper.CloseOrder)
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)
+		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)
 	}
 }

@@ -223,24 +223,24 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @param data body req.OrderProductPriceReq true "详情参数"
+// @param data body req.OrderProductChangePriceReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/product/price [delete]
-func (h *DeskHandler) OrderProductPrice(c *gin.Context) {
-	// companyUuid := helper.GetCompanyUuid(c)
+// @Router /cashier/desk/order/product/price [post]
+func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	// params := req.OrderProductPriceReq{}
-	// if err := c.ShouldBindJSON(&params); err != nil {
-	// 	helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-	// 	return
-	// }
-	// //
-	// _, err := h.orderService.OrderProductDelete(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid)
-	// if err != nil {
-	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
-	// 	return
-	// }
+	params := req.OrderProductChangePriceReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductChangePrice(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid, params.Price)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
 	// 返回结果
 	helper.Success(c, gin.H{})
 }
@@ -278,5 +278,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
 		privateApi.POST("/desk/order/close", wrapper.CloseDeskOrder)
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)
+		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)
+
 	}
 }
