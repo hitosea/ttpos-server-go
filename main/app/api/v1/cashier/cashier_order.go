@@ -11,17 +11,20 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
+	"errors"
+
 	"github.com/gin-gonic/gin"
 )
 
 // CashierOrderHandler 收银点餐处理程序
 type CashierOrderHandler struct {
-	orderService service.IOrderSrv // 订单服务
+	service     service.IOrderSrv // 订单服务
+	deskService service.IDeskSrv  // 桌台服务
 }
 
-// GetCashierOrderList 处理获取收银订单列表
-// @Summary 获取收银订单列表
-// @Description 获取收银订单列表
+// GetCashierOrderList 处理获取订单列表
+// @Summary 获取订单列表
+// @Description 获取订单列表
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
@@ -38,7 +41,7 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.orderService.GetCashierOrderList(companyUuid, req)
+	res, err := h.service.GetCashierOrderList(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -67,7 +70,7 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.orderService.GetCashierOrderInfo(companyUuid, req)
+	res, err := h.service.GetCashierOrderInfo(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -98,7 +101,7 @@ func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	err := h.service.CancelOrder(companyUuid, staff, source, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -126,7 +129,7 @@ func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	err := h.service.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -135,25 +138,36 @@ func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// IsCellCloseDesk 判断桌台是否可关闭
-// @Summary 判断桌台是否可关闭
-// @Description 判断桌台是否可关闭
-// @Tags 收银端.桌台
+// IsCellCloseDesk 判断是否可关闭
+// @Summary 判断是否可关闭
+// @Description 判断是否可关闭
+// @Tags 收银端.订单
 // @Accept json
 // @Produce json
-// @param data query req.DeskInfoReq true "详情参数"
+// @param data query req.OrderIsCellCloseReq true "详情参数"
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/is_cell_close [get]
-func (h *CashierOrderHandler) IsCellCloseDesk(c *gin.Context) {
+// @Router /cashier/order/is_cell_close [get]
+func (h *CashierOrderHandler) IsCellClose(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	//
 	params := req.OrderIsCellCloseReq{}
 	if err := c.ShouldBind(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
 		return
 	}
-	// if _, err := h.service.IsCellCloseDesk(helper.GetCompanyUuid(c), params.Uuid); err != nil {
-	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
-	// 	return
-	// }
+	//
+	var err error
+	if params.DeskUuid > 0 {
+		_, err = h.deskService.IsCellCloseDesk(companyUuid, params.DeskUuid)
+	} else if params.SaleBillUuid > 0 {
+		_, err = h.service.IsCellCancelOrder(companyUuid, params.SaleBillUuid)
+	} else {
+		err = errors.New("参数错误")
+	}
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
 	// todo 获取已经送厨的商品 - 等王总写完拿来用
 
 	// 返回结果
@@ -169,12 +183,15 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv)
 
 	// 初始化处理器
 	wrapper := CashierOrderHandler{
-		orderService: service.NewOrderSrv( // 订单服务
+		service: orderSrv,
+		deskService: service.NewDeskSrv( // 订单服务
 			dbm,
 			service.NewLocaleSrv(),
+			orderSrv,
 			settingSrv,
 		),
 	}
@@ -186,5 +203,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
 	}
 }

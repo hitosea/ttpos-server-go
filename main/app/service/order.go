@@ -30,6 +30,7 @@ type IOrderSrv interface {
 	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)           // 获取收银订单详情
 	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error            // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                           // 删除订单
+	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                         // 判断桌台是否可取消
 }
 
 // orderSrv 收银服务结构
@@ -444,7 +445,7 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 }
 
 // IsCellCancelOrder 判断订单是否可以取消
-func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64, password string) (model.SaleBill, error) {
+func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error) {
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
@@ -475,8 +476,13 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := s.IsCellCancelOrder(dbId, req.SaleBillUuid, req.Password)
+	billInfo, err := s.IsCellCancelOrder(dbId, req.SaleBillUuid)
 	if err != nil {
+		return err
+	}
+
+	// 验证高级密码
+	if err := s.settingSrv.VerifyAdvancedPassword(dbId, req.Password); err != nil {
 		return err
 	}
 

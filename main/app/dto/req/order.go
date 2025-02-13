@@ -36,6 +36,6 @@ type OrderDeleteReq struct {
 
 // 是否可关闭订单
 type OrderIsCellCloseReq struct {
-	DeskUuid     uint64 `json:"desk_uuid"`      // 桌台UUID	   二选一, 桌台UUID权重最大
-	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
+	DeskUuid     uint64 `form:"desk_uuid"`      // 桌台UUID	   二选一, 销售账单UUID权重最大
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
 }
