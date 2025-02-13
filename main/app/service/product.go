@@ -74,10 +74,10 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 	// 转换为响应对象
 	list := make([]cashier_resp.Product, 0, len(products))
 	for _, product := range products {
-		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                             // 商品规格
-		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                               // 商品小料
-		attributes := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroup)) // 商品属性组
-		prices := []float64{}                                                                                  // 保存所有价格，用于计算最低价格
+		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                              // 商品规格
+		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                                // 商品小料
+		attributes := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
+		var prices []float64                                                                                    // 保存所有价格，用于计算最低价格
 
 		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
@@ -109,8 +109,8 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		}
 
 		// 商品属性组
-		if len(product.ProductPackageAttributeGroup) > 0 {
-			for _, group := range product.ProductPackageAttributeGroup {
+		if len(product.ProductPackageAttributeGroups) > 0 {
+			for _, group := range product.ProductPackageAttributeGroups {
 				values := make([]cashier_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
 				for _, attribute := range group.ProductPackageAttributes {
 					values = append(values, cashier_resp.ProductAttributeValue{

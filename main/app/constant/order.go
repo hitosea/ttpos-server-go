@@ -22,14 +22,14 @@ const (
 	SaleBillStatusCanceled = 2 // 已取消
 )
 
-// 订单来源映射到订单编号类型
+// OrderSourceMapToOrderNoType 订单来源映射到订单编号类型
 var OrderSourceMapToOrderNoType = map[string]string{
 	OrderSourceInstant:  "1", // 点餐
 	OrderSourceDesk:     "2", // 桌台
 	OrderSourceRecharge: "3", // 充值
 }
 
-// 订单来源映射到销售账单类型
+// OrderSourceMapToBillType 订单来源映射到销售账单类型
 var OrderSourceMapToBillType = map[string]uint{
 	OrderSourceInstant: SaleBillTypeInstant, // 点餐
 	OrderSourceDesk:    SaleBillTypeDesk,    // 桌台
@@ -61,4 +61,5 @@ const (
 	OrderCheckoutDiscount    = "CHECKOUT_DISCOUNT"   // 结账手动抹零
 	OrderSplitOrder          = "SPLIT_ORDER"         // 拆单
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"  // 撤销拆单
+	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 )

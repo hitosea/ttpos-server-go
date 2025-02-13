@@ -3,9 +3,10 @@ package errors
 import "ttpos-server-go/app/constant"
 
 type AppError struct {
-	Code    int      // 响应码
-	Message string   // 错误信息
-	Replace []string // 替换信息
+	Code    int         // 响应码
+	Message string      // 错误信息
+	Replace []string    // 替换信息
+	data    interface{} // 附加数据
 }
 
 func (e AppError) Error() string {
@@ -30,6 +31,10 @@ func NewWithReplace(message string, replace []string) *AppError {
 
 func NewWithCodeAndReplace(code int, message string, replace []string) *AppError {
 	return &AppError{Code: code, Message: message, Replace: replace}
+}
+
+func NewWithCodeAndData(code int, data interface{}, message string) *AppError {
+	return &AppError{Code: code, Message: message, data: data}
 }
 
 var (

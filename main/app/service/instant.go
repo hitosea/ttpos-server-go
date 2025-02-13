@@ -1,33 +1,40 @@
 package service
 
 import (
+	"errors"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 )
 
 // IInstantSrv 点餐订单服务接口
 type IInstantSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                   // 创建点餐订单
-	GetInstantOrderInfo(dbId uint64, req req.GetInstantOrderInfoReq) (resp.GetInstantOrderInfoResp, error) // 获取点餐订单详情
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                            // 创建点餐订单
+	GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error)          // 获取点餐订单详情
+	AddProductToInstantOrder(dbId uint64, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) // 添加商品
 }
 
 // instantSrv 点餐订单服务结构体
 type instantSrv struct {
-	dbm      *database.DBManager // 数据库管理器
-	orderSrv IOrderSrv           // 订单服务
+	dbm             *database.DBManager // 数据库管理器
+	orderSrv        IOrderSrv           // 订单服务
+	orderProductSrv IOrderProductSrv    // 订单商品服务
 }
 
 // NewInstantSrv 创建点餐订单服务
-func NewInstantSrv(dbm *database.DBManager, orderSrv IOrderSrv) IInstantSrv {
-	return NewInstantSrvImpl(dbm, orderSrv)
+func NewInstantSrv(dbm *database.DBManager, orderSrv IOrderSrv, orderProductSrv IOrderProductSrv) IInstantSrv {
+	return NewInstantSrvImpl(dbm, orderSrv, orderProductSrv)
 }
 
 // NewInstantSrvImpl 创建点餐订单服务实现
-func NewInstantSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv) IInstantSrv {
+func NewInstantSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv, orderProductSrv IOrderProductSrv) IInstantSrv {
 	return &instantSrv{
-		dbm:      dbm,
-		orderSrv: orderSrv,
+		dbm:             dbm,
+		orderSrv:        orderSrv,
+		orderProductSrv: orderProductSrv,
 	}
 }
 
@@ -36,6 +43,67 @@ func (s *instantSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderRes
 	return s.orderSrv.CreateInstantOrder(dbId)
 }
 
-func (s *instantSrv) GetInstantOrderInfo(dbId uint64, req req.GetInstantOrderInfoReq) (resp.GetInstantOrderInfoResp, error) {
+func (s *instantSrv) GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error) {
 	return resp.GetInstantOrderInfoResp{}, nil
+}
+
+// AddProductToInstantOrder 添加商品
+func (s *instantSrv) AddProductToInstantOrder(dbId uint64, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) {
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+
+	db := s.dbm.GetDB(dbId)
+
+	// 验证参数
+	if req.SaleBillUuid == 0 || req.SaleOrderUuid == 0 {
+		return nil, errors.New("销售账单uuid或销售订单uuid不能为空")
+	}
+	if req.Product.Uuid == 0 {
+		return nil, errors.New("商品uuid不能为空")
+	}
+	if req.Product.FlavorUuid == 0 {
+		return nil, errors.New("商品规格uuid不能为空")
+	}
+
+	// 检查销售账单或销售订单
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.New("销售账单不存在")
+	}
+	if len(saleBill.SaleOrders) == 0 {
+		return nil, errors.New("销售订单不存在")
+	}
+	// 检查订单是否可操作
+	if err = saleBill.ValidateOrderStatus(constant.OrderAddProduct); err != nil {
+		return nil, err
+	}
+
+	// 检查商品
+	productPackage, err := s.orderProductSrv.CheckProduct(dbId, req.Product.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	// 检查商品规格
+	if err = s.orderProductSrv.CheckProductOrderFlavor(*productPackage, req.Product.FlavorUuid); err != nil {
+		return nil, err
+	}
+	// 检查商品属性
+	var attributeMap = make(map[uint64][]uint64)
+	for _, attribute := range req.Product.Attributes {
+		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
+	}
+	if err = s.orderProductSrv.CheckProductOrderAttribute(*productPackage, attributeMap); err != nil {
+		return nil, err
+	}
+	// 检查商品加料
+	if err = s.orderProductSrv.CheckProductOrderSauce(*productPackage, req.Product.SauceUuids); err != nil {
+		return nil, err
+	}
+
+	// todo 检查是否已选择必填商品
+
+	// todo 检查商品规格库存
+
+	return &resp.GetInstantOrderInfoResp{}, nil
 }

@@ -30,7 +30,7 @@ type deskSrv struct {
 	settingSrv setting.ISrv        // 设置服务
 }
 
-// NewProductSrv 创建新的收银产品类别服务
+// NewDeskSrv 创建新的收银产品类别服务
 func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
 	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv)
 }
@@ -45,7 +45,7 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrd
 	}
 }
 
-// GetProductList 获取收银机点餐页面产品类别列表
+// GetDeskRegionAndTypeList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
 	// 获取列表
 	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
@@ -79,7 +79,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 	}, nil
 }
 
-// GetProductList 获取收银机点餐页面产品类别列表
+// GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
 	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)

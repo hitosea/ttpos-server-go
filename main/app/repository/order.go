@@ -263,7 +263,7 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 	return info, nil
 }
 
-// GetSaleBillDetail 获取销售账单详细信息
+// GetSaleBillDetails 获取销售账单详细信息
 func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(

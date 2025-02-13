@@ -103,10 +103,10 @@ type ProductPackage struct {
 	SauceMaxSelection     uint   `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount          uint   `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 
-	MultiLanguageName            MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	ProductUnit                  ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
-	ProductBoms                  []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
-	ProductPackageAttributeGroup []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
+	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
+	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
+	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
 }
 
 // ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom
