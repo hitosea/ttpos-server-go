@@ -28,7 +28,7 @@ func NewBindRecordRepoImpl(db *gorm.DB) *BindRecordRepo {
 
 func (r *BindRecordRepo) Unbind(source string, deviceId string, staffUuid uint64) error {
 	return r.db.Model(&model.Device{}).Select("finally_login_uuid").
-		Where("`source` = ? AND `device_id` = ? AND `finally_login_uuid` = ?", source, deviceId, staffUuid).Debug().
+		Where("`source` = ? AND `device_key` = ? AND `finally_login_uuid` = ?", source, deviceId, staffUuid).Debug().
 		Updates(map[string]interface{}{
 			"finally_login_uuid": 0,
 		}).Error
@@ -42,7 +42,7 @@ func (r *BindRecordRepo) GetBindCountBySource(source string) uint {
 
 func (r *BindRecordRepo) GetBySourceAndDeviceId(source string, deviceId string) model.Device {
 	var bindRecord model.Device
-	r.db.Model(&model.Device{}).Where("source = ? AND device_id = ?", source, deviceId).First(&bindRecord)
+	r.db.Model(&model.Device{}).Where("source = ? AND device_key = ?", source, deviceId).First(&bindRecord)
 	return bindRecord
 }
 
