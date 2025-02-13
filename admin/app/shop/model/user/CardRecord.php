@@ -2,7 +2,9 @@
 
 namespace app\shop\model\user;
 
+use think\Env;
 use app\common\model\user\Card;
+use app\common\model\user\MemberCard;
 use app\common\model\user\CardRecord as CardRecordModel;
 
 /**
@@ -15,12 +17,13 @@ class CardRecord extends CardRecordModel
      */
     public function getList($data)
     {
-        $model = $this->alias('r')
-            ->field('r.*')
-            ->with(['card', 'user'])
-            ->join('member u', 'u.uuid=r.member_uuid')
-            ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
-            ->order(['r.create_time' => 'desc']);
+        $prefix = env('DB_PREFIX');
+        $model = $this->withTrashed()->alias('r')
+                ->field('r.*')
+                ->with(['card', 'user'])
+                ->join('member u', 'u.uuid=r.member_uuid')
+                ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
+                ->order(['r.create_time' => 'desc']);
 
         if (isset($data['card_name']) && $data['card_name'] != '') {
             $model = $model->like('c.name', $data['card_name']);
@@ -42,6 +45,12 @@ class CardRecord extends CardRecordModel
         //
         foreach ($list as &$item) {
             $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id']) ? 1 : 0;
+            if ($item['delete_time'] == 0) {
+                $memberCard = (new MemberCard)->where('member_uuid', $item['member_uuid'])->find();
+                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire_time'] ?: 0);
+            } else {
+                $item['expire_time_text'] = date('Y-m-d', $item['expire']);
+            }
         }
         return $list;
     }
@@ -51,16 +60,12 @@ class CardRecord extends CardRecordModel
      */
     public function delay($data)
     {
-        $isExist = self::checkExistByUserId($this['user_id'], $data['order_id']);
+        $isExist = MemberCard::checkExistByUserId($this['member_uuid'], $this['member_card_type_uuid']);
         if ($isExist?->isEmpty()) {
             $this->error = "会员卡不存在";
             return false;
         }
         $update['expire_time'] = strtotime($data['expire_time']);
-        // if ($update['expire_time'] < time()) {
-        //     $this->error = "有效期不能小于当前日期";
-        //     return false;
-        // }
-        return $this->save($update);
+        return $isExist->save($update);
     }
 }

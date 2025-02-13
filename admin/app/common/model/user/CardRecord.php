@@ -3,6 +3,7 @@
 namespace app\common\model\user;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\service\order\OrderService;
 
 /**
@@ -10,20 +11,25 @@ use app\common\service\order\OrderService;
  */
 class CardRecord extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'member_card_log';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
      * @var string[]
      */
     protected $append = [
-        'expire_time_text',
         'pay_time_text',
-        'pay_type_text',
         'disabled',
         //
         'order_id',
+        'pay_price',
+        'is_delete',
+        'expire_time',
+        'pay_type',
     ];
 
     /**
@@ -31,44 +37,28 @@ class CardRecord extends BaseModel
      */
     public function getOrderIdAttr()
     {
-        return $this->uuid ?: 0;
+        return $this->id ?: 0;
     }
-
-    /**
-     * 会员卡有效期
-     * @param $value
-     * @param $data
-     * @return string
-     */
-    public function getExpireTimeTextAttr($value, $data)
+    public function getPayPriceAttr()
     {
-        if (!isset($data['expire_time'])) {
-            return __('无效有效期');
-        }
-        return $data['expire_time'] > 0 ? date('Y-m-d', $data['expire_time']) : __('永久有效');
+        return $this->price ?: 0;
     }
-
-    /**
-     * 付款时间
-     * @param $value
-     * @param $data
-     * @return string
-     */
-    public function getPayTimeTextAttr($value, $data)
+    public function getPayTimeTextAttr()
     {
-        return isset($data['pay_time']) ? date('Y-m-d H:i:s', $data['pay_time']) : __('无效付款时间');
+        $createTime = $this->getData('create_time');
+        return $createTime ? date('Y-m-d H:i:s', $createTime) : '';
     }
-
-    /**
-     * 支付方式
-     * @param $value
-     * @param $data
-     * @return string
-     */
-    public function getPayTypeTextAttr($value, $data)
+    public function getIsdeleteAttr()
     {
-        $pay_type = [10 => __('余额支付'), 20 => __('微信支付'), 30 => __('支付宝支付'), 40 => __('后台发卡')];
-        return isset($data['pay_type']) && isset($pay_type[$data['pay_type']]) ? $pay_type[$data['pay_type']] : __('无效支付方式');
+        return $this->delete_time ? 1 : 0;
+    }
+    public function getExpireTimeAttr()
+    {
+        return $this->expire ?: '';
+    }
+    public function getPayTypeAttr()
+    {
+        return 30;
     }
 
     /**
@@ -79,7 +69,7 @@ class CardRecord extends BaseModel
      */
     public function getDisabledAttr($value, $data)
     {
-        if (isset($data['expire_time']) && $data['expire_time'] != 0 && $data['expire_time'] < time()) {
+        if (isset($data['expire']) && $data['expire'] != 0 && $data['expire'] < time()) {
             return 1;
         }
         return 0;
@@ -112,7 +102,7 @@ class CardRecord extends BaseModel
      */
     public function card()
     {
-        return $this->belongsTo('app\\common\\model\\user\\Card', 'card_id', 'card_id');
+        return $this->belongsTo('app\\common\\model\\user\\Card', 'member_card_type_uuid', 'uuid');
     }
 
     /**
@@ -120,7 +110,7 @@ class CardRecord extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id');
+        return $this->belongsTo('app\\common\\model\\user\\User', 'member_uuid', 'uuid')->field('*, nickname as nickName');
     }
 
     /**
@@ -128,7 +118,7 @@ class CardRecord extends BaseModel
      */
     public static function detail($order_id)
     {
-        return (new static())->with(['card'])->find($order_id);
+        return (new static())->with(['card'])->where('uuid', $order_id)->find();
     }
 
     /**

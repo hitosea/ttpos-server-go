@@ -36,7 +36,7 @@ class Client extends Controller
         $res = $ai->forward(request()->post());
         return $this->renderSuccess('', $res);
     }
-    
+
     /**
      * @Apidoc\Title("列表")
      * @Apidoc\Method ("POST")
@@ -56,14 +56,14 @@ class Client extends Controller
         $versionNumber = $param['version_number'] ?? '';
         $forcedUpdate = $param['forced_update'] ?? '';
         $types = [1 => 'Cashier', 2 => 'Menu', 3=> 'Kitchen', 4 => 'Shop', 5 => 'Assistant'];
-        // 
+        //
         $credentialsPath = root_path('runtime/storage') . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
         $bucket = env('GOOGLE_APPLICATION_BUCKET_NAME');
         $env = env('GOOGLE_APPLICATION_BUCKET_ENV');
         if (!file_exists($credentialsPath) || !$bucket || !$env) {
             return $this->renderError('Not configured.');
         }
-        // 
+        //
         $platform = Cache::get('RENEWALINFO-PLATFORM');
         if (!$platform) {
             $platform = Setting::where('key', SettingEnum::PLATFORM_BRAND)->value('describe') ?: 'ttpos';
@@ -71,16 +71,16 @@ class Client extends Controller
         if (!$platform) {
             return $this->renderError('无平台信息');
         }
-        // 
+        //
         $platform = strtoupper($platform);
-        //        
+        //
         $storage = new StorageClient(['keyFilePath' => $credentialsPath]);
         $terminal = $types[$type];
         // 获取bucket下面的文件列表
         $objects = $storage->bucket($bucket)->objects(['prefix' => "{$platform}/{$env}/{$terminal}/"]);
         // 对象数组
         $objectsDatas = [];
-        // 
+        //
         foreach ($objects as $object) {
             $name = $object->name();
             if (pathinfo($name, PATHINFO_EXTENSION) !== 'apk') {
@@ -91,7 +91,7 @@ class Client extends Controller
                 'md5_hash' => $info['md5Hash'],
                 'original_name' => $name,
             ];
-            // 
+            //
             if ($document = ClientVersionModel::where('original_name', $name)->find()) {
                 if ($document->md5_hash != $info['md5Hash']) {
                     $document->md5_hash = $info['md5Hash'];
@@ -101,18 +101,18 @@ class Client extends Controller
                 }
                 continue;
             }
-            // 
+            //
             preg_match('/V([\d.]+)\.apk$/', $name, $matches);
             $version = $matches[1] ?? '0.0.0';
-            // 
+            //
             $brand = $platform == 'TTPOS' ? 1 : 2;
             $packageName = "com." . strtolower($platform) . '.' . strtolower($terminal);
-            // 
+            //
             $apkData['name'] = $packageName;
             $apkData['versionCode'] = $apkData['compileSdkVersion'] = version_compare('1.0.8', $version, '<') ? 300 : 0;
             $apkData['versionName'] = $version;
             $apkData['platformBuildVersionName'] = $version;
-            // 
+            //
             (new ClientVersionModel)->create([
                 'name' => basename($name),
                 'original_name' => $name,
@@ -143,8 +143,8 @@ class Client extends Controller
                 $data->delete();
             }
         }
-            
-        // 
+
+        //
         $param = $this->postData();
         $type = $param['type'] ?? 1;
         $versionNumber = $param['version_number'] ?? '';
@@ -183,12 +183,12 @@ class Client extends Controller
         if (!$res) {
             return $this->renderError("数据不存在");
         }
-        // 
+        //
         $res->update_log = $param['update_log'];
         $res->forced_update = $param['forced_update'] ?? 0;
         $res->is_publish = 1;
         $res->save();
-        // 
+        //
         return $this->renderSuccess();
     }
 
@@ -255,7 +255,7 @@ class Client extends Controller
     public function delete(ClientValidate $validate)
     {
         $param = $validate->goCheck('id');
-        $version = (new ClientVersionModel)->find($param['id']);
+        $version = (new ClientVersionModel)->where('id', $param['id'])->find();
         if (!$version) {
             return $this->renderError("数据不存在");
         }
@@ -398,7 +398,7 @@ class Client extends Controller
         //
         $type = $param['type'] ?? 1;
         $brand = $param['brand'] ?? 0;
-        // 
+        //
         $credentialsPath = root_path('runtime/storage') . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
         $bucket = env('GOOGLE_APPLICATION_BUCKET_NAME');
         $env = env('GOOGLE_APPLICATION_BUCKET_ENV');
@@ -421,14 +421,14 @@ class Client extends Controller
             $storage = new StorageClient(['keyFilePath' => $credentialsPath]);
             $objects = $storage->bucket($bucket)->object($result->original_name);
             $info = $objects->info();
-            // 
+            //
             if ($result->md5_hash != $info['md5Hash']) {
                 $result->md5_hash = $info['md5Hash'];
                 $result->create_time = strtotime($info['timeCreated']);
                 $result->update_time = strtotime($info['updated']);
                 $result->save();
             }
-            // 
+            //
             $result = $result?->toArray() ?: [];
             $result['update_log'] =  $result['update_log_text'];
         }

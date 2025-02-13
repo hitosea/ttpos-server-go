@@ -33,6 +33,6 @@ class OrderSettled extends BaseModel
      */
     public static function detail($settled_id)
     {
-        return self::with(['orderMaster'])->find($settled_id);
+        return self::with(['orderMaster'])->where('id', $settled_id)->find();
     }
 }

@@ -16,7 +16,7 @@ class Grade extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['grade_id', 'weight', 'equity', 'open_points'];
+    protected $append = ['grade_id', 'weight', 'equity', 'open_points', 'upgrade_points'];
 
     /**
      * 兼容字段
@@ -36,6 +36,10 @@ class Grade extends BaseModel
     public function getOpenPointsAttr()
     {
         return $this->open_point ?: 0;
+    }
+    public function getUpgradePointsAttr()
+    {
+        return $this->upgrade_point ?: 0;
     }
 
     /**

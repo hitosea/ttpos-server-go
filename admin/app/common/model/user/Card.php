@@ -3,6 +3,7 @@
 namespace app\common\model\user;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\model\user\PointsLog as PointsLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
@@ -13,8 +14,11 @@ use app\common\model\user\BalanceLog as BalanceLogModel;
  */
 class Card extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'member_card_type';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
@@ -28,6 +32,9 @@ class Card extends BaseModel
         'is_discount',
         'money',
         'receive_num',
+        'open_points',
+        'open_points_num',
+        'content',
     ];
 
     /**
@@ -52,6 +59,18 @@ class Card extends BaseModel
     public function getReceiveNumAttr($value, $data)
     {
         return (new CardRecord)->where('member_card_type_uuid', '=', $this->uuid)->count();
+    }
+    public function getOpenPointsAttr($value, $data)
+    {
+        return $this->open_point ?: 0;
+    }
+    public function getOpenPointsNumAttr($value, $data)
+    {
+        return $this->open_point_num ?: 0;
+    }
+    public function getContentAttr($value, $data)
+    {
+        return $this->describe ?: '';
     }
 
     /**

@@ -62,7 +62,7 @@ class ErpSupplier extends BaseModel
     public function detail($erp_supplier_id)
     {
         $model = new self;
-        $info = $model->with(['purchaser'])->find($erp_supplier_id);
+        $info = $model->with(['purchaser'])->where('id', $erp_supplier_id)->find();
         return $info;
     }
 

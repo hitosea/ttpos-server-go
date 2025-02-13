@@ -20,7 +20,7 @@ class UserShiftSnapshot extends BaseModel
      */
     public function getSnapshot($id)
     {
-        $detail = $this->find($id);
+        $detail = $this->where('id', $id)->find();
         $content = $detail['content'];
         $content = json_decode($content, true);
         //
