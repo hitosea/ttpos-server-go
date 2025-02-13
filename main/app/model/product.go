@@ -98,7 +98,7 @@ type ProductPackage struct {
 	IsShowH5              uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
 	Sort                  uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
-	Description           string `gorm:"default:'';column:description;comment:'卖点描述'"`
+	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
 	SauceRequired         uint8  `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection     uint   `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount          uint   `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
@@ -107,6 +107,20 @@ type ProductPackage struct {
 	ProductUnit                  ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
 	ProductBoms                  []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
 	ProductPackageAttributeGroup []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
+}
+
+func (model *ProductPackage) IsDown() bool {
+	if model.Status == 0 {
+		return true
+	}
+	return false
+}
+
+func (model *ProductPackage) IsDelete() bool {
+	if model.DeleteTime != 0 {
+		return true
+	}
+	return false
 }
 
 // ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom
@@ -118,8 +132,9 @@ type ProductBom struct {
 	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
 	IsDefaultSelect    uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
 
-	ProductFlavor ProductFlavor `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
-	ProductSauce  ProductSauce  `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
+	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+	ProductPackage ProductPackage `gorm:"foreignKey:product_package_uuid;references:uuid"`
 }
 
 // IsFlavorProduct 判断是否为商品规格

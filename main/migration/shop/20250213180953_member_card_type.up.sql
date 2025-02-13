@@ -1,0 +1,14 @@
+ALTER TABLE `ttpos_member_card_type` CHANGE COLUMN `period` `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效';
+ALTER TABLE `ttpos_member_card_type` CHANGE COLUMN `description` `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '使用须知';
+ALTER TABLE `ttpos_member_card_type` DROP COLUMN `count`; 
+ALTER TABLE `ttpos_member_card_type` DROP COLUMN `gift_value`; 
+ALTER TABLE `ttpos_member_card_type` DROP COLUMN `card_opening_gift`; 
+ALTER TABLE `ttpos_member_card_type` ADD COLUMN `open_point` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送积分,0-否 1-是';
+ALTER TABLE `ttpos_member_card_type` ADD COLUMN `open_point_num` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送积分数';
+ALTER TABLE `ttpos_member_card_type` ADD COLUMN `open_money` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送余额,0-否 1-是';
+ALTER TABLE `ttpos_member_card_type` ADD COLUMN `open_money_num` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送余额数';
+ALTER TABLE `ttpos_member` CHANGE COLUMN `gift_account_balance` `gift_balance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送账户余额';
+ALTER TABLE `ttpos_member_level` CHANGE COLUMN `upgrade_points` `upgrade_point` INT(11) DEFAULT 0 COMMENT '升级条件，累计积分';
+ALTER TABLE `ttpos_member_level` CHANGE COLUMN `open_points` `open_point` TINYINT(3) DEFAULT 0 COMMENT '是否开放累计积分升级，0-否 1-是';
+ALTER TABLE `ttpos_member_card_log` CHANGE COLUMN `period` `expire` INT(11) DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效';
+ALTER TABLE `ttpos_member_point_log` CHANGE COLUMN `description` `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述';

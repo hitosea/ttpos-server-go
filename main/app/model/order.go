@@ -233,6 +233,10 @@ type SaleOrderProductBom struct {
 	IsFlavorBom          uint   `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
+
+	ProductBom       ProductBom       `gorm:"foreignKey:product_bom_uuid;references:uuid"`
+	SaleOrderProduct SaleOrderProduct `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 }
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting

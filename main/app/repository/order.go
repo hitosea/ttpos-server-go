@@ -24,6 +24,7 @@ type IOrderRepo interface {
 	CancelDeskOrder(deskUuid uint64, reason string) error                                                                 // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                          // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                       // 判断是否存在部分支付
+	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                        // 查询销售订单的所有bom
 }
 
 // orderRepo 订单仓库
@@ -390,4 +391,13 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 		}
 	}
 	return false
+}
+
+// GetSaleOrderBomList 查询销售订单的所有bom
+func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error) {
+	var saleOrderProductBoms []model.SaleOrderProductBom
+	if err := r.db.Preload("ProductBom.ProductPackage").Preload("SaleOrderProduct").Model(&model.SaleOrderProductBom{}).Where("sale_order_uuid = ? AND delete_time = 0", saleOrderUuid).Find(&saleOrderProductBoms).Error; err != nil {
+		return nil, err
+	}
+	return saleOrderProductBoms, nil
 }

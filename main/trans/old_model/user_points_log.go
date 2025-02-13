@@ -49,10 +49,10 @@ func (s *UserPointsLogService) ConvertUserPointsLog() error {
 				Uuid:       uint64(userPointsLog.LogID),
 				CreateTime: int64(userPointsLog.CreateTime),
 			},
-			MemberUuid:  uint64(userPointsLog.UserID),
-			Scene:       int(userPointsLog.Scene),
-			Value:       int(userPointsLog.Value),
-			Description: userPointsLog.Describe,
+			MemberUuid: uint64(userPointsLog.UserID),
+			Scene:      int(userPointsLog.Scene),
+			Value:      int(userPointsLog.Value),
+			Describe:   userPointsLog.Describe,
 		}
 		_, err := base.NewMemberPointLogRepo(s.targetDB).CreateMemberPointLog(memberPointLog)
 		if err != nil {

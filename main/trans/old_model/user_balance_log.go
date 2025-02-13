@@ -55,11 +55,11 @@ func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
 				CreateTime: int64(userBalanceLog.CreateTime),
 				UpdateTime: int64(userBalanceLog.CreateTime),
 			},
-			MemberUuid:  uint64(userBalanceLog.UserID),
-			Scene:       int(userBalanceLog.Scene),
-			Money:       userBalanceLog.Money,
-			GiftMoney:   userBalanceLog.GiftMoney,
-			Description: userBalanceLog.Describe,
+			MemberUuid: uint64(userBalanceLog.UserID),
+			Scene:      int(userBalanceLog.Scene),
+			Money:      userBalanceLog.Money,
+			GiftMoney:  userBalanceLog.GiftMoney,
+			Describe:   userBalanceLog.Describe,
 		}
 		_, err := base.NewMemberBalanceLogRepo(s.targetDB).CreateMemberBalanceLog(log)
 		if err != nil {

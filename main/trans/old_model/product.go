@@ -223,7 +223,7 @@ func (s *ProductService) ConvertProduct() error {
 				IsShowH5:              IsShowH5,
 				Sort:                  product.ProductSort,
 				LimitNum:              product.LimitNum,
-				Description:           product.SellingPoint,
+				Describe:              product.SellingPoint,
 				OpenDiscount:          OpenDiscount,
 				SauceRequired:         uint8(product.FeedRequired),
 				SauceMaxSelection:     product.FeedMaxSelect,

@@ -1,1 +1,0 @@
-ALTER TABLE `ttpos_device` RENAME TO `ttpos_bind_record`;

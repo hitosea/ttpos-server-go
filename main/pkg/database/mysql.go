@@ -29,6 +29,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		conf.Port,
 		dbName,
 	)
+	fmt.Println("dsn:", dsn)
 	// 初始化会话
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{

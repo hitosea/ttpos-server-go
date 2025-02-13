@@ -88,7 +88,7 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 			},
 			Price:              userCardRecord.PayPrice,
 			Discount:           int(userCardRecord.Discount),
-			Period:             int(userCardRecord.ExpireTime),
+			Expire:             int(userCardRecord.ExpireTime),
 			MemberName:         user.NickName,
 			MemberPhone:        user.Mobile,
 			MemberNo:           strconv.Itoa(userCardRecord.UserID),

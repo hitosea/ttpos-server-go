@@ -27,3 +27,10 @@ func (model *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 	return
 }
+
+func (model *BaseModel) IsDelete() bool {
+	if model.DeleteTime == 0 {
+		return false
+	}
+	return true
+}
