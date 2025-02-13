@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -12,13 +14,15 @@ import (
 // IOrderProductSrv 定义订单商品服务接口
 type IOrderProductSrv interface {
 	CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error)                            // 检查商品
-	CheckProductOrderFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
-	CheckProductOrderSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
-	CheckProductOrderAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
-	CheckProductOrderFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error            // 检查商品规格库存
-	CheckProductOrderSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
+	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
+	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
+	CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
+	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error            // 检查商品规格库存
+	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
 	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
+	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) // 创建订单商品
+	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                                // 计算单价,商品原价+小料价
 }
 
 // orderProductSrv 订单商品服务结构体
@@ -60,20 +64,21 @@ func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (*model.
 	return &productPackage, nil
 }
 
-// CheckProductOrderFlavor 检查商品规格
+// CheckOrderProductFlavor 检查商品规格
 // productPackage需要包含ProductBoms
-func (o orderProductSrv) CheckProductOrderFlavor(productPackage model.ProductPackage, flavorUuid uint64) error {
+func (o *orderProductSrv) CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error {
 	if slices.ContainsFunc(productPackage.ProductBoms, func(productBom model.ProductBom) bool {
 		return productBom.ProductFlavorUuid == flavorUuid
 	}) {
 		return nil
 	}
+
 	return errors.New("商品规格不存在")
 }
 
-// CheckProductOrderSauce 检查商品加料
+// CheckOrderProductSauce 检查商品加料
 // productPackage需要包含ProductBoms
-func (o *orderProductSrv) CheckProductOrderSauce(productPackage model.ProductPackage, sauceUuids []uint64) error {
+func (o *orderProductSrv) CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error {
 	var count = uint(len(sauceUuids))
 
 	if productPackage.SauceRequired == 1 && count == 0 {
@@ -94,10 +99,10 @@ func (o *orderProductSrv) CheckProductOrderSauce(productPackage model.ProductPac
 	return nil
 }
 
-// CheckProductOrderAttribute 检查商品属性,
+// CheckOrderProductAttribute 检查商品属性,
 // productPackage需要包含ProductPackageAttributeGroups
 // ProductPackageAttributeGroups需要包含ProductPackageAttributes
-func (o *orderProductSrv) CheckProductOrderAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error {
+func (o *orderProductSrv) CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error {
 	var groups = productPackage.ProductPackageAttributeGroups
 	for _, group := range groups {
 		var count = uint(len(attributeMap[group.Uuid]))
@@ -119,17 +124,17 @@ func (o *orderProductSrv) CheckProductOrderAttribute(productPackage model.Produc
 	return nil
 }
 
-func (o *orderProductSrv) CheckProductOrderFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error {
+func (o *orderProductSrv) CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (o *orderProductSrv) CheckProductOrderSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error {
+func (o *orderProductSrv) CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-// CheckProductOrderBomStatus 检查销售订单的商品是否都是上架状态且未删除
+// GetInvalidProductList 检查销售订单的商品是否都是上架状态且未删除
 func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error) {
 	var invalidProductList []model.SaleOrderProduct
 	// 查询销售订单商品组合表
@@ -143,4 +148,104 @@ func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid 
 		}
 	}
 	return invalidProductList, nil
+
+}
+
+// CreateOrderProductReq 创建订单商品请求
+type CreateOrderProductReq struct {
+	Lang           string
+	SaleOrder      model.SaleOrder
+	ProductPackage model.ProductPackage
+	ProductFlavor  model.ProductFlavor
+	ProductBoms    []model.ProductBom
+	Num            uint
+}
+
+// CreateOrderProduct 创建订单商品
+func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) {
+	var res model.SaleOrderProduct
+	db := o.dbm.GetDB(dbId)
+	amount := o.CalcAmount(req.ProductBoms, req.Num)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// 创建订单商品
+		orderProduct, err := repository.NewOrderProductRepo(tx).Create(model.SaleOrderProduct{
+			Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
+			FlavorName:            req.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang),
+			Num:                   req.Num,
+			UnitPrice:             amount.UnitPrice,
+			Price:                 amount.Price,
+			ServiceFee:            amount.ServiceFee,
+			TaxFee:                amount.TaxFee,
+			ProductOriginalAmount: amount.OriginalAmount,
+			DeductStockType:       req.ProductPackage.DeductStockType,
+			MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
+			ImageFileUuid:         req.ProductPackage.ImageFileUuid,
+			ProductPackageUuid:    req.ProductPackage.Uuid,
+			SaleBillUuid:          req.SaleOrder.SaleBillUuid,
+			SaleOrderUuid:         req.SaleOrder.Uuid,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		// 创建销售订单商品BOM
+		var orderProductBoms []model.SaleOrderProductBom
+		for _, bom := range req.ProductBoms {
+			var name string
+			var isFlavorBom uint
+			if bom.ProductFlavorUuid > 0 {
+				name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
+				isFlavorBom = 1
+			}
+			if bom.ProductSauceUuid > 0 {
+				name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
+			}
+			orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
+				Name:                 name,
+				Price:                bom.Price,
+				IsFlavorBom:          isFlavorBom,
+				SaleOrderUuid:        req.SaleOrder.Uuid,
+				SaleOrderProductUuid: orderProduct.Uuid,
+				ProductBomUuid:       bom.Uuid,
+			})
+		}
+		err = repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductBoms)
+		if err != nil {
+			return err
+		}
+
+		res = orderProduct
+
+		return nil
+	})
+
+	return &res, err
+}
+
+type CalcAmountResp struct {
+	UnitPrice      float64 // 单价: productBom.Price累加
+	Price          float64 // 最终单价: 折扣和优惠后的UnitPrice
+	ServiceFee     float64 // 服务费,按比例收取时有 todo
+	TaxFee         float64 // 税费 todo
+	OriginalAmount float64 // 原价销售额: (UnitPrice + TaxFee) * 数量
+}
+
+// CalcAmount 计算单价,商品原价+小料价
+func (o *orderProductSrv) CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp {
+	var unitPrice float64
+	var TaxFee float64
+	var originalAmount float64
+	for _, bom := range boms {
+		unitPrice = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(bom.Price)).InexactFloat64()
+	}
+
+	// 原价销售额 = (UnitPrice + TaxFee) * 数量
+	originalAmount = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(TaxFee)).Mul(decimal.NewFromInt(int64(num))).InexactFloat64()
+
+	return CalcAmountResp{
+		UnitPrice:      unitPrice,
+		Price:          unitPrice,
+		OriginalAmount: originalAmount,
+	}
 }

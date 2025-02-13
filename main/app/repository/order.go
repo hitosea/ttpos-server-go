@@ -56,19 +56,19 @@ func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error)
 
 // GetSaleBill 获取销售单
 func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
-	var model model.SaleBill
+	var saleBill model.SaleBill
 	db := r.db
 
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
-	result := db.First(&model)
+	result := db.First(&saleBill)
 	if result.Error != nil {
-		return model, result.Error
+		return saleBill, result.Error
 	}
 
-	return model, nil
+	return saleBill, nil
 }
 
 // CreateSaleOrder 创建销售订单

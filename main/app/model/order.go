@@ -152,41 +152,43 @@ type SaleOrderProduct struct {
 	BaseModel
 
 	// 产品基本信息
-	Name                  string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
-	FlavorName            string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
-	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
+	Name       string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
+	FlavorName string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
+	Sign       string `gorm:"column:sign;type:varchar(255);default:'';comment:商品签名" json:"sign"`
 
 	// 产品数量和价格
 	Num         uint    `gorm:"column:num;type:int(11);default:0;comment:数量" json:"num"`
 	CustomPrice float64 `gorm:"column:custom_price;type:decimal(12,2);default:0.00;comment:自定义价格" json:"custom_price"`
 	UnitPrice   float64 `gorm:"column:unit_price;type:decimal(12,2);default:0.00;comment:单价" json:"unit_price"`
 	Price       float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:最终单价" json:"price"`
+	ServiceFee  float64 `gorm:"column:service_fee;type:decimal(12,2);default:0.00;comment:服务费" json:"service_fee"`
 
 	// 产品税率和原价
 	TaxRate               uint    `gorm:"column:tax_rate;type:tinyint(1);default:0;comment:税率,单位%.下单时单税率,结账时再重新核算" json:"tax_rate"`
+	TaxFee                float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0.00;comment:税费" json:"tax_fee"`
 	ProductOriginalAmount float64 `gorm:"column:product_original_amount;type:decimal(12,2);default:0.00;comment:原价销售额.包含加料、税费." json:"product_original_amount"`
 
-	// 产品状态和备注
-	Status uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-正常 1-退菜" json:"status"`
-	Remark string `gorm:"column:remark;type:varchar(255);default:'';comment:备注" json:"remark"`
-
-	// 产品赠品信息
-	IsGift     uint   `gorm:"column:is_gift;type:tinyint(1);default:0;comment:是否赠品, 0-否 1-是" json:"is_gift"`
-	GiftReason string `gorm:"column:gift_reason;type:varchar(255);default:'';comment:赠品原因" json:"gift_reason"`
+	// 产品状态和属性
+	Status          uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-正常 1-退菜" json:"status"`
+	IsRequire       uint   `gorm:"column:is_require;type:tinyint(1);default:0;comment:是否必点商品 0-否 1-是" json:"is_require"`
+	IsGift          uint   `gorm:"column:is_gift;type:tinyint(1);default:0;comment:是否赠品, 0-否 1-是" json:"is_gift"`
+	DeductStockType uint   `gorm:"column:deduct_stock_type;type:tinyint(1);default:0;comment:库存计算方式,0-下单减库存 1-付款减库存。创建商品后不变" json:"deduct_stock_type"`
+	Remark          string `gorm:"column:remark;type:varchar(255);default:'';comment:备注" json:"remark"`
+	GiftReason      string `gorm:"column:gift_reason;type:varchar(255);default:'';comment:赠品原因" json:"gift_reason"`
 
 	// 关联ID
-	OrderProductUuid    uint64 `gorm:"column:order_product_uuid;type:bigint(20);default:0;comment:订单产品ID" json:"order_product_uuid"`
-	ProductionOrderUuid uint64 `gorm:"column:production_order_uuid;type:bigint(20);default:0;comment:生产订单ID" json:"production_order_uuid"`
-	Sign                string `gorm:"column:sign;type:varchar(255);default:'';comment:商品签名" json:"sign"`
-	ProductPackageUuid  uint64 `gorm:"column:product_package_uuid;type:bigint(20);default:0;comment:产品包ID" json:"product_package_uuid"`
-	SaleBillUuid        uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
-	SaleOrderUuid       uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
-	ImageFileUuid       uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:图片ID" json:"image_file_uuid"`
+	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
+	ImageFileUuid         uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:图片ID" json:"image_file_uuid"`
+	ProductionOrderUuid   uint64 `gorm:"column:production_order_uuid;type:bigint(20);default:0;comment:生产订单ID" json:"production_order_uuid"`
+	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20);default:0;comment:产品包ID" json:"product_package_uuid"`
+	QrcodeOrderUuid       uint64 `gorm:"column:qrcode_order_uuid;type:bigint(20);default:0;comment:扫码订单ID" json:"qrcode_order_uuid"`
+	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
 
 	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
+	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
@@ -228,9 +230,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
-	Name                 string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
-	Num                  uint    `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
-	FlavorName           string  `gorm:"column:flavor_name	;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
+	Name                 string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
 	Price                float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
 	IsFlavorBom          uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 	SaleOrderUuid        uint64  `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`

@@ -22,7 +22,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// IProductSrv 定义收银服务接口
+// IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                        // 创建点餐订单
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                  // 创建桌台订单
@@ -34,19 +34,19 @@ type IOrderSrv interface {
 	OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error) // 删除订单商品
 }
 
-// orderSrv 收银服务结构
+// orderSrv 订单服务结构
 type orderSrv struct {
 	dbm        *database.DBManager // 数据库管理器
 	localeSrv  ILocaleSrv
 	settingSrv setting.ISrv
 }
 
-// NewOrderSrv 创建新的收银产品类别服务
+// NewOrderSrv 创建订单服务实例
 func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache setting.ISrv) IOrderSrv {
 	return NewOrderSrvImpl(dbm, localeSrv, cache)
 }
 
-// NewOrderSrvImpl 创建新的收银服务实现
+// NewOrderSrvImpl 创建订单服务实例实现
 func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IOrderSrv {
 	return &orderSrv{
 		dbm:        dbm,
@@ -158,7 +158,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			for _, buffetUuid := range req.BuffetUuids {
 				for _, buffetCustomerType := range req.BuffetCustomerTypes {
 					// 获取自助餐顾客类型价格
-					_, err := buffetRepo.GetBuffetCustomerTypePrice(
+					_, err = buffetRepo.GetBuffetCustomerTypePrice(
 						commonRepo.WhereByBuffetPackageUuid(buffetUuid),
 						commonRepo.WhereByCustomerTypeUuid(buffetCustomerType.Uuid),
 					)
@@ -213,8 +213,8 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 		orderNo = datePart + orderSourceType + n
 
 		// 检查订单编号是否存在
-		order, err := repository.NewOrderRepo(db).GetSaleBill(repository.NewCommonRepo().WhereByOrderNo(orderNo))
-		if order.Uuid > 0 {
+		saleBill, err := repository.NewOrderRepo(db).GetSaleBill(repository.NewCommonRepo().WhereByOrderNo(orderNo))
+		if err == nil && saleBill.Uuid > 0 {
 			orderNo = ""
 			continue
 		}
@@ -230,12 +230,12 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 	return orderNo
 }
 
-// GetOrderList 获取订单列表
+// GetCashierOrderList 获取收银端订单列表
 func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
-	copier.Copy(&reqs, req)
+	_ = copier.Copy(&reqs, req)
 	lists, total, err := orderRepo.GetCashierOrderListWithPagination(reqs)
 	if err != nil {
 		return resp.CashierOrderListPaginationResp{}, err
@@ -307,7 +307,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 	}, nil
 }
 
-// GetOrderList 获取订单信息
+// GetCashierOrderInfo 获取收银端订单信息
 func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error) {
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
@@ -427,7 +427,7 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 	if err != nil {
 		return []resp.CashierOrderOperationLog{}, err
 	}
-	// doto - 数据格式待处理
+	// todo - 数据格式待处理
 	logs := make([]resp.CashierOrderOperationLog, 0)
 	for _, record := range orderRecordLists {
 		logs = append(logs, resp.CashierOrderOperationLog{
@@ -513,7 +513,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
-		// 拒绝所有待接单 - doto 待对应的服务层实现
+		// 拒绝所有待接单 - todo 待对应的服务层实现
 		err := qrcodeOrderRepo.Reject(billInfo.DeskUuid)
 		if err != nil {
 			tx.Rollback()
