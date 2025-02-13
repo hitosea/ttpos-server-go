@@ -1270,13 +1270,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_role` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '员工角色关系表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_bind_record` (
+CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '绑定记录ID',
     `finally_login_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后一个登录id, 退出会清为0',
     `finally_login_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后登录时间',
     `source` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
-    `device_id` VARCHAR(255) DEFAULT '' COMMENT '唯一设备标识key',
+    `device_key` VARCHAR(255) DEFAULT '' COMMENT '唯一设备标识key',
     `is_main` TINYINT(1) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
     `print_port_uuid` BIGINT DEFAULT 0 COMMENT '打印档口ID',
     `address` VARCHAR(255) DEFAULT '' COMMENT '绑定地址',

@@ -60,7 +60,8 @@ EOT
         $config = config('database');
         $mysql = $config['connections'][$default];
         $tables = Db::getTables();
-        if (in_array($mysql['prefix'] . 'app', $tables)) {
+        if (in_array($mysql['prefix'] . 'company', $tables)) {
+
             if ($dbname) {
                 $mysql['database'] = $dbname;
                 $mysql['username'] = 'root';
@@ -75,7 +76,7 @@ EOT
                 //
                 $this->migrate($version, 1);
                 //
-                foreach (Db::name('app')->column('app_id') as $appid) {
+                foreach (Db::name('company')->column('uuid') as $appid) {
                     $mysql['database'] = 'shop' . $appid;
                     $mysql['username'] = 'root';
                     $mysql['password'] = env('DB_ROOT_PASSWORD');
