@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -191,7 +192,7 @@ type SaleOrderProductAttribute struct {
 	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
 }
 
-// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料相同的商品签名相同,用于取消拆单时合并商品
+// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料、`改价`相同的商品签名相同,用于取消拆单时合并商品。改价销售订单商品价格后要重新生成签名
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -211,10 +212,10 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-改价
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
-	return bomIdListStr + "-" + attributeIdListStr
+	return fmt.Sprintf("%s-%s-%d", bomIdListStr, attributeIdListStr, model.CustomPrice)
 }
 
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
