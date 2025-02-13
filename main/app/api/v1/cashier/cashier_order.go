@@ -83,8 +83,8 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
-// @param data body req.OrderInfoReq true "详情参数"
-// @Success 200 {object} resp.CashierOrderInfoResp "订单详情"
+// @param data body req.OrderCancelReq true "详情参数"
+// @Success 200 {object} nil "取消订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/cancel [post]
 func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
@@ -92,19 +92,47 @@ func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
 	// 绑定请求参数
-	req := req.OrderInfoReq{}
+	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(companyUuid, staff, source, req.SaleBillUuid, req.SaleOrderUuid)
+	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{})
+}
+
+// CancelOrder 处理删除订单
+// @Summary 删除订单
+// @Description 删除订单
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @param data body req.OrderDeleteReq true "详情参数"
+// @Success 200 {object} nil "取消订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/delete [delete]
+func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	req := req.OrderDeleteReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	//
+	err := h.orderService.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
 }
 
 // RegisterOrderHandlers 注册收银订单路由
@@ -128,5 +156,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
+		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 	}
 }

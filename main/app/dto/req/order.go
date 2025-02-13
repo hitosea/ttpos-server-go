@@ -17,6 +17,19 @@ type OrderListReq struct {
 
 // 订单信息查询
 type OrderInfoReq struct {
-	SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`   // 销售账单UUID
-	SaleOrderUuid uint64 `form:"sale_order_uuid" json:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
+	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
+}
+
+// 订单取消
+type OrderCancelReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
+	CancelReason  string `json:"cancel_reason"`   // 取消原因
+}
+
+// 订单删除
+type OrderDeleteReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
 }

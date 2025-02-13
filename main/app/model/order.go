@@ -75,7 +75,7 @@ type SaleBill struct {
 * 判断订单是否可操作
  */
 func (model *SaleBill) ValidateOrderStatus(operation string) error {
-	if operation != "payment" && model.IsLock == 1 {
+	if operation != constant.OrderSettle && model.IsLock == 1 {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {
@@ -86,7 +86,7 @@ func (model *SaleBill) ValidateOrderStatus(operation string) error {
 	}
 	if len(model.SaleOrders) > 0 {
 		// 拆单没有取消权限
-		if operation == "cancel" && len(model.SaleOrders) > 1 {
+		if operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
 			return errors.New("拆单不可操作")
 		}
 		// 单个订单不能操作
@@ -324,7 +324,7 @@ type SaleBillOperationRecord struct {
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
-	CreateTime    int64  `gorm:"column:create_time;type:int(10) unsigned;not null;default:0;comment:创建时间(时间戳)" json:"create_time"`
-	UpdateTime    int64  `gorm:"column:update_time;type:int(10) unsigned;not null;default:0;comment:更新时间(时间戳)" json:"update_time"`
-	DeleteTime    int64  `gorm:"column:delete_time;type:int(10) unsigned;not null;default:0;comment:删除时间(时间戳)" json:"delete_time"`
+	CreateTime    int64  `gorm:"autoCreateTime;column:create_time;comment:创建时间(时间戳)" json:"create_time"`
+	UpdateTime    int64  `gorm:"autoUpdateTime;column:update_time;comment:更新时间(时间戳)" json:"update_time"`
+	DeleteTime    int64  `gorm:"column:delete_time;default:0;comment:删除时间(时间戳)" json:"delete_time"`
 }
