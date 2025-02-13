@@ -182,7 +182,7 @@ class Supplier extends BaseModel
      */
     public static function detail($shop_supplier_id, $with = [])
     {
-        return static::with($with)->find($shop_supplier_id);
+        return static::with($with)->where('id', $shop_supplier_id)->find();
     }
 
     /**

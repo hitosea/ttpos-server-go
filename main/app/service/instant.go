@@ -85,7 +85,7 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, req req.InstantOrderA
 		return nil, err
 	}
 	// 检查商品规格
-	if err = s.orderProductSrv.CheckProductOrderFlavor(*productPackage, req.Product.FlavorUuid); err != nil {
+	if err = s.orderProductSrv.CheckOrderProductFlavor(*productPackage, req.Product.FlavorUuid); err != nil {
 		return nil, err
 	}
 	// 检查商品属性
@@ -93,11 +93,11 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, req req.InstantOrderA
 	for _, attribute := range req.Product.Attributes {
 		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
 	}
-	if err = s.orderProductSrv.CheckProductOrderAttribute(*productPackage, attributeMap); err != nil {
+	if err = s.orderProductSrv.CheckOrderProductAttribute(*productPackage, attributeMap); err != nil {
 		return nil, err
 	}
 	// 检查商品加料
-	if err = s.orderProductSrv.CheckProductOrderSauce(*productPackage, req.Product.SauceUuids); err != nil {
+	if err = s.orderProductSrv.CheckOrderProductSauce(*productPackage, req.Product.SauceUuids); err != nil {
 		return nil, err
 	}
 

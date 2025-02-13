@@ -176,7 +176,8 @@ class ErpPurchaseOrder extends BaseModel
             ->field('eo.*, suser.real_name as applicant_name, supplier.name as supplier_name')
             ->leftJoin("shop_user suser", "eo.applicant_id = suser.shop_user_id")
             ->leftJoin("supplier supplier", "supplier.shop_supplier_id = eo.shop_supplier_id")
-            ->find($id);
+            ->where('eo.id', $id)
+            ->find();
     }
 
     /**

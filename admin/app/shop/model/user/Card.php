@@ -4,6 +4,7 @@ namespace app\shop\model\user;
 
 use app\common\library\helper;
 use app\common\model\user\CardRecord;
+use app\common\model\user\MemberCard;
 use app\common\model\user\Card as CardModel;
 use app\shop\model\user\CardRecord as CardRecordModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
@@ -21,7 +22,7 @@ class Card extends CardModel
     {
         $model = $this;
         if (isset($data['card_name']) && $data['card_name'] != '') {
-            $model = $model->like('card_name', $data['card_name']);
+            $model = $model->like('name', $data['card_name']);
         }
         if ($data['status'] >= 0) {
             $model = $model->where('status', '=', $data['status']);
@@ -35,10 +36,12 @@ class Card extends CardModel
      */
     public function getDeleteList($data)
     {
-        $model = $this;
+        $model = $this->onlyTrashed();
+
         if (isset($data['card_name']) && $data['card_name']) {
-            $model = $model->like('card_name', $data['card_name']);
+            $model = $model->like('name', $data['card_name']);
         }
+
         $list = $model->order(['create_time' => 'desc'])->paginate($data);
         return $list;
     }
@@ -55,48 +58,56 @@ class Card extends CardModel
         }
         $userIdsArr = array_unique(explode(',', $userIds));
         foreach ($userIdsArr as $userId) {
-            $isExist = (new CardRecord())->checkExistByUserId($userId);
+            $isExist = (new MemberCard())->checkExistByUserId($userId);
             if (!$isExist?->isEmpty()) {
-                if ($data['card_id'] == $isExist['card_id']) {
+                if ($data['card_id'] == $isExist['card_type_uuid']) {
                     $this->error = "会员已拥有此会员卡";
                     return false;
                     continue;
                 }
-                // 删除原有的会员卡
-                (new CardRecord())->where('member_uuid', $userId)->delete();
+
+                // 删除会员的现有会员卡和记录
+                MemberCard::destroy(function($query) use ($userId) {
+                    $query->where('member_uuid', '=', $userId);
+                });
+                CardRecordModel::destroy(function($query) use ($userId) {
+                    $query->where('member_uuid', '=', $userId);
+                });
             }
 
             $detail = self::detail($data['card_id']);
+            $user = (new User)::detail($userId);
             $this->startTrans();
             try {
                 //添加会员卡
                 $record = [
                     'member_uuid' => $userId,
-                    'card_id' => $data['card_id'],
-                    'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
-                    'money' => $detail['money'],
-                    'discount' => $detail['is_discount'] ? $detail['discount'] : 0,
-                    'open_points' => $detail['open_points'],
-                    'open_points_num' => $detail['open_points_num'],
-                    'open_coupon' => $detail['open_coupon'],
-                    'open_coupons' => $detail['open_coupons'],
-                    'open_money' => $detail['open_money'],
-                    'open_money_num' => $detail['open_money_num'],
-                    'pay_price' => $detail['money'] ?? 0,
-                    'pay_status' => 20,
-                    'pay_type' => 30,
-                    'pay_time' => time(),
+                    'member_card_type_uuid' => $data['card_id'],
+                    'expire' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
+                    'price' => $detail['money'],
+                    'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
+                    'member_name' => $user['nickname'] ?? '',
+                    'member_phone' => $user['phone'] ?? '',
+                    'member_no' => $user['member_no'] ?? '',
+                    'member_card_type_name' => $detail['name'],
                 ];
                 $CardRecordModel = new CardRecordModel;
                 $CardRecordModel->save($record);
-                $user = (new User)::detail($userId);
+                //
+                $memberCardUuid = (new MemberCard)->add([
+                    'card_type_uuid' => $data['card_id'],
+                    'member_uuid' => $userId,
+                    'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
+                    'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
+                ]);
                 // 会员卡id
-                if ($data['card_id']) {
-                    $user->setCardId($data['card_id']);
+                if ($memberCardUuid) {
+                    /** @var User $user */
+                    $user->setMemberCardId($memberCardUuid);
                 }
                 // 赠送积分
-                if ($detail['open_points'] && $detail['open_points_num']) {
-                    $user->setIncPoints($detail['open_points_num'], '发会员卡获取积分');
+                if ($detail['open_point'] && $detail['open_point_num']) {
+                    $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分');
                 }
                 // 赠送余额
                 if ($detail['open_money'] && $detail['open_money_num']) {
@@ -106,7 +117,6 @@ class Card extends CardModel
                         'gift_money' => $detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
                     ], ['order_no' => '后台发放会员卡赠送']);
                 }
-                $detail->save(['receive_num' => $detail['receive_num'] + 1]);
                 $this->commit();
             } catch (\Exception $e) {
                 $this->error = $e->getMessage();
@@ -123,8 +133,7 @@ class Card extends CardModel
     public function cancel($data)
     {
         $CardRecordModel = new CardRecordModel;
-        $detail = $CardRecordModel::detail($data['order_id']);
-        $cardDetail = self::detail($detail['card_id']);
+        $detail = $CardRecordModel::where('id', '=', $data['order_id'])->find();
         //
         if (!$detail || $detail['is_delete'] != 0) {
             $this->error = "记录不存在";
@@ -135,15 +144,18 @@ class Card extends CardModel
             return false;
         }
         //
+        $user = (new User)::detail($detail['member_uuid'], true);
+        $memberCard = (new MemberCard())::where('member_uuid', '=', $detail['member_uuid'])->find();
         $this->startTrans();
         try {
+            $memberCard->delete();
             $detail->delete();
-            $user = (new User)::detail($detail['user_id'], true);
             // 撤销会员卡id
-            $user?->setCardId(0);
+            /** @var User $user */
+            $user?->setMemberCardId(0);
             // 撤销积分
-            if ($detail['open_points'] && $detail['open_points_num']) {
-                $user->setIncPoints(-$detail['open_points_num'], '撤销会员卡减少积分');
+            if ($detail['open_point'] && $detail['open_point_num']) {
+                $user->setIncPoints(-$detail['open_point_num'], '撤销会员卡减少积分');
             }
             if ($detail['open_money'] && $detail['open_money_num']) {
                 BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
@@ -152,7 +164,7 @@ class Card extends CardModel
                     'gift_money' => -$detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
                 ], ['order_no' => '撤销会员卡减少余额']);
             }
-            $cardDetail->save(['receive_num' => $cardDetail['receive_num'] - 1]);
+
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -223,17 +235,12 @@ class Card extends CardModel
         if (($data['is_discount'] ?? 0) == 0) {
             $data['discount'] = 0;
         }
-        // {"card_name":"001",
-        //     "type_id":1,"card_style":"","sort":0,"is_discount":1,"discount":100,
-        //     "open_points":1,"open_points_num":"11","open_coupon":0,"open_coupons":[],"month_points":0,
-        //     "month_points_num":0,"month_coupon":0,"month_coupons":[],"expire":0,"money":0,"stock":"",
-        //     "status":0,"content":"11","sub_card":0,"sub_num":0,"default_style":"","is_default":0,
-        //     "open_money":1,"open_money_num":"22"}
         //
         $data['name'] = $data['card_name'] ?? '';
         $data['open_point'] = $data['open_points'] ?? 0;
-        $data['open_point_num'] = $data['open_points_num'] ?? 0;
-        $data['description'] = $data['content'] ?? '';
+        $data['open_point_num'] = $data['open_point'] ? ($data['open_points_num'] ?? 0) : 0;
+        $data['open_money_num'] = $data['open_money'] ? ($data['open_money_num'] ?? 0) : 0;
+        $data['describe'] = $data['content'] ?? '';
         $data['price'] = $data['money'] ?? 0;
         return $this->save($data);
     }
@@ -275,6 +282,13 @@ class Card extends CardModel
         }
         unset($data['create_time']);
         unset($data['update_time']);
+        //
+        $data['name'] = $data['card_name'] ?? '';
+        $data['open_point'] = $data['open_points'] ?? 0;
+        $data['open_point_num'] = $data['open_point'] ? ($data['open_points_num'] ?? 0) : 0;
+        $data['open_money_num'] = $data['open_money'] ? ($data['open_money_num'] ?? 0) : 0;
+        $data['describe'] = $data['content'] ?? '';
+        $data['price'] = $data['money'] ?? 0;
         return $this->save($data);
     }
 

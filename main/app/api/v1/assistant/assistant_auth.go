@@ -93,10 +93,10 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{list=[]resp.OnlineCashier}
+// @Success 200 {object} dto.Response{data=resp.OnlineCashierList}
 // @Router /assistant/online_cashiers [get]
 func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
-	helper.Success(c, gin.H{"list": h.authSrv.GetOnlineCashiers(c.GetUint64(jwt.CompanyUuid))})
+	helper.Success(c, h.authSrv.GetOnlineCashiers(c.GetUint64(jwt.CompanyUuid)))
 }
 
 // GetAssistantBase 点餐助手端信息

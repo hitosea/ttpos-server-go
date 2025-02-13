@@ -29,7 +29,7 @@ type IAuthSrv interface {
 	AssistantBase(cc *gin.Context) (resp.AssistantBase, error)                               // 点餐助手端基本信息
 	Auth(authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
 	BindCashier(cashierReq req.BindCashierReq, cc *gin.Context) (string, error)              // 点餐助手绑定收银机
-	GetOnlineCashiers(companyUuid uint64) []resp.OnlineCashier                               // 获取在线收银机
+	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                             // 获取在线收银机
 }
 
 func NewAuthSrv(
@@ -426,7 +426,7 @@ func (s *AuthSrv) BindCashier(bindReq req.BindCashierReq, cc *gin.Context) (stri
 }
 
 // GetOnlineCashiers 获取在线收银机
-func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) []resp.OnlineCashier {
+func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staffs := staffRepo.GetOnlineCashiers(staffRepo.WithDevice(constant.SettingCashier))
 
@@ -443,5 +443,7 @@ func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) []resp.OnlineCashier {
 			Remark:      remark,
 		})
 	}
-	return cashiers
+	return resp.OnlineCashierList{
+		List: cashiers,
+	}
 }

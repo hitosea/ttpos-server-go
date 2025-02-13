@@ -8,6 +8,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -22,6 +23,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type GetSettingReq struct {
+	CompanyUuid  uint64             // 商家Uuid
+	Language     string             // 请求头accept-language，用于实时翻译，比如门店业务获取抹零翻译"实款实收"
+	Context      *gin.Context       // 请求上下文，用于给url加上域名，比如商城设置logo加上http://xxxx
+	LanguageList []dto.LanguageItem // 商家语言，比如setting里面没有收银机设置，那默认返回商家语言
+}
+
 type ISrv interface {
 	GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error)                 // 获取所有设置，性能问题慎用
 	GetStoreSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Store, error)                                          // 获取商家设置
@@ -29,11 +37,14 @@ type ISrv interface {
 	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Printer, error)     // 获取打印机设置
 	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Cashier, error)     // 获取收银机设置
 	GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Assistant, error) // 获取点餐助手设置
+	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
 	GetBusinessSetting(companyUuid uint64, language string) (setting.Business, error)                                                     // 获取门店业务设置
 	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                     // 获取自助餐设置
 	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                      // 获取货币单位设置
-	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
 	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
+	GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error)                                                                     // 获取收银机语言
+	GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error)                                                                   // 获取收银机副屏广告
+	CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool                                          // 收银机验证密码
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
 	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                     // 验证高级密码
 }
@@ -734,6 +745,48 @@ func (s *Srv) GetH5Setting(companyUuid uint64, language string, cc *gin.Context,
 func (s *Srv) GetCompanySetting(companyUuid uint64) (model.CompanySetting, error) {
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
 	return companySettingRepo.Get(), nil
+}
+
+// GetCashierLanguage 获取收银机语言
+func (s *Srv) GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error) {
+	cashierSetting, err := s.GetCashierSetting(companyUuid, "", nil, nil)
+	if err != nil {
+		return resp.LanguageResp{}, errors.New("获取语言失败")
+	}
+	return resp.LanguageResp{
+		Languages:       cashierSetting.Language,
+		LanguageList:    cashierSetting.LanguageList,
+		DefaultLanguage: cashierSetting.DefaultLanguage,
+	}, nil
+}
+
+// GetCashierAd 获取收银机副屏广告
+func (s *Srv) GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error) {
+	cashierSetting, err := s.GetCashierSetting(companyUuid, "", cc, nil)
+	if err != nil {
+		return resp.Ads{List: make([]setting.CarouselItem, 0)}, errors.New("获取副屏广告失败")
+	}
+	return resp.Ads{
+		List: cashierSetting.Carousel,
+	}, nil
+}
+
+// CashierVerifyPassword 收银机验证密码
+func (s *Srv) CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool {
+	cashierSetting, err := s.GetCashierSetting(companyUuid, "", cc, nil)
+	if err != nil {
+		return false
+	}
+	switch typ {
+	case constant.CashierPasswordTypeCashBox:
+		return cashierSetting.CashierPassword == password
+	case constant.CashierPasswordTypeAdvanced:
+		return cashierSetting.AdvancedPassword == password
+	case constant.CashierPasswordTypeLock:
+		return cashierSetting.LockPassword == password
+	default:
+		return false
+	}
 }
 
 // Updates 更新设置

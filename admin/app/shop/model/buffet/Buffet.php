@@ -17,7 +17,7 @@ class Buffet extends BuffetModel
      */
     public static function detail($buffet_id)
     {
-        return self::with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])->find($buffet_id);
+        return self::with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])->where('id', $buffet_id)->find();
     }
 
     /**

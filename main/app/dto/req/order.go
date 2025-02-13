@@ -7,6 +7,7 @@ var OrderReqMessage = map[string]string{
 	"sale_bill_uuid.required":     "销售账单UUID不能为空",
 	"sale_order_uuid.required":    "销售订单UUID不能为空",
 	"order_product_uuid.required": "订单商品UUID不能为空",
+	"price.required":              "商品价格不能为空",
 }
 
 // 订单列表查询
@@ -52,4 +53,12 @@ type OrderProductDeleteReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
 	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
 	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
+}
+
+// 订单商品改价
+type OrderProductChangePriceReq struct {
+	SaleBillUuid     uint64  `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
+	SaleOrderUuid    uint64  `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
+	OrderProductUuid uint64  `json:"order_product_uuid" binding:"required"` // 订单商品UUID
+	Price            float64 `json:"price" binding:"required"`              // 改价
 }

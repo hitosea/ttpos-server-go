@@ -150,6 +150,6 @@ class ProductFeed extends BaseModel
      */
     public static function detail($id)
     {
-        return self::with(['product', 'material'])->find($id);
+        return self::with(['product', 'material'])->where('id', $id)->find();
     }
 }

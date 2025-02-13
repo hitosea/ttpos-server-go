@@ -16,7 +16,7 @@ use app\common\model\shop\UserShiftLog as UserShiftLogModel;
  */
 class BindRecord extends BaseModel
 {
-    protected $name = 'bind_record';
+    protected $name = 'device';
     protected $pk = 'id';
 
     // 品牌

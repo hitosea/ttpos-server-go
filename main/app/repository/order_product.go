@@ -13,6 +13,7 @@ type IOrderProductRepo interface {
 	WhereSaleOrderUuids(uuids []uint64) DBOption
 	GetProductList(opts ...DBOption) ([]model.SaleOrderProduct, error) // 获取商品列表
 	Delete(uuid uint64) error
+	Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) // 创建商品
 }
 
 // orderProductRepo 商品仓库
@@ -60,7 +61,14 @@ func (r *orderProductRepo) GetProductList(opts ...DBOption) ([]model.SaleOrderPr
 	return products, err
 }
 
-// DeleteProductAttribute 软删除产品
+// Delete 软删除产品
 func (r *orderProductRepo) Delete(uuid uint64) error {
 	return r.db.Model(&model.SaleOrderProduct{}).Where("uuid = ?", uuid).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// Create 创建订单产品
+func (r *orderProductRepo) Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) {
+	err := r.db.Create(&model).Error
+
+	return model, err
 }

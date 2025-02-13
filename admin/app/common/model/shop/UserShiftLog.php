@@ -159,7 +159,7 @@ class UserShiftLog extends BaseModel
      */
     public function detail($id)
     {
-        $detail = $this->with('user')->find($id);
+        $detail = $this->with('user')->where('id', $id)->find();
         //
         $detail['shift_start_time'] = $detail['shift_start_time'] ? DateHelp::formatTimeHis($detail['shift_start_time']) : '-';
         $detail['shift_end_time'] = $detail['shift_end_time'] ? DateHelp::formatTimeHis($detail['shift_end_time']) : '-';

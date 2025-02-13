@@ -61,24 +61,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	helper.Success(c, "退出成功")
 }
 
-// GetCashierBase 收银端信息
-// @Summary 收银端信息
-// @Description 收银端信息
-// @Tags 收银端.认证
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.CashierBase}
-// @Router /cashier/base [get]
-func (h *AuthHandler) GetCashierBase(c *gin.Context) {
-	info, err := h.authSrv.CashierBase(c.Copy())
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
-		return
-	}
-	helper.Success(c, info)
-}
-
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -100,7 +82,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/base", wrapper.GetCashierBase) // 获取基本信息
-		privateApi.POST("/logout", wrapper.Logout)      // 退出登录
+		privateApi.POST("/logout", wrapper.Logout) // 退出登录
 	}
 }

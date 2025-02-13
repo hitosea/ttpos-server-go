@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/dto"
+
 // MultiLanguageName 结构体表示多语言名称 ttpos_multi_language_name
 type MultiLanguageName struct {
 	BaseModel
@@ -11,4 +13,42 @@ type MultiLanguageName struct {
 	JaName   string `gorm:"default:'';column:ja_name;comment:'日语名称'"`
 	KoName   string `gorm:"default:'';column:ko_name;comment:'韩语名称'"`
 	TrName   string `gorm:"default:'';column:tr_name;comment:'土耳其语名称'"`
+}
+
+// GetNames 获取多语言名称
+func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
+	return dto.LocaleResponse{
+		ZH:   m.ZhName,
+		TH:   m.ThName,
+		EN:   m.EnName,
+		ZHTW: m.ZhTwName,
+		JA:   m.JaName,
+		KO:   m.KoName,
+		MY:   m.MyName,
+		TR:   m.TrName,
+	}
+}
+
+// GetNameByLang 获取指定语言名称
+func (m *MultiLanguageName) GetNameByLang(lang string) string {
+	switch lang {
+	case "zh":
+		return m.ZhName
+	case "th":
+		return m.ThName
+	case "en":
+		return m.EnName
+	case "zh_tw":
+		return m.ZhTwName
+	case "ja":
+		return m.JaName
+	case "ko":
+		return m.KoName
+	case "my":
+		return m.MyName
+	case "tr":
+		return m.TrName
+	default:
+		return ""
+	}
 }

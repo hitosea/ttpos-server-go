@@ -204,7 +204,7 @@ func (s *ProductService) ConvertProduct() error {
 					UpdateTime: product.UpdateTime,
 				},
 				Name:                  names.Zh,
-				MultiLanguageNameUuid: uint(id),
+				MultiLanguageNameUuid: id,
 				ImageName:             product.ImgName,
 				ImageFileUuid:         product.ProductImage.ImageID,
 				DeductStockType:       uint(StockDeductMethod),

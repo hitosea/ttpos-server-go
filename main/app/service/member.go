@@ -9,8 +9,8 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) []resp.MemberLevel                     // 获取等级列表
-	SearchMember(companyUuid uint64, keyword string) []resp.SearchMember // 模糊搜索
+	GetLevels(companyUuid uint64) resp.MemberLevelList                     // 获取等级列表
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList // 模糊搜索
 }
 
 // memberSrv 会员服务结构体
@@ -29,7 +29,7 @@ func NewMemberSrvImpl(dbm *database.DBManager) IMemberSrv {
 }
 
 // GetLevels 获取等级列表
-func (s *memberSrv) GetLevels(companyUuid uint64) []resp.MemberLevel {
+func (s *memberSrv) GetLevels(companyUuid uint64) resp.MemberLevelList {
 	memberLevels := repository.NewMemberRepo(s.dbm.GetDB(companyUuid)).GetMemberLevels()
 	respMemberLevels := make([]resp.MemberLevel, 0)
 	for _, memberLevel := range memberLevels {
@@ -37,14 +37,16 @@ func (s *memberSrv) GetLevels(companyUuid uint64) []resp.MemberLevel {
 		copier.Copy(&respMemberLevel, memberLevel)
 		respMemberLevels = append(respMemberLevels, respMemberLevel)
 	}
-	return respMemberLevels
+	return resp.MemberLevelList{
+		List: respMemberLevels,
+	}
 }
 
 // SearchMember 模糊搜索会员
-func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) []resp.SearchMember {
+func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList {
 	searchMembers := make([]resp.SearchMember, 0)
 	if keyword == "" {
-		return searchMembers
+		return resp.SearchMemberList{List: searchMembers}
 	}
 	members := repository.NewMemberRepo(s.dbm.GetDB(companyUuid)).SearchMember(keyword)
 	for _, member := range members {
@@ -52,5 +54,7 @@ func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) []resp.Sear
 		copier.Copy(&searchMember, member)
 		searchMembers = append(searchMembers, searchMember)
 	}
-	return searchMembers
+	return resp.SearchMemberList{
+		List: searchMembers,
+	}
 }

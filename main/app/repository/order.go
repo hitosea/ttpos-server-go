@@ -27,6 +27,7 @@ type IOrderRepo interface {
 	IsPartiallyPaid(param any) bool                                                                                           // 判断是否存在部分支付
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                          // 删除订单产品
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
+	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
 }
 
 // orderRepo 订单仓库
@@ -56,19 +57,19 @@ func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error)
 
 // GetSaleBill 获取销售单
 func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
-	var model model.SaleBill
+	var saleBill model.SaleBill
 	db := r.db
 
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
-	result := db.First(&model)
+	result := db.First(&saleBill)
 	if result.Error != nil {
-		return model, result.Error
+		return saleBill, result.Error
 	}
 
-	return model, nil
+	return saleBill, nil
 }
 
 // CreateSaleOrder 创建销售订单
@@ -496,4 +497,16 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 			Update("delete_time", uint(time.Now().Unix())).
 			Error
 	})
+}
+
+// ChangeProductPrice 修改订单商品价格
+func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error {
+	// todo 等植换考虑下先
+	return r.db.Model(&model.SaleOrderProduct{}).
+		Where("delete_time = ?", 0).
+		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
+		Updates(map[string]interface{}{
+			"custom_price": price,
+			"price":        price,
+		}).Error
 }

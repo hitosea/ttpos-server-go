@@ -32,6 +32,6 @@ class Role extends BaseModel
      */
     public static function detail($role_id)
     {
-        return static::with(['access'])->find($role_id);
+        return static::with(['access'])->where('id', $role_id)->find();
     }
 }

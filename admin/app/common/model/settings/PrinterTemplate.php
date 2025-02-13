@@ -18,7 +18,7 @@ class PrinterTemplate extends BaseModel
      */
     public static function detail($id, $with = [])
     {
-        return static::with($with)->find($id);
+        return static::with($with)->where('id', $id)->find();
     }
 
     /**

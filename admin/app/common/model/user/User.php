@@ -308,9 +308,9 @@ class User extends BaseModel
     /**
      * 更新会员卡id
      */
-    public function setCardId($cardId)
+    public function setMemberCardId($memberCardUuid)
     {
-        return $this->save(['card_id' => $cardId]);
+        return $this->save(['member_card_uuid' => $memberCardUuid]);
     }
 
     /*
@@ -599,12 +599,24 @@ class User extends BaseModel
     }
 
     /**
-     * 会员概括
+     * 会员概括统计
+     * @param array $data 查询条件
+     * @return array 统计结果
      */
-    public function storeOverview($data)
+    public function storeOverview($data = [])
     {
-        $detail = $this->field(['sum(balance) as balance', 'sum(gift_balance) as gift_balance'])->find();
-        return $detail;
+        // 获取统计数据
+        $stats = $this->where([
+            ['delete_time', '=', 0],
+        ])->field([
+            'COALESCE(SUM(balance), 0) as balance',
+            'COALESCE(SUM(gift_balance), 0) as gift_balance',
+        ])->findOrEmpty();
+
+        return [
+            'balance' => round(floatval($stats['balance'] ?? 0), 2),
+            'gift_balance' => round(floatval($stats['gift_balance'] ?? 0), 2),
+        ];
     }
 
     /**

@@ -106,7 +106,8 @@ class Card extends Controller
      */
     public function delay($order_id)
     {
-        $model = CardRecordModel::detail($order_id);
+        /** @var CardRecordModel $model */
+        $model = CardRecordModel::where('id', $order_id)->find();
         if ($model->delay($this->postData())) {
             return $this->renderSuccess('更新成功');
         }
@@ -201,7 +202,7 @@ class Card extends Controller
             //卡片样式
             $image = $model::getImage();
             // 处理小数点
-            $model['open_points_num'] = helper::number2($model['open_points_num']);
+            $model['open_points_num'] = helper::number2($model['open_point_num']);
             $model['open_money_num'] = helper::number2($model['open_money_num']);
             return $this->renderSuccess('', compact('model', 'image'));
         }
