@@ -11,14 +11,13 @@ import (
 
 // IOrderProductSrv 定义订单商品服务接口
 type IOrderProductSrv interface {
-	CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error)                               // 检查商品
-	CheckProductOrderFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                      // 检查商品规格
-	CheckProductOrderSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                     // 检查商品加料
-	CheckProductOrderAttribute(productPackage model.ProductPackage, attributes []model.ProductAttribute) error // 检查商品属性
-	CheckProductOrderFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error               // 检查商品规格库存
-	CheckProductOrderSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品加料库存
-	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)            // 获取所有已经失效的订单商品，检查销售订单的商品是否都是上架状态且未删除
-
+	CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error)                            // 检查商品
+	CheckProductOrderFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
+	CheckProductOrderSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
+	CheckProductOrderAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
+	CheckProductOrderFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error            // 检查商品规格库存
+	CheckProductOrderSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
+	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 }
 
