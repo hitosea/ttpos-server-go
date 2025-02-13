@@ -133,7 +133,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		}
 	}
 
-	uuid, err := database.GetID()
+	uuid, err := utils.GetID()
 	if err != nil {
 		logger.Logger.Error("生成雪花ID失败", zap.Error(err))
 		return apperrors.NewWithCode(constant.CodeFail, "系统内部错误")

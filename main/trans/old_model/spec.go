@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -51,7 +51,7 @@ func (s *SpecService) ConvertSpec() error {
 		}
 		fmt.Println(fmt.Sprintf("spec_id: %d, spec_name: %+v", spec.SpecID, names))
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		if err != nil {
 			return err
 		}

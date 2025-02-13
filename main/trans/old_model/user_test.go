@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 func TestUser(t *testing.T) {
@@ -31,7 +31,7 @@ func TestConvertUser(t *testing.T) {
 func testConvertUser() {
 	InitializeSonyFlakeId()
 
-	database.InitSonyFlakeId()
+	utils.InitSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

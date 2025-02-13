@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 func TestTableType(t *testing.T) {
@@ -31,7 +31,7 @@ func TestConvertTableType(t *testing.T) {
 func testConvertTableType() {
 	InitializeSonyFlakeId()
 
-	database.InitSonyFlakeId()
+	utils.InitSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 func TestShopRoleAccess(t *testing.T) {
@@ -31,7 +31,7 @@ func TestConvertShopRoleAccess(t *testing.T) {
 func testConvertShopRoleAccess() {
 	InitializeSonyFlakeId()
 
-	database.InitSonyFlakeId()
+	utils.InitSonyFlakeId()
 
 	db, err := NewMySQLConnection(conf, dbName)
 	if err != nil {

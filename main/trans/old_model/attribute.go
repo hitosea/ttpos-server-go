@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -53,7 +53,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 		}
 		fmt.Println(fmt.Sprintf("attribute_id: %d, attribute_name: %+v", attribute.AttributeID, names))
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		if err != nil {
 			return err
 		}

@@ -75,7 +75,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 获取销售账单UUID
-		saleBillUuid, err := database.GetID()
+		saleBillUuid, err := utils.GetID()
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 获取销售订单UUID
-		saleOrderUuid, err := database.GetID()
+		saleOrderUuid, err := utils.GetID()
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 	var db = s.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 获取销售账单UUID
-		saleBillUuid, err := database.GetID()
+		saleBillUuid, err := utils.GetID()
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 获取销售订单UUID
-		saleOrderUuid, err := database.GetID()
+		saleOrderUuid, err := utils.GetID()
 		if err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 						continue
 					}
 
-					saleOrderBuffetCustomerTypeUuid, err := database.GetID()
+					saleOrderBuffetCustomerTypeUuid, err := utils.GetID()
 					if err != nil {
 						return err
 					}

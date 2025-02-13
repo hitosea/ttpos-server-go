@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"ttpos-server-go/pkg/utils"
 
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -41,7 +42,7 @@ func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog
 	if startTime == 0 {
 		startTime = time.Now().Unix()
 	}
-	uuid, err := database.GetID()
+	uuid, err := utils.GetID()
 	if err != nil {
 		return model.StaffShiftLog{}, err
 	}

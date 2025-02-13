@@ -6,7 +6,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -82,7 +82,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			return err
 		}
 		for _, productID := range productIDList {
-			id, err := database.GetID()
+			id, err := utils.GetID()
 			if err != nil {
 				return err
 			}
@@ -108,7 +108,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			return err
 		}
 		for _, printerID := range printerIDList {
-			id, err := database.GetID()
+			id, err := utils.GetID()
 			if err != nil {
 				return err
 			}
@@ -133,7 +133,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			return err
 		}
 		for _, regionID := range regionIDList {
-			id, err := database.GetID()
+			id, err := utils.GetID()
 			if err != nil {
 				return err
 			}

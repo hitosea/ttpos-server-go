@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -116,7 +116,7 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		fmt.Printf("%+v\n", names)
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		if err != nil {
 			return err
 		}

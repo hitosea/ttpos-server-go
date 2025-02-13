@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -50,7 +50,7 @@ func (s *ReturnReasonService) ConvertReturnReason() error {
 		}
 		fmt.Println(fmt.Sprintf("return_reason_id: %d, return_reason_name: %+v", returnReason.Id, names))
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		if err != nil {
 			return err
 		}

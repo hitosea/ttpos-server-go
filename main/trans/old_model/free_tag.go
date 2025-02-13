@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 type FreeTag struct {
@@ -48,7 +48,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		}
 		fmt.Println(fmt.Sprintf("free_tag_id: %d, free_tag_name: %+v", freeTag.Id, names))
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
 		languageName := names.GenMultiLanguageName(id)

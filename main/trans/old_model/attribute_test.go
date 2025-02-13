@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 func TestGetAttributeList(t *testing.T) {
@@ -23,7 +23,7 @@ var SonyFlakeIdOnce sync.Once
 
 func InitializeSonyFlakeId() {
 	SonyFlakeIdOnce.Do(func() {
-		database.InitSonyFlakeId()
+		utils.InitSonyFlakeId()
 	})
 }
 

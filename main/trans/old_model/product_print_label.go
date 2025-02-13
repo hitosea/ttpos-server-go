@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -45,7 +45,7 @@ func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 	for _, productPrintLabel := range productPrintLabels {
 		fmt.Println(fmt.Sprintf("-------迁移product_print_label: %+v", productPrintLabel))
 
-		id, err := database.GetID()
+		id, err := utils.GetID()
 		if err != nil {
 			return err
 		}
