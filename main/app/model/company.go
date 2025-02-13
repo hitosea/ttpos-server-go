@@ -27,7 +27,7 @@ type CompanySetting struct {
 	IsOpenAssistant  int    `gorm:"column:is_open_assistant;type:int(11);default:0;comment:是否开启点餐助手: 0不开启, 1开启;NOT NULL" json:"is_open_assistant"`
 	IsOpenKitchenKds int    `gorm:"column:is_open_kitchen_kds;type:int(11);default:0;comment:是否开启后厨KDS: 0不开启, 1开启;NOT NULL" json:"is_open_kitchen_kds"`
 	IsOpenBuffet     int    `gorm:"column:is_open_buffet;type:int(11);default:0;comment:是否开启自助餐: 0不开启, 1开启;NOT NULL" json:"is_open_buffet"`
-	IsOpenScanOrder  int    `gorm:"column:is_open_scan_order;type:int(11);default:0;comment:是否开启扫码点餐接单 0不开启, 1开启;NOT NULL" json:"is_open_scan_order"`
+	IsOpenH5Order    int    `gorm:"column:is_open_h5_order;type:int(11);default:0;comment:是否开启扫码点餐接单 0不开启, 1开启;NOT NULL" json:"is_open_h5_order"`
 	IsOpenLocalPrint int    `gorm:"column:is_open_local_print;type:int(11);default:1;comment:是否开启本地打印服务 0不开启, 1开启;NOT NULL" json:"is_open_local_print"`
 	CashLimit        int    `gorm:"column:cash_limit;type:int(11);default:0;comment:收银机上限;NOT NULL" json:"cash_limit"`
 	KitchenLimit     int    `gorm:"column:kitchen_limit;type:int(11);default:0;comment:厨显上限;NOT NULL" json:"kitchen_limit"`

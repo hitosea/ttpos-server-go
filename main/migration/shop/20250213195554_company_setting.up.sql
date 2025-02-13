@@ -1,0 +1,1 @@
+ALTER TABLE `ttpos_company_setting` CHANGE COLUMN `is_open_scan_order` `is_open_h5_order`  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启';

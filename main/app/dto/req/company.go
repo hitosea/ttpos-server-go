@@ -24,7 +24,7 @@ type ParamCreateCompany struct {
 	IsOpenAssistant  int      `json:"is_open_assistant"`   // 是否开启助手
 	IsOpenKitchenKds int      `json:"is_open_kitchen_kds"` // 是否开启厨房KDS
 	IsOpenBuffet     int      `json:"is_open_buffet"`      // 是否开启自助餐
-	IsOpenScanOrder  int      `json:"is_open_scan_order"`  // 是否接受扫码订单
+	IsOpenH5Order    int      `json:"is_open_h5_order"`    // 是否接受扫码订单
 	IsOpenLocalPrint int      `json:"is_open_local_print"` // 是否开启本地打印
 	TableLimit       int      `json:"table_limit"`         // 桌位限制
 	PrinterLimit     int      `json:"printer_limit"`       // 打印机限制
@@ -55,7 +55,7 @@ type ParamUpdateCompany struct {
 	IsOpenAssistant  int      `json:"is_open_assistant"`   // 是否开启助手
 	IsOpenKitchenKds int      `json:"is_open_kitchen_kds"` // 是否开启厨房KDS
 	IsOpenBuffet     int      `json:"is_open_buffet"`      // 是否开启自助餐
-	IsOpenScanOrder  int      `json:"is_open_scan_order"`  // 是否接受扫码订单
+	IsOpenH5Order    int      `json:"is_open_h5_order"`    // 是否接受扫码订单
 	IsOpenLocalPrint int      `json:"is_open_local_print"` // 是否开启本地打印
 	TableLimit       int      `json:"table_limit"`         // 桌位限制
 	PrinterLimit     int      `json:"printer_limit"`       // 打印机限制
