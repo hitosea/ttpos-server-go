@@ -89,7 +89,7 @@ class Controller extends BaseController
         //
         request()->licenses = $license = App::where('uuid', $appId)->find()?->getLicense();
         //
-        if (($license['is_open_scan'] ?? 0) != 1) {
+        if (($license['is_open_h5'] ?? 0) != 1) {
             throw new BaseException(['msg' => '当前未开启扫码点餐功能，请联系销售代表', 'data' => [], 'code' => StatusCode::USER_ERROR]);
         }
         // 系统设置状态

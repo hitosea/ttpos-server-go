@@ -4135,7 +4135,7 @@ class Order extends BaseModelOrder
                 $this->error = '使用会员才能进行余额支付';
                 return false;
             }
-            $user = UserModel::where('user_id', $order['user_id'])->find();
+            $user = UserModel::where('uuid', $order['user_id'])->find();
             $user_balance = $user->balance;
             $user_gift_balance_balance = $user->gift_balance;
             if ($price > $user_balance + $user_gift_balance_balance) {
@@ -4460,12 +4460,11 @@ class Order extends BaseModelOrder
         $balancePay = OrderPayType::where('order_id', $this['order_id'])->where('value', OrderPayTypeEnum::BALANCE)->find();
         if ($balancePay) {
             // 累积用户总消费金额
-            $this['user_id'] && $this->user->setIncPayMoney($balancePay['price']);
+            $this['uuid'] && $this->user->setIncPayMoney($balancePay['price']);
             // 更新用户余额
             BalanceLog::add(BalanceLogSceneEnum::CONSUME, [
                 'order_id' => $this['order_id'],
-                'user_id' => $this->user['user_id'],
-                'card_id' => $this->user['card_id'],
+                'member_uuid' => $this->user['uuid'],
                 'money' => -$balancePay['price'],
             ], ['order_no' => $this['order_no']]);
         }

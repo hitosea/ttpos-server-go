@@ -44,7 +44,7 @@ class Cash extends CashModel
         $model = $model->alias('cash')
             ->with(['user'])
             ->field('cash.*, user.nickName, user.avatarUrl')
-            ->join('user user', 'user.user_id = cash.user_id')
+            ->join('member user', 'user.uuid = cash.member_uuid')
             ->order(['cash.create_time' => 'desc']);
         // 查询条件
         if ($user_id > 0) {
@@ -97,8 +97,7 @@ class Cash extends CashModel
             User::totalMoney($this['user_id'], $this['money']);
             //添加余额记录
             BalanceLogModel::add(BalanceLogSceneEnum::CASH, [
-                'user_id' => $this['user_id'],
-                'card_id' => User::detail($this['user_id'])?->card_id,
+                'member_uuid' => $this['user_id'],
                 'money' => -$this['money'],
             ], '');
             // 事务提交
@@ -201,7 +200,7 @@ class Cash extends CashModel
         $model = $model->alias('cash')
             ->with(['user'])
             ->field('cash.*, user.nickName, user.avatarUrl,user.mobile')
-            ->join('user user', 'user.user_id = cash.user_id')
+            ->join('member user', 'user.uuid = cash.member_uuid')
             ->order(['cash.create_time' => 'desc']);
         // 查询条件
         if ($user_id > 0) {

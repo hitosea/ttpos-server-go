@@ -7,9 +7,25 @@ use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 
 class PointsLog extends BaseModel
 {
-    protected $name = 'user_points_log';
-    protected $pk = 'log_id';
-    protected $updateTime = false;
+    protected $name = 'member_point_log';
+    protected $pk = 'id';
+
+    /**
+     * 追加属性
+     */
+    protected $append = ['log_id', 'user_id'];
+
+    /**
+     * 兼容字段
+     */
+    public function getLogIdAttr($value, $data)
+    {
+        return $this->id ?: 0;
+    }
+    public function getUserIdAttr($value, $data)
+    {
+        return $this->member_uuid ?: 0;
+    }
 
     /**
      * 获取当前模型属性
@@ -40,7 +56,7 @@ class PointsLog extends BaseModel
     public function user()
     {
         $module = self::getCalledModule() ?: 'common';
-        return $this->belongsTo("app\\{$module}\\model\\user\\User");
+        return $this->belongsTo("app\\{$module}\\model\\user\\User", 'member_uuid', 'uuid')->field('*, nickname as nickName')->hidden(['password']);
     }
 
     /**

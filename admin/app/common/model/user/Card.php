@@ -13,17 +13,21 @@ use app\common\model\user\BalanceLog as BalanceLogModel;
  */
 class Card extends BaseModel
 {
-    protected $name = 'member_card';
-    protected $pk = 'card_id';
+    protected $name = 'member_card_type';
+    protected $pk = 'id';
 
     /**
      * 追加字段
      * @var string[]
      */
     protected $append = [
-        'card_id',
-        'card_style_url',
         'expire_time_text',
+        //
+        'card_id',
+        'card_name',
+        'is_discount',
+        'money',
+        'receive_num',
     ];
 
     /**
@@ -31,7 +35,23 @@ class Card extends BaseModel
      */
     public function getCardIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
+    }
+    public function getCardNameAttr()
+    {
+        return $this->getData('name') ?: '';
+    }
+    public function getIsDiscountAttr($value, $data)
+    {
+        return $this->discount > 0 ? 1 : 0;
+    }
+    public function getMoneyAttr($value, $data)
+    {
+        return $this->price ?: 0;
+    }
+    public function getReceiveNumAttr($value, $data)
+    {
+        return (new CardRecord)->where('member_card_type_uuid', '=', $this->uuid)->count();
     }
 
     /**
@@ -43,21 +63,6 @@ class Card extends BaseModel
     public function getExpireTimeTextAttr($value, $data)
     {
         return $data['expire'] ? __('有效期：') . $data['expire'] . __('个月') : __('永久有效');
-    }
-
-    /**
-     * 卡片样式
-     * @param $value
-     * @param $data
-     * @return string
-     */
-    public function getCardStyleUrlAttr($value, $data)
-    {
-        if ($data['is_default']) {
-            return $data['default_style'];
-        } else {
-            return $data['card_style'] ? base_url() . 'image/card/' . $data['card_style'] : '';
-        }
     }
 
     /**
@@ -87,7 +92,7 @@ class Card extends BaseModel
      */
     public static function detail($card_id, $with = [])
     {
-        return (new static())->with($with)->find($card_id);
+        return (new static())->with($with)->where('uuid', $card_id)->find();
     }
 
     /**
@@ -123,9 +128,9 @@ class Card extends BaseModel
     // 检测用户是否有余额/积分消费记录
     public function checkUserConsumeRecord($user_id, $card_id = 0)
     {
-        if (!(new BalanceLogModel)->where('user_id', $user_id)->where('card_id', $card_id)->where('scene', BalanceLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty()) {
+        if (!(new BalanceLogModel)->where('member_uuid', $user_id)->where('scene', BalanceLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty()) {
             return true;
         }
-        return !(new PointsLogModel)->where('user_id', $user_id)->where('card_id', $card_id)->where('scene', PointsLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty();
+        return !(new PointsLogModel)->where('member_uuid', $user_id)->where('scene', PointsLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty();
     }
 }

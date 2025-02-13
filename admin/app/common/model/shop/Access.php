@@ -317,7 +317,7 @@ class Access extends BaseModel
                 }
             }
             // 授权无H5点餐权限
-            if (isset($licenses['is_open_scan']) && $licenses['is_open_scan'] == 0) {
+            if (isset($licenses['is_open_h5']) && $licenses['is_open_h5'] == 0) {
                 if ($value['uuid'] == 1724220505) {
                     continue;
                 }
@@ -341,7 +341,7 @@ class Access extends BaseModel
                 }
             }
             // 授权无扫码点餐接单权限
-            if (isset($licenses['is_accept_scan_order']) && $licenses['is_accept_scan_order'] == 0) {
+            if (isset($licenses['is_open_h5_order']) && $licenses['is_open_h5_order'] == 0) {
                 if ($value['uuid'] == 1724320522) {
                     continue;
                 }

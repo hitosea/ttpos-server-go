@@ -18,7 +18,7 @@ class User extends UserModel
     public function upgradeGrade($user, $upgradeGrade)
     {
         // 更新会员等级的数据
-        $this->where('user_id', '=', $user['user_id'])
+        $this->where('uuid', '=', $user['user_id'])
             ->update([
                 'grade_id' => $upgradeGrade['grade_id']
             ]);
@@ -26,7 +26,7 @@ class User extends UserModel
             'old_grade_id' => $user['grade_id'],
             'new_grade_id' => $upgradeGrade['grade_id'],
             'change_type' => ChangeTypeEnum::AUTO_UPGRADE,
-            'user_id' => $user['user_id'],
+            'member_uuid' => $user['user_id'],
         ]);
         return true;
     }

@@ -68,11 +68,11 @@ class App extends AppModel
             "su.company_uuid as shop_supplier_id",
             "su.is_open_member",
             "su.is_open_tablet",
-            "su.is_open_scan",
+            "su.is_open_h5 as is_open_scan",
             "su.is_open_assistant",
             "su.is_open_kitchen_kds",
             "su.is_open_buffet",
-            "su.is_accept_scan_order",
+            "su.is_open_h5_order as is_accept_scan_order",
             "su.is_open_local_print",
             "su.table_limit",
             "su.printer_limit",
@@ -243,6 +243,12 @@ class App extends AppModel
             // 平台
             $this->save($save_data);
 
+            // 商户
+            if (isset($data['logo'])) unset($data['logo']);
+            $data['is_open_h5'] = $data['is_open_scan'] ?? 0;
+            $data['is_open_h5_order'] = $data['is_accept_scan_order'] ?? 0;
+            SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
+
             // 用户
             $shop_user->save($user_data);
 
@@ -253,10 +259,6 @@ class App extends AppModel
                 $staff['password'] = salt_hash($data['password']);
             }
             (new ShopStaffModel([], $companyUuid))->setAppId($companyUuid)->where('uuid', $shop_user->uuid)->find()?->save($staff);
-
-            // 商户
-            if (isset($data['logo'])) unset($data['logo']);
-            SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
 
             // todo 会员设置 - 支付方式关联
             // if (isset($data['is_open_member'])) {

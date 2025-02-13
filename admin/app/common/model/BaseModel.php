@@ -137,6 +137,15 @@ class BaseModel extends Model
         });
     }
 
+    // 新增前
+    public static function onBeforeInsert(Model $model)
+    {
+        $fields = $model->getTable() ? $model->getFields() : [];
+        if (in_array('uuid', array_keys($fields)) && empty($model->uuid)) {
+            $model->uuid = createUuid();
+        }
+    }
+
     // 更新前
     public static function onBeforeUpdate(Model $model)
     {

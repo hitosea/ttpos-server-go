@@ -197,11 +197,11 @@ class App extends BaseModel
             'logo' => $this->supplier?->logo,                       // 商家logo
             'is_open_member' => $this->supplier?->is_open_member,
             'is_open_tablet' => $this->supplier?->is_open_tablet,
-            'is_open_scan' => $this->supplier?->is_open_scan,
+            'is_open_h5' => $this->supplier?->is_open_h5,
             'is_open_assistant' => $this->supplier?->is_open_assistant,
             'is_open_kitchen_kds' => $this->supplier?->is_open_kitchen_kds,
             'is_open_buffet' => $this->supplier?->is_open_buffet,
-            'is_accept_scan_order' => $this->supplier?->is_accept_scan_order, // 是否开启扫码点餐接单
+            'is_open_h5_order' => $this->supplier?->is_open_h5_order, // 是否开启扫码点餐接单
             'is_open_local_print' => $this->supplier?->is_open_local_print, // 是否开启本地打印服务
         ];
         //

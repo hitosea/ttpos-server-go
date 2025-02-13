@@ -63,7 +63,7 @@ class Card extends CardModel
                     continue;
                 }
                 // 删除原有的会员卡
-                (new CardRecord())->where('user_id', $userId)->delete();
+                (new CardRecord())->where('member_uuid', $userId)->delete();
             }
 
             $detail = self::detail($data['card_id']);
@@ -71,7 +71,7 @@ class Card extends CardModel
             try {
                 //添加会员卡
                 $record = [
-                    'user_id' => $userId,
+                    'member_uuid' => $userId,
                     'card_id' => $data['card_id'],
                     'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
                     'money' => $detail['money'],
@@ -101,8 +101,7 @@ class Card extends CardModel
                 // 赠送余额
                 if ($detail['open_money'] && $detail['open_money_num']) {
                     BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
-                        'user_id' => $user['user_id'],
-                        'card_id' => $data['card_id'],
+                        'member_uuid' => $user['user_id'],
                         'money' => helper::bcadd($detail['open_money_num'], 0), // v1.0.8显示余额明细
                         'gift_money' => $detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
                     ], ['order_no' => '后台发放会员卡赠送']);
@@ -148,8 +147,7 @@ class Card extends CardModel
             }
             if ($detail['open_money'] && $detail['open_money_num']) {
                 BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
-                    'user_id' => $user['user_id'],
-                    'card_id' => $detail['card_id'],
+                    'member_uuid' => $user['user_id'],
                     'money' => -$detail['open_money_num'],
                     'gift_money' => -$detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
                 ], ['order_no' => '撤销会员卡减少余额']);
@@ -225,7 +223,18 @@ class Card extends CardModel
         if (($data['is_discount'] ?? 0) == 0) {
             $data['discount'] = 0;
         }
-        $data['app_id'] = self::$app_id;
+        // {"card_name":"001",
+        //     "type_id":1,"card_style":"","sort":0,"is_discount":1,"discount":100,
+        //     "open_points":1,"open_points_num":"11","open_coupon":0,"open_coupons":[],"month_points":0,
+        //     "month_points_num":0,"month_coupon":0,"month_coupons":[],"expire":0,"money":0,"stock":"",
+        //     "status":0,"content":"11","sub_card":0,"sub_num":0,"default_style":"","is_default":0,
+        //     "open_money":1,"open_money_num":"22"}
+        //
+        $data['name'] = $data['card_name'] ?? '';
+        $data['open_point'] = $data['open_points'] ?? 0;
+        $data['open_point_num'] = $data['open_points_num'] ?? 0;
+        $data['description'] = $data['content'] ?? '';
+        $data['price'] = $data['money'] ?? 0;
         return $this->save($data);
     }
 
@@ -275,7 +284,7 @@ class Card extends CardModel
     public function setDelete()
     {
         // 判断该卡下是否存在会员
-        if (CardRecordModel::checkExistByRecordId($this['card_id'])) {
+        if (CardRecordModel::checkExistByRecordId($this['uuid'])) {
             return false;
         }
         return $this->delete();

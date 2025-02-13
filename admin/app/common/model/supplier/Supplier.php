@@ -24,12 +24,6 @@ class Supplier extends BaseModel
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
-    // 写入后同步数据
-    public static function onAfterWrite(Model $data)
-    {
-        self::synchronousSetting($data);
-    }
-
     // 更新后同步数据
     public static function onAfterUpdate(Model $model)
     {
@@ -42,6 +36,12 @@ class Supplier extends BaseModel
                 }
             }
         }
+    }
+
+    // 写入后同步数据
+    public static function onAfterWrite(Model $data)
+    {
+        self::synchronousSetting($data);
     }
 
     /**
@@ -191,9 +191,7 @@ class Supplier extends BaseModel
     public function onBatchIncSupplierMoney($data)
     {
         foreach ($data as $supplierId => $supplierMoney) {
-            $this->inc('total_money', $supplierMoney)
-                ->inc('money', $supplierMoney)
-                ->update();
+            $this->inc('total_money', $supplierMoney)->inc('money', $supplierMoney);
         }
         return true;
     }
@@ -276,7 +274,7 @@ class Supplier extends BaseModel
      */
     public static function synchronousSetting(self $data, $type = '')
     {
-        $oidAppId = request()->appId;
+        $oidAppId = request()->appId ?: 0;
         request()->appId = $data->company_uuid;
         $companyUuid = $data->company_uuid;
         try {
@@ -317,7 +315,7 @@ class Supplier extends BaseModel
                 'language' => $settingLanguages
             ], $data->shop_supplier_id, $companyUuid, 1);
             // 拒单
-            if (isset($data['is_accept_scan_order']) && $data['is_accept_scan_order'] == 0) {
+            if (isset($data['is_open_h5_order']) && $data['is_open_h5_order'] == 0) {
                 $list = (new TakeOrder([], $companyUuid))->where('status', 0)->select();
                 /** @var TakeOrder $item */
                 foreach ($list as $item) {
@@ -436,7 +434,7 @@ class Supplier extends BaseModel
         $detail['buffet'] = $buffet;
         // 授权信息
         $detail['license_remaining_days'] = DateHelp::getLicenseRemainingDays(request()->licenses);
-        $detail['is_accept_scan_order'] = isset(request()->licenses['is_accept_scan_order']) ? request()->licenses['is_accept_scan_order'] : 0;
+        $detail['is_open_h5_order'] = isset(request()->licenses['is_open_h5_order']) ? request()->licenses['is_open_h5_order'] : 0;
         // 云端基础信息
         $cloud_basic = SettingModel::getCloudBasic();
         $detail['cloud_basic'] = $cloud_basic;

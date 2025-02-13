@@ -56,6 +56,8 @@ class Grade extends GradeModel
         $data['uuid'] = createUuid();
         $data['discount'] = $data['equity'];
         $data['priority'] = $data['weight'];
+        $data['open_point'] = $data['open_points'];
+        $data['upgrade_point'] = $data['upgrade_points'];
         return $this->save($data);
     }
 
@@ -93,6 +95,8 @@ class Grade extends GradeModel
         //
         $data['discount'] = $data['equity'];
         $data['priority'] = $data['weight'];
+        $data['open_point'] = $data['open_points'];
+        $data['upgrade_point'] = $data['upgrade_points'];
         return $this->save($data);
     }
 

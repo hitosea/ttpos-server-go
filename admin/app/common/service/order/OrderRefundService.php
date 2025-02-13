@@ -63,7 +63,7 @@ class OrderRefundService
         $user = UserModel::detail($order['user_id']);
         // 记录余额明细
         BalanceLogModel::add(BalanceLogSceneEnum::REFUND, [
-            'user_id' => $user['user_id'],
+            'member_uuid' => $user['user_id'],
             'card_id' => $user['card_id'],
             'money' => $money,
         ], ['order_no' => $order['order_no']]);
@@ -104,7 +104,7 @@ class OrderRefundService
         $user = UserModel::detail($order['user_id']);
         // 记录余额明细
         BalanceLogModel::add(BalanceLogSceneEnum::REFUND, [
-            'user_id' => $user['user_id'],
+            'member_uuid' => $user['user_id'],
             'card_id' => $user['card_id'],
             'money' => $money,
         ], ['order_no' => $order['order_no']]);

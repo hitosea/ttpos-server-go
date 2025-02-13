@@ -10,8 +10,8 @@ use app\common\service\order\OrderService;
  */
 class CardRecord extends BaseModel
 {
-    protected $pk = 'order_id';
-    protected $name = 'user_card_record';
+    protected $name = 'member_card_log';
+    protected $pk = 'id';
 
     /**
      * 追加字段
@@ -22,7 +22,17 @@ class CardRecord extends BaseModel
         'pay_time_text',
         'pay_type_text',
         'disabled',
+        //
+        'order_id',
     ];
+
+    /**
+     * 兼容字段
+     */
+    public function getOrderIdAttr()
+    {
+        return $this->uuid ?: 0;
+    }
 
     /**
      * 会员卡有效期
@@ -127,7 +137,7 @@ class CardRecord extends BaseModel
     public static function checkExistByRecordId($card_id)
     {
         $model = new static;
-        return !!$model->where('card_id', '=', (int)$card_id)->count();
+        return !!$model->where('member_card_type_uuid', '=', (int)$card_id)->count();
     }
 
     /**
@@ -135,9 +145,9 @@ class CardRecord extends BaseModel
      */
     public static function checkExistByUserId($user_id, $order_id = 0)
     {
-        $model = (new static)->where('pay_status', '=', 20)->where('user_id', '=', $user_id);
+        $model = (new static)->where('member_uuid', '=', $user_id);
         if ($order_id) {
-            $model = $model->where('order_id', '=', $order_id);
+            $model = $model->where('uuid', '=', $order_id);
         }
         return $model->findOrEmpty();
     }
