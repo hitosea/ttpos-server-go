@@ -1,7 +1,14 @@
 package command
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
+	"os"
+	"time"
+	"ttpos-server-go/config"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	miMysql "github.com/golang-migrate/migrate/v4/database/mysql"
@@ -10,10 +17,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	"log"
-	"os"
-	"time"
-	"ttpos-server-go/config"
 )
 
 func init() {
@@ -76,11 +79,23 @@ func runSaasMigrate(op string) {
 	}
 	databaseConf := config.Database
 	fmt.Println(fmt.Sprintf("dbconf:%+v", databaseConf))
-	db, err := NewMySQLConnection(databaseConf, databaseConf.Database)
+
+	dns := fmt.Sprintf("%s:%s@tcp(%s:%d)/", "root", databaseConf.RootPassword, databaseConf.Host, databaseConf.Port)
+	fmt.Println(dns)
+	db, err := sql.Open("mysql", dns)
 	if err != nil {
+		log.Fatal(err)
+	}
+	// 查询是否存在数据库
+	err = createDatabaseIfNotExists(db, databaseConf.Database)
+	if err != nil {
+		log.Fatal(err)
+	}
+	saasDb, errSql := NewMySQLConnection(databaseConf, databaseConf.Database)
+	if errSql != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	dbInstance, _ := db.DB()
+	dbInstance, _ := saasDb.DB()
 	instance, _ := miMysql.WithInstance(dbInstance, &miMysql.Config{
 		MigrationsTable:  "",
 		DatabaseName:     databaseConf.Database,
@@ -109,4 +124,32 @@ func runSaasMigrate(op string) {
 		}
 	}
 
+}
+
+func createDatabaseIfNotExists(db *sql.DB, targetDbName string) error {
+	rows, err := db.QueryContext(context.Background(), "SHOW DATABASES")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	exists := false
+	for rows.Next() {
+		var dbName string
+		err = rows.Scan(&dbName)
+		if err != nil {
+			return err
+		}
+		if dbName == targetDbName {
+			exists = true
+			break
+		}
+	}
+	if !exists {
+		_, err = db.ExecContext(context.Background(), "CREATE DATABASE "+targetDbName)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
