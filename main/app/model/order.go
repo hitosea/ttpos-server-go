@@ -1,9 +1,7 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -67,9 +65,7 @@ type SaleBill struct {
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
-/**
-* 判断订单是否可操作
- */
+// ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(operation string) error {
 	if operation != constant.OrderSettle && model.IsLock == 1 {
 		return errors.New("订单已被锁定，请解锁后重新操作")
@@ -131,9 +127,7 @@ type SaleOrder struct {
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
-/**
-* 判断订单是否可操作
- */
+// ValidateOrderStatus 判断订单是否可操作
 func (model *SaleOrder) ValidateOrderStatus() error {
 	if model.Status == constant.SaleBillStatusCanceled {
 		return errors.New("订单已取消")
@@ -188,10 +182,11 @@ type SaleOrderProduct struct {
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
-// 销售订单产品属性 SaleOrderProductAttribute `ttpos_sale_order_product_attribute`
+// SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
 	BaseModel
 	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
+	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
 }
@@ -201,8 +196,6 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
 
-	json, _ := json.Marshal(model)
-	fmt.Println(string(json))
 	// 物料ID列表
 	for _, bom := range model.SaleOrderProductBoms {
 		bomIdList = append(bomIdList, strconv.FormatUint(bom.ProductBomUuid, 10))
@@ -224,15 +217,17 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	return bomIdListStr + "-" + attributeIdListStr
 }
 
-// 销售订单产品原料 SaleOrderProductBom `ttpos_sale_order_product_bom`
+// SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
-	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
-	Num                  uint   `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
-	Unit                 string `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
-	IsFlavorBom          uint   `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
-	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
-	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	Name                 string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'原料名称,不随后台更新'"`
+	Num                  uint    `gorm:"column:num;not null;default:0;comment:'原料用量,不随后台更新'"`
+	Unit                 string  `gorm:"column:unit;type:varchar(255);not null;default:'';comment:'单位,不随后台更新'"`
+	Price                float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'原料价格,不随后台更新'"`
+	SaleOrderUuid        uint64  `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
+	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductBomUuid       uint64  `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	IsFlavorBom          uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 }
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting
@@ -277,7 +272,7 @@ type SaleOrderProductMaterial struct {
 	BomUuid              uint64 `gorm:"column:bom_uuid;type:bigint(20);default:0;comment:BOM ID" json:"bom_uuid"`
 }
 
-// 桌台账单操作记录
+// SaleBillOperationRecord 桌台账单操作记录
 type SaleBillOperationRecord struct {
 	BaseModel
 	Source        string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
