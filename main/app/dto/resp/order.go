@@ -104,10 +104,15 @@ type CashierOrderInfos struct {
 }
 
 type CashierOrderOperationLog struct {
-	Source     uint   `json:"source"`      // 来源
-	CreateTime int64  `json:"create_time"` // 创建时间
-	Username   string `json:"username"`    // 会员名称
-	UserEmail  string `json:"user_email"`  // 会员邮箱
+	Uuid          uint64 `json:"uuid"`            // 账单操作记录ID
+	Source        string `json:"source"`          // 操作来源 cashier-收银 assistant-助手 shop-商家后台
+	Action        string `json:"action"`          // 操作行为
+	Message       string `json:"message"`         // 消息内容
+	Data          string `json:"data"`            // 消息数据
+	Remark        string `json:"remark"`          // 备注
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID
+	CreateTime    int64  `json:"create_time"`     // 创建时间(时间戳)
 }
 
 type CashierOrderInfoResp struct {

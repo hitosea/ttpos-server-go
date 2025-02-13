@@ -10,11 +10,16 @@ import (
 
 // IOrderOperationRecordRepo 订单操作记录
 type IOrderOperationRecordRepo interface {
-	GetRecordList(pageNo, pageSize int) ([]model.SaleBillOperationRecord, int64, error)
+	GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleBillOperationRecord, int64, error)
+	GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error)
 	GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error)
 	UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error
 	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error)
 	DeleteRecord(saleBillUuid uint64) error
+}
+
+type OrderOperationRecordRepoImpl struct {
+	db *gorm.DB
 }
 
 func NewOrderOperationRecordRepo(db *gorm.DB) IOrderOperationRecordRepo {
@@ -26,16 +31,16 @@ func NewOrderOperationRecordRepoImpl(db *gorm.DB) *OrderOperationRecordRepoImpl 
 	return &OrderOperationRecordRepoImpl{db: db}
 }
 
-type OrderOperationRecordRepoImpl struct {
-	db *gorm.DB
-}
-
 // GetOrderOperationRecordList 获取订单操作记录列表
-func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int) ([]model.SaleBillOperationRecord, int64, error) {
+func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleBillOperationRecord, int64, error) {
 	var orderOperationRecords []model.SaleBillOperationRecord
 	var total int64
 
 	query := r.db.Model(&model.SaleBillOperationRecord{}).Where("delete_time = ?", 0)
+
+	for _, opt := range opts {
+		query = opt(query)
+	}
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
@@ -45,6 +50,13 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int) ([]mo
 	// 获取分页数据
 	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orderOperationRecords).Error
 	return orderOperationRecords, total, err
+}
+
+// GetOrderOperationRecordList 获取订单操作记录列表
+func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error) {
+	var orderOperationRecords []model.SaleBillOperationRecord
+	err := r.db.Model(&model.SaleBillOperationRecord{}).Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderOperationRecords).Error
+	return orderOperationRecords, err
 }
 
 // GetOrderOperationRecordInfo 获取订单操作记录信息
