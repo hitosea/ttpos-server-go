@@ -4,28 +4,28 @@ namespace app\common\model\product;
 
 use think\facade\Db;
 use think\Collection;
+use help\ValidateHelp;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
-use app\common\model\product\AttributeGroup;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\ProductAttribute;
 use app\common\model\product\ProductAttributeGroup;
-use app\common\model\product\Attribute as AttributeModel;
 
 /**
  * 属性模型
  */
-class Attribute extends BaseModel
+class AttributeGroup extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'product_attribute';
+    protected $name = 'product_attribute_group';
     protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
     /**
-     * 追加字段
+     * 处理多语言
      */
-    protected $append = ['attribute_id', 'attribute_name', 'attribute_name_text', 'parent_attribute_name_text'];
+    protected $append = ['attribute_id', 'attribute_name', 'parent_id', 'attribute_name_text', 'parent_attribute_name_text'];
 
     /**
      * 兼容字段
@@ -37,6 +37,10 @@ class Attribute extends BaseModel
     public function getAttributeNameAttr($value, $data = [])
     {
         return $this->getData('name') ?: 0;
+    }
+    public function getParentIdAttr($value, $data = [])
+    {
+        return 0;
     }
 
     /**
@@ -98,15 +102,7 @@ class Attribute extends BaseModel
      */
     public function children()
     {
-        return $this->hasMany(Attribute::class, 'parent_id', 'attribute_id');
-    }
-
-    /**
-     * 父属性
-     */
-    public function parent()
-    {
-        return $this->belongsTo(Attribute::class, 'parent_id', 'attribute_id');
+        return $this->hasMany(Attribute::class, 'attribute_group_uuid', 'uuid');
     }
 
     /**
@@ -187,22 +183,8 @@ class Attribute extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
         return $this->alias('a')
             ->field('a.*')
-            ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(pa.product_ids, '') AS product_ids")
-            ->leftJoin("
-                (
-                    SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
-                    FROM {$prefix}product_attribute pa
-                    LEFT JOIN {$prefix}product product ON pa.product_id = product.product_id
-                    WHERE product.is_delete = 0
-                    GROUP BY pa.attribute_id
-                ) pa
-            ", 'a.attribute_id = pa.attribute_id')
-            ->leftJoin('attribute b', 'a.parent_id = b.attribute_id')
-            ->where('a.shop_supplier_id', '=', $shop_supplier_id)
             ->order(['a.create_time' => 'desc'])
             ->field('a.*, b.attribute_name as parent_attribute_name')
             ->select();
@@ -210,11 +192,10 @@ class Attribute extends BaseModel
 
     /**
      * 详情
-     * @param string $uuid
      */
-    public static function detail($uuid)
+    public static function detail($attribute_id)
     {
-        return static::where('uuid', $uuid)->find();
+        return self::where('uuid', $attribute_id)->find();
     }
 
     /**
@@ -222,7 +203,7 @@ class Attribute extends BaseModel
      */
     public function isUseWithAttributeValue($attribute_id)
     {
-        return Attribute::where('parent_id', 'in', $attribute_id)->count() > 0;
+        return Attribute::where('uuid', 'in', $attribute_id)->count() > 0;
     }
 
     /**
@@ -256,81 +237,53 @@ class Attribute extends BaseModel
     }
 
     /**
-     * 维护产品表中的属性数组
-     *
-     * @param $total_product_ids 产品ID数组
+     * 修改
      */
-    public function maintainProductAttribute($total_product_ids, $delete_product_ids = []): bool
+    public function edit($data)
     {
-        if (!empty($total_product_ids)) {
-            $chunks = array_chunk($total_product_ids, 1000);
-            foreach ($chunks as $chunk) {
-                // 查询属性表
-                $product_attributes = ProductAttribute::with([
-                    'productAttributeGroup' => function ($query) {
-                        $query->field(['group_attribute_id', 'attribute_open_max_select', 'attribute_required', 'attribute_max_select']);
-                    },
-                    'attribute' => function ($query) {
-                        $query->field(['attribute_id', 'attribute_name', 'parent_id'])->with([
-                            'parent' => function ($query) {
-                                $query->field(['attribute_id', 'attribute_name']);
-                            }
-                        ]);
-                    }
-                ])->whereIn('product_id', $chunk)
-                    ->field(['product_attribute_id', 'product_id', 'attribute_id', 'default_select', 'group_attribute_id'])
-                    ->select()
-                    ->toArray();
-                // 格式化数据
-                $product_attribute_map = [];
-                foreach ($product_attributes as $item) {
-                    $product_id = $item['product_id'];
-                    $attribute = $item['attribute'];
-                    $parent_id = $attribute['parent']['attribute_id'] ?? 0;
-                    //
-                    if (!isset($product_attribute_map[$product_id])) {
-                        $product_attribute_map[$product_id] = [];
-                    }
-                    if (!isset($product_attribute_map[$product_id][$parent_id])) {
-                        $product_attribute_map[$product_id][$parent_id] = [
-                            'attribute_open_max_select' => $item['productAttributeGroup']['attribute_open_max_select'] ?? 0,
-                            'attribute_required'        => $item['productAttributeGroup']['attribute_required'] ?? 0,
-                            'attribute_max_select'      => $item['productAttributeGroup']['attribute_max_select'] ?? 0,
-                            'parent_id'                 => $parent_id,
-                            'attribute_name'            => $attribute['parent']['attribute_name'] ?? '',
-                            'attribute_value'           => [],
-                            'default_select'            => [],
-                            'attribute_ids'             => []
-                        ];
-                    }
-                    $product_attribute_map[$product_id][$parent_id]['attribute_value'][] = $attribute['attribute_name'] ?? '';
-                    $product_attribute_map[$product_id][$parent_id]['default_select'][]  = $item['default_select'] ?? 0;
-                    $product_attribute_map[$product_id][$parent_id]['attribute_ids'][]   = $item['attribute_id'] ?? 0;
-                }
-                // 更新产品表
-                $prefix = env('DB_PREFIX');
-                $product = new Product;
-                $product_ids = array_keys($product_attribute_map);
-                $product_attributes = array_values($product_attribute_map);
-                if (!empty($product_ids)) {
-                    $update_sql = "UPDATE {$prefix}product SET product_attr = CASE product_id ";
-                    foreach ($product_ids as $index => $product_id) {
-                        $product_attr = json_encode(array_values($product_attributes[$index] ?? []));
-                        $product_attr = addslashes($product_attr); // 防止SQL注入并确保JSON数据正确转义
-                        $update_sql .= "WHEN $product_id THEN '$product_attr' ";
-                    }
-                    $update_sql .= "END WHERE product_id IN (" . implode(',', $product_ids) . ")";
-                    Db::connect($product->getConnection())->execute($update_sql);
-                }
-                // 如果有全部删除的产品ID，则清空对应的属性数组
-                if (!empty($delete_product_ids)) {
-                    $delete_product_ids = array_diff($delete_product_ids, $product_ids);
-                    if (!empty($delete_product_ids)) {
-                        $product->where('product_id', 'in', $delete_product_ids)->update(['product_attr' => '[]']);
-                    }
-                }
-            }
+        if (ValidateHelp::hasEmptyValue($data['attribute_name'] ?? '')) {
+            $this->error = '属性名称不能为空';
+            return false;
         }
+        $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
+        $isExist = $this->where('name', $attribute_name)->where('uuid', '<>', $this['uuid'])->count();
+        if ($isExist) {
+            $this->error = '名称已存在';
+            return false;
+        }
+        //
+        $data['name'] = $attribute_name;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name, $this['multi_language_name_uuid']);
+        $this->save($data);
         return true;
+    }
+
+    /**
+     * 删除
+     */
+    public function setDelete($attribute_id)
+    {
+        // 检查是否存在属性值
+        if ($this->isUseWithAttributeValue($attribute_id)) {
+            $this->error = '该属性下存在属性值，不允许删除';
+            return false;
+        }
+        $this->startTrans();
+        try {
+            // 删除多语言数据
+            $models = $this->whereIn('uuid', $attribute_id)->select();
+            foreach ($models as $model) {
+                if ($model['multi_language_name_uuid']) {
+                    (new MultiLanguageName)->where('uuid', $model['multi_language_name_uuid'])->find()?->delete();
+                }
+                $model->delete();
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 }

@@ -141,7 +141,23 @@ class Feed extends FeedModel
         //     $this->error = '该加料下存在商品，不允许删除';
         //     return false;
         // }
-        return $this->where('uuid', 'in', $feed_id)->delete();
+        $this->startTrans();
+        try {
+            // 删除多语言数据
+            $models = $this->whereIn('uuid', $feed_id)->select();
+            foreach ($models as $model) {
+                if ($model['multi_language_name_uuid']) {
+                    (new MultiLanguageName)->where('uuid', $model['multi_language_name_uuid'])->find()?->delete();
+                }
+                $model->delete();
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**

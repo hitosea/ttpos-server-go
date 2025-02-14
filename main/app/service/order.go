@@ -26,8 +26,8 @@ import (
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                              // 创建点餐订单
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                        // 创建桌台订单
-	GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error)                               // 获取收银订单列表
-	GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error)                                         // 获取收银订单详情
+	GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                            // 获取订单列表
+	GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                     // 获取订单详情
 	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                          // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                         // 删除订单
 	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                       // 判断桌台是否可取消
@@ -233,18 +233,18 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 	return orderNo
 }
 
-// GetCashierOrderList 获取收银端订单列表
-func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.CashierOrderListPaginationResp, error) {
+// GetCashierOrderList 获取订单列表
+func (s *orderSrv) GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
 	_ = copier.Copy(&reqs, req)
 	lists, total, err := orderRepo.GetCashierOrderListWithPagination(reqs)
 	if err != nil {
-		return resp.CashierOrderListPaginationResp{}, err
+		return resp.OrderListPaginationResp{}, err
 	}
 	// 组合列表源数据
-	billList := make([]resp.CashierBillList, len(lists))
+	billList := make([]resp.BillList, len(lists))
 	for i, bill := range lists {
 		totalPayTypeNames := []string{}
 		orderList := make([]resp.CashierOrder, len(bill.SaleOrders))
@@ -267,7 +267,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 			}
 		}
 		//
-		billList[i] = resp.CashierBillList{
+		billList[i] = resp.BillList{
 			SaleBillUuid:  bill.Uuid,
 			BillType:      bill.BillType,
 			IsSplit:       len(bill.SaleOrders) > 1,
@@ -290,7 +290,7 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 		return num
 	}
 	// 返回响应对象
-	return resp.CashierOrderListPaginationResp{
+	return resp.OrderListPaginationResp{
 		List: billList,
 		Meta: struct {
 			dto.PageResponse
@@ -310,25 +310,25 @@ func (s *orderSrv) GetCashierOrderList(dbId uint64, req req.OrderListReq) (resp.
 	}, nil
 }
 
-// GetCashierOrderInfo 获取收银端订单信息
-func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.CashierOrderInfoResp, error) {
+// GetOrderInfos 获取收银端订单信息
+func (s *orderSrv) GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderInfosResp, error) {
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
 	info, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
-		return resp.CashierOrderInfoResp{}, err
+		return resp.OrderInfosResp{}, err
 	}
 
 	// 组合信息
 	totalMemberNames := []string{}
-	payTypes := make([]resp.CashierOrderInfoPayTypes, 0)
-	orderList := make([]resp.CashierOrderInfo, len(info.SaleOrders))
+	payTypes := make([]resp.OrderInfoPayTypes, 0)
+	orderList := make([]resp.OrderInfo, len(info.SaleOrders))
 	for i, order := range info.SaleOrders {
 		payTypeNames := []string{}
 		for _, payment := range order.PaymentOrders {
-			payTypes = append(payTypes, resp.CashierOrderInfoPayTypes{
+			payTypes = append(payTypes, resp.OrderInfoPayTypes{
 				Uuid:              payment.Uuid,
 				PaymentMethodName: payment.PaymentMethodName,
 				CurrencyUnit:      payment.CurrencyUnit,
@@ -342,23 +342,9 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
 		}
 		//
-		products := make([]resp.CashierOrderProduct, len(order.SaleOrderProducts))
+		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
-			attributeNames := []string{}
-			for _, bom := range product.SaleOrderProductBoms {
-				if bom.IsFlavorBom == 1 {
-					attributeNames = append(attributeNames, bom.Name)
-				}
-			}
-			for _, attribute := range product.SaleOrderProductAttributes {
-				attributeNames = append(attributeNames, attribute.Name)
-			}
-			for _, bom := range product.SaleOrderProductBoms {
-				if bom.IsFlavorBom != 1 {
-					attributeNames = append(attributeNames, bom.Name)
-				}
-			}
-			products[j] = resp.CashierOrderProduct{
+			products[j] = resp.OrderProduct{
 				Uuid:                  product.Uuid,
 				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
 				FlavorName:            product.FlavorName,
@@ -373,11 +359,11 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 				IsGift:                product.IsGift == 1,
 				GiftReason:            product.GiftReason,
 				ImageUrl:              product.ImageFile.GetUrl(),
-				Attributes:            strings.Join(attributeNames, ";"),
+				Attributes:            product.GetAttributeNames(),
 			}
 		}
 		//
-		orderList[i] = resp.CashierOrderInfo{
+		orderList[i] = resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
 			BillType:      info.BillType,
 			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
@@ -393,8 +379,8 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 	}
 
 	// 返回响应对象
-	return resp.CashierOrderInfoResp{
-		Detail: resp.CashierOrderInfos{
+	return resp.OrderInfosResp{
+		Detail: resp.OrderInfos{
 			SaleBillUuid:  info.Uuid,
 			BillType:      info.BillType,
 			IsSplit:       len(info.SaleOrders) > 1,
@@ -410,12 +396,12 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 			SaleOrders:    orderList,
 		},
 		OperationLog: struct {
-			List []resp.CashierOrderOperationLog
+			List []resp.OrderOperationLog
 		}{
-			List: func() []resp.CashierOrderOperationLog {
+			List: func() []resp.OrderOperationLog {
 				logs, err := s.GetRecordList(dbId, req.SaleBillUuid, 0)
 				if err != nil {
-					return []resp.CashierOrderOperationLog{}
+					return []resp.OrderOperationLog{}
 				}
 				return logs
 			}(),
@@ -424,21 +410,20 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 }
 
 // GetRecordList 获取操作记录
-func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.CashierOrderOperationLog, error) {
+func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.OrderOperationLog, error) {
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(s.dbm.GetDB(dbId))
 	orderRecordLists, err := orderRecordRepo.GetRecordLists(saleBillUuid)
 	if err != nil {
-		return []resp.CashierOrderOperationLog{}, err
+		return []resp.OrderOperationLog{}, err
 	}
 	// todo - 数据格式待处理
-	logs := make([]resp.CashierOrderOperationLog, 0)
+	logs := make([]resp.OrderOperationLog, 0)
 	for _, record := range orderRecordLists {
-		logs = append(logs, resp.CashierOrderOperationLog{
+		logs = append(logs, resp.OrderOperationLog{
 			Uuid:          record.Uuid,
 			Source:        record.Source,
 			Action:        record.Action,
-			Message:       record.Message,
-			Data:          "",
+			Data:          record.Data,
 			Remark:        record.Remark,
 			SaleBillUuid:  record.SaleBillUuid,
 			SaleOrderUuid: record.SaleOrderUuid,
@@ -545,7 +530,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 		Remark:        "取消订单",
 		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
 		OperatorUuid:  staff.Uuid,
-	})
+	}, nil)
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -655,23 +640,26 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
+	orderProductRepo := repository.NewOrderProductRepo(db)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return model.SaleBill{}, err
-	}
-
-	// 判断商品
-	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
-		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
 		return model.SaleBill{}, err
 	}
+
+	// 判断商品
+	product, err := orderProductRepo.GetProductInfo(req.OrderProductUuid)
+	if err != nil {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
+
 	// 开始事务
 	tx := db.Begin()
 	defer func() {
@@ -692,19 +680,17 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
 		Source:        source,
 		Remark:        "改价",
-		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: req.SaleOrderUuid,
 		OperatorUuid:  staffUuid,
+	}, map[string]interface{}{
+		"order_product_id": req.OrderProductUuid,
+		"product_id":       product.Uuid,
+		"product_name":     product.Name,
+		"total_num":        product.Num,
+		"price":            req.Price,
+		"product_attr":     product.GetAttributeNames(),
 	})
-	// OrderOperationLog::createLog($p['order_id'], OrderOperationLog::ACTION_CHANGE_PRICE, [
-	// 	'order_product_id' => $p->order_product_id,
-	// 	'product_id' => $p->product_id,
-	// 	'product_name' => $p->product_name,
-	// 	'product_attr' => $p->getData('product_attr'),
-	// 	'total_num' => $p->total_num,
-	// 	'price' => $money,
-	// 	'parent_id' => $splitOrder->parent_id,         // 拆单主单ID
-	// 	'order_name' => $splitOrder->order_name,       // 订单名称
-	// ], '改价');
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -727,6 +713,7 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
@@ -755,11 +742,17 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
 
-	// todo - 添加操作日志
-	// OrderOperationLog::createLog($this['order_id'], OrderOperationLog::ACTION_UPDATE_MEAL_NUM, [
-	// 	'old_meal_num' => $old_meal_num,
-	// 	'new_meal_num' => $meal_num,
-	// ], '修改桌台就餐人数');
+	// 添加操作日志
+	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
+		Source:        source,
+		Remark:        "修改桌台就餐人数",
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: 0,
+		OperatorUuid:  staffUuid,
+	}, map[string]interface{}{
+		"old_meal_num": billInfo.MealNum,
+		"new_meal_num": req.Population,
+	})
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -794,7 +787,7 @@ func (s *orderSrv) OrderProductRemark(dbId uint64, staffUuid uint64, source stri
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 
-	// 修改订单商品人数
+	// 修改订单商品备注
 	if err := orderRepo.ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
 		return model.SaleBill{}, err
 	}

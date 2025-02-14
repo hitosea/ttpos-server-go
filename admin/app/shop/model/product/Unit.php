@@ -82,7 +82,23 @@ class Unit extends UnitModel
             $this->error = '该单位下存在商品，不允许删除';
             return false;
         }
-        return $this->where('uuid', 'in', $unit_id)->delete();
+        $this->startTrans();
+        try {
+            // 删除多语言数据
+            $models = $this->whereIn('uuid', $unit_id)->select();
+            foreach ($models as $model) {
+                if ($model['multi_language_name_uuid']) {
+                    (new MultiLanguageName)->where('uuid', $model['multi_language_name_uuid'])->find()?->delete();
+                }
+                $model->delete();
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**

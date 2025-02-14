@@ -12,6 +12,7 @@ type IOrderProductRepo interface {
 	WhereSaleBillUuids(uuids []uint64) DBOption
 	WhereSaleOrderUuids(uuids []uint64) DBOption
 	GetProductList(opts ...DBOption) ([]model.SaleOrderProduct, error) // 获取商品列表
+	GetProductInfo(uuid uint64) (model.SaleOrderProduct, error)        // 获取商品信息
 	Delete(uuid uint64) error
 	Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) // 创建商品
 }
@@ -71,4 +72,17 @@ func (r *orderProductRepo) Create(model model.SaleOrderProduct) (model.SaleOrder
 	err := r.db.Create(&model).Error
 
 	return model, err
+}
+
+// GetProductInfo 获取商品信息
+func (r *orderProductRepo) GetProductInfo(uuid uint64) (model.SaleOrderProduct, error) {
+	var product model.SaleOrderProduct
+
+	err := r.db.Where("uuid = ?", uuid).
+		Preload("MultiLanguageName").
+		Preload("SaleOrderProductAttributes").
+		Preload("SaleOrderProductBoms").
+		First(&product).Error
+
+	return product, err
 }

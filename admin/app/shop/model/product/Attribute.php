@@ -4,6 +4,8 @@ namespace app\shop\model\product;
 
 use think\facade\Env;
 use help\ValidateHelp;
+use app\common\model\product\AttributeGroup;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\ProductAttribute;
 use app\common\model\product\ProductAttributeGroup;
 use app\common\model\product\Attribute as AttributeModel;
@@ -18,42 +20,42 @@ class Attribute extends AttributeModel
      */
     public function getList($data, $shop_supplier_id)
     {
+        // 属性组
+        $type = $data['type'] ?? 1;
+        if ($type == 1) {
+            return AttributeGroup::with(['children'])->order(['create_time' => 'desc'])->paginate($data);
+        }
+
+        // 属性值
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('a')
-            ->field('a.*')
-            ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(pa.product_ids, '') AS product_ids")
-            ->leftJoin("
-                (
-                    SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
-                    FROM {$prefix}product_attribute pa
-                    LEFT JOIN {$prefix}product product ON pa.product_id = product.product_id
-                    WHERE product.is_delete = 0
-                    GROUP BY pa.attribute_id
-                ) pa
-            ", 'a.attribute_id = pa.attribute_id');
+            ->field('a.*');
+
+        // todo 兼容
+        // ->field("IFNULL(pa.product_ids, '') AS product_ids")
+        // ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
+        // ->leftJoin("
+        //     (
+        //         SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
+        //         FROM {$prefix}product_attribute pa
+        //         LEFT JOIN {$prefix}product product ON pa.product_id = product.product_id
+        //         WHERE product.is_delete = 0
+        //         GROUP BY pa.attribute_id
+        //     ) pa
+        // ", 'a.attribute_id = pa.attribute_id');
+
         // 名称
         if (isset($data['attribute_name']) && $data['attribute_name'] != '') {
-            $model = $model->jsonLike('a.attribute_name', $data['attribute_name']);
-        }
-        // 类型
-        if (isset($data['type']) && $data['type']) {
-            if ($data['type'] == 1) {
-                $model = $model->where('a.parent_id', 0);
-            } else {
-                $model = $model->where('a.parent_id', '>', 0);
-            }
+            $model = $model->jsonLike('a.name', $data['attribute_name']);
         }
         // 父级ids
         if (isset($data['parent_ids']) && $data['parent_ids'] !== '') {
-            $model = $model->where('a.parent_id', 'in', $data['parent_ids']);
+            $model = $model->where('a.attribute_group_uuid', 'in', $data['parent_ids']);
         }
         // 关联查询父级名称
         $model = $model->alias('a')
-            ->with(['children'])
-            ->leftJoin('attribute parent', 'a.parent_id = parent.attribute_id')
-            ->field('a.*, parent.attribute_name as parent_attribute_name')
-            ->where('a.shop_supplier_id', $shop_supplier_id)
+            ->leftJoin('product_attribute_group parent', 'a.attribute_group_uuid = parent.uuid')
+            ->field('a.*, parent.name as parent_attribute_name')
             ->order(['a.create_time' => 'desc']);
         return $model->paginate($data);
     }
@@ -69,14 +71,27 @@ class Attribute extends AttributeModel
         }
         $parent_id = $data['parent_id'] ?? 0;
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist        = $this->where('parent_id', $parent_id > 0 ? '>' : '=', 0)->where('attribute_name', $attribute_name)->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
+        $model = null;
+        if ($parent_id > 0) {
+            $model = $this;
+            $isExist = $this->where('attribute_group_uuid', '>', 0)->where('name', $attribute_name)->count();
+            if ($isExist) {
+                $this->error = '名称已存在';
+                return false;
+            }
+        } else {
+            $model = new AttributeGroup;
+            $isExist = $model->where('name', $attribute_name)->count();
+            if ($isExist) {
+                $this->error = '名称已存在';
+                return false;
+            }
         }
-        $data['shop_supplier_id'] = $shop_supplier_id;
-        $data['app_id']           = self::$app_id;
-        return $this->save($data);
+        //
+        $data['name'] = $attribute_name;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name);
+        $data['attribute_group_uuid'] = $parent_id;
+        return $model->save($data);
     }
 
     /**
@@ -88,17 +103,21 @@ class Attribute extends AttributeModel
             $this->error = '属性名称不能为空';
             return false;
         }
-        $parent_id = $this['parent_id'] ?? 0;
+        $parent_id = $this['attribute_group_uuid'] ?? 0;
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist        = $this->where('parent_id', $parent_id)->where('attribute_name', $attribute_name)->where('attribute_id', '<>', $this['attribute_id'])->count();
+        $isExist = $this->where('name', $attribute_name)->where('uuid', '<>', $this['uuid'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
+        //
+        $data['name'] = $attribute_name;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name, $this['multi_language_name_uuid']);
+        $data['attribute_group_uuid'] = $parent_id;
         $this->save($data);
-        // 更新关联产品表中的属性数组
-        $attribute_id = $this['attribute_id'];
-        $this->maintainProductAttribute($this->productAttribute($attribute_id)->column('product_id'));
+        // todo 兼容 更新关联产品表中的属性数组
+        // $attribute_id = $this['attribute_id'];
+        // $this->maintainProductAttribute($this->productAttribute($attribute_id)->column('product_id'));
         return true;
     }
 
@@ -107,15 +126,29 @@ class Attribute extends AttributeModel
      */
     public function setDelete($attribute_id)
     {
-        if ($this->isUseWithAttributeValue($attribute_id)) {
-            $this->error = '该属性下存在属性值，不允许删除';
+        // todo 兼容
+        // if ($this->isUseWithProduct($attribute_id)) {
+        //     $this->error = '该属性下存在商品，不允许删除';
+        //     return false;
+        // }
+
+        $this->startTrans();
+        try {
+            // 删除多语言数据
+            $models = $this->whereIn('uuid', $attribute_id)->select();
+            foreach ($models as $model) {
+                if ($model['multi_language_name_uuid']) {
+                    (new MultiLanguageName)->where('uuid', $model['multi_language_name_uuid'])->find()?->delete();
+                }
+                $model->delete();
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
             return false;
         }
-        if ($this->isUseWithProduct($attribute_id)) {
-            $this->error = '该属性下存在商品，不允许删除';
-            return false;
-        }
-        return $this->where('attribute_id', 'in', $attribute_id)->delete();
     }
 
     /**

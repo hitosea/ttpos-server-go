@@ -10,7 +10,7 @@ use app\common\model\BaseModel;
  */
 class ProductAttribute extends BaseModel
 {
-    protected $name = 'product_attribute';
+    protected $name = 'product_package_attribute';
     protected $pk = 'attribute_id';
     protected $append = [];
 
