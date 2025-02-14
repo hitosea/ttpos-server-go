@@ -344,20 +344,6 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 		//
 		products := make([]resp.CashierOrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
-			attributeNames := []string{}
-			for _, bom := range product.SaleOrderProductBoms {
-				if bom.IsFlavorBom == 1 {
-					attributeNames = append(attributeNames, bom.Name)
-				}
-			}
-			for _, attribute := range product.SaleOrderProductAttributes {
-				attributeNames = append(attributeNames, attribute.Name)
-			}
-			for _, bom := range product.SaleOrderProductBoms {
-				if bom.IsFlavorBom != 1 {
-					attributeNames = append(attributeNames, bom.Name)
-				}
-			}
 			products[j] = resp.CashierOrderProduct{
 				Uuid:                  product.Uuid,
 				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
@@ -373,7 +359,7 @@ func (s *orderSrv) GetCashierOrderInfo(dbId uint64, req req.OrderInfoReq) (resp.
 				IsGift:                product.IsGift == 1,
 				GiftReason:            product.GiftReason,
 				ImageUrl:              product.ImageFile.GetUrl(),
-				Attributes:            strings.Join(attributeNames, ";"),
+				Attributes:            product.GetAttributeNames(),
 			}
 		}
 		//
@@ -437,8 +423,7 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 			Uuid:          record.Uuid,
 			Source:        record.Source,
 			Action:        record.Action,
-			Message:       record.Message,
-			Data:          "",
+			Data:          record.Data,
 			Remark:        record.Remark,
 			SaleBillUuid:  record.SaleBillUuid,
 			SaleOrderUuid: record.SaleOrderUuid,
@@ -545,7 +530,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 		Remark:        "取消订单",
 		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
 		OperatorUuid:  staff.Uuid,
-	})
+	}, nil)
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -655,23 +640,26 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
+	orderProductRepo := repository.NewOrderProductRepo(db)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return model.SaleBill{}, err
-	}
-
-	// 判断商品
-	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
-		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
 		return model.SaleBill{}, err
 	}
+
+	// 判断商品
+	product, err := orderProductRepo.GetProductInfo(req.OrderProductUuid)
+	if err != nil {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
+
 	// 开始事务
 	tx := db.Begin()
 	defer func() {
@@ -692,19 +680,17 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
 		Source:        source,
 		Remark:        "改价",
-		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: req.SaleOrderUuid,
 		OperatorUuid:  staffUuid,
+	}, map[string]interface{}{
+		"order_product_id": req.OrderProductUuid,
+		"product_id":       product.Uuid,
+		"product_name":     product.Name,
+		"total_num":        product.Num,
+		"price":            req.Price,
+		"product_attr":     product.GetAttributeNames(),
 	})
-	// OrderOperationLog::createLog($p['order_id'], OrderOperationLog::ACTION_CHANGE_PRICE, [
-	// 	'order_product_id' => $p->order_product_id,
-	// 	'product_id' => $p->product_id,
-	// 	'product_name' => $p->product_name,
-	// 	'product_attr' => $p->getData('product_attr'),
-	// 	'total_num' => $p->total_num,
-	// 	'price' => $money,
-	// 	'parent_id' => $splitOrder->parent_id,         // 拆单主单ID
-	// 	'order_name' => $splitOrder->order_name,       // 订单名称
-	// ], '改价');
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -727,6 +713,7 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
@@ -755,11 +742,17 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
 
-	// todo - 添加操作日志
-	// OrderOperationLog::createLog($this['order_id'], OrderOperationLog::ACTION_UPDATE_MEAL_NUM, [
-	// 	'old_meal_num' => $old_meal_num,
-	// 	'new_meal_num' => $meal_num,
-	// ], '修改桌台就餐人数');
+	// 添加操作日志
+	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
+		Source:        source,
+		Remark:        "修改桌台就餐人数",
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: 0,
+		OperatorUuid:  staffUuid,
+	}, map[string]interface{}{
+		"old_meal_num": billInfo.MealNum,
+		"new_meal_num": req.Population,
+	})
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -794,7 +787,7 @@ func (s *orderSrv) OrderProductRemark(dbId uint64, staffUuid uint64, source stri
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 
-	// 修改订单商品人数
+	// 修改订单商品备注
 	if err := orderRepo.ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
 		return model.SaleBill{}, err
 	}

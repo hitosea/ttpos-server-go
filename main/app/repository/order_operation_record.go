@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"encoding/json"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -13,7 +14,7 @@ type IOrderOperationRecordRepo interface {
 	GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error)
 	GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error)
 	UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error
-	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error)
+	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error)
 	DeleteRecord(saleBillUuid uint64) error
 }
 
@@ -76,16 +77,33 @@ func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record 
 }
 
 // CreateOrderOperationRecord 创建订单操作记录
-func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error) {
+func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error) {
 	record.Action = Action
 	record.SaleBillUuid = saleBillUuid
-	//
+
+	// 将 data 转换为 JSON 字符串
+	if data != nil {
+		dataJson, err := json.Marshal(data)
+		if err != nil {
+			return 0, err
+		}
+		record.Data = string(dataJson)
+	}
+
 	if err := r.db.Create(&record).Error; err != nil {
 		return 0, err
 	}
-	// todo 异常日志
-	// OrderAbnormalLog::createLog(OrderAbnormalLog::SOURCE_ORDER, $orderId, $action, $data, $remark);
-	//
+
+	// // 添加异常日志
+	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
+	// 	Source:        source,
+	// 	Remark:        "改价",
+	// 	SaleOrderUuid: req.SaleOrderUuid,
+	// 	OperatorUuid:  staffUuid,
+	// }, map[string]interface{}{
+	// 	"remark": "",
+	// })
+
 	return record.Uuid, nil
 }
 

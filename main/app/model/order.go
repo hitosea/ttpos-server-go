@@ -227,6 +227,25 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	return fmt.Sprintf("%s-%s-%d", bomIdListStr, attributeIdListStr, model.CustomPrice)
 }
 
+// GetAttributeNames 获取属性名称字符串
+func (model *SaleOrderProduct) GetAttributeNames() string {
+	attributeNames := []string{}
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavorBom == 1 {
+			attributeNames = append(attributeNames, bom.Name)
+		}
+	}
+	for _, attribute := range model.SaleOrderProductAttributes {
+		attributeNames = append(attributeNames, attribute.Name)
+	}
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavorBom != 1 {
+			attributeNames = append(attributeNames, bom.Name)
+		}
+	}
+	return strings.Join(attributeNames, "; ")
+}
+
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
@@ -295,10 +314,10 @@ type SaleOrderProductMaterial struct {
 type SaleBillOperationRecord struct {
 	BaseModel
 	// 基本信息
-	Source  string `gorm:"column:source;type:varchar(255);not null;default:'';comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
-	Action  string `gorm:"column:action;type:varchar(150);not null;default:'';comment:操作行为" json:"action"`
-	Message string `gorm:"column:message;type:varchar(255);not null;default:'';comment:消息内容" json:"message"`
-	Remark  string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:备注" json:"remark"`
+	Data   string `gorm:"column:data;comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"data"`
+	Source string `gorm:"column:source;comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
+	Action string `gorm:"column:action;comment:操作行为" json:"action"`
+	Remark string `gorm:"column:remark;comment:备注" json:"remark"`
 	// 关联ID字段
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
