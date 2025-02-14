@@ -4,6 +4,7 @@ namespace app\shop\model\product;
 
 use help\ValidateHelp;
 use app\common\model\product\ProductSku;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\ProductSkuMaterial;
 
@@ -19,28 +20,26 @@ class Spec extends SpecModel
     {
         $prefix = env('DB_PREFIX');
         $model = $this->alias('sku')
-            ->field('sku.*')
-            ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(psku.product_ids, '') AS product_ids")
-            ->leftJoin("
-                (
-                    SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
-                    FROM {$prefix}product_sku psku
-                    LEFT JOIN {$prefix}product product ON psku.product_id = product.product_id
-                    WHERE product.is_delete = 0
-                    GROUP BY psku.spec_sku_id
-                ) psku
-            ", 'sku.spec_id = psku.spec_sku_id');
+            ->field('sku.*');
+
+            // todo 兼容
+            // ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
+            // ->field("IFNULL(psku.product_ids, '') AS product_ids")
+            // ->leftJoin("
+            //     (
+            //         SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
+            //         FROM {$prefix}product_sku psku
+            //         LEFT JOIN {$prefix}product product ON psku.product_id = product.product_id
+            //         WHERE product.is_delete = 0
+            //         GROUP BY psku.spec_sku_id
+            //     ) psku
+            // ", 'sku.spec_id = psku.spec_sku_id');
+
         //
         if (isset($data['spec_name']) && $data['spec_name'] != '') {
-            $model = $model->jsonLike('sku.spec_name', $data['spec_name']);
+            $model = $model->jsonLike('sku.name', $data['spec_name']);
         }
-        $list = $model
-            ->with('material')
-            ->where('sku.shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['sku.create_time' => 'desc'])
-            ->paginate($data);
-
+        $list = $model->order(['sku.create_time' => 'desc'])->paginate($data);
         return $list;
     }
 
@@ -49,33 +48,35 @@ class Spec extends SpecModel
      */
     public function add($data, $shop_supplier_id)
     {
-        if (ValidateHelp::hasEmptyValue($data['spec_name'] ?? '')) {
+        $name = $data['spec_name'] ?? '';
+        if (ValidateHelp::hasEmptyValue($name)) {
             $this->error = '规格名称不能为空';
             return false;
         }
-        $isExist = $this->where('spec_name', '=', $data['spec_name'])->count();
+        $isExist = $this->where('name', '=', $name)->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
-        $data['shop_supplier_id'] = $shop_supplier_id;
-        $data['app_id'] = self::$app_id;
+        //
+        $data['name'] = $name;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($name);
         $this->save($data);
-
-        // 关联规格材料
         $specId = $this->spec_id;
-        if (isset($data['material']) && !empty($data['material'])) {
-            ProductSkuMaterial::where('spec_id', '=', $specId)->delete();
-            foreach ($data['material'] as $data) {
-                $material = [
-                    'spec_id' => $specId,
-                    'product_sku_id' => 0,
-                    'material_id' => $data['product_id'],
-                    'material_num' => $data['material_num'] ?? 0,
-                ];
-                (new ProductSkuMaterial)->save($material);
-            }
-        }
+
+        // todo 兼容 关联规格材料
+        // if (isset($data['material']) && !empty($data['material'])) {
+        //     ProductSkuMaterial::where('spec_id', '=', $specId)->delete();
+        //     foreach ($data['material'] as $data) {
+        //         $material = [
+        //             'spec_id' => $specId,
+        //             'product_sku_id' => 0,
+        //             'material_id' => $data['product_id'],
+        //             'material_num' => $data['material_num'] ?? 0,
+        //         ];
+        //         (new ProductSkuMaterial)->save($material);
+        //     }
+        // }
         return array_merge($data, ['spec_id' => $specId]);
     }
 
@@ -84,34 +85,39 @@ class Spec extends SpecModel
      */
     public function edit($data)
     {
-        if (ValidateHelp::hasEmptyValue($data['spec_name'] ?? '')) {
+        $name = $data['spec_name'] ?? '';
+        if (ValidateHelp::hasEmptyValue($name)) {
             $this->error = '规格名称不能为空';
             return false;
         }
-        $isExist = $this->where('spec_name', '=', $data['spec_name'])
-            ->where('spec_id', '<>', $this['spec_id'])
+        $isExist = $this->where('name', '=', $name)
+            ->where('uuid', '<>', $this['uuid'])
             ->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
+        //
+        $data['name'] = $name;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($name, $this['multi_language_name_uuid']);
         $this->save($data);
-        // 关联规格材料
-        $specId = $this['spec_id'];
-        ProductSkuMaterial::where('spec_id', '=', $specId)->delete();
-        if (isset($data['material']) && !empty($data['material'])) {
-            foreach ($data['material'] as $data) {
-                $material = [
-                    'spec_id' => $specId,
-                    'product_sku_id' => 0,
-                    'material_id' => $data['product_id'],
-                    'material_num' => $data['material_num'] ?? 0,
-                ];
-                (new ProductSkuMaterial)->save($material);
-            }
-        }
-        // 同步产品规格表名称
-        ProductSku::where('spec_sku_id', $specId)->update(['spec_name' => $data['spec_name']]);
+
+        // todo 兼容 关联规格材料
+        // $specId = $this['spec_id'];
+        // ProductSkuMaterial::where('spec_id', '=', $specId)->delete();
+        // if (isset($data['material']) && !empty($data['material'])) {
+        //     foreach ($data['material'] as $data) {
+        //         $material = [
+        //             'spec_id' => $specId,
+        //             'product_sku_id' => 0,
+        //             'material_id' => $data['product_id'],
+        //             'material_num' => $data['material_num'] ?? 0,
+        //         ];
+        //         (new ProductSkuMaterial)->save($material);
+        //     }
+        // }
+        // // 同步产品规格表名称
+        // ProductSku::where('spec_sku_id', $specId)->update(['spec_name' => $data['spec_name']]);
         return true;
     }
 
@@ -125,7 +131,24 @@ class Spec extends SpecModel
             $this->error = '该规格下存在商品，不允许删除';
             return false;
         }
-        return $this->where('spec_id', 'in', $spec_id)->delete();
+        //
+        $this->startTrans();
+        try {
+            // 删除多语言数据
+            $models = $this->whereIn('uuid', $spec_id)->select();
+            foreach ($models as $model) {
+                if ($model['multi_language_name_uuid']) {
+                    $model->multiLanguageName->delete();
+                }
+                $model->delete();
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**

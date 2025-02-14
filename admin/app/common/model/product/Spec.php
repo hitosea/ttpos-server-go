@@ -4,21 +4,43 @@ namespace app\common\model\product;
 
 use think\facade\Db;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  * 规格/属性(组)模型
  */
 class Spec extends BaseModel
 {
-    protected $name = 'spec';
-    protected $pk = 'spec_id';
-    protected $updateTime = false;
+    use SoftDelete;
+    protected $name = 'product_flavor';
+    protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
-     * 处理多语言
+     * 追加字段
      */
-    protected $append = ['spec_name_text'];
+    protected $append = ['spec_id', 'spec_name', 'spec_name_text'];
 
+    /**
+     * 兼容字段
+     */
+    public function getSpecIdAttr($value, $data)
+    {
+        return $this->uuid ?: 0;
+    }
+    public function getSpecNameAttr($value)
+    {
+        return $this->getData('name') ?: '';
+    }
+
+    /**
+     * 多语言关联
+     */
+    public function multiLanguageName()
+    {
+        return $this->hasOne('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
+    }
     /**
      * 规格名称
      * @param mixed $value
@@ -27,7 +49,7 @@ class Spec extends BaseModel
      */
     public function getSpecNameTextAttr($value, $data)
     {
-        return extractLanguage($data['spec_name']);
+        return extractLanguage($data['name']);
     }
 
     /**
@@ -94,23 +116,26 @@ class Spec extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
-        return $this->alias('sku')
-        ->with(['material'])
-        ->field('sku.*')
-        ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
-        ->field("IFNULL(psku.product_ids, '') AS product_ids")
-        ->leftJoin("
-            (
-                SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
-                FROM {$prefix}product_sku psku
-                LEFT JOIN {$prefix}product product ON psku.product_id = product.product_id
-                WHERE product.is_delete = 0
-                GROUP BY psku.spec_sku_id
-            ) psku
-        ", 'sku.spec_id = psku.spec_sku_id')
-        ->order(['create_time' => 'desc'])
-        ->select();
+        return $this->order(['create_time' => 'desc'])->select();
+
+        // todo 兼容
+        // $prefix = env('DB_PREFIX');
+        // return $this->alias('sku')
+        //     ->with(['material'])
+        //     ->field('sku.*')
+        //     ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
+        //     ->field("IFNULL(psku.product_ids, '') AS product_ids")
+        //     ->leftJoin("
+        //     (
+        //         SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
+        //         FROM {$prefix}product_sku psku
+        //         LEFT JOIN {$prefix}product_package product ON psku.product_id = product.product_id
+        //         WHERE product.is_delete = 0
+        //         GROUP BY psku.spec_sku_id
+        //     ) psku
+        // ", 'sku.spec_id = psku.spec_sku_id')
+        //     ->order(['create_time' => 'desc'])
+        //     ->select();
     }
 
     /**
@@ -126,7 +151,7 @@ class Spec extends BaseModel
      */
     public static function detail($spec_id)
     {
-        return self::find($spec_id);
+        return self::where('uuid', $spec_id)->find();
     }
 
     /**
@@ -134,11 +159,12 @@ class Spec extends BaseModel
      */
     public function isUseWithProduct($spec_id)
     {
-        // 兼容旧数据，先删除产品已删除的关联数据
-        ProductSku::where('product_id', 'in', function ($query) {
-            $query->name('product')->field('product_id');
-        })->delete();
-        return ProductSku::where('spec_sku_id', 'in', $spec_id)->count() > 0;
+        // todo 兼容 兼容旧数据，先删除产品已删除的关联数据
+        // ProductSku::where('product_id', 'in', function ($query) {
+        //     $query->name('product')->field('product_id');
+        // })->delete();
+        // return ProductSku::where('spec_sku_id', 'in', $spec_id)->count() > 0;
+        return false;
     }
 
     /**
@@ -147,11 +173,11 @@ class Spec extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null, $lang = 'zh')
     {
         $filter = [
-            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(spec_name, '$.$lang'))"), '=', $name],
+            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['spec_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('spec_id') ? true : false;
+        return static::where($filter)->value('uuid') ? true : false;
     }
 }

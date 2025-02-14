@@ -12,7 +12,7 @@ use think\model\concern\SoftDelete;
 class ErpSupplier extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'erp_supplier';
+    protected $name = 'supplier';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 

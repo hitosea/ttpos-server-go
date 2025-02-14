@@ -187,25 +187,26 @@ class Attribute extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
-        return $this->alias('a')
-            ->field('a.*')
-            ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(pa.product_ids, '') AS product_ids")
-            ->leftJoin("
-                (
-                    SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
-                    FROM {$prefix}product_attribute pa
-                    LEFT JOIN {$prefix}product product ON pa.product_id = product.product_id
-                    WHERE product.is_delete = 0
-                    GROUP BY pa.attribute_id
-                ) pa
-            ", 'a.attribute_id = pa.attribute_id')
-            ->leftJoin('attribute b', 'a.parent_id = b.attribute_id')
-            ->where('a.shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['a.create_time' => 'desc'])
-            ->field('a.*, b.attribute_name as parent_attribute_name')
-            ->select();
+        return $this->order(['create_time' => 'desc'])->select();
+
+        // todo 兼容
+        // $prefix = env('DB_PREFIX');
+        // return $this->alias('a')
+        //     ->field('a.*')
+        //     ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
+        //     ->field("IFNULL(pa.product_ids, '') AS product_ids")
+        //     ->leftJoin("
+        //         (
+        //             SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
+        //             FROM {$prefix}product_attribute pa
+        //             LEFT JOIN {$prefix}product_package product ON pa.product_id = product.product_id
+        //             GROUP BY pa.attribute_id
+        //         ) pa
+        //     ", 'a.attribute_id = pa.attribute_id')
+        //     ->leftJoin('attribute b', 'a.parent_id = b.attribute_id')
+        //     ->order(['a.create_time' => 'desc'])
+        //     ->field('a.*, b.attribute_name as parent_attribute_name')
+        //     ->select();
     }
 
     /**

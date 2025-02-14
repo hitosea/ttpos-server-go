@@ -763,9 +763,9 @@ class Product extends ProductModel
         $model = $this;
         //已下架
         if ($type == 'lower') {
-            $model = $model->where('product_status', '=', 20);
+            $model = $model->where('status', '=', 20);
         }
-        return $model->where('product_type', '=', $product_type)->count();
+        return $model->count();
     }
 
     /**
