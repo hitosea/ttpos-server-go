@@ -5,6 +5,7 @@ namespace app\shop\model\product;
 use think\facade\Env;
 use help\ValidateHelp;
 use app\common\model\product\ProductFeed;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Feed as FeedModel;
 use app\common\model\product\ProductFeedMaterial;
 
@@ -20,26 +21,27 @@ class Feed extends FeedModel
     {
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('feed')
-            ->field('feed.*')
-            ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(pf.product_ids, '') AS product_ids")
-            ->leftJoin("
-                (
-                    SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
-                    FROM {$prefix}product_feed pf
-                    LEFT JOIN {$prefix}product product ON pf.product_id = product.product_id
-                    WHERE product.is_delete = 0
-                    GROUP BY pf.feed_id
-                ) pf
-            ", 'feed.feed_id = pf.feed_id');
+            ->field('feed.*');
+
+            // todo 兼容
+            // ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
+            // ->field("IFNULL(pf.product_ids, '') AS product_ids")
+            // ->leftJoin("
+            //     (
+            //         SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
+            //         FROM {$prefix}product_feed pf
+            //         LEFT JOIN {$prefix}product product ON pf.product_id = product.product_id
+            //         WHERE product.is_delete = 0
+            //         GROUP BY pf.feed_id
+            //     ) pf
+            // ", 'feed.feed_id = pf.feed_id');
+
         //
         if (isset($data['feed_name']) && $data['feed_name'] != '') {
-            $model = $model->jsonLike('feed.feed_name', trim($data['feed_name']));
+            $model = $model->jsonLike('feed.name', trim($data['feed_name']));
         }
-        $list = $model->with(['material'])
-            ->where('feed.shop_supplier_id', '=', $shop_supplier_id)
-            ->order(['feed.create_time' => 'desc'])
-            ->paginate($data);
+        // $list = $model->with(['material'])->order(['feed.create_time' => 'desc'])->paginate($data);
+        $list = $model->order(['feed.create_time' => 'desc'])->paginate($data);
         return $list;
     }
 
@@ -52,34 +54,34 @@ class Feed extends FeedModel
             $this->error = '加料名称不能为空';
             return false;
         }
-        $isExist = $this->where('feed_name', '=', $data['feed_name'])
-            ->count();
+        $isExist = $this->where('name', '=', $data['feed_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
-        $data['shop_supplier_id'] = $shop_supplier_id;
-        $data['app_id']           = self::$app_id;
+        //
+        $data['name'] = $data['feed_name'] ?? '';
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['feed_name']);
         $this->save($data);
-        // 关联加料材料
-        $feedId = $this->feed_id;
-        if (isset($data['material']) && !empty($data['material'])) {
-            ProductFeedMaterial::destroy(['feed_id' => $feedId]);
-            foreach ($data['material'] as $data) {
-                // 数量超过处理
-                $material_num = $data['material_num'] ?? 0;
-                if ($material_num > self::MAX_MATERIAL_NUM) {
-                    $material_num = self::MAX_MATERIAL_NUM;
-                }
-                $material = [
-                    'feed_id'          => $feedId,
-                    'product_feed_id'  => 0,
-                    'material_id'      => $data['product_id'],
-                    'material_num'     => $material_num,
-                ];
-                (new ProductFeedMaterial)->save($material);
-            }
-        }
+        // todo 关联加料材料
+        // $feedId = $this->feed_id;
+        // if (isset($data['material']) && !empty($data['material'])) {
+        //     ProductFeedMaterial::destroy(['feed_id' => $feedId]);
+        //     foreach ($data['material'] as $data) {
+        //         // 数量超过处理
+        //         $material_num = $data['material_num'] ?? 0;
+        //         if ($material_num > self::MAX_MATERIAL_NUM) {
+        //             $material_num = self::MAX_MATERIAL_NUM;
+        //         }
+        //         $material = [
+        //             'feed_id'          => $feedId,
+        //             'product_feed_id'  => 0,
+        //             'material_id'      => $data['product_id'],
+        //             'material_num'     => $material_num,
+        //         ];
+        //         (new ProductFeedMaterial)->save($material);
+        //     }
+        // }
         return true;
     }
 
@@ -92,37 +94,40 @@ class Feed extends FeedModel
             $this->error = '加料名称不能为空';
             return false;
         }
-        $isExist = $this->where('feed_name', '=', $data['feed_name'])
-            ->where('feed_id', '<>', $this['feed_id'])
+        $isExist = $this->where('name', '=', $data['feed_name'])
+            ->where('uuid', '<>', $this['uuid'])
             ->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
+        //
+        $data['name'] = $data['feed_name'] ?? '';
+        (new MultiLanguageName)->saveNames($data['feed_name'], $this['multi_language_name_uuid']);
         $this->save($data);
-        // 关联加料材料
-        $feedId = $this['feed_id'];
-        ProductFeedMaterial::destroy(['feed_id' => $feedId]);
-        if (isset($data['material']) && !empty($data['material'])) {
-            foreach ($data['material'] as $item) {
-                // 数量超过处理
-                $material_num = $item['material_num'] ?? 0;
-                if ($material_num > self::MAX_MATERIAL_NUM) {
-                    $material_num = self::MAX_MATERIAL_NUM;
-                }
-                $material = [
-                    'feed_id'          => $feedId,
-                    'product_feed_id'  => 0,
-                    'material_id'      => $item['product_id'],
-                    'material_num'     => $material_num,
-                ];
-                (new ProductFeedMaterial)->save($material);
-            }
-        }
-        // 同步产品加料表名称
-        ProductFeed::where('feed_id', $feedId)->update(['feed_name' => $data['feed_name']]);
-        // 同步产品表中的加料数组
-        $this->maintainProductFeed($this->productFeed($feedId)->column('product_id'));
+        // todo 兼容 关联加料材料
+        // $feedId = $this['feed_id'];
+        // ProductFeedMaterial::destroy(['feed_id' => $feedId]);
+        // if (isset($data['material']) && !empty($data['material'])) {
+        //     foreach ($data['material'] as $item) {
+        //         // 数量超过处理
+        //         $material_num = $item['material_num'] ?? 0;
+        //         if ($material_num > self::MAX_MATERIAL_NUM) {
+        //             $material_num = self::MAX_MATERIAL_NUM;
+        //         }
+        //         $material = [
+        //             'feed_id'          => $feedId,
+        //             'product_feed_id'  => 0,
+        //             'material_id'      => $item['product_id'],
+        //             'material_num'     => $material_num,
+        //         ];
+        //         (new ProductFeedMaterial)->save($material);
+        //     }
+        // }
+        // // 同步产品加料表名称
+        // ProductFeed::where('feed_id', $feedId)->update(['feed_name' => $data['feed_name']]);
+        // // 同步产品表中的加料数组
+        // $this->maintainProductFeed($this->productFeed($feedId)->column('product_id'));
         return true;
     }
 
@@ -131,12 +136,12 @@ class Feed extends FeedModel
      */
     public function setDelete($feed_id)
     {
-        // 判断是否关联产品
-        if ($this->isUseWithProduct($feed_id)) {
-            $this->error = '该加料下存在商品，不允许删除';
-            return false;
-        }
-        return $this->where('feed_id', 'in', $feed_id)->delete();
+        // todo 判断是否关联产品
+        // if ($this->isUseWithProduct($feed_id)) {
+        //     $this->error = '该加料下存在商品，不允许删除';
+        //     return false;
+        // }
+        return $this->where('uuid', 'in', $feed_id)->delete();
     }
 
     /**

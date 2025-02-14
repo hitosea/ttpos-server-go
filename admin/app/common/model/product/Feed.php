@@ -2,25 +2,53 @@
 
 namespace app\common\model\product;
 
+use think\Model;
 use help\StringHelp;
 use think\facade\Db;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  * 加料库模型
  */
 class Feed extends BaseModel
 {
-    protected $name = 'feed';
-    protected $pk = 'feed_id';
-
-    /**
-     * 处理多语言
-     */
-    protected $append = ['feed_name_text'];
+    use SoftDelete;
+    protected $name = 'product_sauce';
+    protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     // 最大材料数量限制
     const MAX_MATERIAL_NUM = 99999999;
+
+    /**
+     * 追加字段
+     */
+    protected $append = ['feed_id', 'feed_name', 'feed_name_text'];
+
+    // 定义事件 onBeforeDelete
+    protected $delete = ['onBeforeDelete'];
+
+    /**
+     * 兼容字段
+     */
+    public function getFeedIdAttr()
+    {
+        return $this->uuid ?: 0;
+    }
+    public function getFeedNameAttr()
+    {
+        return $this->getData('name') ?: '';
+    }
+
+    /**
+     * 多语言关联
+     */
+    public function multiLanguageName()
+    {
+        return $this->hasOne('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
+    }
 
     /**
      * 加料名称
@@ -31,20 +59,20 @@ class Feed extends BaseModel
      */
     public function getFeedNameTextAttr($value, $data = [])
     {
-        return extractLanguage($value ?: $data['feed_name']);
+        return extractLanguage($value ?: $data['name']);
     }
 
     /**
-     * 关联产品ids
+     * todo 关联产品ids
      */
     public function getProductIdsAttr($value, $data = [])
     {
-        $product_ids = $data['product_ids'] ?? $value ?? '';
-        if (empty($product_ids)) {
-            return [];
-        }
-        $arr = array_map('intval', explode(',', $product_ids));
-        return array_values($arr);
+        // $product_ids = $data['product_ids'] ?? $value ?? '';
+        // if (empty($product_ids)) {
+        //     return [];
+        // }
+        // $arr = array_map('intval', explode(',', $product_ids));
+        // return array_values($arr);
     }
 
     /**
@@ -66,7 +94,8 @@ class Feed extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductFeedMaterial', 'feed_id')->where('product_feed_id', '=', 0)->with(['materialProduct']);
+        // todo 兼容
+        // return $this->hasMany('app\\common\\model\\product\\ProductFeedMaterial', 'feed_id')->where('product_feed_id', '=', 0)->with(['materialProduct']);
     }
 
     /**
@@ -76,11 +105,11 @@ class Feed extends BaseModel
     {
         $prefix = env('DB_PREFIX');
         return $this->alias('feed')
-        ->with(['material'])
-        ->field('feed.*')
-        ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
-        ->field("IFNULL(pf.product_ids, '') AS product_ids")
-        ->leftJoin("
+            ->with(['material'])
+            ->field('feed.*')
+            ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
+            ->field("IFNULL(pf.product_ids, '') AS product_ids")
+            ->leftJoin("
             (
                 SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
                 FROM {$prefix}product_feed pf
@@ -89,7 +118,7 @@ class Feed extends BaseModel
                 GROUP BY pf.feed_id
             ) pf
         ", 'feed.feed_id = pf.feed_id')
-        ->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
+            ->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**
@@ -97,7 +126,7 @@ class Feed extends BaseModel
      */
     public static function detail($feed_id)
     {
-        return self::find($feed_id);
+        return self::where('uuid', $feed_id)->find();
     }
 
     /**
@@ -118,16 +147,16 @@ class Feed extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null, $lang = 'zh')
     {
         $filter = [
-            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(feed_name, '$.$lang'))"), '=', $name],
+            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['feed_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('feed_id') ? true : false;
+        return static::where($filter)->value('uuid') ? true : false;
     }
 
     /**
-     * 维护产品表中的加料数组
+     * todo 兼容 维护产品表中的加料数组
      *
      * @param array $total_product_ids 产品ID数组
      */
