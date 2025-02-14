@@ -4,6 +4,7 @@ namespace app\shop\controller\product\expand;
 
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\common\model\product\AttributeGroup;
 use app\shop\model\product\Attribute as AttributeModel;
 
 
@@ -58,11 +59,14 @@ class Attr extends Controller
      */
     public function edit($attribute_id)
     {
-        /** @var AttributeModel $model */
         $model = AttributeModel::detail($attribute_id);
+        if (!$model) {
+            $model = AttributeGroup::where('uuid', $attribute_id)->find();
+        }
         if (!$model) {
             return $this->renderError('数据不存在');
         }
+        /** @var AttributeModel $model */
         if ($model->edit($this->postData())) {
             return $this->renderSuccess('更新成功');
         }
@@ -78,7 +82,14 @@ class Attr extends Controller
      */
     public function delete($attribute_id)
     {
-        $model = new AttributeModel;
+        $model = AttributeModel::detail($attribute_id);
+        if (!$model) {
+            $model = AttributeGroup::where('uuid', $attribute_id)->find();
+        }
+        if (!$model) {
+            return $this->renderError('数据不存在');
+        }
+        /** @var AttributeModel $model */
         if (!$model->setDelete($attribute_id)) {
             return $this->renderError($model->getError() ?: '删除失败');
         }
