@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -12,9 +13,11 @@ type IOrderProductRepo interface {
 	WhereSaleBillUuids(uuids []uint64) DBOption
 	WhereSaleOrderUuids(uuids []uint64) DBOption
 	GetProductList(opts ...DBOption) ([]model.SaleOrderProduct, error) // 获取商品列表
-	GetProductInfo(uuid uint64) (model.SaleOrderProduct, error)        // 获取商品信息
+	GetProductInfoByUuid(uuid uint64) (model.SaleOrderProduct, error)  // 通过UUID获取商品详情
+	GetProductInfo(opts ...DBOption) (model.SaleOrderProduct, error)   // 获取商品详情
 	Delete(uuid uint64) error
-	Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) // 创建商品
+	Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) // 创建订单商品
+	Update(data map[string]interface{}, opts ...DBOption) error          // 更新订单商品
 }
 
 // orderProductRepo 商品仓库
@@ -74,8 +77,8 @@ func (r *orderProductRepo) Create(model model.SaleOrderProduct) (model.SaleOrder
 	return model, err
 }
 
-// GetProductInfo 获取商品信息
-func (r *orderProductRepo) GetProductInfo(uuid uint64) (model.SaleOrderProduct, error) {
+// GetProductInfoByUuid 获取商品信息
+func (r *orderProductRepo) GetProductInfoByUuid(uuid uint64) (model.SaleOrderProduct, error) {
 	var product model.SaleOrderProduct
 
 	err := r.db.Where("uuid = ?", uuid).
@@ -85,4 +88,36 @@ func (r *orderProductRepo) GetProductInfo(uuid uint64) (model.SaleOrderProduct, 
 		First(&product).Error
 
 	return product, err
+}
+
+// GetProductInfo 获取商品详情
+func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (model.SaleOrderProduct, error) {
+	var product model.SaleOrderProduct
+
+	db := r.db.Model(&model.SaleOrderProduct{}).Session(&gorm.Session{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.First(&product).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return product, err
+	}
+
+	return product, nil
+}
+
+// Update 更新
+func (r *orderProductRepo) Update(data map[string]interface{}, opts ...DBOption) error {
+	db := r.db.Model(&model.SaleOrderProduct{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Updates(data).Error
+
+	return err
 }

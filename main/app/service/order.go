@@ -341,28 +341,28 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderI
 		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {
 			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
 		}
-		//
+		// todo - 待完善
 		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
 			products[j] = resp.OrderProduct{
-				Uuid:                  product.Uuid,
-				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
-				FlavorName:            product.FlavorName,
-				Num:                   product.Num,
-				CustomPrice:           product.CustomPrice,
-				UnitPrice:             product.UnitPrice,
-				Price:                 product.Price,
-				TaxRate:               product.TaxRate,
-				ProductOriginalAmount: product.ProductOriginalAmount,
-				Status:                product.Status,
-				Remark:                product.Remark,
-				IsGift:                product.IsGift == 1,
-				GiftReason:            product.GiftReason,
-				ImageUrl:              product.ImageFile.GetUrl(),
-				Attributes:            product.GetAttributeNames(),
+				Uuid:       product.Uuid,
+				LocaleName: s.localeSrv.GetLocaleNames(product.MultiLanguageName),
+				FlavorName: product.FlavorName,
+				Num:        product.Num,
+				// CustomPrice:           product.CustomPrice,
+				// UnitPrice:             product.UnitPrice,
+				Price:   product.Price,
+				TaxRate: product.TaxRate,
+				// ProductOriginalAmount: product.ProductOriginalAmount,
+				Status:     product.Status,
+				Remark:     product.Remark,
+				IsGift:     product.IsGift == 1,
+				GiftReason: product.GiftReason,
+				ImageUrl:   product.ImageFile.GetUrl(),
+				Attributes: product.GetAttributeNames(),
 			}
 		}
-		//
+
 		orderList[i] = resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
 			BillType:      info.BillType,
@@ -655,7 +655,7 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	}
 
 	// 判断商品
-	product, err := orderProductRepo.GetProductInfo(req.OrderProductUuid)
+	product, err := orderProductRepo.GetProductInfoByUuid(req.OrderProductUuid)
 	if err != nil {
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}

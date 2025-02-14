@@ -2,18 +2,18 @@ package service
 
 import (
 	"errors"
-	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
+
+	"github.com/shopspring/decimal"
 )
 
 // IOrderProductSrv 定义订单商品服务接口
 type IOrderProductSrv interface {
-	CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error)                            // 检查商品
+	CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error)                             // 检查商品
 	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
 	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
 	CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
@@ -43,25 +43,32 @@ func NewOrderProductSrvImpl(dbm *database.DBManager) IOrderProductSrv {
 }
 
 // CheckProduct 检查商品
-func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error) {
+func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error) {
 	db := o.dbm.GetDB(dbId)
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	productPackage, _ := productRepo.GetProduct(
 		commonRepo.WhereByUuid(productUuid),
 		commonRepo.WhereBySoftDelete(),
+		productRepo.WithMultiLanguageName(),
 		productRepo.WithProductBoms(),
+		productRepo.WithProductBomsProductFlavor(),
+		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
+		productRepo.WithProductBomsProductSauce(),
+		productRepo.WithProductBomsProductSauceMultiLanguageName(),
 		productRepo.WithProductPackageAttributeGroup(),
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
 	)
 	if productPackage.Uuid == 0 {
-		return nil, errors.New("商品不存在")
+		return model.ProductPackage{}, errors.New("商品不存在")
 	}
 	if productPackage.Status == constant.ProductStatusOffSale {
-		return nil, errors.New("商品已下架")
+		return model.ProductPackage{}, errors.New("商品已下架")
 	}
 
-	return &productPackage, nil
+	return productPackage, nil
 }
 
 // CheckOrderProductFlavor 检查商品规格
@@ -163,64 +170,8 @@ type CreateOrderProductReq struct {
 
 // CreateOrderProduct 创建订单商品
 func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) {
-	var res model.SaleOrderProduct
-	db := o.dbm.GetDB(dbId)
-	amount := o.CalcAmount(req.ProductBoms, req.Num)
-	err := db.Transaction(func(tx *gorm.DB) error {
-		// 创建订单商品
-		orderProduct, err := repository.NewOrderProductRepo(tx).Create(model.SaleOrderProduct{
-			Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
-			FlavorName:            req.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang),
-			Num:                   req.Num,
-			UnitPrice:             amount.UnitPrice,
-			Price:                 amount.Price,
-			ServiceFee:            amount.ServiceFee,
-			TaxFee:                amount.TaxFee,
-			ProductOriginalAmount: amount.OriginalAmount,
-			DeductStockType:       req.ProductPackage.DeductStockType,
-			MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
-			ImageFileUuid:         req.ProductPackage.ImageFileUuid,
-			ProductPackageUuid:    req.ProductPackage.Uuid,
-			SaleBillUuid:          req.SaleOrder.SaleBillUuid,
-			SaleOrderUuid:         req.SaleOrder.Uuid,
-		})
 
-		if err != nil {
-			return err
-		}
-
-		// 创建销售订单商品BOM
-		var orderProductBoms []model.SaleOrderProductBom
-		for _, bom := range req.ProductBoms {
-			var name string
-			var isFlavorBom uint
-			if bom.ProductFlavorUuid > 0 {
-				name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
-				isFlavorBom = 1
-			}
-			if bom.ProductSauceUuid > 0 {
-				name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
-			}
-			orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
-				Name:                 name,
-				Price:                bom.Price,
-				IsFlavorBom:          isFlavorBom,
-				SaleOrderUuid:        req.SaleOrder.Uuid,
-				SaleOrderProductUuid: orderProduct.Uuid,
-				ProductBomUuid:       bom.Uuid,
-			})
-		}
-		err = repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductBoms)
-		if err != nil {
-			return err
-		}
-
-		res = orderProduct
-
-		return nil
-	})
-
-	return &res, err
+	return nil, nil
 }
 
 type CalcAmountResp struct {
