@@ -29,11 +29,13 @@ type CashierOrderHandler struct {
 // @Accept json
 // @Produce json
 // @param data query req.OrderListReq true "列表参数"
-// @Success 200 {object} resp.CashierOrderListPaginationResp "订单列表"
+// @Success 200 {object} resp.OrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
 func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
 	// 绑定请求参数
 	req := req.OrderListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -41,7 +43,7 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetOrderLists(companyUuid, req)
+	res, err := h.service.GetOrderLists(companyUuid, staff, source, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -58,11 +60,13 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data query req.OrderInfoReq true "详情参数"
-// @Success 200 {object} resp.CashierOrderInfoResp "订单详情"
+// @Success 200 {object} resp.OrderInfosResp "订单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/info [get]
 func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
 	// 绑定请求参数
 	req := req.OrderInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -70,7 +74,7 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetOrderInfos(companyUuid, req)
+	res, err := h.service.GetOrderInfos(companyUuid, staff, source, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)

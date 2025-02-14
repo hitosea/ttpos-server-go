@@ -132,11 +132,21 @@ type SaleOrder struct {
 	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	ReturnOrders      []ReturnOrder      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 // TableName 指定表名
 func (SaleOrder) TableName() string {
 	return "ttpos_sale_order"
+}
+
+// 获取总的退款金额
+func (model *SaleOrder) GetTotalRefundAmount() float64 {
+	refundAmount := 0.0
+	for _, refundOrder := range model.ReturnOrders {
+		refundAmount += refundOrder.RefundAmount
+	}
+	return refundAmount
 }
 
 // ValidateOrderStatus 判断订单是否可操作

@@ -7,36 +7,49 @@ type CreateOrderResp struct {
 	Uuid uint64 `json:"uuid"` // 订单UUID
 }
 
-type CashierOrder struct {
-	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单UUID
-	BillType      uint    `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
-	SerialNo      string  `json:"serial_no"`       // 桌位编号 (点餐流水号)
-	OrderNo       string  `json:"order_no"`        // 订单编号
-	Status        uint    `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    int64   `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64 `json:"order_amount"`    // 订单总金额
-	PaymentAmount float64 `json:"payment_amount"`  // 支付金额
-	PayTypeName   string  `json:"pay_type_name"`   // 支付类型名称
+// 账单列表订单响应
+type BillListsOrder struct {
+	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
+	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
+	OrderNo       string         `json:"order_no"`        // 订单编号
+	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64          `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64        `json:"order_amount"`    // 订单总金额
+	PaymentAmount float64        `json:"payment_amount"`  // 支付金额
+	PayTypeName   string         `json:"pay_type_name"`   // 支付类型名称
+	Extra         BillListsExtra `json:"extra,omitempty"`
+}
+
+// 账单列表额外信息响应
+type BillListsExtra struct { // 通过当前数据控制按钮是否显示
+	IsCellRefund        bool `json:"is_cell_refund"`                   // 是否可退款
+	IsCellCancel        bool `json:"is_cell_cancel,omitempty"`         // 是否可取消
+	IsCellReverseSettle bool `json:"is_cell_reverse_settle,omitempty"` // 是否可反结账
+	IsCellPrint         bool `json:"is_cell_print,omitempty"`          // 是否可打印小票
+	IsCellDelete        bool `json:"is_cell_delete,omitempty"`         // 是否可删除
+	IsCellInvoice       bool `json:"is_cell_invoice,omitempty"`        // 是否可打印发票
 }
 
 // 订单列表响应
-type BillList struct {
-	SaleBillUuid  uint64         `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint           `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
-	IsSplit       bool           `json:"is_split"`       // 是否拆单	false:否 true:是
-	SerialNo      string         `json:"serial_no"`      // 桌位编号 (点餐流水号)
-	OrderNo       string         `json:"order_no"`       // 订单编号
-	Status        uint           `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    int64          `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64        `json:"order_amount"`   // 订单总金额
-	PaymentAmount float64        `json:"payment_amount"` // 支付金额
-	PayTypeName   string         `json:"pay_type_name"`  // 支付类型名称
-	SaleOrders    []CashierOrder `json:"sale_orders"`    // 订单列表
+type BillLists struct {
+	SaleBillUuid  uint64           `json:"sale_bill_uuid"` // 销售账单UUID
+	BillType      uint             `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
+	IsSplit       bool             `json:"is_split"`       // 是否拆单	false:否 true:是
+	SerialNo      string           `json:"serial_no"`      // 桌位编号 (点餐流水号)
+	OrderNo       string           `json:"order_no"`       // 订单编号
+	Status        uint             `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64            `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64          `json:"order_amount"`   // 订单总金额
+	PaymentAmount float64          `json:"payment_amount"` // 支付金额
+	PayTypeName   string           `json:"pay_type_name"`  // 支付类型名称
+	SaleOrders    []BillListsOrder `json:"sale_orders"`    // 订单列表
+	Extra         BillListsExtra   `json:"extra,omitempty"`
 }
 
 // 订单列表分页响应
 type OrderListPaginationResp struct {
-	List []BillList `json:"list"` // 订单列表
+	List []BillLists `json:"list"` // 订单列表
 	Meta struct {
 		dto.PageResponse
 		UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
@@ -55,23 +68,24 @@ type OrderInfoPayTypes struct {
 }
 
 type OrderProduct struct {
-	Uuid                  uint64             `json:"uuid"`                    // 销售订单商品ID
-	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 产品名称
-	FlavorName            string             `json:"flavor_name"`             // 口味名称
-	Num                   uint               `json:"num"`                     // 数量
-	CustomPrice           float64            `json:"custom_price"`            // 自定义价格
-	UnitPrice             float64            `json:"unit_price"`              // 单价
-	Price                 float64            `json:"price"`                   // 最终单价
-	TaxRate               uint               `json:"tax_rate"`                // 税率,单位%.下单时单税率,结账时再重新核算
-	ProductOriginalAmount float64            `json:"product_original_amount"` // 原价销售额.包含加料、税费.
-	Status                uint               `json:"status"`                  // 状态, 0-正常 1-退菜
-	Remark                string             `json:"remark"`                  // 备注
-	IsGift                bool               `json:"is_gift"`                 // 是否赠品, fasle-否 true-是
-	GiftReason            string             `json:"gift_reason"`             // 赠品原因
-	Attributes            string             `json:"attributes"`              // 规格属性加料
-	ImageUrl              string             `json:"image_url"`               // 图片地址
+	Uuid         uint64             `json:"uuid"`          // 销售订单商品ID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 产品名称
+	FlavorName   string             `json:"flavor_name"`   // 口味名称
+	Num          uint               `json:"num"`           // 数量
+	SalePrice    float64            `json:"sale_price"`    // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
+	Price        float64            `json:"Price"`         // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
+	TotalPrice   float64            `json:"total_price"`   // 应收金额(单商品)=最终单价+服务费+总税费
+	TaxRate      uint               `json:"tax_rate"`      // 税率,单位%.下单时单税率,结账时再重新核算
+	Status       uint               `json:"status"`        // 状态, 0-正常 1-退菜
+	Remark       string             `json:"remark"`        // 备注
+	IsGift       bool               `json:"is_gift"`       // 是否赠品, fasle-否 true-是
+	GiftReason   string             `json:"gift_reason"`   // 赠品原因
+	Attributes   string             `json:"attributes"`    // 规格属性加料
+	ImageUrl     string             `json:"image_url"`     // 图片地址
+	RefundReason string             `json:"refund_reason"` // 退菜原因
 }
 
+// 订单信息响应
 type OrderInfo struct {
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
@@ -120,4 +134,5 @@ type OrderInfosResp struct {
 	OperationLog struct {
 		List []OrderOperationLog
 	} `json:"operation_log"` // 操作日志
+	Extra BillListsExtra `json:"extra"`
 }

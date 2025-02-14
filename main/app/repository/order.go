@@ -130,16 +130,17 @@ func (r *orderRepo) GetOrderNum(opts ...DBOption) (int64, error) {
 
 // GetCashierOrderListWithPagination 获取收银台订单列表-参数
 type GetCashierOrderListWithPaginationType struct {
-	PageNo           int
-	PageSize         int
-	OrderNo          string
-	DateType         int
-	EnableCreateTime bool
-	EnablePayTime    bool
-	QueryStartTime   uint
-	QueryEndTime     uint
-	Status           int
-	BillType         int
+	PageNo           int    // 页码
+	PageSize         int    // 页面大小
+	OrderNo          string // 订单编号
+	DateType         int    // 时间类型,-1=全部、0=今天、1=本周、2=本月、3=本年
+	EnableCreateTime bool   // 是否启用创建时间
+	EnablePayTime    bool   // 是否启用支付时间
+	QueryStartTime   uint   // 查询开始时间
+	QueryEndTime     uint   // 查询结束时间
+	Status           int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
+	BillType         int    // 订单类型,-1=全部、0=餐单、1=外卖
+	DiningMethod     int    // 用餐方式,-1=全都、 0-堂食 1-打包
 }
 
 // GetCashierOrderListWithPagination 获取收银台订单列表
@@ -159,6 +160,9 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders.PaymentMethod",
 			},
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.SortWithID("DESC"),
@@ -172,6 +176,9 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 				// 账单类型
 				if param.BillType != -1 {
 					db = db.Where("bill_type = ?", param.BillType)
+				}
+				if param.DiningMethod != -1 {
+					db = db.Where("dining_method = ?", param.DiningMethod)
 				}
 				//  账单状态
 				if param.Status != -1 {
@@ -337,6 +344,9 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+			},
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
