@@ -99,7 +99,6 @@ class AppValidate extends  BaseValidate
             'app_id',
             'name',
             'level',
-            'logo',
             'link_phone',
             'user_name',
             'parent_id',

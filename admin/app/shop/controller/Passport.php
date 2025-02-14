@@ -77,7 +77,7 @@ class Passport extends Controller
         $model = new User();
         if ($userInfo = $model->checkLogin($user)) {
             // saas首次修改密码
-            if ($userInfo['password_change'] == 0) {
+            if ($userInfo['password_change_count'] == 0) {
                 return $this->renderError('首次登录需修改密码', ['token' => $userInfo['token']], StatusCode::UNBIND_ERROR);
             }
             $companyUuid = $userInfo['company_uuid'] ?? 0;

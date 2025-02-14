@@ -118,7 +118,7 @@ class User extends UserModel
             $this->error = '原密码错误';
             return false;
         }
-        if ($userInfo['password_change'] > 0) {
+        if ($userInfo['password_change_count'] > 0) {
             $this->error = '已经修改过密码';
             return false;
         }
@@ -126,7 +126,7 @@ class User extends UserModel
             $this->error = '两次密码输入不一致';
             return false;
         }
-        $date['password_change'] = $userInfo['password_change'] + 1;
+        $date['password_change_count'] = $userInfo['password_change_count'] + 1;
         $date['password'] = salt_hash($newPassword);
         $userInfo->save($date);
         //
