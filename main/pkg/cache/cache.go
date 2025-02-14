@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"context"
+	"github.com/redis/go-redis/v9"
 	"sync"
 	"time"
 )
@@ -21,8 +23,8 @@ const (
 )
 
 type Config struct {
-	Host     string
-	Port     int
+	Host     string // 单节点时，正常填。集群时用,号分隔多个地址
+	Port     int    // 单节点时，正常填。集群时端口要求一样
 	Password string
 	DB       int
 }
@@ -46,4 +48,10 @@ func Init(cacheType CacheType, config Config) {
 	once.Do(func() {
 		Global = NewCache(cacheType, config)
 	})
+}
+
+type IRedis interface {
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Get(ctx context.Context, key string) *redis.StatusCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
 }

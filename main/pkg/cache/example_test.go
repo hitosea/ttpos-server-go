@@ -1,9 +1,12 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func TestCache(t *testing.T) {
@@ -43,4 +46,13 @@ func TestCache(t *testing.T) {
 		t.Error("Failed to get value from Go-Cache")
 	}
 	fmt.Printf("Go-Cache value: %v\n", value)
+}
+
+func TestCache_Set(t *testing.T) {
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:    []string{"192.168.100.117:36379"},
+		Password: "123123",
+	})
+	ctx := context.Background()
+	client.Ping(ctx)
 }
