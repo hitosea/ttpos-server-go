@@ -159,17 +159,17 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// CloseDesk 处理关闭桌台订单
-// @Summary 关闭桌台订单
-// @Description 关闭桌台订单
+// CancelDeskOrder 处理取消桌台订单
+// @Summary 取消桌台订单
+// @Description 取消桌台订单
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @param data query req.OrderCancelReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/close [post]
-func (h *DeskHandler) CloseDeskOrder(c *gin.Context) {
+// @Router /cashier/desk/order/cancel [post]
+func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
@@ -304,7 +304,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
 		privateApi.POST("/desk/close", wrapper.CloseDesk)
 		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
-		privateApi.POST("/desk/order/close", wrapper.CloseDeskOrder)
+		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)

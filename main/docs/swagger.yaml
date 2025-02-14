@@ -2211,11 +2211,11 @@ paths:
       summary: 获取桌台列表
       tags:
       - 收银端.桌台
-  /cashier/desk/order/close:
+  /cashier/desk/order/cancel:
     post:
       consumes:
       - application/json
-      description: 关闭桌台订单
+      description: 取消桌台订单
       parameters:
       - description: 取消原因
         in: query
@@ -2236,7 +2236,7 @@ paths:
           description: OK
         "404":
           description: 未找到
-      summary: 关闭桌台订单
+      summary: 取消桌台订单
       tags:
       - 收银端.桌台
   /cashier/desk/order/create:
@@ -2366,34 +2366,6 @@ paths:
         "404":
           description: 未找到
       summary: 取消点餐订单
-      tags:
-      - 收银端.点餐
-  /cashier/instant/order/close:
-    post:
-      consumes:
-      - application/json
-      description: 关闭点餐订单
-      parameters:
-      - description: 取消原因
-        in: query
-        name: cancel_reason
-        type: string
-      - description: 高级密码 后台开启的时候才传
-        in: query
-        name: password
-        type: string
-      - description: 销售账单UUID
-        in: query
-        name: sale_bill_uuid
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "404":
-          description: 未找到
-      summary: 关闭点餐订单
       tags:
       - 收银端.点餐
   /cashier/instant/order/create:

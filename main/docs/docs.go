@@ -1278,9 +1278,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/close": {
+        "/cashier/desk/order/cancel": {
             "post": {
-                "description": "关闭桌台订单",
+                "description": "取消桌台订单",
                 "consumes": [
                     "application/json"
                 ],
@@ -1290,7 +1290,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.桌台"
                 ],
-                "summary": "关闭桌台订单",
+                "summary": "取消桌台订单",
                 "parameters": [
                     {
                         "type": "string",
@@ -1513,49 +1513,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "取消点餐订单成功"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/instant/order/close": {
-            "post": {
-                "description": "关闭点餐订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "关闭点餐订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "取消原因",
-                        "name": "cancel_reason",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "高级密码 后台开启的时候才传",
-                        "name": "password",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
                     },
                     "404": {
                         "description": "未找到"
