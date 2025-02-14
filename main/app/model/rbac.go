@@ -36,7 +36,7 @@ type Staff struct {
 	DutyNo              string `gorm:"column:duty_no;type:varchar(64);comment:当班编号" json:"duty_no"`
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
-	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceKey"`
+	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceId"`
 }
 
 // Role 角色表 ttpos_role
