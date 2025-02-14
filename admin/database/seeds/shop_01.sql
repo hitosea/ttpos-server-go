@@ -45,25 +45,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-未结账 1-已结账',
-    `product_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，(订单商品.总应收金额)之和',
-    `product_original_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额。 商品原始金额=(订单商品.总销售价)之和',
+    `product_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，(订单商品.总最终单价)之和。商品已含税时，该金额包括了税费。当商品未含税时，该金额不包括税费',
+    `product_original_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额。 商品原始金额=(订单商品.总销售价)之和。',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费固定服务费时，服务费=固定服务费；按比例收服务费时，服务费=(订单商品.总服务费)之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费。税费=(订单商品.总税费)之和',
-    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总商品应收金额。总金额=(订单商品.总应收金额)之和',
+    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。应收金额=(订单商品.总应收金额)之和。校验：当商品已含税时，应收金额=商品金额+服务费；当商品未含税时，应收金额=商品金额+服务费+税费',
     -- 会员打折金额
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
     -- 自定义折扣金额
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和',
     -- 总打折金额
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总打折金额。总打折金额=(订单商品.打折金额)之和',
-    -- 总金额
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总金额。总金额=总商品应收金额+总服务费+总税费-总打折金额',
-    `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原始金额',
-    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费,包括商品税费和服务费税费',
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '折扣费用',
-    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用',
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总金额',
+    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总打折金额。总打折金额=(订单商品.打折金额)之和。校验：总打折金额=总会员折扣金额+总自定义折扣金额',
+    -- 结账抹零金额
+    `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
+    -- 实收金额。
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '实收金额。实收金额=应收金额+手续费-结账抹零金额',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,关联付款单的支付金额之和',
+    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
+    `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -163,15 +162,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `product_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单商品）,规格原价+小料价',
     `is_custom_price` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自定义价格（单商品）, 0-否 1-是',
     -- 总销售价=销售价*数量
-    `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
+    `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
     -- 税率
     `tax_rate` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
     `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣率(0-100%)',
     `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员卡折扣率(0-100%)',
     `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣率(0-100%)',
-    -- 最终单价=销售价*折扣率
-    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(单商品，会员、会员卡和优惠折扣后)。销售价*折扣率',
+    -- 最终单价=销售价*折扣率；总最终单价=最终单价*商品数量
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率',
      -- 单个商品总税费=商品税费+服务费税费；总税费=单个商品总税费*商品数量
     `service_tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费税费（单商品）,0-不收取税费；收取时，服务费税费=服务费*税率',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品税费（单商品）。商品已含税时，税费=规格原价*(1-1/(1+税率))；商品未含税时，税费=原始单价*税率',
@@ -180,7 +179,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
    -- 单个商品应收金额=最终单价+服务费+总税费; 总应收金额=单个商品应收金额*商品数量
     `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)=最终单价+服务费+总税费',
     -- 打折金额；总打折金额=单个商品打折金额*商品数量
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价',
+    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额',
     -- 会员折扣金额
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣金额（单商品）=销售价*会员折扣率*会员卡折扣率',
     -- 自定义折扣金额
