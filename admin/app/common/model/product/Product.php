@@ -23,7 +23,7 @@ use app\shop\model\product\Category as CategoryModel;
  */
 class Product extends BaseModel
 {
-    protected $name = 'product_category';
+    protected $name = 'product_package';
     protected $pk = 'id';
     protected $append = ['product_id', 'product_sales', 'product_name_text', 'product_unit_text'];
 

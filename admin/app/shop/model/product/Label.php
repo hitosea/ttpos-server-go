@@ -16,7 +16,7 @@ class Label extends LabelModel
     {
         $model = $this;
         if (isset($data['label_name']) && $data['label_name'] != '') {
-            $model = $model->like('label_name', trim($data['label_name']));
+            $model = $model->like('name', trim($data['label_name']));
         }
         $list =  $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
 
@@ -32,13 +32,13 @@ class Label extends LabelModel
      */
     public function add($data, $shop_supplier_id)
     {
-        $isExist = $this->where('label_name', '=', $data['label_name'])->count();
+        $isExist = $this->where('name', '=', $data['label_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
-        $data['shop_supplier_id'] = $shop_supplier_id;
-        $data['app_id'] = self::$app_id;
+        //
+        $data['name'] = $data['label_name'] ?? '';
         return $this->save($data);
     }
 
@@ -47,13 +47,15 @@ class Label extends LabelModel
      */
     public function edit($data)
     {
-        $isExist = $this->where('label_name', '=', $data['label_name'])
-            ->where('label_id', '<>', $this['label_id'])
+        $isExist = $this->where('name', '=', $data['label_name'])
+            ->where('uuid', '<>', $this['uuid'])
             ->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
+        //
+        $data['name'] = $data['label_name'] ?? '';
         return $this->save($data);
     }
 
@@ -67,7 +69,7 @@ class Label extends LabelModel
             $this->error = '该标签下存在商品，不允许删除';
             return false;
         }
-        return $this->where('label_id', 'in', $label_id)->delete();
+        return $this->where('uuid', 'in', $label_id)->delete();
     }
 
     /**
@@ -83,9 +85,9 @@ class Label extends LabelModel
         $this->startTrans();
         try {
             // 删除原有关系
-            $this->product()->update(['label_id' => 0]);
+            $this->product()->update(['printer_tag_uuid' => 0]);
             // 添加新关系
-            Product::whereIn('product_id', $product_ids)->update(['label_id' => $label_id]);
+            Product::whereIn('uuid', $product_ids)->update(['printer_tag_uuid' => $label_id]);
             $this->commit();
             return true;
         } catch (\Exception $e) {

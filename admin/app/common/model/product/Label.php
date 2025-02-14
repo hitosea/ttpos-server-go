@@ -9,20 +9,32 @@ use app\common\model\BaseModel;
  */
 class Label extends BaseModel
 {
-    protected $name = 'product_print_label';
-    protected $pk = 'label_id';
+    protected $name = 'printer_tag';
+    protected $pk = 'id';
 
     /**
-     * 处理多语言
+     * 追加字段
      */
-    protected $append = ['label_name_text'];
+    protected $append = ['label_id', 'label_name', 'label_name_text'];
+
+    /**
+     * 兼容字段
+     */
+    public function getLabelIdAttr()
+    {
+        return $this->uuid ?: 0;
+    }
+    public function getLabelNameAttr()
+    {
+        return $this->getData('name') ?: '';
+    }
 
     /**
      * 标签名称
      */
     public function getLabelNameTextAttr($value, $data = [])
     {
-        return extractLanguage($value ?: $data['label_name']);
+        return extractLanguage($value ?: $data['name']);
     }
 
     /**
@@ -30,7 +42,7 @@ class Label extends BaseModel
      */
     public function getProductIdsAttr($value, $data = [])
     {
-        return $this->product()->column('product_id');
+        return $this->product()->column('uuid');
     }
 
     /**
@@ -38,7 +50,7 @@ class Label extends BaseModel
      */
     public function product()
     {
-        return $this->hasMany('app\\common\\model\\product\\Product', 'label_id', 'label_id');
+        return $this->hasMany('app\\common\\model\\product\\Product', 'printer_tag_uuid', 'uuid');
     }
 
     /**
@@ -51,10 +63,10 @@ class Label extends BaseModel
         if ($data) {
             $addData = [];
             foreach ($data as $item) {
-                $isExit = $this->where('label_name', '=', $item['label_name'])->count();
+                $isExit = $this->where('name', '=', $item['label_name'])->count();
                 if ($isExit == 0) {
                     $addData[] = [
-                        'label_name' => $item['label_name'],
+                        'name' => $item['label_name'],
                     ];
                 }
             }
@@ -75,7 +87,7 @@ class Label extends BaseModel
      */
     public static function detail($label_id)
     {
-        return self::find($label_id);
+        return self::where('uuid', $label_id)->find();
     }
 
     /**
@@ -83,7 +95,7 @@ class Label extends BaseModel
      */
     public function isUseWithProduct($label_id)
     {
-        return Product::where('label_id', 'in', $label_id)->count() > 0;
+        return Product::where('printer_tag_uuid', 'in', $label_id)->count() > 0;
     }
 
     /**
@@ -92,11 +104,11 @@ class Label extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'label_name' => $name,
+            'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['label_id', '<>', $id];
+            $filter[] = ['id', '<>', $id];
         }
-        return static::where($filter)->value('label_id') ? true : false;
+        return static::where($filter)->value('id') ? true : false;
     }
 }
