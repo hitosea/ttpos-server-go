@@ -20,3 +20,12 @@ type SearchMember struct {
 type SearchMemberList struct {
 	List []SearchMember `json:"list"`
 }
+
+type RechargeMember struct {
+	Uuid      uint64  `json:"uuid"`       // 会员Uuid
+	Nickname  string  `json:"nickname"`   // 会员昵称
+	CardName  string  `json:"card_name"`  // 会员卡名称
+	LevelName string  `json:"level_name"` // 会员等级
+	Balance   float64 `json:"balance"`    // 会员余额
+	Points    float64 `json:"points"`     // 会员积分
+}

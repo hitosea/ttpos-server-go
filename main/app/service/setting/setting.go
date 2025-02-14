@@ -17,6 +17,8 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/nahid/gohttp"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
@@ -26,8 +28,8 @@ import (
 type GetSettingReq struct {
 	CompanyUuid  uint64             // 商家Uuid
 	Language     string             // 请求头accept-language，用于实时翻译，比如门店业务获取抹零翻译"实款实收"
-	Context      *gin.Context       // 请求上下文，用于给url加上域名，比如商城设置logo加上http://xxxx
-	LanguageList []dto.LanguageItem // 商家语言，比如setting里面没有收银机设置，那默认返回商家语言
+	Context      *gin.Context       // 请求上下文，用于给url加上域名，比如收银机副屏广告轮播图增加域名
+	LanguageList []dto.LanguageItem // 如果设置为nil，则读取商家语言，否则将LanguageList传递给getDefaultXXX
 }
 
 type ISrv interface {
@@ -47,6 +49,7 @@ type ISrv interface {
 	CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool                                          // 收银机验证密码
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
 	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                     // 验证高级密码
+	CheckUpdate(appType int, brand string, language string) (resp.UpdateInfo, error)                                                      // 检查更新
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -530,7 +533,7 @@ func (s *Srv) GetPrinterSetting(companyUuid uint64, language string, cc *gin.Con
 		err     error
 		printer setting.Printer
 	)
-	if len(languageList) == 0 {
+	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
 		if err != nil {
 			return printer, err
@@ -621,7 +624,7 @@ func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Con
 		err     error
 		cashier setting.Cashier
 	)
-	if len(languageList) == 0 {
+	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
 		if err != nil {
 			return cashier, err
@@ -661,7 +664,7 @@ func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.C
 		err       error
 		assistant setting.Assistant
 	)
-	if len(languageList) == 0 {
+	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
 		if err != nil {
 			return assistant, err
@@ -706,7 +709,7 @@ func (s *Srv) GetH5Setting(companyUuid uint64, language string, cc *gin.Context,
 		err error
 		h5  setting.H5
 	)
-	if len(languageList) == 0 {
+	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
 		if err != nil {
 			return h5, err
@@ -778,15 +781,46 @@ func (s *Srv) CashierVerifyPassword(typ string, password string, companyUuid uin
 		return false
 	}
 	switch typ {
-	case constant.CashierPasswordTypeCashBox:
+	case constant.PasswordTypeCashBox:
 		return cashierSetting.CashierPassword == password
-	case constant.CashierPasswordTypeAdvanced:
+	case constant.PasswordTypeAdvanced:
 		return cashierSetting.AdvancedPassword == password
-	case constant.CashierPasswordTypeLock:
+	case constant.PasswordTypeLock:
 		return cashierSetting.LockPassword == password
 	default:
 		return false
 	}
+}
+
+// CheckUpdate 检查更新
+func (s *Srv) CheckUpdate(appType int, brand string, language string) (resp.UpdateInfo, error) {
+	type UpdateData struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			VersionName  string `json:"version_name"`
+			ForcedUpdate int    `json:"forced_update"`
+			UpdateLog    string `json:"update_log"`
+			DownloadURL  string `json:"download_url"`
+		} `json:"data"`
+	}
+	url := fmt.Sprintf("%s/api/admin/client.client/getNewVersion?type=%d&brand=%s&language=%s", viper.GetString("CLOUD_PLATFORM_HOST"), appType, brand, language)
+	res, err := gohttp.NewRequest().Post(url)
+	if err != nil {
+		return resp.UpdateInfo{}, errors.New("获取最新版本信息失败")
+	}
+	bodyBytes, _ := res.GetBodyAsByte()
+	var updateData UpdateData
+	if err := json.Unmarshal(bodyBytes, &updateData); err != nil {
+		logger.Logger.Error("解析版本更新信息失败", zap.Error(err))
+	}
+
+	return resp.UpdateInfo{
+		VersionName:  updateData.Data.VersionName,
+		ForcedUpdate: updateData.Data.ForcedUpdate,
+		UpdateLog:    updateData.Data.UpdateLog,
+		DownloadURL:  updateData.Data.DownloadURL,
+	}, nil
 }
 
 // Updates 更新设置
