@@ -20,7 +20,7 @@ type CashierOrder struct {
 }
 
 // 订单列表响应
-type CashierBillList struct {
+type BillList struct {
 	SaleBillUuid  uint64         `json:"sale_bill_uuid"` // 销售账单UUID
 	BillType      uint           `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
 	IsSplit       bool           `json:"is_split"`       // 是否拆单	false:否 true:是
@@ -35,8 +35,8 @@ type CashierBillList struct {
 }
 
 // 订单列表分页响应
-type CashierOrderListPaginationResp struct {
-	List []CashierBillList `json:"list"` // 订单列表
+type OrderListPaginationResp struct {
+	List []BillList `json:"list"` // 订单列表
 	Meta struct {
 		dto.PageResponse
 		UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
@@ -45,7 +45,7 @@ type CashierOrderListPaginationResp struct {
 	} `json:"meta"` // Meta信息
 }
 
-type CashierOrderInfoPayTypes struct {
+type OrderInfoPayTypes struct {
 	Uuid              uint64  `json:"sale_bill_uuid"`      // 支付单UUID
 	PaymentMethodName string  `json:"payment_method_name"` // 支付类型名称
 	CurrencyUnit      string  `json:"currency_unit"`       // 货币单位
@@ -54,7 +54,7 @@ type CashierOrderInfoPayTypes struct {
 	Source            uint    `json:"source"`              // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 }
 
-type CashierOrderProduct struct {
+type OrderProduct struct {
 	Uuid                  uint64             `json:"uuid"`                    // 销售订单商品ID
 	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 产品名称
 	FlavorName            string             `json:"flavor_name"`             // 口味名称
@@ -72,38 +72,38 @@ type CashierOrderProduct struct {
 	ImageUrl              string             `json:"image_url"`               // 图片地址
 }
 
-type CashierOrderInfo struct {
-	SaleOrderUuid uint64                `json:"sale_order_uuid"` // 销售订单UUID
-	BillType      uint                  `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
-	SerialNo      string                `json:"serial_no"`       // 桌位编号 (点餐流水号)
-	OrderNo       string                `json:"order_no"`        // 订单编号
-	Status        uint                  `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    int64                 `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64               `json:"order_amount"`    // 订单总金额
-	PaymentAmount float64               `json:"payment_amount"`  // 支付金额
-	PayTypeName   string                `json:"pay_type_name"`   // 支付类型名称
-	MemberName    string                `json:"member_name"`     // 会员名称
-	Products      []CashierOrderProduct `json:"products"`        // 产品列表
+type OrderInfo struct {
+	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
+	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
+	OrderNo       string         `json:"order_no"`        // 订单编号
+	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64          `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64        `json:"order_amount"`    // 订单总金额
+	PaymentAmount float64        `json:"payment_amount"`  // 支付金额
+	PayTypeName   string         `json:"pay_type_name"`   // 支付类型名称
+	MemberName    string         `json:"member_name"`     // 会员名称
+	Products      []OrderProduct `json:"products"`        // 产品列表
 }
 
 // 订单信息响应
-type CashierOrderInfos struct {
-	SaleBillUuid  uint64                     `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint                       `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
-	IsSplit       bool                       `json:"is_split"`       // 是否拆单	false:否 true:是
-	SerialNo      string                     `json:"serial_no"`      // 桌位编号 (点餐流水号)
-	OrderNo       string                     `json:"order_no"`       // 订单编号
-	Status        uint                       `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	CreateTime    int64                      `json:"create_time"`    // 创建时间
-	FinishTime    int64                      `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64                    `json:"order_amount"`   // 订单总金额
-	PaymentAmount float64                    `json:"payment_amount"` // 支付金额
-	MemberNames   string                     `json:"member_names"`   // 会员名称
-	PayTypes      []CashierOrderInfoPayTypes `json:"pay_types"`      // 支付类型
-	SaleOrders    []CashierOrderInfo         `json:"sale_orders"`    // 订单列表
+type OrderInfos struct {
+	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
+	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
+	IsSplit       bool                `json:"is_split"`       // 是否拆单	false:否 true:是
+	SerialNo      string              `json:"serial_no"`      // 桌位编号 (点餐流水号)
+	OrderNo       string              `json:"order_no"`       // 订单编号
+	Status        uint                `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	CreateTime    int64               `json:"create_time"`    // 创建时间
+	FinishTime    int64               `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64             `json:"order_amount"`   // 订单总金额
+	PaymentAmount float64             `json:"payment_amount"` // 支付金额
+	MemberNames   string              `json:"member_names"`   // 会员名称
+	PayTypes      []OrderInfoPayTypes `json:"pay_types"`      // 支付类型
+	SaleOrders    []OrderInfo         `json:"sale_orders"`    // 订单列表
 }
 
-type CashierOrderOperationLog struct {
+type OrderOperationLog struct {
 	Uuid          uint64 `json:"uuid"`            // 账单操作记录ID
 	Source        string `json:"source"`          // 操作来源 cashier-收银 assistant-助手 shop-商家后台
 	Action        string `json:"action"`          // 操作行为
@@ -115,9 +115,9 @@ type CashierOrderOperationLog struct {
 	CreateTime    int64  `json:"create_time"`     // 创建时间(时间戳)
 }
 
-type CashierOrderInfoResp struct {
-	Detail       CashierOrderInfos `json:"detail"` // 明细
+type OrderInfosResp struct {
+	Detail       OrderInfos `json:"detail"` // 明细
 	OperationLog struct {
-		List []CashierOrderOperationLog
+		List []OrderOperationLog
 	} `json:"operation_log"` // 操作日志
 }

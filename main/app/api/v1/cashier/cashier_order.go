@@ -41,7 +41,7 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetCashierOrderList(companyUuid, req)
+	res, err := h.service.GetOrderLists(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -70,7 +70,7 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetCashierOrderInfo(companyUuid, req)
+	res, err := h.service.GetOrderInfos(companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
