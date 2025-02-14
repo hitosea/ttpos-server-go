@@ -86,7 +86,7 @@ class Category extends Controller
     public function Delete($category_id)
     {
         /** @var CategoryModel $model */
-        $model = CategoryModel::find($category_id);
+        $model = CategoryModel::detail($category_id);
         if (!$model) {
             return $this->renderError('数据不存在');
         }
@@ -159,12 +159,12 @@ class Category extends Controller
      * @Apidoc\Title("普通商品顶级分类列表")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url("/index.php/shop/product.store.category/parent")
-     * @Apidoc\Returned("list", type="array", ref="app\shop\model\product\Category\getALLParent", desc="列表")
+     * @Apidoc\Returned("list", type="array", ref="app\shop\model\product\Category\getAllParent", desc="列表")
      */
     public function parent()
     {
         $model = new CategoryModel;
-        $list = $model->getALLParent(1, 0, $this->store, true);
+        $list = $model->getAllParent(1, 0, $this->store, true);
         return $this->renderSuccess('', compact('list'));
     }
 }

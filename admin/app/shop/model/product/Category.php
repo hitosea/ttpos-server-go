@@ -3,6 +3,7 @@
 namespace app\shop\model\product;
 
 use think\facade\Cache;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Category as CategoryModel;
 
 /**
@@ -15,8 +16,9 @@ class Category extends CategoryModel
      */
     public function add($data)
     {
+        $name = $data['name'] ?? '';
         // 判断分类名称不能为空
-        if (empty($data['name'])) {
+        if (empty($name)) {
             $this->error = '分类名称不能为空';
             return false;
         }
@@ -33,12 +35,12 @@ class Category extends CategoryModel
             return false;
         }
         //
-        $data['app_id'] = self::$app_id;
-        $data['create_time'] = time();
-        $data['update_time'] = time();
-        $category_id = $this->insertGetId($data);
+        $data['parent_uuid'] = $parentId;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($name);
+        $this->save($data);
+        $category_id = $this->getLastInsID();
         $this->deleteCache($data['type'] ?? 0, $data['is_special'] ?? 0, $data['shop_supplier_id'] ?? 0);
-        return array_merge($data, ['category_id' => $category_id, 'name_text' => extractLanguage($data['name'] ?? '')]);
+        return array_merge($data, ['category_id' => $category_id, 'name_text' => extractLanguage($name ?? '')]);
     }
 
     /**
@@ -46,8 +48,9 @@ class Category extends CategoryModel
      */
     public function edit($data)
     {
+        $name = $data['name'] ?? '';
         // 判断分类名称不能为空
-        if (empty($data['name'])) {
+        if (empty($name)) {
             $this->error = '分类名称不能为空';
             return false;
         }
@@ -69,6 +72,8 @@ class Category extends CategoryModel
         }
         //
         !array_key_exists('image_id', $data) && $data['image_id'] = 0;
+        $data['parent_uuid'] = $parentId;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($name, $this['multi_language_name_uuid']);
         $res = $this->save($data) !== false;
         $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
         return $res;
@@ -83,29 +88,29 @@ class Category extends CategoryModel
             $this->error = '不可删除的分类';
             return false;
         }
-        $where = $this->is_special == 1 ? ['special_id' => $this->category_id] : ['category_id' => $this->category_id];
+        $where = $this->is_special == 1 ? ['special_category_uuid' => $this->uuid] : ['category_uuid' => $this->uuid];
         // 判断是否存在商品
         if ($productCount = (new Product)->getProductTotal($where)) {
             $this->error = '该分类下存在' . $productCount . '个商品，不允许删除';
             return false;
         }
         // 判断是否存在子分类
-        if ($this->where('parent_id', $this['category_id'])->count()) {
+        if ($this->where('parent_uuid', $this['uuid'])->count()) {
             $this->error = '该分类下存在子分类，不允许删除';
             return false;
         }
         //
         $res = $this->delete();
+        // todo 兼容
+        // $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
         //
-        $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
-        //
-        if ($res && $this->category_id) {
+        if ($res && $this->uuid) {
             foreach (Product::where($where)->select() as $product) {
-                if ($product->is_special == 1 && $product->special_id == $this->category_id) {
-                    $product->update(['special_id' => 0]);
+                if ($product->special_category_uuid == $this->uuid) {
+                    $product->update(['special_category_uuid' => 0]);
                 }
-                if ($product->is_special != 1 && $product->category_id == $this->category_id) {
-                    $product->update(['category_id' => 0]);
+                if ($product->category_uuid == $this->uuid) {
+                    $product->update(['category_uuid' => 0]);
                 }
             }
         }

@@ -92,7 +92,7 @@ class Category extends Controller
     public function parent()
     {
         $model = new CategoryModel;
-        $list = $model->getALLParent(0, 0, $this->store);
+        $list = $model->getAllParent(0, 0, $this->store);
         return $this->renderSuccess('', compact('list'));
     }
 }

@@ -23,7 +23,7 @@ class Attribute extends BaseModel
     protected $defaultSoftDelete = 0;
 
     /**
-     * 处理多语言
+     * 追加字段
      */
     protected $append = ['attribute_id', 'attribute_name', 'attribute_name_text', 'parent_attribute_name_text'];
 

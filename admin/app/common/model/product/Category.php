@@ -17,9 +17,25 @@ use app\common\model\supplier\Supplier as SupplierModel;
  */
 class Category extends BaseModel
 {
-    protected $pk = 'category_id';
-    protected $name = 'category';
-    protected $append = ['name_text', 'path_name_text'];
+    protected $name = 'product_category';
+    protected $pk = 'id';
+
+    /**
+     * 追加字段
+     */
+    protected $append = ['category_id', 'parent_id', 'name_text', 'path_name_text'];
+
+    /**
+     * 兼容字段
+     */
+    public function getCategoryIdAttr($value, $data = [])
+    {
+        return $this->uuid ?: 0;
+    }
+    public function getParentIdAttr($value, $data = [])
+    {
+        return $this->parent_uuid ?: 0;
+    }
 
     /**
      * 处理多语言
@@ -35,9 +51,9 @@ class Category extends BaseModel
     public static function getPathNameTextAttr($value, $data = [])
     {
         $text = extractLanguage($value ?: $data['name'] ?? '');
-        if (isset($data['parent_id']) && $data['parent_id'] > 0) {
+        if (isset($data['parent_uuid']) && $data['parent_uuid'] > 0) {
             try {
-                $parentName = self::where('category_id', $data['parent_id'])->value('name');
+                $parentName = self::where('uuid', $data['parent_uuid'])->value('name');
                 $parentText = extractLanguage($parentName ?? '');
                 $text = $parentText . '-' . $text;
             } catch (\Exception $e) {
@@ -56,7 +72,7 @@ class Category extends BaseModel
 
     public function child()
     {
-        return $this->hasMany('app\\common\\model\\product\\Category', 'parent_id', 'category_id')->with(['images']);
+        return $this->hasMany('app\\common\\model\\product\\Category', 'parent_uuid', 'uuid')->with(['images']);
     }
 
     /**
@@ -64,7 +80,7 @@ class Category extends BaseModel
      */
     public static function detail($category_id)
     {
-        return self::find($category_id);
+        return self::where('uuid', $category_id)->find();
     }
 
 
@@ -76,7 +92,7 @@ class Category extends BaseModel
     /**
      * 所有分类
      */
-    public static function getALL($type, $is_special, $store = [], $name = '', $is_sort = 1)
+    public static function getAll($type, $is_special, $store = [], $name = '', $is_sort = 1)
     {
         $request = request();
         $page = $request->param('page');
@@ -84,32 +100,18 @@ class Category extends BaseModel
         $isPaginate = ($request->is_paginate !== false && $page != null && $list_rows != null);
         $order_conditions = $is_sort ? ['c.sort' => 'asc', 'c.create_time' => 'desc'] : ['c.create_time' => 'desc'];
         $child_order_conditions = $is_sort ? ['sort' => 'asc', 'create_time' => 'desc'] : ['create_time' => 'desc'];
-
-        if ($store) {
-            $user = $store['user'];
-            $supplier = $store['supplier'];
-        }
-
-        if (isset($supplier['is_main']) && $supplier['is_main'] == 1 || isset($supplier['category_set']) && $supplier['category_set'] == 20) {
-            $shop_supplier_id = $user['shop_supplier_id'];
-        } else {
-            $detail = SupplierModel::where('is_main', '=', 1)->find();
-            $shop_supplier_id = $detail['shop_supplier_id'];
-        }
-
+        //
         $model = new static;
-        $cacheKey = 'category_' . $shop_supplier_id . '_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
+        $cacheKey = 'category_' . '_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
         if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
             $prefix = Env::get('DB_PREFIX');
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
                 $q->jsonLike('name', $name);
                 $q->order($child_order_conditions);
             }])
-                ->where('c.parent_id', '=', 0)
-                ->where('c.type', '=', $type)
+                ->where('c.parent_uuid', '=', 0)
                 ->where('c.is_special', '=', $is_special)
                 ->order($order_conditions)
-                ->where('c.shop_supplier_id', '=', $shop_supplier_id)
                 ->when($name != '', function ($q) use ($prefix, $name) {
                     $q->jsonLike('c.name', $name);
                     $key = '1';
@@ -120,14 +122,14 @@ class Category extends BaseModel
                         }
                     }
                     $value = StringHelp::escapeLikeStr($name);
-                    $q->whereOrRaw("EXISTS(SELECT * FROM {$prefix}category as cc WHERE cc.parent_id = c.category_id and JSON_EXTRACT(cc.name , '$.\"$key\"') LIKE '%$value%' )");
+                    $q->whereOrRaw("EXISTS(SELECT * FROM {$prefix}product_category as cc WHERE cc.parent_uuid = c.uuid and JSON_EXTRACT(cc.name , '$.\"$key\"') LIKE '%$value%' )");
                 });
 
             $data = $isPaginate ? $data->paginate(compact('page', 'list_rows')) : $data->select();
             $all = !empty($data) ? $data->toArray() : [];
             $result = $all;
             if ($name == '' && !$isPaginate) {
-                Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
+                Cache::tag('category' . $is_special . $type)->set($cacheKey, $all);
             }
         }
         return $result;
@@ -136,88 +138,21 @@ class Category extends BaseModel
     /**
      * 所有父级分类
      */
-    public static function getALLParent($type, $is_special, $store = '', $filter_button = false)
-    {
-        $user = $store['user'];
-        $supplier = $store['supplier'];
-        if ($supplier['is_main'] == 1 || $supplier['category_set'] == 20) {
-            $shop_supplier_id = $user['shop_supplier_id'];
-        } else {
-            $detail = SupplierModel::where('is_main', '=', 1)->find();
-            $shop_supplier_id = $detail['shop_supplier_id'];
-        }
-        $model = new static;
-        $cacheKey = 'category_parent_' . $shop_supplier_id . '_' . $model::$app_id . $type . $is_special . '_' . checkDetect();
-        if (!Cache::get($cacheKey)) {
-            $model = $model->with(['images'])
-                ->where('parent_id', '=', 0)
-                ->where('type', '=', $type)
-                ->where('is_special', '=', $is_special)
-                ->order(['create_time' => 'desc']);
-            // 过滤按钮分类
-            if ($filter_button) {
-                $model = $model->where('is_button', 0);
-            }
-            //
-            $data = $model->select();
-            $all = !empty($data) ? $data->toArray() : [];
-            Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
-        }
-        return Cache::get($cacheKey);
-    }
-
-    /**
-     * 获取前端分类
-     */
-    public static function getApiALL($type, $is_special, $shop_supplier_id)
+    public static function getAllParent($type, $is_special, $store = '', $filter_button = false)
     {
         $model = new static;
-        $supplier = SupplierModel::detail($shop_supplier_id);
-        if ($supplier['is_main'] == 0 && $supplier['category_set'] == 10) {
-            $detail = SupplierModel::where('is_main', '=', 1)->find();
-            $shop_supplier_id = $detail['shop_supplier_id'];
-        }
-        $cacheKey = 'category_api_' . $shop_supplier_id . '_' . $model::$app_id . $type . $is_special . '_' . checkDetect();
-        if (!Cache::get($cacheKey)) {
-            $data = $model->with(['images'])
-                ->where('type', '=', $type)
-                ->where('status', '=', 1)
-                ->where('is_special', '=', $is_special)
-                ->order(['create_time' => 'desc'])
-                ->select();
-            $all = !empty($data) ? $data->toArray() : [];
-            Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
-        }
-        return Cache::get($cacheKey);
-    }
-
-    /**
-     * 获取收银台分类
-     */
-    public static function getCashierALL($type, $shop_supplier_id, $is_special = 0)
-    {
-        $model = new static;
-        $supplier = SupplierModel::detail($shop_supplier_id);
-        if ($supplier && $supplier['is_main'] == 0 && $supplier['category_set'] == 10) {
-            $detail = SupplierModel::where('is_main', '=', 1)->find();
-            $shop_supplier_id = $detail['shop_supplier_id'];
+        $model = $model->with(['images'])
+            ->where('parent_uuid', '=', 0)
+            ->where('is_special', '=', $is_special)
+            ->order(['create_time' => 'desc']);
+        // 过滤按钮分类
+        if ($filter_button) {
+            $model = $model->where('uuid', '>', 0);
         }
         //
-        $cacheKey = 'category_cashier_' . $shop_supplier_id . '_' . $model::$app_id . $type . $is_special . '_' . checkDetect();
-        if (!Cache::get($cacheKey)) {
-            $data = $model->with(['images', 'child' => function ($query) {
-                $query->field('category_id, is_special, name, parent_id')->where('status', '=', 1);
-            }])
-                ->field('category_id, is_special, name, parent_id')
-                ->where('parent_id', '=', 0)
-                ->where('type', '=', $type)
-                ->where('status', '=', 1)
-                ->order(['is_special' => 'desc', 'sort' => 'asc', 'create_time' => 'desc'])
-                ->select();
-            $all = !empty($data) ? $data->toArray() : [];
-            Cache::tag('category' . $shop_supplier_id . $is_special . $type)->set($cacheKey, $all);
-        }
-        return Cache::get($cacheKey);
+        $data = $model->select();
+        $all = !empty($data) ? $data->toArray() : [];
+        return $all;
     }
 
     /**
@@ -384,7 +319,7 @@ class Category extends BaseModel
      */
     public static function getCacheAll($type, $is_special, $store = '', $name = '', $is_sort = true)
     {
-        return self::getALL($type, $is_special, $store, $name, $is_sort);
+        return self::getAll($type, $is_special, $store, $name, $is_sort);
     }
 
     /**
@@ -393,7 +328,7 @@ class Category extends BaseModel
     public static function getCacheTree($type, $is_special, $store = [], $name = '', $button_filter = true)
     {
         request()->is_paginate = false;
-        $list = self::getALL($type, $is_special, $store, $name);
+        $list = self::getAll($type, $is_special, $store, $name);
         return self::handleButtonList($list, $button_filter);
     }
 
@@ -487,7 +422,7 @@ class Category extends BaseModel
      */
     public static function getActiveALL($type, $is_special, $store = '', $name = '', $button_filter = false)
     {
-        return self::handleButtonList(self::getALL($type, $is_special, $store, $name, 0), $button_filter);;
+        return self::handleButtonList(self::getAll($type, $is_special, $store, $name, 0), $button_filter);;
     }
 
     /**
@@ -515,23 +450,23 @@ class Category extends BaseModel
         $model = new self;
         $prefix = env('DB_PREFIX');
 
-        $level = $model->where('category_id', $category_id)->value('parent_id') != 0;
+        $level = $model->where('uuid', $category_id)->value('parent_uuid') != 0;
         if ($level) {
-            return Product::where('category_id', $category_id)->count();
+            return Product::where('uuid', $category_id)->count();
         } else {
             return $model->alias('a')
                 ->leftJoin("
                     (
-                        SELECT IF(c.parent_id, c.parent_id, c.category_id) as category_id, COUNT(*) AS product_count
-                        FROM {$prefix}product product
-                        LEFT JOIN {$prefix}category c ON product.category_id = c.category_id OR c.category_id = product.special_id
-                        WHERE product.is_delete = 0 AND c.is_button = 0
-                        GROUP BY IF(c.parent_id, c.parent_id, c.category_id)
+                        SELECT IF(c.parent_uuid, c.parent_uuid, c.uuid) as category_uuid, COUNT(*) AS product_count
+                        FROM {$prefix}product_package product
+                        LEFT JOIN {$prefix}product_category c ON product.category_uuid = c.uuid OR c.uuid = product.special_category_uuid
+                        WHERE c.uuid > 0
+                        GROUP BY IF(c.parent_uuid, c.parent_uuid, c.uuid)
                     ) product
-                ", 'a.category_id = product.category_id OR a.parent_id = product.category_id')
-                ->field('a.category_id, a.is_special, a.name, a.parent_id, COALESCE(product.product_count, 0) as product_count')
-                ->where('a.parent_id', 0)
-                ->where('a.category_id', $category_id)
+                ", 'a.uuid = product.category_uuid OR a.parent_uuid = product.category_uuid')
+                ->field('a.uuid, a.is_special, a.name, a.parent_uuid, COALESCE(product.product_count, 0) as product_count')
+                ->where('a.parent_uuid', 0)
+                ->where('a.uuid', $category_id)
                 ->value('product_count') ?: 0;
         }
     }
@@ -545,9 +480,9 @@ class Category extends BaseModel
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['category_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('category_id') ? true : false;
+        return static::where($filter)->value('uuid') ? true : false;
     }
 
     /**
