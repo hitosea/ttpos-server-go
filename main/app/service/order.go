@@ -33,6 +33,7 @@ type IOrderSrv interface {
 	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                                     // 判断桌台是否可取消
 	OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64) (model.SaleBill, error)                     // 删除订单商品
 	OrderProductChangePrice(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, price float64) (model.SaleBill, error) // 修改订单商品价格
+	OrderChangePopulation(dbId uint64, saleBillUuid uint64, population int) (model.SaleBill, error)                                                 // 修改订单商品人数
 }
 
 // orderSrv 订单服务结构
@@ -705,6 +706,64 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, saleBillUuid uint64, sal
 	// 	'parent_id' => $splitOrder->parent_id,         // 拆单主单ID
 	// 	'order_name' => $splitOrder->order_name,       // 订单名称
 	// ], '改价');
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return model.SaleBill{}, err
+	}
+
+	return billInfo, nil
+}
+
+// OrderChangePopulation  修改订单人数
+func (s *orderSrv) OrderChangePopulation(dbId uint64, saleBillUuid uint64, population int) (model.SaleBill, error) {
+	if population < 0 || population > 999 {
+		return model.SaleBill{}, errors.New("人数错误")
+	}
+
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+	if billInfo.ID == 0 {
+		return model.SaleBill{}, errors.New("找不到订单")
+	}
+
+	// 判断订单状态
+	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, 0); err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
+	// 修改订单商品人数
+	if err := orderRepo.ChangePopulation(saleBillUuid, population); err != nil {
+		return model.SaleBill{}, err
+	}
+
+	// todo - 重算价格 - 等王总的逻辑
+	// (new OrderModel)->reloadPrice($order_id);
+
+	// todo - 添加操作日志
+	// OrderOperationLog::createLog($this['order_id'], OrderOperationLog::ACTION_UPDATE_MEAL_NUM, [
+	// 	'old_meal_num' => $old_meal_num,
+	// 	'new_meal_num' => $meal_num,
+	// ], '修改桌台就餐人数');
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {

@@ -153,6 +153,34 @@ func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderChangePopulation 处理点餐订单修改人数
+// @Summary 点餐订单修改人数
+// @Description 点餐订单修改人数
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderChangePopulationReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/population [post]
+func (h *CashierInstantHandler) OrderChangePopulation(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	// 绑定请求参数
+	params := req.OrderChangePopulationReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderChangePopulation(companyUuid, params.SaleBillUuid, params.Population)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -178,5 +206,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/close", wrapper.CloseOrder)
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)
+		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)
 	}
 }
