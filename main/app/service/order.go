@@ -482,6 +482,9 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	if err != nil {
 		return err
 	}
+	if billInfo.ID == 0 {
+		return errors.New("找不到订单")
+	}
 
 	// 验证高级密码
 	if err := s.settingSrv.VerifyAdvancedPassword(dbId, req.Password); err != nil {
@@ -565,6 +568,9 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 	if err != nil {
 		return err
 	}
+	if billInfo.ID == 0 {
+		return errors.New("找不到订单")
+	}
 
 	if billInfo.Status != constant.SaleBillStatusCanceled {
 		return errors.New("订单状态不允许删除")
@@ -593,6 +599,9 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 	if err != nil {
 		return model.SaleBill{}, err
 	}
+	if billInfo.ID == 0 {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderDeleteProduct, saleOrderUuid); err != nil {
@@ -600,7 +609,7 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, saleBillUuid uint64, saleOrde
 	}
 
 	// 判断订单商品状态
-	if len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
+	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 	for _, product := range billInfo.SaleOrders[0].SaleOrderProducts {
@@ -655,9 +664,12 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, saleBillUuid uint64, sal
 	if err != nil {
 		return model.SaleBill{}, err
 	}
+	if billInfo.ID == 0 {
+		return model.SaleBill{}, errors.New("找不到订单商品")
+	}
 
 	// 判断商品
-	if len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
+	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
 
@@ -666,15 +678,18 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, saleBillUuid uint64, sal
 		return model.SaleBill{}, err
 	}
 
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
 	// 修改订单商品价格
 	if err := orderRepo.ChangeProductPrice(saleBillUuid, saleOrderUuid, orderProductUuid, price); err != nil {
 		return model.SaleBill{}, err
 	}
-
-	//
-	// $p->product_price = $money;
-	// $p->is_change_price = 1;
-	// $p->total_price = helper::bcmul($money, $p->total_num);
 
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
@@ -690,6 +705,11 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, saleBillUuid uint64, sal
 	// 	'parent_id' => $splitOrder->parent_id,         // 拆单主单ID
 	// 	'order_name' => $splitOrder->order_name,       // 订单名称
 	// ], '改价');
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return model.SaleBill{}, err
+	}
 
 	return billInfo, nil
 }
