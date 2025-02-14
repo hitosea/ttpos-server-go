@@ -171,8 +171,8 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 // @Router /cashier/desk/order/cancel [post]
 func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -201,6 +201,8 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 // @Router /cashier/desk/order/product/delete [delete]
 func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
 	// 绑定请求参数
 	params := req.OrderProductDeleteReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -208,7 +210,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductDelete(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid)
+	_, err := h.orderService.OrderProductDelete(companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -229,6 +231,8 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 // @Router /cashier/desk/order/product/price [post]
 func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
 	// 绑定请求参数
 	params := req.OrderProductChangePriceReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -236,7 +240,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductChangePrice(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid, params.Price)
+	_, err := h.orderService.OrderProductChangePrice(companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -257,6 +261,8 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 // @Router /cashier/desk/order/population [post]
 func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
 	// 绑定请求参数
 	params := req.OrderChangePopulationReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -264,7 +270,37 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderChangePopulation(companyUuid, params.SaleBillUuid, params.Population)
+	_, err := h.orderService.OrderChangePopulation(companyUuid, staff.Uuid, source, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderProductRemark 处理桌台订单商品备注
+// @Summary 桌台订单商品备注
+// @Description 桌台订单商品备注
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderProductRemarkReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/product/remark [post]
+func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
+	// 绑定请求参数
+	params := req.OrderProductRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductRemark(companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -308,6 +344,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)
-
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)
 	}
 }

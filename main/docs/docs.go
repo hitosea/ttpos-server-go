@@ -1460,6 +1460,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/product/remark": {
+            "post": {
+                "description": "桌台订单商品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "桌台订单商品备注",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/region_and_type": {
             "get": {
                 "description": "获取桌台的区域和类型",
@@ -1632,6 +1666,40 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.OrderProductChangePriceReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/product/remark": {
+            "post": {
+                "description": "点餐订单商品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "点餐订单商品备注",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductRemarkReq"
                         }
                     }
                 ],
@@ -3769,6 +3837,32 @@ const docTemplate = `{
                 "order_product_uuid": {
                     "description": "订单商品UUID",
                     "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderProductRemarkReq": {
+            "type": "object",
+            "required": [
+                "order_product_uuid",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "order_product_uuid": {
+                    "description": "订单商品UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "remark",
+                    "type": "string"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",

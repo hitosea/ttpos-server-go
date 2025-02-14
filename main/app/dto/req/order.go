@@ -9,6 +9,7 @@ var OrderReqMessage = map[string]string{
 	"order_product_uuid.required": "订单商品UUID不能为空",
 	"price.required":              "商品价格不能为空",
 	"population.required":         "人数不能为空",
+	"remark.required":             "备注不能为空",
 }
 
 // 订单列表查询
@@ -68,4 +69,12 @@ type OrderProductChangePriceReq struct {
 type OrderChangePopulationReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
 	Population   int    `json:"population" binding:"required"`     // 人数
+}
+
+// 订单商品remark
+type OrderProductRemarkReq struct {
+	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
+	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
+	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
+	Remark           string `json:"remark"`                                // remark
 }
