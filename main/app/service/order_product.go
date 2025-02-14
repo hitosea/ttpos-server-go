@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // IOrderProductSrv 定义订单商品服务接口
@@ -21,8 +22,9 @@ type IOrderProductSrv interface {
 	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
 	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
-	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) // 创建订单商品
-	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                                // 计算单价,商品原价+小料价
+	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error) // 创建订单商品
+	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                               // 计算单价,商品原价+小料价
+	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                   // 生成订单商品
 }
 
 // orderProductSrv 订单商品服务结构体
@@ -161,17 +163,82 @@ func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid 
 // CreateOrderProductReq 创建订单商品请求
 type CreateOrderProductReq struct {
 	Lang           string
+	SaleBill       model.SaleBill
 	SaleOrder      model.SaleOrder
 	ProductPackage model.ProductPackage
-	ProductFlavor  model.ProductFlavor
-	ProductBoms    []model.ProductBom
+	SauceUuids     []uint64
 	Num            uint
 }
 
 // CreateOrderProduct 创建订单商品
-func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) {
+func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error) {
+	var data model.SaleOrderProduct
+	db := o.dbm.GetDB(dbId)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// 生成销售订单商品
+		orderProductData := o.GenerateOrderProduct(GenerateOrderProductReq{
+			Lang:           req.Lang,
+			ProductPackage: req.ProductPackage,
+			SaleBillUuid:   req.SaleBill.Uuid,
+			SaleOrderUuid:  req.SaleOrder.Uuid,
+			SauceUuids:     req.SauceUuids,
+			Num:            req.Num,
+		})
 
-	return nil, nil
+		// 判断销售订单商品签名是否存在, 存在则更新, 不存在则创建
+		orderProduct, err := repository.NewOrderProductRepo(tx).GetProductInfo(
+			repository.CommonRepo.WhereBySign(orderProductData.Sign),
+			repository.CommonRepo.WhereBySaleBillUuid(orderProductData.SaleBillUuid),
+			repository.CommonRepo.WhereBySaleOrderUuid(orderProductData.SaleOrderUuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err != nil {
+			return err
+		}
+		if orderProduct.Uuid == 0 {
+			// 创建销售订单商品
+			orderProduct, err = repository.NewOrderProductRepo(tx).Create(orderProductData)
+			if err != nil {
+				return err
+			}
+			// 创建销售订单商品bom
+			for key, bom := range orderProductData.SaleOrderProductBoms {
+				bom.SaleOrderProductUuid = orderProduct.Uuid
+				orderProductData.SaleOrderProductBoms[key] = bom
+			}
+			if err := repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
+				return err
+			}
+			// 创建销售订单商品属性
+			if len(orderProductData.SaleOrderProductAttributes) > 0 {
+				for key, attribute := range orderProductData.SaleOrderProductAttributes {
+					attribute.SaleOrderProductUuid = orderProduct.Uuid
+					orderProductData.SaleOrderProductAttributes[key] = attribute
+				}
+				if err := repository.NewOrderProductAttributeRepo(tx).CreateBatch(orderProductData.SaleOrderProductAttributes); err != nil {
+					return err
+				}
+			}
+		} else {
+			// 更新销售订单商品
+			if err := repository.NewOrderProductRepo(tx).Update(
+				map[string]interface{}{
+					"num": repository.NewCommonRepo().IncrementNum(1),
+				},
+				repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
+			); err != nil {
+				return err
+			}
+		}
+
+		data = orderProduct
+
+		// 计算销售订单商品相关金额
+
+		return nil
+	})
+
+	return data, err
 }
 
 type CalcAmountResp struct {
@@ -199,4 +266,83 @@ func (o *orderProductSrv) CalcAmount(boms []model.ProductBom, num uint) CalcAmou
 		Price:          unitPrice,
 		OriginalAmount: originalAmount,
 	}
+}
+
+// GenerateOrderProductReq 生成订单商品请求
+type GenerateOrderProductReq struct {
+	Lang           string
+	ProductPackage model.ProductPackage
+	SaleBillUuid   uint64
+	SaleOrderUuid  uint64
+	SauceUuids     []uint64
+	Num            uint
+}
+
+// GenerateOrderProduct 生成订单商品
+func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct {
+	// 获取商品规格名称
+	flavorName := ""
+	flavor := req.ProductPackage.GetFlavor()
+	if flavor.Uuid > 0 {
+		flavorName = flavor.MultiLanguageName.GetNameByLang(req.Lang)
+	}
+
+	// 生成商品原始价格
+	flavorPrice, saucePrice, productPrice, salePrice := req.ProductPackage.GenerateOriginalAmount(req.SauceUuids)
+
+	// 构建销售订单商品模型
+	orderProduct := model.SaleOrderProduct{
+		Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
+		FlavorName:            flavorName,
+		Num:                   1,
+		FlavorPrice:           flavorPrice,
+		SaucePrice:            saucePrice,
+		ProductPrice:          productPrice,
+		SalePrice:             salePrice,
+		DeductStockType:       req.ProductPackage.DeductStockType,
+		MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
+		ImageFileUuid:         req.ProductPackage.ImageFileUuid,
+		ProductPackageUuid:    req.ProductPackage.Uuid,
+		SaleBillUuid:          req.SaleBillUuid,
+		SaleOrderUuid:         req.SaleOrderUuid,
+	}
+
+	// 构建销售订单商品BOM
+	var orderProductBoms []model.SaleOrderProductBom
+	for _, bom := range req.ProductPackage.ProductBoms {
+		var name string
+		var isFlavorBom uint
+		if bom.ProductFlavorUuid > 0 {
+			name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
+			isFlavorBom = 1
+		}
+		if bom.ProductSauceUuid > 0 {
+			name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
+		}
+		orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
+			Name:           name,
+			Price:          bom.Price,
+			IsFlavorBom:    isFlavorBom,
+			SaleOrderUuid:  req.SaleOrderUuid,
+			ProductBomUuid: bom.Uuid,
+		})
+	}
+
+	// 构建销售订单商品属性
+	var orderProductAttributes []model.SaleOrderProductAttribute
+	for _, productPackageGroup := range req.ProductPackage.ProductPackageAttributeGroups {
+		for _, productPackageAttribute := range productPackageGroup.ProductPackageAttributes {
+			orderProductAttributes = append(orderProductAttributes, model.SaleOrderProductAttribute{
+				Name:                 productPackageAttribute.Attribute.MultiLanguageName.GetNameByLang(req.Lang),
+				SaleOrderUuid:        req.SaleOrderUuid,
+				ProductAttributeUuid: productPackageAttribute.AttributeUuid,
+			})
+		}
+	}
+
+	orderProduct.SaleOrderProductBoms = orderProductBoms
+	orderProduct.SaleOrderProductAttributes = orderProductAttributes
+	orderProduct.Sign = orderProduct.GenerateProductSign()
+
+	return orderProduct
 }
