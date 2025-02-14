@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 总销售价=销售价*数量
     `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
     -- 税率
-    `tax_rate` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
+    `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
     `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
     `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
@@ -216,6 +216,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID',
+    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台uuid',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未下单 1-未接单 2-已接单 3-已拒单',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码订单';
+
+CREATE TABLE IF NOT EXISTS `ttpos_h5_orde_product` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单商品ID',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码订单商品';
+
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -350,10 +370,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_operation_record` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '账单操作记录ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台账单记录ID',
     `source` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作来源 cashier-收银 assistant-助手 shop-商家后台',
     `action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '操作行为',
-    `message` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '消息内容',
+    `data` text NOT NULL DEFAULT '' COMMENT '数据',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
