@@ -2,12 +2,13 @@ package service
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"slices"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+
+	"github.com/gin-gonic/gin"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -133,7 +134,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
-		DeviceKey:        addReq.DeviceId,
+		DeviceId:         addReq.DeviceId,
 		Address:          addReq.Address,
 		Port:             int(addReq.Port),
 		DeviceIp:         addReq.DeviceId,

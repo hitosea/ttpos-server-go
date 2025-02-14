@@ -66,22 +66,22 @@ class LanguageEnum extends Enum
     {
         return [
             [
-                'key' => 1,
+                'key' => '1',
                 'name' => 'en',
                 'value' => 'English',
             ],
             [
-                'key' => 2,
+                'key' => '2',
                 'name' => 'th',
                 'value' => 'ภาษาไทย',
             ],
             [
-                'key' => 3,
+                'key' => '3',
                 'name' => 'zhtw',
                 'value' => '繁體中文',
             ],
             [
-                'key' => 4,
+                'key' => '4',
                 'name' => 'ja',
                 'value' => '日本語',
             ]

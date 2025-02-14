@@ -3,6 +3,7 @@
 namespace app\shop\model\product;
 
 use help\ValidateHelp;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Unit as UnitModel;
 
 /**
@@ -17,7 +18,7 @@ class Unit extends UnitModel
     {
         $model = $this;
         if (isset($data['unit_name']) && $data['unit_name'] != '') {
-            $model = $model->jsonLike('unit_name', $data['unit_name']);
+            $model = $model->jsonLike('name', $data['unit_name']);
         }
         $list = $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
 
@@ -37,15 +38,17 @@ class Unit extends UnitModel
             $this->error = '单位名称不能为空';
             return false;
         }
-        $isExist = $this->where('unit_name', '=', $data['unit_name'])->count();
+        $isExist = $this->where('name', '=', $data['unit_name'])->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
-        $data['shop_supplier_id'] = $shop_supplier_id;
-        $data['app_id']           = self::$app_id;
+        //
+        $data['name'] = $data['unit_name'] ?? '';
+        $langUuid = (new MultiLanguageName)->saveNames($data['unit_name']);
+        $data['multi_language_name_uuid'] = $langUuid;
         $this->save($data);
-        return array_merge($data, ['unit_id' => $this->unit_id]);
+        return array_merge($data, ['unit_id' => $this->uuid]);
     }
 
     /**
@@ -57,15 +60,16 @@ class Unit extends UnitModel
             $this->error = '单位名称不能为空';
             return false;
         }
-        $isExist = $this->where('unit_name', '=', $data['unit_name'])
-            ->where('unit_id', '<>', $this['unit_id'])
+        $isExist = $this->where('name', '=', $data['unit_name'])
+            ->where('uuid', '<>', $this['uuid'])
             ->count();
         if ($isExist) {
             $this->error = '名称已存在';
             return false;
         }
-        // 更新关联产品的单位
-        $this->product()->update(['product_unit' => $data['unit_name']]);
+        //
+        $data['name'] = $data['unit_name'] ?? '';
+        (new MultiLanguageName)->saveNames($data['unit_name'], $this['multi_language_name_uuid']);
         return $this->save($data);
     }
 
@@ -79,7 +83,7 @@ class Unit extends UnitModel
             $this->error = '该单位下存在商品，不允许删除';
             return false;
         }
-        return $this->where('unit_id', 'in', $unit_id)->delete();
+        return $this->where('uuid', 'in', $unit_id)->delete();
     }
 
     /**
@@ -95,9 +99,9 @@ class Unit extends UnitModel
         $this->startTrans();
         try {
             // 删除原有关系
-            $this->product()->update(['unit_id' => 0, 'product_unit' => '']);
+            $this->product()->update(['unit_uuid' => 0]);
             // 添加新关系
-            Product::whereIn('product_id', $product_ids)->update(['unit_id' => $unit_id, 'product_unit' => $this['unit_name']]);
+            Product::whereIn('uuid', $product_ids)->update(['unit_uuid' => $unit_id]);
             $this->commit();
             return true;
         } catch (\Exception $e) {
