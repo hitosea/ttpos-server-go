@@ -125,9 +125,9 @@ func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// OrderProductDelete 处理删除点餐订单商品改价
-// @Summary 删除点餐订单商品改价
-// @Description 删除点餐订单商品改价
+// OrderProductChangePrice 处理删除点餐订单商品改价
+// @Summary 点餐订单商品改价
+// @Description 点餐订单商品改价
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
