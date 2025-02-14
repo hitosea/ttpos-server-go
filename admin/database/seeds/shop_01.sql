@@ -18,9 +18,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额,关联销售订单的总金额之和',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费,关联销售订单的服务费之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费,关联销售订单的税费之和',
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '折扣费用,关联销售订单的折扣费用之和',
+    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。应收金额=(订单.应收金额)之和。',
+    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总打折金额,关联销售订单的折扣费用之和',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用,关联销售订单的会员折扣费用之和',
-    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
+    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣费用,关联销售订单的会员折扣费用之和',
+    `product_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
+    `product_original_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额。 商品原始金额=(订单.原始商品金额)之和。',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,支付金额-订单总金额=支付手续费',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,多次支付的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,关联销售订单的赠菜金额之和',
@@ -59,8 +62,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     -- 结账抹零金额
     `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
     -- 实收金额。
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '实收金额。实收金额=应收金额+手续费-结账抹零金额',
-    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,关联付款单的支付金额之和',
+    `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
+    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
+    `unpaid_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '未支付金额。未支付金额=最终应收-已支付金额',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
@@ -166,9 +170,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 税率
     `tax_rate` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
-    `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣率(0-100%)',
-    `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员卡折扣率(0-100%)',
-    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣率(0-100%)',
+    `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
+    `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
+    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
+    -- 会员折扣后的价格
+    `member_discount_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣后的价格（单商品）=销售价*会员折扣率*会员卡折扣率',
     -- 最终单价=销售价*折扣率；总最终单价=最终单价*商品数量
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率',
      -- 单个商品总税费=商品税费+服务费税费；总税费=单个商品总税费*商品数量
@@ -181,9 +187,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 打折金额；总打折金额=单个商品打折金额*商品数量
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额',
     -- 会员折扣金额
-    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣金额（单商品）=销售价*会员折扣率*会员卡折扣率',
+    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣金额（单商品）=销售价*（1-会员折扣率*会员卡折扣率）',
     -- 自定义折扣金额
-    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单商品）=销售价-最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)',
+    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单商品）。自定义折扣金额（单商品）=会员折扣后的价格（单商品）*(1-自定义折扣率) 。校验：自定义折扣金额（单商品）=销售价 - 最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)',
     -- 状态值
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退',
     `is_require` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否必点商品 0-否 1-是。用于在前端显示必点图标',
