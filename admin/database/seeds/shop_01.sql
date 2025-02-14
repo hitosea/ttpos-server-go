@@ -700,6 +700,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
+    `stock_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
+    `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `is_default_select` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
