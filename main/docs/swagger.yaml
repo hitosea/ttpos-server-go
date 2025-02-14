@@ -220,6 +220,28 @@ definitions:
       message:
         type: string
     type: object
+  req.AddMemberReq:
+    properties:
+      level_uuid:
+        description: 会员等级Uuid
+        type: integer
+      nickname:
+        description: 昵称
+        maxLength: 50
+        type: string
+      password:
+        description: 密码
+        maxLength: 16
+        minLength: 4
+        type: string
+      phone:
+        description: 手机号
+        maxLength: 20
+        type: string
+    required:
+    - level_uuid
+    - phone
+    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -319,6 +341,26 @@ definitions:
         description: 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
         type: integer
     type: object
+  req.OrderProductChangePriceReq:
+    properties:
+      order_product_uuid:
+        description: 订单商品UUID
+        type: integer
+      price:
+        description: 改价
+        type: number
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    required:
+    - order_product_uuid
+    - price
+    - sale_bill_uuid
+    - sale_order_uuid
+    type: object
   req.OrderProductDeleteReq:
     properties:
       order_product_uuid:
@@ -346,6 +388,21 @@ definitions:
     required:
     - is_sold_out
     - product_bom_uuid
+    type: object
+  req.VerifyPasswordReq:
+    properties:
+      password:
+        description: 密码
+        type: string
+    required:
+    - password
+    type: object
+  resp.Ads:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
     type: object
   resp.AssistantBase:
     properties:
@@ -915,6 +972,22 @@ definitions:
         description: 餐桌类型ID
         type: integer
     type: object
+  resp.LanguageResp:
+    properties:
+      default_language:
+        description: 默认语言
+        type: string
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      languages:
+        description: 语言列表
+        items:
+          type: string
+        type: array
+    type: object
   resp.MemberLevel:
     properties:
       create_time:
@@ -930,6 +1003,13 @@ definitions:
         description: 等级Uuid
         type: integer
     type: object
+  resp.MemberLevelList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.MemberLevel'
+        type: array
+    type: object
   resp.OnlineCashier:
     properties:
       cashier_uuid:
@@ -944,6 +1024,13 @@ definitions:
       username:
         description: 收银员账号
         type: string
+    type: object
+  resp.OnlineCashierList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.OnlineCashier'
+        type: array
     type: object
   resp.Permission:
     properties:
@@ -972,6 +1059,27 @@ definitions:
       uuid:
         type: integer
     type: object
+  resp.RechargeMember:
+    properties:
+      balance:
+        description: 会员余额
+        type: number
+      card_name:
+        description: 会员卡名称
+        type: string
+      level_name:
+        description: 会员等级
+        type: string
+      nickname:
+        description: 会员昵称
+        type: string
+      points:
+        description: 会员积分
+        type: number
+      uuid:
+        description: 会员Uuid
+        type: integer
+    type: object
   resp.SearchMember:
     properties:
       nickname:
@@ -983,6 +1091,13 @@ definitions:
       uuid:
         description: 会员Uuid
         type: integer
+    type: object
+  resp.SearchMemberList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SearchMember'
+        type: array
     type: object
   resp.SoldOut:
     properties:
@@ -1372,13 +1487,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -1469,21 +1584,41 @@ paths:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
-                list:
-                  items:
-                    $ref: '#/definitions/resp.OnlineCashier'
-                  type: array
+                data:
+                  $ref: '#/definitions/resp.OnlineCashierList'
               type: object
       security:
       - JwtToken: []
       summary: 获取在线收银机
       tags:
       - 点餐助手端.认证鉴权
+  /cashier/ad:
+    get:
+      consumes:
+      - application/json
+      description: 收银端副屏广告
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.Ads'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 收银端副屏广告
+      tags:
+      - 收银端.基础信息
   /cashier/base:
     get:
       consumes:
       - application/json
-      description: 收银端信息
+      description: 收银端基础信息
       produces:
       - application/json
       responses:
@@ -1498,9 +1633,9 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 收银端信息
+      summary: 收银端基础信息
       tags:
-      - 收银端.认证
+      - 收银端.基础信息
   /cashier/bill/cancel/{id}:
     delete:
       consumes:
@@ -1958,6 +2093,29 @@ paths:
       summary: 获取自助餐列表
       tags:
       - 收银端.自助餐
+  /cashier/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查更新
+      tags:
+      - 收银端.基础信息
   /cashier/desk/close:
     post:
       consumes:
@@ -2019,13 +2177,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -2113,6 +2271,28 @@ paths:
         "404":
           description: 未找到
       summary: 删除桌台订单商品
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/product/price:
+    post:
+      consumes:
+      - application/json
+      description: 删除桌台订单商品改价
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductChangePriceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      summary: 删除桌台订单商品改价
       tags:
       - 收银端.桌台
   /cashier/desk/region_and_type:
@@ -2219,6 +2399,50 @@ paths:
       summary: 删除点餐订单商品
       tags:
       - 收银端.点餐
+  /cashier/instant/order/product/price:
+    post:
+      consumes:
+      - application/json
+      description: 删除点餐订单商品改价
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductChangePriceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      summary: 删除点餐订单商品改价
+      tags:
+      - 收银端.点餐
+  /cashier/language:
+    get:
+      consumes:
+      - application/json
+      description: 收银端语言
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LanguageResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 收银端语言
+      tags:
+      - 收银端.基础信息
   /cashier/login:
     post:
       consumes:
@@ -2263,6 +2487,30 @@ paths:
       summary: 收银端退出登录
       tags:
       - 收银端.认证
+  /cashier/member/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加会员
+      parameters:
+      - description: 添加会员参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddMemberReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 添加会员
+      tags:
+      - 收银端.会员
   /cashier/member/levels:
     get:
       consumes:
@@ -2277,14 +2525,40 @@ paths:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
-                list:
-                  items:
-                    $ref: '#/definitions/resp.MemberLevel'
-                  type: array
+                data:
+                  $ref: '#/definitions/resp.MemberLevelList'
               type: object
       security:
       - JwtToken: []
       summary: 会员等级列表
+      tags:
+      - 收银端.会员
+  /cashier/member/recharge_member:
+    get:
+      consumes:
+      - application/json
+      description: 充值会员信息
+      parameters:
+      - description: uuid
+        in: query
+        name: uuid
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeMember'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 充值会员信息
       tags:
       - 收银端.会员
   /cashier/member/search:
@@ -2306,10 +2580,8 @@ paths:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
-                list:
-                  items:
-                    $ref: '#/definitions/resp.SearchMember'
-                  type: array
+                data:
+                  $ref: '#/definitions/resp.SearchMemberList'
               type: object
       security:
       - JwtToken: []
@@ -2389,11 +2661,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -2415,11 +2687,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -2437,42 +2709,42 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -2795,6 +3067,78 @@ paths:
       summary: 沽清售罄列表
       tags:
       - 收银端.沽清
+  /cashier/verify_advanced_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证高级密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证高级密码
+      tags:
+      - 收银端.基础信息
+  /cashier/verify_cash_box_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证钱箱密码
+      parameters:
+      - description: 验证钱箱密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证钱箱密码
+      tags:
+      - 收银端.基础信息
+  /cashier/verify_lock_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证锁屏密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证锁屏密码
+      tags:
+      - 收银端.基础信息
   /kitchen/call/handle:
     post:
       consumes:

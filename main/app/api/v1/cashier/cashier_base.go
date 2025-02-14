@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/i18n"
 
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -85,12 +86,12 @@ func (h *BaseHandler) GetAd(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_cash_box_password [post]
 func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
-	var verifyPasswordReq req.VerifyPasswordReq
-	if err := c.ShouldBindJSON(&verifyPasswordReq); err != nil {
-		helper.HandleValidationError(c, err, verifyPasswordReq, nil)
+	var passwordReq req.VerifyPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.CashierPasswordTypeCashBox, verifyPasswordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeCashBox, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -109,12 +110,12 @@ func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_advanced_password [post]
 func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
-	var verifyPasswordReq req.VerifyPasswordReq
-	if err := c.ShouldBindJSON(&verifyPasswordReq); err != nil {
-		helper.HandleValidationError(c, err, verifyPasswordReq, nil)
+	var passwordReq req.VerifyPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.CashierPasswordTypeAdvanced, verifyPasswordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeAdvanced, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -133,17 +134,36 @@ func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_lock_password [post]
 func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
-	var verifyPasswordReq req.VerifyPasswordReq
-	if err := c.ShouldBindJSON(&verifyPasswordReq); err != nil {
-		helper.HandleValidationError(c, err, verifyPasswordReq, nil)
+	var passwordReq req.VerifyPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.CashierPasswordTypeLock, verifyPasswordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeLock, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
 		helper.Fail(c, constant.CodeFail, "验证失败")
 	}
+}
+
+// checkUpdate 检查更新
+// @Summary 检查更新
+// @Description 检查更新
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param brand query string true "品牌参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/check_update [get]
+func (h *BaseHandler) checkUpdate(c *gin.Context) {
+	updateInfo, err := h.settingSrv.CheckUpdate(constant.AppTypeCashier, c.Query("brand"), i18n.GetAcceptLanguage(c))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, updateInfo)
 }
 
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -169,7 +189,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/verify_cash_box_password", wrapper.VerifyCashBoxPassword)  // 验证钱箱密码
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
-		privateApi.GET("/check_update", nil)                                         // 检查更新
+		privateApi.GET("/check_update", wrapper.checkUpdate)                         // 检查更新
 		privateApi.GET("/print_data", nil)                                           // 获取打印数据
 	}
 }

@@ -17,6 +17,9 @@ type Member struct {
 	GiftBalance       float64 `gorm:"column:gift_balance;type:decimal(12,2);default:0.00;comment:'赠送账户余额';" json:"gift_balance"`
 	MemberLevelUuid   uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:'会员等级ID';" json:"member_level_uuid"`
 	MemberCardUuid    uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:'会员卡片ID';" json:"member_card_uuid"`
+
+	MemberLevel *MemberLevel `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
+	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
 // MemberLevel 会员等级表 `ttpos_member_level`
@@ -41,6 +44,9 @@ type MemberCard struct {
 	Deadline     int64  `gorm:"column:deadline;type:int(11);default:0;comment:截止日期(时间戳);" json:"deadline"`
 	Discount     int    `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;" json:"discount"`
 	Status       int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-exp到期 1-valid有效 2-repeal作废,管理员点击作废按钮 3-cover覆盖,领取了新的会员卡;" json:"status"`
+
+	Member         *Member         `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MemberCardType *MemberCardType `gorm:"foreignKey:CardTypeUuid;references:Uuid"`
 }
 
 // MemberCardType 会员卡类型表 `ttpos_member_card_type`

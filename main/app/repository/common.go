@@ -14,7 +14,8 @@ type WithPreload struct {
 	Args  []interface{}
 }
 
-func UnDelete(db *gorm.DB) *gorm.DB {
+// NotDeleted 筛选未被删除的
+func NotDeleted(db *gorm.DB) *gorm.DB {
 	return db.Where("delete_time = 0")
 }
 

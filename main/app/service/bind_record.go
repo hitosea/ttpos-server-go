@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"slices"
+	"ttpos-server-go/app/dto"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -106,7 +107,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), cc, nil)
+		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), cc, []dto.LanguageItem{})
 		if err != nil {
 			return err
 		}

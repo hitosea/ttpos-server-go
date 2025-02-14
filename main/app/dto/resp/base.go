@@ -60,3 +60,10 @@ type LanguageResp struct {
 type Ads struct {
 	List []setting.CarouselItem `json:"list"`
 }
+
+type UpdateInfo struct {
+	VersionName  string `json:"version_name"`
+	ForcedUpdate int    `json:"forced_update"`
+	UpdateLog    string `json:"update_log"`
+	DownloadURL  string `json:"download_url"`
+}

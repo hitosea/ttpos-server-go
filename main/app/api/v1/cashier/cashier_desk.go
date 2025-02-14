@@ -217,9 +217,9 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// OrderProductDelete 处理删除桌台订单商品改价
-// @Summary 删除桌台订单商品改价
-// @Description 删除桌台订单商品改价
+// OrderProductChangePrice 处理删除桌台订单商品改价
+// @Summary 桌台订单商品改价
+// @Description 桌台订单商品改价
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
