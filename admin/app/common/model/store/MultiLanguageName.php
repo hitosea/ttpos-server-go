@@ -4,14 +4,18 @@ namespace app\common\model\store;
 
 use think\facade\Cache;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  * 门店免单标签
  */
 class MultiLanguageName extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'multi_language_name';
     protected $pk   = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     // 缓存前缀
     const CACHE_PREFIX = 'multi_language_name:';

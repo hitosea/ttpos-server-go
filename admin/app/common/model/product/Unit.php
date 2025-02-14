@@ -35,35 +35,6 @@ class Unit extends BaseModel
     }
 
     /**
-     * 多语言数据处理
-     * @param mixed $model
-     * @return void
-     */
-    public static function onBeforeDelete($model)
-    {
-        dump(1111111);
-        die;
-        if ($model instanceof \think\Collection) {
-            $uuids = $model->column('multi_language_name_uuid');
-            if (!empty($uuids)) {
-                $model->multiLanguageName()->where('uuid', 'in', $uuids)->delete();
-            }
-        } else {
-            if ($model->multi_language_name_uuid) {
-                $model->multiLanguageName()->delete();
-            }
-        }
-    }
-
-    /**
-     * 多语言关联
-     */
-    public function multiLanguageName()
-    {
-        return $this->hasOne('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
-    }
-
-    /**
      * 单位名称
      */
     public function getUnitNameTextAttr($value, $data)

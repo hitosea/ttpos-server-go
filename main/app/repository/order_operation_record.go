@@ -3,7 +3,6 @@ package repository
 import (
 	"time"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -78,7 +77,6 @@ func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record 
 
 // CreateOrderOperationRecord 创建订单操作记录
 func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord) (uint64, error) {
-	record.Uuid, _ = utils.GetID()
 	record.Action = Action
 	record.SaleBillUuid = saleBillUuid
 	//

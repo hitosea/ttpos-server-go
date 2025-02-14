@@ -67,36 +67,6 @@ func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// CloseOrder 处理关闭点餐订单
-// @Summary 关闭点餐订单
-// @Description 关闭点餐订单
-// @Tags 收银端.点餐
-// @Accept json
-// @Produce json
-// @param data query req.OrderCancelReq true "详情参数"
-// @Success 200 {object} nil
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/close [post]
-func (h *CashierInstantHandler) CloseOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
-	// 绑定请求参数
-	req := req.OrderCancelReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	//
-	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	// 返回结果
-	helper.Success(c, gin.H{})
-}
-
 // OrderProductDelete 处理删除点餐订单商品
 // @Summary 删除点餐订单商品
 // @Description 删除点餐订单商品
@@ -109,6 +79,8 @@ func (h *CashierInstantHandler) CloseOrder(c *gin.Context) {
 // @Router /cashier/instant/order/product/delete [delete]
 func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
 	// 绑定请求参数
 	params := req.OrderProductDeleteReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -116,7 +88,7 @@ func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductDelete(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid)
+	_, err := h.orderService.OrderProductDelete(companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -137,6 +109,8 @@ func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 // @Router /cashier/instant/order/product/price [post]
 func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	source := helper.GetSource(c)
+	staff := helper.GetStaff(c)
 	// 绑定请求参数
 	params := req.OrderProductChangePriceReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -144,7 +118,67 @@ func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductChangePrice(companyUuid, params.SaleBillUuid, params.SaleOrderUuid, params.OrderProductUuid, params.Price)
+	_, err := h.orderService.OrderProductChangePrice(companyUuid, staff.Uuid, source, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderChangePopulation 处理点餐订单修改人数
+// @Summary 点餐订单修改人数
+// @Description 点餐订单修改人数
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderChangePopulationReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/population [post]
+func (h *CashierInstantHandler) OrderChangePopulation(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
+	// 绑定请求参数
+	params := req.OrderChangePopulationReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderChangePopulation(companyUuid, staff.Uuid, source, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderProductRemark 处理点餐订单商品备注
+// @Summary 点餐订单商品备注
+// @Description 点餐订单商品备注
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderProductRemarkReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/product/remark [post]
+func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
+	// 绑定请求参数
+	params := req.OrderProductRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	_, err := h.orderService.OrderProductRemark(companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -175,8 +209,9 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)
-		privateApi.POST("/instant/order/close", wrapper.CloseOrder)
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)
+		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)
+		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)
 	}
 }

@@ -261,7 +261,7 @@ type SaleBillSetting struct {
 	ZeroCheckout uint `gorm:"column:zero_checkout;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout"`
 }
 
-// SaleOrderBuffetCustomerType 销售订单顾客类型
+// SaleOrderBuffetCustomerType 销售订单自助餐顾客类型
 type SaleOrderBuffetCustomerType struct {
 	// 主键字段
 	BaseModel
@@ -273,6 +273,14 @@ type SaleOrderBuffetCustomerType struct {
 
 	// 数值字段
 	Num uint `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
+}
+
+// SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`
+type SaleOrderBuffetDelayProduct struct {
+	BaseModel
+	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
+	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
+	Num             uint   `gorm:"default:0;column:num;comment:'数量'"`
 }
 
 // SaleOrderProductMaterial 销售订单产品原料

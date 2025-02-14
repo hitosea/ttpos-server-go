@@ -45,8 +45,7 @@ class Unit extends UnitModel
         }
         //
         $data['name'] = $data['unit_name'] ?? '';
-        $langUuid = (new MultiLanguageName)->saveNames($data['unit_name']);
-        $data['multi_language_name_uuid'] = $langUuid;
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['unit_name']);
         $this->save($data);
         return array_merge($data, ['unit_id' => $this->uuid]);
     }

@@ -28,6 +28,8 @@ type IOrderRepo interface {
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                          // 删除订单产品
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
 	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
+	ChangePopulation(saleBillUuid uint64, population int) error                                                               // 修改订单人数
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
 }
 
 // orderRepo 订单仓库
@@ -501,7 +503,6 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 
 // ChangeProductPrice 修改订单商品价格
 func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error {
-	// todo 等植换考虑下先
 	return r.db.Model(&model.SaleOrderProduct{}).
 		Where("delete_time = ?", 0).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
@@ -509,5 +510,49 @@ func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64
 			"is_custom_price": 1,
 			"sauce_price":     price,
 			"price":           price,
+		}).Error
+}
+
+// ChangePopulation 修改订单人数
+func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		where := "sale_order_uuid in (select uuid from " + model.SaleOrder{}.TableName() + " where sale_bill_uuid = ?)"
+		//
+		err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
+			Where("delete_time = ?", 0).
+			Where(where, saleBillUuid).
+			Updates(map[string]interface{}{
+				"num": population,
+			}).Error
+		if err != nil {
+			return err
+		}
+		//
+		err = tx.Model(&model.SaleOrderBuffetDelayProduct{}).
+			Where("delete_time = ?", 0).
+			Where(where, saleBillUuid).
+			Updates(map[string]interface{}{
+				"num": population,
+			}).Error
+		if err != nil {
+			return err
+		}
+		//
+		return tx.Model(&model.SaleBill{}).
+			Where("delete_time = ?", 0).
+			Where("uuid = ?", saleBillUuid).
+			Updates(map[string]interface{}{
+				"meal_num": population,
+			}).Error
+	})
+}
+
+// ChangeProductRemark 修改订单商品备注
+func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error {
+	return r.db.Model(&model.SaleOrderProduct{}).
+		Where("delete_time = ?", 0).
+		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
+		Updates(map[string]interface{}{
+			"remark": remark,
 		}).Error
 }

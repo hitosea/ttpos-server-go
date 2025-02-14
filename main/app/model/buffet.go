@@ -53,11 +53,3 @@ type BuffetDelay struct {
 	Price     float64 `gorm:"default:0;column:price;comment:'价格'"`
 	Status    uint    `gorm:"default:0;column:status;comment:'状态 0-禁用 1-启用'"`
 }
-
-// SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`
-type SaleOrderBuffetDelayProduct struct {
-	BaseModel
-	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
-	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
-	Num             uint   `gorm:"default:0;column:num;comment:'数量'"`
-}
