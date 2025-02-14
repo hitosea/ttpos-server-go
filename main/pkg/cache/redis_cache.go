@@ -17,13 +17,15 @@ type redisCache struct {
 
 type ClusterConfig []Config
 
-func (c ClusterConfig) Parse(config Config) ClusterConfig {
+func ParseRedisConfig(config Config) ClusterConfig {
+	var c ClusterConfig
 	hostList := strings.Split(config.Host, ",")
+	portList := strings.Split(config.Port, ",")
 	if len(hostList) > 1 {
-		for _, host := range hostList {
+		for index, host := range hostList {
 			conf := Config{
 				Host:     host,
-				Port:     config.Port,
+				Port:     portList[index],
 				Password: config.Password,
 				DB:       0,
 			}
@@ -44,10 +46,10 @@ func (c ClusterConfig) Parse(config Config) ClusterConfig {
 func newRedisCache(conf Config) Cache {
 	var client *redis.Client
 	var clusterClient *redis.ClusterClient
-	var clusterConfig ClusterConfig
-	clusterConfig = clusterConfig.Parse(conf)
+	clusterConfig := ParseRedisConfig(conf)
 	if len(clusterConfig) == 1 {
-		address := fmt.Sprintf("%s:%d", conf.Host, conf.Port)
+		address := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
+		fmt.Println("address:", address)
 		client = redis.NewClient(&redis.Options{
 			Addr:     address,
 			Password: conf.Password,
@@ -62,7 +64,7 @@ func newRedisCache(conf Config) Cache {
 	} else {
 		var addressList []string
 		for _, conf := range clusterConfig {
-			address := fmt.Sprintf("%s:%d", conf.Host, conf.Port)
+			address := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
 			addressList = append(addressList, address)
 
 		}

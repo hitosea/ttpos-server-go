@@ -77,13 +77,13 @@ func jwtConf(opt copier.Option) {
 func redisConf(opt copier.Option) {
 	Redis = RedisConf{
 		Host:     "127.0.0.1",
-		Port:     6379,
+		Port:     "6379",
 		Password: "password",
 		DB:       0,
 	}
 	copier.CopyWithOption(&Redis, RedisConf{
 		Host:     viper.GetString("REDIS_HOST"),
-		Port:     viper.GetInt("REDIS_PORT"),
+		Port:     viper.GetString("REDIS_PORT"),
 		Password: viper.GetString("REDIS_PASSWORD"),
 		DB:       viper.GetInt("REDIS_DB"),
 	}, opt)

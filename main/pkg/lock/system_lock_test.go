@@ -11,10 +11,15 @@ import (
 func TestOpenDesk(t *testing.T) {
 	// 分布式锁时需要redis信息
 	InitRedisLock(cache.Config{
-		Host:     "192.168.100.59",
-		Port:     6379,
-		Password: "",
-		DB:       1,
+		//Host:     "192.168.100.69",
+		//Port:     "6379",
+		//Password: "",
+		//DB:       1,
+
+		Host:     "156.255.90.128",
+		Port:     "7001",
+		Password: "sass@123.com!",
+		//DB:       1,
 	})
 	var wg sync.WaitGroup
 	systemLock := NewSystemLock()
@@ -35,10 +40,14 @@ func TestOpenDesk(t *testing.T) {
 }
 
 func TestPay(t *testing.T) {
+	//err := logger.Init()
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 	// 分布式锁时需要redis信息
 	InitRedisLock(cache.Config{
-		Host:     "192.168.100.59",
-		Port:     6379,
+		Host:     "192.168.100.69",
+		Port:     "6379",
 		Password: "",
 		DB:       1,
 	})
