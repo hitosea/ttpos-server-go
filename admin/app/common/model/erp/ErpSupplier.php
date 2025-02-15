@@ -20,14 +20,22 @@ class ErpSupplier extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = [];
+    protected $append = ['contact_person'];
+
+    /**
+     * 兼容字段
+     */
+    public function getContactPersonAttr($value, $data)
+    {
+        return $this->contact_name ?: '';
+    }
 
     /**
      * 采购负责人
      */
     public function purchaser()
     {
-        return $this->belongsTo(User::class, 'purchaser_id', 'shop_user_id')->field('shop_user_id, real_name');
+        return $this->belongsTo(User::class, 'staff_uuid', 'uuid');
     }
 
     /**
@@ -78,9 +86,11 @@ class ErpSupplier extends BaseModel
             $this->error = '该供应商名称已存在';
             return false;
         }
-        $data['app_id'] = self::$app_id;
+        //
+        $data['contact_name'] = $data['contact_person'] ?? '';
+        $data['staff_uuid'] = $data['purchaser_id'] ?? 0;
         $model->save($data);
-        return $model->id;
+        return $model->uuid;
     }
 
     /**
@@ -89,13 +99,16 @@ class ErpSupplier extends BaseModel
     public function edit($data)
     {
         // 验证供应商名称唯一性
-        $exist = (new self)->where('name', $data['name'])->where('id', '<>', $this->id)->find();
+        $exist = (new self)->where('name', $data['name'])->where('uuid', '<>', $this->uuid)->find();
         if ($exist) {
             $this->error = '该供应商名称已存在';
             return false;
         }
+        //
+        $data['contact_name'] = $data['contact_person'] ?? '';
+        $data['staff_uuid'] = $data['purchaser_id'] ?? 0;
         $this->save($data);
-        return $this->id;
+        return $this->uuid;
     }
 
     /**

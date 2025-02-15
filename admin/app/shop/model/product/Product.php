@@ -718,7 +718,8 @@ class Product extends ProductModel
      */
     public function setStatus($state)
     {
-        return $this->save(['product_status' => $state]) !== false;
+        $value = $state == 10 ? 1 : 0;
+        return $this->save(['status' => $value]) !== false;
     }
 
     /**
@@ -728,55 +729,56 @@ class Product extends ProductModel
     {
         $product_ids = explode(',', $product_ids);
         if (empty($product_ids)) return false;
-        $products = $this->where('product_id', 'in', $product_ids)->field(['product_id', 'type', 'shop_supplier_id'])->select();
+        $products = $this->where('uuid', 'in', $product_ids)->field(['uuid'])->select();
         // 开启事务
         $this->startTrans();
         try {
-            foreach ($products as $product) {
-                $product_id = $product['product_id'] ?? 0;
-                $type = $product['type'] ?? 0;
-                $shop_supplier_id = $product['shop_supplier_id'] ?? 0;
-                //
-                if ($type == ProductModel::TYPE_MATERIAL) {
-                    $is_used = $this->checkMaterialUsed($product['product_id']) ? 1 : 0;
-                    if ($is_used) {
-                        $this->error = '该材料已被使用，无法删除';
-                        return false;
-                    }
-                }
-                //
-                $this->where('product_id', '=', $product_id)->delete();
-                // 删除自助餐关联产品
-                (new BuffetProductModel)->where('product_id', '=', $product_id)->delete();
-                // 删除的规格材料
-                if ($type == ProductModel::TYPE_MATERIAL) {
-                    $skuMaterials = ProductSkuMaterial::where('material_id', '=', $product_id)->select();
-                    $productSkuIds = $skuMaterials->column('product_sku_id');
-                    $newSkuMaterials = ProductSkuMaterial::where('product_sku_id', 'in', $productSkuIds)->select();
-                    foreach ($skuMaterials as &$skuMaterial) {
-                        $skuMaterial->delete();
-                    }
-                    $feedMaterials = ProductFeedMaterial::where('material_id', '=', $product_id)->select();
-                    $productFeedIds = $feedMaterials->column('product_feed_id');
-                    $newFeedMaterials = ProductFeedMaterial::where('product_feed_id', 'in', $productFeedIds)->select();
-                    foreach ($feedMaterials as &$feedMaterial) {
-                        $feedMaterial->delete();
-                    }
+            // todo 兼容
+            // foreach ($products as $product) {
+            //     $product_id = $product['product_id'] ?? 0;
+            //     $type = $product['type'] ?? 0;
+            //     $shop_supplier_id = $product['shop_supplier_id'] ?? 0;
+            //     //
+            //     if ($type == ProductModel::TYPE_MATERIAL) {
+            //         $is_used = $this->checkMaterialUsed($product['product_id']) ? 1 : 0;
+            //         if ($is_used) {
+            //             $this->error = '该材料已被使用，无法删除';
+            //             return false;
+            //         }
+            //     }
+            //     //
+            //     $this->where('product_id', '=', $product_id)->delete();
+            //     // 删除自助餐关联产品
+            //     (new BuffetProductModel)->where('product_id', '=', $product_id)->delete();
+            //     // 删除的规格材料
+            //     if ($type == ProductModel::TYPE_MATERIAL) {
+            //         $skuMaterials = ProductSkuMaterial::where('material_id', '=', $product_id)->select();
+            //         $productSkuIds = $skuMaterials->column('product_sku_id');
+            //         $newSkuMaterials = ProductSkuMaterial::where('product_sku_id', 'in', $productSkuIds)->select();
+            //         foreach ($skuMaterials as &$skuMaterial) {
+            //             $skuMaterial->delete();
+            //         }
+            //         $feedMaterials = ProductFeedMaterial::where('material_id', '=', $product_id)->select();
+            //         $productFeedIds = $feedMaterials->column('product_feed_id');
+            //         $newFeedMaterials = ProductFeedMaterial::where('product_feed_id', 'in', $productFeedIds)->select();
+            //         foreach ($feedMaterials as &$feedMaterial) {
+            //             $feedMaterial->delete();
+            //         }
 
-                    // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-                    $newSkuMaterialIds = $newSkuMaterials->column('material_id');
-                    $newFeedMaterialIds = $newFeedMaterials->column('material_id');
-                    $materialIds = array_merge($newSkuMaterialIds, $newFeedMaterialIds);
-                    $this->reCalProductStock(array_unique($materialIds));
-                }
-                // 新增规格删除出库记录
-                $sku = ProductSku::with(['product'])->where('product_id', '=', $product_id)->select();
-                foreach ($sku as $item) {
-                    $this->deleteInventoryRecord($item, '', $shop_supplier_id, $shop_user_id);
-                }
-                // 删除产品关联规格
-                ProductSku::where('product_id', '=', $product_id)->delete();
-            }
+            //         // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
+            //         $newSkuMaterialIds = $newSkuMaterials->column('material_id');
+            //         $newFeedMaterialIds = $newFeedMaterials->column('material_id');
+            //         $materialIds = array_merge($newSkuMaterialIds, $newFeedMaterialIds);
+            //         $this->reCalProductStock(array_unique($materialIds));
+            //     }
+            //     // 新增规格删除出库记录
+            //     $sku = ProductSku::with(['product'])->where('product_id', '=', $product_id)->select();
+            //     foreach ($sku as $item) {
+            //         $this->deleteInventoryRecord($item, '', $shop_supplier_id, $shop_user_id);
+            //     }
+            //     // 删除产品关联规格
+            //     ProductSku::where('product_id', '=', $product_id)->delete();
+            // }
             $this->commit();
             return true;
         } catch (\Exception $e) {
