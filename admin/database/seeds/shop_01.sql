@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 自定义折扣金额
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单商品）。自定义折扣金额（单商品）=会员折扣后的价格（单商品）*(1-自定义折扣率) 。校验：自定义折扣金额（单商品）=销售价 - 最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)',
     -- 状态值
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退菜',
     `is_require` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否必点商品 0-否 1-是。用于在前端显示必点图标',
     -- 下单是指加购商品吗？还是送厨商品？如果下单指加购，则可以理解这类商品为抢购商品，先抢先得。
     `deduct_stock_type` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '库存计算方式,0-下单减库存 1-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数',
@@ -200,7 +200,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `deduct_stock_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注，顾客对商品的备注信息',
     `is_gift` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否赠菜, 0-否 1-是',
-    `gift_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '赠菜原因',
+    `gift_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '赠菜原因',
+    `refund_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '退菜原因',
     `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品',
     -- 关联信息
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
@@ -1473,6 +1474,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
 CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货单商品唯一标识符',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品表ID',
     `return_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货单ID',
     `product_type` INT(11) NOT NULL DEFAULT 0 COMMENT '商品类型, 1-销售订单商品SaleOrderProduct 2-销售订单顾客类型SaleOrderBuffetCustomerType 3-自助餐加钟BuffetAddTimeProduct 4-自助餐加钟顾客类型BuffetAddTimeCustomerType',
     `product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品ID',
@@ -1481,7 +1484,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `tax_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '税率,根据结账时税率计算',
     `product_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
     `product_discount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品折扣',
-    `product_total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品总金额',
+    `product_total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品总金额（退款总金额）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

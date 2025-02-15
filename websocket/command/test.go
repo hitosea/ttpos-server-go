@@ -7,7 +7,6 @@ import (
 	"websocket/config"
 	"websocket/pkg/cache"
 	"websocket/pkg/database"
-	"websocket/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -32,16 +31,12 @@ var testsCmd = &cobra.Command{
 		var cacheConfig cache.Config
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cacheConfig)
-
 	},
 	Run: func(_ *cobra.Command, _ []string) {
-
-		token, _ := utils.GenerateToken("cashier", 1, 1, "", config.JWT.Secret, 1186400)
-
-		fmt.Println(token)
-
+		// token, _ := utils.GenerateToken("cashier", 1, 1, "", config.JWT.Secret, 1186400)
+		// fmt.Println(token)
 		// 订阅
-		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", "您的消息内容").Err()
+		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", "{'name': 1}").Err()
 		if err != nil {
 			fmt.Println("Error publishing message:", err)
 		} else {

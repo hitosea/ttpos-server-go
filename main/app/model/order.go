@@ -124,9 +124,10 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 type SaleOrder struct {
 	BaseModel
 	// 基础标识字段
-	OrderNo string `gorm:"column:order_no;type:varchar(255);default:'';comment:订单编号" json:"order_no"`
-	Status  uint   `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-未结账 1-已结账" json:"status"`
-	IsFree  uint   `gorm:"column:is_free;type:tinyint(1);default:0;comment:是否免单, 0-否 1-是" json:"is_gift"`
+	OrderNo    string `gorm:"column:order_no;comment:订单编号" json:"order_no"`
+	Status     uint   `gorm:"column:status;comment:订单状态, 0-未结账 1-已结账" json:"status"`
+	IsFree     uint   `gorm:"column:is_free;comment:是否免单, 0-否 1-是" json:"is_free"`
+	FreeReason string `gorm:"column:free_reason;comment:免单原因" json:"free_reason"`
 
 	// 关联ID字段
 	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -240,11 +241,12 @@ type SaleOrderProduct struct {
 
 	// 库存相关字段
 	DeductStockType uint  `gorm:"column:deduct_stock_type;type:tinyint(1);not null;default:0;comment:'库存计算方式,0-下单减库存 1-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数'" json:"deduct_stock_type"`
-	DeductStockTime int64 `gorm:"column:deduct_stock_time;type:int(10);not null;default:0;comment:'减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存'" json:"deduct_stock_time"`
+	DeductStockTime int64 `gorm:"column:deduct_stock_time;type:int(10);not null;default:0;comment:'减库存的时间(时间戳），0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存'" json:"deduct_stock_time"`
 
 	// 赠品相关字段
-	IsGift     uint   `gorm:"column:is_gift;type:tinyint(1);not null;default:0;comment:'是否赠菜, 0-否 1-是'" json:"is_gift"`
-	GiftReason string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
+	IsGift       uint   `gorm:"column:is_gift;type:tinyint(1);not null;default:0;comment:'是否赠菜, 0-否 1-是'" json:"is_gift"`
+	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
+	RefundReason string `gorm:"column:refund_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
 
 	// 关联ID字段
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;not null;default:0;comment:'多语言名称UUID'" json:"multi_language_name_uuid"`
@@ -264,6 +266,7 @@ type SaleOrderProduct struct {
 	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`

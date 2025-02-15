@@ -12,7 +12,7 @@ import (
 )
 
 type DBManager struct {
-	dbs map[uint]*gorm.DB
+	dbs map[uint64]*gorm.DB
 }
 
 var (
@@ -24,7 +24,7 @@ var (
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
-			dbs: make(map[uint]*gorm.DB),
+			dbs: make(map[uint64]*gorm.DB),
 		}
 		instance.initDBs(conf)
 	})
@@ -35,7 +35,7 @@ func GetDBManager(conf config.DatabaseConf) *DBManager {
 func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	// Initialize the dbs map if it's nil
 	if m.dbs == nil {
-		m.dbs = make(map[uint]*gorm.DB)
+		m.dbs = make(map[uint64]*gorm.DB)
 	}
 	// 主数据库
 	if m.dbs[0] == nil {
@@ -72,7 +72,7 @@ func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gor
 }
 
 // GetDB 获取数据库
-func (m *DBManager) GetDB(index uint) *gorm.DB {
+func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	if db, ok := m.dbs[index]; ok {
 		return db
 	}
@@ -86,8 +86,8 @@ func (m *DBManager) GetDB(index uint) *gorm.DB {
 	panic(fmt.Sprintf("Database with index %d not found", index))
 }
 
-func (m *DBManager) GetDBNameList() map[uint]string {
-	dbNames := make(map[uint]string)
+func (m *DBManager) GetDBNameList() map[uint64]string {
+	dbNames := make(map[uint64]string)
 	for dbName := range m.dbs {
 		dbNames[dbName] = fmt.Sprintf("%s%d", "shop", dbName)
 	}

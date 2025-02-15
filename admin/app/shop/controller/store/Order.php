@@ -129,7 +129,12 @@ class Order extends Controller
         if (($result['code'] ?? 0) != 1) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        return $this->renderSuccess('', $result['data']);
+        //
+        $data = $result['data'];
+        $data['detail']['create_time'] =  $data['detail']['create_time'] ? date('Y-m-d H:i:s',  $data['detail']['create_time']) : '';
+        $data['detail']['finish_time'] =  $data['detail']['finish_time'] ? date('Y-m-d H:i:s',  $data['detail']['finish_time']) : '';
+        // 
+        return $this->renderSuccess('', $data);
 
         // 订单详情
         /** @var OrderModel $detail */

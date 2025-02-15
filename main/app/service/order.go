@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -547,22 +549,24 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
 			products[j] = resp.OrderProduct{
-				Uuid:       product.Uuid,
-				LocaleName: product.MultiLanguageName.GetNames(),
-				FlavorName: product.FlavorName,
-				Num:        product.Num,
-				Price:      product.Price,
-				SalePrice:  product.SalePrice,
-				TotalPrice: product.TotalPrice,
-				TaxRate:    product.TaxRate,
-				Status:     product.Status,
-				Remark:     product.Remark,
-				IsGift:     product.IsGift == 1,
-				GiftReason: product.GiftReason,
-				ImageUrl:   product.ImageFile.GetUrl(),
-				Attributes: product.GetAttributeNames(),
-				// 退菜原因 - todo 待完善
-				RefundReason: "", // product.refund_reason
+				Uuid:           product.Uuid,
+				LocaleName:     product.MultiLanguageName.GetNames(),
+				FlavorName:     product.FlavorName,
+				Num:            product.Num,
+				Price:          product.Price,
+				SalePrice:      product.SalePrice,
+				TotalPrice:     decimal.NewFromFloat(product.TotalPrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
+				TotalSalePrice: decimal.NewFromFloat(product.SalePrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
+				TaxRate:        product.TaxRate,
+				Status:         product.Status,
+				Remark:         product.Remark,
+				IsGift:         product.IsGift == 1,
+				GiftReason:     product.GiftReason,
+				ImageUrl:       product.ImageFile.GetUrl(),
+				Attributes:     product.GetAttributeNames(),
+				RefundReason:   product.RefundReason,
+				// todo 待完善
+				RefundAmount: 0,
 			}
 		}
 		// todo - SerialNo 取值不对
@@ -572,13 +576,14 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
 			OrderNo:       order.OrderNo,
 			Status:        order.Status,
-			FinishTime:    order.FinishTime,
+			IsFree:        order.IsFree == 1,
+			FreeReason:    order.FreeReason,
 			OrderAmount:   order.Amount,
 			PaymentAmount: order.PaymentAmount - order.GetTotalRefundAmount(),
 			RefundAmount:  order.GetTotalRefundAmount(),
 			PayTypeName:   strings.Join(payTypeNames, ","),
 			MemberName:    order.Member.Nickname,
-			MemberUuid:    order.Member.Uuid,
+			MemberUuid:    order.ConsumerUuid,
 			Products:      products,
 		}
 	}
@@ -621,9 +626,10 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 			CancelReason:  info.Reason,
 			PayTypes:      payTypes,
 			SaleOrders:    orderList,
+			Remark:        info.Remark,
 		},
 		OperationLog: struct {
-			List []resp.OrderOperationLog
+			List []resp.OrderOperationLog `json:"list"`
 		}{
 			List: func() []resp.OrderOperationLog {
 				logs, err := s.GetRecordList(dbId, req.SaleBillUuid, 0)
@@ -647,11 +653,21 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 	// todo - 数据格式待处理
 	logs := make([]resp.OrderOperationLog, 0)
 	for _, record := range orderRecordLists {
+		// 解析Data字段的JSON字符串为map
+		var data any
+		if record.Data != "" {
+			if err := json.Unmarshal([]byte(record.Data), &data); err != nil {
+				data = struct{}{}
+			}
+		} else {
+			data = struct{}{}
+		}
+		//
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:          record.Uuid,
 			Source:        record.Source,
 			Action:        record.Action,
-			Data:          record.Data,
+			Data:          data,
 			Remark:        record.Remark,
 			SaleBillUuid:  record.SaleBillUuid,
 			SaleOrderUuid: record.SaleOrderUuid,

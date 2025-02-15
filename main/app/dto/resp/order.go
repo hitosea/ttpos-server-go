@@ -73,21 +73,23 @@ type OrderInfoPayTypes struct {
 }
 
 type OrderProduct struct {
-	Uuid         uint64             `json:"uuid"`          // 销售订单商品ID
-	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 产品名称
-	FlavorName   string             `json:"flavor_name"`   // 口味名称
-	Num          uint               `json:"num"`           // 数量
-	SalePrice    float64            `json:"sale_price"`    // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
-	Price        float64            `json:"Price"`         // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
-	TotalPrice   float64            `json:"total_price"`   // 应收金额(单商品)=最终单价+服务费+总税费
-	TaxRate      float64            `json:"tax_rate"`      // 税率,单位%.下单时单税率,结账时再重新核算
-	Status       uint               `json:"status"`        // 状态, 0-正常 1-退菜
-	Remark       string             `json:"remark"`        // 备注
-	IsGift       bool               `json:"is_gift"`       // 是否赠品, fasle-否 true-是
-	GiftReason   string             `json:"gift_reason"`   // 赠品原因
-	Attributes   string             `json:"attributes"`    // 规格属性加料
-	ImageUrl     string             `json:"image_url"`     // 图片地址
-	RefundReason string             `json:"refund_reason"` // 退菜原因
+	Uuid           uint64             `json:"uuid"`             // 销售订单商品ID
+	LocaleName     dto.LocaleResponse `json:"locale_name"`      // 产品名称
+	FlavorName     string             `json:"flavor_name"`      // 口味名称
+	Num            uint               `json:"num"`              // 数量
+	SalePrice      float64            `json:"sale_price"`       // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
+	Price          float64            `json:"price"`            // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
+	TotalPrice     float64            `json:"total_price"`      // 应收金额(单商品)=最终单价+服务费+总税费
+	TotalSalePrice float64            `json:"total_sale_price"` // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'
+	TaxRate        float64            `json:"tax_rate"`         // 税率,单位%.下单时单税率,结账时再重新核算
+	RefundAmount   float64            `json:"refund_amount"`    // 退款金额
+	Status         uint               `json:"status"`           // 状态, 0-正常 1-退菜
+	Remark         string             `json:"remark"`           // 备注
+	IsGift         bool               `json:"is_gift"`          // 是否赠品, fasle-否 true-是
+	GiftReason     string             `json:"gift_reason"`      // 赠品原因
+	Attributes     string             `json:"attributes"`       // 规格属性加料
+	ImageUrl       string             `json:"image_url"`        // 图片地址
+	RefundReason   string             `json:"refund_reason"`    // 退菜原因
 }
 
 // 订单信息响应
@@ -104,6 +106,8 @@ type OrderInfo struct {
 	PayTypeName   string         `json:"pay_type_name"`   // 支付类型名称
 	MemberName    string         `json:"member_name"`     // 会员名称
 	MemberUuid    uint64         `json:"member_uuid"`     // 会员名称
+	IsFree        bool           `json:"is_free"`         // 是否免单
+	FreeReason    string         `json:"free_reason"`     // 免单原因
 	Products      []OrderProduct `json:"products"`        // 产品列表
 }
 
@@ -124,8 +128,9 @@ type OrderInfos struct {
 	MemberNames   string              `json:"member_names"`   // 会员名称
 	MemberUuids   string              `json:"member_uuids"`   // 会员名称
 	BuffetNames   string              `json:"buffet_names"`   // 自助餐名称
-	CancelReason  string              `json:"cancel_reason"`  // 自助餐名称
+	CancelReason  string              `json:"cancel_reason"`  // 取消原因
 	CashierName   string              `json:"cashier_name"`   // 收银员名称
+	Remark        string              `json:"remark"`         // 备注
 	PayTypes      []OrderInfoPayTypes `json:"pay_types"`      // 支付类型
 	SaleOrders    []OrderInfo         `json:"sale_orders"`    // 订单列表
 }
@@ -134,8 +139,7 @@ type OrderOperationLog struct {
 	Uuid          uint64 `json:"uuid"`            // 账单操作记录ID
 	Source        string `json:"source"`          // 操作来源 cashier-收银 assistant-助手 shop-商家后台
 	Action        string `json:"action"`          // 操作行为
-	Message       string `json:"message"`         // 消息内容
-	Data          string `json:"data"`            // 消息数据
+	Data          any    `json:"data"`            // 消息数据
 	Remark        string `json:"remark"`          // 备注
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID
@@ -145,7 +149,7 @@ type OrderOperationLog struct {
 type OrderInfosResp struct {
 	Detail       OrderInfos `json:"detail"` // 明细
 	OperationLog struct {
-		List []OrderOperationLog
+		List []OrderOperationLog `json:"list"`
 	} `json:"operation_log"` // 操作日志
 	Extra BillListsExtra `json:"extra"` // 通过当前数据控制按钮是否显示
 }

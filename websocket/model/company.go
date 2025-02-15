@@ -3,7 +3,7 @@ package model
 // Company 集团表
 type Company struct {
 	ID            uint   `gorm:"primaryKey;AUTO_INCREMENT;comment:集团id"`
-	Uuid          uint   `gorm:"default:0;comment:UUID"`
+	Uuid          uint64 `gorm:"default:0;comment:UUID"`
 	Name          string `gorm:"default:'';comment:集团名称"`
 	Logo          string `gorm:"default:'';comment:logo"`
 	IsRecycle     uint   `gorm:"default:0;comment:是否回收"`

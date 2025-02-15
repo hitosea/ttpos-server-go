@@ -22,7 +22,7 @@ func (r *WebSocketMsgRepository) Create(webSocketMsg model.WebSocketMsg) (uint, 
 	return webSocketMsg.ID, result.Error
 }
 
-func (r *WebSocketMsgRepository) DeleteByTypeAndCompanyId(msgType string, companyId uint) error {
+func (r *WebSocketMsgRepository) DeleteByTypeAndCompanyId(msgType string, companyId uint64) error {
 	return r.dbm.GetDB(0).Where("type = ? AND company_uuid = ?", msgType, companyId).Delete(&model.WebSocketMsg{}).Error
 }
 
