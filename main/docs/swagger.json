@@ -2123,7 +2123,7 @@
                     "200": {
                         "description": "订单详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.CashierOrderInfoResp"
+                            "$ref": "#/definitions/resp.OrderInfosResp"
                         }
                     },
                     "404": {
@@ -2193,6 +2193,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "用餐方式,-1=全都、 0-堂食 1-打包",
+                        "name": "dining_method",
+                        "in": "query"
+                    },
+                    {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
                         "name": "enable_create_time",
@@ -2248,7 +2254,7 @@
                     "200": {
                         "description": "订单列表",
                         "schema": {
-                            "$ref": "#/definitions/resp.CashierOrderListPaginationResp"
+                            "$ref": "#/definitions/resp.OrderListPaginationResp"
                         }
                     },
                     "404": {
@@ -3921,6 +3927,134 @@
                 }
             }
         },
+        "resp.BillLists": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "type": "integer"
+                },
+                "extra": {
+                    "$ref": "#/definitions/resp.BillListsExtra"
+                },
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
+                    "type": "integer"
+                },
+                "is_split": {
+                    "description": "是否拆单\tfalse:否 true:是",
+                    "type": "boolean"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_type_name": {
+                    "description": "支付类型名称",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_orders": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.BillListsOrder"
+                    }
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.BillListsExtra": {
+            "type": "object",
+            "properties": {
+                "is_cell_cancel": {
+                    "description": "是否可取消",
+                    "type": "boolean"
+                },
+                "is_cell_delete": {
+                    "description": "是否可删除",
+                    "type": "boolean"
+                },
+                "is_cell_invoice": {
+                    "description": "是否可打印发票",
+                    "type": "boolean"
+                },
+                "is_cell_print": {
+                    "description": "是否可打印小票",
+                    "type": "boolean"
+                },
+                "is_cell_refund": {
+                    "description": "是否可退款",
+                    "type": "boolean"
+                },
+                "is_cell_reverse_settle": {
+                    "description": "是否可反结账",
+                    "type": "boolean"
+                }
+            }
+        },
+        "resp.BillListsOrder": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "type": "integer"
+                },
+                "extra": {
+                    "$ref": "#/definitions/resp.BillListsExtra"
+                },
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
+                    "type": "integer"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_type_name": {
+                    "description": "支付类型名称",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.Buffet": {
             "type": "object",
             "properties": {
@@ -4069,420 +4203,6 @@
                 "username": {
                     "description": "登录账号",
                     "type": "string"
-                }
-            }
-        },
-        "resp.CashierBillList": {
-            "type": "object",
-            "properties": {
-                "bill_type": {
-                    "description": "订单类型\t0:桌台订单 1:点餐订单",
-                    "type": "integer"
-                },
-                "finish_time": {
-                    "description": "完成时间（支付时间）（时间戳）",
-                    "type": "integer"
-                },
-                "is_split": {
-                    "description": "是否拆单\tfalse:否 true:是",
-                    "type": "boolean"
-                },
-                "order_amount": {
-                    "description": "订单总金额",
-                    "type": "number"
-                },
-                "order_no": {
-                    "description": "订单编号",
-                    "type": "string"
-                },
-                "pay_type_name": {
-                    "description": "支付类型名称",
-                    "type": "string"
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_orders": {
-                    "description": "订单列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CashierOrder"
-                    }
-                },
-                "serial_no": {
-                    "description": "桌位编号 (点餐流水号)",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrder": {
-            "type": "object",
-            "properties": {
-                "bill_type": {
-                    "description": "订单类型\t0:桌台订单 1:点餐订单",
-                    "type": "integer"
-                },
-                "finish_time": {
-                    "description": "完成时间（支付时间）（时间戳）",
-                    "type": "integer"
-                },
-                "order_amount": {
-                    "description": "订单总金额",
-                    "type": "number"
-                },
-                "order_no": {
-                    "description": "订单编号",
-                    "type": "string"
-                },
-                "pay_type_name": {
-                    "description": "支付类型名称",
-                    "type": "string"
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
-                    "type": "integer"
-                },
-                "serial_no": {
-                    "description": "桌位编号 (点餐流水号)",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrderInfo": {
-            "type": "object",
-            "properties": {
-                "bill_type": {
-                    "description": "订单类型\t0:桌台订单 1:点餐订单",
-                    "type": "integer"
-                },
-                "finish_time": {
-                    "description": "完成时间（支付时间）（时间戳）",
-                    "type": "integer"
-                },
-                "member_name": {
-                    "description": "会员名称",
-                    "type": "string"
-                },
-                "order_amount": {
-                    "description": "订单总金额",
-                    "type": "number"
-                },
-                "order_no": {
-                    "description": "订单编号",
-                    "type": "string"
-                },
-                "pay_type_name": {
-                    "description": "支付类型名称",
-                    "type": "string"
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "products": {
-                    "description": "产品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CashierOrderProduct"
-                    }
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
-                    "type": "integer"
-                },
-                "serial_no": {
-                    "description": "桌位编号 (点餐流水号)",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrderInfoPayTypes": {
-            "type": "object",
-            "properties": {
-                "currency_unit": {
-                    "description": "货币单位",
-                    "type": "string"
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "payment_method_name": {
-                    "description": "支付类型名称",
-                    "type": "string"
-                },
-                "sale_bill_uuid": {
-                    "description": "支付单UUID",
-                    "type": "integer"
-                },
-                "source": {
-                    "description": "支付状态, 来源 0-系统 1-手动 2-LianLianPay",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "支付状态, 0-未支付 1-已支付 2-已退款",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrderInfoResp": {
-            "type": "object",
-            "properties": {
-                "detail": {
-                    "description": "明细",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.CashierOrderInfos"
-                        }
-                    ]
-                },
-                "operation_log": {
-                    "description": "操作日志",
-                    "type": "object",
-                    "properties": {
-                        "list": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/resp.CashierOrderOperationLog"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "resp.CashierOrderInfos": {
-            "type": "object",
-            "properties": {
-                "bill_type": {
-                    "description": "订单类型\t0:桌台订单 1:点餐订单",
-                    "type": "integer"
-                },
-                "create_time": {
-                    "description": "创建时间",
-                    "type": "integer"
-                },
-                "finish_time": {
-                    "description": "完成时间（支付时间）（时间戳）",
-                    "type": "integer"
-                },
-                "is_split": {
-                    "description": "是否拆单\tfalse:否 true:是",
-                    "type": "boolean"
-                },
-                "member_names": {
-                    "description": "会员名称",
-                    "type": "string"
-                },
-                "order_amount": {
-                    "description": "订单总金额",
-                    "type": "number"
-                },
-                "order_no": {
-                    "description": "订单编号",
-                    "type": "string"
-                },
-                "pay_types": {
-                    "description": "支付类型",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CashierOrderInfoPayTypes"
-                    }
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_orders": {
-                    "description": "订单列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CashierOrderInfo"
-                    }
-                },
-                "serial_no": {
-                    "description": "桌位编号 (点餐流水号)",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrderListPaginationResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "订单列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CashierBillList"
-                    }
-                },
-                "meta": {
-                    "description": "Meta信息",
-                    "type": "object",
-                    "properties": {
-                        "cancel_num": {
-                            "description": "已取消数量",
-                            "type": "integer"
-                        },
-                        "complete_num": {
-                            "description": "已完成数量",
-                            "type": "integer"
-                        },
-                        "page_no": {
-                            "description": "当前页码",
-                            "type": "integer"
-                        },
-                        "page_size": {
-                            "description": "每页大小",
-                            "type": "integer"
-                        },
-                        "total": {
-                            "description": "总数",
-                            "type": "integer"
-                        },
-                        "unpaid_num": {
-                            "description": "待付款数量",
-                            "type": "integer"
-                        }
-                    }
-                }
-            }
-        },
-        "resp.CashierOrderOperationLog": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "description": "操作行为",
-                    "type": "string"
-                },
-                "create_time": {
-                    "description": "创建时间(时间戳)",
-                    "type": "integer"
-                },
-                "data": {
-                    "description": "消息数据",
-                    "type": "string"
-                },
-                "message": {
-                    "description": "消息内容",
-                    "type": "string"
-                },
-                "remark": {
-                    "description": "备注",
-                    "type": "string"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单ID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单ID",
-                    "type": "integer"
-                },
-                "source": {
-                    "description": "操作来源 cashier-收银 assistant-助手 shop-商家后台",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "账单操作记录ID",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CashierOrderProduct": {
-            "type": "object",
-            "properties": {
-                "attributes": {
-                    "description": "规格属性加料",
-                    "type": "string"
-                },
-                "custom_price": {
-                    "description": "自定义价格",
-                    "type": "number"
-                },
-                "flavor_name": {
-                    "description": "口味名称",
-                    "type": "string"
-                },
-                "gift_reason": {
-                    "description": "赠品原因",
-                    "type": "string"
-                },
-                "image_url": {
-                    "description": "图片地址",
-                    "type": "string"
-                },
-                "is_gift": {
-                    "description": "是否赠品, fasle-否 true-是",
-                    "type": "boolean"
-                },
-                "locale_name": {
-                    "description": "产品名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "num": {
-                    "description": "数量",
-                    "type": "integer"
-                },
-                "price": {
-                    "description": "最终单价",
-                    "type": "number"
-                },
-                "product_original_amount": {
-                    "description": "原价销售额.包含加料、税费.",
-                    "type": "number"
-                },
-                "remark": {
-                    "description": "备注",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "状态, 0-正常 1-退菜",
-                    "type": "integer"
-                },
-                "tax_rate": {
-                    "description": "税率,单位%.下单时单税率,结账时再重新核算",
-                    "type": "integer"
-                },
-                "unit_price": {
-                    "description": "单价",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "销售订单商品ID",
-                    "type": "integer"
                 }
             }
         },
@@ -4813,6 +4533,330 @@
                     "items": {
                         "$ref": "#/definitions/resp.OnlineCashier"
                     }
+                }
+            }
+        },
+        "resp.OrderInfo": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "type": "integer"
+                },
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
+                    "type": "integer"
+                },
+                "member_name": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_type_name": {
+                    "description": "支付类型名称",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "products": {
+                    "description": "产品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderProduct"
+                    }
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderInfoPayTypes": {
+            "type": "object",
+            "properties": {
+                "currency_unit": {
+                    "description": "货币单位",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_method_name": {
+                    "description": "支付类型名称",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "支付单UUID",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "支付状态, 来源 0-系统 1-手动 2-LianLianPay",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付状态, 0-未支付 1-已支付 2-已退款",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderInfos": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "finish_time": {
+                    "description": "完成时间（支付时间）（时间戳）",
+                    "type": "integer"
+                },
+                "is_split": {
+                    "description": "是否拆单\tfalse:否 true:是",
+                    "type": "boolean"
+                },
+                "member_names": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_types": {
+                    "description": "支付类型",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderInfoPayTypes"
+                    }
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_orders": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderInfo"
+                    }
+                },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 订单状态, 0-待付款、1-已完成、2-已取消",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderInfosResp": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "description": "明细",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderInfos"
+                        }
+                    ]
+                },
+                "extra": {
+                    "$ref": "#/definitions/resp.BillListsExtra"
+                },
+                "operation_log": {
+                    "description": "操作日志",
+                    "type": "object",
+                    "properties": {
+                        "list": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/resp.OrderOperationLog"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "resp.OrderListPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.BillLists"
+                    }
+                },
+                "meta": {
+                    "description": "Meta信息",
+                    "type": "object",
+                    "properties": {
+                        "cancel_num": {
+                            "description": "已取消数量",
+                            "type": "integer"
+                        },
+                        "complete_num": {
+                            "description": "已完成数量",
+                            "type": "integer"
+                        },
+                        "page_no": {
+                            "description": "当前页码",
+                            "type": "integer"
+                        },
+                        "page_size": {
+                            "description": "每页大小",
+                            "type": "integer"
+                        },
+                        "total": {
+                            "description": "总数",
+                            "type": "integer"
+                        },
+                        "unpaid_num": {
+                            "description": "待付款数量",
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "resp.OrderOperationLog": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "操作行为",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间(时间戳)",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "消息数据",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "消息内容",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单ID",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "操作来源 cashier-收银 assistant-助手 shop-商家后台",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "账单操作记录ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderProduct": {
+            "type": "object",
+            "properties": {
+                "Price": {
+                    "description": "最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'",
+                    "type": "number"
+                },
+                "attributes": {
+                    "description": "规格属性加料",
+                    "type": "string"
+                },
+                "flavor_name": {
+                    "description": "口味名称",
+                    "type": "string"
+                },
+                "gift_reason": {
+                    "description": "赠品原因",
+                    "type": "string"
+                },
+                "image_url": {
+                    "description": "图片地址",
+                    "type": "string"
+                },
+                "is_gift": {
+                    "description": "是否赠品, fasle-否 true-是",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "产品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "refund_reason": {
+                    "description": "退菜原因",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sale_price": {
+                    "description": "销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价",
+                    "type": "number"
+                },
+                "status": {
+                    "description": "状态, 0-正常 1-退菜",
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "税率,单位%.下单时单税率,结账时再重新核算",
+                    "type": "integer"
+                },
+                "total_price": {
+                    "description": "应收金额(单商品)=最终单价+服务费+总税费",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "销售订单商品ID",
+                    "type": "integer"
                 }
             }
         },
