@@ -27,7 +27,7 @@ class User extends BaseModel
     protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getUserIdAttr()
     {

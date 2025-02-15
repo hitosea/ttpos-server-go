@@ -24,19 +24,19 @@ class Access extends BaseModel
     const ASSISTANT_ROUTE_NAME = '点餐助手';
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getAccessIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
     }
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getParentIdAttr()
     {
-        return $this->parent_uuid ?? 0;
+        return $this->parent_uuid ?: 0;
     }
 
     /*

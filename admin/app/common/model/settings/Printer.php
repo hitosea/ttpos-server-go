@@ -23,7 +23,7 @@ class Printer extends BaseModel
     protected $append = ['printer_id', 'printer_name'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getPrinterIdAttr()
     {

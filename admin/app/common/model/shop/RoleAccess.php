@@ -19,19 +19,19 @@ class RoleAccess extends BaseModel
     protected $append = ['role_id', 'access_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getRoleIdAttr()
     {
-        return $this->role_uuid ?? 0;
+        return $this->role_uuid ?: 0;
     }
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getAccessIdAttr()
     {
-        return $this->access_uuid ?? 0;
+        return $this->access_uuid ?: 0;
     }
 
     /**
