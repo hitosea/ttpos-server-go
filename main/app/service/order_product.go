@@ -25,6 +25,7 @@ type IOrderProductSrv interface {
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
 	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
 	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                    // 生成订单商品
+	UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error                // 更新订单商品金额
 }
 
 // orderProductSrv 订单商品服务结构体
@@ -257,7 +258,7 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 			// 更新销售订单商品
 			if err := repository.NewOrderProductRepo(tx).Update(
 				map[string]interface{}{
-					"num": repository.NewCommonRepo().IncrementNum(1),
+					"num": repository.NewCommonRepo().IncrementNum(req.Num),
 				},
 				repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
 			); err != nil {
@@ -266,24 +267,12 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 		}
 
 		// 计算销售订单商品相关金额
-		orderProductAmount := o.orderCalcSrv.CalcOrderProductAmount(req.SaleBill, req.SaleOrder, orderProduct)
-		if err := repository.NewOrderProductRepo(tx).Update(
-			map[string]interface{}{
-				"price":                     orderProductAmount.DiscountAmount.Price,
-				"discount_fee":              orderProductAmount.DiscountAmount.DiscountFee,
-				"member_discount_fee":       orderProductAmount.DiscountAmount.MemberDiscountFee,
-				"custom_discount_fee":       orderProductAmount.DiscountAmount.CustomDiscountFee,
-				"member_discount_rate":      orderProductAmount.DiscountAmount.MemberDiscountRate,
-				"member_card_discount_rate": orderProductAmount.DiscountAmount.MemberCardDiscountRate,
-				"custom_discount_rate":      orderProductAmount.DiscountAmount.CustomDiscountRate,
-				"tax_fee":                   orderProductAmount.TaxAmount.TaxFee,
-				"service_fee":               orderProductAmount.ServiceAmount.ServiceFee,
-				"service_tax_fee":           orderProductAmount.ServiceAmount.ServiceTaxFee,
-				"total_price":               orderProductAmount.TotalPrice,
-			},
-			repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
-			repository.NewCommonRepo().WhereBySoftDelete(),
-		); err != nil {
+		err = o.UpdateOrderProductAmount(tx, UpdateOrderProductAmountReq{
+			SaleBill:     req.SaleBill,
+			SaleOrder:    req.SaleOrder,
+			OrderProduct: orderProduct,
+		})
+		if err != nil {
 			return err
 		}
 
@@ -378,4 +367,37 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 	orderProduct.Sign = orderProduct.GenerateProductSign()
 
 	return orderProduct
+}
+
+// UpdateOrderProductAmountReq 更新订单商品金额请求
+type UpdateOrderProductAmountReq struct {
+	SaleBill     model.SaleBill
+	SaleOrder    model.SaleOrder
+	OrderProduct model.SaleOrderProduct
+}
+
+// UpdateOrderProductAmount 更新订单商品金额
+func (o *orderProductSrv) UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error {
+	orderProductAmount := o.orderCalcSrv.CalcOrderProductAmount(req.SaleBill, req.SaleOrder, req.OrderProduct)
+	if err := repository.NewOrderProductRepo(db).Update(
+		map[string]interface{}{
+			"price":                     orderProductAmount.DiscountAmount.Price,
+			"discount_fee":              orderProductAmount.DiscountAmount.DiscountFee,
+			"member_discount_fee":       orderProductAmount.DiscountAmount.MemberDiscountFee,
+			"custom_discount_fee":       orderProductAmount.DiscountAmount.CustomDiscountFee,
+			"member_discount_rate":      orderProductAmount.DiscountAmount.MemberDiscountRate,
+			"member_card_discount_rate": orderProductAmount.DiscountAmount.MemberCardDiscountRate,
+			"custom_discount_rate":      orderProductAmount.DiscountAmount.CustomDiscountRate,
+			"tax_fee":                   orderProductAmount.TaxAmount.TaxFee,
+			"service_fee":               orderProductAmount.ServiceAmount.ServiceFee,
+			"service_tax_fee":           orderProductAmount.ServiceAmount.ServiceTaxFee,
+			"total_price":               orderProductAmount.TotalPrice,
+		},
+		repository.NewCommonRepo().WhereByUuid(req.OrderProduct.Uuid),
+		repository.NewCommonRepo().WhereBySoftDelete(),
+	); err != nil {
+		return err
+	}
+
+	return nil
 }
