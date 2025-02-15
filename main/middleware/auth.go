@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"slices"
 	"strings"
 	"ttpos-server-go/app/api/helper"
@@ -11,6 +11,8 @@ import (
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
+
+	"github.com/gin-gonic/gin"
 )
 
 func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
@@ -29,6 +31,8 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			return
 		}
 
+		fmt.Println(config.JWT.Secret)
+
 		// 验证token
 		claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
 		if err != nil {
@@ -37,7 +41,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			return
 		}
 
-		if !slices.Contains([]string{constant.SourceCashier, constant.SourceAssistant}, claims.Source) {
+		if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant}, claims.Source) {
 			helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
 			c.Abort()
 			return

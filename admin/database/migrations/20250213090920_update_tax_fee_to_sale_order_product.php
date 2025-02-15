@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 
 
-class Update extends Migrator
+class UpdateTaxFeeToSaleOrderProduct extends Migrator
 {
     /**
      * Change Method.

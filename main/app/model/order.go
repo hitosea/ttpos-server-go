@@ -64,6 +64,7 @@ type SaleBill struct {
 	// 关联字段
 	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	Cashier         Staff           `gorm:"foreignKey:CashierUuid;references:uuid"`
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -92,6 +93,31 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 		}
 	}
 	return nil
+}
+
+// 获取总的退款金额
+func (model *SaleBill) GetTotalRefundAmount() float64 {
+	refundAmount := 0.0
+	for _, saleOrder := range model.SaleOrders {
+		for _, refundOrder := range saleOrder.ReturnOrders {
+			refundAmount += refundOrder.RefundAmount
+		}
+	}
+	return refundAmount
+}
+
+// 获取所有自助餐名称
+func (model *SaleBill) GetBuffetNames(language string) string {
+	buffets := make([]string, 0)
+	for _, order := range model.SaleOrders {
+		for _, buffet := range order.Buffets {
+			name := buffet.BuffetPackageMultiLanguageName.GetNameByLang(language)
+			if !slices.Contains(buffets, name) {
+				buffets = append(buffets, name)
+			}
+		}
+	}
+	return strings.Join(buffets, "+")
 }
 
 // SaleOrder 销售订单 ttpos_sale_order
@@ -129,10 +155,11 @@ type SaleOrder struct {
 	CustomDiscountRate     float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:100;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
 
 	// 关联对象
-	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
-	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	ReturnOrders      []ReturnOrder      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	PaymentOrders     []PaymentOrder                `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	Member            Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
+	SaleOrderProducts []SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	ReturnOrders      []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	Buffets           []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 // TableName 指定表名
@@ -158,6 +185,15 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 		return errors.New("订单已结账")
 	}
 	return nil
+}
+
+// 获取所有自助餐名称
+func (model *SaleOrder) GetBuffetNames(language string) string {
+	buffets := make([]string, 0)
+	for _, buffet := range model.Buffets {
+		buffets = append(buffets, buffet.BuffetPackageMultiLanguageName.GetNameByLang(language))
+	}
+	return strings.Join(buffets, "+")
 }
 
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
@@ -299,12 +335,18 @@ type SaleOrderBuffetCustomerType struct {
 	BaseModel
 
 	// 关联ID字段
-	SaleOrderUuid          uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
-	BuffetPackageUuid      uint64 `gorm:"column:buffet_package_uuid;type:bigint(20);default:0;comment:自助餐套餐ID" json:"buffet_package_uuid"`
-	BuffetCustomerTypeUuid uint64 `gorm:"column:buffet_customer_type_uuid;type:bigint(20);default:0;comment:自助餐客户类型ID" json:"buffet_customer_type_uuid"`
+	SaleOrderUuid                           uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
+	BuffetPackageUuid                       uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetPackageMultiLanguageNameUuid      uint64 `gorm:"column:buffet_package_multi_language_name_uuid;comment:自助餐套餐多语言ID" json:"buffet_package_multi_language_name_uuid"`
+	BuffetCustomerTypeUuid                  uint64 `gorm:"column:buffet_customer_type_uuid;comment:自助餐客户类型ID" json:"buffet_customer_type_uuid"`
+	BuffetCustomerTypeMultiLanguageNameUuid uint64 `gorm:"column:buffet_customer_type_multi_language_name_uuid;comment:自助餐客户类型多语言ID" json:"buffet_customer_type_multi_language_name_uuid"`
 
 	// 数值字段
 	Num uint `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
+
+	// 关联字段
+	BuffetPackageMultiLanguageName      MultiLanguageName `gorm:"foreignKey:BuffetPackageMultiLanguageNameUuid;references:uuid"`
+	BuffetCustomerTypeMultiLanguageName MultiLanguageName `gorm:"foreignKey:BuffetCustomerTypeMultiLanguageNameUuid;references:uuid"`
 }
 
 // SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`

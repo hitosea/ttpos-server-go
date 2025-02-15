@@ -9,11 +9,13 @@ type CreateOrderResp struct {
 
 // 账单列表订单响应
 type BillListsOrder struct {
+	SaleBillUuid  uint64         `json:"sale_bill_uuid"`  // 销售订单UUID
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
 	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
 	OrderNo       string         `json:"order_no"`        // 订单编号
 	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	ConsumerUuids string         `json:"consumer_uuids"`  // 会员id
 	FinishTime    int64          `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64        `json:"order_amount"`    // 订单总金额
 	PaymentAmount float64        `json:"payment_amount"`  // 支付金额
@@ -24,7 +26,7 @@ type BillListsOrder struct {
 // 账单列表额外信息响应
 type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellRefund        bool `json:"is_cell_refund"`                   // 是否可退款
-	IsCellCancel        bool `json:"is_cell_cancel,omitempty"`         // 是否可取消
+	IsCellCancel        bool `json:"is_cell_cancel"`                   // 是否可取消
 	IsCellReverseSettle bool `json:"is_cell_reverse_settle,omitempty"` // 是否可反结账
 	IsCellPrint         bool `json:"is_cell_print,omitempty"`          // 是否可打印小票
 	IsCellDelete        bool `json:"is_cell_delete,omitempty"`         // 是否可删除
@@ -43,6 +45,7 @@ type BillLists struct {
 	OrderAmount   float64          `json:"order_amount"`    // 订单总金额
 	PaymentAmount float64          `json:"payment_amount"`  // 支付金额
 	PayTypeName   string           `json:"pay_type_name"`   // 支付类型名称
+	ConsumerUuids string           `json:"consumer_uuids"`  // 会员id
 	SaleOrders    []BillListsOrder `json:"sale_orders"`     // 订单列表
 	Extra         BillListsExtra   `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
@@ -59,12 +62,14 @@ type OrderListPaginationResp struct {
 }
 
 type OrderInfoPayTypes struct {
-	Uuid              uint64  `json:"sale_bill_uuid"`      // 支付单UUID
-	PaymentMethodName string  `json:"payment_method_name"` // 支付类型名称
-	CurrencyUnit      string  `json:"currency_unit"`       // 货币单位
-	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额
-	Status            uint    `json:"status"`              // 支付状态, 0-未支付 1-已支付 2-已退款
-	Source            uint    `json:"source"`              // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
+	Uuid            uint64  `json:"sale_bill_uuid"`    // 支付单UUID
+	PaymentTypeName string  `json:"payment_type_name"` // 支付类型名称
+	CurrencyUnit    string  `json:"currency_unit"`     // 货币单位
+	PaymentAmount   float64 `json:"payment_amount"`    // 支付金额
+	Code            string  `json:"code"`              // 支付Code
+	Status          uint    `json:"status"`            // 支付状态, 0-未支付 1-已支付 2-已退款
+	Source          uint    `json:"source"`            // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
+	SourceText      string  `json:"source_text"`       // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 }
 
 type OrderProduct struct {
@@ -95,8 +100,10 @@ type OrderInfo struct {
 	FinishTime    int64          `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64        `json:"order_amount"`    // 订单总金额
 	PaymentAmount float64        `json:"payment_amount"`  // 支付金额
+	RefundAmount  float64        `json:"refund_amount"`   // 退款金额
 	PayTypeName   string         `json:"pay_type_name"`   // 支付类型名称
 	MemberName    string         `json:"member_name"`     // 会员名称
+	MemberUuid    uint64         `json:"member_uuid"`     // 会员名称
 	Products      []OrderProduct `json:"products"`        // 产品列表
 }
 
@@ -105,6 +112,7 @@ type OrderInfos struct {
 	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
 	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
 	IsSplit       bool                `json:"is_split"`       // 是否拆单	false:否 true:是
+	IsBuffet      bool                `json:"is_buffet"`      // 是否自助餐	false:否 true:是
 	SerialNo      string              `json:"serial_no"`      // 桌位编号 (点餐流水号)
 	OrderNo       string              `json:"order_no"`       // 订单编号
 	Status        uint                `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
@@ -112,7 +120,12 @@ type OrderInfos struct {
 	FinishTime    int64               `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
 	OrderAmount   float64             `json:"order_amount"`   // 订单总金额
 	PaymentAmount float64             `json:"payment_amount"` // 支付金额
+	RefundAmount  float64             `json:"refund_amount"`  // 退款金额
 	MemberNames   string              `json:"member_names"`   // 会员名称
+	MemberUuids   string              `json:"member_uuids"`   // 会员名称
+	BuffetNames   string              `json:"buffet_names"`   // 自助餐名称
+	CancelReason  string              `json:"cancel_reason"`  // 自助餐名称
+	CashierName   string              `json:"cashier_name"`   // 收银员名称
 	PayTypes      []OrderInfoPayTypes `json:"pay_types"`      // 支付类型
 	SaleOrders    []OrderInfo         `json:"sale_orders"`    // 订单列表
 }

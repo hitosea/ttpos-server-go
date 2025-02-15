@@ -11,7 +11,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 
-	"github.com/gin-gonic/gin"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
@@ -21,6 +20,8 @@ import (
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 type IAuthSrv interface {
@@ -295,6 +296,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 		companySetting model.CompanySetting
 		staff          model.Staff
 	)
+
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(auth.CompanyUuid))
 	staff = staffRepo.GetByUuid(auth.StaffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
@@ -322,7 +324,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 	if auth.Source == constant.SourceAssistant && auth.Assistant.DeviceId != "" { // 登录了点餐助手，且绑定了收银机
 		deviceId = auth.Assistant.DeviceId
 	}
-	if !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
+	if auth.Source != constant.SourceShop && !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
 		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
 	}
 

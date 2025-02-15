@@ -1,4 +1,4 @@
-package cashier
+package admin
 
 import (
 	"ttpos-server-go/app/api/helper"

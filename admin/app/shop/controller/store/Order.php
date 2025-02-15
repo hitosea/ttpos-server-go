@@ -2,6 +2,7 @@
 
 namespace app\shop\controller\store;
 
+use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\order\OrderProductFree;
@@ -31,61 +32,105 @@ class Order extends Controller
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\order\Order\getList", desc="列表")
      */
     public function index($dataType = 'all')
-    {
-        // 订单列表
-        $model = new OrderModel();
+    {   
         $data = $this->postData();
-        // 时间模式
-        if (!isset($data['time_mode']) || !is_array($data['time_mode'])) {
-            $data['time_mode'] = [0]; // 默认开台时间
+        // 订单来源 0-全都 10-桌台 20-收银
+        $bill_type = (trim($data['order_source'] ?? -1) ?: -1);
+        if ($bill_type == 10) {
+            $bill_type = 0;
+        }
+        if ($bill_type == 20) {
+            $bill_type = 1;
+        }
+        // 点餐方式
+        $dining_method = trim($data['style_id'] ?? -1) ?: -1;
+        if ($dining_method == 30) {
+            $dining_method = 1;
+        }
+        if ($dining_method == 40) {
+            $dining_method = 0;
+        }
+        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+        $status = -1;
+        switch ($dataType) {
+            case 'payment':
+                $status = 0;
+                break;
+            case 'process':
+                $status = 1;
+                break;
+            case 'complete':
+                $status = 2;
+                break;
+            case 'cancel':
+                $status = 3;
+                break;
+        }
+        // 
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/list', [
+            'order_no' => $data['order_no'] ?? '',
+            'bill_type' =>$bill_type,
+            'date_type' => (trim($data['time_type'] ?? '') ?: 0) - 1,
+            'dining_method' => $dining_method,
+            'status' => $status,
+            'page_no' => $data['page'] ?? 1,
+            'page_size' => $data['list_rows'] ?? 10,
+            'enable_create_time' => in_array(0, $data['time_mode'] ?? []),
+            'enable_pay_time' =>in_array(1, $data['time_mode'] ?? []),
+            'query_start_time' =>($data['time'][0] ?? '') ? strtotime($data['time'][0]) : 0,
+            'query_end_time' =>($data['time'][1] ?? '') ? strtotime($data['time'][1]) : 0,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? 0) != 1) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        // 
+        foreach ($result['data']['list'] as $key => &$item) {
+            $item['finish_time'] = $item['finish_time'] ? date('Y-m-d H:i:s', $item['finish_time']) : '';
+            if ($item['sale_orders']) {
+                foreach ($item['sale_orders'] as $subKey => &$subItem) {
+                    $subItem['finish_time'] = $subItem['finish_time'] ? date('Y-m-d H:i:s', $subItem['finish_time']) : '';
+                }
+            }
         }
         //
-        $data['order_type'] = 1;
-        $data['parent_id'] = 0;
-        $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
-        $list = $model->getList($dataType, $data);
-        foreach ($list as $key => $item) {
-            // 是否显示退款按钮 1-显示 0-隐藏
-            /** @var OrderModel $item */
-            [$list[$key]['is_refund_button'], $list[$key]['is_cancel_button']] = $item->getButtonStatus($item);
-            if ($item['subOrder']) {
-                foreach ($item['subOrder'] as $subKey => $subItem) {
-                    /** @var OrderModel $subItem */
-                    [$list[$key]['subOrder'][$subKey]['is_refund_button'], $list[$key]['subOrder'][$subKey]['is_cancel_button']] = $subItem->getButtonStatus($subItem);
-                }
-            }
-            // 拆单主单支付方式去重
-            if ($item['parent_id'] == 0 && count($item['subOrder']) > 0) {
-                $payTypes = $item['payType']->toArray();
-                $uniquePayTypes = [];
-                foreach ($payTypes as $payType) {
-                    $uniquePayTypes[$payType['value']] = $payType;
-                }
-                $item['payType'] = new \think\Collection(array_values($uniquePayTypes));
-            }
-        }
-        $order_count = [
-            'order_count' => [
-                'all' => $model->getCount('all', $data),
-                'payment' => $model->getCount('payment', $data),
-                'process' => $model->getCount('process', $data),
-                'complete' => $model->getCount('complete', $data),
-                'cancel' => $model->getCount('cancel', $data),
-            ],
-        ];
-        $ex_style = DeliveryTypeEnum::store();
-        return $this->renderSuccess('', compact('list', 'ex_style', 'order_count'));
+        $result['data']['ex_style']  = DeliveryTypeEnum::store();
+        // 
+        return $this->renderSuccess('', $result['data']);
     }
 
     /**
      * @Apidoc\Title("订单详情")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/store.order/detail")
-     * @Apidoc\Param("order_id", type="int", require=true, default="", desc="订单id")
+     * @Apidoc\Param("sale_bill_uuid", type="int", require=true, default="", desc="销售账单UUID")
+     * @Apidoc\Param("sale_order_uuid", type="int", require=true, default="", desc="销售订单UUID 当查看子订单信息的时候才需要传")
      * @Apidoc\Returned("detail", type="array", ref="app\shop\model\order\Order\detail", desc="订单详情")
      */
-    public function detail($order_id)
+    public function detail($sale_bill_uuid, $sale_order_uuid = 0)
     {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/info', [
+            'sale_bill_uuid' => $sale_bill_uuid,
+            'sale_order_uuid' => $sale_order_uuid,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? 0) != 1) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('', $result['data']);
+
         // 订单详情
         /** @var OrderModel $detail */
         $detail = OrderModel::detailWithTrashed($order_id, null, ["'' as free_tag_text"]);

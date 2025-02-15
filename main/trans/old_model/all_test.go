@@ -7,22 +7,22 @@ import (
 
 var conf = config.DatabaseConf{
 	Host:          "localhost",
-	Port:          3306,
+	Port:          13061,
 	User:          "root",
-	Password:      "5cd6a0408e9ccf92",
+	Password:      "fbe61a042f752dff",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var dbName = "shop_wang"
+var dbName = "shop1724054105"
 var targetConf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          3306,
 	User:          "root",
-	Password:      "5cd6a0408e9ccf92",
+	Password:      "d4f3c7d055516a3b",
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop1"
+var targetDBName = "shop8609817471094784"
 
 func TestConvertAll(t *testing.T) {
 	testConvertAttribute()             // 商品属性

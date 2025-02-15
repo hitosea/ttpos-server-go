@@ -1,5 +1,9 @@
 package model
 
+import (
+	"ttpos-server-go/i18n"
+)
+
 // PaymentMethod 支付方式 `ttpos_payment_method`
 type PaymentMethod struct {
 	BaseModel
@@ -16,10 +20,22 @@ type PaymentMethod struct {
 	Status               uint    `gorm:"default:0;column:status;comment:状态 0-禁用 1-启用" json:"status"`
 }
 
+// 获取来源文本
+func (model *PaymentMethod) GetSourceText(language string) string {
+	if model.Source == 0 {
+		return i18n.Translate(language, "系统")
+	} else if model.Source == 1 {
+		return i18n.Translate(language, "手动")
+	} else if model.Source == 2 {
+		return i18n.Translate(language, "LianLianPay")
+	}
+	return ""
+}
+
 // PaymentOrder 支付订单 ttpos_payment_order
 type PaymentOrder struct {
 	BaseModel
-	PaymentMethodName string  `gorm:"column:payment_method_name;type:varchar(255);default:'';comment:支付方式名称" json:"payment_method_name"`
+	PaymentTypeName   string  `gorm:"column:payment_type_name;type:varchar(255);default:'';comment:支付方式名称" json:"payment_type_name"`
 	PaymentFeePercent float64 `gorm:"column:payment_fee_percent;type:decimal(5,2);default:0.00;comment:支付手续费百分比" json:"payment_fee_percent"`
 	CurrencyUnit      string  `gorm:"column:currency_unit;type:varchar(10);default:'';comment:货币单位" json:"currency_unit"`
 	PaymentAmount     float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0.00;comment:支付金额" json:"payment_amount"`

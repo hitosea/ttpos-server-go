@@ -86,7 +86,7 @@
             <template #label>
               <span>
                 {{ $t('全部订单') }}
-                <el-tag size="" class="ml-4">{{ order_count.all }}</el-tag>
+                <el-tag size="" class="ml-4">{{ order_count.total }}</el-tag>
               </span>
             </template>
           </el-tab-pane>
@@ -94,7 +94,7 @@
             <template #label>
               <span>
                 {{ $t('待付款') }}
-                <el-tag size="" class="ml-4">{{ order_count.payment }}</el-tag>
+                <el-tag size="" class="ml-4">{{ order_count.unpaid_num }}</el-tag>
               </span>
             </template>
           </el-tab-pane>
@@ -103,7 +103,7 @@
             <template #label>
               <span>
                 {{ $t('已取消') }}
-                <el-tag size="" class="ml-4">{{ order_count.cancel }}</el-tag>
+                <el-tag size="" class="ml-4">{{ order_count.cancel_num }}</el-tag>
               </span>
             </template>
           </el-tab-pane>
@@ -111,57 +111,49 @@
             <template #label>
               <span>
                 {{ $t('已完成') }}
-                <el-tag size="" class="ml-4"> {{ order_count.complete }}</el-tag>
+                <el-tag size="" class="ml-4"> {{ order_count.complete_num }}</el-tag>
               </span>
             </template>
           </el-tab-pane>
         </el-tabs>
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="order_no">
-          <el-table-column prop="order_source_text" :label="$t('订单类型')">
+          <el-table-column prop="serial_no" :label="$t('订单类型')">
             <template #default="scope">
-              {{ scope.row.order_source_text }}
-              {{ scope.row.is_merge == '1' ? $t('(合桌)') : '' }}
+              {{ scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')}}
             </template>
           </el-table-column>
-          <el-table-column prop="table_no" :label="$t('桌号/序号')">
-            <template #default="scope">
-              <div v-if="scope.row.is_merge == '1'">
-                {{ tableNo(scope.row.mergeList) }}
-              </div>
-              <div v-else>
-                {{ scope.row.table_no ? scope.row.table_no : scope.row.call_no || '-' }}
-              </div>
-            </template>
-          </el-table-column>
+          <el-table-column prop="serial_no" :label="$t('桌号/序号')"></el-table-column>
           <el-table-column prop="order_no" :label="$t('订单号')"></el-table-column>
-          <el-table-column prop="order_status" :label="$t('状态')">
+          <el-table-column prop="status" :label="$t('状态')">
             <template #default="scope">
-              <div>
-                {{ scope.row.order_status.value == 10 ? $t('待付款') : scope.row.order_status.value == 20 ? $t('已取消') : $t('已完成') }}
-              </div>
+                {{ scope.row.status == 0 ? $t('待付款') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
             </template>
           </el-table-column>
-          <el-table-column prop="pay_time_text" :label="$t('支付时间')"></el-table-column>
-          <el-table-column prop="order_price" :label="$t('订单金额')" width="140" show-overflow-tooltip>
+          <el-table-column prop="finish_time" :label="$t('支付时间')">
+            <template #default="scope">
+                {{ scope.row.finish_time }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
             <template #default="scope">
               <div style="line-height: 24px">
                 <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(scope.row.order_price) }}
+                {{ this.$formatPrice(scope.row.order_amount) }}
                 <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 <p class="gray98" v-if="currency.is_open == 1">
                   <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ this.$formatPrice((Number(scope.row.order_price) * Number(currency.vices?.unit_rate)).toFixed(2))
+                  {{ this.$formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
                   }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
                 </p>
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="pay_price" :label="$t('实付金额')" show-overflow-tooltip>
+          <el-table-column prop="payment_amount" :label="$t('实付金额')" show-overflow-tooltip>
             <template #default="scope">
               <div>
-                <div class="orange" v-if="scope.row.order_status.value == 30">
+                <div class="orange" v-if="scope.row.status == 1">
                   <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ this.$formatPrice(scope.row.pay_price - scope.row.refund_money) }}
+                  {{ this.$formatPrice(scope.row.payment_amount) }}
                   <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 </div>
                 <div v-else>-</div>
@@ -170,40 +162,25 @@
           </el-table-column>
           <el-table-column prop="" :label="$t('会员')" show-overflow-tooltip>
             <template #default="scope">
-              <template v-if="(scope.row.subOrder || []).length > 0">
-                <span class="gray9"> {{ uniqueUsers(scope.row.subOrder) }}</span>
-              </template>
-              <template v-else>
-                <template v-if="scope.row.user">
-                  <span class="gray9">{{ $t('会员ID') }}&nbsp;({{ scope.row.user.user_id }})</span>
-                </template>
-                <p v-else>-</p>
-              </template>
+                <span v-if="scope.row.consumer_uuids" class="gray9">{{ $t('会员ID') }}&nbsp;({{scope.row.consumer_uuids}})</span>
+                <span v-else class="gray9">-</span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="pay_type.text" :label="$t('支付方式')" show-overflow-tooltip>
-            <template #default="scope">
-              <span class="gray9">{{
-                scope.row.order_status.value == 30 ? patType(scope.row.merge_parent_id == 0 ? scope.row.payType : scope.row.parentOrder.payType) : '-'
-              }}</span>
-            </template>
-          </el-table-column>
+           <el-table-column prop="pay_type_name" :label="$t('支付方式')" show-overflow-tooltip></el-table-column>
 
           <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
               <div>
                 <el-button @click="addClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
-
-                <el-button v-if="scope.row.is_refund_button == '1'" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/refund'"
+                <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/refund'"
                   >{{ $t('退款') }}
                 </el-button>
-
-                <el-button v-if="scope.row.is_cancel_button == '1'" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
+                <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
                   >{{ $t('取消') }}
                 </el-button>
                 <el-button
-                  v-if="scope.row.order_status.value == 20 && scope.row.merge_parent_id == 0"
+                  v-if="scope.row.extra.is_cell_delete"
                   @click="delClick(scope.row)"
                   type="danger"
                   link
@@ -287,11 +264,12 @@
         time: '',
         /*统计*/
         order_count: {
-          all: 0,
-          payment: 0,
-          delivery: 0,
-          complete: 0,
-          cancel: 0,
+            cancel_num : 0,
+            complete_num : 0,
+            page_no : 1,
+            page_size : 10,
+            total : 0,
+            unpaid_num : 0,
         },
         /*是否打开编辑弹窗*/
         open_edit: false,
@@ -391,21 +369,15 @@
         self.loading = true;
         OrderApi.storeOrderlist(Params, true)
           .then((res) => {
-            self.tableData = res.data.list.data;
+            self.tableData = res.data.list;
             self.tableData.map((item) => {
-              if (item.subOrder.length > 0) {
-                item.children = item.subOrder;
-                item.children.map((items) => {
-                  items.order_source_text = '';
-                  items.table_no ? (items.table_no = items.table_no + '-' + items.order_name) : '';
-                  items.call_no ? (items.call_no = items.call_no + '-' + items.order_name) : '';
-                });
-              }
+                if (item.sale_orders.length > 0) {
+                    item.children = item.sale_orders;
+                }
             });
-
-            self.totalDataNumber = res.data.list.total;
+            self.totalDataNumber = res.data.meta.total;
             self.exStyle = res.data.ex_style;
-            self.order_count = res.data.order_count.order_count;
+            self.order_count = res.data.meta;
             self.loading = false;
           })
           .catch((error) => {
@@ -416,8 +388,6 @@
       /*打开添加*/
       addClick(row) {
         let self = this;
-        let params = row.order_id;
-
         let pageParams = self.searchForm;
         pageParams.dataType = self.activeName;
         pageParams.page = self.curPage;
@@ -426,7 +396,8 @@
         self.$router.push({
           path: '/' + this.app_id + '/store/order/detail',
           query: {
-            order_id: params,
+            sale_bill_uuid: row.sale_bill_uuid,
+            sale_order_uuid: row.sale_order_uuid,
           },
         });
       },

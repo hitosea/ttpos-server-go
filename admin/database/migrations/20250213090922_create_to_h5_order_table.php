@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 
 
-class CreateTable extends Migrator
+class CreateToH5OrderTable extends Migrator
 {
     /**
      * Change Method.

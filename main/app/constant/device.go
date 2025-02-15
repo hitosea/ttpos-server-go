@@ -1,6 +1,7 @@
 package constant
 
 const (
+	SourceShop      = "shop"      // 商家
 	SourceCashier   = "cashier"   // 收银机
 	SourceTablet    = "tablet"    // 平板端
 	SourceKitchen   = "kitchen"   // 厨显端

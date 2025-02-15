@@ -13,7 +13,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单类型：') }}</span>
-              {{ detail.order_source_text }}{{ detail?.is_merge == '1' ? $t('(合桌)') : '' }}
+              {{ detail.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')}}
             </div>
           </el-col>
           <el-col :span="6">
@@ -22,127 +22,84 @@
               {{ detail.order_no }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.user">
+          <el-col :span="6" v-if="detail.member_uuids">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail.user?.user_id }})</span>
+              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member_uuids }})</span>
             </div>
           </el-col>
-          <template v-if="uniqueUsers.length > 0">
-            <el-col :span="6">
-              <div class="pb16">
-                <span class="gray9">{{ $t('会员：') }}</span>
-                {{ $t('会员ID') }}&nbsp;(<template v-for="(item, index) in uniqueUsers"
-                  ><span v-if="item">{{ item.user_id }}</span
-                  ><span v-if="index < uniqueUsers.length - 1">,</span></template
-                >)
-              </div>
-            </el-col>
-          </template>
-
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(detail.order_price) }}
+              {{ this.$formatPrice(detail.order_amount) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
               <span v-if="currency.is_open == 1" style="padding-left: 8px">
                 <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ this.$formatPrice(Number(detail.order_price) * Number(currency.vices?.unit_rate)) }}
+                {{ this.$formatPrice(Number(detail.order_amount) * Number(currency.vices?.unit_rate)) }}
                 <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.express_price > 0">
-            <div class="pb16">
-              <span class="gray9">{{ $t('配送费：') }}</span>
-              {{ detail.express_price }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.bag_price > 0">
-            <div class="pb16">
-              <span class="gray9">{{ $t('包装费：') }}</span>
-              {{ detail.bag_price }}
-            </div>
-          </el-col>
-
-          <el-col :span="6" v-if="detail.order_status.value == 30">
+          <el-col :span="6" v-if="detail.status == 1">
             <div class="pb16">
               <span class="gray9">{{ $t('实付款金额：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(Number(detail.pay_price) - Number(detail.refund_money)) }}
+              {{ this.$formatPrice(Number(detail.payment_amount)) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
             </div>
           </el-col>
-          <el-col :span="6" v-if="Number(detail.refund_money) > 0">
+          <el-col :span="6" v-if="Number(detail.refund_money || 0) > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('退款金额：') }}</span>
               <span>
                 <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(detail.refund_money) }}
+                {{ this.$formatPrice(detail.refund_amount) }}
                 <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.order_status.value == 30" v-for="item in detail.merge_parent_id == 0 ? detail.payType : detail.parentOrder.payType">
+          <el-col :span="6" v-if="detail.status == 1" v-for="item in detail.pay_types">
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
-                {{ item.name }}
-                <template v-if="item.source_text && item.value != 40 && item.value != 10 && item.value != -1"> ({{ item.source_text }}) </template>
-                <el-tag class="ml-8" v-if="item.pay_status == '0'" type="danger" size="large">{{ $t('异常') }}</el-tag>
+                {{ item.payment_type_name }}
+                <template v-if="item.source_text && item.code != 40 && item.code != 10 && item.code != -1"> ({{ item.source_text }}) </template>
+                <el-tag class="ml-8" v-if="item.status == 0" type="danger" size="large">{{ $t('异常') }}</el-tag>
               </span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('用餐方式：') }}</span>
-              {{ detail.delivery_type.text }}
+              <span class="gray9">{{ $t('用餐方式：') }}</span> {{ $t('店内就餐') }}
             </div>
           </el-col>
-
-          <el-col :span="6" v-if="detail.table_no || detail?.is_merge == '1'">
+          <el-col :span="6" v-if="detail.serial_no">
             <div class="pb16">
-              <span class="gray9">{{ $t('桌号：') }}</span>
-              <template v-if="detail?.is_merge == '1'">
-                {{ tableNo(detail.mergeList) }}
-              </template>
-              <template v-else>
-                {{ detail.table_no }}
-                <span v-if="detail?.order_name">- {{ detail?.order_name }}</span>
-              </template>
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail?.call_no">
-            <div class="pb16">
-              <span class="gray9">{{ $t('序号：') }}</span>
-              {{ detail?.call_no }}
-              <span v-if="detail?.order_name">- {{ detail?.order_name }}</span>
+              <span class="gray9">{{ detail.bill_type == 1 ? $t('序号：') : $t('桌号：') }}</span> {{ detail.serial_no }}
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('交易状态：') }}</span>
-              {{ detail.order_status.value == 10 ? $t('待付款') : detail.order_status.value == 20 ? $t('已取消') : $t('已完成') }}
+              {{ detail.status == 0 ? $t('待付款') : detail.status == 2 ? $t('已取消') : $t('已完成') }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.cashier">
+          <el-col :span="6" v-if="detail.cashier_name">
             <div class="pb16">
               <span class="gray9">{{ $t('收银员：') }}</span>
-              {{ detail.cashier?.real_name || '-' }}
+              {{ detail.cashier_name || '-' }}
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.is_buffet == 1">
             <div class="pb16">
-              <span class="gray9">{{ $t('自助餐：') }}</span>
-              <template v-if="detail?.buffet?.length > 0">{{ buffet }}</template>
-              <template v-else>-</template>
+              <span class="gray9">{{ $t('自助餐：') }}</span>{{ detail.buffet_names }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.cancel_remark">
+          <el-col :span="6" v-if="detail.status == 2">
             <div class="pb16">
               <span class="gray9">{{ $t('取消原因：') }}</span>
-              {{ detail.cancel_remark || '-' }}
+              {{ detail.cancel_reason || '-' }}
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.is_free > 0">
@@ -151,7 +108,7 @@
               {{ detail.free_tag_text || '-' }}
             </div>
           </el-col>
-          <el-col :span="6">
+          <!-- <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('时间：') }}</span>
               {{ detail.create_time || '-' }} {{ $t('至') }} {{ detail.pay_time || '-' }}
@@ -162,7 +119,7 @@
               <span class="gray9">{{ $t('备注：') }}</span>
               {{ detail.table_remark || '-' }}
             </div>
-          </el-col>
+          </el-col> -->
         </el-row>
       </div>
 
@@ -299,7 +256,7 @@
 
       <div class="common-form mt16">{{ $t('操作记录') }}</div>
 
-      <div class="timeline-box">
+      <!-- <div class="timeline-box">
         <el-timeline class="timeline-main">
           <el-timeline-item v-for="(activity, index) in activities" placement="top" :key="index" :color="activity.color" :hollow="activity.hollow" :timestamp="activity.timestamp">
             <div class="flex">
@@ -324,9 +281,9 @@
             </div>
           </el-timeline-item>
         </el-timeline>
-      </div>
+      </div> -->
 
-      <div class="table-wrap" v-if="detail.order_status.value == 20 && detail.cancel_remark != ''">
+      <!-- <div class="table-wrap" v-if="detail.status == 2 && detail.cancel_remark != ''">
         <div class="common-form mt16">{{ $t('取消信息') }}</div>
         <div class="table-wrap">
           <el-row>
@@ -338,20 +295,17 @@
             </el-col>
           </el-row>
         </div>
-      </div>
+      </div> -->
     </div>
-    <div class="common-button-wrapper">
+    <!-- <div class="common-button-wrapper">
       <el-button size="small" @click="cancelFunc">{{ $t('返回') }}</el-button>
       <el-button v-if="detail.is_refund_button == '1'" @click="refundClick(detail)" type="danger" size="small" v-auth="'/store/operate/refund'">{{ $t('退款') }}</el-button>
       <el-button v-if="detail.is_cancel_button == '1'" @click="cancelClick(detail)" type="danger" size="small" v-auth="'/store/operate/order_cancel'">{{ $t('取消') }} </el-button>
       <el-button v-if="detail.order_status.value == 20" @click="delClick(detail)" type="danger" size="small" v-auth="'/store/order/delete'">{{ $t('删除') }} </el-button>
-    </div>
+    </div> -->
     <!--处理-->
-    <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="order_id" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
-    <!--处理-->
-    <refund v-if="open_refund" :open_edit="open_refund" :order_no="order_no" :order_id="order_id" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')">
-    </refund>
-
+    <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :sale_bill_uuid="sale_bill_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
+    <refund v-if="open_refund" :open_edit="open_refund" :order_no="order_no" :sale_bill_uuid="sale_bill_uuid" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"></refund>
     <refundAgain v-if="open_refundAgain" :open_edit="open_refundAgain" :refundOrder="refundOrder" @closeDialog="closerefundAgainDialogFunc($event)"> </refundAgain>
   </div>
 </template>
@@ -378,7 +332,8 @@
         loading: true,
         /*订单数据*/
         detail: {
-          order_id: 0,
+          sale_bill_uuid: 0,
+          sale_order_uuid: 0,
           pay_status: [],
           pay_type: [],
           delivery_type: [],
@@ -387,7 +342,7 @@
           product: [],
           order_status: [],
           extract: [],
-          delivery_status: [],
+          pay_types: [],
           supplier: {
             name: '',
           },
@@ -399,7 +354,8 @@
         /*当前编辑的对象*/
         refundOrder: {},
         order_no: 0,
-        order_id: 0,
+        sale_bill_uuid: 0,
+        sale_order_uuid: 0,
         pay_price: 0,
         buffet: [],
         tableData: [],
@@ -462,76 +418,77 @@
       getParams() {
         let self = this;
         // 取到路由带过来的参数
-        const params = this.$route.query.order_id;
         OrderApi.storeOrderdetail(
           {
-            order_id: params,
+            sale_bill_uuid: this.$route.query.sale_bill_uuid,
+            sale_order_uuid: this.$route.query.sale_order_uuid,
           },
           true
         )
-          .then((data) => {
+          .then((res) => {
             self.loading = false;
-            self.detail = data.data.detail;
-            self.buffet = [];
-            self.detail.buffet.map((item) => {
-              self.buffet.push(item.name_text);
-            });
+            console.log(res)
+            self.detail = res.data.detail;
+            // self.buffet = [];
+            // self.detail.buffet.map((item) => {
+            //   self.buffet.push(item.name_text);
+            // });
 
-            self.buffet = self.buffet.join('+');
-            self.tableData = [];
-            self.detail.buffetCustomerType.map((item) => {
-              self.tableData.push({
-                name_text: `${item.buffet_name_text}(${item.customer_type_name_text})`,
-                image: { file_path: 'buffet' },
-                product_attr: '',
-                refund: '',
-                product_price: item.price,
-                total_num: item.num,
-                total_consumption_tax_pay_price: item.total_consumption_tax_pay_price,
-                total_consumption_tax_order_price: item.total_consumption_tax_order_price,
-                refund_money: Number(item.consumption_tax_pay_price) * Number(item.refund_num),
-                is_return: item.is_return,
-              });
-            });
+            // self.buffet = self.buffet.join('+');
+            // self.tableData = [];
+            // self.detail.buffetCustomerType.map((item) => {
+            //   self.tableData.push({
+            //     name_text: `${item.buffet_name_text}(${item.customer_type_name_text})`,
+            //     image: { file_path: 'buffet' },
+            //     product_attr: '',
+            //     refund: '',
+            //     product_price: item.price,
+            //     total_num: item.num,
+            //     total_consumption_tax_pay_price: item.total_consumption_tax_pay_price,
+            //     total_consumption_tax_order_price: item.total_consumption_tax_order_price,
+            //     refund_money: Number(item.consumption_tax_pay_price) * Number(item.refund_num),
+            //     is_return: item.is_return,
+            //   });
+            // });
 
-            self.detail.delay.map((item) => {
-              self.tableData.push({
-                name_text: item.name_text,
-                image: { file_path: 'clock' },
-                product_attr: '',
-                refund: '',
-                product_price: item.price,
-                total_num: self.detail.meal_num,
-                total_consumption_tax_pay_price: Number(item.price) * Number(item.num),
-                total_consumption_tax_order_price: Number(item.price) * Number(item.num),
-                refund_money: item.refund_money,
-              });
-            });
+            // self.detail.delay.map((item) => {
+            //   self.tableData.push({
+            //     name_text: item.name_text,
+            //     image: { file_path: 'clock' },
+            //     product_attr: '',
+            //     refund: '',
+            //     product_price: item.price,
+            //     total_num: self.detail.meal_num,
+            //     total_consumption_tax_pay_price: Number(item.price) * Number(item.num),
+            //     total_consumption_tax_order_price: Number(item.price) * Number(item.num),
+            //     refund_money: item.refund_money,
+            //   });
+            // });
 
-            self.detail.product.map((item) => {
-              self.tableData.push({
-                name_text: item.product_name_text,
-                image: item.image,
-                product_attr: item.product_attr,
-                refund: item.refund,
-                product_price: item.product_price,
-                total_num: item.total_num,
-                total_consumption_tax_pay_price: item.total_consumption_tax_pay_price,
-                total_consumption_tax_order_price: item.total_consumption_tax_order_price,
-                refund_money: Number(item.consumption_tax_pay_price) * Number(item.refund_num),
-                free_tag_text: item.free_tag_text,
-                is_free: item.is_free,
-                productReturn: item.productReturn,
-                is_return: item.is_return,
-              });
-            });
+            // self.detail.product.map((item) => {
+            //   self.tableData.push({
+            //     name_text: item.product_name_text,
+            //     image: item.image,
+            //     product_attr: item.product_attr,
+            //     refund: item.refund,
+            //     product_price: item.product_price,
+            //     total_num: item.total_num,
+            //     total_consumption_tax_pay_price: item.total_consumption_tax_pay_price,
+            //     total_consumption_tax_order_price: item.total_consumption_tax_order_price,
+            //     refund_money: Number(item.consumption_tax_pay_price) * Number(item.refund_num),
+            //     free_tag_text: item.free_tag_text,
+            //     is_free: item.is_free,
+            //     productReturn: item.productReturn,
+            //     is_return: item.is_return,
+            //   });
+            // });
 
-            if (self.detail?.is_merge == '1') {
-              self.dataSplicing(this.detail.mergeList, 1);
-            }
-            if ((self.detail?.subOrder || []).length > 0) {
-              self.dataSplicing(this.detail.subOrder, 2);
-            }
+            // if (self.detail?.is_merge == '1') {
+            //   self.dataSplicing(this.detail.mergeList, 1);
+            // }
+            // if ((self.detail?.subOrder || []).length > 0) {
+            //   self.dataSplicing(this.detail.subOrder, 2);
+            // }
 
             self.activities = [];
             data.data.operationLog.map((item) => {
@@ -633,12 +590,12 @@
       /*打开取消*/
       cancelClick(item) {
         this.order_no = item.order_no;
-        this.order_id = item.order_id;
+        this.sale_bill_uuid = item.sale_bill_uuid;
         this.open_edit = true;
       },
       refundClick(item) {
         this.order_no = item.order_no;
-        this.order_id = item.order_id;
+        this.sale_bill_uuid = item.sale_bill_uuid;
         this.pay_price = (Number(item.pay_price) - Number(item.refund_money)).toFixed(2);
         this.open_refund = true;
       },
@@ -675,7 +632,7 @@
           type: 'warning',
         }).then(() => {
           OrderApi.storedelete({
-            order_id: item.order_id,
+            sale_bill_uuid: item.sale_bill_uuid,
           }).then((data) => {
             this.$ElMessage({
               message: $t('删除成功'),
@@ -699,7 +656,7 @@
             .then(() => {
               this.loading = true;
               const params = {
-                payment_order_id: item.payment_order_id,
+                payment_sale_bill_uuid: item.payment_sale_bill_uuid,
                 refund_money: item.refund_money,
                 refund_destination_id: item.refund_destination_id,
               };

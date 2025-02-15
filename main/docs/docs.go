@@ -3269,6 +3269,245 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/shop/order/cancel": {
+            "post": {
+                "description": "取消订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "取消订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/order/delete": {
+            "delete": {
+                "description": "删除订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "删除订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "取消订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/order/info": {
+            "get": {
+                "description": "获取订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "获取订单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID 当查看子订单信息的时候才需要传",
+                        "name": "sale_order_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "订单详情",
+                        "schema": {
+                            "$ref": "#/definitions/resp.OrderInfosResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/order/is_cell_close": {
+            "get": {
+                "description": "判断订单是否可关闭",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "判断订单是否可关闭",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
+                        "name": "desk_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/order/list": {
+            "get": {
+                "description": "获取订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "获取订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
+                        "name": "bill_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "name": "date_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "用餐方式,-1=全都、 0-堂食 1-打包",
+                        "name": "dining_method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用开台时间 false-不启用，true-启用",
+                        "name": "enable_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用支付时间 false-不启用，true-启用",
+                        "name": "enable_pay_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "query_start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "账单状态, -1=全都、 0=待付款、1=已完成、2=已取消",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "订单列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.OrderListPaginationResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3940,6 +4179,10 @@ const docTemplate = `{
                     "description": "订单类型\t0:桌台订单 1:点餐订单",
                     "type": "integer"
                 },
+                "consumer_uuids": {
+                    "description": "会员id",
+                    "type": "string"
+                },
                 "extra": {
                     "description": "通过当前数据控制按钮是否显示",
                     "allOf": [
@@ -4029,6 +4272,10 @@ const docTemplate = `{
                     "description": "订单类型\t0:桌台订单 1:点餐订单",
                     "type": "integer"
                 },
+                "consumer_uuids": {
+                    "description": "会员id",
+                    "type": "string"
+                },
                 "extra": {
                     "$ref": "#/definitions/resp.BillListsExtra"
                 },
@@ -4051,6 +4298,10 @@ const docTemplate = `{
                 "payment_amount": {
                     "description": "支付金额",
                     "type": "number"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID",
@@ -4562,6 +4813,10 @@ const docTemplate = `{
                     "description": "会员名称",
                     "type": "string"
                 },
+                "member_uuid": {
+                    "description": "会员名称",
+                    "type": "integer"
+                },
                 "order_amount": {
                     "description": "订单总金额",
                     "type": "number"
@@ -4648,6 +4903,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "member_names": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "member_uuids": {
                     "description": "会员名称",
                     "type": "string"
                 },

@@ -115,9 +115,9 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	}
 
 	// 验证设备是否绑定
-	bindRecordRepo := repository.NewBindRecordRepository(&database.DBManager{})
-	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(claims.CompanyId, claims.Source, claims.DeviceId)
-	if existsBindRecord.ID == 0 {
+	DeviceRepo := repository.NewDeviceRepository(&database.DBManager{})
+	existsDevice := DeviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyId, claims.Source, claims.DeviceId)
+	if existsDevice.ID == 0 {
 		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
 			State: constant.CodeFail,
@@ -129,7 +129,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 
 	// 断开之前的链接
 	for i, conn := range WsClients {
-		if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsBindRecord.Source && conn.DeviceId == existsBindRecord.DeviceId && conn.ws != ws {
+		if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId && conn.ws != ws {
 			conn.ws.Close()
 			WsClients = append(WsClients[:i], WsClients[i+1:]...)
 			break
@@ -139,8 +139,8 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	// 添加新连接
 	WsClients = append(WsClients, ConnectionInfo{
 		CompanyId:     claims.CompanyId,
-		SourceClient:  existsBindRecord.Source,
-		DeviceId:      existsBindRecord.DeviceId,
+		SourceClient:  existsDevice.Source,
+		DeviceId:      existsDevice.DeviceId,
 		LastHeartbeat: time.Now().Format(time.RFC3339),
 		ws:            ws,
 	})
@@ -148,7 +148,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	// 监听关闭事件以删除连接详细信息
 	ws.SetCloseHandler(func(code int, text string) error {
 		for i, conn := range WsClients {
-			if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsBindRecord.Source && conn.DeviceId == existsBindRecord.DeviceId {
+			if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId {
 				WsClients = append(WsClients[:i], WsClients[i+1:]...)
 				break
 			}

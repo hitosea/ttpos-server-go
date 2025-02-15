@@ -63,7 +63,7 @@ class User extends UserModel
             return false;
         }
         // 保存登录状态
-        $user['token'] = signToken($user['uuid'], 'shop', '', md5($user->password));
+        $user['token'] = signToken($user['uuid'], 'shop', '', md5($user->password), $user['company_uuid']);
         // 货币信息
         $user['currency'] = SettingModel::getCurrency(0, $user['company_uuid']);
         // 写入登录日志

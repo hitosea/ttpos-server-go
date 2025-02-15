@@ -362,6 +362,15 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
 			},
+			WithPreload{
+				Query: "Cashier",
+			},
+			WithPreload{
+				Query: "SaleOrders.Buffets.BuffetPackageMultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.Buffets.BuffetCustomerTypeMultiLanguageName",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
