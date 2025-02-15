@@ -30,14 +30,14 @@ type IProductRepo interface {
 	WithDineTax() DBOption                                                                                          // 预加载堂食税
 	WithTakeoutTax() DBOption                                                                                       // 预加载外卖税
 
-	WithProductPackage() DBOption                                                                           // bom关联包
-	WithProductPackageMultiLanguageName() DBOption                                                          // bom关联包多语言
-	WithProductFlavor() DBOption                                                                            // bom关联规格名称
-	WithProductFlavorMultiLanguageName() DBOption                                                           // bom关联规格名称多语言
-	GetSoldOutWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductBom, int64, error) // 分页获取沽清商品列表
-	WhereBomUuid(uuid uint64) DBOption                                                                      // bom uuid 查询条件
-	WhereBomIsSoldOut() DBOption                                                                            // 根据bom售罄查询
-	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 更新bom售罄状态
+	WithProductPackage() DBOption                                                                           // 沽清 预加载产品
+	WithProductPackageMultiLanguageName() DBOption                                                          // 沽清 预加载产品多语言
+	WithProductFlavor() DBOption                                                                            // 沽清 预加载规格名称
+	WithProductFlavorMultiLanguageName() DBOption                                                           // 沽清 预加载规格名称多语言
+	GetSoldOutWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductBom, int64, error) // 沽清 分页获取沽清商品列表
+	WhereBomUuid(uuid uint64) DBOption                                                                      // 沽清 产品 uuid 查询条件
+	WhereBomIsSoldOut() DBOption                                                                            // 沽清 产品是否售罄
+	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
 }
 
 // productRepo 商品仓库

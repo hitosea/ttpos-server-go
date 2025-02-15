@@ -8,10 +8,17 @@ import (
 
 // IPaymentOrderRepo 定义仓库接口
 type IPaymentOrderRepo interface {
-	WhereSaleOrderUuid(uuid uint64) DBOption
-	WhereSaleOrderUuids(uuids []uint64) DBOption
+	WhereRelatedUuid(uuid uint64) DBOption
+	WhereRelatedUuids(uuids []uint64) DBOption
+	WhereStatus(status uint) DBOption
+	WherePaymentTypeUuid(uuid uint64) DBOption
+	WhereUuid(uuid uint64) DBOption
+
 	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
+
+	Create(order model.PaymentOrder) (model.PaymentOrder, error) // 创建支付订单
+	Update(uuid uint64, vars map[string]any) error               // 更新支付订单金额
 }
 
 // paymentOrderRepo 仓库
@@ -51,16 +58,48 @@ func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.Paymen
 	return paymentOrders, err
 }
 
-// WhereSaleOrderUuid 根据sale_order_uuid查询
-func (r *paymentOrderRepo) WhereSaleOrderUuid(uuid uint64) DBOption {
+func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
+	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
+	return order, err
+}
+
+// Update 更新支付订单
+func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
+	err := r.db.Where("uuid = ?", uuid).Updates(vars).Error
+	return err
+}
+
+// WhereRelatedUuid 根据related_uuid(销售订单、充值订单)查询
+func (r *paymentOrderRepo) WhereRelatedUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("sale_order_uuid = ?", uuid)
+		return db.Where("related = ?", uuid)
 	}
 }
 
-// WhereSaleOrderUuids 根据sale_order_uuids查询
-func (r *paymentOrderRepo) WhereSaleOrderUuids(uuids []uint64) DBOption {
+// WherePaymentTypeUuid 根据支付方式Uuid查询
+func (r *paymentOrderRepo) WherePaymentTypeUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("sale_order_uuid in (?)", uuids)
+		return db.Where("payment_type_uuid = ?", uuid)
+	}
+}
+
+// WhereUuid 根据支付订单Uuid查询
+func (r *paymentOrderRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereRelatedUuids 根据related_uuids(销售订单、充值订单)查询
+func (r *paymentOrderRepo) WhereRelatedUuids(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related in (?)", uuids)
+	}
+}
+
+// WhereStatus 根据状态查询
+func (r *paymentOrderRepo) WhereStatus(status uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
 	}
 }

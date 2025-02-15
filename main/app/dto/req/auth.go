@@ -6,7 +6,7 @@ type LoginReq struct {
 	Code     string `json:"code"  binding:"required"`      // 验证码
 	DeviceId string `json:"device_id"  binding:"required"` // 设备ID
 	Brand    string `json:"brand"`                         // 品牌名称
-	Source   string `json:"source"`                        //  来源
+	Source   string `json:"-"`
 }
 
 type BindCashierReq struct {

@@ -1,28 +1,27 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"runtime/debug"
+	"ttpos-server-go/app/constant"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-func Recovery(logger *zap.Logger) gin.HandlerFunc {
+func Recovery(logger *zap.Logger, mode string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				//logger.Error("panic recovered",
-				//	zap.Any("error", err),
-				//	zap.String("stack", string(debug.Stack())),
-				//)
-				fmt.Println(err)
-				fmt.Println(string(debug.Stack()))
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				internalErr := gin.H{
 					"code":    500,
 					"message": "Internal Server Error",
-				})
+				}
+				if mode == constant.ServerModeDebug {
+					internalErr["error"] = err
+					internalErr["stack"] = string(debug.Stack())
+				}
+				c.AbortWithStatusJSON(http.StatusInternalServerError, internalErr)
 			}
 		}()
 		c.Next()

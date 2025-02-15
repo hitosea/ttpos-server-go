@@ -81,7 +81,7 @@ func NewCaptchaSrvImpl(cache cache.Cache) *CaptchaSrv {
 		DriverMath: base64Captcha.DriverMath{
 			Height:          60,
 			Width:           150,
-			NoiseCount:      30,
+			NoiseCount:      10,
 			ShowLineOptions: 0,
 			BgColor: &color.RGBA{
 				R: 250,

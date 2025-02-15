@@ -16,7 +16,7 @@ type Company struct {
 // CompanySetting 公司设置表 ttpos_company_setting
 type CompanySetting struct {
 	BaseModel
-	CompanyUuid      int64  `gorm:"column:company_uuid;type:bigint(20);default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
+	CompanyUuid      uint64 `gorm:"column:company_uuid;type:bigint(20);default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	RealName         string `gorm:"column:real_name;type:varchar(50);comment:真实姓名;NOT NULL" json:"real_name"`
 	LinkName         string `gorm:"column:link_name;type:varchar(50);comment:联系人;NOT NULL" json:"link_name"`
 	LinkPhone        string `gorm:"column:link_phone;type:varchar(25);comment:联系电话;NOT NULL" json:"link_phone"`

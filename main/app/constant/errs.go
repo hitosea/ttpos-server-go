@@ -1,5 +1,11 @@
 package constant
 
+const (
+	ServerModeRelease = "release"
+	ServerModeDebug   = "debug"
+	ServerModeTest    = "test"
+)
+
 // TODO 部分错误码直接拿重构前的，是否需要更换
 const (
 	CodeSuccess    = 1   // 成功

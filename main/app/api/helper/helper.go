@@ -93,18 +93,18 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 	var ves validator.ValidationErrors
 	ok := errors.As(err, &ves)
 	if !ok {
-		if config.Server.Mode == "debug" {
+		if config.Server.Mode == constant.ServerModeDebug {
 			Fail(c, constant.CodeBadRequest, err.Error())
 		} else {
 			Fail(c, constant.CodeBadRequest, "参数错误")
 		}
 		return
 	}
-	// if config.Server.Mode == "debug" {
-	// 	// 获取环境配置
-	// 	Fail(c, constant.CodeBadRequest, err.Error())
-	// 	return
-	// }
+	if config.Server.Mode == constant.ServerModeDebug {
+		// 获取环境配置
+		Fail(c, constant.CodeBadRequest, err.Error())
+		return
+	}
 	for _, ve := range ves {
 		if jsonTag, jsonTagExists := structFieldJsonTagMaps[ve.StructField()]; jsonTagExists {
 			if message, messageExists := messages[jsonTag+"."+ve.Tag()]; messageExists {

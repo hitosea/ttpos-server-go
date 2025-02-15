@@ -486,7 +486,7 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 		uuids[i] = v.Uuid
 	}
 	repo := NewPaymentOrderRepo(r.db)
-	paymentOrders, err := repo.GetPaymentOrderList(repo.WhereSaleOrderUuids(uuids))
+	paymentOrders, err := repo.GetPaymentOrderList(repo.WhereRelatedUuids(uuids))
 	if err != nil {
 		return false
 	}

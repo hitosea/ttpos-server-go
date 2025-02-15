@@ -1,5 +1,8 @@
 package req
 
+import "ttpos-server-go/app/model"
+
+// AddMemberReq 添加会员请求
 type AddMemberReq struct {
 	LevelUuid uint64 `json:"level_uuid" binding:"required"`                    // 会员等级Uuid
 	Phone     string `json:"phone" binding:"required,max=20"`                  // 手机号
@@ -7,6 +10,7 @@ type AddMemberReq struct {
 	Password  string `json:"password" binding:"omitempty,number,min=4,max=16"` // 密码
 }
 
+// AddMemberReqMessage 添加会员错误提示
 var AddMemberReqMessage = map[string]string{
 	"level_uuid.required": "会员等级不存在",
 	"phone.max":           "手机号不能超过20个字符",
@@ -14,4 +18,51 @@ var AddMemberReqMessage = map[string]string{
 	"password.number":     "密码必须为4-16位纯数字",
 	"password.min":        "密码必须为4-16位纯数字",
 	"password.max":        "密码必须为4-16位纯数字",
+}
+
+// CreateRechargeOrderReq 创建充值订单请求
+type CreateRechargeOrderReq struct {
+	MemberUuid        uint64  `json:"member_uuid" binding:"required"`           // 会员Uuid
+	RechargeAmount    float64 `json:"recharge_amount" binding:"required,min=1"` // 充值金额
+	RechargeOrderUuid uint64  `json:"recharge_order_uuid"`                      // 进行中的充值订单，如果没有进行中的充值订单，传递0
+	GiftAmount        float64 `json:"gift_amount" binding:"omitempty,min=0"`    // 赠送金额
+	GiftPoint         float64 `json:"gift_point" binding:"omitempty,min=0"`     // 赠送积分
+
+	StaffEmail string `json:"-"` // 员工账号
+	StaffName  string `json:"-"` // 员工real_name
+	StaffUuid  uint64 `json:"-"` // 员工Uuid
+	Source     string `json:"-"` // 来源
+}
+
+var CreateRechargeOrderReqMessage = map[string]string{
+	"recharge_amount.min": "最小充值金额为1",
+	"gift_amount.min":     "赠送金额错误",
+	"gift_point.min":      "赠送积分错误",
+}
+
+// RechargeOrderAddPaymentMethodReq 充值订单添加支付方式
+type RechargeOrderAddPaymentMethodReq struct {
+	RechargeOrderUuid uint64  `json:"recharge_order_uuid" binding:"required"`         // 充值订单Uuid
+	PaymentAmount     float64 `json:"payment_amount" binding:"required,min=0.01"`     // 支付金额
+	PaymentMethodUuid uint64  `json:"payment_method_uuid" binding:"omitempty,neq=10"` // 支付方式Uuid
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`                             // 充值订单支付订单Uuid
+
+	CompanySetting model.CompanySetting `json:"-"`
+}
+
+var RechargeOrderAddPaymentMethodReqMessage = map[string]string{
+	"payment_amount.min":      "支付金额最低0.01",
+	"payment_method_uuid.neq": "不能使用余额支付充值",
+}
+
+// RechargeOrderCancelPaymentMethodReq 充值订单撤销支付方式
+type RechargeOrderCancelPaymentMethodReq struct {
+	RechargeOrderUuid uint64 `json:"recharge_order_uuid" binding:"required"` // 充值订单Uuid
+	PaymentOrderUuid  uint64 `json:"payment_order_uuid" binding:"required"`  // 支付订单Uuid
+}
+
+// ConfirmRechargeOrder 确认充值订单
+type ConfirmRechargeOrder struct {
+	RechargeOrderUuId uint64 `json:"recharge_order_uuid"` // 充值订单Uuid
+	MemberUuid        uint64 `json:"member_uuid"`         // 会员Uuid
 }

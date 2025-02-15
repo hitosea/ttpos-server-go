@@ -3,7 +3,6 @@ package assistant
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -96,7 +95,7 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.OnlineCashierList}
 // @Router /assistant/online_cashiers [get]
 func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
-	helper.Success(c, h.authSrv.GetOnlineCashiers(c.GetUint64(jwt.CompanyUuid)))
+	helper.Success(c, h.authSrv.GetOnlineCashiers(helper.GetCompanyUuid(c)))
 }
 
 // GetAssistantBase 点餐助手端信息

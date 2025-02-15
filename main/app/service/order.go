@@ -530,8 +530,8 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 					PaymentTypeName: payment.PaymentTypeName,
 					CurrencyUnit:    payment.CurrencyUnit,
 					PaymentAmount:   payment.PaymentAmount,
-					Status:          payment.Status,
-					Source:          payment.PaymentMethod.Source,
+					Status:          uint(payment.Status),
+					Source:          uint(payment.PaymentMethod.Source),
 					SourceText:      payment.PaymentMethod.GetSourceText(language),
 				})
 				payTypeNames = append(payTypeNames, payment.PaymentTypeName)

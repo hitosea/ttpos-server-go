@@ -44,6 +44,7 @@ type ISrv interface {
 	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                     // 获取自助餐设置
 	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                      // 获取货币单位设置
 	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
+	GetPaymentSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Payment, error)                                   // 获取门店-支付方式设置
 	GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error)                                                                     // 获取收银机语言
 	GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error)                                                                   // 获取收银机副屏广告
 	GetServiceFeeSetting(companyUuid uint64) (setting.ServiceCharge, error)                                                               // 获取服务费设置
@@ -599,6 +600,28 @@ func (s *Srv) GetBuffetSetting(companyUuid uint64, companySetting model.CompanyS
 		return buffet, errors.New("解析自助餐-自助餐设置失败")
 	}
 	return defaultBuffet, nil
+}
+
+// GetPaymentSetting 门店-支付方式
+func (s *Srv) GetPaymentSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Payment, error) {
+	var payment setting.Payment
+	st := s.getSettingByKey(companyUuid, constant.SettingPayment)
+	err := json.Unmarshal([]byte(st.Values), &payment)
+	if err != nil {
+		logger.Logger.Error("解析门店-支付方式失败", zap.Error(err))
+		return payment, errors.New("解析门店-支付方式失败")
+	}
+	// 会员关闭时 门店管理 支付方式 余额这个开关要关了
+	if companySetting.IsOpenMember == 0 {
+		payment.IsBalance = "0"
+	}
+	tmp := s.getDefaultPayment()
+	err = copier.CopyWithOption(&tmp, payment, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并门店-支付方式失败", zap.Error(err))
+		return payment, errors.New("合并门店-支付方式失败")
+	}
+	return payment, nil
 }
 
 // GetCurrencySetting 货币单位设置

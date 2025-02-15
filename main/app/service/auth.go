@@ -208,8 +208,8 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 
 // Logout 退出登录
 func (s *AuthSrv) Logout(cc *gin.Context) error {
-	companyUuid := cc.GetUint64(jwt.CompanyUuid)
-	source := cc.GetString(jwt.Source)
+	companyUuid := helper.GetCompanyUuid(cc)
+	source := helper.GetSource(cc)
 	staffUuid := cc.GetUint64(jwt.StaffUuid)
 	assistantUuid := cc.GetUint64(jwt.AssistantStaffUuid)
 
@@ -228,7 +228,7 @@ func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 	companySetting := helper.GetCompanySetting(cc)
 	staff := helper.GetStaff(cc)
 	var (
-		source   = cc.GetString(jwt.Source)
+		source   = helper.GetSource(cc)
 		deviceId = cc.GetString(jwt.DeviceId)
 	)
 	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
@@ -279,7 +279,7 @@ func (s *AuthSrv) AssistantBase(cc *gin.Context) (resp.AssistantBase, error) {
 	company := helper.GetCompany(cc)
 	staff := helper.GetStaff(cc)
 	var (
-		source   = cc.GetString(jwt.Source)
+		source   = helper.GetSource(cc)
 		deviceId = cc.GetString(jwt.DeviceId)
 	)
 	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
@@ -390,8 +390,8 @@ func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
 // BindCashier 绑定收银机
 func (s *AuthSrv) BindCashier(bindReq req.BindCashierReq, cc *gin.Context) (string, error) {
 	var newToken string
-	companyUuid := cc.GetUint64(jwt.CompanyUuid)
-	if cc.GetString(jwt.Source) != constant.SourceAssistant {
+	companyUuid := helper.GetCompanyUuid(cc)
+	if helper.GetSource(cc) != constant.SourceAssistant {
 		return newToken, errors.New("用户信息错误")
 	}
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))

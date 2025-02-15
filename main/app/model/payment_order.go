@@ -7,17 +7,18 @@ import (
 // PaymentMethod 支付方式 `ttpos_payment_method`
 type PaymentMethod struct {
 	BaseModel
-	Name                 string  `gorm:"default:'';column:name;comment:支付方式名称" json:"name"`
-	PaymentName          string  `gorm:"default:'';column:payment_name;comment:支付名称" json:"payment_name"`
-	LogoFileUuid         uint64  `gorm:"default:0;column:logo_file_uuid;comment:logo图片UUID" json:"logo_file_uuid"`
-	QrCodeFileUuid       uint64  `gorm:"default:0;column:qrcode_file_uuid;comment:二维码图片UUID" json:"qrcode_file_uuid"`
-	FeePercent           float64 `gorm:"default:0.00;column:fee_percent;comment:手续费百分比" json:"fee_percent"`
-	OrderBy              int     `gorm:"default:0;column:order_by;comment:排序" json:"order_by"`
-	IsShowCashier        bool    `gorm:"default:1;column:is_show_cashier;comment:是否在收银员界面显示" json:"is_show_cashier"`
-	IsShowAssistant      bool    `gorm:"default:1;column:is_show_assistant;comment:是否在助手界面显示" json:"is_show_assistant"`
-	IsShowMemberRecharge bool    `gorm:"default:1;column:is_show_member_recharge;comment:是否在会员充值界面显示" json:"is_show_member_recharge"`
-	Source               uint    `gorm:"default:0;column:source;comment:来源 0-系统 1-手动 2-LianLianPay" json:"source"`
-	Status               uint    `gorm:"default:0;column:status;comment:状态 0-禁用 1-启用" json:"status"`
+	Name                 string  `gorm:"column:name;type:varchar(255);comment:支付方式名称;NOT NULL" json:"name"`
+	Code                 int     `gorm:"column:code;type:int(11);default:0;comment:支付方式代号;NOT NULL" json:"code"`
+	PaymentName          string  `gorm:"column:payment_name;type:varchar(255);comment:支付名称;NOT NULL" json:"payment_name"`
+	Source               int     `gorm:"column:source;type:tinyint(1);default:1;comment:来源 0-系统 1-手动 2-LianLianPay;NOT NULL" json:"source"`
+	LogoFileUuid         uint64  `gorm:"column:logo_file_uuid;type:bigint(20) unsigned;default:0;comment:logo图片ID;NOT NULL" json:"logo_file_uuid"`
+	QrcodeFileUuid       uint64  `gorm:"column:qrcode_file_uuid;type:bigint(20) unsigned;default:0;comment:二维码图片ID;NOT NULL" json:"qrcode_file_uuid"`
+	FeePercent           float64 `gorm:"column:fee_percent;type:decimal(5,2);default:0;comment:手续费百分比;NOT NULL" json:"fee_percent"`
+	IsShowCashier        int     `gorm:"column:is_show_cashier;type:tinyint(1);default:0;comment:0-不显示 1-收银机结账显示;NOT NULL" json:"is_show_cashier"`
+	IsShowAssistant      int     `gorm:"column:is_show_assistant;type:tinyint(1);default:0;comment:0-不显示 1-点餐助手结账显示;NOT NULL" json:"is_show_assistant"`
+	IsShowMemberRecharge int     `gorm:"column:is_show_member_recharge;type:tinyint(1);default:0;comment:0-不显示 1-收银机会员充值显示;NOT NULL" json:"is_show_member_recharge"`
+	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态 0-禁用 1-启用;NOT NULL" json:"status"`
+	Sort                 int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 }
 
 // 获取来源文本
@@ -35,17 +36,17 @@ func (model *PaymentMethod) GetSourceText(language string) string {
 // PaymentOrder 支付订单 ttpos_payment_order
 type PaymentOrder struct {
 	BaseModel
-	PaymentTypeName   string  `gorm:"column:payment_type_name;type:varchar(255);default:'';comment:支付方式名称" json:"payment_type_name"`
-	PaymentFeePercent float64 `gorm:"column:payment_fee_percent;type:decimal(5,2);default:0.00;comment:支付手续费百分比" json:"payment_fee_percent"`
-	CurrencyUnit      string  `gorm:"column:currency_unit;type:varchar(10);default:'';comment:货币单位" json:"currency_unit"`
-	PaymentAmount     float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0.00;comment:支付金额" json:"payment_amount"`
-	Amount            float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:金额" json:"amount"`
-	TransactionNumber string  `gorm:"column:transaction_number;type:varchar(255);default:'';comment:交易号" json:"transaction_number"`
-	Status            uint    `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款" json:"status"`
+	PaymentTypeName      string  `gorm:"column:payment_type_name;type:varchar(255);comment:支付类型名称;NOT NULL" json:"payment_type_name"`
+	PaymentFeePercent    float64 `gorm:"column:payment_fee_percent;type:decimal(5,2);default:0.00;comment:支付手续费百分比;NOT NULL" json:"payment_fee_percent"`
+	CurrencyUnit         string  `gorm:"column:currency_unit;type:varchar(10);comment:货币单位;NOT NULL" json:"currency_unit"`
+	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0.00;comment:支付金额;NOT NULL" json:"payment_amount"`
+	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0.00;comment:支付手续费,支付金额*支付手续费百分比;NOT NULL" json:"payment_commission_fee"`
+	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:金额：支付金额+支付手续费;NOT NULL" json:"amount"`
+	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
+	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
 
-	// 关联ID字段
-	PaymentMethodUuid uint64 `gorm:"column:payment_method_uuid;type:bigint(20);default:0;comment:支付方式ID" json:"payment_method_uuid"`
-	SaleOrderUuid     uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
+	PaymentTypeUuid uint64 `gorm:"column:payment_type_uuid;type:bigint(20) unsigned;default:0;comment:支付类型ID;NOT NULL" json:"payment_type_uuid"`
+	RelatedUuid     uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:充值订单、销售订单ID;NOT NULL" json:"related_uuid"`
 
 	// 关联字段
 	PaymentMethod PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:uuid"`

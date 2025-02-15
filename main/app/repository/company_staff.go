@@ -38,16 +38,6 @@ func (r *CompanyStaffRepo) WithCompanySetting() With {
 
 func (r *CompanyStaffRepo) GetByUsername(username string, withs ...With) model.CompanyStaff {
 	var companyStaff model.CompanyStaff
-	r.handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&companyStaff)
+	handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&companyStaff)
 	return companyStaff
-}
-
-func (r *CompanyStaffRepo) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
-	if len(withs) == 0 {
-		return db
-	}
-	for _, with := range withs {
-		db = with(db)
-	}
-	return db
 }
