@@ -3,13 +3,17 @@
 namespace app\common\model\buffet;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  *
  */
 class BuffetProduct extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'buffet_product';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段

@@ -25,6 +25,7 @@ class Buffet extends BaseModel
      * @var string[]
      */
     protected $append = [
+        'id',
         'buffet_id',
         'is_time_limit',
         'time_limit',
@@ -39,7 +40,10 @@ class Buffet extends BaseModel
     /**
      * 兼容字段
      */
-    public function getBuffetIdAttr($value, $data = [])
+    public function getIdAttr($value, $data = [])
+    {
+        return $this->uuid ?: 0;
+    }    public function getBuffetIdAttr($value, $data = [])
     {
         return $this->uuid ?: 0;
     }

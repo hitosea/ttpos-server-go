@@ -325,6 +325,7 @@ class Buffet extends BuffetModel
         // 开启事务
         $this->startTrans();
         try {
+            unset($data['id']);
             $this->save($data);
             // 更新自助餐顾客类型
             $this->updateBuffetCustomer($this['uuid'], $customerType);
