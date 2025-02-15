@@ -5,6 +5,7 @@ namespace app\shop\model\buffet;
 use help\ValidateHelp;
 use app\common\model\buffet\BuffetTax;
 use app\common\model\buffet\BuffetCustomer;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\buffet\Buffet as BuffetModel;
 
 /**
@@ -17,7 +18,7 @@ class Buffet extends BuffetModel
      */
     public static function detail($buffet_id)
     {
-        return self::with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])->where('id', $buffet_id)->find();
+        return self::with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])->where('uuid', $buffet_id)->find();
     }
 
     /**
@@ -39,7 +40,9 @@ class Buffet extends BuffetModel
             ->order(['create_time' => 'desc'])
             ->paginate($params);
         foreach ($list as &$item) {
-            $item['can_delete'] = $this->getCanDelete($item);
+            // todo 兼容
+            // $item['can_delete'] = $this->getCanDelete($item);
+            $item['can_delete'] = 1;
         }
         return $list;
     }
@@ -166,17 +169,22 @@ class Buffet extends BuffetModel
             $this->error = '自助餐税类只能设置1条';
             return false;
         }
+        //
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['name']);
+        $data['tax_uuid'] = $data['buffetTaxes'][0]['tax_category_id'] ?? 0; // 税收ID
+        $data['is_limit_time'] = $data['is_time_limit']; // 是否限时, 0-否 1-是
+        $data['limit_time'] = $data['time_limit']; // 限时时间(分钟)
+        $data['can_combined'] = $data['is_comb']; // 是否可合并, 0-否 1-是
+        $data['non_ordering_time'] = $data['remain_continue_time']; // 平板不可下单时间(分钟)
+        $data['reminder_order_time'] = $data['remain_continue_notice_time']; // 平板提醒不可下单时间(分钟)
         // 开启事务
         $this->startTrans();
         try {
-            $data['app_id'] = self::$app_id;
             $this->save($data);
             // 更新自助餐顾客类型
-            $this->updateBuffetCustomer($this['id'], $customerType);
+            $this->updateBuffetCustomer($this['uuid'], $customerType);
             // 更新自助餐关联产品
             $this->updateBuffetProduct($products, $buyLimitProducts);
-            // 更新自助餐税类
-            $this->updateBuffetTaxes($this['id'], $data['buffetTaxes'] ?? []);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -306,16 +314,22 @@ class Buffet extends BuffetModel
             $this->error = '自助餐税类只能设置1条';
             return false;
         }
+        //
+        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['name'], $this['multi_language_name_uuid']);
+        $data['tax_uuid'] = $data['buffetTaxes'][0]['tax_category_id'] ?? 0; // 税收ID
+        $data['is_limit_time'] = $data['is_time_limit']; // 是否限时, 0-否 1-是
+        $data['limit_time'] = $data['time_limit']; // 限时时间(分钟)
+        $data['can_combined'] = $data['is_comb']; // 是否可合并, 0-否 1-是
+        $data['non_ordering_time'] = $data['remain_continue_time']; // 平板不可下单时间(分钟)
+        $data['reminder_order_time'] = $data['remain_continue_notice_time']; // 平板提醒不可下单时间(分钟)
         // 开启事务
         $this->startTrans();
         try {
             $this->save($data);
             // 更新自助餐顾客类型
-            $this->updateBuffetCustomer($this['id'], $customerType);
+            $this->updateBuffetCustomer($this['uuid'], $customerType);
             // 更新自助餐关联产品
             $this->updateBuffetProduct($products, $buyLimitProducts);
-            // 更新自助餐税类
-            $this->updateBuffetTaxes($this['id'], $data['buffetTaxes'] ?? []);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -331,15 +345,15 @@ class Buffet extends BuffetModel
     private function updateBuffetProduct($products, $buyLimitProducts)
     {
         $buffetProducts = new BuffetProduct;
-        $buffetProducts->destroy(['buffet_id' => $this['id']]);
+        $buffetProducts->destroy(['buffet_package_uuid' => $this['uuid']]);
         // 新增关联产品
         $data = [];
         foreach ($products as $item) {
             $productId = $item['product_id'];
             $data[] = [
-                'buffet_id' => $this['id'],
-                'product_id' => $productId,
-                'limit_num' => $buyLimitProducts[$productId]['limit_num'] ?? 0,
+                'buffet_package_uuid' => $this['uuid'],
+                'product_package_uuid' => $productId,
+                'limit' => $buyLimitProducts[$productId]['limit_num'] ?? 0,
                 'is_show_cashier' => $item['is_show_cashier'] ?? 0,
                 'is_show_tablet' => $item['is_show_tablet'] ?? 0,
                 'is_show_kitchen' => $item['is_show_kitchen'] ?? 0,
@@ -356,14 +370,14 @@ class Buffet extends BuffetModel
     public function updateBuffetCustomer($buffet_id, $customers)
     {
         $buffetCustomerType = new BuffetCustomer;
-        $buffetCustomerType->destroy(['buffet_id' => $buffet_id]);
+        $buffetCustomerType->destroy(['buffet_package_uuid' => $buffet_id]);
         // 新增关联顾客类型
         $data = [];
         foreach ($customers as $item) {
             $customerTypeId = $item['customer_type_id'];
             $data[] = [
-                'buffet_id' => $buffet_id,
-                'customer_type_id' => $customerTypeId,
+                'buffet_package_uuid' => $buffet_id,
+                'customer_type_uuid' => $customerTypeId,
                 'price' => $item['price'] ?? 0,
             ];
         }
@@ -371,32 +385,11 @@ class Buffet extends BuffetModel
     }
 
     /**
-     * 更新自助餐关联税类
-     */
-    private function updateBuffetTaxes($buffetId, $buffetTax)
-    {
-        if (empty($buffetTax)) {
-            return;
-        }
-        $model = new BuffetTax;
-        $model->destroy(['buffet_id' => $buffetId]);
-        $data = [];
-        foreach ($buffetTax as $item) {
-            $data[] = [
-                'buffet_id' => $buffetId,
-                'buffet_tax_type' => $item['buffet_tax_type'] ?? 0,
-                'tax_category_id' => $item['tax_category_id'] ?? 0,
-            ];
-        }
-        $model->saveAll($data);
-    }
-
-    /**
      * 设置自助餐组合
      */
     public function setComb($is_comb)
     {
-        return $this->save(['is_comb' => (int)$is_comb]);
+        return $this->save(['can_combined' => (int)$is_comb]);
     }
 
     /**
@@ -412,11 +405,12 @@ class Buffet extends BuffetModel
      */
     public function setDelete()
     {
-        if (!$this->getCanDelete($this)) {
-            $this->error = '自助餐正在使用中，不可删除';
-            return false;
-        }
-        return $this->destroy(['id' => $this['id']]);
+        // todo 兼容
+        // if (!$this->getCanDelete($this)) {
+        //     $this->error = '自助餐正在使用中，不可删除';
+        //     return false;
+        // }
+        return $this->destroy(['uuid' => $this['uuid']]);
     }
 
     /**

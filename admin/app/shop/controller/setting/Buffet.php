@@ -87,7 +87,7 @@ class Buffet extends Controller
                 return $this->renderError('顾客类型名称已存在，请重新输入');
             }
             // 有多少个顾客类型
-            $oldCount = $customerCommonModel->where('status', '=', 1)->count();
+            $oldCount = $customerCommonModel->count();
             // 遍历除去删除的顾客类型 不判断数量
             $deleteCount = 0;
             $addCount = 0;
@@ -123,8 +123,6 @@ class Buffet extends Controller
                 $action = $customer['action'] ?? null;
                 // 如果是新增
                 if ($action == 'add') {
-                    $customer['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
-                    $customer['app_id'] = $this->store['app']['app_id'];
                     unset($customer['action']);
                     $customerModel->save($customer);
                     continue;
@@ -161,7 +159,6 @@ class Buffet extends Controller
                 }
                 // 如果是新增
                 if (isset($clock['action']) && $clock['action'] == 'add') {
-                    $clock['app_id'] = $this->store['app']['app_id'];
                     unset($clock['action']);
                     $delayModel->save($clock);
                     continue;
@@ -169,7 +166,7 @@ class Buffet extends Controller
                 // 如果是删除 - 保留数据，只是修改状态
                 if (isset($clock['action']) && $clock['action'] == 'delete') {
                     if (isset($clock['id'])) {
-                        $delayModel->where('id', $clock['id'])->find()?->save(['status' => 0]);
+                        $delayModel->where('id', $clock['id'])->find()?->delete();
                     }
                     continue;
                 }
@@ -210,9 +207,6 @@ class Buffet extends Controller
             return $this->renderError('缺少参数');
         }
         $ret = SettingModel::getSupplierItem($key, $this->store['user']['shop_supplier_id'], $this->store['app']['app_id']);
-        // 获取自助餐折扣列表
-        $buffetDiscount = BuffetDiscountModel::getList();
-        $ret['add_buffet_discount'] = $buffetDiscount;
         // 获取加钟列表
         $delay = DelayModel::getList();
         $ret['add_clock'] = $delay;

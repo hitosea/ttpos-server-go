@@ -158,7 +158,7 @@ class Buffet extends Controller
      */
     public function edit($buffet_id)
     {
-        /**@var BuffetModel $model */
+        /** @var BuffetModel $model */
         $model = BuffetModel::detail($buffet_id ?? 0);
         if (!$model) {
             return $this->renderError('数据不存在');
@@ -183,6 +183,7 @@ class Buffet extends Controller
         if (!$model) {
             return $this->renderError('数据不存在');
         }
+        /** @var BuffetModel $model */
         if ($model?->setComb($is_comb)) {
             return $this->renderSuccess('操作成功');
         }
@@ -203,6 +204,7 @@ class Buffet extends Controller
         if (!$model) {
             return $this->renderError('数据不存在');
         }
+        /** @var BuffetModel $model */
         if ($model?->setStatus($state)) {
             return $this->renderSuccess('操作成功');
         }
@@ -222,6 +224,7 @@ class Buffet extends Controller
         if (!$model) {
             return $this->renderError('数据不存在');
         }
+        /** @var BuffetModel $model */
         if ($model?->setDelete()) {
             return $this->renderSuccess('删除成功');
         }
