@@ -12,6 +12,7 @@ import (
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
 	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                              // 创建销售单
+	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                         // 创建销售账单设置
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                     // 获取销售单
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
@@ -49,6 +50,16 @@ func NewOrderRepoImpl(db *gorm.DB) IOrderRepo {
 
 // CreateSaleBill 创建销售单
 func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error) {
+	err := r.db.Create(&model).Error
+	if err != nil {
+		return model, err
+	}
+
+	return model, nil
+}
+
+// CreateSaleBillSetting 创建销售账单设置
+func (r *orderRepo) CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, err
@@ -265,6 +276,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 						return db
 					},
 				},
+			},
+			WithPreload{
+				Query: "SaleBillSetting",
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),

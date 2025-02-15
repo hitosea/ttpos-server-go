@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 )
@@ -35,6 +36,7 @@ type IOrderSrv interface {
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
 	OrderProductRemark(dbId uint64, staffUuid uint64, source string, req req.OrderProductRemarkReq) (model.SaleBill, error)           // 修改订单商品备注
+	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) error                                                        // 创建销售账单设置
 }
 
 // orderSrv 订单服务结构
@@ -95,6 +97,12 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return err
 		}
 
+		// 创建销售账单设置
+		err = s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		if err != nil {
+			return err
+		}
+
 		// 创建销售订单
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
@@ -119,6 +127,95 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 	}, nil
 }
 
+// CreateSaleBillSetting 创建销售账单设置
+func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) error {
+	// 获取服务费设置
+	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(dbId)
+	if err != nil {
+		return err
+	}
+	// 获取税率设置
+	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(dbId)
+	if err != nil {
+		return err
+	}
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(dbId, "")
+	if err != nil {
+		return err
+	}
+
+	var serviceFeeType uint
+	var serviceFeeValue float64
+	var taxFeeType uint
+	var discountType uint
+	var zero uint
+	var zeroCheckout uint
+	var isStatGift uint = 1
+	var isStatFree uint = 1
+
+	// 销售账单服务费
+	if serviceFeeSetting.IsOpen == "1" {
+		if serviceFeeSetting.ChargeType == "1" {
+			serviceFeeType = 1
+		}
+		if serviceFeeSetting.ChargeType == "2" {
+			if serviceFeeSetting.IsOpenTax == "0" {
+				serviceFeeType = 2
+			}
+			if serviceFeeSetting.IsOpenTax == "1" {
+				serviceFeeType = 3
+			}
+		}
+		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 销售账单税率
+	if taxRateSetting.IsOpen == "1" {
+		taxFeeType = 1
+	}
+
+	// 销售账单优惠折扣
+	if businessSetting.DiscountMethod == "20" {
+		discountType = 1
+	}
+
+	// 销售账单优惠折扣自动抹零方式
+	zeroingMethod, _ := convertor.ToInt(businessSetting.ZeroingMethod)
+	zero = uint(zeroingMethod)
+
+	// 销售账单结账自动抹零方式
+	checkoutZeroingMethod, _ := convertor.ToInt(businessSetting.CheckoutZeroingMethod)
+	zeroCheckout = uint(checkoutZeroingMethod)
+
+	// 销售账单赠菜计算方式
+	if businessSetting.GiftMethod == "20" {
+		isStatGift = 0
+	}
+
+	// 销售账单免单计算方式
+	if businessSetting.FreeMethod == "20" {
+		isStatFree = 0
+	}
+
+	_, err = repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
+		SaleBillUuid:    saleBillUuid,
+		ServiceFeeType:  serviceFeeType,
+		ServiceFeeValue: serviceFeeValue,
+		TaxFeeType:      taxFeeType,
+		DiscountType:    discountType,
+		Zero:            zero,
+		ZeroCheckout:    zeroCheckout,
+		IsStatGift:      isStatGift,
+		IsStatFree:      isStatFree,
+	})
+
+	return err
+}
+
 // CreateDeskOrder 创建桌台订单
 func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	var billUuid uint64
@@ -141,6 +238,12 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			MealNum:      *req.MealNum,
 			Remark:       req.Remark,
 		})
+		if err != nil {
+			return err
+		}
+
+		// 创建销售账单设置
+		err = s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
 		if err != nil {
 			return err
 		}

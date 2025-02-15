@@ -87,7 +87,7 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 	}
 
 	// 生成订单商品
-	_, err = s.orderProductSrv.CreateOrderProduct(dbId, CreateOrderProductReq{
+	err = s.orderProductSrv.CreateOrderProduct(dbId, CreateOrderProductReq{
 		Lang:           lang,
 		SaleBill:       saleBill,
 		SaleOrder:      saleBill.SaleOrders[0],
@@ -95,7 +95,6 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 		SauceUuids:     req.Product.SauceUuids,
 		Num:            1,
 	})
-
 	if err != nil {
 		return nil, errors.New("创建订单商品失败")
 	}

@@ -113,6 +113,8 @@ type ProductPackage struct {
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
 	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
 	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
+	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
+	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
 }
 
 // ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom

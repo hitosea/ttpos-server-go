@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -24,25 +23,26 @@ type IOrderProductSrv interface {
 	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
-	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error)  // 创建订单商品
-	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                                // 计算单价,商品原价+小料价
+	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
 	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                    // 生成订单商品
 }
 
 // orderProductSrv 订单商品服务结构体
 type orderProductSrv struct {
-	dbm *database.DBManager
+	dbm          *database.DBManager
+	orderCalcSrv IOrderCalcSrv
 }
 
 // NewOrderProductSrv 创建商品服务
-func NewOrderProductSrv(dbm *database.DBManager) IOrderProductSrv {
-	return NewOrderProductSrvImpl(dbm)
+func NewOrderProductSrv(dbm *database.DBManager, orderCalcSrv IOrderCalcSrv) IOrderProductSrv {
+	return NewOrderProductSrvImpl(dbm, orderCalcSrv)
 }
 
 // NewOrderProductSrvImpl 创建商品服务实现
-func NewOrderProductSrvImpl(dbm *database.DBManager) IOrderProductSrv {
+func NewOrderProductSrvImpl(dbm *database.DBManager, orderCalcSrv IOrderCalcSrv) IOrderProductSrv {
 	return &orderProductSrv{
-		dbm: dbm,
+		dbm:          dbm,
+		orderCalcSrv: orderCalcSrv,
 	}
 }
 
@@ -55,6 +55,8 @@ func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (model.P
 		commonRepo.WhereByUuid(productUuid),
 		commonRepo.WhereBySoftDelete(),
 		productRepo.WithMultiLanguageName(),
+		productRepo.WithDineTax(),
+		productRepo.WithTakeoutTax(),
 		productRepo.WithProductBoms(),
 		productRepo.WithProductBomsProductFlavor(),
 		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
@@ -204,16 +206,15 @@ type CreateOrderProductReq struct {
 }
 
 // CreateOrderProduct 创建订单商品
-func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error) {
-	var data model.SaleOrderProduct
+func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error {
 	db := o.dbm.GetDB(dbId)
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 生成销售订单商品
 		orderProductData := o.GenerateOrderProduct(GenerateOrderProductReq{
 			Lang:           req.Lang,
 			ProductPackage: req.ProductPackage,
-			SaleBillUuid:   req.SaleBill.Uuid,
-			SaleOrderUuid:  req.SaleOrder.Uuid,
+			SaleBill:       req.SaleBill,
+			SaleOrder:      req.SaleOrder,
 			SauceUuids:     req.SauceUuids,
 			Num:            req.Num,
 		})
@@ -264,49 +265,37 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 			}
 		}
 
-		data = orderProduct
-
 		// 计算销售订单商品相关金额
+		orderProductAmount := o.orderCalcSrv.CalcOrderProductAmount(req.SaleBill, req.SaleOrder, orderProduct)
+		if err := repository.NewOrderProductRepo(tx).Update(
+			map[string]interface{}{
+				"price":                     orderProductAmount.DiscountAmount.Price,
+				"discount_fee":              orderProductAmount.DiscountAmount.DiscountFee,
+				"member_discount_fee":       orderProductAmount.DiscountAmount.MemberDiscountFee,
+				"custom_discount_fee":       orderProductAmount.DiscountAmount.CustomDiscountFee,
+				"member_discount_rate":      orderProductAmount.DiscountAmount.MemberDiscountRate,
+				"member_card_discount_rate": orderProductAmount.DiscountAmount.MemberCardDiscountRate,
+				"custom_discount_rate":      orderProductAmount.DiscountAmount.CustomDiscountRate,
+				"tax_fee":                   orderProductAmount.TaxAmount.TaxFee,
+			},
+			repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
+			repository.NewCommonRepo().WhereBySoftDelete(),
+		); err != nil {
+			return err
+		}
 
 		return nil
 	})
 
-	return data, err
-}
-
-type CalcAmountResp struct {
-	UnitPrice      float64 // 单价: productBom.Price累加
-	Price          float64 // 最终单价: 折扣和优惠后的UnitPrice
-	ServiceFee     float64 // 服务费,按比例收取时有 todo
-	TaxFee         float64 // 税费 todo
-	OriginalAmount float64 // 原价销售额: (UnitPrice + TaxFee) * 数量
-}
-
-// CalcAmount 计算单价,商品原价+小料价
-func (o *orderProductSrv) CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp {
-	var unitPrice float64
-	var TaxFee float64
-	var originalAmount float64
-	for _, bom := range boms {
-		unitPrice = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(bom.Price)).InexactFloat64()
-	}
-
-	// 原价销售额 = (UnitPrice + TaxFee) * 数量
-	originalAmount = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(TaxFee)).Mul(decimal.NewFromInt(int64(num))).InexactFloat64()
-
-	return CalcAmountResp{
-		UnitPrice:      unitPrice,
-		Price:          unitPrice,
-		OriginalAmount: originalAmount,
-	}
+	return err
 }
 
 // GenerateOrderProductReq 生成订单商品请求
 type GenerateOrderProductReq struct {
 	Lang           string
 	ProductPackage model.ProductPackage
-	SaleBillUuid   uint64
-	SaleOrderUuid  uint64
+	SaleBill       model.SaleBill
+	SaleOrder      model.SaleOrder
 	SauceUuids     []uint64
 	Num            uint
 }
@@ -323,6 +312,12 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 	// 生成商品原始价格
 	flavorPrice, saucePrice, productPrice, salePrice := req.ProductPackage.GenerateOriginalAmount(req.SauceUuids)
 
+	// 获取消费税率
+	taxRate := req.ProductPackage.DineTax.TaxRate
+	if req.SaleBill.DiningMethod == constant.SaleBillDiningMethodTakeout {
+		taxRate = req.ProductPackage.TakeoutTax.TaxRate
+	}
+
 	// 构建销售订单商品模型
 	orderProduct := model.SaleOrderProduct{
 		Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
@@ -336,8 +331,10 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 		MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
 		ImageFileUuid:         req.ProductPackage.ImageFileUuid,
 		ProductPackageUuid:    req.ProductPackage.Uuid,
-		SaleBillUuid:          req.SaleBillUuid,
-		SaleOrderUuid:         req.SaleOrderUuid,
+		SaleBillUuid:          req.SaleBill.Uuid,
+		SaleOrderUuid:         req.SaleOrder.Uuid,
+		IsOpenMemberDiscount:  req.ProductPackage.OpenDiscount,
+		TaxRate:               taxRate,
 	}
 
 	// 构建销售订单商品BOM
@@ -356,7 +353,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 			Name:           name,
 			Price:          bom.Price,
 			IsFlavorBom:    isFlavorBom,
-			SaleOrderUuid:  req.SaleOrderUuid,
+			SaleOrderUuid:  req.SaleOrder.Uuid,
 			ProductBomUuid: bom.Uuid,
 		})
 	}
@@ -367,7 +364,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 		for _, productPackageAttribute := range productPackageGroup.ProductPackageAttributes {
 			orderProductAttributes = append(orderProductAttributes, model.SaleOrderProductAttribute{
 				Name:                 productPackageAttribute.Attribute.MultiLanguageName.GetNameByLang(req.Lang),
-				SaleOrderUuid:        req.SaleOrderUuid,
+				SaleOrderUuid:        req.SaleOrder.Uuid,
 				ProductAttributeUuid: productPackageAttribute.AttributeUuid,
 			})
 		}

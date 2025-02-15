@@ -12,8 +12,8 @@ const (
 )
 
 const (
-	SaleBillDiningMethodTakeout = 0 // 外卖
-	SaleBillDiningMethodDineIn  = 1 // 堂食
+	SaleBillDiningMethodDineIn  = 0 // 堂食
+	SaleBillDiningMethodTakeout = 1 // 打包
 )
 
 const (

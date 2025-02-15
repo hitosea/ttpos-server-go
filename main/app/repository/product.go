@@ -27,6 +27,8 @@ type IProductRepo interface {
 	WithProductPackageAttributeGroupProductPackageAttributes() DBOption                                             // 预加载产品包装属性组产品包装属性
 	WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption                                    // 预加载产品包装属性组产品包装属性属性
 	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption                   // 预加载产品包装属性组产品包装属性属性多语言名称
+	WithDineTax() DBOption                                                                                          // 预加载堂食税
+	WithTakeoutTax() DBOption                                                                                       // 预加载外卖税
 
 	WithProductPackage() DBOption                                                                           // bom关联包
 	WithProductPackageMultiLanguageName() DBOption                                                          // bom关联包多语言
@@ -303,5 +305,19 @@ func (r *productRepo) WhereBomUuid(uuid uint64) DBOption {
 func (r *productRepo) WhereBomIsSoldOut() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_sold_out = 1")
+	}
+}
+
+// WithDineTax 预加载堂食税
+func (r *productRepo) WithDineTax() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DineTax")
+	}
+}
+
+// WithTakeoutTax 预加载外卖税
+func (r *productRepo) WithTakeoutTax() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutTax")
 	}
 }

@@ -46,6 +46,8 @@ type ISrv interface {
 	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
 	GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error)                                                                     // 获取收银机语言
 	GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error)                                                                   // 获取收银机副屏广告
+	GetServiceFeeSetting(companyUuid uint64) (setting.ServiceCharge, error)                                                               // 获取服务费设置
+	GetTaxRateSetting(companyUuid uint64) (setting.TaxRate, error)                                                                        // 获取税率设置
 	CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool                                          // 收银机验证密码
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
 	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                     // 验证高级密码
@@ -772,6 +774,44 @@ func (s *Srv) GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error
 	return resp.Ads{
 		List: cashierSetting.Carousel,
 	}, nil
+}
+
+// GetServiceFeeSetting 获取服务费设置
+func (s *Srv) GetServiceFeeSetting(companyUuid uint64) (setting.ServiceCharge, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingServiceCharge)
+	var serviceFee setting.ServiceCharge
+	err := json.Unmarshal([]byte(st.Values), &serviceFee)
+	if err != nil {
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	if serviceFee.IsOpen == "0" {
+		serviceFee.IsOpen = "0"
+	}
+	defaultServiceFee := s.getDefaultServiceCharge()
+	err = copier.CopyWithOption(&defaultServiceFee, serviceFee, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	return defaultServiceFee, nil
+}
+
+// GetTaxRateSetting 获取税率设置
+func (s *Srv) GetTaxRateSetting(companyUuid uint64) (setting.TaxRate, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingTaxRate)
+	var taxRate setting.TaxRate
+	err := json.Unmarshal([]byte(st.Values), &taxRate)
+	if err != nil {
+		return taxRate, errors.New("解析税率设置失败")
+	}
+	if taxRate.IsOpen == "0" {
+		taxRate.IsOpen = "0"
+	}
+	defaultTaxRate := s.getDefaultTaxRate()
+	err = copier.CopyWithOption(&defaultTaxRate, taxRate, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		return taxRate, errors.New("解析税率设置失败")
+	}
+	return defaultTaxRate, nil
 }
 
 // CashierVerifyPassword 收银机验证密码

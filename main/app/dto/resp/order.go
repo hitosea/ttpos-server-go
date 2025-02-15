@@ -75,7 +75,7 @@ type OrderProduct struct {
 	SalePrice    float64            `json:"sale_price"`    // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
 	Price        float64            `json:"Price"`         // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
 	TotalPrice   float64            `json:"total_price"`   // 应收金额(单商品)=最终单价+服务费+总税费
-	TaxRate      uint               `json:"tax_rate"`      // 税率,单位%.下单时单税率,结账时再重新核算
+	TaxRate      float64            `json:"tax_rate"`      // 税率,单位%.下单时单税率,结账时再重新核算
 	Status       uint               `json:"status"`        // 状态, 0-正常 1-退菜
 	Remark       string             `json:"remark"`        // 备注
 	IsGift       bool               `json:"is_gift"`       // 是否赠品, fasle-否 true-是
