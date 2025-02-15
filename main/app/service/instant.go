@@ -74,43 +74,24 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 	if len(saleBill.SaleOrders) == 0 {
 		return nil, errors.New("销售订单不存在")
 	}
+
 	// 检查订单是否可操作
 	if err = saleBill.ValidateOrderStatus(constant.OrderAddProduct); err != nil {
 		return nil, err
 	}
 
-	// 检查商品
-	productPackage, err := s.orderProductSrv.CheckProduct(dbId, req.Product.Uuid)
+	// 检查创建订单商品
+	productPackage, err := s.orderProductSrv.CheckCreateOrderProduct(dbId, req.Product)
 	if err != nil {
 		return nil, err
 	}
-	// 检查商品规格
-	if err = s.orderProductSrv.CheckOrderProductFlavor(productPackage, req.Product.FlavorUuid); err != nil {
-		return nil, err
-	}
-	// 检查商品属性
-	var attributeMap = make(map[uint64][]uint64)
-	for _, attribute := range req.Product.Attributes {
-		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
-	}
-	if err = s.orderProductSrv.CheckOrderProductAttribute(productPackage, attributeMap); err != nil {
-		return nil, err
-	}
-	// 检查商品加料
-	if err = s.orderProductSrv.CheckOrderProductSauce(productPackage, req.Product.SauceUuids); err != nil {
-		return nil, err
-	}
-
-	// todo 检查是否已选择必填商品
-
-	// todo 检查商品规格库存
 
 	// 生成订单商品
 	_, err = s.orderProductSrv.CreateOrderProduct(dbId, CreateOrderProductReq{
 		Lang:           lang,
 		SaleBill:       saleBill,
 		SaleOrder:      saleBill.SaleOrders[0],
-		ProductPackage: productPackage,
+		ProductPackage: *productPackage,
 		SauceUuids:     req.Product.SauceUuids,
 		Num:            1,
 	})

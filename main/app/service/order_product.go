@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
@@ -14,17 +15,18 @@ import (
 
 // IOrderProductSrv 定义订单商品服务接口
 type IOrderProductSrv interface {
-	CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error)                             // 检查商品
-	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
-	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
-	CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
-	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error            // 检查商品规格库存
-	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
+	CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error)                                 // 检查商品
+	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                       // 检查商品规格
+	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                      // 检查商品加料
+	CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error // 检查商品属性
+	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品规格库存
+	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                 // 检查商品加料库存
 	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
-	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error) // 创建订单商品
-	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                               // 计算单价,商品原价+小料价
-	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                   // 生成订单商品
+	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
+	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (model.SaleOrderProduct, error)  // 创建订单商品
+	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                                // 计算单价,商品原价+小料价
+	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                    // 生成订单商品
 }
 
 // orderProductSrv 订单商品服务结构体
@@ -111,7 +113,11 @@ func (o *orderProductSrv) CheckOrderProductSauce(productPackage model.ProductPac
 // CheckOrderProductAttribute 检查商品属性,
 // productPackage需要包含ProductPackageAttributeGroups
 // ProductPackageAttributeGroups需要包含ProductPackageAttributes
-func (o *orderProductSrv) CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error {
+func (o *orderProductSrv) CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error {
+	var attributeMap = make(map[uint64][]uint64)
+	for _, attribute := range attributes {
+		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
+	}
 	var groups = productPackage.ProductPackageAttributeGroups
 	for _, group := range groups {
 		var count = uint(len(attributeMap[group.Uuid]))
@@ -158,6 +164,33 @@ func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid 
 	}
 	return invalidProductList, nil
 
+}
+
+// CheckCreateOrderProduct 检查创建订单商品
+func (o *orderProductSrv) CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) {
+	// 检查商品
+	productPackage, err := o.CheckProduct(dbId, product.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	// 检查商品规格
+	if err = o.CheckOrderProductFlavor(productPackage, product.FlavorUuid); err != nil {
+		return nil, err
+	}
+	// 检查商品属性
+	if err = o.CheckOrderProductAttribute(productPackage, product.Attributes); err != nil {
+		return nil, err
+	}
+	// 检查商品加料
+	if err = o.CheckOrderProductSauce(productPackage, product.SauceUuids); err != nil {
+		return nil, err
+	}
+
+	// todo 检查商品规格库存
+
+	// todo 是否必选商品
+
+	return &productPackage, nil
 }
 
 // CreateOrderProductReq 创建订单商品请求
@@ -294,7 +327,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 	orderProduct := model.SaleOrderProduct{
 		Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
 		FlavorName:            flavorName,
-		Num:                   1,
+		Num:                   req.Num,
 		FlavorPrice:           flavorPrice,
 		SaucePrice:            saucePrice,
 		ProductPrice:          productPrice,
