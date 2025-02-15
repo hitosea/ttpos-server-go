@@ -37,7 +37,7 @@ type IOrderSrv interface {
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
 	OrderProductRemark(dbId uint64, staffUuid uint64, source string, req req.OrderProductRemarkReq) (model.SaleBill, error)           // 修改订单商品备注
-	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) error                                                        // 创建销售账单设置
+	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                               // 创建销售账单设置
 }
 
 // orderSrv 订单服务结构
@@ -99,15 +99,20 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 创建销售账单设置
-		err = s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
 		if err != nil {
 			return err
 		}
 
 		// 创建销售订单
+		var serviceFee float64
+		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+			serviceFee = saleBillSetting.ServiceFeeValue
+		}
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
+			ServiceFee:   serviceFee,
 		})
 		if err != nil {
 			return err
@@ -129,21 +134,21 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) error {
+func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(dbId)
 	if err != nil {
-		return err
+		return model.SaleBillSetting{}, err
 	}
 	// 获取税率设置
 	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(dbId)
 	if err != nil {
-		return err
+		return model.SaleBillSetting{}, err
 	}
 	// 获取门店业务设置
 	businessSetting, err := s.settingSrv.GetBusinessSetting(dbId, "")
 	if err != nil {
-		return err
+		return model.SaleBillSetting{}, err
 	}
 
 	var serviceFeeType uint
@@ -152,36 +157,41 @@ func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid 
 	var discountType uint
 	var zero uint
 	var zeroCheckout uint
-	var isStatGift uint = 1
-	var isStatFree uint = 1
+	var isStatGift uint = constant.SaleBillSettingIsStatGiftYes
+	var isStatFree uint = constant.SaleBillSettingIsStatFreeYes
 
 	// 销售账单服务费
 	if serviceFeeSetting.IsOpen == "1" {
 		if serviceFeeSetting.ChargeType == "1" {
-			serviceFeeType = 1
+			serviceFeeType = constant.SaleBillSettingServiceFeeTypeFixed
 		}
 		if serviceFeeSetting.ChargeType == "2" {
 			if serviceFeeSetting.IsOpenTax == "0" {
-				serviceFeeType = 2
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercent
 			}
 			if serviceFeeSetting.IsOpenTax == "1" {
-				serviceFeeType = 3
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
 			}
 		}
 		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
 		if err != nil {
-			return err
+			return model.SaleBillSetting{}, err
 		}
 	}
 
 	// 销售账单税率
 	if taxRateSetting.IsOpen == "1" {
-		taxFeeType = 1
+		if taxRateSetting.CalcType == "1" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercentTax
+		}
+		if taxRateSetting.CalcType == "2" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercent
+		}
 	}
 
 	// 销售账单优惠折扣
 	if businessSetting.DiscountMethod == "20" {
-		discountType = 1
+		discountType = constant.SaleBillSettingDiscountTypeOff
 	}
 
 	// 销售账单优惠折扣自动抹零方式
@@ -194,15 +204,15 @@ func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid 
 
 	// 销售账单赠菜计算方式
 	if businessSetting.GiftMethod == "20" {
-		isStatGift = 0
+		isStatGift = constant.SaleBillSettingIsStatGiftNone
 	}
 
 	// 销售账单免单计算方式
 	if businessSetting.FreeMethod == "20" {
-		isStatFree = 0
+		isStatFree = constant.SaleBillSettingIsStatFreeNone
 	}
 
-	_, err = repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
+	saleBillSetting, err := repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
 		SaleBillUuid:    saleBillUuid,
 		ServiceFeeType:  serviceFeeType,
 		ServiceFeeValue: serviceFeeValue,
@@ -214,7 +224,7 @@ func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid 
 		IsStatFree:      isStatFree,
 	})
 
-	return err
+	return saleBillSetting, err
 }
 
 // CreateDeskOrder 创建桌台订单
@@ -244,15 +254,20 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 创建销售账单设置
-		err = s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
 		if err != nil {
 			return err
 		}
 
 		// 创建销售订单
+		var serviceFee float64
+		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+			serviceFee = saleBillSetting.ServiceFeeValue
+		}
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
+			ServiceFee:   serviceFee,
 		})
 		if err != nil {
 			return err
