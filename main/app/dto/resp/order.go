@@ -33,18 +33,18 @@ type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 
 // 订单列表响应
 type BillLists struct {
-	SaleBillUuid  uint64           `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint             `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
-	IsSplit       bool             `json:"is_split"`       // 是否拆单	false:否 true:是
-	SerialNo      string           `json:"serial_no"`      // 桌位编号 (点餐流水号)
-	OrderNo       string           `json:"order_no"`       // 订单编号
-	Status        uint             `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    int64            `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64          `json:"order_amount"`   // 订单总金额
-	PaymentAmount float64          `json:"payment_amount"` // 支付金额
-	PayTypeName   string           `json:"pay_type_name"`  // 支付类型名称
-	SaleOrders    []BillListsOrder `json:"sale_orders"`    // 订单列表
-	Extra         BillListsExtra   `json:"extra,omitempty"`
+	SaleBillUuid  uint64           `json:"sale_bill_uuid"`  // 销售账单UUID
+	BillType      uint             `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	IsSplit       bool             `json:"is_split"`        // 是否拆单	false:否 true:是
+	SerialNo      string           `json:"serial_no"`       // 桌位编号 (点餐流水号)
+	OrderNo       string           `json:"order_no"`        // 订单编号
+	Status        uint             `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64            `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64          `json:"order_amount"`    // 订单总金额
+	PaymentAmount float64          `json:"payment_amount"`  // 支付金额
+	PayTypeName   string           `json:"pay_type_name"`   // 支付类型名称
+	SaleOrders    []BillListsOrder `json:"sale_orders"`     // 订单列表
+	Extra         BillListsExtra   `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
 
 // 订单列表分页响应
@@ -134,5 +134,5 @@ type OrderInfosResp struct {
 	OperationLog struct {
 		List []OrderOperationLog
 	} `json:"operation_log"` // 操作日志
-	Extra BillListsExtra `json:"extra"`
+	Extra BillListsExtra `json:"extra"` // 通过当前数据控制按钮是否显示
 }

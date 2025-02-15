@@ -3941,7 +3941,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "extra": {
-                    "$ref": "#/definitions/resp.BillListsExtra"
+                    "description": "通过当前数据控制按钮是否显示",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BillListsExtra"
+                        }
+                    ]
                 },
                 "finish_time": {
                     "description": "完成时间（支付时间）（时间戳）",
@@ -4698,7 +4703,12 @@ const docTemplate = `{
                     ]
                 },
                 "extra": {
-                    "$ref": "#/definitions/resp.BillListsExtra"
+                    "description": "通过当前数据控制按钮是否显示",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BillListsExtra"
+                        }
+                    ]
                 },
                 "operation_log": {
                     "description": "操作日志",

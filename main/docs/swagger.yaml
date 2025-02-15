@@ -450,7 +450,9 @@ definitions:
         description: "订单类型\t0:桌台订单 1:点餐订单"
         type: integer
       extra:
-        $ref: '#/definitions/resp.BillListsExtra'
+        allOf:
+        - $ref: '#/definitions/resp.BillListsExtra'
+        description: 通过当前数据控制按钮是否显示
       finish_time:
         description: 完成时间（支付时间）（时间戳）
         type: integer
@@ -971,7 +973,9 @@ definitions:
         - $ref: '#/definitions/resp.OrderInfos'
         description: 明细
       extra:
-        $ref: '#/definitions/resp.BillListsExtra'
+        allOf:
+        - $ref: '#/definitions/resp.BillListsExtra'
+        description: 通过当前数据控制按钮是否显示
       operation_log:
         description: 操作日志
         properties:
