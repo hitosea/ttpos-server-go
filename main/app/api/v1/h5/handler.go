@@ -96,7 +96,7 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.H5Response{data=resp.H5CategoryList}
-// @Router index.php/scan/product.category/index [post]
+// @Router /scan/product.category/index [post]
 func (h *H5Handler) GetCategoryList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	list, err := h.service.GetCategoryList(ctx)
