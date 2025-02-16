@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 
 	"github.com/gin-gonic/gin"
 
@@ -107,7 +108,8 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), cc, []dto.LanguageItem{})
+		ctx := context.NewContext(context.WithGinContext(cc))
+		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), []dto.LanguageItem{})
 		if err != nil {
 			return err
 		}

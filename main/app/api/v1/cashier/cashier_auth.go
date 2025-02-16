@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,6 +35,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
 		return
 	}
+	setting.NewCommonCache().SetBaseUrl(utils.GetBaseURL(c.Request)) // 设置基础url到缓存中
 	loginRequest.Source = constant.SourceCashier
 	token, err := h.authSrv.Login(loginRequest, c.Copy())
 	if err != nil {

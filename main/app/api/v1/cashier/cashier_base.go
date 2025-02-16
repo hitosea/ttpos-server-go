@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -49,7 +50,8 @@ func (h *BaseHandler) GetCashierBase(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.LanguageResp}
 // @Router /cashier/language [get]
 func (h *BaseHandler) GetLanguage(c *gin.Context) {
-	language, err := h.settingSrv.GetCashierLanguage(helper.GetCompanyUuid(c))
+	ctx := context.NewContextByGin(c)
+	language, err := h.settingSrv.GetCashierLanguage(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -67,7 +69,8 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.Ads}
 // @Router /cashier/ad [get]
 func (h *BaseHandler) GetAd(c *gin.Context) {
-	ads, err := h.settingSrv.GetCashierAd(helper.GetCompanyUuid(c), c.Copy())
+	ctx := context.NewContextByGin(c.Copy())
+	ads, err := h.settingSrv.GetCashierAd(ctx, helper.GetCompanyUuid(c))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -91,7 +94,8 @@ func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeCashBox, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	ctx := context.NewContextByGin(c.Copy())
+	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeCashBox, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -115,7 +119,8 @@ func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeAdvanced, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	ctx := context.NewContextByGin(c.Copy())
+	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeAdvanced, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -139,7 +144,8 @@ func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(constant.PasswordTypeLock, passwordReq.Password, helper.GetCompanyUuid(c), c.Copy())
+	ctx := context.NewContextByGin(c)
+	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeLock, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {

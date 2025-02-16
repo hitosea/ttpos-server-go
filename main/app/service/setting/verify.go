@@ -14,7 +14,7 @@ func (s *Srv) VerifyAdvancedPassword(companyUuid uint64, password string) error 
 		if password == "" {
 			return errors.New("请输入确认密码")
 		}
-		cashier, err := s.GetCashierSetting(companyUuid, "", nil, nil)
+		cashier, err := s.GetCashierSetting(nil, companyUuid, "", nil)
 		if err != nil {
 			return err
 		}

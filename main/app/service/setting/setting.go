@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -33,23 +34,23 @@ type GetSettingReq struct {
 }
 
 type ISrv interface {
-	GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error)                 // 获取所有设置，性能问题慎用
-	GetStoreSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Store, error)                                          // 获取商家设置
-	GetStoreLanguageList(companyUuid uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error)                                // 获取商家语言
-	GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Printer, error)     // 获取打印机设置
-	GetCashierSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Cashier, error)     // 获取收银机设置
-	GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Assistant, error) // 获取点餐助手设置
-	GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
-	GetBusinessSetting(companyUuid uint64, language string) (setting.Business, error)                                                     // 获取门店业务设置
-	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                     // 获取自助餐设置
-	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                      // 获取货币单位设置
-	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                   // 获取公司设置
-	GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error)                                                                     // 获取收银机语言
-	GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error)                                                                   // 获取收银机副屏广告
-	CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool                                          // 收银机验证密码
-	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
-	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                     // 验证高级密码
-	CheckUpdate(appType int, brand string, language string) (resp.UpdateInfo, error)                                                      // 检查更新
+	GetAll(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (map[string]any, error)                 // 获取所有设置，性能问题慎用
+	GetStoreSetting(c context.Context, companyUuid uint64, language string) (setting.Store, error)                                          // 获取商家设置
+	GetStoreLanguageList(c context.Context, companyUuid uint64, language string) ([]dto.LanguageItem, error)                                // 获取商家语言
+	GetPrinterSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Printer, error)     // 获取打印机设置
+	GetCashierSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Cashier, error)     // 获取收银机设置
+	GetAssistantSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Assistant, error) // 获取点餐助手设置
+	GetH5Setting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.H5, error)               // 获取扫码H5设置
+	GetBusinessSetting(companyUuid uint64, language string) (setting.Business, error)                                                       // 获取门店业务设置
+	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                       // 获取自助餐设置
+	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                        // 获取货币单位设置
+	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                     // 获取公司设置
+	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                                                        // 获取收银机语言
+	GetCashierAd(c context.Context, companyUuid uint64) (resp.Ads, error)                                                                   // 获取收银机副屏广告
+	CashierVerifyPassword(c context.Context, typ string, password string, companyUuid uint64) bool                                          // 收银机验证密码
+	Updates(companyUuid uint64, settingKey string, values any) error                                                                        // 更新设置
+	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                       // 验证高级密码
+	CheckUpdate(appType int, brand string, language string) (resp.UpdateInfo, error)                                                        // 检查更新
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -98,7 +99,7 @@ func (s *Srv) fromCache(companyUuid uint64) ([]model.Setting, error) {
 }
 
 // GetAll 获取所有设置
-func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.LanguageItem, cc *gin.Context) (map[string]any, error) {
+func (s *Srv) GetAll(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (map[string]any, error) {
 
 	// 获取company_setting
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
@@ -128,6 +129,7 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 	var isShowScanSoldOut, isShowAssistantSoldOut int
 
 	for _, st := range settings {
+		ginContext := c.GetGinContext()
 		switch st.Key {
 		case constant.SettingPrinter: // 小票打印机设置
 			var printer setting.Printer
@@ -163,11 +165,11 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 				logger.Logger.Error("合并商城设置失败", zap.Error(err))
 				return nil, errors.New("合并商城设置失败")
 			}
-			if tmp.LogoURL != "" && cc != nil {
-				tmp.LogoURL = utils.GetBaseURL(cc.Request) + tmp.LogoURL
+			if tmp.LogoURL != "" && ginContext != nil {
+				tmp.LogoURL = utils.GetBaseURL(ginContext.Request) + tmp.LogoURL
 			}
-			if tmp.AvatarURL != "" && cc != nil {
-				tmp.AvatarURL = utils.GetBaseURL(cc.Request) + tmp.AvatarURL
+			if tmp.AvatarURL != "" && ginContext != nil {
+				tmp.AvatarURL = utils.GetBaseURL(ginContext.Request) + tmp.AvatarURL
 			}
 
 			retSettings[constant.SettingStore] = tmp
@@ -332,9 +334,9 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 			}
 
 			// 滚动图/视频处理
-			if len(cashier.Carousel) > 0 && cc != nil {
+			if len(cashier.Carousel) > 0 && ginContext != nil {
 				for i, item := range cashier.Carousel {
-					cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(cc.Request), true)
+					cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
 				}
 			}
 			tmp := s.getDefaultCashier(languageList)
@@ -369,9 +371,9 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 				return nil, errors.New("解析各端-平板端设置失败")
 			}
 			// 滚动图/视频处理
-			if len(tablet.Carousel) > 0 && cc != nil {
+			if len(tablet.Carousel) > 0 && ginContext != nil {
 				for i, item := range tablet.Carousel {
-					tablet.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(cc.Request), true)
+					tablet.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
 				}
 			}
 			tmp := s.getDefaultTablet(languageList)
@@ -478,8 +480,8 @@ func (s *Srv) GetAll(companyUuid uint64, language string, languageList []dto.Lan
 }
 
 // GetStoreLanguageList 获取商家语言列表
-func (s *Srv) GetStoreLanguageList(companyId uint64, language string, cc *gin.Context) ([]dto.LanguageItem, error) {
-	set, err := s.GetStoreSetting(companyId, language, cc)
+func (s *Srv) GetStoreLanguageList(c context.Context, companyId uint64, language string) ([]dto.LanguageItem, error) {
+	set, err := s.GetStoreSetting(c, companyId, language)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +502,7 @@ func (s *Srv) getSettingByKey(companyUuid uint64, key string) model.Setting {
 }
 
 // GetStoreSetting 获取商家设置
-func (s *Srv) GetStoreSetting(companyUuid uint64, language string, cc *gin.Context) (setting.Store, error) {
+func (s *Srv) GetStoreSetting(c context.Context, companyUuid uint64, language string) (setting.Store, error) {
 	var store setting.Store
 	st := s.getSettingByKey(companyUuid, constant.SettingStore)
 	err := json.Unmarshal([]byte(st.Values), &store)
@@ -518,23 +520,24 @@ func (s *Srv) GetStoreSetting(companyUuid uint64, language string, cc *gin.Conte
 		logger.Logger.Error("合并商城设置失败", zap.Error(err))
 		return store, errors.New("合并商城设置失败")
 	}
-	if defaultStore.LogoURL != "" && cc != nil {
-		defaultStore.LogoURL = utils.GetBaseURL(cc.Request) + defaultStore.LogoURL
+	ginContext := c.GetGinContext()
+	if defaultStore.LogoURL != "" && ginContext != nil {
+		defaultStore.LogoURL = utils.GetBaseURL(ginContext.Request) + defaultStore.LogoURL
 	}
-	if defaultStore.AvatarURL != "" && cc != nil {
-		defaultStore.AvatarURL = utils.GetBaseURL(cc.Request) + defaultStore.AvatarURL
+	if defaultStore.AvatarURL != "" && ginContext != nil {
+		defaultStore.AvatarURL = utils.GetBaseURL(ginContext.Request) + defaultStore.AvatarURL
 	}
 	return defaultStore, nil
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Srv) GetPrinterSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Printer, error) {
+func (s *Srv) GetPrinterSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Printer, error) {
 	var (
 		err     error
 		printer setting.Printer
 	)
 	if languageList == nil {
-		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		languageList, err = s.GetStoreLanguageList(c, companyUuid, language)
 		if err != nil {
 			return printer, err
 		}
@@ -619,13 +622,13 @@ func (s *Srv) GetCurrencySetting(companyUuid uint64) (setting.Currency, error) {
 }
 
 // GetCashierSetting 获取收银机设置
-func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Cashier, error) {
+func (s *Srv) GetCashierSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Cashier, error) {
 	var (
 		err     error
 		cashier setting.Cashier
 	)
 	if languageList == nil {
-		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		languageList, err = s.GetStoreLanguageList(c, companyUuid, language)
 		if err != nil {
 			return cashier, err
 		}
@@ -638,9 +641,10 @@ func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Con
 	}
 
 	// 滚动图/视频处理
-	if len(cashier.Carousel) > 0 && cc != nil {
+	ginContext := c.GetGinContext()
+	if len(cashier.Carousel) > 0 && ginContext != nil {
 		for i, item := range cashier.Carousel {
-			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(cc.Request), true)
+			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
 		}
 	}
 	defaultCashier := s.getDefaultCashier(languageList)
@@ -659,13 +663,13 @@ func (s *Srv) GetCashierSetting(companyUuid uint64, language string, cc *gin.Con
 }
 
 // GetAssistantSetting 获取点餐助手设置
-func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.Assistant, error) {
+func (s *Srv) GetAssistantSetting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Assistant, error) {
 	var (
 		err       error
 		assistant setting.Assistant
 	)
 	if languageList == nil {
-		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		languageList, err = s.GetStoreLanguageList(c, companyUuid, language)
 		if err != nil {
 			return assistant, err
 		}
@@ -704,13 +708,13 @@ func (s *Srv) GetAssistantSetting(companyUuid uint64, language string, cc *gin.C
 }
 
 // GetH5Setting 获取点餐助手设置
-func (s *Srv) GetH5Setting(companyUuid uint64, language string, cc *gin.Context, languageList []dto.LanguageItem) (setting.H5, error) {
+func (s *Srv) GetH5Setting(c context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.H5, error) {
 	var (
 		err error
 		h5  setting.H5
 	)
 	if languageList == nil {
-		languageList, err = s.GetStoreLanguageList(companyUuid, language, cc)
+		languageList, err = s.GetStoreLanguageList(c, companyUuid, language)
 		if err != nil {
 			return h5, err
 		}
@@ -751,8 +755,8 @@ func (s *Srv) GetCompanySetting(companyUuid uint64) (model.CompanySetting, error
 }
 
 // GetCashierLanguage 获取收银机语言
-func (s *Srv) GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error) {
-	cashierSetting, err := s.GetCashierSetting(companyUuid, "", nil, nil)
+func (s *Srv) GetCashierLanguage(c context.Context) (resp.LanguageResp, error) {
+	cashierSetting, err := s.GetCashierSetting(c, c.GetCompanyUuid(), "", nil)
 	if err != nil {
 		return resp.LanguageResp{}, errors.New("获取语言失败")
 	}
@@ -764,8 +768,8 @@ func (s *Srv) GetCashierLanguage(companyUuid uint64) (resp.LanguageResp, error) 
 }
 
 // GetCashierAd 获取收银机副屏广告
-func (s *Srv) GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error) {
-	cashierSetting, err := s.GetCashierSetting(companyUuid, "", cc, nil)
+func (s *Srv) GetCashierAd(c context.Context, companyUuid uint64) (resp.Ads, error) {
+	cashierSetting, err := s.GetCashierSetting(c, companyUuid, "", nil)
 	if err != nil {
 		return resp.Ads{List: make([]setting.CarouselItem, 0)}, errors.New("获取副屏广告失败")
 	}
@@ -775,8 +779,8 @@ func (s *Srv) GetCashierAd(companyUuid uint64, cc *gin.Context) (resp.Ads, error
 }
 
 // CashierVerifyPassword 收银机验证密码
-func (s *Srv) CashierVerifyPassword(typ string, password string, companyUuid uint64, cc *gin.Context) bool {
-	cashierSetting, err := s.GetCashierSetting(companyUuid, "", cc, nil)
+func (s *Srv) CashierVerifyPassword(c context.Context, typ string, password string, companyUuid uint64) bool {
+	cashierSetting, err := s.GetCashierSetting(c, companyUuid, "", nil)
 	if err != nil {
 		return false
 	}

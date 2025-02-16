@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 
 	"github.com/gin-gonic/gin"
 	"ttpos-server-go/app/constant"
@@ -240,7 +241,8 @@ func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 		return cashierBase, errors.New("当前无权限，请联系管理员")
 	}
 	language := i18n.GetAcceptLanguage(cc)
-	cashierSetting, err := s.settingSrv.GetCashierSetting(company.Uuid, language, cc, nil)
+	ctx := context.NewContext(context.WithGinContext(cc))
+	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, company.Uuid, language, nil)
 	if err != nil {
 		return cashierBase, err
 	}
@@ -366,7 +368,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 
 // 检查收银是否开启
 func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil, []dto.LanguageItem{})
+	cashierSetting, err := s.settingSrv.GetCashierSetting(context.NewDefaultContext(), companyUuid, "", []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}
@@ -378,7 +380,7 @@ func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
 
 // 检查桌台功能是否开启
 func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(companyUuid, "", nil, []dto.LanguageItem{})
+	cashierSetting, err := s.settingSrv.GetCashierSetting(context.NewDefaultContext(), companyUuid, "", []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}
