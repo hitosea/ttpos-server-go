@@ -10,8 +10,6 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 
-	"github.com/gin-gonic/gin"
-
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	apperrors "ttpos-server-go/app/errors"
@@ -21,7 +19,7 @@ import (
 )
 
 type IBindRecordSrv interface {
-	Add(addReq req.AddBindRecordReq, cc *gin.Context) error                            // 添加绑定记录
+	Add(ctx context.Context, addReq req.AddBindRecordReq) error                        // 添加绑定记录
 	Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error // 解绑
 	GetRemark(companyUuid uint64, source string, deviceId string) string               // 获取设备绑定备注
 	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool              // 设备是否绑定
@@ -43,7 +41,7 @@ func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) *Bin
 	}
 }
 
-func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error {
+func (s *BindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) error {
 	if !slices.Contains([]string{constant.SourceCashier, constant.SourceTablet, constant.SourceKitchen, constant.SourceAssistant}, addReq.Source) ||
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
@@ -108,8 +106,7 @@ func (s *BindRecordSrv) Add(addReq req.AddBindRecordReq, cc *gin.Context) error 
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		ctx := context.NewContext(context.WithGinContext(cc))
-		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, addReq.CompanyUuid, i18n.GetAcceptLanguage(cc), []dto.LanguageItem{})
+		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, addReq.CompanyUuid, i18n.GetAcceptLanguage(ctx.GetGinContext()), []dto.LanguageItem{})
 		if err != nil {
 			return err
 		}

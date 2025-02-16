@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +36,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	loginRequest.Source = constant.SourceAssistant
-	token, err := h.authSrv.Login(loginRequest, c.Copy())
+
+	token, err := h.authSrv.Login(context.NewContextByGin(c.Copy()), loginRequest)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -53,7 +55,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /assistant/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	err := h.authSrv.Logout(c.Copy())
+	err := h.authSrv.Logout(context.NewContextByGin(c.Copy()))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -77,7 +79,7 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	token, err := h.authSrv.BindCashier(bindReq, c.Copy())
+	token, err := h.authSrv.BindCashier(context.NewContextByGin(c.Copy()), bindReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -108,7 +110,7 @@ func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
 // @Router /assistant/base [get]
 func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
-	info, err := h.authSrv.AssistantBase(c.Copy())
+	info, err := h.authSrv.AssistantBase(context.NewContextByGin(c.Copy()))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return

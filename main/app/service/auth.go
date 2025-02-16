@@ -21,17 +21,15 @@ import (
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
-
-	"github.com/gin-gonic/gin"
 )
 
 type IAuthSrv interface {
-	Login(loginReq req.LoginReq, cc *gin.Context) (string, error)                            // 登录
-	Logout(cc *gin.Context) error                                                            // 退出登录
-	CashierBase(cc *gin.Context) (resp.CashierBase, error)                                   // 收银端基本信息
-	AssistantBase(cc *gin.Context) (resp.AssistantBase, error)                               // 点餐助手端基本信息
+	Login(ctx context.Context, loginReq req.LoginReq) (string, error)                        // 登录
+	Logout(ctx context.Context) error                                                        // 退出登录
+	CashierBase(ctx context.Context) (resp.CashierBase, error)                               // 收银端基本信息
+	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                           // 点餐助手端基本信息
 	Auth(authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
-	BindCashier(cashierReq req.BindCashierReq, cc *gin.Context) (string, error)              // 点餐助手绑定收银机
+	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)          // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                             // 获取在线收银机
 }
 
@@ -97,10 +95,10 @@ func NewAuthSrvImpl(
 }
 
 // Login 登录
-func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) {
+func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, error) {
 	var token string
 	// 验证验证码
-	if !s.captchaSrv.Verify(cc.GetHeader("X-Sign"), loginReq.Code) {
+	if !s.captchaSrv.Verify(ctx.GetGinContext().GetHeader("X-Sign"), loginReq.Code) {
 		return token, errors.New("验证码错误")
 	}
 	var staff model.Staff
@@ -187,14 +185,14 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 	}
 
 	// 添加绑定记录
-	err := s.bindRecordSrv.Add(req.AddBindRecordReq{
+	err := s.bindRecordSrv.Add(ctx, req.AddBindRecordReq{
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
 		Source:           loginReq.Source,
 		FinallyLoginUuid: staff.Uuid,
 		FinallyLoginTime: time.Now().Unix(),
 		CompanyUuid:      staff.CompanyUuid,
-	}, cc)
+	})
 	if err != nil {
 		return token, err
 	}
@@ -208,11 +206,11 @@ func (s *AuthSrv) Login(loginReq req.LoginReq, cc *gin.Context) (string, error) 
 }
 
 // Logout 退出登录
-func (s *AuthSrv) Logout(cc *gin.Context) error {
-	companyUuid := helper.GetCompanyUuid(cc)
-	source := helper.GetSource(cc)
-	staffUuid := cc.GetUint64(jwt.StaffUuid)
-	assistantUuid := cc.GetUint64(jwt.AssistantStaffUuid)
+func (s *AuthSrv) Logout(ctx context.Context) error {
+	companyUuid := helper.GetCompanyUuid(ctx.GetGinContext())
+	source := helper.GetSource(ctx.GetGinContext())
+	staffUuid := ctx.GetGinContext().GetUint64(jwt.StaffUuid)
+	assistantUuid := ctx.GetGinContext().GetUint64(jwt.AssistantStaffUuid)
 
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	if source == constant.SourceAssistant && assistantUuid != 0 {
@@ -223,14 +221,14 @@ func (s *AuthSrv) Logout(cc *gin.Context) error {
 }
 
 // CashierBase 获取收银端基本信息
-func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
+func (s *AuthSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	var cashierBase resp.CashierBase
-	company := helper.GetCompany(cc)
-	companySetting := helper.GetCompanySetting(cc)
-	staff := helper.GetStaff(cc)
+	company := helper.GetCompany(ctx.GetGinContext())
+	companySetting := helper.GetCompanySetting(ctx.GetGinContext())
+	staff := helper.GetStaff(ctx.GetGinContext())
 	var (
-		source   = helper.GetSource(cc)
-		deviceId = cc.GetString(jwt.DeviceId)
+		source   = helper.GetSource(ctx.GetGinContext())
+		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
 	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
@@ -241,8 +239,7 @@ func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 	if len(permissions) == 0 {
 		return cashierBase, errors.New("当前无权限，请联系管理员")
 	}
-	language := i18n.GetAcceptLanguage(cc)
-	ctx := context.NewContext(context.WithGinContext(cc))
+	language := i18n.GetAcceptLanguage(ctx.GetGinContext())
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, company.Uuid, language, nil)
 	if err != nil {
 		return cashierBase, err
@@ -277,12 +274,12 @@ func (s *AuthSrv) CashierBase(cc *gin.Context) (resp.CashierBase, error) {
 }
 
 // AssistantBase 获取收银端基本信息
-func (s *AuthSrv) AssistantBase(cc *gin.Context) (resp.AssistantBase, error) {
-	company := helper.GetCompany(cc)
-	staff := helper.GetStaff(cc)
+func (s *AuthSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
+	company := helper.GetCompany(ctx.GetGinContext())
+	staff := helper.GetStaff(ctx.GetGinContext())
 	var (
-		source   = helper.GetSource(cc)
-		deviceId = cc.GetString(jwt.DeviceId)
+		source   = helper.GetSource(ctx.GetGinContext())
+		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
 	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
 	return resp.AssistantBase{
@@ -390,10 +387,10 @@ func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
 }
 
 // BindCashier 绑定收银机
-func (s *AuthSrv) BindCashier(bindReq req.BindCashierReq, cc *gin.Context) (string, error) {
+func (s *AuthSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, error) {
 	var newToken string
-	companyUuid := helper.GetCompanyUuid(cc)
-	if helper.GetSource(cc) != constant.SourceAssistant {
+	companyUuid := helper.GetCompanyUuid(ctx.GetGinContext())
+	if helper.GetSource(ctx.GetGinContext()) != constant.SourceAssistant {
 		return newToken, errors.New("用户信息错误")
 	}
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
@@ -421,8 +418,8 @@ func (s *AuthSrv) BindCashier(bindReq req.BindCashierReq, cc *gin.Context) (stri
 	}
 	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
 	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{
-		DeviceId:  cc.GetString(jwt.DeviceId),
-		StaffUuid: cc.GetUint64(jwt.StaffUuid),
+		DeviceId:  ctx.GetGinContext().GetString(jwt.DeviceId),
+		StaffUuid: ctx.GetGinContext().GetUint64(jwt.StaffUuid),
 	})
 	if err != nil {
 		return newToken, errors.New("生成token失败")

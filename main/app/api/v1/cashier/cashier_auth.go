@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -34,7 +35,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	loginRequest.Source = constant.SourceCashier
-	token, err := h.authSrv.Login(loginRequest, c.Copy())
+	token, err := h.authSrv.Login(context.NewContextByGin(c.Copy()), loginRequest)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -52,7 +53,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	err := h.authSrv.Logout(c.Copy())
+	err := h.authSrv.Logout(context.NewContextByGin(c.Copy()))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return

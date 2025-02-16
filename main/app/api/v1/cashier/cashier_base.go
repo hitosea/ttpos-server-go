@@ -32,7 +32,7 @@ type BaseHandler struct {
 // @Success 200 {object} dto.Response{data=resp.CashierBase}
 // @Router /cashier/base [get]
 func (h *BaseHandler) GetCashierBase(c *gin.Context) {
-	info, err := h.authSrv.CashierBase(c.Copy())
+	info, err := h.authSrv.CashierBase(context.NewContextByGin(c.Copy()))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
