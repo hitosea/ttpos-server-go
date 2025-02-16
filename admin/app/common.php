@@ -73,40 +73,52 @@ function base_url()
 }
 
 // 生成验签
-function signToken($uid, $type, $device_id = '', $pwd = '', $sign = '')
+function signToken($uid, $source, $device_id = '', $pwd = '', $company_uuid = 0)
 {
-    $exp = ($type == 'admin' || $type == 'shop') ? 36000 : (30 * 86400 * 1200);
-    $key = Config::get('app.salt') . $type;     //这里是自定义的一个随机字串，应该写在config文件中的，解密时也会用，相当    于加密中常用的 盐  salt
+    $exp = ($source == 'admin' || $source == 'shop') ? 36000 : (30 * 86400 * 1200);
+    $key = Config::get('app.salt');     //这里是自定义的一个随机字串，应该写在config文件中的，解密时也会用，相当    于加密中常用的 盐  salt
     $token = array(
-        "iss" => $key,                          //签发者 可以为空
-        "aud" => '',                            //面象的用户，可以为空
         "iat" => time(),                        //签发时间
         "nbf" => time() + 3,                    //在什么时候jwt开始生效  （这里表示生成100秒后才生效）
         "exp" => time() + $exp,                 //token 过期时间改为1200个月 86400=24小时 36000=10小时
-        "data" => [                             //记录的userid的信息，这里是自已添加上去的，如果有其它信息，可以再添加数组的键值对
-            'uid' => $uid,
-            'type' => $type,
-            'device_id' => $device_id,
-            'pwd' => $pwd,
-            'sign' => $sign,
-        ]
+        'pwd' => $pwd,
+        'source' => $source,
+        'device_id' => $device_id . '',
+        'staff_uuid' => $uid,
+        'company_uuid' => $company_uuid,
     );
-
     $jwt = JWT::encode($token, $key, "HS256");  //根据参数生成了 token
     return $jwt;
 }
 
 // 验证token
+/**
+ * 验证JWT token的有效性和类型
+ *
+ * @param string $token JWT token字符串
+ * @param string $type 需要验证的token类型
+ * @return array 返回包含验证状态的数组
+ */
 function checkToken($token, $type)
 {
-    $key = Config::get('app.salt') . $type;
+    $key = Config::get('app.salt');
     $status = array("code" => -1);
     try {
         JWT::$leeway = 60; //当前时间减去60，把时间留点余地
         $decoded = JWT::decode($token, new Key($key, 'HS256')); //HS256方式，这里要和签发的时候对应
         $arr = json_decode(json_encode($decoded), 1);
         $res['code'] = 1;
-        $res['data'] = $arr['data'];
+        $res['data'] = [                             //记录的userid的信息，这里是自已添加上去的，如果有其它信息，可以再添加数组的键值对
+            'uid' => $arr['staff_uuid'],
+            'type' => $arr['source'],
+            'pwd' => $arr['pwd'],
+            'device_id' => $arr['device_id'],
+            'company_uuid' => $arr['company_uuid'],
+        ];
+        if ($res['data']['type'] != $type){
+            $status['msg'] = "签名不正确";
+            return $status;
+        }
         return $res;
     } catch (\Firebase\JWT\SignatureInvalidException $e) { //签名不正确
         $status['msg'] = "签名不正确";

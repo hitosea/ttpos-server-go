@@ -25,7 +25,7 @@ use app\common\model\order\OrderProduct as OrderProductModel;
 class UserShiftLog extends BaseModel
 {
 
-    protected $name = 'shop_user_shift_log';
+    protected $name = 'staff_shift_log';
     protected $pk = 'id';
 
     /**
@@ -122,16 +122,16 @@ class UserShiftLog extends BaseModel
         $startTime = isset($params['create_time'][0]) ? strtotime($params['create_time'][0]) : 0;
         $endTime = isset($params['create_time'][1]) ? strtotime($params['create_time'][1] . ' 23:59:59') : 0;
         $model = $this;
-        $model = $model->alias('a')->leftJoin('shop_user su', 'a.shift_user_id = su.shop_user_id');
+        $model = $model->alias('a')->leftJoin('staff su', 'a.staff_uuid = su.uuid');
 
         if ($username) {
             $model = $model->where(function ($q) use ($username) {
-                $q->like('su.user_name|su.real_name', $username);
+                $q->like('su.username|su.real_name', $username);
             });
         }
 
         if ($userId) {
-            $model = $model->where('a.shift_user_id', '=', $userId);
+            $model = $model->where('a.uuid', '=', $userId);
         }
 
         if ($startTime && $endTime) {
@@ -140,7 +140,7 @@ class UserShiftLog extends BaseModel
 
         $orderSort = ['a.create_time' => 'desc'];
         $list = $model->with(['user' => function ($query) {
-            $query->field('shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
+            $query->field('uuid as shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
         }])
             ->field("a.*")
             ->where('a.status', 1)
@@ -433,11 +433,11 @@ class UserShiftLog extends BaseModel
     public function getExistUserList($limit = 1000)
     {
         return (new User)->alias('u')
-            ->field('u.shop_user_id, u.user_name, IF(u.real_name = "", u.user_name, u.real_name) as real_name')
-            ->join('shop_user_shift_log s', 'u.shop_user_id = s.shift_user_id')
+            ->field('u.uuid as shop_user_id, u.username as user_name, IF(u.real_name = "", u.username, u.real_name) as real_name')
+            ->join('staff_shift_log s', 'u.uuid = s.staff_uuid')
             ->where('s.id', '>', 0)
             ->where('s.status', '>', 0)
-            ->group('u.shop_user_id')
+            ->group('u.uuid')
             ->order(['u.create_time' => 'desc'])
             ->paginate($limit);
     }

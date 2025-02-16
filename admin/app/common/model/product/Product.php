@@ -25,7 +25,29 @@ class Product extends BaseModel
 {
     protected $name = 'product_package';
     protected $pk = 'id';
-    protected $append = ['product_id', 'product_sales', 'product_name_text', 'product_unit_text'];
+    protected $append = [
+        'type',
+        'product_id',
+        'product_name',
+        'product_price',
+        'category_id',
+        'special_id',
+        'erp_supplier_id',
+        'img_name',
+        'unit_id',
+        'label_id',
+        'feed_required',
+        'feed_open_max_select',
+        'feed_max_select',
+        'selling_point',
+        'is_enable_grade',
+        'is_alone_grade',
+        'product_sort',
+        'product_status',
+        'product_sales',
+        'product_name_text',
+        'product_unit_text',
+    ];
 
     /*
      * 类型 10-成品 20-材料
@@ -34,11 +56,81 @@ class Product extends BaseModel
     const TYPE_MATERIAL = 20;
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
+    public function getTypeAttr($value, $data = [])
+    {
+        return 10;
+    }
     public function getProductIdAttr($value, $data = [])
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
+    }
+    public function getProductNameAttr($value, $data = [])
+    {
+        return $this->getData('name') ?: '';
+    }
+    public function getCategoryIdAttr($value, $data = [])
+    {
+        return $this->category_uuid ?: 0;
+    }
+    public function getSpecialIdAttr($value, $data = [])
+    {
+        return $this->special_category_uuid ?: 0;
+    }
+    public function getErpSupplierIdAttr($value, $data = [])
+    {
+        return $this->supplier_uuid ?: 0;
+    }
+    public function getImgNameAttr($value, $data = [])
+    {
+        return $this->image_name ?: '';
+    }
+    public function getUnitIdAttr($value, $data = [])
+    {
+        return $this->unit_uuid ?: 0;
+    }
+    public function getLabelIdAttr($value, $data = [])
+    {
+        return $this->printer_tag_uuid ?: 0;
+    }
+    public function getDeductStockTypeAttr($value, $data = [])
+    {
+        return $value ? 10 : 20;
+    }
+    public function getFeedRequiredAttr($value, $data = [])
+    {
+        return $this->sauce_required ?: 0;
+    }
+    public function getFeedOpenMaxSelectAttr($value, $data = [])
+    {
+        return $this->sauce_max_selection ? 1 : 0;
+    }
+    public function getFeedMaxSelectAttr($value, $data = [])
+    {
+        return $this->sauce_max_selection ?: 0;
+    }
+    public function getSellingPointAttr($value, $data = [])
+    {
+        return $this->describe ?: '';
+    }
+    public function getIsEnableGradeAttr($value, $data = [])
+    {
+        return $this->open_discount ?: 0;
+    }
+    public function getProductStatusAttr($value, $data)
+    {
+        $value = $this->status ? 10 : 20;
+        $status = [10 => __('上架'), 20 => __('下架')];
+        return ['text' => $status[$value], 'value' => $value];
+    }
+    public function getProductSortAttr($value, $data)
+    {
+        return $this->sort ?: 0;
+    }
+    public function getIsAloneGradeAttr($value, $data)
+    {
+        return 0;
     }
 
     /**
@@ -62,7 +154,7 @@ class Product extends BaseModel
      */
     public static function getProductNameTextAttr($value, $data = [])
     {
-        return extractLanguage($value ?: $data['product_name'] ?? '');
+        return extractLanguage($value ?: $data['name'] ?? '');
     }
 
     /**
@@ -70,9 +162,8 @@ class Product extends BaseModel
      */
     public function getProductUnitTextAttr($value, $data)
     {
-        return extractLanguage($data['product_unit'] ?? '');
+        return extractLanguage($value ?: $data['product_unit'] ?? '');
     }
-
 
     /**
      * 获取单位规格名称
@@ -81,7 +172,6 @@ class Product extends BaseModel
     {
         return extractLanguage($data['spec_name'] ?? '');
     }
-
 
     /**
      * 属性
@@ -169,7 +259,7 @@ class Product extends BaseModel
      */
     public function category()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Category');
+        return $this->belongsTo('app\\common\\model\\product\\Category', 'category_uuid', 'uuid');
     }
 
     /**
@@ -185,7 +275,7 @@ class Product extends BaseModel
      */
     public function sku()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductSku')->order(['product_sku_id' => 'asc'])->with(['material']);
+        return $this->hasMany('app\\common\\model\\product\\ProductBom', 'product_package_uuid', 'uuid')->where('product_flavor_uuid', '>', 0)->order(['uuid' => 'asc']);
     }
 
     /**
@@ -193,7 +283,7 @@ class Product extends BaseModel
      */
     public function feed()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductFeed')->order(['product_feed_id' => 'asc'])->with(['material']);
+        return $this->hasMany('app\\common\\model\\product\\ProductBom', 'product_package_uuid', 'uuid')->where('product_sauce_uuid', '>', 0)->order(['uuid' => 'asc']);
     }
 
     /**
@@ -201,7 +291,7 @@ class Product extends BaseModel
      */
     public function image()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductImage')->order(['id' => 'asc']);
+        return $this->hasMany('app\\common\\model\\file\\UploadFile', 'uuid', 'image_file_uuid')->order(['id' => 'asc']);
     }
 
     /**
@@ -217,8 +307,7 @@ class Product extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')
-            ->field(['shop_supplier_id', 'name', 'address', 'logo']);
+        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')->field(['shop_supplier_id', 'name', 'address', 'logo']);
     }
 
     /**
@@ -259,15 +348,6 @@ class Product extends BaseModel
     public function productTaxes()
     {
         return $this->hasMany('app\\common\\model\\product\\ProductTax', 'product_id', 'product_id');
-    }
-
-    /**
-     * 商品状态
-     */
-    public function getProductStatusAttr($value, $data)
-    {
-        $status = [10 => __('上架'), 20 => __('下架')];
-        return ['text' => $status[$value], 'value' => $value];
     }
 
     /**
@@ -701,102 +781,110 @@ class Product extends BaseModel
             'special_id' => 0,        //特殊分类id
         ], $param);
 
-        // 筛选条件
-        $filter = [];
-        $model = $this;
-        if (isset($params['material_type']) && in_array($params['material_type'], [self::TYPE_MATERIAL, self::TYPE_PRODUCT])) {
-            $model = $model->where('product.type', '=', $params['material_type']);
-        }
-        if (isset($params['product_type'])) {
-            $model = $model->where('product.product_type', '=', $params['product_type']);
-        }
-        if (($params['product_ids'] ?? '') != '') {
-            $model = $model->whereIn('product.product_id', explode(',', $params['product_ids']));
-        }
-        if ($params['category_id'] > 0) {
-            $categoryIds = (new CategoryModel)
-                ->where(function ($query) use ($params): void {
-                    $query->where('category_id', $params['category_id']);
-                    $query->whereOr('parent_id', $params['category_id']);
-                })
-                ->column('category_id');
-            $model = $model->whereIn('category_id', $categoryIds);
-        }
-        if ($params['special_id'] > 0) {
-            $model = $model->where('product.special_id', '=', $params['special_id']);
-        }
-        if (isset($params['product_name']) && $params['product_name'] != '') {
-            $model = $model->jsonLike('product_name', $params['product_name']);
-        }
-        if (!empty($params['search'])) {
-            $model = $model->where('product_name', $params['search']);
-        }
-        // 排序规则
-        $sort = [];
-        if ($params['sortType'] === 'all') {
-            $sort = ['product_sort', 'product_id' => 'desc'];
-        }
-        if (isset($params['type'])) {
-            //出售中
-            if ($params['type'] == 'sell') {
-                $model = $model->where('product_status', '=', 10);
-            }
-            //下架
-            if ($params['type'] == 'lower') {
-                $model = $model->where('product_status', '=', 20);
-            }
-            //库存紧张
-            if ($params['type'] == 'stock') {
-                $model = $model->whereBetween('product_stock', [1, 20]);
-                $model = $model->where('product_status', '=', 10);
-            }
-            //已售罄
-            if ($params['type'] == 'over') {
-                $model = $model->where('product_stock', '=', 0);
-                $model = $model->where('product_status', '=', 10);
-            }
-        }
-        // 产品需求，如果sku规格库中数量少于传输的库存数量，就要显示
-        if (isset($params['stock']) && $params['stock'] > 0) {
-            $stock = (int) $params['stock'];
-            $model = $model->leftJoin('product_sku sku', 'sku.product_id = product.product_id');
-            // stock_num-成品库存，material_stock-材料库存
-            if (isset($params['material_type']) && $params['material_type'] > 0) {
-                $field = ($params['material_type'] == self::TYPE_MATERIAL) ? 'sku.material_stock' : 'sku.stock_num';
-                $model = $model->where($field, '<', $stock);
-            } else {
-                $model = $model->whereRaw("
-                    CASE
-                        WHEN product.type = 20 THEN sku.material_stock < {$stock}
-                        WHEN product.type = 10 THEN sku.stock_num < {$stock}
-                        ELSE FALSE
-                    END
-                ");
-            }
-            $model = $model->group('product.product_id');
-        }
-        //
-        if (isset($params['shop_supplier_id']) && $params['shop_supplier_id']) {
-            $model = $model->where('product.shop_supplier_id', '=', $params['shop_supplier_id']);
-        }
-        if (isset($params['product_id']) && $params['product_id']) {
-            $model = $model->whereNotIn('product_id', $params['product_id']);
-        }
         // 执行查询
-        $model = $model->alias('product')
-            ->field(['product.*', '(sales_initial + sales_actual) as product_sales'])
-            ->with(['category', 'image.file', 'sku', 'supplier'])
-            ->where('product.is_delete', '=', 0)
-            ->where($filter)
-            ->order($sort);
+        $list = $this->alias('product')
+            ->with(['category', 'image', 'sku'])
+            ->field(['product.*, name as product_name, actual_sale_num as product_sales'])
+            ->order(['sort', 'id' => 'desc'])
+            ->paginate($params);
 
-        if ($page == 1) {
-            $list = $model->select();
-        } else {
-            $list = $model->paginate($params);
-        }
-        // 整理列表数据并返回
-        return $this->setProductListData($list, true);
+        return $list;
+
+        // todo 兼容
+        // $model = $this;
+        // if (isset($params['material_type']) && in_array($params['material_type'], [self::TYPE_MATERIAL, self::TYPE_PRODUCT])) {
+        //     $model = $model->where('product.type', '=', $params['material_type']);
+        // }
+        // if (isset($params['product_type'])) {
+        //     $model = $model->where('product.product_type', '=', $params['product_type']);
+        // }
+        // if (($params['product_ids'] ?? '') != '') {
+        //     $model = $model->whereIn('product.product_id', explode(',', $params['product_ids']));
+        // }
+        // if ($params['category_id'] > 0) {
+        //     $categoryIds = (new CategoryModel)
+        //         ->where(function ($query) use ($params): void {
+        //             $query->where('category_id', $params['category_id']);
+        //             $query->whereOr('parent_id', $params['category_id']);
+        //         })
+        //         ->column('category_id');
+        //     $model = $model->whereIn('category_id', $categoryIds);
+        // }
+        // if ($params['special_id'] > 0) {
+        //     $model = $model->where('product.special_id', '=', $params['special_id']);
+        // }
+        // if (isset($params['product_name']) && $params['product_name'] != '') {
+        //     $model = $model->jsonLike('product_name', $params['product_name']);
+        // }
+        // if (!empty($params['search'])) {
+        //     $model = $model->where('product_name', $params['search']);
+        // }
+        // // 排序规则
+        // $sort = [];
+        // if ($params['sortType'] === 'all') {
+        //     $sort = ['product_sort', 'product_id' => 'desc'];
+        // }
+        // if (isset($params['type'])) {
+        //     //出售中
+        //     if ($params['type'] == 'sell') {
+        //         $model = $model->where('product_status', '=', 10);
+        //     }
+        //     //下架
+        //     if ($params['type'] == 'lower') {
+        //         $model = $model->where('product_status', '=', 20);
+        //     }
+        //     //库存紧张
+        //     if ($params['type'] == 'stock') {
+        //         $model = $model->whereBetween('product_stock', [1, 20]);
+        //         $model = $model->where('product_status', '=', 10);
+        //     }
+        //     //已售罄
+        //     if ($params['type'] == 'over') {
+        //         $model = $model->where('product_stock', '=', 0);
+        //         $model = $model->where('product_status', '=', 10);
+        //     }
+        // }
+        // // 产品需求，如果sku规格库中数量少于传输的库存数量，就要显示
+        // if (isset($params['stock']) && $params['stock'] > 0) {
+        //     $stock = (int) $params['stock'];
+        //     $model = $model->leftJoin('product_sku sku', 'sku.product_id = product.product_id');
+        //     // stock_num-成品库存，material_stock-材料库存
+        //     if (isset($params['material_type']) && $params['material_type'] > 0) {
+        //         $field = ($params['material_type'] == self::TYPE_MATERIAL) ? 'sku.material_stock' : 'sku.stock_num';
+        //         $model = $model->where($field, '<', $stock);
+        //     } else {
+        //         $model = $model->whereRaw("
+        //             CASE
+        //                 WHEN product.type = 20 THEN sku.material_stock < {$stock}
+        //                 WHEN product.type = 10 THEN sku.stock_num < {$stock}
+        //                 ELSE FALSE
+        //             END
+        //         ");
+        //     }
+        //     $model = $model->group('product.product_id');
+        // }
+        // //
+        // if (isset($params['shop_supplier_id']) && $params['shop_supplier_id']) {
+        //     $model = $model->where('product.shop_supplier_id', '=', $params['shop_supplier_id']);
+        // }
+        // if (isset($params['product_id']) && $params['product_id']) {
+        //     $model = $model->whereNotIn('product_id', $params['product_id']);
+        // }
+        // // 执行查询
+        // $model = $model->alias('product')
+        //     ->field(['product.*', '(sales_initial + sales_actual) as product_sales'])
+        //     ->with(['category', 'image.file', 'sku', 'supplier'])
+        //     ->where('product.is_delete', '=', 0)
+        //     ->where($filter)
+        //     ->order($sort);
+
+        // if ($page == 1) {
+        //     $list = $model->select();
+        // } else {
+        //     $list = $model->paginate($params);
+        // }
+        // // 整理列表数据并返回
+        // return $this->setProductListData($list, true);
     }
 
     /**
@@ -852,6 +940,7 @@ class Product extends BaseModel
             // 回调函数
             is_callable($callback) && call_user_func($callback, $product);
         }
+
         return $data;
     }
 
@@ -938,20 +1027,26 @@ class Product extends BaseModel
      */
     public static function detail($product_id)
     {
-        $model = (new static())->with([
+        $model = (new static())->alias('p')
+        ->field(['p.*', 'unit.name as product_unit'])
+        ->leftJoin('product_unit unit', 'unit.uuid = p.unit_uuid')
+        ->with([
             'category',
-            'image.file',
+            'image',
             'sku',
-            'feed',
-            'supplier',
-            'productTaxes',
-        ])->where('product_id', '=', $product_id)
-            ->find();
+
+            // todo 兼容
+            // 'feed',
+            // 'supplier',
+            // 'productTaxes',
+        ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;
         }
-        // 整理商品数据并返回
-        return $model->setProductListData($model, false);
+        return $model;
+
+        // todo 整理商品数据并返回
+        // return $model->setProductListData($model, false);
     }
 
     /**
@@ -1559,12 +1654,14 @@ class Product extends BaseModel
     public function checkNameExist($name, $shop_supplier_id, $id = null, $lang = 'zh')
     {
         $filter = [
-            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(product_name, '$.$lang'))"), '=', $name],
+            [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['product_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('product_id') ? true : false;
+        return false;
+        // todo 兼容
+        // return static::where($filter)->value('uuid') ? true : false;
     }
 
     /**
@@ -1573,12 +1670,14 @@ class Product extends BaseModel
     public function checkProductImgExist($name, $shop_supplier_id, $id = null)
     {
         $filter = [
-            'img_name' => $name,
+            'image_name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['product_id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->where('img_name', '<>', '')->value('product_id') ? true : false;
+        return false;
+        // todo 兼容
+        // return static::where($filter)->where('image_name', '<>', '')->value('uuid') ? true : false;
     }
 
     /**

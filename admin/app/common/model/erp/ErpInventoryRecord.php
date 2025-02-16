@@ -15,7 +15,7 @@ use app\common\model\product\ProductSku;
 class ErpInventoryRecord extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'erp_inventory_record';
+    protected $name = 'warehouse_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 

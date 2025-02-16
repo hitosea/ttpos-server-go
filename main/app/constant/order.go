@@ -12,14 +12,45 @@ const (
 )
 
 const (
-	SaleBillDiningMethodTakeout = 0 // 外卖
-	SaleBillDiningMethodDineIn  = 1 // 堂食
+	SaleBillDiningMethodDineIn  = 0 // 堂食
+	SaleBillDiningMethodTakeout = 1 // 打包
 )
 
 const (
 	SaleBillStatusPending  = 0 // 待付款
 	SaleBillStatusComplete = 1 // 已完成
 	SaleBillStatusCanceled = 2 // 已取消
+)
+
+const (
+	SaleBillSettingServiceFeeTypeNone       = 0 // 不收取服务费
+	SaleBillSettingServiceFeeTypeFixed      = 1 // 固定服务费
+	SaleBillSettingServiceFeeTypePercent    = 2 // 按比例-不收取税费
+	SaleBillSettingServiceFeeTypePercentTax = 3 // 按比例-收取税费
+
+	SaleBillSettingTaxFeeTypeNone       = 0 // 不收取税费
+	SaleBillSettingTaxFeeTypePercent    = 1 // 商品未含税
+	SaleBillSettingTaxFeeTypePercentTax = 2 // 商品已含税
+
+	SaleBillSettingDiscountZeroingMethodNone    = 0 // 实款实收
+	SaleBillSettingDiscountZeroingMethodPercent = 1 // 抹分
+	SaleBillSettingDiscountZeroingMethodFixed   = 2 // 抹角
+	SaleBillSettingDiscountZeroingMethodRound   = 3 // 四舍五入保留一位小数
+	SaleBillSettingDiscountZeroingMethodInteger = 4 // 四舍五入保留整数
+
+	SaleBillSettingCheckoutZeroingMethodNone    = 0 // 实款实收
+	SaleBillSettingCheckoutZeroingMethodPercent = 1 // 抹分
+	SaleBillSettingCheckoutZeroingMethodFixed   = 2 // 抹角
+	SaleBillSettingCheckoutZeroingMethodYuan    = 3 // 抹元
+
+	SaleBillSettingIsStatGiftNone = 0 // 不计入总销售额、优惠折扣
+	SaleBillSettingIsStatGiftYes  = 1 // 计入总销售额、优惠折扣
+
+	SaleBillSettingIsStatFreeNone = 0 // 不计入总销售额、优惠折扣、服务费、税费
+	SaleBillSettingIsStatFreeYes  = 1 // 计入总销售额、优惠折扣、服务费、税费
+
+	SaleBillSettingDiscountTypePercent = 0 // 百分比打折%
+	SaleBillSettingDiscountTypeOff     = 1 // 百分比直接减免% off
 )
 
 // OrderSourceMapToOrderNoType 订单来源映射到订单编号类型

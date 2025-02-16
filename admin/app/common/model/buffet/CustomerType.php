@@ -3,6 +3,7 @@
 namespace app\common\model\buffet;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\model\buffet\BuffetCustomer;
 
 /**
@@ -10,7 +11,10 @@ use app\common\model\buffet\BuffetCustomer;
  */
 class CustomerType extends BaseModel
 {
-    protected $name = 'customer_type';
+    use SoftDelete;
+    protected $name = 'buffet_customer_type';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
@@ -19,6 +23,10 @@ class CustomerType extends BaseModel
     protected $append = [
         'name_text',
     ];
+
+    /**
+     * 兼容字段
+     */
 
     /**
      * 获取名称
@@ -33,7 +41,7 @@ class CustomerType extends BaseModel
      */
     public static function getList()
     {
-        return (new self())->where('status', '=', 1)->select();
+        return (new self())->select();
     }
 
     /**
@@ -44,17 +52,16 @@ class CustomerType extends BaseModel
         $this->startTrans();
         try {
             $find = self::where('id', $id)->find();
-            if ($find) {
-                $find->status = 0;
-                $find->save();
-            }
             // 删除自助餐顾客类型关联
-            foreach (BuffetCustomer::where('customer_type_id', $id)->select() as $buffet) {
+            foreach (BuffetCustomer::where('customer_type_uuid', $find['uuid'])->select() as $buffet) {
                 $buffet->delete();
             }
+            $find?->delete();
             $this->commit();
             return true;
         } catch (\Exception $e) {
+            dump($e->getMessage());
+            die;
             $this->rollback();
             return false;
         }

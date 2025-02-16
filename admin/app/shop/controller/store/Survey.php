@@ -97,14 +97,25 @@ class Survey extends Controller
         $data = $this->postData() ?: [];
         $shopSupplierId = $this->store['user']['shop_supplier_id'];
         $model = new OrderModel();
+
         // 店內概況
-        $detail = $model->storeOverview($data);
+        $detail = [];
         // 区域数据
-        $regionData = $model->regionData($data);
+        $regionData =[];
         // 销量排行
-        $salesNumRank = $model->getProductRank(0, 1, $shopSupplierId, $data);
+        $salesNumRank = [];
         // 销售额排行
-        $salesMoneyRank = $model->getProductRank(1, 1, $shopSupplierId, $data);
+        $salesMoneyRank = [];
+
+        // todo 兼容
+        // // 店內概況
+        // $detail = $model->storeOverview($data);
+        // // 区域数据
+        // $regionData = $model->regionData($data);
+        // // 销量排行
+        // $salesNumRank = $model->getProductRank(0, 1, $shopSupplierId, $data);
+        // // 销售额排行
+        // $salesMoneyRank = $model->getProductRank(1, 1, $shopSupplierId, $data);
         //
         return $this->renderSuccess('', compact('detail', 'regionData', 'salesNumRank', 'salesMoneyRank'));
     }

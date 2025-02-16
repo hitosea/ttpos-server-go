@@ -260,6 +260,39 @@ definitions:
     required:
     - product_bom_uuid
     type: object
+  req.ConfirmRechargeOrder:
+    properties:
+      member_uuid:
+        description: 会员Uuid
+        type: integer
+      recharge_order_uuid:
+        description: 充值订单Uuid
+        type: integer
+    type: object
+  req.CreateRechargeOrderReq:
+    properties:
+      gift_amount:
+        description: 赠送金额
+        minimum: 0
+        type: number
+      gift_point:
+        description: 赠送积分
+        minimum: 0
+        type: number
+      member_uuid:
+        description: 会员Uuid
+        type: integer
+      recharge_amount:
+        description: 充值金额
+        minimum: 1
+        type: number
+      recharge_order_uuid:
+        description: 进行中的充值订单，如果没有进行中的充值订单，传递0
+        type: integer
+    required:
+    - member_uuid
+    - recharge_amount
+    type: object
   req.DeskBuffetCustomerType:
     properties:
       meal_num:
@@ -307,9 +340,6 @@ definitions:
         type: string
       password:
         description: 密码
-        type: string
-      source:
-        description: 来源
         type: string
       username:
         description: 用户名
@@ -408,6 +438,37 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.RechargeOrderAddPaymentMethodReq:
+    properties:
+      payment_amount:
+        description: 支付金额
+        minimum: 0.01
+        type: number
+      payment_method_uuid:
+        description: 支付方式Uuid
+        type: integer
+      payment_order_uuid:
+        description: 充值订单支付订单Uuid
+        type: integer
+      recharge_order_uuid:
+        description: 充值订单Uuid
+        type: integer
+    required:
+    - payment_amount
+    - recharge_order_uuid
+    type: object
+  req.RechargeOrderCancelPaymentMethodReq:
+    properties:
+      payment_order_uuid:
+        description: 支付订单Uuid
+        type: integer
+      recharge_order_uuid:
+        description: 充值订单Uuid
+        type: integer
+    required:
+    - payment_order_uuid
+    - recharge_order_uuid
+    type: object
   req.SoldOutItem:
     properties:
       is_sold_out:
@@ -443,6 +504,110 @@ definitions:
       username:
         description: 登录账号
         type: string
+    type: object
+  resp.BillLists:
+    properties:
+      bill_type:
+        description: "订单类型\t0:桌台订单 1:点餐订单"
+        type: integer
+      consumer_uuids:
+        description: 会员id
+        type: string
+      extra:
+        allOf:
+        - $ref: '#/definitions/resp.BillListsExtra'
+        description: 通过当前数据控制按钮是否显示
+      finish_time:
+        description: 完成时间（支付时间）（时间戳）
+        type: integer
+      is_split:
+        description: "是否拆单\tfalse:否 true:是"
+        type: boolean
+      order_amount:
+        description: 订单总金额
+        type: number
+      order_no:
+        description: 订单编号
+        type: string
+      pay_type_name:
+        description: 支付类型名称
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_orders:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/resp.BillListsOrder'
+        type: array
+      serial_no:
+        description: 桌位编号 (点餐流水号)
+        type: string
+      status:
+        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+        type: integer
+    type: object
+  resp.BillListsExtra:
+    properties:
+      is_cell_cancel:
+        description: 是否可取消
+        type: boolean
+      is_cell_delete:
+        description: 是否可删除
+        type: boolean
+      is_cell_invoice:
+        description: 是否可打印发票
+        type: boolean
+      is_cell_print:
+        description: 是否可打印小票
+        type: boolean
+      is_cell_refund:
+        description: 是否可退款
+        type: boolean
+      is_cell_reverse_settle:
+        description: 是否可反结账
+        type: boolean
+    type: object
+  resp.BillListsOrder:
+    properties:
+      bill_type:
+        description: "订单类型\t0:桌台订单 1:点餐订单"
+        type: integer
+      consumer_uuids:
+        description: 会员id
+        type: string
+      extra:
+        $ref: '#/definitions/resp.BillListsExtra'
+      finish_time:
+        description: 完成时间（支付时间）（时间戳）
+        type: integer
+      order_amount:
+        description: 订单总金额
+        type: number
+      order_no:
+        description: 订单编号
+        type: string
+      pay_type_name:
+        description: 支付类型名称
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      sale_bill_uuid:
+        description: 销售订单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+      serial_no:
+        description: 桌位编号 (点餐流水号)
+        type: string
+      status:
+        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+        type: integer
     type: object
   resp.Buffet:
     properties:
@@ -538,303 +703,6 @@ definitions:
         description: 登录账号
         type: string
     type: object
-  resp.CashierBillList:
-    properties:
-      bill_type:
-        description: "订单类型\t0:桌台订单 1:点餐订单"
-        type: integer
-      finish_time:
-        description: 完成时间（支付时间）（时间戳）
-        type: integer
-      is_split:
-        description: "是否拆单\tfalse:否 true:是"
-        type: boolean
-      order_amount:
-        description: 订单总金额
-        type: number
-      order_no:
-        description: 订单编号
-        type: string
-      pay_type_name:
-        description: 支付类型名称
-        type: string
-      payment_amount:
-        description: 支付金额
-        type: number
-      sale_bill_uuid:
-        description: 销售账单UUID
-        type: integer
-      sale_orders:
-        description: 订单列表
-        items:
-          $ref: '#/definitions/resp.CashierOrder'
-        type: array
-      serial_no:
-        description: 桌位编号 (点餐流水号)
-        type: string
-      status:
-        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-        type: integer
-    type: object
-  resp.CashierOrder:
-    properties:
-      bill_type:
-        description: "订单类型\t0:桌台订单 1:点餐订单"
-        type: integer
-      finish_time:
-        description: 完成时间（支付时间）（时间戳）
-        type: integer
-      order_amount:
-        description: 订单总金额
-        type: number
-      order_no:
-        description: 订单编号
-        type: string
-      pay_type_name:
-        description: 支付类型名称
-        type: string
-      payment_amount:
-        description: 支付金额
-        type: number
-      sale_order_uuid:
-        description: 销售订单UUID
-        type: integer
-      serial_no:
-        description: 桌位编号 (点餐流水号)
-        type: string
-      status:
-        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-        type: integer
-    type: object
-  resp.CashierOrderInfo:
-    properties:
-      bill_type:
-        description: "订单类型\t0:桌台订单 1:点餐订单"
-        type: integer
-      finish_time:
-        description: 完成时间（支付时间）（时间戳）
-        type: integer
-      member_name:
-        description: 会员名称
-        type: string
-      order_amount:
-        description: 订单总金额
-        type: number
-      order_no:
-        description: 订单编号
-        type: string
-      pay_type_name:
-        description: 支付类型名称
-        type: string
-      payment_amount:
-        description: 支付金额
-        type: number
-      products:
-        description: 产品列表
-        items:
-          $ref: '#/definitions/resp.CashierOrderProduct'
-        type: array
-      sale_order_uuid:
-        description: 销售订单UUID
-        type: integer
-      serial_no:
-        description: 桌位编号 (点餐流水号)
-        type: string
-      status:
-        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-        type: integer
-    type: object
-  resp.CashierOrderInfoPayTypes:
-    properties:
-      currency_unit:
-        description: 货币单位
-        type: string
-      payment_amount:
-        description: 支付金额
-        type: number
-      payment_method_name:
-        description: 支付类型名称
-        type: string
-      sale_bill_uuid:
-        description: 支付单UUID
-        type: integer
-      source:
-        description: 支付状态, 来源 0-系统 1-手动 2-LianLianPay
-        type: integer
-      status:
-        description: 支付状态, 0-未支付 1-已支付 2-已退款
-        type: integer
-    type: object
-  resp.CashierOrderInfoResp:
-    properties:
-      detail:
-        allOf:
-        - $ref: '#/definitions/resp.CashierOrderInfos'
-        description: 明细
-      operation_log:
-        description: 操作日志
-        properties:
-          list:
-            items:
-              $ref: '#/definitions/resp.CashierOrderOperationLog'
-            type: array
-        type: object
-    type: object
-  resp.CashierOrderInfos:
-    properties:
-      bill_type:
-        description: "订单类型\t0:桌台订单 1:点餐订单"
-        type: integer
-      create_time:
-        description: 创建时间
-        type: integer
-      finish_time:
-        description: 完成时间（支付时间）（时间戳）
-        type: integer
-      is_split:
-        description: "是否拆单\tfalse:否 true:是"
-        type: boolean
-      member_names:
-        description: 会员名称
-        type: string
-      order_amount:
-        description: 订单总金额
-        type: number
-      order_no:
-        description: 订单编号
-        type: string
-      pay_types:
-        description: 支付类型
-        items:
-          $ref: '#/definitions/resp.CashierOrderInfoPayTypes'
-        type: array
-      payment_amount:
-        description: 支付金额
-        type: number
-      sale_bill_uuid:
-        description: 销售账单UUID
-        type: integer
-      sale_orders:
-        description: 订单列表
-        items:
-          $ref: '#/definitions/resp.CashierOrderInfo'
-        type: array
-      serial_no:
-        description: 桌位编号 (点餐流水号)
-        type: string
-      status:
-        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-        type: integer
-    type: object
-  resp.CashierOrderListPaginationResp:
-    properties:
-      list:
-        description: 订单列表
-        items:
-          $ref: '#/definitions/resp.CashierBillList'
-        type: array
-      meta:
-        description: Meta信息
-        properties:
-          cancel_num:
-            description: 已取消数量
-            type: integer
-          complete_num:
-            description: 已完成数量
-            type: integer
-          page_no:
-            description: 当前页码
-            type: integer
-          page_size:
-            description: 每页大小
-            type: integer
-          total:
-            description: 总数
-            type: integer
-          unpaid_num:
-            description: 待付款数量
-            type: integer
-        type: object
-    type: object
-  resp.CashierOrderOperationLog:
-    properties:
-      action:
-        description: 操作行为
-        type: string
-      create_time:
-        description: 创建时间(时间戳)
-        type: integer
-      data:
-        description: 消息数据
-        type: string
-      message:
-        description: 消息内容
-        type: string
-      remark:
-        description: 备注
-        type: string
-      sale_bill_uuid:
-        description: 销售账单ID
-        type: integer
-      sale_order_uuid:
-        description: 销售订单ID
-        type: integer
-      source:
-        description: 操作来源 cashier-收银 assistant-助手 shop-商家后台
-        type: string
-      uuid:
-        description: 账单操作记录ID
-        type: integer
-    type: object
-  resp.CashierOrderProduct:
-    properties:
-      attributes:
-        description: 规格属性加料
-        type: string
-      custom_price:
-        description: 自定义价格
-        type: number
-      flavor_name:
-        description: 口味名称
-        type: string
-      gift_reason:
-        description: 赠品原因
-        type: string
-      image_url:
-        description: 图片地址
-        type: string
-      is_gift:
-        description: 是否赠品, fasle-否 true-是
-        type: boolean
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 产品名称
-      num:
-        description: 数量
-        type: integer
-      price:
-        description: 最终单价
-        type: number
-      product_original_amount:
-        description: 原价销售额.包含加料、税费.
-        type: number
-      remark:
-        description: 备注
-        type: string
-      status:
-        description: 状态, 0-正常 1-退菜
-        type: integer
-      tax_rate:
-        description: 税率,单位%.下单时单税率,结账时再重新核算
-        type: integer
-      unit_price:
-        description: 单价
-        type: number
-      uuid:
-        description: 销售订单商品ID
-        type: integer
-    type: object
   resp.Company:
     properties:
       name:
@@ -843,6 +711,23 @@ definitions:
       uuid:
         description: 商家UUID
         type: integer
+    type: object
+  resp.ConfirmRechargeOrder:
+    properties:
+      amount:
+        description: 实收
+        type: number
+      charge_due:
+        description: 找零
+        type: number
+      payment_methods:
+        description: 支付方式
+        items:
+          type: string
+        type: array
+      recharge_amount:
+        description: 应收
+        type: number
     type: object
   resp.CreateDeskOrderResp:
     properties:
@@ -1063,6 +948,304 @@ definitions:
           $ref: '#/definitions/resp.OnlineCashier'
         type: array
     type: object
+  resp.OrderInfo:
+    properties:
+      bill_type:
+        description: "订单类型\t0:桌台订单 1:点餐订单"
+        type: integer
+      finish_time:
+        description: 完成时间（支付时间）（时间戳）
+        type: integer
+      member_name:
+        description: 会员名称
+        type: string
+      member_uuid:
+        description: 会员名称
+        type: integer
+      order_amount:
+        description: 订单总金额
+        type: number
+      order_no:
+        description: 订单编号
+        type: string
+      pay_type_name:
+        description: 支付类型名称
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      products:
+        description: 产品列表
+        items:
+          $ref: '#/definitions/resp.OrderProduct'
+        type: array
+      refund_amount:
+        description: 退款金额
+        type: number
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+      serial_no:
+        description: 桌位编号 (点餐流水号)
+        type: string
+      status:
+        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+        type: integer
+    type: object
+  resp.OrderInfoPayTypes:
+    properties:
+      code:
+        description: 支付Code
+        type: string
+      currency_unit:
+        description: 货币单位
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      payment_type_name:
+        description: 支付类型名称
+        type: string
+      sale_bill_uuid:
+        description: 支付单UUID
+        type: integer
+      source:
+        description: 支付状态, 来源 0-系统 1-手动 2-LianLianPay
+        type: integer
+      source_text:
+        description: 支付状态, 来源 0-系统 1-手动 2-LianLianPay
+        type: string
+      status:
+        description: 支付状态, 0-未支付 1-已支付 2-已退款
+        type: integer
+    type: object
+  resp.OrderInfos:
+    properties:
+      bill_type:
+        description: "订单类型\t0:桌台订单 1:点餐订单"
+        type: integer
+      buffet_names:
+        description: 自助餐名称
+        type: string
+      cancel_reason:
+        description: 自助餐名称
+        type: string
+      cashier_name:
+        description: 收银员名称
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      finish_time:
+        description: 完成时间（支付时间）（时间戳）
+        type: integer
+      is_buffet:
+        description: "是否自助餐\tfalse:否 true:是"
+        type: boolean
+      is_split:
+        description: "是否拆单\tfalse:否 true:是"
+        type: boolean
+      member_names:
+        description: 会员名称
+        type: string
+      member_uuids:
+        description: 会员名称
+        type: string
+      order_amount:
+        description: 订单总金额
+        type: number
+      order_no:
+        description: 订单编号
+        type: string
+      pay_types:
+        description: 支付类型
+        items:
+          $ref: '#/definitions/resp.OrderInfoPayTypes'
+        type: array
+      payment_amount:
+        description: 支付金额
+        type: number
+      refund_amount:
+        description: 退款金额
+        type: number
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_orders:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/resp.OrderInfo'
+        type: array
+      serial_no:
+        description: 桌位编号 (点餐流水号)
+        type: string
+      status:
+        description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+        type: integer
+    type: object
+  resp.OrderInfosResp:
+    properties:
+      detail:
+        allOf:
+        - $ref: '#/definitions/resp.OrderInfos'
+        description: 明细
+      extra:
+        allOf:
+        - $ref: '#/definitions/resp.BillListsExtra'
+        description: 通过当前数据控制按钮是否显示
+      operation_log:
+        description: 操作日志
+        properties:
+          list:
+            items:
+              $ref: '#/definitions/resp.OrderOperationLog'
+            type: array
+        type: object
+    type: object
+  resp.OrderListPaginationResp:
+    properties:
+      list:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/resp.BillLists'
+        type: array
+      meta:
+        description: Meta信息
+        properties:
+          cancel_num:
+            description: 已取消数量
+            type: integer
+          complete_num:
+            description: 已完成数量
+            type: integer
+          page_no:
+            description: 当前页码
+            type: integer
+          page_size:
+            description: 每页大小
+            type: integer
+          total:
+            description: 总数
+            type: integer
+          unpaid_num:
+            description: 待付款数量
+            type: integer
+        type: object
+    type: object
+  resp.OrderOperationLog:
+    properties:
+      action:
+        description: 操作行为
+        type: string
+      create_time:
+        description: 创建时间(时间戳)
+        type: integer
+      data:
+        description: 消息数据
+        type: string
+      message:
+        description: 消息内容
+        type: string
+      remark:
+        description: 备注
+        type: string
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单ID
+        type: integer
+      source:
+        description: 操作来源 cashier-收银 assistant-助手 shop-商家后台
+        type: string
+      uuid:
+        description: 账单操作记录ID
+        type: integer
+    type: object
+  resp.OrderProduct:
+    properties:
+      Price:
+        description: 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
+        type: number
+      attributes:
+        description: 规格属性加料
+        type: string
+      flavor_name:
+        description: 口味名称
+        type: string
+      gift_reason:
+        description: 赠品原因
+        type: string
+      image_url:
+        description: 图片地址
+        type: string
+      is_gift:
+        description: 是否赠品, fasle-否 true-是
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 产品名称
+      num:
+        description: 数量
+        type: integer
+      refund_reason:
+        description: 退菜原因
+        type: string
+      remark:
+        description: 备注
+        type: string
+      sale_price:
+        description: 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
+        type: number
+      status:
+        description: 状态, 0-正常 1-退菜
+        type: integer
+      tax_rate:
+        description: 税率,单位%.下单时单税率,结账时再重新核算
+        type: number
+      total_price:
+        description: 应收金额(单商品)=最终单价+服务费+总税费
+        type: number
+      uuid:
+        description: 销售订单商品ID
+        type: integer
+    type: object
+  resp.PaymentOrder:
+    properties:
+      amount:
+        description: 支付订单金额 = payment_amount + payment_commission_fee
+        type: number
+      payment_method_uuid:
+        description: 支付方式Uuid
+        type: integer
+      uuid:
+        description: 充值订单支付订单Uuid
+        type: integer
+    type: object
+  resp.PendingRechargeOrder:
+    properties:
+      gift_money:
+        description: 赠送金额
+        type: number
+      gift_point:
+        description: 赠送积分
+        type: number
+      member_uuid:
+        description: 会员Uuid
+        type: integer
+      payment_orders:
+        description: 充值订单支付类型列表
+        items:
+          $ref: '#/definitions/resp.PaymentOrder'
+        type: array
+      recharge_money:
+        description: 充值金额
+        type: number
+      uuid:
+        description: 充值订单Uuid
+        type: integer
+    type: object
   resp.Permission:
     properties:
       alias:
@@ -1206,7 +1389,7 @@ definitions:
   setting.Business:
     properties:
       checkout_zeroing_method:
-        description: 结账自动抹零方式
+        description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-抹元'
         type: string
       checkout_zeroing_method_list:
         description: 结账自动抹零方式列表
@@ -1251,7 +1434,7 @@ definitions:
         description: 电子菜单二维码校验失效值，6位数数字
         type: string
       zeroing_method:
-        description: 优惠折扣自动抹零方式
+        description: '优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数'
         type: string
       zeroing_method_list:
         description: 优惠折扣自动抹零方式列表
@@ -1518,13 +1701,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -2208,13 +2391,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -2602,6 +2785,86 @@ paths:
       summary: 添加会员
       tags:
       - 收银端.会员
+  /cashier/member/confirm_recharge_order:
+    post:
+      consumes:
+      - application/json
+      description: 确认充值订单
+      parameters:
+      - description: 确认充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ConfirmRechargeOrder'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ConfirmRechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 确认充值订单
+      tags:
+      - 收银端.会员
+  /cashier/member/create_recharge_order:
+    post:
+      consumes:
+      - application/json
+      description: 创建充值订单
+      parameters:
+      - description: 创建充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreateRechargeOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PendingRechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 创建充值订单
+      tags:
+      - 收银端.会员
+  /cashier/member/in_progress_recharge_order:
+    get:
+      consumes:
+      - application/json
+      description: 获取进行中的充值订单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PendingRechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取进行中的充值订单
+      tags:
+      - 收银端.会员
   /cashier/member/levels:
     get:
       consumes:
@@ -2650,6 +2913,64 @@ paths:
       security:
       - JwtToken: []
       summary: 充值会员信息
+      tags:
+      - 收银端.会员
+  /cashier/member/recharge_order_add_payment_method:
+    post:
+      consumes:
+      - application/json
+      description: 充值订单添加支付方式
+      parameters:
+      - description: 充值订单添加支付方式参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderAddPaymentMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PendingRechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 充值订单添加支付方式
+      tags:
+      - 收银端.会员
+  /cashier/member/recharge_order_cancel_payment_method:
+    post:
+      consumes:
+      - application/json
+      description: 充值订单撤销支付方式
+      parameters:
+      - description: 充值订单撤销支付方式参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderCancelPaymentMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PendingRechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 充值订单撤销支付方式
       tags:
       - 收银端.会员
   /cashier/member/search:
@@ -2752,11 +3073,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -2764,7 +3085,7 @@ paths:
         "200":
           description: 订单详情
           schema:
-            $ref: '#/definitions/resp.CashierOrderInfoResp'
+            $ref: '#/definitions/resp.OrderInfosResp'
         "404":
           description: 未找到
       summary: 获取订单详情
@@ -2778,11 +3099,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -2800,42 +3121,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
+        type: integer
+      - description: 用餐方式,-1=全都、 0-堂食 1-打包
+        in: query
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -2847,7 +3172,7 @@ paths:
         "200":
           description: 订单列表
           schema:
-            $ref: '#/definitions/resp.CashierOrderListPaginationResp'
+            $ref: '#/definitions/resp.OrderListPaginationResp'
         "404":
           description: 未找到
       summary: 获取订单列表
@@ -3498,6 +3823,163 @@ paths:
       summary: 获取服务端公钥
       tags:
       - 通用
+  /shop/order/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消订单
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消订单成功
+        "404":
+          description: 未找到
+      summary: 取消订单
+      tags:
+      - 商家端.订单
+  /shop/order/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除订单
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消订单成功
+        "404":
+          description: 未找到
+      summary: 删除订单
+      tags:
+      - 商家端.订单
+  /shop/order/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单详情
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单UUID 当查看子订单信息的时候才需要传
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单详情
+          schema:
+            $ref: '#/definitions/resp.OrderInfosResp'
+        "404":
+          description: 未找到
+      summary: 获取订单详情
+      tags:
+      - 商家端.订单
+  /shop/order/is_cell_close:
+    get:
+      consumes:
+      - application/json
+      description: 判断订单是否可关闭
+      parameters:
+      - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
+        in: query
+        name: deskUuid
+        type: integer
+      - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
+        in: query
+        name: saleBillUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "404":
+          description: 未找到
+      summary: 判断订单是否可关闭
+      tags:
+      - 商家端.订单
+  /shop/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单列表
+      parameters:
+      - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
+        in: query
+        name: billType
+        type: integer
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+        in: query
+        name: dateType
+        type: integer
+      - description: 用餐方式,-1=全都、 0-堂食 1-打包
+        in: query
+        name: diningMethod
+        type: integer
+      - description: 启用开台时间 false-不启用，true-启用
+        in: query
+        name: enableCreateTime
+        type: boolean
+      - description: 启用支付时间 false-不启用，true-启用
+        in: query
+        name: enablePayTime
+        type: boolean
+      - description: 订单编号
+        in: query
+        name: orderNo
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: pageNo
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: 查询结束时间戳
+        in: query
+        name: queryEndTime
+        type: integer
+      - description: 查询开始时间戳
+        in: query
+        name: queryStartTime
+        type: integer
+      - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单列表
+          schema:
+            $ref: '#/definitions/resp.OrderListPaginationResp'
+        "404":
+          description: 未找到
+      summary: 获取订单列表
+      tags:
+      - 商家端.订单
 securityDefinitions:
   JwtToken:
     in: header

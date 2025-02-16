@@ -19,11 +19,11 @@ class Role extends BaseModel
     protected $append = ['role_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getRoleIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
     }
 
     /**

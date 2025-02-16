@@ -12,9 +12,9 @@ import (
 
 // IInstantSrv 点餐订单服务接口
 type IInstantSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                            // 创建点餐订单
-	GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error)          // 获取点餐订单详情
-	AddProductToInstantOrder(dbId uint64, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) // 添加商品
+	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                         // 创建点餐订单
+	GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error)                       // 获取点餐订单详情
+	AddProductToInstantOrder(dbId uint64, lang string, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) // 添加商品
 }
 
 // instantSrv 点餐订单服务结构体
@@ -48,7 +48,7 @@ func (s *instantSrv) GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInf
 }
 
 // AddProductToInstantOrder 添加商品
-func (s *instantSrv) AddProductToInstantOrder(dbId uint64, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) {
+func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
@@ -74,36 +74,30 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, req req.InstantOrderA
 	if len(saleBill.SaleOrders) == 0 {
 		return nil, errors.New("销售订单不存在")
 	}
+
 	// 检查订单是否可操作
 	if err = saleBill.ValidateOrderStatus(constant.OrderAddProduct); err != nil {
 		return nil, err
 	}
 
-	// 检查商品
-	productPackage, err := s.orderProductSrv.CheckProduct(dbId, req.Product.Uuid)
+	// 检查创建订单商品
+	productPackage, err := s.orderProductSrv.CheckCreateOrderProduct(dbId, req.Product)
 	if err != nil {
 		return nil, err
 	}
-	// 检查商品规格
-	if err = s.orderProductSrv.CheckOrderProductFlavor(*productPackage, req.Product.FlavorUuid); err != nil {
-		return nil, err
-	}
-	// 检查商品属性
-	var attributeMap = make(map[uint64][]uint64)
-	for _, attribute := range req.Product.Attributes {
-		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
-	}
-	if err = s.orderProductSrv.CheckOrderProductAttribute(*productPackage, attributeMap); err != nil {
-		return nil, err
-	}
-	// 检查商品加料
-	if err = s.orderProductSrv.CheckOrderProductSauce(*productPackage, req.Product.SauceUuids); err != nil {
-		return nil, err
-	}
 
-	// todo 检查是否已选择必填商品
-
-	// todo 检查商品规格库存
+	// 生成订单商品
+	err = s.orderProductSrv.CreateOrderProduct(dbId, CreateOrderProductReq{
+		Lang:           lang,
+		SaleBill:       saleBill,
+		SaleOrder:      saleBill.SaleOrders[0],
+		ProductPackage: *productPackage,
+		SauceUuids:     req.Product.SauceUuids,
+		Num:            1,
+	})
+	if err != nil {
+		return nil, errors.New("创建订单商品失败")
+	}
 
 	return &resp.GetInstantOrderInfoResp{}, nil
 }

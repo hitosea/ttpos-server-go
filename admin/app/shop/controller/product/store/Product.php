@@ -13,6 +13,7 @@ use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
 use app\shop\model\product\Label as LabelModel;
 use app\shop\model\product\Product as ProductModel;
+use app\common\model\product\Material as MaterialModel;
 use app\shop\model\product\Category as CategoryModel;
 
 /**
@@ -140,10 +141,8 @@ class Product extends Controller
             return $this->getBaseData();
         }
         $data = json_decode($this->postData()['params'], true);
-        $model = new ProductModel;
-        $data['product_type'] = 1;
+        $model = ($data['type'] ?? 10) == 10 ? new ProductModel : new MaterialModel;
         $data['shop_user_id'] = $this->store['user']['shop_user_id'];
-        $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
         if ($model->add($data)) {
             return $this->renderSuccess('添加成功');
         }
@@ -226,9 +225,9 @@ class Product extends Controller
             return $this->renderSuccess('', array_merge(ProductService::getEditData(1, $this->store), compact('model')));
         }
         /** @var ProductModel $model */
-        $model = ProductModel::detail($product_id);
+        $model = ($data['type'] ?? 10) == 10 ? ProductModel::detail($product_id) : MaterialModel::detail($product_id);
         $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
-        if ($model->edit($data, true)) {
+        if ($model->edit($data)) {
             return $this->renderSuccess('更新成功');
         }
         return $this->renderError($model->getError() ?: '更新失败', $model->getErrorData() ?: []);

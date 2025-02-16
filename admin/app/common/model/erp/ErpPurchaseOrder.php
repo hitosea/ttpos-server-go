@@ -111,25 +111,28 @@ class ErpPurchaseOrder extends BaseModel
         //
         $prefix = Env::get('DB_PREFIX');
         return self::alias('eo')->with(['purchaser'])
-            ->field('eo.*, de.erp_supplier_names, de.erp_purchase_names, COALESCE(NULLIF(suser.real_name, ""), suser.user_name) as applicant_name')
-            ->leftJoin("shop_user suser", "eo.applicant_id = suser.shop_user_id")
-            ->leftJoin(
-                "
-                (
-                    SELECT
-                        de.purchase_order_id, es.purchaser_id, p.erp_supplier_id,
-                        group_concat(DISTINCT es.name) as erp_supplier_names,
-                        group_concat(DISTINCT user.real_name) as erp_purchase_names
-                    FROM {$prefix}erp_purchase_detail as de
-                    LEFT JOIN {$prefix}product_sku as sku ON de.product_sku_id = sku.product_sku_id
-                    LEFT JOIN {$prefix}product as p ON sku.product_id = p.product_id
-                    LEFT JOIN {$prefix}erp_supplier as es ON es.id = p.erp_supplier_id
-                    LEFT JOIN {$prefix}shop_user as user ON es.purchaser_id = user.shop_user_id
-                    $where
-                    GROUP BY de.purchase_order_id
-                ) as de",
-                "eo.id = de.purchase_order_id"
-            )
+            ->field('eo.*, COALESCE(NULLIF(suser.real_name, ""), suser.username) as applicant_name')
+            ->leftJoin("staff suser", "eo.applicant_uuid = suser.uuid")
+
+            // todo 兼容
+            // ->leftJoin(
+            //     "
+            //     (
+            //         SELECT
+            //             de.purchase_order_id, es.purchaser_id, p.erp_supplier_id,
+            //             group_concat(DISTINCT es.name) as erp_supplier_names,
+            //             group_concat(DISTINCT user.real_name) as erp_purchase_names
+            //         FROM {$prefix}erp_purchase_detail as de
+            //         LEFT JOIN {$prefix}product_sku as sku ON de.product_sku_id = sku.product_sku_id
+            //         LEFT JOIN {$prefix}product as p ON sku.product_id = p.product_id
+            //         LEFT JOIN {$prefix}erp_supplier as es ON es.id = p.erp_supplier_id
+            //         LEFT JOIN {$prefix}shop_user as user ON es.purchaser_id = user.shop_user_id
+            //         $where
+            //         GROUP BY de.purchase_order_id
+            //     ) as de",
+            //     "eo.id = de.purchase_order_id"
+            // )
+
             ->when(!empty($erpSupplierId), function ($q) use ($erpSupplierId) {
                 $q->where('de.erp_supplier_id', $erpSupplierId);
             })

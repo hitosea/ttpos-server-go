@@ -8,6 +8,7 @@ use think\facade\Env;
 use think\facade\Cache;
 use app\common\model\BaseModel;
 use app\common\model\order\Order;
+use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\order\OrderProduct;
 use app\common\model\supplier\Supplier as SupplierModel;
@@ -17,8 +18,11 @@ use app\common\model\supplier\Supplier as SupplierModel;
  */
 class Category extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'product_category';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
@@ -35,6 +39,14 @@ class Category extends BaseModel
     public function getParentIdAttr($value, $data = [])
     {
         return $this->parent_uuid ?: 0;
+    }
+
+    /**
+     * 多语言关联
+     */
+    public function multiLanguageName()
+    {
+        return $this->hasOne('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
     }
 
     /**
@@ -173,7 +185,7 @@ class Category extends BaseModel
             ->leftJoin("
                     (
                         SELECT if(c.parent_id, c.parent_id, c.category_id) as category_id, count(*) AS product_count
-                        FROM {$prefix}product product
+                        FROM {$prefix}product_package product
                         left join {$prefix}category c on `product`.`category_id` = c.category_id or c.category_id = product.special_id
                         where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
                         GROUP BY if(c.parent_id, c.parent_id, c.category_id)
@@ -218,7 +230,7 @@ class Category extends BaseModel
             ->leftJoin("
                     (
                         SELECT if(c.parent_id, c.parent_id, c.category_id) as category_id, count(*) AS product_count
-                        FROM {$prefix}product product
+                        FROM {$prefix}product_package product
                         left join {$prefix}category c on `product`.`category_id` = c.category_id or c.category_id = product.special_id
                         where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
                         GROUP BY if(c.parent_id, c.parent_id, c.category_id)
@@ -282,8 +294,8 @@ class Category extends BaseModel
             ->leftJoin("
                     (
                         SELECT if(cc.parent_id, cc.parent_id, cc.category_id) as category_id, count(*) AS product_num
-                        FROM {$prefix}product product
-                        left join {$prefix}category cc on `product`.`category_id` = cc.category_id or cc.category_id = product.special_id and cc.is_button = 0
+                        FROM {$prefix}product_package product
+                        left join {$prefix}product_category cc on `product`.`category_id` = cc.category_id or cc.category_id = product.special_id and cc.is_button = 0
                         where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and cc.status = 1
                         GROUP BY if(cc.parent_id, cc.parent_id, cc.category_id)
                     ) product_num
@@ -293,8 +305,8 @@ class Category extends BaseModel
                     if(c.parent_id, c.parent_id, c.category_id) as category_id,
                     SUM(op.total_num) AS product_count
                 FROM {$prefix}order_product op
-                INNER JOIN {$prefix}product p ON op.product_id = p.product_id
-                LEFT JOIN {$prefix}category c ON p.category_id = c.category_id OR c.category_id = p.special_id and c.is_button = 0
+                INNER JOIN {$prefix}product_package p ON op.product_id = p.product_id
+                LEFT JOIN {$prefix}product_category c ON p.category_id = c.category_id OR c.category_id = p.special_id and c.is_button = 0
                 WHERE op.order_id = {$order_id}
                     AND op.is_send_kitchen = 0
                     AND op.add_source = {$product_source}

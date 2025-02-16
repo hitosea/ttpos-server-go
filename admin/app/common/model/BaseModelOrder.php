@@ -69,7 +69,7 @@ class BaseModelOrder extends BaseModel
     ];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getOrderIdAttr()
     {

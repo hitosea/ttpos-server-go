@@ -83,7 +83,7 @@ class Unit extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->order(['sort' => 'asc', 'create_time' => 'desc'])->select()?->append(['product_ids'], true);
+        return $this->order(['create_time' => 'desc'])->select()?->append(['product_ids'], true);
     }
 
     /**

@@ -39,7 +39,7 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 
 func (r *StaffRepo) GetByUuid(uuid uint64, withs ...With) model.Staff {
 	var staff model.Staff
-	r.handleWiths(r.db, withs).Where("uuid = ?", uuid).Debug().First(&staff)
+	handleWiths(r.db, withs).Where("uuid = ?", uuid).Debug().First(&staff)
 	return staff
 }
 
@@ -63,7 +63,7 @@ func (r *StaffRepo) WithDevice(source string) With {
 
 func (r *StaffRepo) GetByUsername(username string, withs ...With) model.Staff {
 	var staff model.Staff
-	r.handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&staff)
+	handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&staff)
 	return staff
 }
 
@@ -75,23 +75,13 @@ func (r *StaffRepo) GetByDeviceId(bindKey string) model.Staff {
 
 func (r *StaffRepo) GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff {
 	var staff model.Staff
-	r.handleWiths(r.db, withs).Where("uuid = ? AND bind_key = ?", uuid, bindKey).Debug().First(&staff)
+	handleWiths(r.db, withs).Where("uuid = ? AND bind_key = ?", uuid, bindKey).Debug().First(&staff)
 	return staff
 }
 func (r *StaffRepo) GetOnlineCashiers(withs ...With) []model.Staff {
 	var staff []model.Staff
-	r.handleWiths(r.db, withs).Where("cashier_online = 1").Debug().Find(&staff)
+	handleWiths(r.db, withs).Where("cashier_online = 1").Debug().Find(&staff)
 	return staff
-}
-
-func (r *StaffRepo) handleWiths(db *gorm.DB, withs []With) *gorm.DB {
-	if len(withs) == 0 {
-		return db
-	}
-	for _, with := range withs {
-		db = with(db)
-	}
-	return db
 }
 
 func (r *StaffRepo) Update(uuid uint64, vars map[string]any) error {

@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -30,7 +30,7 @@ type MemberHandler struct {
 // @Success 200 {object} dto.Response{data=resp.MemberLevelList}
 // @Router /cashier/member/levels [get]
 func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
-	helper.Success(c, h.memberSrv.GetLevels(c.GetUint64(jwt.CompanyUuid)))
+	helper.Success(c, h.memberSrv.GetLevels(helper.GetCompanyUuid(c)))
 }
 
 // SearchMember 模糊搜索会员
@@ -44,7 +44,7 @@ func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.SearchMemberList}
 // @Router /cashier/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
-	helper.Success(c, h.memberSrv.SearchMember(c.GetUint64(jwt.CompanyUuid), c.Query("keyword")))
+	helper.Success(c, h.memberSrv.SearchMember(helper.GetCompanyUuid(c), c.Query("keyword")))
 }
 
 // RechargeMember 充值会员信息
@@ -62,7 +62,7 @@ func (h *MemberHandler) RechargeMember(c *gin.Context) {
 	if err != nil {
 		helper.Fail(c, constant.CodeBadRequest, "参数错误")
 	}
-	info, err := h.memberSrv.GetRechargeMember(c.GetUint64(jwt.CompanyUuid), uuid)
+	info := h.memberSrv.GetRechargeMember(helper.GetCompanyUuid(c), uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 	}
@@ -85,11 +85,139 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		helper.HandleValidationError(c, err, addMemberReq, req.AddMemberReqMessage)
 		return
 	}
-	if err := h.memberSrv.AddMember(c.GetUint64(jwt.CompanyUuid), addMemberReq); err != nil {
+	if err := h.memberSrv.AddMember(helper.GetCompanyUuid(c), addMemberReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{}, "添加会员成功")
+}
+
+// GetPendingRechargeOrder 获取进行中的充值订单
+// @Summary 获取进行中的充值订单
+// @Description 获取进行中的充值订单
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Router /cashier/member/in_progress_recharge_order [get]
+func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
+	order := h.memberSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
+	helper.Success(c, order)
+}
+
+// CreateRechargeOrder 创建充值订单
+// @Summary 创建充值订单
+// @Description 创建充值订单
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CreateRechargeOrderReq true "创建充值订单参数"
+// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Router /cashier/member/create_recharge_order [post]
+func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
+	var (
+		rechargeReq req.CreateRechargeOrderReq
+		err         error
+		order       resp.PendingRechargeOrder
+	)
+	if err = c.ShouldBindJSON(&rechargeReq); err != nil {
+		helper.HandleValidationError(c, err, rechargeReq, req.CreateRechargeOrderReqMessage)
+		return
+	}
+
+	staff := helper.GetStaff(c)
+	rechargeReq.StaffEmail = staff.Username
+	rechargeReq.StaffName = staff.RealName
+	rechargeReq.StaffUuid = staff.Uuid
+	rechargeReq.Source = helper.GetSource(c)
+
+	if order, err = h.memberSrv.CreateRechargeOrder(helper.GetCompanyUuid(c), rechargeReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
+// AddPaymentMethod 充值订单添加支付方式
+// @Summary 充值订单添加支付方式
+// @Description 充值订单添加支付方式
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderAddPaymentMethodReq true "充值订单添加支付方式参数"
+// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Router /cashier/member/recharge_order_add_payment_method [post]
+func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
+	var (
+		addPaymentMethodReq req.RechargeOrderAddPaymentMethodReq
+		err                 error
+		order               resp.PendingRechargeOrder
+	)
+	if err = c.ShouldBindJSON(&addPaymentMethodReq); err != nil {
+		helper.HandleValidationError(c, err, addPaymentMethodReq, req.RechargeOrderAddPaymentMethodReqMessage)
+		return
+	}
+
+	addPaymentMethodReq.CompanySetting = helper.GetCompanySetting(c)
+	if order, err = h.memberSrv.AddPaymentMethod(helper.GetCompanyUuid(c), addPaymentMethodReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
+// CancelPaymentMethod 充值订单撤销支付方式
+// @Summary 充值订单撤销支付方式
+// @Description 充值订单撤销支付方式
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderCancelPaymentMethodReq true "充值订单撤销支付方式参数"
+// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Router /cashier/member/recharge_order_cancel_payment_method [post]
+func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
+	var (
+		cancelPaymentMethodReq req.RechargeOrderCancelPaymentMethodReq
+		err                    error
+		order                  resp.PendingRechargeOrder
+	)
+	if err = c.ShouldBindJSON(&cancelPaymentMethodReq); err != nil {
+		helper.HandleValidationError(c, err, cancelPaymentMethodReq, nil)
+		return
+	}
+	if order, err = h.memberSrv.CancelPaymentMethod(helper.GetCompanyUuid(c), cancelPaymentMethodReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
+// ConfirmRechargeOrder 确认充值订单
+// @Summary 确认充值订单
+// @Description 确认充值订单
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ConfirmRechargeOrder true "确认充值订单参数"
+// @Success 200 {object} dto.Response{data=resp.ConfirmRechargeOrder}
+// @Router /cashier/member/confirm_recharge_order [post]
+func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
+	var confirmRechargeOrder req.ConfirmRechargeOrder
+	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
+		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
+		return
+	}
+	order, err := h.memberSrv.ConfirmRechargeOrder(helper.GetCompanyUuid(c), confirmRechargeOrder)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
 }
 
 func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -101,7 +229,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, service.NewPaymentMethodSrv(dbm, settingSrv), settingSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv: memberSrv,
@@ -110,10 +238,16 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/member/levels", wrapper.GetMemberLevels)       // 获取会员等级列表
-		privateApi.GET("/member/search", wrapper.SearchMember)          // 模糊搜索会员
-		privateApi.GET("/member/charge_member", wrapper.RechargeMember) // 充值会员信息
+		privateApi.GET("/member/levels", wrapper.GetMemberLevels)         // 获取会员等级列表
+		privateApi.POST("/member/add", wrapper.AddMember)                 // 添加会员
+		privateApi.GET("/member/search", wrapper.SearchMember)            // 模糊搜索会员
+		privateApi.GET("/member/recharge_member", wrapper.RechargeMember) // 充值会员信息
 
-		privateApi.POST("/member/add", wrapper.AddMember) // 添加会员
+		privateApi.POST("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)       // 获取进行中的充值订单
+		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单
+		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)       // 充值订单添加支付方式
+		privateApi.POST("/member/recharge_order_cancel_payment_method", wrapper.CancelPaymentMethod) // 充值订单撤销支付方式
+		privateApi.POST("/member/confirm_recharge_order", wrapper.ConfirmRechargeOrder)              // 确认充值订单
+
 	}
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -14,11 +15,14 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -26,8 +30,8 @@ import (
 type IOrderSrv interface {
 	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                              // 创建点餐订单
 	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                        // 创建桌台订单
-	GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                            // 获取订单列表
-	GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                     // 获取订单详情
+	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)          // 获取订单列表
+	GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error)         // 获取订单详情
 	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                          // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                         // 删除订单
 	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                       // 判断桌台是否可取消
@@ -35,6 +39,7 @@ type IOrderSrv interface {
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
 	OrderProductRemark(dbId uint64, staffUuid uint64, source string, req req.OrderProductRemarkReq) (model.SaleBill, error)           // 修改订单商品备注
+	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                               // 创建销售账单设置
 }
 
 // orderSrv 订单服务结构
@@ -95,10 +100,21 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 			return err
 		}
 
+		// 创建销售账单设置
+		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		if err != nil {
+			return err
+		}
+
 		// 创建销售订单
+		var serviceFee float64
+		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+			serviceFee = saleBillSetting.ServiceFeeValue
+		}
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
+			ServiceFee:   serviceFee,
 		})
 		if err != nil {
 			return err
@@ -117,6 +133,100 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		SaleBillUuid:  billUuid,
 		SaleOrderUuid: orderUuid,
 	}, nil
+}
+
+// CreateSaleBillSetting 创建销售账单设置
+func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
+	// 获取服务费设置
+	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(dbId)
+	if err != nil {
+		return model.SaleBillSetting{}, err
+	}
+	// 获取税率设置
+	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(dbId)
+	if err != nil {
+		return model.SaleBillSetting{}, err
+	}
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(dbId, "")
+	if err != nil {
+		return model.SaleBillSetting{}, err
+	}
+
+	var serviceFeeType uint
+	var serviceFeeValue float64
+	var taxFeeType uint
+	var discountType uint
+	var zero uint
+	var zeroCheckout uint
+	var isStatGift uint = constant.SaleBillSettingIsStatGiftYes
+	var isStatFree uint = constant.SaleBillSettingIsStatFreeYes
+
+	// 销售账单服务费
+	if serviceFeeSetting.IsOpen == "1" {
+		if serviceFeeSetting.ChargeType == "1" {
+			serviceFeeType = constant.SaleBillSettingServiceFeeTypeFixed
+		}
+		if serviceFeeSetting.ChargeType == "2" {
+			if serviceFeeSetting.IsOpenTax == "0" {
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercent
+			}
+			if serviceFeeSetting.IsOpenTax == "1" {
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
+			}
+		}
+		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
+		if err != nil {
+			return model.SaleBillSetting{}, err
+		}
+	}
+
+	// 销售账单税率
+	if taxRateSetting.IsOpen == "1" {
+		if taxRateSetting.CalcType == "1" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercentTax
+		}
+		if taxRateSetting.CalcType == "2" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercent
+		}
+	}
+
+	// 销售账单优惠折扣
+	if businessSetting.DiscountMethod == "20" {
+		discountType = constant.SaleBillSettingDiscountTypeOff
+	}
+
+	// 销售账单优惠折扣自动抹零方式
+	zeroingMethod, _ := convertor.ToInt(businessSetting.ZeroingMethod)
+	zero = uint(zeroingMethod)
+
+	// 销售账单结账自动抹零方式
+	checkoutZeroingMethod, _ := convertor.ToInt(businessSetting.CheckoutZeroingMethod)
+	zeroCheckout = uint(checkoutZeroingMethod)
+
+	// 销售账单赠菜计算方式
+	if businessSetting.GiftMethod == "20" {
+		isStatGift = constant.SaleBillSettingIsStatGiftNone
+	}
+
+	// 销售账单免单计算方式
+	if businessSetting.FreeMethod == "20" {
+		isStatFree = constant.SaleBillSettingIsStatFreeNone
+	}
+
+	saleBillSetting, err := repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
+		SaleBillUuid:    saleBillUuid,
+		ServiceFeeType:  serviceFeeType,
+		ServiceFeeValue: serviceFeeValue,
+		TaxFeeType:      taxFeeType,
+		DiscountType:    discountType,
+		Zero:            zero,
+		ZeroCheckout:    zeroCheckout,
+		IsStatGift:      isStatGift,
+		IsStatFree:      isStatFree,
+	})
+
+	return saleBillSetting, err
 }
 
 // CreateDeskOrder 创建桌台订单
@@ -145,10 +255,21 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 			return err
 		}
 
+		// 创建销售账单设置
+		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		if err != nil {
+			return err
+		}
+
 		// 创建销售订单
+		var serviceFee float64
+		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+			serviceFee = saleBillSetting.ServiceFeeValue
+		}
 		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
+			ServiceFee:   serviceFee,
 		})
 		if err != nil {
 			return err
@@ -234,7 +355,7 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 }
 
 // GetCashierOrderList 获取订单列表
-func (s *orderSrv) GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
+func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
@@ -244,30 +365,91 @@ func (s *orderSrv) GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderL
 		return resp.OrderListPaginationResp{}, err
 	}
 	// 组合列表源数据
-	billList := make([]resp.BillList, len(lists))
+	billList := make([]resp.BillLists, len(lists))
+	consumerUuids := []string{}
 	for i, bill := range lists {
 		totalPayTypeNames := []string{}
-		orderList := make([]resp.CashierOrder, len(bill.SaleOrders))
-		for i, order := range bill.SaleOrders {
-			payTypeNames := []string{}
-			for _, payment := range order.PaymentOrders {
-				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
-				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+		isSplit := len(bill.SaleOrders) > 1 // 拆单
+		orderList := make([]resp.BillListsOrder, 0)
+		//
+		billListsExtra := resp.BillListsExtra{
+			IsCellRefund:        false,
+			IsCellCancel:        bill.Status == constant.SaleBillStatusPending,
+			IsCellReverseSettle: false,
+			IsCellPrint:         !isSplit && bill.Status != constant.SaleBillStatusPending,
+			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
+			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,
+		}
+		// 拆单
+		if isSplit {
+			for k, order := range bill.SaleOrders {
+				payTypeNames := []string{}
+				for _, payment := range order.PaymentOrders {
+					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
+					payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+				}
+				orderExtra := resp.BillListsExtra{
+					IsCellRefund:        false,
+					IsCellCancel:        order.Status == constant.SaleBillStatusPending,
+					IsCellReverseSettle: false,
+					IsCellPrint:         !isSplit && order.Status != constant.SaleBillStatusPending,
+					IsCellInvoice:       !isSplit && order.Status == constant.SaleBillStatusComplete,
+					IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
+				}
+				// 不等于免单 && 未全退款 && 完成
+				if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+					orderExtra.IsCellRefund = true
+				}
+				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
+				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+					orderExtra.IsCellReverseSettle = true
+				}
+				//
+				orderList = append(orderList, resp.BillListsOrder{
+					SaleBillUuid:  order.SaleBillUuid,
+					SaleOrderUuid: order.Uuid,
+					BillType:      bill.BillType,
+					SerialNo:      bill.SerialNo + "-" + strconv.Itoa(k+1),
+					ConsumerUuids: func() string {
+						if order.ConsumerUuid == 0 {
+							return ""
+						}
+						return strconv.FormatUint(order.ConsumerUuid, 10)
+					}(),
+					OrderNo:       order.OrderNo,
+					Status:        order.Status,
+					FinishTime:    order.FinishTime,
+					OrderAmount:   order.Amount,
+					PaymentAmount: order.PaymentAmount,
+					PayTypeName:   strings.Join(payTypeNames, ","),
+					Extra:         orderExtra,
+				})
+				//
+				if order.ConsumerUuid > 0 {
+					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+				}
 			}
-			orderList[i] = resp.CashierOrder{
-				SaleOrderUuid: order.Uuid,
-				BillType:      bill.BillType,
-				SerialNo:      bill.SerialNo + "-" + strconv.Itoa(i+1),
-				OrderNo:       order.OrderNo,
-				Status:        order.Status,
-				FinishTime:    order.FinishTime,
-				OrderAmount:   order.Amount,
-				PaymentAmount: order.PaymentAmount,
-				PayTypeName:   strings.Join(payTypeNames, ","),
+		} else {
+			// 没有拆单
+			order := bill.SaleOrders[0]
+			if order.ConsumerUuid > 0 {
+				consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+			}
+			//
+			for _, payment := range order.PaymentOrders {
+				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
+			}
+			// 不等于免单 && 未退款 && 完成
+			if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+				billListsExtra.IsCellRefund = true
+			}
+			// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
+			if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+				billListsExtra.IsCellReverseSettle = true
 			}
 		}
 		//
-		billList[i] = resp.BillList{
+		billList[i] = resp.BillLists{
 			SaleBillUuid:  bill.Uuid,
 			BillType:      bill.BillType,
 			IsSplit:       len(bill.SaleOrders) > 1,
@@ -277,8 +459,10 @@ func (s *orderSrv) GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderL
 			FinishTime:    bill.FinishTime,
 			OrderAmount:   bill.Amount,
 			PaymentAmount: bill.PaymentAmount,
+			ConsumerUuids: strings.Join(consumerUuids, ","),
 			PayTypeName:   strings.Join(totalPayTypeNames, ","),
 			SaleOrders:    orderList,
+			Extra:         billListsExtra,
 		}
 	}
 	// 获取数量
@@ -311,7 +495,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, req req.OrderListReq) (resp.OrderL
 }
 
 // GetOrderInfos 获取收银端订单信息
-func (s *orderSrv) GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderInfosResp, error) {
+func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error) {
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 
@@ -320,83 +504,132 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderI
 	if err != nil {
 		return resp.OrderInfosResp{}, err
 	}
+	isMain := req.SaleOrderUuid > 0     // 是否查询主单
+	isSplit := len(info.SaleOrders) > 1 // 是否拆单
 
 	// 组合信息
 	totalMemberNames := []string{}
+	totalMemberUuids := []string{}
 	payTypes := make([]resp.OrderInfoPayTypes, 0)
 	orderList := make([]resp.OrderInfo, len(info.SaleOrders))
 	for i, order := range info.SaleOrders {
 		payTypeNames := []string{}
-		for _, payment := range order.PaymentOrders {
+		if order.IsFree == 1 {
 			payTypes = append(payTypes, resp.OrderInfoPayTypes{
-				Uuid:              payment.Uuid,
-				PaymentMethodName: payment.PaymentMethodName,
-				CurrencyUnit:      payment.CurrencyUnit,
-				PaymentAmount:     payment.PaymentAmount,
-				Status:            payment.Status,
-				Source:            payment.PaymentMethod.Source,
+				Uuid:            0,
+				PaymentTypeName: i18n.Translate(language, "免单"),
+				CurrencyUnit:    "",
+				PaymentAmount:   order.PaymentAmount,
+				Status:          2,
+				Source:          0,
+				SourceText:      "",
 			})
-			payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+			payTypeNames = append(payTypeNames, i18n.Translate(language, "免单"))
+		} else {
+			for _, payment := range order.PaymentOrders {
+				payTypes = append(payTypes, resp.OrderInfoPayTypes{
+					Uuid:            payment.Uuid,
+					PaymentTypeName: payment.PaymentTypeName,
+					CurrencyUnit:    payment.CurrencyUnit,
+					PaymentAmount:   payment.PaymentAmount,
+					Status:          uint(payment.Status),
+					Source:          uint(payment.PaymentMethod.Source),
+					SourceText:      payment.PaymentMethod.GetSourceText(language),
+				})
+				payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+			}
 		}
 		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {
 			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
+		}
+		if order.ConsumerUuid != 0 {
+			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(order.ConsumerUuid, 10))
 		}
 		//
 		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
 			products[j] = resp.OrderProduct{
-				Uuid:                  product.Uuid,
-				LocaleName:            s.localeSrv.GetLocaleNames(product.MultiLanguageName),
-				FlavorName:            product.FlavorName,
-				Num:                   product.Num,
-				CustomPrice:           product.CustomPrice,
-				UnitPrice:             product.UnitPrice,
-				Price:                 product.Price,
-				TaxRate:               product.TaxRate,
-				ProductOriginalAmount: product.ProductOriginalAmount,
-				Status:                product.Status,
-				Remark:                product.Remark,
-				IsGift:                product.IsGift == 1,
-				GiftReason:            product.GiftReason,
-				ImageUrl:              product.ImageFile.GetUrl(),
-				Attributes:            product.GetAttributeNames(),
+				Uuid:           product.Uuid,
+				LocaleName:     product.MultiLanguageName.GetNames(),
+				FlavorName:     product.FlavorName,
+				Num:            product.Num,
+				Price:          product.Price,
+				SalePrice:      product.SalePrice,
+				TotalPrice:     decimal.NewFromFloat(product.TotalPrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
+				TotalSalePrice: decimal.NewFromFloat(product.SalePrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
+				TaxRate:        product.TaxRate,
+				Status:         product.Status,
+				Remark:         product.Remark,
+				IsGift:         product.IsGift == 1,
+				GiftReason:     product.GiftReason,
+				ImageUrl:       product.ImageFile.GetUrl(),
+				Attributes:     product.GetAttributeNames(),
+				RefundReason:   product.RefundReason,
+				// todo 待完善
+				RefundAmount: 0,
 			}
 		}
-		//
+		// todo - SerialNo 取值不对
 		orderList[i] = resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
 			BillType:      info.BillType,
 			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
 			OrderNo:       order.OrderNo,
 			Status:        order.Status,
-			FinishTime:    order.FinishTime,
+			IsFree:        order.IsFree == 1,
+			FreeReason:    order.FreeReason,
 			OrderAmount:   order.Amount,
-			PaymentAmount: order.PaymentAmount,
+			PaymentAmount: order.PaymentAmount - order.GetTotalRefundAmount(),
+			RefundAmount:  order.GetTotalRefundAmount(),
 			PayTypeName:   strings.Join(payTypeNames, ","),
 			MemberName:    order.Member.Nickname,
+			MemberUuid:    order.ConsumerUuid,
 			Products:      products,
 		}
+	}
+
+	// 处理额外信息
+	order := info.SaleOrders[0]
+	orderExtra := resp.BillListsExtra{
+		IsCellRefund: false,
+		IsCellPrint:  (!isSplit || !isMain) && order.Status != constant.SaleBillStatusPending,
+		IsCellDelete: order.Status == constant.SaleBillStatusCanceled,
+	}
+	if (!isSplit || !isMain) && order.IsFree == 0 && info.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+		orderExtra.IsCellRefund = true
 	}
 
 	// 返回响应对象
 	return resp.OrderInfosResp{
 		Detail: resp.OrderInfos{
-			SaleBillUuid:  info.Uuid,
-			BillType:      info.BillType,
-			IsSplit:       len(info.SaleOrders) > 1,
-			SerialNo:      info.SerialNo,
-			OrderNo:       info.OrderNo,
+			SaleBillUuid: info.Uuid,
+			IsSplit:      isSplit,
+			BillType:     info.BillType,
+			SerialNo:     info.SerialNo,
+			OrderNo: func() string {
+				if isMain {
+					return info.OrderNo
+				}
+				return order.OrderNo
+			}(),
 			Status:        info.Status,
 			CreateTime:    info.CreateTime,
 			FinishTime:    info.FinishTime,
 			OrderAmount:   info.Amount,
-			PaymentAmount: info.PaymentAmount,
+			PaymentAmount: info.PaymentAmount - info.GetTotalRefundAmount(),
+			RefundAmount:  info.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
+			MemberUuids:   strings.Join(totalMemberUuids, ","),
+			CashierName:   info.Cashier.RealName,
+			IsBuffet:      info.IsBuffet == 1,
+			BuffetNames:   info.GetBuffetNames(language),
+			CancelReason:  info.Reason,
 			PayTypes:      payTypes,
 			SaleOrders:    orderList,
+			Remark:        info.Remark,
 		},
 		OperationLog: struct {
-			List []resp.OrderOperationLog
+			List []resp.OrderOperationLog `json:"list"`
 		}{
 			List: func() []resp.OrderOperationLog {
 				logs, err := s.GetRecordList(dbId, req.SaleBillUuid, 0)
@@ -406,6 +639,7 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, req req.OrderInfoReq) (resp.OrderI
 				return logs
 			}(),
 		},
+		Extra: orderExtra,
 	}, nil
 }
 
@@ -419,11 +653,21 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 	// todo - 数据格式待处理
 	logs := make([]resp.OrderOperationLog, 0)
 	for _, record := range orderRecordLists {
+		// 解析Data字段的JSON字符串为map
+		var data any
+		if record.Data != "" {
+			if err := json.Unmarshal([]byte(record.Data), &data); err != nil {
+				data = struct{}{}
+			}
+		} else {
+			data = struct{}{}
+		}
+		//
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:          record.Uuid,
 			Source:        record.Source,
 			Action:        record.Action,
-			Data:          record.Data,
+			Data:          data,
 			Remark:        record.Remark,
 			SaleBillUuid:  record.SaleBillUuid,
 			SaleOrderUuid: record.SaleOrderUuid,
@@ -528,6 +772,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderOrderCancel, model.SaleBillOperationRecord{
 		Source:        source,
 		Remark:        "取消订单",
+		SaleBillUuid:  billInfo.SaleOrders[0].Uuid,
 		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
 		OperatorUuid:  staff.Uuid,
 	}, nil)
@@ -655,7 +900,7 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	}
 
 	// 判断商品
-	product, err := orderProductRepo.GetProductInfo(req.OrderProductUuid)
+	product, err := orderProductRepo.GetProductInfoByUuid(req.OrderProductUuid)
 	if err != nil {
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}

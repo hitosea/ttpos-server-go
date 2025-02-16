@@ -3,13 +3,17 @@
 namespace app\common\model\delay;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  *
  */
 class Delay extends BaseModel
 {
-    protected $name = 'delay';
+    use SoftDelete;
+    protected $name = 'buffet_delay';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段

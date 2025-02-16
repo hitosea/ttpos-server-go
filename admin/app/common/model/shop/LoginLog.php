@@ -18,11 +18,11 @@ class LoginLog extends BaseModel
     protected $append = ['login_log_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getLoginLogIdAttr()
     {
-        return $this->id ?? 0;
+        return $this->id ?: 0;
     }
 
     /**

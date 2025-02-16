@@ -2,66 +2,80 @@ package service
 
 import (
 	"errors"
-	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 // IOrderProductSrv 定义订单商品服务接口
 type IOrderProductSrv interface {
-	CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error)                            // 检查商品
-	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                   // 检查商品规格
-	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                  // 检查商品加料
-	CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error // 检查商品属性
-	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error            // 检查商品规格库存
-	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error             // 检查商品加料库存
+	CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error)                                 // 检查商品
+	CheckOrderProductFlavor(productPackage model.ProductPackage, flavorUuid uint64) error                       // 检查商品规格
+	CheckOrderProductSauce(productPackage model.ProductPackage, sauceUuids []uint64) error                      // 检查商品加料
+	CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error // 检查商品属性
+	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品规格库存
+	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                 // 检查商品加料库存
 	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
-	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) // 创建订单商品
-	CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp                                // 计算单价,商品原价+小料价
+	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
+	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
+	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                    // 生成订单商品
+	UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error                // 更新订单商品金额
 }
 
 // orderProductSrv 订单商品服务结构体
 type orderProductSrv struct {
-	dbm *database.DBManager
+	dbm          *database.DBManager
+	orderCalcSrv IOrderCalcSrv
 }
 
 // NewOrderProductSrv 创建商品服务
-func NewOrderProductSrv(dbm *database.DBManager) IOrderProductSrv {
-	return NewOrderProductSrvImpl(dbm)
+func NewOrderProductSrv(dbm *database.DBManager, orderCalcSrv IOrderCalcSrv) IOrderProductSrv {
+	return NewOrderProductSrvImpl(dbm, orderCalcSrv)
 }
 
 // NewOrderProductSrvImpl 创建商品服务实现
-func NewOrderProductSrvImpl(dbm *database.DBManager) IOrderProductSrv {
+func NewOrderProductSrvImpl(dbm *database.DBManager, orderCalcSrv IOrderCalcSrv) IOrderProductSrv {
 	return &orderProductSrv{
-		dbm: dbm,
+		dbm:          dbm,
+		orderCalcSrv: orderCalcSrv,
 	}
 }
 
 // CheckProduct 检查商品
-func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (*model.ProductPackage, error) {
+func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (model.ProductPackage, error) {
 	db := o.dbm.GetDB(dbId)
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	productPackage, _ := productRepo.GetProduct(
 		commonRepo.WhereByUuid(productUuid),
 		commonRepo.WhereBySoftDelete(),
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithDineTax(),
+		productRepo.WithTakeoutTax(),
 		productRepo.WithProductBoms(),
+		productRepo.WithProductBomsProductFlavor(),
+		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
+		productRepo.WithProductBomsProductSauce(),
+		productRepo.WithProductBomsProductSauceMultiLanguageName(),
 		productRepo.WithProductPackageAttributeGroup(),
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
 	)
 	if productPackage.Uuid == 0 {
-		return nil, errors.New("商品不存在")
+		return model.ProductPackage{}, errors.New("商品不存在")
 	}
 	if productPackage.Status == constant.ProductStatusOffSale {
-		return nil, errors.New("商品已下架")
+		return model.ProductPackage{}, errors.New("商品已下架")
 	}
 
-	return &productPackage, nil
+	return productPackage, nil
 }
 
 // CheckOrderProductFlavor 检查商品规格
@@ -102,7 +116,11 @@ func (o *orderProductSrv) CheckOrderProductSauce(productPackage model.ProductPac
 // CheckOrderProductAttribute 检查商品属性,
 // productPackage需要包含ProductPackageAttributeGroups
 // ProductPackageAttributeGroups需要包含ProductPackageAttributes
-func (o *orderProductSrv) CheckOrderProductAttribute(productPackage model.ProductPackage, attributeMap map[uint64][]uint64) error {
+func (o *orderProductSrv) CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error {
+	var attributeMap = make(map[uint64][]uint64)
+	for _, attribute := range attributes {
+		attributeMap[attribute.GroupUuid] = append(attributeMap[attribute.GroupUuid], attribute.ValueUuids...)
+	}
 	var groups = productPackage.ProductPackageAttributeGroups
 	for _, group := range groups {
 		var count = uint(len(attributeMap[group.Uuid]))
@@ -151,101 +169,235 @@ func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid 
 
 }
 
+// CheckCreateOrderProduct 检查创建订单商品
+func (o *orderProductSrv) CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) {
+	// 检查商品
+	productPackage, err := o.CheckProduct(dbId, product.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	// 检查商品规格
+	if err = o.CheckOrderProductFlavor(productPackage, product.FlavorUuid); err != nil {
+		return nil, err
+	}
+	// 检查商品属性
+	if err = o.CheckOrderProductAttribute(productPackage, product.Attributes); err != nil {
+		return nil, err
+	}
+	// 检查商品加料
+	if err = o.CheckOrderProductSauce(productPackage, product.SauceUuids); err != nil {
+		return nil, err
+	}
+
+	// todo 检查商品规格库存
+
+	// todo 是否必选商品
+
+	return &productPackage, nil
+}
+
 // CreateOrderProductReq 创建订单商品请求
 type CreateOrderProductReq struct {
 	Lang           string
+	SaleBill       model.SaleBill
 	SaleOrder      model.SaleOrder
 	ProductPackage model.ProductPackage
-	ProductFlavor  model.ProductFlavor
-	ProductBoms    []model.ProductBom
+	SauceUuids     []uint64
 	Num            uint
 }
 
 // CreateOrderProduct 创建订单商品
-func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) (*model.SaleOrderProduct, error) {
-	var res model.SaleOrderProduct
+func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error {
 	db := o.dbm.GetDB(dbId)
-	amount := o.CalcAmount(req.ProductBoms, req.Num)
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// 创建订单商品
-		orderProduct, err := repository.NewOrderProductRepo(tx).Create(model.SaleOrderProduct{
-			Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
-			FlavorName:            req.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang),
-			Num:                   req.Num,
-			UnitPrice:             amount.UnitPrice,
-			Price:                 amount.Price,
-			ServiceFee:            amount.ServiceFee,
-			TaxFee:                amount.TaxFee,
-			ProductOriginalAmount: amount.OriginalAmount,
-			DeductStockType:       req.ProductPackage.DeductStockType,
-			MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
-			ImageFileUuid:         req.ProductPackage.ImageFileUuid,
-			ProductPackageUuid:    req.ProductPackage.Uuid,
-			SaleBillUuid:          req.SaleOrder.SaleBillUuid,
-			SaleOrderUuid:         req.SaleOrder.Uuid,
+		// 生成销售订单商品
+		orderProductData := o.GenerateOrderProduct(GenerateOrderProductReq{
+			Lang:           req.Lang,
+			ProductPackage: req.ProductPackage,
+			SaleBill:       req.SaleBill,
+			SaleOrder:      req.SaleOrder,
+			SauceUuids:     req.SauceUuids,
+			Num:            req.Num,
 		})
 
+		// 判断销售订单商品签名是否存在, 存在则更新, 不存在则创建
+		orderProduct, err := repository.NewOrderProductRepo(tx).GetProductInfo(
+			repository.CommonRepo.WhereBySign(orderProductData.Sign),
+			repository.CommonRepo.WhereBySaleBillUuid(orderProductData.SaleBillUuid),
+			repository.CommonRepo.WhereBySaleOrderUuid(orderProductData.SaleOrderUuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
 		if err != nil {
 			return err
 		}
-
-		// 创建销售订单商品BOM
-		var orderProductBoms []model.SaleOrderProductBom
-		for _, bom := range req.ProductBoms {
-			var name string
-			var isFlavorBom uint
-			if bom.ProductFlavorUuid > 0 {
-				name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
-				isFlavorBom = 1
+		if orderProduct.Uuid == 0 {
+			// 创建销售订单商品
+			orderProduct, err = repository.NewOrderProductRepo(tx).Create(orderProductData)
+			if err != nil {
+				return err
 			}
-			if bom.ProductSauceUuid > 0 {
-				name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
+			// 创建销售订单商品bom
+			for key, bom := range orderProductData.SaleOrderProductBoms {
+				bom.SaleOrderProductUuid = orderProduct.Uuid
+				orderProductData.SaleOrderProductBoms[key] = bom
 			}
-			orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
-				Name:                 name,
-				Price:                bom.Price,
-				IsFlavorBom:          isFlavorBom,
-				SaleOrderUuid:        req.SaleOrder.Uuid,
-				SaleOrderProductUuid: orderProduct.Uuid,
-				ProductBomUuid:       bom.Uuid,
-			})
+			if err := repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
+				return err
+			}
+			// 创建销售订单商品属性
+			if len(orderProductData.SaleOrderProductAttributes) > 0 {
+				for key, attribute := range orderProductData.SaleOrderProductAttributes {
+					attribute.SaleOrderProductUuid = orderProduct.Uuid
+					orderProductData.SaleOrderProductAttributes[key] = attribute
+				}
+				if err := repository.NewOrderProductAttributeRepo(tx).CreateBatch(orderProductData.SaleOrderProductAttributes); err != nil {
+					return err
+				}
+			}
+		} else {
+			// 更新销售订单商品
+			if err := repository.NewOrderProductRepo(tx).Update(
+				map[string]interface{}{
+					"num": repository.NewCommonRepo().IncrementNum(req.Num),
+				},
+				repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
+			); err != nil {
+				return err
+			}
 		}
-		err = repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductBoms)
+
+		// 计算销售订单商品相关金额
+		err = o.UpdateOrderProductAmount(tx, UpdateOrderProductAmountReq{
+			SaleBill:     req.SaleBill,
+			SaleOrder:    req.SaleOrder,
+			OrderProduct: orderProduct,
+		})
 		if err != nil {
 			return err
 		}
-
-		res = orderProduct
 
 		return nil
 	})
 
-	return &res, err
+	return err
 }
 
-type CalcAmountResp struct {
-	UnitPrice      float64 // 单价: productBom.Price累加
-	Price          float64 // 最终单价: 折扣和优惠后的UnitPrice
-	ServiceFee     float64 // 服务费,按比例收取时有 todo
-	TaxFee         float64 // 税费 todo
-	OriginalAmount float64 // 原价销售额: (UnitPrice + TaxFee) * 数量
+// GenerateOrderProductReq 生成订单商品请求
+type GenerateOrderProductReq struct {
+	Lang           string
+	ProductPackage model.ProductPackage
+	SaleBill       model.SaleBill
+	SaleOrder      model.SaleOrder
+	SauceUuids     []uint64
+	Num            uint
 }
 
-// CalcAmount 计算单价,商品原价+小料价
-func (o *orderProductSrv) CalcAmount(boms []model.ProductBom, num uint) CalcAmountResp {
-	var unitPrice float64
-	var TaxFee float64
-	var originalAmount float64
-	for _, bom := range boms {
-		unitPrice = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(bom.Price)).InexactFloat64()
+// GenerateOrderProduct 生成订单商品
+func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct {
+	// 获取商品规格名称
+	flavorName := ""
+	flavor := req.ProductPackage.GetFlavor()
+	if flavor.Uuid > 0 {
+		flavorName = flavor.MultiLanguageName.GetNameByLang(req.Lang)
 	}
 
-	// 原价销售额 = (UnitPrice + TaxFee) * 数量
-	originalAmount = decimal.NewFromFloat(unitPrice).Add(decimal.NewFromFloat(TaxFee)).Mul(decimal.NewFromInt(int64(num))).InexactFloat64()
+	// 生成商品原始价格
+	flavorPrice, saucePrice, productPrice, salePrice := req.ProductPackage.GenerateOriginalAmount(req.SauceUuids)
 
-	return CalcAmountResp{
-		UnitPrice:      unitPrice,
-		Price:          unitPrice,
-		OriginalAmount: originalAmount,
+	// 获取消费税率
+	taxRate := req.ProductPackage.DineTax.TaxRate
+	if req.SaleBill.DiningMethod == constant.SaleBillDiningMethodTakeout {
+		taxRate = req.ProductPackage.TakeoutTax.TaxRate
 	}
+
+	// 构建销售订单商品模型
+	orderProduct := model.SaleOrderProduct{
+		Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
+		FlavorName:            flavorName,
+		Num:                   req.Num,
+		FlavorPrice:           flavorPrice,
+		SaucePrice:            saucePrice,
+		ProductPrice:          productPrice,
+		SalePrice:             salePrice,
+		DeductStockType:       req.ProductPackage.DeductStockType,
+		MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
+		ImageFileUuid:         req.ProductPackage.ImageFileUuid,
+		ProductPackageUuid:    req.ProductPackage.Uuid,
+		SaleBillUuid:          req.SaleBill.Uuid,
+		SaleOrderUuid:         req.SaleOrder.Uuid,
+		IsOpenMemberDiscount:  req.ProductPackage.OpenDiscount,
+		TaxRate:               taxRate,
+	}
+
+	// 构建销售订单商品BOM
+	var orderProductBoms []model.SaleOrderProductBom
+	for _, bom := range req.ProductPackage.ProductBoms {
+		var name string
+		var isFlavorBom uint
+		if bom.ProductFlavorUuid > 0 {
+			name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
+			isFlavorBom = 1
+		}
+		if bom.ProductSauceUuid > 0 {
+			name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
+		}
+		orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
+			Name:           name,
+			Price:          bom.Price,
+			IsFlavorBom:    isFlavorBom,
+			SaleOrderUuid:  req.SaleOrder.Uuid,
+			ProductBomUuid: bom.Uuid,
+		})
+	}
+
+	// 构建销售订单商品属性
+	var orderProductAttributes []model.SaleOrderProductAttribute
+	for _, productPackageGroup := range req.ProductPackage.ProductPackageAttributeGroups {
+		for _, productPackageAttribute := range productPackageGroup.ProductPackageAttributes {
+			orderProductAttributes = append(orderProductAttributes, model.SaleOrderProductAttribute{
+				Name:                 productPackageAttribute.Attribute.MultiLanguageName.GetNameByLang(req.Lang),
+				SaleOrderUuid:        req.SaleOrder.Uuid,
+				ProductAttributeUuid: productPackageAttribute.AttributeUuid,
+			})
+		}
+	}
+
+	orderProduct.SaleOrderProductBoms = orderProductBoms
+	orderProduct.SaleOrderProductAttributes = orderProductAttributes
+	orderProduct.Sign = orderProduct.GenerateProductSign()
+
+	return orderProduct
+}
+
+// UpdateOrderProductAmountReq 更新订单商品金额请求
+type UpdateOrderProductAmountReq struct {
+	SaleBill     model.SaleBill
+	SaleOrder    model.SaleOrder
+	OrderProduct model.SaleOrderProduct
+}
+
+// UpdateOrderProductAmount 更新订单商品金额
+func (o *orderProductSrv) UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error {
+	orderProductAmount := o.orderCalcSrv.CalcOrderProductAmount(req.SaleBill, req.SaleOrder, req.OrderProduct)
+	if err := repository.NewOrderProductRepo(db).Update(
+		map[string]interface{}{
+			"price":                     orderProductAmount.DiscountAmount.Price,
+			"discount_fee":              orderProductAmount.DiscountAmount.DiscountFee,
+			"member_discount_fee":       orderProductAmount.DiscountAmount.MemberDiscountFee,
+			"custom_discount_fee":       orderProductAmount.DiscountAmount.CustomDiscountFee,
+			"member_discount_rate":      orderProductAmount.DiscountAmount.MemberDiscountRate,
+			"member_card_discount_rate": orderProductAmount.DiscountAmount.MemberCardDiscountRate,
+			"custom_discount_rate":      orderProductAmount.DiscountAmount.CustomDiscountRate,
+			"tax_fee":                   orderProductAmount.TaxAmount.TaxFee,
+			"service_fee":               orderProductAmount.ServiceAmount.ServiceFee,
+			"service_tax_fee":           orderProductAmount.ServiceAmount.ServiceTaxFee,
+			"total_price":               orderProductAmount.TotalPrice,
+		},
+		repository.NewCommonRepo().WhereByUuid(req.OrderProduct.Uuid),
+		repository.NewCommonRepo().WhereBySoftDelete(),
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

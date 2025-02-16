@@ -41,7 +41,7 @@ type ClientMessage struct {
 
 // ConnectionInfo represents a generic message structure
 type ConnectionInfo struct {
-	CompanyId     uint   `json:"company_id"`
+	CompanyUuid   uint64 `json:"company_id"`
 	SourceClient  string `json:"source_client"`
 	DeviceId      string `json:"device_id"`
 	LastHeartbeat string `json:"last_heartbeat"`
@@ -115,9 +115,9 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	}
 
 	// 验证设备是否绑定
-	bindRecordRepo := repository.NewBindRecordRepository(&database.DBManager{})
-	existsBindRecord := bindRecordRepo.GetRecordBySourceAndDeviceId(claims.CompanyId, claims.Source, claims.DeviceId)
-	if existsBindRecord.ID == 0 {
+	DeviceRepo := repository.NewDeviceRepository(&database.DBManager{})
+	existsDevice := DeviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyUuid, claims.Source, claims.DeviceId)
+	if existsDevice.ID == 0 {
 		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
 			State: constant.CodeFail,
@@ -129,7 +129,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 
 	// 断开之前的链接
 	for i, conn := range WsClients {
-		if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsBindRecord.Source && conn.DeviceId == existsBindRecord.DeviceId && conn.ws != ws {
+		if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId && conn.ws != ws {
 			conn.ws.Close()
 			WsClients = append(WsClients[:i], WsClients[i+1:]...)
 			break
@@ -138,9 +138,9 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 
 	// 添加新连接
 	WsClients = append(WsClients, ConnectionInfo{
-		CompanyId:     claims.CompanyId,
-		SourceClient:  existsBindRecord.Source,
-		DeviceId:      existsBindRecord.DeviceId,
+		CompanyUuid:   claims.CompanyUuid,
+		SourceClient:  existsDevice.Source,
+		DeviceId:      existsDevice.DeviceId,
 		LastHeartbeat: time.Now().Format(time.RFC3339),
 		ws:            ws,
 	})
@@ -148,7 +148,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	// 监听关闭事件以删除连接详细信息
 	ws.SetCloseHandler(func(code int, text string) error {
 		for i, conn := range WsClients {
-			if conn.CompanyId == claims.CompanyId && conn.SourceClient == existsBindRecord.Source && conn.DeviceId == existsBindRecord.DeviceId {
+			if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId {
 				WsClients = append(WsClients[:i], WsClients[i+1:]...)
 				break
 			}
@@ -162,10 +162,10 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 		State: constant.CodeSuccess,
 		Msg:   "Connected successfully",
 		Data: utils.StructToJson(map[string]interface{}{
-			"source":     claims.Source,
-			"company_id": claims.CompanyId,
-			"staff_id":   claims.StaffId,
-			"device_id":  claims.DeviceId,
+			"source":       claims.Source,
+			"company_uuid": claims.CompanyUuid,
+			"staff_uuid":   claims.StaffUuid,
+			"device_id":    claims.DeviceId,
 		}),
 	})); err != nil {
 		fmt.Println("Error sending ping message:", err)
@@ -214,21 +214,21 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 }
 
 // PushClient 推送消息
-func PushClient(CompanyId uint, SourceClient, DeviceId string, msgType string, data string) {
+func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType string, data string) {
 	for _, conn := range WsClients {
-		if conn.CompanyId == CompanyId && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") {
+		if conn.CompanyUuid == CompanyUuid && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") {
 			// 创建一个 WebSocketMsgRepository 实例
 			repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
 
 			// 1. 先删后加 - 同一个类型，只保留最新的
-			err := repo.DeleteByTypeAndCompanyId(msgType, CompanyId)
+			err := repo.DeleteByTypeAndCompanyId(msgType, CompanyUuid)
 			if err != nil {
 				fmt.Printf("Error deleting old messages: %v\n", err)
 			}
 
 			// 2. 创建
 			id, err := repo.Create(model.WebSocketMsg{
-				CompanyUuid:  CompanyId,
+				CompanyUuid:  CompanyUuid,
 				Uid:          conn.DeviceId,
 				Msg:          data,
 				Type:         msgType,

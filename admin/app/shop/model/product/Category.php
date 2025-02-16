@@ -100,9 +100,10 @@ class Category extends CategoryModel
             return false;
         }
         //
+        $this->multiLanguageName->delete();
         $res = $this->delete();
-        // todo 兼容
-        // $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
+        // 兼容
+        $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
         //
         if ($res && $this->uuid) {
             foreach (Product::where($where)->select() as $product) {

@@ -1,9 +1,9 @@
 <?php
 
 use think\migration\Migrator;
+use think\migration\db\Column;
 
-
-class Update extends Migrator
+class AddStatusToBuffetPackageTable extends Migrator
 {
     /**
      * Change Method.
@@ -28,10 +28,10 @@ class Update extends Migrator
      */
     public function change()
     {
-        $table = $this->table('sale_order_product');
-        if ($table->hasColumn('tax_fee')) {
-            $table->changeColumn('tax_fee', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true, 'default' => null])
-                  ->update();
+        $table = $this->table('buffet_package');
+        if (!$table->hasColumn('status')) {
+            $table->addColumn(Column::tinyInteger('status')->setDefault(1)->setComment('状态 0-禁用 1-启用')->setAfter('reminder_order_time'));
         }
+        $table->update();
     }
 }

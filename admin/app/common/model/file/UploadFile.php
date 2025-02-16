@@ -18,19 +18,19 @@ class UploadFile extends BaseModel
     protected $append = ['file_path', 'file_id', 'group_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getFileIdAttr()
     {
-        return $this->uuid ?? 0;
+        return $this->uuid ?: 0;
     }
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getGroupIdAttr()
     {
-        return $this->group_uuid ?? 0;
+        return $this->group_uuid ?: 0;
     }
 
     /**

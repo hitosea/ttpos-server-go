@@ -1,5 +1,11 @@
 package model
 
+import (
+	"slices"
+
+	"github.com/shopspring/decimal"
+)
+
 // ProductFlavor 商品规格表,定义商品的规格信息 ttpos_product_flavor
 type ProductFlavor struct {
 	BaseModel
@@ -107,20 +113,8 @@ type ProductPackage struct {
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
 	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
 	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
-}
-
-func (model *ProductPackage) IsDown() bool {
-	if model.Status == 0 {
-		return true
-	}
-	return false
-}
-
-func (model *ProductPackage) IsDelete() bool {
-	if model.DeleteTime != 0 {
-		return true
-	}
-	return false
+	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
+	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
 }
 
 // ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom
@@ -136,6 +130,59 @@ type ProductBom struct {
 	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+}
+
+// IsDown 判断商品包是否下架
+func (model *ProductPackage) IsDown() bool {
+	return model.Status == 0
+}
+
+// IsDelete 判断商品包是否删除
+func (model *ProductPackage) IsDelete() bool {
+	return model.DeleteTime != 0
+}
+
+// GenerateOriginalAmount 生成商品原始价格
+func (model *ProductPackage) GenerateOriginalAmount(sauceUuids []uint64) (float64, float64, float64, float64) {
+	var (
+		flavorPrice  float64
+		saucePrice   float64
+		productPrice float64
+		salePrice    float64
+	)
+	for _, bom := range model.ProductBoms {
+		if bom.IsFlavorProduct() {
+			flavorPrice = bom.Price
+		}
+		if bom.IsSauce() && slices.Contains(sauceUuids, bom.ProductSauceUuid) {
+			saucePrice = decimal.NewFromFloat(bom.Price).Add(decimal.NewFromFloat(saucePrice)).InexactFloat64()
+		}
+	}
+	productPrice = decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(saucePrice)).InexactFloat64()
+	return flavorPrice, saucePrice, productPrice, salePrice
+}
+
+// GetFlavor 获取商品规格
+func (model *ProductPackage) GetFlavor() ProductFlavor {
+	for _, bom := range model.ProductBoms {
+		if bom.IsFlavorProduct() {
+			return bom.ProductFlavor
+		}
+	}
+
+	return ProductFlavor{}
+}
+
+// GetSauces 获取商品小料
+func (model *ProductPackage) GetSauces() []ProductSauce {
+	sauces := make([]ProductSauce, 0)
+	for _, bom := range model.ProductBoms {
+		if bom.IsSauce() {
+			sauces = append(sauces, bom.ProductSauce)
+		}
+	}
+
+	return sauces
 }
 
 // IsFlavorProduct 判断是否为商品规格

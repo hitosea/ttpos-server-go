@@ -18,11 +18,11 @@ class OptLog extends BaseModel
     protected $append = ['opt_log_id'];
 
     /**
-     * 兼容ID字段
+     * 兼容字段
      */
     public function getOptLogIdAttr()
     {
-        return $this->id ?? 0;
+        return $this->id ?: 0;
     }
 
     /**

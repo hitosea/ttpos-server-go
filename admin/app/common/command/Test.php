@@ -55,6 +55,10 @@ class Test extends Command
 
     protected function execute(Input $input, Output $output)
     {
+
+        dump(signToken(8609817483677696, 'shop', 1, 'admin', 8609817471094784));
+        die;
+
         // 测试雪花ID生成是否重复 - 真实并发测试
         $workerIds = range(1, 3); // 使用3个不同的worker ID
         $iterations = 1000; // 每个worker生成1000个ID

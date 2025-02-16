@@ -36,5 +36,5 @@ return [
     // 默认多应用
     'auto_multi_app' => true,
     //后台token加密
-    'salt' => Env::get('TOKEN_SALT', '!@#$%*&fasw-dkjh' . Env::get('APP_ID'))
+    'salt' => Env::get('JWT_SECRET', '!@#$%*&fasw-dkjh' . Env::get('APP_ID'))
 ];

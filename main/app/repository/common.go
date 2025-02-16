@@ -2,9 +2,21 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Where func(*gorm.DB) *gorm.DB
+
+func handleWiths(db *gorm.DB, withs []With) *gorm.DB {
+	if len(withs) == 0 {
+		return db
+	}
+	for _, with := range withs {
+		db = with(db)
+	}
+	return db
+}
+
 type With func(*gorm.DB) *gorm.DB
 type DBOption func(*gorm.DB) *gorm.DB
 
@@ -28,6 +40,7 @@ type ICommonRepo interface {
 	WhereByID(id uint) DBOption                                     // 根据ID查询
 	WhereByUuid(uuid uint64) DBOption                               // 根据UUID查询
 	WhereBySaleBillUuid(uuid uint64) DBOption                       // 根据销售单UUID查询
+	WhereBySaleOrderUuid(uuid uint64) DBOption                      // 根据销售订单UUID查询
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
@@ -38,12 +51,15 @@ type ICommonRepo interface {
 	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption       // 根据顾客类型UUID查询
 	WhereByProductPackageUuid(productPackUuid uint64) DBOption      // 根据产品套餐UUID查询
 	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption     // 根据产品口味UUID查询
+	WhereBySign(sign string) DBOption                               // 根据签名查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	SortWithID(order string) DBOption                               // 根据ID排序
 	SortWithSort(order string) DBOption                             // 根据Order By排序
 	SortWithIsSpecial(order string) DBOption                        // 根据是否特殊排序
 	Preload(preloads ...WithPreload) DBOption                       // 预加载
+	IncrementNum(num uint) clause.Expr                              // 增加商品数量
+	DecrementNum(num uint) clause.Expr                              // 减少商品数量
 }
 
 // commonRepo 公共仓库实现
@@ -202,4 +218,28 @@ func (r *commonRepo) Preload(preloads ...WithPreload) DBOption {
 		}
 		return db
 	}
+}
+
+// WhereBySaleOrderUuid 根据销售订单UUID查询
+func (r *commonRepo) WhereBySaleOrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_order_uuid = ?", uuid)
+	}
+}
+
+// WhereBySign 根据签名查询
+func (r *commonRepo) WhereBySign(sign string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("sign = ?", sign)
+	}
+}
+
+// IncrementNum 增加商品数量
+func (r *commonRepo) IncrementNum(num uint) clause.Expr {
+	return gorm.Expr("num + ?", num)
+}
+
+// DecrementNum 减少商品数量
+func (r *commonRepo) DecrementNum(num uint) clause.Expr {
+	return gorm.Expr("num - ?", num)
 }

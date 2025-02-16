@@ -45,8 +45,11 @@ type ISrv interface {
 	GetBuffetSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Buffet, error)                                       // 获取自助餐设置
 	GetCurrencySetting(companyUuid uint64) (setting.Currency, error)                                                                        // 获取货币单位设置
 	GetCompanySetting(companyUuid uint64) (model.CompanySetting, error)                                                                     // 获取公司设置
+	GetPaymentSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Payment, error)                                     // 获取门店-支付方式设置
 	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                                                        // 获取收银机语言
 	GetCashierAd(c context.Context, companyUuid uint64) (resp.Ads, error)                                                                   // 获取收银机副屏广告
+	GetServiceFeeSetting(companyUuid uint64) (setting.ServiceCharge, error)                                                                 // 获取服务费设置
+	GetTaxRateSetting(companyUuid uint64) (setting.TaxRate, error)                                                                          // 获取税率设置
 	CashierVerifyPassword(c context.Context, typ string, password string, companyUuid uint64) bool                                          // 收银机验证密码
 	Updates(companyUuid uint64, settingKey string, values any) error                                                                        // 更新设置
 	VerifyAdvancedPassword(companyUuid uint64, password string) error                                                                       // 验证高级密码
@@ -602,6 +605,28 @@ func (s *Srv) GetBuffetSetting(companyUuid uint64, companySetting model.CompanyS
 	return defaultBuffet, nil
 }
 
+// GetPaymentSetting 门店-支付方式
+func (s *Srv) GetPaymentSetting(companyUuid uint64, companySetting model.CompanySetting) (setting.Payment, error) {
+	var payment setting.Payment
+	st := s.getSettingByKey(companyUuid, constant.SettingPayment)
+	err := json.Unmarshal([]byte(st.Values), &payment)
+	if err != nil {
+		logger.Logger.Error("解析门店-支付方式失败", zap.Error(err))
+		return payment, errors.New("解析门店-支付方式失败")
+	}
+	// 会员关闭时 门店管理 支付方式 余额这个开关要关了
+	if companySetting.IsOpenMember == 0 {
+		payment.IsBalance = "0"
+	}
+	tmp := s.getDefaultPayment()
+	err = copier.CopyWithOption(&tmp, payment, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		logger.Logger.Error("合并门店-支付方式失败", zap.Error(err))
+		return payment, errors.New("合并门店-支付方式失败")
+	}
+	return payment, nil
+}
+
 // GetCurrencySetting 货币单位设置
 func (s *Srv) GetCurrencySetting(companyUuid uint64) (setting.Currency, error) {
 	st := s.getSettingByKey(companyUuid, constant.SettingCurrency)
@@ -776,6 +801,44 @@ func (s *Srv) GetCashierAd(c context.Context, companyUuid uint64) (resp.Ads, err
 	return resp.Ads{
 		List: cashierSetting.Carousel,
 	}, nil
+}
+
+// GetServiceFeeSetting 获取服务费设置
+func (s *Srv) GetServiceFeeSetting(companyUuid uint64) (setting.ServiceCharge, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingServiceCharge)
+	var serviceFee setting.ServiceCharge
+	err := json.Unmarshal([]byte(st.Values), &serviceFee)
+	if err != nil {
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	if serviceFee.IsOpen == "0" {
+		serviceFee.IsOpen = "0"
+	}
+	defaultServiceFee := s.getDefaultServiceCharge()
+	err = copier.CopyWithOption(&defaultServiceFee, serviceFee, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	return defaultServiceFee, nil
+}
+
+// GetTaxRateSetting 获取税率设置
+func (s *Srv) GetTaxRateSetting(companyUuid uint64) (setting.TaxRate, error) {
+	st := s.getSettingByKey(companyUuid, constant.SettingTaxRate)
+	var taxRate setting.TaxRate
+	err := json.Unmarshal([]byte(st.Values), &taxRate)
+	if err != nil {
+		return taxRate, errors.New("解析税率设置失败")
+	}
+	if taxRate.IsOpen == "0" {
+		taxRate.IsOpen = "0"
+	}
+	defaultTaxRate := s.getDefaultTaxRate()
+	err = copier.CopyWithOption(&defaultTaxRate, taxRate, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		return taxRate, errors.New("解析税率设置失败")
+	}
+	return defaultTaxRate, nil
 }
 
 // CashierVerifyPassword 收银机验证密码

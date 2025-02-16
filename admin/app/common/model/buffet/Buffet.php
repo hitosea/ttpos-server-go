@@ -16,7 +16,7 @@ use app\common\model\order\OrderBuffet as OrderBuffetModel;
 class Buffet extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'buffet';
+    protected $name = 'buffet_package';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -25,21 +25,63 @@ class Buffet extends BaseModel
      * @var string[]
      */
     protected $append = [
+        'id',
+        'buffet_id',
+        'is_time_limit',
+        'time_limit',
+        'is_comb',
+        'remain_continue_time',
+        'remain_continue_notice_time',
+        'is_remain_continue',
+        'sale_num',
         'name_text',
     ];
+
+    /**
+     * 兼容字段
+     */
+    public function getIdAttr($value, $data = [])
+    {
+        return $this->uuid ?: 0;
+    }    public function getBuffetIdAttr($value, $data = [])
+    {
+        return $this->uuid ?: 0;
+    }
+    public function getIsTimeLimitAttr($value, $data = [])
+    {
+        return $this->is_limit_time ?: 0;
+    }
+    public function getTimeLimitAttr($value, $data = [])
+    {
+        return $this->limit_time ?: 0;
+    }
+    public function getIsCombAttr($value, $data = [])
+    {
+        return $this->can_combined ?: 0;
+    }
+    public function getRemainContinueTimeAttr($value, $data = [])
+    {
+        return $this->non_ordering_time ?: 0;
+    }
+    public function getRemainContinueNoticeTimeAttr($value, $data = [])
+    {
+        return $this->reminder_order_time ?: 0;
+    }
+    public function getIsRemainContinueAttr($value, $data = [])
+    {
+        return $this->non_ordering_time > 0 ? 1 : 0;
+    }
+    public function getSaleNumAttr($value, $data = [])
+    {
+        return 0;
+    }
 
     /**
      * 关联自助餐产品
      */
     public function buffetProducts()
     {
-        return $this->hasMany(BuffetProduct::class, 'buffet_id', 'id')->with('product');
-    }
-
-    // 与BuffetDiscount模型的多对多关联
-    public function buffetDiscount()
-    {
-        return $this->belongsToMany(BuffetDiscount::class, 'buffet_discount_rel', 'buffet_discount_id', 'buffet_id');
+        return $this->hasMany(BuffetProduct::class, 'buffet_package_uuid', 'uuid')->with('product');
     }
 
     /**
@@ -47,7 +89,7 @@ class Buffet extends BaseModel
      */
     public function buffetCustomerType()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetCustomer', 'buffet_id', 'id');
+        return $this->hasMany('app\\common\\model\\buffet\\BuffetCustomer', 'buffet_package_uuid', 'uuid');
     }
 
     /**
@@ -55,7 +97,7 @@ class Buffet extends BaseModel
      */
     public function buffetLimitProducts()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetProduct', 'buffet_id', 'id')->where('limit_num', '>', 0)->with('product');
+        return $this->hasMany('app\\common\\model\\buffet\\BuffetProduct', 'buffet_package_uuid', 'uuid')->where('limit', '>', 0)->with('product');
     }
 
     /**
@@ -63,7 +105,7 @@ class Buffet extends BaseModel
      */
     public function buffetTaxes()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetTax', 'buffet_id', 'id');
+        return $this->hasMany('app\\common\\model\\tax\\TaxCategory', 'uuid', 'tax_uuid');
     }
 
     /**
@@ -165,8 +207,8 @@ class Buffet extends BaseModel
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
-        return static::where($filter)->value('id') ? true : false;
+        return static::where($filter)->value('uuid') ? true : false;
     }
 }

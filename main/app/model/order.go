@@ -64,6 +64,7 @@ type SaleBill struct {
 	// 关联字段
 	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	Cashier         Staff           `gorm:"foreignKey:CashierUuid;references:uuid"`
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -94,13 +95,39 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 	return nil
 }
 
+// 获取总的退款金额
+func (model *SaleBill) GetTotalRefundAmount() float64 {
+	refundAmount := 0.0
+	for _, saleOrder := range model.SaleOrders {
+		for _, refundOrder := range saleOrder.ReturnOrders {
+			refundAmount += refundOrder.RefundAmount
+		}
+	}
+	return refundAmount
+}
+
+// 获取所有自助餐名称
+func (model *SaleBill) GetBuffetNames(language string) string {
+	buffets := make([]string, 0)
+	for _, order := range model.SaleOrders {
+		for _, buffet := range order.Buffets {
+			name := buffet.BuffetPackageMultiLanguageName.GetNameByLang(language)
+			if !slices.Contains(buffets, name) {
+				buffets = append(buffets, name)
+			}
+		}
+	}
+	return strings.Join(buffets, "+")
+}
+
 // SaleOrder 销售订单 ttpos_sale_order
 type SaleOrder struct {
 	BaseModel
 	// 基础标识字段
-	OrderNo string `gorm:"column:order_no;type:varchar(255);default:'';comment:订单编号" json:"order_no"`
-	Status  uint   `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-未结账 1-已结账" json:"status"`
-	IsFree  uint   `gorm:"column:is_free;type:tinyint(1);default:0;comment:是否免单, 0-否 1-是" json:"is_gift"`
+	OrderNo    string `gorm:"column:order_no;comment:订单编号" json:"order_no"`
+	Status     uint   `gorm:"column:status;comment:订单状态, 0-未结账 1-已结账" json:"status"`
+	IsFree     uint   `gorm:"column:is_free;comment:是否免单, 0-否 1-是" json:"is_free"`
+	FreeReason string `gorm:"column:free_reason;comment:免单原因" json:"free_reason"`
 
 	// 关联ID字段
 	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -124,15 +151,30 @@ type SaleOrder struct {
 	// 时间相关字段
 	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);default:100;comment:会员折扣率(0-100%)" json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:100;comment:会员卡折扣率(0-100%)" json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:100;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
+
 	// 关联对象
-	PaymentOrders     []PaymentOrder     `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	Member            Member             `gorm:"foreignKey:ConsumerUuid;references:uuid"`
-	SaleOrderProducts []SaleOrderProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	PaymentOrders     []PaymentOrder                `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	Member            Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
+	SaleOrderProducts []SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	ReturnOrders      []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	Buffets           []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 // TableName 指定表名
 func (SaleOrder) TableName() string {
 	return "ttpos_sale_order"
+}
+
+// 获取总的退款金额
+func (model *SaleOrder) GetTotalRefundAmount() float64 {
+	refundAmount := 0.0
+	for _, refundOrder := range model.ReturnOrders {
+		refundAmount += refundOrder.RefundAmount
+	}
+	return refundAmount
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -146,50 +188,85 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 	return nil
 }
 
+// 获取所有自助餐名称
+func (model *SaleOrder) GetBuffetNames(language string) string {
+	buffets := make([]string, 0)
+	for _, buffet := range model.Buffets {
+		buffets = append(buffets, buffet.BuffetPackageMultiLanguageName.GetNameByLang(language))
+	}
+	return strings.Join(buffets, "+")
+}
+
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
 type SaleOrderProduct struct {
-	// 主键和标识字段
+	// 基础字段
 	BaseModel
 
-	// 产品基本信息
-	Name       string `gorm:"column:name;type:varchar(255);default:'';comment:产品名称" json:"name"`
-	FlavorName string `gorm:"column:flavor_name;type:varchar(255);default:'';comment:口味名称" json:"flavor_name"`
-	Sign       string `gorm:"column:sign;type:varchar(255);default:'';comment:商品签名" json:"sign"`
+	// 基本信息字段
+	Name       string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
+	FlavorName string `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
+	Num        uint   `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
+	Remark     string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 
-	// 产品数量和价格
-	Num         uint    `gorm:"column:num;type:int(11);default:0;comment:数量" json:"num"`
-	CustomPrice float64 `gorm:"column:custom_price;type:decimal(12,2);default:0.00;comment:自定义价格" json:"custom_price"`
-	UnitPrice   float64 `gorm:"column:unit_price;type:decimal(12,2);default:0.00;comment:单价" json:"unit_price"`
-	Price       float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:最终单价" json:"price"`
-	ServiceFee  float64 `gorm:"column:service_fee;type:decimal(12,2);default:0.00;comment:服务费" json:"service_fee"`
+	// 状态相关字段
+	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨 2-已退'" json:"status"`
+	IsRequire     uint `gorm:"column:is_require;type:tinyint(1);not null;default:0;comment:'是否必点商品 0-否 1-是。用于在前端显示必点图标'" json:"is_require"`
+	IsAcceptOrder uint `gorm:"column:is_accept_order;type:tinyint(1);not null;default:0;comment:'是否已接单, 0-否 1-是'" json:"is_accept_order"`
 
-	// 产品税率和原价
-	TaxRate               uint    `gorm:"column:tax_rate;type:tinyint(1);default:0;comment:税率,单位%.下单时单税率,结账时再重新核算" json:"tax_rate"`
-	TaxFee                float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0.00;comment:税费" json:"tax_fee"`
-	ProductOriginalAmount float64 `gorm:"column:product_original_amount;type:decimal(12,2);default:0.00;comment:原价销售额.包含加料、税费." json:"product_original_amount"`
+	// 价格相关字段
+	FlavorPrice  float64 `gorm:"column:flavor_price;type:decimal(12,2);not null;default:0.00;comment:'规格原价（单商品）,仅某规格商品的原价'" json:"flavor_price"`
+	SaucePrice   float64 `gorm:"column:sauce_price;type:decimal(12,2);not null;default:0.00;comment:'小料价（单商品）,所有小料的价格之和'" json:"sauce_price"`
+	ProductPrice float64 `gorm:"column:product_price;type:decimal(12,2);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价'" json:"product_price"`
+	SalePrice    float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0.00;comment:'销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'" json:"sale_price"`
+	Price        float64 `gorm:"column:price;type:decimal(12,2);not null;default:0.00;comment:'最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'" json:"price"`
+	TotalPrice   float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)=最终单价+服务费+总税费'" json:"total_price"`
 
-	// 产品状态和属性
-	Status          uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-正常 1-退菜" json:"status"`
-	IsRequire       uint   `gorm:"column:is_require;type:tinyint(1);default:0;comment:是否必点商品 0-否 1-是" json:"is_require"`
-	IsGift          uint   `gorm:"column:is_gift;type:tinyint(1);default:0;comment:是否赠品, 0-否 1-是" json:"is_gift"`
-	DeductStockType uint   `gorm:"column:deduct_stock_type;type:tinyint(1);default:0;comment:库存计算方式,0-下单减库存 1-付款减库存。创建商品后不变" json:"deduct_stock_type"`
-	Remark          string `gorm:"column:remark;type:varchar(255);default:'';comment:备注" json:"remark"`
-	GiftReason      string `gorm:"column:gift_reason;type:varchar(255);default:'';comment:赠品原因" json:"gift_reason"`
+	// 折扣相关字段
+	IsCustomPrice          uint    `gorm:"column:is_custom_price;type:tinyint(1);not null;default:0;comment:'是否自定义价格（单商品）, 0-否 1-是'" json:"is_custom_price"`
+	IsOpenMemberDiscount   uint    `gorm:"column:is_open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"is_open_member_discount"`
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`
 
-	// 关联ID
-	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20);default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
-	ImageFileUuid         uint64 `gorm:"column:image_file_uuid;type:bigint(20);default:0;comment:图片ID" json:"image_file_uuid"`
-	ProductionOrderUuid   uint64 `gorm:"column:production_order_uuid;type:bigint(20);default:0;comment:生产订单ID" json:"production_order_uuid"`
-	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20);default:0;comment:产品包ID" json:"product_package_uuid"`
-	QrcodeOrderUuid       uint64 `gorm:"column:qrcode_order_uuid;type:bigint(20);default:0;comment:扫码订单ID" json:"qrcode_order_uuid"`
-	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
-	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_order_uuid"`
+	// 折扣金额字段
+	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);not null;default:0.00;comment:'打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额'" json:"discount_fee"`
+	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0.00;comment:'会员折扣金额（单商品）=销售价*会员折扣率*会员卡折扣率'" json:"member_discount_fee"`
+	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣金额（单商品）=销售价-最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)'" json:"custom_discount_fee"`
+
+	// 税费和服务费字段
+	TaxRate       float64 `gorm:"column:tax_rate;type:decimal(12,2);not null;default:0;comment:'税率,单位%.加购时记录税率,结账时再重新核算'" json:"tax_rate"`
+	ServiceTaxFee float64 `gorm:"column:service_tax_fee;type:decimal(12,2);not null;default:0.00;comment:'服务费税费（单商品）,0-不收取税费；收取时，服务费税费=服务费*税率'" json:"service_tax_fee"`
+	TaxFee        float64 `gorm:"column:tax_fee;type:decimal(12,2);not null;default:0.00;comment:'商品税费（单商品）。商品已含税时，税费=规格原价*(1-1/(1+税率))；商品未含税时，税费=原始单价*税率'" json:"tax_fee"`
+	ServiceFee    float64 `gorm:"column:service_fee;type:decimal(12,2);not null;default:0.00;comment:'服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例'" json:"service_fee"`
+
+	// 库存相关字段
+	DeductStockType uint  `gorm:"column:deduct_stock_type;type:tinyint(1);not null;default:0;comment:'库存计算方式,0-下单减库存 1-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数'" json:"deduct_stock_type"`
+	DeductStockTime int64 `gorm:"column:deduct_stock_time;type:int(10);not null;default:0;comment:'减库存的时间(时间戳），0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存'" json:"deduct_stock_time"`
+
+	// 赠品相关字段
+	IsGift       uint   `gorm:"column:is_gift;type:tinyint(1);not null;default:0;comment:'是否赠菜, 0-否 1-是'" json:"is_gift"`
+	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
+	RefundReason string `gorm:"column:refund_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
+
+	// 关联ID字段
+	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;not null;default:0;comment:'多语言名称UUID'" json:"multi_language_name_uuid"`
+	ImageFileUuid         uint64 `gorm:"column:image_file_uuid;not null;default:0;comment:'商品图片ID'" json:"image_file_uuid"`
+	ProductionOrderUuid   uint64 `gorm:"column:production_order_uuid;type:bigint(20);not null;default:0;comment:'生产订单ID'" json:"production_order_uuid"`
+	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20);not null;default:0;comment:'商品包ID'" json:"product_package_uuid"`
+	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);not null;default:0;comment:'销售账单ID'" json:"sale_bill_uuid"`
+	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:'销售订单ID'" json:"sale_order_uuid"`
+	QrcodeOrderUuid       uint64 `gorm:"column:qrcode_order_uuid;type:bigint(20);not null;default:0;comment:'扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品'" json:"qrcode_order_uuid"`
+
+	// 其他字段
+	Sign                 string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
+	IsQrcodeOrderProduct uint   `gorm:"column:is_qrcode_order_product;type:tinyint(1);not null;default:0;comment:'是否为扫码订单商品, 0-否 1-是'" json:"is_qrcode_order_product"`
 
 	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
@@ -199,32 +276,6 @@ type SaleOrderProductAttribute struct {
 	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
-}
-
-// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料、`改价`相同的商品签名相同,用于取消拆单时合并商品。改价销售订单商品价格后要重新生成签名
-func (model *SaleOrderProduct) GenerateProductSign() string {
-	bomIdList := make([]string, 0)
-	attributeIdList := make([]string, 0)
-
-	// 物料ID列表
-	for _, bom := range model.SaleOrderProductBoms {
-		bomIdList = append(bomIdList, strconv.FormatUint(bom.ProductBomUuid, 10))
-	}
-	// 属性ID列表
-	for _, attributeGroup := range model.SaleOrderProductAttributes {
-		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.ProductAttributeUuid, 10))
-	}
-	// 物料ID列表和属性ID列表排序
-	sort.Slice(bomIdList, func(i, j int) bool {
-		return bomIdList[i] < bomIdList[j]
-	})
-	sort.Slice(attributeIdList, func(i, j int) bool {
-		return attributeIdList[i] < attributeIdList[j]
-	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-改价
-	bomIdListStr := strings.Join(bomIdList, ",")
-	attributeIdListStr := strings.Join(attributeIdList, ",")
-	return fmt.Sprintf("%s-%s-%d", bomIdListStr, attributeIdListStr, model.CustomPrice)
 }
 
 // GetAttributeNames 获取属性名称字符串
@@ -262,22 +313,23 @@ type SaleOrderProductBom struct {
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting
 type SaleBillSetting struct {
-	// 主键和标识字段
+	// 基础字段
 	BaseModel
-
-	// 关联字段
 	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 
-	// 服务费相关设置
+	// 费用计算设置
 	ServiceFeeType  uint    `gorm:"column:service_fee_type;type:tinyint(1);default:0;comment:服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费" json:"service_fee_type"`
 	ServiceFeeValue float64 `gorm:"column:service_fee_value;type:decimal(12,2);default:0;comment:服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例" json:"service_fee_value"`
+	TaxFeeType      uint    `gorm:"column:tax_fee_type;type:tinyint(1);default:0;comment:税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税" json:"tax_fee_type"`
 
-	// 税费设置
-	TaxFeeType uint `gorm:"column:tax_fee_type;type:tinyint(1);default:0;comment:税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税" json:"tax_fee_type"`
-
-	// 抹零设置
+	// 优惠和抹零设置
+	DiscountType uint `gorm:"column:discount_type;type:tinyint(1);default:0;comment:打折类型, 0-百分比打折% 1-百分比直接减免% off" json:"discount_type"`
 	Zero         uint `gorm:"column:zero;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero"`
 	ZeroCheckout uint `gorm:"column:zero_checkout;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout"`
+
+	// 统计设置
+	IsStatGift uint `gorm:"column:is_stat_gift;type:tinyint(1);default:0;comment:是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣" json:"is_stat_gift"`
+	IsStatFree uint `gorm:"column:is_stat_free;type:tinyint(1);default:0;comment:是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费" json:"is_stat_free"`
 }
 
 // SaleOrderBuffetCustomerType 销售订单自助餐顾客类型
@@ -286,12 +338,18 @@ type SaleOrderBuffetCustomerType struct {
 	BaseModel
 
 	// 关联ID字段
-	SaleOrderUuid          uint64 `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
-	BuffetPackageUuid      uint64 `gorm:"column:buffet_package_uuid;type:bigint(20);default:0;comment:自助餐套餐ID" json:"buffet_package_uuid"`
-	BuffetCustomerTypeUuid uint64 `gorm:"column:buffet_customer_type_uuid;type:bigint(20);default:0;comment:自助餐客户类型ID" json:"buffet_customer_type_uuid"`
+	SaleOrderUuid                           uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
+	BuffetPackageUuid                       uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetPackageMultiLanguageNameUuid      uint64 `gorm:"column:buffet_package_multi_language_name_uuid;comment:自助餐套餐多语言ID" json:"buffet_package_multi_language_name_uuid"`
+	BuffetCustomerTypeUuid                  uint64 `gorm:"column:buffet_customer_type_uuid;comment:自助餐客户类型ID" json:"buffet_customer_type_uuid"`
+	BuffetCustomerTypeMultiLanguageNameUuid uint64 `gorm:"column:buffet_customer_type_multi_language_name_uuid;comment:自助餐客户类型多语言ID" json:"buffet_customer_type_multi_language_name_uuid"`
 
 	// 数值字段
 	Num uint `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
+
+	// 关联字段
+	BuffetPackageMultiLanguageName      MultiLanguageName `gorm:"foreignKey:BuffetPackageMultiLanguageNameUuid;references:uuid"`
+	BuffetCustomerTypeMultiLanguageName MultiLanguageName `gorm:"foreignKey:BuffetCustomerTypeMultiLanguageNameUuid;references:uuid"`
 }
 
 // SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`
@@ -334,4 +392,30 @@ type SaleOrderDiscountStrategy struct {
 	JsonField string  `gorm:"column:json_field;type:text;default:null;comment:JSON字段" json:"json_field"`
 	// 关联ID字段
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
+}
+
+// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料、备注、`改价`相同的商品签名相同,用于取消拆单时合并商品。改价销售订单商品价格后要重新生成签名
+func (model *SaleOrderProduct) GenerateProductSign() string {
+	bomIdList := make([]string, 0)
+	attributeIdList := make([]string, 0)
+
+	// 物料ID列表
+	for _, bom := range model.SaleOrderProductBoms {
+		bomIdList = append(bomIdList, strconv.FormatUint(bom.ProductBomUuid, 10))
+	}
+	// 属性ID列表
+	for _, attributeGroup := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.ProductAttributeUuid, 10))
+	}
+	// 物料ID列表和属性ID列表排序
+	sort.Slice(bomIdList, func(i, j int) bool {
+		return bomIdList[i] < bomIdList[j]
+	})
+	sort.Slice(attributeIdList, func(i, j int) bool {
+		return attributeIdList[i] < attributeIdList[j]
+	})
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-改价
+	bomIdListStr := strings.Join(bomIdList, ",")
+	attributeIdListStr := strings.Join(attributeIdList, ",")
+	return fmt.Sprintf("%s-%s-%s-%.2f", bomIdListStr, attributeIdListStr, model.Remark, model.SalePrice)
 }

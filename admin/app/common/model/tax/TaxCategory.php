@@ -17,8 +17,17 @@ class TaxCategory extends BaseModel
      * @var string[]
      */
     protected $append = [
+        'tax_category_id',
         'name_text',
     ];
+
+    /**
+     * 兼容字段
+     */
+    public function getTaxCategoryIdAttr($value, $data = [])
+    {
+        return $this->uuid ?: 0;
+    }
 
     /**
      * 获取名称
