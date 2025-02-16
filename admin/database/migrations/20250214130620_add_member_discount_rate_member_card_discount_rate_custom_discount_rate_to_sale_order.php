@@ -29,14 +29,13 @@ class AddMemberDiscountRateMemberCardDiscountRateCustomDiscountRateToSaleOrder e
     public function change()
     {
         $table = $this->table('sale_order');
-        if (!$table->hasColumn('member_discount_rate')) {
+        if (!$table->hasColumn('member_discount_rate') ) {
             $table->addColumn('member_discount_rate', 'decimal', [
                 'precision' => 12, 
                 'scale' => 2, 
                 'null' => false, 
                 'default' => 100, 
-                'comment' => '会员折扣率(0-100%)', 
-                'after' => 'total_price'
+                'comment' => '会员折扣率(0-100%)'
             ])->update();
         }
         if (!$table->hasColumn('member_card_discount_rate')) {

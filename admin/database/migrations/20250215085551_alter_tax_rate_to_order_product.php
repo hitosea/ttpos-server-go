@@ -34,7 +34,6 @@ class AlterTaxRateToOrderProduct extends Migrator
                 'scale' => 2, 
                 'null' => false, 
                 'default' => 0, 
-                'after' => 'sale_price', 
                 'comment' => '税率,单位%.加购时记录税率,结账时再重新核算'
             ])
             ->update();

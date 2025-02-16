@@ -9,6 +9,7 @@ import (
 type Context interface {
 	GetLanguage() string
 	GetCompanyUuid() uint64
+	GetDbId() uint64
 	GetGinContext() *gin.Context
 	GetContext() context.Context
 }

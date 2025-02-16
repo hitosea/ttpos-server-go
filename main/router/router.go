@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/cashier"
+	"ttpos-server-go/app/api/v1/h5"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
@@ -56,6 +57,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			assistant.RegisterDeskHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterBuffetHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterAuthHandlers(assistantGroup, dbm, cache)
+		}
+		// H5扫码端
+		h5Group := apiV1.Group("/h5")
+		{
+			h5.RegisterH5Handlers(h5Group, dbm, cache)
 		}
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")

@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddIsOpenMemberDiscountToSaleOrderProduct extends Migrator
+class UpdateTtposSaleOrderProductQrcodeTable extends Migrator
 {
     /**
      * Change Method.
@@ -29,9 +29,15 @@ class AddIsOpenMemberDiscountToSaleOrderProduct extends Migrator
     public function change()
     {
         $table = $this->table('sale_order_product');
-        if (!$table->hasColumn('is_open_member_discount')) {
-            $table->addColumn('is_open_member_discount', 'tinyinteger', ['limit' => 1, 'null' => false, 'default' => 0, 'comment' => '是否开启会员折扣, 0-否 1-是'])
-                ->update();
+        if ($table->hasColumn('qrcode_order_uuid')) {
+            $table->removeColumn('qrcode_order_uuid')
+                  ->update();
+        }
+
+        $table = $this->table('product_bom');
+        if (!$table->hasColumn('status')) {
+            $table->addColumn('status', 'tinyinteger', ['null' => false, 'default' => 0, 'comment' => '状态, 0-下架 1-上架. 同步商品包的状态'])
+                  ->update();
         }
     }
 }
