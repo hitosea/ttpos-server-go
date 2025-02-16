@@ -2,6 +2,7 @@ package setting
 
 import (
 	"errors"
+	"ttpos-server-go/pkg/context"
 )
 
 // VerifyAdvancedPassword 验证高级密码
@@ -14,7 +15,8 @@ func (s *Srv) VerifyAdvancedPassword(companyUuid uint64, password string) error 
 		if password == "" {
 			return errors.New("请输入确认密码")
 		}
-		cashier, err := s.GetCashierSetting(nil, companyUuid, "", nil)
+		ctx := context.NewDefaultContext()
+		cashier, err := s.GetCashierSetting(ctx, companyUuid, "", nil)
 		if err != nil {
 			return err
 		}
