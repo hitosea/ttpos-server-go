@@ -17,6 +17,7 @@ import (
 
 func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ctx := helper.GetContext(c)
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			helper.Fail(c, constant.CodeBadRequest, "token 为空")
@@ -48,7 +49,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		}
 
 		// 用户鉴权
-		company, companySetting, staff, err := authSrv.Auth(req.Authenticate{
+		company, companySetting, staff, err := authSrv.Auth(ctx, req.Authenticate{
 			Source:      claims.Source,
 			DeviceId:    claims.DeviceId,
 			CompanyUuid: claims.CompanyUuid,

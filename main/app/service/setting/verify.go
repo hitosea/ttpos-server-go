@@ -6,8 +6,8 @@ import (
 )
 
 // VerifyAdvancedPassword 验证高级密码
-func (s *Srv) VerifyAdvancedPassword(companyUuid uint64, password string) error {
-	businessSetting, err := s.GetBusinessSetting(companyUuid, "")
+func (s *Srv) VerifyAdvancedPassword(ctx context.Context, password string) error {
+	businessSetting, err := s.GetBusinessSetting(ctx)
 	if err != nil {
 		return err
 	}
@@ -15,8 +15,7 @@ func (s *Srv) VerifyAdvancedPassword(companyUuid uint64, password string) error 
 		if password == "" {
 			return errors.New("请输入确认密码")
 		}
-		ctx := context.NewDefaultContext()
-		cashier, err := s.GetCashierSetting(ctx, companyUuid, "", nil)
+		cashier, err := s.GetCashierSetting(ctx, nil)
 		if err != nil {
 			return err
 		}

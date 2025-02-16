@@ -69,7 +69,7 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 // @Router /cashier/ad [get]
 func (h *BaseHandler) GetAd(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ads, err := h.settingSrv.GetCashierAd(ctx, helper.GetCompanyUuid(c))
+	ads, err := h.settingSrv.GetCashierAd(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -163,7 +163,8 @@ func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/check_update [get]
 func (h *BaseHandler) checkUpdate(c *gin.Context) {
-	updateInfo, err := h.settingSrv.CheckUpdate(constant.AppTypeCashier, c.Query("brand"), i18n.GetAcceptLanguage(c))
+	ctx := helper.GetContext(c)
+	updateInfo, err := h.settingSrv.CheckUpdate(ctx, constant.AppTypeCashier, c.Query("brand"), i18n.GetAcceptLanguage(c))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

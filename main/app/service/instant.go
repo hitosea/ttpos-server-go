@@ -6,13 +6,14 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 )
 
 // IInstantSrv 点餐订单服务接口
 type IInstantSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                         // 创建点餐订单
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                 // 创建点餐订单
 	GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error)                       // 获取点餐订单详情
 	AddProductToInstantOrder(dbId uint64, lang string, req req.InstantOrderAddProductReq) (*resp.GetInstantOrderInfoResp, error) // 添加商品
 }
@@ -39,8 +40,8 @@ func NewInstantSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv, orderProduct
 }
 
 // CreateInstantOrder 创建点餐订单
-func (s *instantSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) {
-	return s.orderSrv.CreateInstantOrder(dbId)
+func (s *instantSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	return s.orderSrv.CreateInstantOrder(ctx)
 }
 
 func (s *instantSrv) GetInstantOrderInfo(dbId uint64, req req.InstantOrderGetInfoReq) (resp.GetInstantOrderInfoResp, error) {

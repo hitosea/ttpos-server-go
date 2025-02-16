@@ -6,14 +6,14 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 )
 
 // IPaymentMethodSrv 定义支付方式服务接口
 type IPaymentMethodSrv interface {
-	IsAvailable(paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否可以用
-	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, price float64) float64  // 计算税费
+	IsAvailable(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否可以用
+	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, price float64) float64                       // 计算税费
 }
 
 // paymentMethodSrv  支付方式服务结构体
@@ -35,7 +35,7 @@ func NewPaymentMethodSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) I
 	}
 }
 
-func (s *paymentMethodSrv) IsAvailable(paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool {
+func (s *paymentMethodSrv) IsAvailable(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool {
 	if paymentMethod.ID == 0 {
 		return false
 	}
@@ -43,9 +43,9 @@ func (s *paymentMethodSrv) IsAvailable(paymentMethod model.PaymentMethod, compan
 		return false
 	}
 	// 获取支付设置
-	paymentSetting, err := s.settingSrv.GetPaymentSetting(companySetting.CompanyUuid, companySetting)
+	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
-		logger.Logger.Error("获取支付设置失败", zap.Error(err))
+		ctx.Log().Error("获取支付设置失败", zap.Error(err))
 		return false
 	}
 	if paymentSetting.IsBalance == "1" {

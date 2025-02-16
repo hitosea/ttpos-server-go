@@ -28,8 +28,9 @@ type CashierInstantHandler struct {
 // @Success 200 {object} resp.CreateOrderResp
 // @Router /cashier/instant/order/create [post]
 func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	// 创建订单
-	res, err := h.orderService.CreateInstantOrder(helper.GetCompanyUuid(c))
+	res, err := h.orderService.CreateInstantOrder(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("创建订单失败"))
 		return
@@ -48,9 +49,7 @@ func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cancel [post]
 func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,7 +57,7 @@ func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	err := h.orderService.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

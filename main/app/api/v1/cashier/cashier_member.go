@@ -152,6 +152,7 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
 // @Router /cashier/member/recharge_order_add_payment_method [post]
 func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var (
 		addPaymentMethodReq req.RechargeOrderAddPaymentMethodReq
 		err                 error
@@ -163,7 +164,7 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 	}
 
 	addPaymentMethodReq.CompanySetting = helper.GetCompanySetting(c)
-	if order, err = h.memberSrv.AddPaymentMethod(helper.GetCompanyUuid(c), addPaymentMethodReq); err != nil {
+	if order, err = h.memberSrv.AddPaymentMethod(ctx, addPaymentMethodReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
@@ -181,6 +182,7 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
 // @Router /cashier/member/recharge_order_cancel_payment_method [post]
 func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var (
 		cancelPaymentMethodReq req.RechargeOrderCancelPaymentMethodReq
 		err                    error
@@ -190,7 +192,7 @@ func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, cancelPaymentMethodReq, nil)
 		return
 	}
-	if order, err = h.memberSrv.CancelPaymentMethod(helper.GetCompanyUuid(c), cancelPaymentMethodReq); err != nil {
+	if order, err = h.memberSrv.CancelPaymentMethod(ctx, cancelPaymentMethodReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}

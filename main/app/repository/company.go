@@ -2,13 +2,14 @@ package repository
 
 import (
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
 
 // ICompanyRepo 公司
 type ICompanyRepo interface {
-	GetCompanyInfo(companyUuid uint64, opts ...DBOption) (model.Company, error)
+	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 }
 
 func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
@@ -25,10 +26,10 @@ type CompanyRepoImpl struct {
 }
 
 // GetCompanyInfo 获取公司信息
-func (r *CompanyRepoImpl) GetCompanyInfo(companyUuid uint64, opts ...DBOption) (model.Company, error) {
+func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error) {
 	var company model.Company
 
-	db := r.db.Where("uuid = ?", companyUuid)
+	db := r.db.Where("uuid = ?", ctx.GetCompanyUuid())
 
 	for _, opt := range opts {
 		db = opt(db)

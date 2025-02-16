@@ -22,15 +22,15 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                      // 获取等级列表
-	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                  // 模糊搜索
-	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                     // 添加会员
-	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                            // 获取充值会员信息
-	GetPendingRechargeOrder(companyUuid uint64) resp.PendingRechargeOrder                                                                   // 获取进行中的会员充值订单
-	CreateRechargeOrder(companyUuid uint64, createRechargeOrderReq req.CreateRechargeOrderReq) (resp.PendingRechargeOrder, error)           // 创建充值订单
-	AddPaymentMethod(companyUuid uint64, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error)          // 充值订单添加支付方式
-	CancelPaymentMethod(companyUuid uint64, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) // 充值订单撤销支付方式
-	ConfirmRechargeOrder(companyUuid uint64, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)           // 确认充值订单
+	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                       // 获取等级列表
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                   // 模糊搜索
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                      // 添加会员
+	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                             // 获取充值会员信息
+	GetPendingRechargeOrder(companyUuid uint64) resp.PendingRechargeOrder                                                                    // 获取进行中的会员充值订单
+	CreateRechargeOrder(companyUuid uint64, createRechargeOrderReq req.CreateRechargeOrderReq) (resp.PendingRechargeOrder, error)            // 创建充值订单
+	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error)          // 充值订单添加支付方式
+	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) // 充值订单撤销支付方式
+	ConfirmRechargeOrder(companyUuid uint64, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)            // 确认充值订单
 }
 
 // memberSrv 会员服务结构体
@@ -252,7 +252,8 @@ func (s *memberSrv) CreateRechargeOrder(companyUuid uint64, rechargeOrderReq req
 }
 
 // AddPaymentMethod 充值订单添加支付方式
-func (s *memberSrv) AddPaymentMethod(companyUuid uint64, addPaymentMethodReq req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+func (s *memberSrv) AddPaymentMethod(ctx context.Context, addPaymentMethodReq req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+	companyUuid := ctx.GetCompanyUuid()
 	var orderResp resp.PendingRechargeOrder
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
 	rechargeOrder := memberRepo.GetPendingRechargeOrder(addPaymentMethodReq.RechargeOrderUuid)
@@ -265,7 +266,7 @@ func (s *memberSrv) AddPaymentMethod(companyUuid uint64, addPaymentMethodReq req
 	// 根据Uuid 获取支付方式
 	paymentMethod := repository.NewPaymentMethodRepo(s.dbm.GetDB(companyUuid)).GetByUuid(addPaymentMethodReq.PaymentMethodUuid)
 	// 支付方式是否可用
-	if !s.paymentMethodSrv.IsAvailable(paymentMethod, addPaymentMethodReq.CompanySetting) {
+	if !s.paymentMethodSrv.IsAvailable(ctx, paymentMethod, addPaymentMethodReq.CompanySetting) {
 		return orderResp, errors.New("支付方式未开启")
 	}
 	if paymentMethod.Code == constant.PaymentMethodCodeBalance {
@@ -311,7 +312,7 @@ func (s *memberSrv) AddPaymentMethod(companyUuid uint64, addPaymentMethodReq req
 			"payment_commission_fee": paymentCommissionFee,
 		})
 	} else {
-		currencySetting, err := s.settingSrv.GetCurrencySetting(companyUuid)
+		currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 		if err != nil {
 			return orderResp, errors2.ErrInternal
 		}
@@ -332,7 +333,8 @@ func (s *memberSrv) AddPaymentMethod(companyUuid uint64, addPaymentMethodReq req
 }
 
 // CancelPaymentMethod 充值订单撤销支付方式
-func (s *memberSrv) CancelPaymentMethod(companyUuid uint64, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+	companyUuid := ctx.GetCompanyUuid()
 	var orderResp resp.PendingRechargeOrder
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
 	rechargeOrder := memberRepo.GetPendingRechargeOrder(cancelPaymentMethod.RechargeOrderUuid)

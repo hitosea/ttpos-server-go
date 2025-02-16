@@ -111,6 +111,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/create [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
 	if err := c.ShouldBind(&params); err != nil {
@@ -119,7 +120,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	}
 
 	// 创建桌台订单
-	res, err := h.service.CreateDeskOrder(helper.GetCompanyUuid(c), params)
+	res, err := h.service.CreateDeskOrder(ctx, params)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -140,9 +141,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/close [post]
 func (h *DeskHandler) CloseDesk(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskCloseReq{}
 	if err := c.ShouldBind(&params); err != nil {
@@ -150,7 +149,7 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.CloseDesk(companyUuid, staff, source, params)
+	err := h.service.CloseDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -170,9 +169,7 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cancel [post]
 func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	staff := helper.GetStaff(c)
-	source := helper.GetSource(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -180,7 +177,7 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(companyUuid, staff, source, req)
+	err := h.orderService.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

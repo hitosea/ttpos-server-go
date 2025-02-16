@@ -10,17 +10,18 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
-	GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)      // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) // 获取桌台区域和类型列表
-	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                        // 获取桌台详情
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)  // 创建桌台订单
-	CloseDesk(dbId uint64, staff model.Staff, source string, req req.DeskCloseReq) error        // 关闭桌台
-	IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, error)                           // 判断桌台是否可以关闭
+	GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)             // 获取桌台列表
+	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)        // 获取桌台区域和类型列表
+	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                               // 获取桌台详情
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) // 创建桌台订单
+	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                         // 关闭桌台
+	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                          // 判断桌台是否可以关闭
 }
 
 // deskSrv 收银服务结构体
@@ -227,7 +228,8 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 }
 
 // CreateDeskOrder 创建桌台订单
-func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+	dbId := ctx.GetDbId()
 	// 验证请求参数
 	err := s.validateCreateDeskOrderReq(req)
 	if err != nil {
@@ -251,11 +253,11 @@ func (s *deskSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp
 			return resp.CreateDeskOrderResp{}, errors.New("就餐人数不能小于1")
 		}
 	} else {
-		return s.createDeskBuffetOrder(dbId, req)
+		return s.createDeskBuffetOrder(ctx, req)
 	}
 
 	// 创建桌台-非自助餐订单
-	return s.orderSrv.CreateDeskOrder(dbId, req)
+	return s.orderSrv.CreateDeskOrder(ctx, req)
 }
 
 // validateCreateDeskOrderReq 验证请求参数
@@ -287,13 +289,14 @@ func (s *deskSrv) validateCreateDeskOrderReq(req req.DeskOrderCreateReq) error {
 }
 
 // createDeskBuffetOrder 创建桌台自助餐订单
-func (s *deskSrv) createDeskBuffetOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+	dbId := ctx.GetDbId()
 	// 验证自助餐是否开启
-	companySetting, err := s.settingSrv.GetCompanySetting(dbId)
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, err
 	}
-	buffetSetting, err := s.settingSrv.GetBuffetSetting(dbId, companySetting)
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, err
 	}
@@ -317,11 +320,12 @@ func (s *deskSrv) createDeskBuffetOrder(dbId uint64, req req.DeskOrderCreateReq)
 		}
 	}
 
-	return s.orderSrv.CreateDeskOrder(dbId, req)
+	return s.orderSrv.CreateDeskOrder(ctx, req)
 }
 
 // 判断桌台是否可关闭
-func (s *deskSrv) IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, error) {
+func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error) {
+	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
 	if err != nil {
@@ -333,14 +337,15 @@ func (s *deskSrv) IsCellCloseDesk(dbId uint64, deskUuid uint64) (model.Desk, err
 	if desk.SaleBill.ID == 0 {
 		return model.Desk{}, nil
 	}
-	if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(dbId, desk.SaleBill.Uuid); err != nil {
+	if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
 		return model.Desk{}, err
 	}
 	return desk, nil
 }
 
 // 关闭桌台
-func (s *deskSrv) CloseDesk(dbId uint64, staff model.Staff, source string, reqs req.DeskCloseReq) error {
+func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
+	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
@@ -350,7 +355,7 @@ func (s *deskSrv) CloseDesk(dbId uint64, staff model.Staff, source string, reqs 
 		return nil
 	}
 	// 取消订单
-	if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(dbId, staff, source, req.OrderCancelReq{
+	if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
 		SaleBillUuid: desk.SaleBill.Uuid,
 		CancelReason: reqs.Reason,
 		Password:     reqs.Password,

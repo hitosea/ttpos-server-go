@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 
 	"ttpos-server-go/app/constant"
@@ -24,13 +23,13 @@ import (
 )
 
 type IAuthSrv interface {
-	Login(ctx context.Context, loginReq req.LoginReq) (string, error)                        // 登录
-	Logout(ctx context.Context) error                                                        // 退出登录
-	CashierBase(ctx context.Context) (resp.CashierBase, error)                               // 收银端基本信息
-	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                           // 点餐助手端基本信息
-	Auth(authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
-	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)          // 点餐助手绑定收银机
-	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                             // 获取在线收银机
+	Login(ctx context.Context, loginReq req.LoginReq) (string, error)                                             // 登录
+	Logout(ctx context.Context) error                                                                             // 退出登录
+	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                    // 收银端基本信息
+	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                // 点餐助手端基本信息
+	Auth(ctx context.Context, authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
+	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                               // 点餐助手绑定收银机
+	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                  // 获取在线收银机
 }
 
 func NewAuthSrv(
@@ -239,20 +238,19 @@ func (s *AuthSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if len(permissions) == 0 {
 		return cashierBase, errors.New("当前无权限，请联系管理员")
 	}
-	language := i18n.GetAcceptLanguage(ctx.GetGinContext())
-	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, company.Uuid, language, nil)
+	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
 	if err != nil {
 		return cashierBase, err
 	}
-	businessSetting, err := s.settingSrv.GetBusinessSetting(company.Uuid, language)
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
 		return cashierBase, err
 	}
-	buffetSetting, err := s.settingSrv.GetBuffetSetting(company.Uuid, companySetting)
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
 		return cashierBase, err
 	}
-	currencySetting, err := s.settingSrv.GetCurrencySetting(company.Uuid)
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
 		return cashierBase, err
 	}
@@ -289,7 +287,7 @@ func (s *AuthSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 }
 
 // Auth 鉴权
-func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
+func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
@@ -331,7 +329,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 	case constant.SourceCashier: // 收银端
 		{
 			// 检查收银是否开启
-			if !s.isCashierOpen(auth.CompanyUuid, auth.UrlPath) {
+			if !s.isCashierOpen(ctx, auth.UrlPath) {
 				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
@@ -356,7 +354,7 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 				}
 			}
 			// 检查桌台功能是否开启
-			if !s.isTableOpen(auth.CompanyUuid) {
+			if !s.isTableOpen(ctx) {
 				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
@@ -366,8 +364,8 @@ func (s *AuthSrv) Auth(auth req.Authenticate) (model.Company, model.CompanySetti
 }
 
 // 检查收银是否开启
-func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(context.NewDefaultContext(), companyUuid, "", []dto.LanguageItem{})
+func (s *AuthSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
+	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}
@@ -378,8 +376,8 @@ func (s *AuthSrv) isCashierOpen(companyUuid uint64, pathUrl string) bool {
 }
 
 // 检查桌台功能是否开启
-func (s *AuthSrv) isTableOpen(companyUuid uint64) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(context.NewDefaultContext(), companyUuid, "", []dto.LanguageItem{})
+func (s *AuthSrv) isTableOpen(ctx context.Context) bool {
+	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}

@@ -30,19 +30,19 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error)                                                              // 创建点餐订单
-	CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                        // 创建桌台订单
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                      // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                // 创建桌台订单
 	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)          // 获取订单列表
 	GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error)         // 获取订单详情
-	CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error                                          // 取消订单
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                    // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                         // 删除订单
-	IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error)                                                       // 判断桌台是否可取消
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                               // 判断桌台是否可取消
 	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)           // 删除订单商品
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                  // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
-	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                               // 创建销售账单设置
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)          // 创建销售账单设置
 }
 
 // orderSrv 订单服务结构
@@ -67,7 +67,8 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 }
 
 // CreateInstantOrder 创建点餐订单
-func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp, error) {
+func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
@@ -104,7 +105,7 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, dbId, saleBill.Uuid)
 		if err != nil {
 			return err
 		}
@@ -139,19 +140,19 @@ func (s *orderSrv) CreateInstantOrder(dbId uint64) (resp.CreateInstantOrderResp,
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
+func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
 	// 获取服务费设置
-	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(dbId)
+	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
 	if err != nil {
 		return model.SaleBillSetting{}, err
 	}
 	// 获取税率设置
-	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(dbId)
+	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
 	if err != nil {
 		return model.SaleBillSetting{}, err
 	}
 	// 获取门店业务设置
-	businessSetting, err := s.settingSrv.GetBusinessSetting(dbId, "")
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
 		return model.SaleBillSetting{}, err
 	}
@@ -233,7 +234,8 @@ func (s *orderSrv) CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid 
 }
 
 // CreateDeskOrder 创建桌台订单
-func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
+	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	var db = s.dbm.GetDB(dbId)
@@ -259,7 +261,7 @@ func (s *orderSrv) CreateDeskOrder(dbId uint64, req req.DeskOrderCreateReq) (res
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(tx, dbId, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, dbId, saleBill.Uuid)
 		if err != nil {
 			return err
 		}
@@ -681,7 +683,8 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 }
 
 // IsCellCancelOrder 判断订单是否可以取消
-func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error) {
+func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error) {
+	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, constant.OptionalUuid)
@@ -698,7 +701,10 @@ func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.Sa
 }
 
 // CancelOrder 取消订单
-func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, req req.OrderCancelReq) error {
+func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) error {
+	dbId := ctx.GetDbId()
+	staff := ctx.GetStaff()
+	source := ctx.GetSource()
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
@@ -712,7 +718,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := s.IsCellCancelOrder(dbId, req.SaleBillUuid)
+	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
 		return err
 	}
@@ -721,7 +727,7 @@ func (s *orderSrv) CancelOrder(dbId uint64, staff model.Staff, source string, re
 	}
 
 	// 验证高级密码
-	if err := s.settingSrv.VerifyAdvancedPassword(dbId, req.Password); err != nil {
+	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
 		return err
 	}
 

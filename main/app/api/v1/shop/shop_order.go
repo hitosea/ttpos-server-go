@@ -96,9 +96,7 @@ func (h *ShopOrderHandler) GetOrderInfo(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/cancel [post]
 func (h *ShopOrderHandler) CancelOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -106,7 +104,7 @@ func (h *ShopOrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.CancelOrder(companyUuid, staff, source, req)
+	err := h.service.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -153,7 +151,7 @@ func (h *ShopOrderHandler) DeleteOrder(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/is_cell_close [get]
 func (h *ShopOrderHandler) IsCellClose(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	//
 	params := req.OrderIsCellCloseReq{}
 	if err := c.ShouldBind(&params); err != nil {
@@ -163,9 +161,9 @@ func (h *ShopOrderHandler) IsCellClose(c *gin.Context) {
 	//
 	var err error
 	if params.DeskUuid > 0 {
-		_, err = h.deskService.IsCellCloseDesk(companyUuid, params.DeskUuid)
+		_, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
 	} else if params.SaleBillUuid > 0 {
-		_, err = h.service.IsCellCancelOrder(companyUuid, params.SaleBillUuid)
+		_, err = h.service.IsCellCancelOrder(ctx, params.SaleBillUuid)
 	} else {
 		err = errors.New("参数错误")
 	}

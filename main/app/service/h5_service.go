@@ -47,23 +47,23 @@ func NewH5SrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv sett
 
 func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetBaseInfoResponse, error) {
 	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(ctx.GetDbId()))
-	companySetting, err := s.settingSrv.GetCompanySetting(ctx.GetCompanyUuid())
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
 		return nil, err
 	}
-	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx.GetCompanyUuid())
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
 		return nil, err
 	}
-	h5Setting, err := s.settingSrv.GetH5Setting(ctx, ctx.GetCompanyUuid(), ctx.GetLanguage(), nil)
+	h5Setting, err := s.settingSrv.GetH5Setting(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx.GetCompanyUuid(), companySetting)
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
 		return nil, err
 	}
-	companyInfo, err := companyRepo.GetCompanyInfo(ctx.GetCompanyUuid())
+	companyInfo, err := companyRepo.GetCompanyInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (s *h5Srv) OpenH5Desk(ctx context.Context, deskUuid uint64, request req.Ope
 			MealNum:  &request.MealNum,
 		}
 	}
-	_, err := s.deskSrv.CreateDeskOrder(ctx.GetDbId(), param)
+	_, err := s.deskSrv.CreateDeskOrder(ctx, param)
 	if err != nil {
 		return err
 	}
