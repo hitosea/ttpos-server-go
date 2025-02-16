@@ -3,15 +3,12 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"github.com/jinzhu/copier"
-	"strings"
 	"time"
 
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/encrypt"
-	"ttpos-server-go/pkg/utils"
 )
 
 type IEncryptSrv interface {
@@ -50,14 +47,6 @@ func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*r
 
 	var keyPair encrypt.KeyPair
 	switch encryptType {
-	case "pgp":
-		name := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
-		passphrase := strings.ToLower(utils.RandomString(8, utils.LowerLetters, utils.UpperLetters, utils.Numbers))
-		kp, err := encrypt.GeneratePgpKeyPair(name, "aa@bb.cc", passphrase)
-		if err != nil {
-			return nil, errors.New("获取服务端公钥失败")
-		}
-		_ = copier.Copy(&keyPair, *kp)
 	case "jsencrypt":
 		var err error
 		if keyPair, err = encrypt.GenerateRSAKeyPairPEM(2048); err != nil {

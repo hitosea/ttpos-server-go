@@ -37,7 +37,7 @@ func (h *Handler) GetCaptcha(c *gin.Context) {
 // @Access json
 // @Produce json
 // @param client_id query string true "客户端Id"
-// @param type query string true "加密类型: pgp\jsencrypt"
+// @param type query string true "加密类型: jsencrypt"
 // @Success 200 {object} dto.Response
 // @Router /passport/server_public_key [get]
 func (h *Handler) GetServerPublicKey(c *gin.Context) {

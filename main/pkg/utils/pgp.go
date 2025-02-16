@@ -19,9 +19,7 @@ func ParseEncrypt(encrypt, field string) map[string]string {
 		publicKey = strings.ReplaceAll(publicKey, "_", "/")
 		publicKey = strings.ReplaceAll(publicKey, "$", "\n")
 		if encryptType, ok2 := parsedMap["encrypt_type"]; ok2 {
-			if encryptType == "pgp" {
-				publicKey = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n" + publicKey + "\n-----END PGP PUBLIC KEY BLOCK-----"
-			} else {
+			if encryptType == "jsencrypt" {
 				publicKey = "-----BEGIN PUBLIC KEY-----\n" + publicKey + "\n-----END PUBLIC KEY-----"
 			}
 		}
