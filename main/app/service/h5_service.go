@@ -2,12 +2,14 @@ package service
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 
 	"github.com/jinzhu/copier"
 )
@@ -290,9 +292,20 @@ func (s *h5Srv) GetCategoryList(ctx context.Context) (resp.H5CategoryList, error
 }
 
 func (s *h5Srv) RemarkProduct(ctx context.Context, remark string, saleOrderProductUuid uint64) error {
+	// 获取桌台销售账单信息
+	saleBill, errSaleBill := s.orderSrv.GetSaleBillByDeskId(ctx)
+	if errSaleBill != nil {
+		return errSaleBill
+	}
+
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBill.Uuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBill.Uuid)
+
+	// 修改订单商品备注
 	_, err := s.orderSrv.OrderProductRemark(ctx, req.OrderProductRemarkReq{
-		SaleBillUuid:     0, // todo 获取
-		SaleOrderUuid:    0, // todo 获取
+		SaleBillUuid:     saleBill.Uuid,
+		SaleOrderUuid:    constant.OptionalUuid,
 		OrderProductUuid: saleOrderProductUuid,
 		Remark:           remark,
 	})

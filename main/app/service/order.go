@@ -39,6 +39,7 @@ type IOrderSrv interface {
 	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)           // 删除订单商品
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                  // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
 	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                               // 创建销售账单设置
 }
@@ -1005,6 +1006,21 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 		return model.SaleBill{}, err
 	}
 
+	return billInfo, nil
+}
+
+// GetSaleBillByDeskId  获取桌台账单信息
+func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error) {
+	dbId := ctx.GetDbId()
+	deskUuid := ctx.GetDeskUuid()
+
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+
+	// 通过桌台查找到当前桌台的正在进行销售账单
+	billInfo, err := orderRepo.GetSaleBillInfoByDesk(deskUuid, constant.OptionalUuid)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
 	return billInfo, nil
 }
 

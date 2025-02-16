@@ -19,6 +19,7 @@ type IOrderRepo interface {
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
 	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)           // 获取收银的订单列表
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
+	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
@@ -283,6 +284,35 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return model.SaleBill{}, err
+	}
+	return info, nil
+}
+
+// GetSaleBillInfoByDesk 获取桌台的账单信息
+func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", constant.NotDeleted)
+						if saleOrderUuid > constant.OptionalUuid {
+							db = db.Where("uuid = ?", saleOrderUuid)
+						}
+						return db
+					},
+				},
+			},
+			WithPreload{
+				Query: "SaleBillSetting",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByDeskUuid(deskUuid),
 	)
 	if err != nil {
 		return model.SaleBill{}, err
