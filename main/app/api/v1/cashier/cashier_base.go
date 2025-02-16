@@ -4,11 +4,9 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/i18n"
-	"ttpos-server-go/pkg/context"
-
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -32,7 +30,8 @@ type BaseHandler struct {
 // @Success 200 {object} dto.Response{data=resp.CashierBase}
 // @Router /cashier/base [get]
 func (h *BaseHandler) GetCashierBase(c *gin.Context) {
-	info, err := h.authSrv.CashierBase(context.NewContextByGin(c.Copy()))
+	ctx := helper.GetContext(c)
+	info, err := h.authSrv.CashierBase(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -50,7 +49,7 @@ func (h *BaseHandler) GetCashierBase(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.LanguageResp}
 // @Router /cashier/language [get]
 func (h *BaseHandler) GetLanguage(c *gin.Context) {
-	ctx := context.NewContextByGin(c)
+	ctx := helper.GetContext(c)
 	language, err := h.settingSrv.GetCashierLanguage(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -69,7 +68,7 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.Ads}
 // @Router /cashier/ad [get]
 func (h *BaseHandler) GetAd(c *gin.Context) {
-	ctx := context.NewContextByGin(c.Copy())
+	ctx := helper.GetContext(c)
 	ads, err := h.settingSrv.GetCashierAd(ctx, helper.GetCompanyUuid(c))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -89,12 +88,12 @@ func (h *BaseHandler) GetAd(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_cash_box_password [post]
 func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var passwordReq req.VerifyPasswordReq
 	if err := c.ShouldBindJSON(&passwordReq); err != nil {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	ctx := context.NewContextByGin(c.Copy())
 	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeCashBox, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
@@ -114,12 +113,12 @@ func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_advanced_password [post]
 func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var passwordReq req.VerifyPasswordReq
 	if err := c.ShouldBindJSON(&passwordReq); err != nil {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	ctx := context.NewContextByGin(c.Copy())
 	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeAdvanced, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
@@ -139,12 +138,12 @@ func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/verify_lock_password [post]
 func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var passwordReq req.VerifyPasswordReq
 	if err := c.ShouldBindJSON(&passwordReq); err != nil {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	ctx := context.NewContextByGin(c)
 	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeLock, passwordReq.Password, helper.GetCompanyUuid(c))
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")

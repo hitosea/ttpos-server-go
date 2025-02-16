@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -29,13 +28,14 @@ type AuthHandler struct {
 // @Success 200 {object} dto.Response
 // @Router /cashier/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var loginRequest req.LoginReq
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
 		return
 	}
 	loginRequest.Source = constant.SourceCashier
-	token, err := h.authSrv.Login(context.NewContextByGin(c.Copy()), loginRequest)
+	token, err := h.authSrv.Login(ctx, loginRequest)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -53,7 +53,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	err := h.authSrv.Logout(context.NewContextByGin(c.Copy()))
+	ctx := helper.GetContext(c)
+	err := h.authSrv.Logout(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return

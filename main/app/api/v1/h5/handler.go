@@ -7,7 +7,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -30,10 +29,7 @@ type H5Handler struct {
 // @Success 200 {object} resp.GetBaseInfoResponse{}
 // @Router /index.php/scan/base.base/getInfo [post]
 func (h H5Handler) GetBaseInfo(c *gin.Context) {
-	ctx := context.NewContext(
-		context.WithCompanyUuid(helper.GetCompanyUuid(c)),
-		context.WithLanguage(helper.GetLanguage(c)),
-	)
+	ctx := helper.GetContext(c)
 	var deskUuid uint64
 	info, err := h.service.GetCompanyInfo(ctx, deskUuid)
 	if err != nil {
@@ -53,8 +49,9 @@ func (h H5Handler) GetBaseInfo(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
 // @Router /index.php/scan/order.Order/buffetList [post]
 func (h *H5Handler) GetBuffetList(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var deskUuid uint64
-	list, err := h.service.GetBuffetList(context.NewDefaultContext(), deskUuid)
+	list, err := h.service.GetBuffetList(ctx, deskUuid)
 	if err != nil {
 		Fail(c, 500, "获取信息失败")
 		return
@@ -73,6 +70,8 @@ func (h *H5Handler) GetBuffetList(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
 // @Router /index.php/scan/order.Order/setTable [post]
 func (h *H5Handler) GetOpenDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
 	var deskUuid uint64
 	// 绑定请求参数
 	params := req.OpenDeskRequest{}
@@ -81,7 +80,7 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 		return
 	}
 
-	err := h.service.OpenH5Desk(context.NewDefaultContext(), deskUuid, req.OpenDeskRequest{})
+	err := h.service.OpenH5Desk(ctx, deskUuid, req.OpenDeskRequest{})
 	if err != nil {
 		Fail(c, 500, "获取信息失败")
 		return
@@ -99,7 +98,8 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5CategoryList}
 // @Router index.php/scan/product.category/index [post]
 func (h *H5Handler) GetCategoryList(c *gin.Context) {
-	list, err := h.service.GetCategoryList(context.NewDefaultContext())
+	ctx := helper.GetContext(c)
+	list, err := h.service.GetCategoryList(ctx)
 	if err != nil {
 		Fail(c, 500, "获取信息失败")
 		return

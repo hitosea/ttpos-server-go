@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -159,4 +160,12 @@ func GetCompanySetting(cc *gin.Context) model.CompanySetting {
 		}
 	}
 	return model.CompanySetting{}
+}
+
+func GetContext(c *gin.Context) context.Context {
+	return context.NewContext(
+		context.WithGinContext(c.Copy()),
+		context.WithLanguage(GetLanguage(c)),
+		context.WithCompanyUuid(GetCompanyUuid(c)),
+	)
 }

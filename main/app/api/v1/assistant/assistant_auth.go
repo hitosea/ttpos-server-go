@@ -8,7 +8,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -30,14 +29,14 @@ type AuthHandler struct {
 // @Success 200 {object} dto.Response
 // @Router /assistant/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var loginRequest req.LoginReq
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
 		return
 	}
 	loginRequest.Source = constant.SourceAssistant
-
-	token, err := h.authSrv.Login(context.NewContextByGin(c.Copy()), loginRequest)
+	token, err := h.authSrv.Login(ctx, loginRequest)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -55,7 +54,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /assistant/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	err := h.authSrv.Logout(context.NewContextByGin(c.Copy()))
+	ctx := helper.GetContext(c)
+	err := h.authSrv.Logout(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -74,12 +74,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /assistant/bind_cashier [post]
 func (h *AuthHandler) BindCashier(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var bindReq req.BindCashierReq
 	if err := c.ShouldBindJSON(&bindReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	token, err := h.authSrv.BindCashier(context.NewContextByGin(c.Copy()), bindReq)
+	token, err := h.authSrv.BindCashier(ctx, bindReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
@@ -110,7 +111,8 @@ func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
 // @Router /assistant/base [get]
 func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
-	info, err := h.authSrv.AssistantBase(context.NewContextByGin(c.Copy()))
+	ctx := helper.GetContext(c)
+	info, err := h.authSrv.AssistantBase(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
