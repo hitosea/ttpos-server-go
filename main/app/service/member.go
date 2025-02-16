@@ -13,8 +13,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/cryptor"
@@ -24,7 +24,7 @@ import (
 type IMemberSrv interface {
 	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                      // 获取等级列表
 	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                  // 模糊搜索
-	AddMember(companyUuid uint64, addMemberReq req.AddMemberReq) error                                                                      // 添加会员
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                     // 添加会员
 	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                            // 获取充值会员信息
 	GetPendingRechargeOrder(companyUuid uint64) resp.PendingRechargeOrder                                                                   // 获取进行中的会员充值订单
 	CreateRechargeOrder(companyUuid uint64, createRechargeOrderReq req.CreateRechargeOrderReq) (resp.PendingRechargeOrder, error)           // 创建充值订单
@@ -86,7 +86,8 @@ func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) resp.Search
 }
 
 // AddMember 添加会员
-func (s *memberSrv) AddMember(companyUuid uint64, addMemberReq req.AddMemberReq) error {
+func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error {
+	companyUuid := ctx.GetCompanyUuid()
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
 
 	// 判断等级是否存在
@@ -108,7 +109,7 @@ func (s *memberSrv) AddMember(companyUuid uint64, addMemberReq req.AddMemberReq)
 		Password:        "",
 		MemberLevelUuid: addMemberReq.LevelUuid,
 	}); err != nil {
-		logger.Logger.Error("添加会员失败", zap.Error(err))
+		ctx.Log().Error("添加会员失败", zap.Error(err))
 		return errors.New("添加会员失败")
 	}
 	return nil
@@ -162,6 +163,7 @@ func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.PendingRech
 
 // CreateRechargeOrder 创建充值订单
 func (s *memberSrv) CreateRechargeOrder(companyUuid uint64, rechargeOrderReq req.CreateRechargeOrderReq) (resp.PendingRechargeOrder, error) {
+	ctx := context.NewDefaultContext()
 	var orderResp resp.PendingRechargeOrder
 	// 判断会员是否存在
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
@@ -209,7 +211,7 @@ func (s *memberSrv) CreateRechargeOrder(companyUuid uint64, rechargeOrderReq req
 				}
 				return nil
 			}); err != nil {
-				logger.Logger.Error("修改充值订单失败", zap.Error(err))
+				ctx.Log().Error("修改充值订单失败", zap.Error(err))
 				return orderResp, errors.New("修改充值订单失败")
 			}
 

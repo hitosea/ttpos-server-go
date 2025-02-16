@@ -2,6 +2,7 @@ package context
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"ttpos-server-go/app/model"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ type Context interface {
 	GetCompanySetting() model.CompanySetting // 获取商家设置
 	GetStaff() model.Staff                   // 获取员工信息
 	GetDeskUuid() uint64                     // 获取桌台ID
+	Log() *zap.Logger                        // 获取日志实例
 }
 type ContextImpl struct {
 	context.Context
@@ -29,6 +31,7 @@ type ContextImpl struct {
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
 	deskUuid       uint64               // 桌台ID
+	log            *zap.Logger
 }
 
 type Option func(*ContextImpl)
@@ -72,6 +75,12 @@ func WithStaff(staff model.Staff) Option {
 func WithCompanyUuid(companyUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.companyUuid = companyUuid
+	}
+}
+
+func WithLogger(log *zap.Logger) Option {
+	return func(ctx *ContextImpl) {
+		ctx.log = log
 	}
 }
 
@@ -141,4 +150,8 @@ func (c *ContextImpl) GetCompanySetting() model.CompanySetting {
 
 func (c *ContextImpl) GetStaff() model.Staff {
 	return c.staff
+}
+
+func (c *ContextImpl) Log() *zap.Logger {
+	return c.log
 }

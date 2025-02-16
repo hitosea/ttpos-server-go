@@ -80,12 +80,13 @@ func (h *MemberHandler) RechargeMember(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /cashier/member/add [post]
 func (h *MemberHandler) AddMember(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var addMemberReq req.AddMemberReq
 	if err := c.ShouldBindJSON(&addMemberReq); err != nil {
 		helper.HandleValidationError(c, err, addMemberReq, req.AddMemberReqMessage)
 		return
 	}
-	if err := h.memberSrv.AddMember(helper.GetCompanyUuid(c), addMemberReq); err != nil {
+	if err := h.memberSrv.AddMember(ctx, addMemberReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}

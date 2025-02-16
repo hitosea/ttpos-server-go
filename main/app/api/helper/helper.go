@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"go.uber.org/zap"
 	"net/http"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
@@ -10,6 +11,7 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -168,13 +170,19 @@ func GetCompanySetting(cc *gin.Context) model.CompanySetting {
 
 func GetContext(c *gin.Context) context.Context {
 	return context.NewContext(
-		context.WithGinContext(c.Copy()),
-		context.WithLanguage(GetLanguage(c)),
-		context.WithCompanyUuid(GetCompanyUuid(c)),
-		context.WithSource(GetSource(c)),
-		context.WithCompany(GetCompany(c)),
-		context.WithStaff(GetStaff(c)),
-		context.WithCompanySetting(GetCompanySetting(c)),
-		context.WithDeskUuid(GetDeskUuid(c)),
+		context.WithGinContext(c.Copy()),                 // 在上下文中添加gin上下文
+		context.WithLanguage(GetLanguage(c)),             // 在上下文中添加语言
+		context.WithCompanyUuid(GetCompanyUuid(c)),       // 在上下文中添加公司uuid
+		context.WithSource(GetSource(c)),                 //在上下文中添加来源
+		context.WithCompany(GetCompany(c)),               // 在上下文中添加公司信息
+		context.WithStaff(GetStaff(c)),                   // 在上下文中添加员工信息
+		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
+		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息
+		context.WithLogger(func() *zap.Logger {
+			if logger.Logger == nil {
+				return zap.NewNop() // 避免未初始化日志导致nil空指针错误
+			}
+			return logger.Logger
+		}()),
 	)
 }
