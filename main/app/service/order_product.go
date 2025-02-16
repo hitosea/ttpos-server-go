@@ -2,11 +2,13 @@ package service
 
 import (
 	"errors"
+	"github.com/shopspring/decimal"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"gorm.io/gorm"
@@ -20,7 +22,7 @@ type IOrderProductSrv interface {
 	CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error // 检查商品属性
 	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品规格库存
 	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                 // 检查商品加料库存
-	GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)
+	GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)          //
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
 	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
@@ -71,7 +73,7 @@ func (o *orderProductSrv) CheckProduct(dbId uint64, productUuid uint64) (model.P
 	if productPackage.Uuid == 0 {
 		return model.ProductPackage{}, errors.New("商品不存在")
 	}
-	if productPackage.Status == constant.ProductStatusOffSale {
+	if !productPackage.IsUp() {
 		return model.ProductPackage{}, errors.New("商品已下架")
 	}
 
@@ -153,19 +155,89 @@ func (o *orderProductSrv) CheckOrderProductSauceStock(productPackage model.Produ
 }
 
 // GetInvalidProductList 检查销售订单的商品是否都是上架状态且未删除
-func (o *orderProductSrv) GetInvalidProductList(companyId uint64, saleOrderUuid uint64) ([]model.SaleOrderProduct, error) {
-	var invalidProductList []model.SaleOrderProduct
+func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error) {
+	companyId := ctx.GetDbId()
+	var downOrSaleOutProductList []model.SaleOrderProduct    // 下架或沽清的商品
+	var priceChangeProductList []model.SaleOrderProduct      // 价格变动的商品
+	var invalidProductBomList []model.ProductBom             // 库存不足的ProductBom
+	var exceedLimitProductPackageList []model.ProductPackage // 超过限购数量的ProductPackage
+
+	productBomSubStockMap := make(map[uint64]float64)          // 各个ProductBom的需要消耗的库存
+	productBomMap := make(map[uint64]model.ProductBom)         // 各个ProductBom的库存数
+	productPackageMap := make(map[uint64]model.ProductPackage) // 我需要知道销售订单购买了哪些ProductPackage
+	saleOrderProductUuidMap := make(map[uint64]bool)           // 记录该订单下单了哪些商品
+	productPackageBuyNumMap := make(map[uint64]float64)        // 各个ProductPackage购买的数量
+
 	// 查询销售订单商品组合表
-	bomList, err := repository.NewOrderRepo(o.dbm.GetDB(companyId)).GetSaleOrderBomList(saleOrderUuid)
+	saleOrderProductBomList, err := repository.NewOrderRepo(srv.dbm.GetDB(companyId)).GetSaleOrderBomList(saleOrderUuid)
 	if err != nil {
 		return nil, err
 	}
-	for _, bom := range bomList {
-		if bom.ProductBom.IsDelete() || bom.ProductBom.ProductPackage.IsDown() || bom.ProductBom.ProductPackage.IsDelete() {
-			invalidProductList = append(invalidProductList, bom.SaleOrderProduct)
+	// 得到该销售订单各个ProductBom的需要消耗的库存、各个ProductBom的库存
+	for _, saleOrderProductBom := range saleOrderProductBomList {
+		productBomUuid := saleOrderProductBom.ProductBomUuid
+		num := float64(1) // 每个SaleOrderProduct的消耗ProductBom数量都是1
+		pre := productBomSubStockMap[productBomUuid]
+		// 累加
+		productBomSubStockMap[productBomUuid] = decimal.NewFromFloat(pre).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+
+		// 记录该ProductBom的库存。仅记录一次，因为后面的库存数是一样的
+		if _, ok := productBomMap[productBomUuid]; !ok {
+			productBomMap[productBomUuid] = saleOrderProductBom.ProductBom
+		}
+		// 记录该订单商品购买了哪些ProductPackage
+		if _, ok := productPackageMap[saleOrderProductBom.ProductBom.ProductPackage.Uuid]; !ok {
+			productPackageMap[saleOrderProductBom.ProductBom.ProductPackage.Uuid] = saleOrderProductBom.ProductBom.ProductPackage
+		}
+		// 记录该订单下单了哪些商品
+		if _, ok := saleOrderProductUuidMap[saleOrderProductBom.SaleOrderProduct.Uuid]; !ok {
+			saleOrderProductUuidMap[saleOrderProductBom.SaleOrderProduct.Uuid] = true
 		}
 	}
-	return invalidProductList, nil
+	if len(productBomMap) == len(productBomSubStockMap) {
+		return nil, errors.New("业务数据异常，请联系管理员")
+	}
+	// 判断各个ProductBom的库存是否足够
+	for productBomUuid, _ := range productBomSubStockMap {
+		// 如果库存不足
+		productBom := productBomMap[productBomUuid]
+		if productBom.StockNum < productBomSubStockMap[productBomUuid] {
+			invalidProductBomList = append(invalidProductBomList, productBom) // 记录库存不足的ProductBom
+		}
+	}
+	// 逐个订单商品判断
+	for _, saleOrderProductBom := range saleOrderProductBomList {
+		// 判断是否已经下架/软删除
+		if saleOrderProductBom.ProductBom.ProductPackage.IsDown() || saleOrderProductBom.ProductBom.IsDown() {
+			downOrSaleOutProductList = append(downOrSaleOutProductList, saleOrderProductBom.SaleOrderProduct)
+		}
+		// 判断sale_order_product价格是否有变动
+		if saleOrderProductBom.Price != productBomMap[saleOrderProductBom.ProductBomUuid].Price {
+			priceChangeProductList = append(priceChangeProductList, saleOrderProductBom.SaleOrderProduct) // 记录priceChangeProductList
+		}
+	}
+	// 判断哪些ProductPackage超过了限购数量
+	// 获取订单的订单商品列表
+	saleOrderProductUuids := make([]uint64, 0)
+	for saleOrderProductUuid, _ := range saleOrderProductUuidMap {
+		saleOrderProductUuids = append(saleOrderProductUuids, saleOrderProductUuid)
+	}
+	orderProducts, err := repository.NewOrderRepo(srv.dbm.GetDB(companyId)).GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids)
+	if err != nil {
+		return nil, err
+	}
+	for _, orderProduct := range orderProducts {
+		// 累计该ProductPackage购买的数量
+		pre := productPackageBuyNumMap[orderProduct.ProductPackageUuid]
+		productPackageBuyNumMap[orderProduct.ProductPackageUuid] = decimal.NewFromFloat(pre).Add(decimal.NewFromFloat(float64(orderProduct.Num))).Round(4).InexactFloat64()
+	}
+	// 判断哪些ProductPackage超过了限购数量
+	for productPackageUuid, buyNum := range productPackageBuyNumMap {
+		if uint(buyNum) > productPackageMap[productPackageUuid].LimitNum {
+			exceedLimitProductPackageList = append(exceedLimitProductPackageList, productPackageMap[productPackageUuid])
+		}
+	}
+	return downOrSaleOutProductList, nil
 
 }
 

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -33,5 +34,5 @@ func (model *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 
 // IsDelete 判断记录是否已删除
 func (model *BaseModel) IsDelete() bool {
-	return model.DeleteTime != 0
+	return model.DeleteTime != constant.NotDeleted
 }

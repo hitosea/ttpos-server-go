@@ -2,6 +2,7 @@ package model
 
 import (
 	"slices"
+	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
 )
@@ -117,7 +118,18 @@ type ProductPackage struct {
 	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
 }
 
-// ProductBom 产品BOM表,定义产品BOM的相关信息 ttpos_product_bom
+// IsUp 判断商品是否是上架状态。排除下架、删除状态
+func (model *ProductPackage) IsUp() bool {
+	if model.Status == constant.ProductStatusOffSale || model.DeleteTime != constant.NotDeleted {
+		return false
+	}
+	if model.Status == constant.ProductStatusOnSale {
+		return true
+	}
+	return false
+}
+
+// ProductBom 产品BOM表,定义产品BOM的相关信息 `ttpos_product_bom`
 type ProductBom struct {
 	BaseModel
 	Price              float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
@@ -125,16 +137,44 @@ type ProductBom struct {
 	ProductSauceUuid   uint64  `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
 	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
 	IsDefaultSelect    uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
+	StockNum           float64 `gorm:"column:stock_num;not null;default:0;comment:'库存数量'"`
 	IsSoldOut          uint    `gorm:"column:is_sold_out;not null;default:0;comment:'是否售罄：0-否 1-是'"`
+	Status             uint    `gorm:"column:status;not null;default:0;comment:'状态, 0-下架 1-上架'"`
 
 	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
 }
 
+// IsSoldOutStatus 判断是否标记沽清、或售罄无库存
+func (model *ProductBom) IsSoldOutStatus() bool {
+	return model.IsSoldOut == constant.ProductStatusSaleOut || model.StockNum <= 0
+}
+
+// IsNotSoldOutStatus 判断bom是否还可以销售
+func (model *ProductBom) IsNotSoldOutStatus() bool {
+	return !model.IsSoldOutStatus()
+}
+
+func (model *ProductBom) IsUp() bool {
+	if model.IsSoldOut == constant.ProductStatusSaleOut ||
+		model.Status == constant.ProductStatusOffSale ||
+		model.DeleteTime != constant.NotDeleted {
+		return false
+	}
+	if model.Status == constant.ProductStatusOnSale {
+		return true
+	}
+	return false
+}
+
+func (model *ProductBom) IsDown() bool {
+	return !model.IsUp()
+}
+
 // IsDown 判断商品包是否下架
 func (model *ProductPackage) IsDown() bool {
-	return model.Status == 0
+	return !model.IsUp()
 }
 
 // IsDelete 判断商品包是否删除

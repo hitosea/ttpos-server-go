@@ -21,6 +21,7 @@ type IOrderRepo interface {
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
+	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)          // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
 	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
@@ -358,6 +359,16 @@ func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid
 	return info, nil
 }
 
+// 根据销售订单商品uuid列表获取销售订单商品列表
+func (r *orderRepo) GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error) {
+	products := []model.SaleOrderProduct{}
+	err := r.db.Model(&model.SaleOrderProduct{}).Where("uuid in ?", saleOrderProductUuids).Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
 // GetSaleBillDetails 获取销售账单详细信息 - 几乎包含所有的关联
 func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
@@ -531,7 +542,7 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 // GetSaleOrderBomList 查询销售订单的所有bom
 func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error) {
 	var saleOrderProductBoms []model.SaleOrderProductBom
-	if err := r.db.Preload("ProductBom.ProductPackage").Preload("SaleOrderProduct").Model(&model.SaleOrderProductBom{}).Where("sale_order_uuid = ? AND delete_time = 0", saleOrderUuid).Find(&saleOrderProductBoms).Error; err != nil {
+	if err := r.db.Preload("ProductBom.ProductPackage").Preload("SaleOrderProduct").Model(&model.SaleOrderProductBom{}).Where("sale_order_uuid = ? AND delete_time = ?", saleOrderUuid, constant.NotDeleted).Find(&saleOrderProductBoms).Error; err != nil {
 		return nil, err
 	}
 	return saleOrderProductBoms, nil
