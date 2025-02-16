@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
@@ -815,6 +816,13 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 		return err
 	}
 
+	// 检查是否有已送厨的商品，如果有，则标记production_order_product.status为消单退菜（制作中消单退菜、制作完成消单退菜）
+	// 如果已送厨商品还在制作中，通知厨房取消制作
+	doingProductList := make([]uint64, 0) // 制作中的商品uuid列表 sale_order_product_uuid
+	// todo 获取还在制作中的商品
+
+	// 发布事件，通知厨房取消制作
+	event.NewSystemBus().PublishCancelDoingProductEvent(event.CancelDoingProductPayload{SaleOrderProductUuids: doingProductList})
 	return nil
 }
 

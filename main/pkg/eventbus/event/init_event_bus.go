@@ -24,8 +24,9 @@ type SystemEventBus struct {
 // 初始化时，会创建一个新的 EventBus 实例并赋值给 SystemEventBus 的 bus 字段。
 func NewSystemBus() *SystemEventBus {
 	systemBusOnce.Do(func() {
-		systemEventBus = new(SystemEventBus)
-		systemEventBus.bus = eventbus.NewEventBus()
+		systemEventBus = &SystemEventBus{
+			bus: eventbus.NewEventBus(),
+		}
 	})
 	return systemEventBus
 }

@@ -309,5 +309,10 @@ func (s *h5Srv) RemarkProduct(ctx context.Context, remark string, saleOrderProdu
 		OrderProductUuid: saleOrderProductUuid,
 		Remark:           remark,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	// 备注成功。如果送厨后还能修改备注的话，需要在这里发起事件通知厨房
+
+	return nil
 }
