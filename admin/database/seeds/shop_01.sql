@@ -136,21 +136,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付方式表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_qrcode_order` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '扫码订单ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '扫码订单名称',
-    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台ID',
-    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额',
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未接单 1-已接单 2-已拒单',
-    `handle_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单时间(时间戳)',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码(接单)订单表';
-
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 基本信息
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -207,9 +192,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     -- 扫码订单相关  // todo 设计新表，扫码订单商品 ttpos_h5_order_product
-    `qrcode_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品',
-    `is_qrcode_order_product` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为扫码订单商品, 0-否 1-是',
-    `is_accept_order` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已接单, 0-否 1-是',
+    `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品', -- sql qrcode_order_uuid -> h5_order_uuid
+    `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品', -- sql add column
+    `is_h5_order_product` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为扫码订单商品, 0-否 1-是', -- sql is_qrcode_order_product -> is_h5_order_product
+    `is_accept_order` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单', -- sql update column : default 0 -> default 1
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -221,8 +207,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID',
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台uuid',
+    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未下单 1-未接单 2-已接单 3-已拒单',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    -- start 记录信息，用于财务核算或门店营业管理
+    `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变',
+    `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变',
+    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变',
+    -- end 记录信息，用于财务核算或门店营业管理
+    `product_total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品总价。接单和拒单后从sale_order_product表获取，不再改变',
+    `total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额. 订单金额=商品总价*折扣率。接单和拒单后从sale_order_product表获取，不再改变',
+    `staff_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单或拒单员工ID',
+    `handle_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单或拒单时间(时间戳)',
+    `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '下单时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)，扫码下单时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
@@ -230,8 +227,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_h5_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单商品ID',
-    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单商品uuid',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称.接单和拒单后从sale_order_product表获取，不再改变',
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价（折后价）。接单和拒单后从sale_order_product表获取，不再改变',
+    `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（折前价）。接单和拒单后从sale_order_product表获取，不再改变',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '最终商品数量.接单和拒单后从sale_order_product表获取，不再改变',
+    `attribute_text` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '商品属性文本。接单和拒单后从sale_order_product表获取，不再改变',
+    `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注。接单和拒单后从sale_order_product表获取，不再改变',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品uuid',
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -701,6 +704,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `is_default_select` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态', -- sql add column
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1099,7 +1103,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sale_inventory` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售库存ID',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `stock_num` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '库存数量',
-    `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-unclear未沽清 1-clear已沽清',
+    `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-下架 1-沽清 2-上架',
     `inventory_count` INT(11) NOT NULL DEFAULT 0 COMMENT '库存数量,实际库存量',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
