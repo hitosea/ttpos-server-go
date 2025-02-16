@@ -14,6 +14,12 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
+type KeyPair struct {
+	PublicKey  string `json:"public_key"`
+	PrivateKey string `json:"private_key"`
+	Passphrase string `json:"passphrase"`
+}
+
 // GenerateRSAKeyPairPEM 生成RSA密钥对并返回PEM格式的字符串
 func GenerateRSAKeyPairPEM(bits int) (KeyPair, error) {
 	var keyPair KeyPair

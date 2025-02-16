@@ -35,7 +35,7 @@ func Init() error {
 
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
-	// PGP
+	// 接口加密相关
 	Encrypt = EncryptConf{
 		CachePrefix:   "keypair:",
 		EncryptHeader: "encrypt",

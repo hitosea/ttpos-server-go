@@ -2,10 +2,7 @@ module ttpos-server-go
 
 go 1.23
 
-replace github.com/ProtonMail/go-crypto v0.0.0-20230331115716-d34776aa93ec => github.com/kuaifan/go-crypto v0.0.0-20230330012824-67fae3819558
-
 require (
-	github.com/ProtonMail/gopenpgp/v2 v2.8.2
 	github.com/ace-zhaoy/go-id v1.0.6
 	github.com/duke-git/lancet/v2 v2.3.4
 	github.com/gin-gonic/gin v1.9.1
@@ -38,8 +35,6 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/ProtonMail/go-crypto v1.1.4 // indirect
-	github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/beevik/ntp v1.3.1 // indirect

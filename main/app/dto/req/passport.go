@@ -2,7 +2,7 @@ package req
 
 type GetServerPublicKeyRequest struct {
 	ClientId string `form:"client_id" binding:"required"`
-	Type     string `form:"type" binding:"required,oneof=pgp jsencrypt"`
+	Type     string `form:"type" binding:"required,oneof=jsencrypt"`
 }
 
 var GetServerPublicKeyRequestMessage = map[string]string{
