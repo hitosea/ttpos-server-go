@@ -269,8 +269,8 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders",
 				Args: []interface{}{
 					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", 0)
-						if saleOrderUuid > 0 {
+						db = db.Where("delete_time = ?", constant.NotDeleted)
+						if saleOrderUuid > constant.OptionalUuid {
 							db = db.Where("uuid = ?", saleOrderUuid)
 						}
 						return db
@@ -472,7 +472,7 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 		info = v
 		ok = true
 	case uint64:
-		info, _ = r.GetSaleBillInfo(v, 0)
+		info, _ = r.GetSaleBillInfo(v, constant.OptionalUuid)
 		ok = true
 	default:
 		return false
@@ -583,7 +583,7 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 // ChangeProductRemark 修改订单商品备注
 func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error {
 	return r.db.Model(&model.SaleOrderProduct{}).
-		Where("delete_time = ?", 0).
+		Where("delete_time = ?", constant.NotDeleted).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
 		Updates(map[string]interface{}{
 			"remark": remark,

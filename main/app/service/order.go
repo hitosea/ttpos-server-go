@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
@@ -38,7 +39,7 @@ type IOrderSrv interface {
 	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)           // 删除订单商品
 	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
 	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
-	OrderProductRemark(dbId uint64, staffUuid uint64, source string, req req.OrderProductRemarkReq) (model.SaleBill, error)           // 修改订单商品备注
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
 	CreateSaleBillSetting(db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                               // 创建销售账单设置
 }
 
@@ -681,7 +682,7 @@ func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid
 func (s *orderSrv) IsCellCancelOrder(dbId uint64, saleBillUuid uint64) (model.SaleBill, error) {
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
-	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, constant.OptionalUuid)
 	if err != nil {
 		return model.SaleBill{}, err
 	}
@@ -796,7 +797,7 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, 0)
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, constant.OptionalUuid)
 	if err != nil {
 		return err
 	}
@@ -961,7 +962,7 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
+	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, constant.OptionalUuid)
 	if err != nil {
 		return model.SaleBill{}, err
 	}
@@ -1008,7 +1009,10 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 }
 
 // OrderProductRemark  修改订单商品备注
-func (s *orderSrv) OrderProductRemark(dbId uint64, staffUuid uint64, source string, req req.OrderProductRemarkReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error) {
+	dbId := ctx.GetDbId()
+	_ = ctx.GetStaff().Uuid // 员工ID
+	_ = ctx.GetSource()     // 操作来源
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
@@ -1023,7 +1027,7 @@ func (s *orderSrv) OrderProductRemark(dbId uint64, staffUuid uint64, source stri
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
+	if err := billInfo.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
 		return model.SaleBill{}, err
 	}
 

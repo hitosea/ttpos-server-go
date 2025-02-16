@@ -17,6 +17,7 @@ type IH5Srv interface {
 	GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetBaseInfoResponse, error)
 	GetBuffetList(ctx context.Context, deskUuid uint64) (resp.H5BuffetList, error)
 	OpenH5Desk(ctx context.Context, deskUuid uint64, request req.OpenDeskRequest) error
+	RemarkProduct(ctx context.Context, remark string, saleOrderProductUuid uint64) error
 	GetCategoryList(ctx context.Context) (resp.H5CategoryList, error)
 }
 
@@ -286,4 +287,14 @@ func (s *h5Srv) OpenH5Desk(ctx context.Context, deskUuid uint64, request req.Ope
 
 func (s *h5Srv) GetCategoryList(ctx context.Context) (resp.H5CategoryList, error) {
 	return resp.H5CategoryList{}, nil
+}
+
+func (s *h5Srv) RemarkProduct(ctx context.Context, remark string, saleOrderProductUuid uint64) error {
+	_, err := s.orderSrv.OrderProductRemark(ctx, req.OrderProductRemarkReq{
+		SaleBillUuid:     0, // todo 获取
+		SaleOrderUuid:    0, // todo 获取
+		OrderProductUuid: saleOrderProductUuid,
+		Remark:           remark,
+	})
+	return err
 }

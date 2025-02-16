@@ -2,6 +2,7 @@ package h5
 
 import (
 	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -85,7 +86,32 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 		Fail(c, 500, "获取信息失败")
 		return
 	}
-	Success(c, nil)
+	SuccessWithMsg(c, "开台成功")
+}
+
+// RemarkProduct 给商品添加备注
+// @Summary 添加备注
+// @Description 给商品添加备注
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.AddProductRemarkRequest true "添加备注参数"
+// @Success 200 {object} resp.H5Response{}
+// @Router /index.php/scan/order.Order/remark [post]
+func (h *H5Handler) RemarkProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.AddProductRemarkRequest{}
+	if err := c.ShouldBind(&params); err != nil {
+		Fail(c, 500, constant.RemarkFail)
+		return
+	}
+	err := h.service.RemarkProduct(ctx, params.Remark, params.SaleOrderProductUuid)
+	if err != nil {
+		Fail(c, 500, constant.RemarkFail)
+		return
+	}
+	SuccessWithMsg(c, constant.RemarkSuccess)
 }
 
 // GetOpenDesk 获取商品分类
@@ -96,7 +122,7 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.H5Response{data=resp.H5CategoryList}
-// @Router index.php/scan/product.category/index [post]
+// @Router /index.php/scan/product.category/index [post]
 func (h *H5Handler) GetCategoryList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	list, err := h.service.GetCategoryList(ctx)

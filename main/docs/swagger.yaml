@@ -242,6 +242,15 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddProductRemarkRequest:
+    properties:
+      order_product_id:
+        description: 商品ID
+        type: integer
+      remark:
+        description: 备注
+        type: string
+    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -251,6 +260,18 @@ definitions:
         type: array
     required:
     - sold_out_data
+    type: object
+  req.BuffetCustomerType:
+    properties:
+      customer_type_id:
+        description: 自助餐顾客类型ID
+        type: integer
+      name_text:
+        description: 自助餐顾客类型名称
+        type: string
+      num:
+        description: 顾客数量
+        type: integer
     type: object
   req.CancelSoldOutReq:
     properties:
@@ -349,6 +370,25 @@ definitions:
     - device_id
     - password
     - username
+    type: object
+  req.OpenDeskRequest:
+    properties:
+      buffet_customer_type:
+        description: 自助餐顾客类型
+        items:
+          $ref: '#/definitions/req.BuffetCustomerType'
+        type: array
+      buffet_ids:
+        description: 自助餐ID
+        items:
+          type: integer
+        type: array
+      is_buffet:
+        description: 是否是餐桌
+        type: integer
+      meal_num:
+        description: 顾客数量
+        type: integer
     type: object
   req.OrderCancelReq:
     properties:
@@ -888,6 +928,872 @@ definitions:
         description: 餐桌类型ID
         type: integer
     type: object
+  resp.GetBaseInfoResponse:
+    properties:
+      baseInfo:
+        properties:
+          buffet:
+            properties:
+              add_clock:
+                description: 添加时钟
+                items:
+                  type: string
+                type: array
+              is_add_clock:
+                description: 是否添加时钟
+                type: string
+              is_buffet_discount:
+                description: 是否自助餐折扣
+                type: string
+              is_buy_continue:
+                description: 是否继续购买
+                type: string
+              is_open:
+                description: 是否开启自助餐
+                type: string
+              is_remain_continue:
+                description: 是否继续剩余
+                type: string
+              remain_continue_notice_time:
+                description: 继续剩余通知时间
+                type: string
+              remain_continue_time:
+                description: 继续剩余时间
+                type: string
+              tablet_end_time:
+                description: 桌台结束时间
+                type: string
+            type: object
+          cloud_basic:
+            properties:
+              base:
+                properties:
+                  auth_code_bind_validity_period:
+                    description: 授权码绑定有效期
+                    type: string
+                  brand_logo:
+                    description: 品牌logo
+                    type: string
+                  brand_logo_long:
+                    description: 品牌logo长
+                    type: string
+                  brand_name:
+                    description: 品牌名称
+                    type: string
+                  browser_logo:
+                    description: 浏览器logo
+                    type: string
+                  browser_title:
+                    description: 浏览器标题
+                    type: string
+                  expiration_reminder:
+                    description: 过期提醒
+                    type: integer
+                  member_default_avatar:
+                    description: 会员默认头像
+                    type: string
+                type: object
+            type: object
+          currency:
+            description: 货币信息
+            properties:
+              is_open:
+                description: 是否启用
+                type: string
+              unit:
+                description: 单位
+                type: string
+              unit_position:
+                description: 单位位置
+                type: string
+              vices:
+                properties:
+                  unit_rate:
+                    description: 单位换算率
+                    type: string
+                  vice_unit:
+                    description: 辅币单位
+                    type: string
+                  vice_unit_position:
+                    description: 辅币单位位置
+                    type: string
+                type: object
+            type: object
+          h5:
+            properties:
+              buffet_order_limit:
+                description: 自助餐订单限制
+                properties:
+                  is_limit_num:
+                    description: 是否限制数量
+                    type: string
+                  is_limit_time:
+                    description: 是否限制时间
+                    type: string
+                  limit_num:
+                    description: 限制数量
+                    type: string
+                  limit_time:
+                    description: 限制时间
+                    type: string
+                type: object
+              default_language:
+                description: 默认语言
+                type: string
+              is_buffet_order_limit:
+                description: 是否自助餐订单限制
+                type: string
+              is_call_service:
+                description: 是否呼叫服务
+                type: string
+              is_customer_order:
+                description: 是否顾客订单
+                type: string
+              is_order_limit:
+                description: 是否订单限制
+                type: string
+              is_show_scan_sold_out:
+                description: 是否显示扫码售罄
+                type: integer
+              is_show_sold_out:
+                description: 是否显示售罄
+                type: string
+              is_voice_remind:
+                description: 是否语音提醒
+                type: string
+              kitchen_language:
+                description: 厨房语言
+                type: string
+              language:
+                description: 语言
+                items:
+                  type: string
+                type: array
+              language_list:
+                description: 语言列表
+                items:
+                  properties:
+                    i:
+                      description: 语言索引
+                      type: string
+                    index:
+                      description: 语言索引
+                      type: string
+                    key:
+                      description: 语言键
+                      type: string
+                    value:
+                      description: 语言值
+                      type: string
+                  type: object
+                type: array
+              order_limit:
+                description: 订单限制
+                properties:
+                  is_limit_num:
+                    description: 是否限制数量
+                    type: string
+                  is_limit_time:
+                    description: 是否限制时间
+                    type: string
+                  limit_num:
+                    description: 限制数量
+                    type: string
+                  limit_time:
+                    description: 限制时间
+                    type: string
+                type: object
+            type: object
+          is_accept_scan_order:
+            description: 是否接受扫码订单
+            type: integer
+          is_cloud_deploy:
+            description: 是否云部署
+            type: boolean
+          kitchen:
+            properties:
+              is_open:
+                description: 是否开启厨房
+                type: string
+            type: object
+          license_remaining_days:
+            description: 许可证剩余天数
+            type: integer
+          logo:
+            description: 商家logo
+            type: string
+          name:
+            type: string
+          shop:
+            description: 商家信息
+            properties:
+              address:
+                description: 地址
+                type: string
+              app_id:
+                description: 应用ID
+                type: integer
+              assistant_limit:
+                description: 助手限额
+                type: integer
+              auto_close:
+                description: 自动关闭
+                type: integer
+              bag_price:
+                description: 包装价格
+                type: string
+              bag_type:
+                description: 包装类型
+                type: integer
+              business_id:
+                description: 商家ID
+                type: integer
+              cash_limit:
+                description: 现金限额
+                type: integer
+              cash_money:
+                description: 现金金额
+                type: string
+              category_set:
+                description: 分类设置
+                type: integer
+              chain_number:
+                description: 连锁编号
+                type: string
+              city_id:
+                description: 城市ID
+                type: integer
+              close_time:
+                description: 关闭时间
+                type: integer
+              create_time:
+                description: 创建时间
+                type: string
+              delivery_distance:
+                description: 配送距离
+                type: integer
+              delivery_set:
+                description: 配送设置
+                items:
+                  type: string
+                type: array
+              delivery_time:
+                description: 配送时间
+                items:
+                  type: string
+                type: array
+              deploy_mode:
+                description: 部署模式
+                type: integer
+              deposit_money:
+                description: 押金金额
+                type: string
+              description:
+                description: 描述
+                type: string
+              fav_count:
+                description: 收藏数量
+                type: integer
+              freeze_money:
+                description: 冻结金额
+                type: string
+              is_accept_scan_order:
+                description: 是否接受扫码订单
+                type: integer
+              is_delete:
+                description: 是否删除
+                type: integer
+              is_main:
+                description: 是否主店
+                type: integer
+              is_open_assistant:
+                description: 是否开启助手
+                type: integer
+              is_open_buffet:
+                description: 是否开启自助餐
+                type: integer
+              is_open_kitchen_kds:
+                description: 是否开启厨房KDS
+                type: integer
+              is_open_local_print:
+                description: 是否开启本地打印
+                type: integer
+              is_open_member:
+                description: 是否开启会员
+                type: integer
+              is_open_scan:
+                description: 是否开启扫码
+                type: integer
+              is_open_tablet:
+                description: 是否开启桌台
+                type: integer
+              is_recycle:
+                description: 是否回收
+                type: integer
+              kitchen_limit:
+                description: 厨房限额
+                type: integer
+              languages:
+                description: 语言
+                type: string
+              latitude:
+                description: 纬度
+                type: string
+              level:
+                description: 商家等级
+                type: integer
+              link_name:
+                description: 联系人名称
+                type: string
+              link_phone:
+                description: 联系人电话
+                type: string
+              logo:
+                description: 商家logo
+                type: string
+              longitude:
+                description: 经度
+                type: string
+              mac_addr:
+                description: 设备mac地址
+                type: string
+              min_money:
+                description: 最小金额
+                type: string
+              money:
+                description: 金额
+                type: string
+              name:
+                description: 商家名称
+                type: string
+              parent_id:
+                description: 父级ID
+                type: integer
+              pick_time:
+                description: 自提时间
+                items:
+                  type: string
+                type: array
+              printer_limit:
+                description: 打印机限额
+                type: integer
+              province_id:
+                description: 省份ID
+                type: integer
+              real_name:
+                description: 商家真实名称
+                type: string
+              region_id:
+                description: 区域ID
+                type: integer
+              reserve:
+                description: 预定
+                type: integer
+              sale_stock:
+                description: 销售库存
+                type: integer
+              serial_number:
+                description: 设备序列号
+                type: string
+              service_money:
+                description: 服务金额
+                type: string
+              service_type:
+                description: 服务类型
+                type: integer
+              settle_type:
+                description: 结算方式
+                type: integer
+              shipping_fee:
+                description: 运费
+                type: string
+              shop_supplier_id:
+                description: 商家ID
+                type: integer
+              status:
+                description: 状态
+                type: integer
+              store_set:
+                description: 店铺设置
+                items:
+                  type: string
+                type: array
+              store_time:
+                description: 店铺营业时间
+                items:
+                  type: string
+                type: array
+              store_type:
+                description: 店铺类型
+                type: integer
+              storebag_price:
+                description: 店铺包装价格
+                type: string
+              storebag_type:
+                description: 店铺包装类型
+                type: integer
+              table_limit:
+                description: 桌台限额
+                type: integer
+              tablet_limit:
+                description: 桌台限额
+                type: integer
+              timezone:
+                description: 时区
+                type: string
+              total_gift:
+                description: 总赠菜
+                type: integer
+              total_money:
+                description: 总金额
+                type: string
+              update_time:
+                description: 更新时间
+                type: string
+              user_id:
+                description: 用户ID
+                type: integer
+            type: object
+        type: object
+      orderInfo:
+        properties:
+          is_buffet:
+            description: 是否自助餐
+            type: integer
+        type: object
+      tableInfo:
+        description: 桌台信息
+        properties:
+          app_id:
+            type: integer
+          area_id:
+            type: integer
+          area_name:
+            type: string
+          bind_info:
+            type: string
+          create_time:
+            type: string
+          is_bind:
+            type: integer
+          max_num:
+            type: integer
+          min_num:
+            type: integer
+          qrcode_value:
+            type: string
+          shop_supplier_id:
+            type: integer
+          sort:
+            type: integer
+          status:
+            type: integer
+          switch_status:
+            type: integer
+          table_id:
+            type: integer
+          table_no:
+            type: string
+          type_id:
+            type: integer
+          type_name:
+            type: string
+          underwayOrder:
+            properties:
+              actual_price:
+                type: integer
+              actual_receive_price:
+                type: string
+              app_id:
+                type: integer
+              auto_close:
+                type: integer
+              bag_price:
+                type: string
+              balance:
+                type: string
+              buffet_expired_time:
+                type: integer
+              buffet_remaining_time:
+                type: integer
+              buffet_start_time:
+                type: integer
+              buyer_remark:
+                type: string
+              call_no:
+                type: string
+              cancel_remark:
+                type: string
+              cashier_id:
+                type: integer
+              change_due:
+                type: string
+              checkout_diff_money:
+                type: string
+              checkout_discount_type:
+                type: integer
+              close_time:
+                type: integer
+              consumption_tax_money:
+                type: string
+              consumption_tax_type:
+                type: integer
+              coupon_id:
+                type: integer
+              coupon_id_sys:
+                type: integer
+              coupon_money:
+                type: string
+              coupon_money_sys:
+                type: string
+              create_time:
+                type: string
+              delete_time:
+                type: integer
+              deliver_source:
+                type: integer
+              deliver_status:
+                type: integer
+              deliver_text:
+                type: string
+              delivery_status:
+                properties:
+                  text:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              delivery_time:
+                type: integer
+              delivery_type:
+                properties:
+                  text:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              device_id:
+                type: string
+              discount_change_price:
+                type: string
+              discount_method:
+                type: integer
+              discount_money:
+                type: string
+              discount_ratio:
+                type: integer
+              driver_id:
+                type: integer
+              eat_type:
+                type: integer
+              elapsed_time:
+                type: integer
+              extra_times:
+                type: integer
+              finance_id:
+                type: integer
+              free_pay_price:
+                type: string
+              free_remark:
+                type: string
+              is_buffet:
+                type: integer
+              is_change_price:
+                type: integer
+              is_delete:
+                type: integer
+              is_free:
+                type: integer
+              is_lock:
+                type: integer
+              is_merge:
+                type: integer
+              is_must_notice:
+                type: integer
+              is_settled:
+                type: integer
+              is_stay:
+                type: integer
+              last_buffet_time_limit:
+                type: integer
+              lock_elapsed_time:
+                type: integer
+              lock_time:
+                type: integer
+              meal_num:
+                type: integer
+              mealtime:
+                type: string
+              merge_id:
+                type: string
+              merge_parent_id:
+                type: integer
+              online_money:
+                type: string
+              order_id:
+                type: integer
+              order_name:
+                type: string
+              order_no:
+                type: string
+              order_price:
+                type: string
+              order_source:
+                type: integer
+              order_source_text:
+                type: string
+              order_status:
+                properties:
+                  text:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              order_type:
+                type: integer
+              order_type_text:
+                type: string
+              original_consumption_tax_money:
+                type: string
+              original_price:
+                type: string
+              parent_id:
+                type: integer
+              pay_end_time:
+                type: integer
+              pay_fee_money:
+                type: string
+              pay_price:
+                type: string
+              pay_source:
+                type: string
+              pay_status:
+                properties:
+                  text:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              pay_time:
+                type: integer
+              pay_time_text:
+                type: string
+              pay_type:
+                type: integer
+              points_bonus:
+                type: string
+              points_money:
+                type: string
+              points_num:
+                type: integer
+              print_num:
+                type: integer
+              receipt_status:
+                properties:
+                  text:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              receipt_time:
+                type: integer
+              refund_consumption_tax:
+                type: string
+              refund_money:
+                type: string
+              room_id:
+                type: integer
+              service_money:
+                type: string
+              service_type:
+                type: integer
+              setting_service_money:
+                type: string
+              settle_device_id:
+                type: string
+              settle_type:
+                type: integer
+              shop_supplier_id:
+                type: integer
+              small_auto:
+                type: integer
+              small_diff_money:
+                type: string
+              small_discount_type:
+                type: integer
+              state_text:
+                type: string
+              stay_time:
+                type: integer
+              supplier_money:
+                type: string
+              surplus_balance:
+                type: string
+              sys_money:
+                type: string
+              table_id:
+                type: integer
+              table_no:
+                type: string
+              table_remark:
+                type: string
+              take_fee:
+                type: string
+              total_price:
+                type: string
+              total_product_consumption_tax:
+                type: string
+              total_product_price:
+                type: string
+              total_product_service_consumption_tax:
+                type: string
+              total_product_service_fee:
+                type: string
+              trade_no:
+                type: string
+              transaction_id:
+                type: string
+              update_price:
+                properties:
+                  symbol:
+                    type: string
+                  value:
+                    type: integer
+                type: object
+              update_time:
+                type: string
+              user_discount_money:
+                type: string
+              user_id:
+                type: integer
+              virtual_auto:
+                type: integer
+              virtual_content:
+                type: string
+            type: object
+          update_time:
+            type: string
+        type: object
+    type: object
+  resp.H5Buffet:
+    properties:
+      app_id:
+        type: integer
+      buffetCustomerType:
+        items:
+          $ref: '#/definitions/resp.H5BuffetCustomerType'
+        type: array
+      buffetTaxes:
+        items:
+          properties:
+            app_id:
+              type: integer
+            buffet_id:
+              type: integer
+            buffet_tax_type:
+              type: integer
+            create_time:
+              type: string
+            id:
+              type: integer
+            tax_category_id:
+              type: integer
+            tax_rate:
+              type: integer
+            update_time:
+              type: string
+          type: object
+        type: array
+      buy_limit_status:
+        type: integer
+      create_time:
+        type: string
+      delete_time:
+        type: integer
+      id:
+        type: integer
+      is_comb:
+        type: integer
+      is_remain_continue:
+        type: integer
+      name:
+        type: string
+      name_text:
+        type: string
+      price:
+        type: string
+      remain_continue_notice_time:
+        type: integer
+      remain_continue_time:
+        type: integer
+      sale_num:
+        type: integer
+      shop_supplier_id:
+        type: integer
+      sort:
+        type: integer
+      status:
+        type: integer
+      time_limit:
+        type: integer
+      update_time:
+        type: string
+    type: object
+  resp.H5BuffetCustomerType:
+    properties:
+      app_id:
+        type: integer
+      buffet_id:
+        type: integer
+      create_time:
+        type: string
+      customer_type_id:
+        type: integer
+      id:
+        type: integer
+      name_text:
+        type: string
+      price:
+        type: string
+      shop_supplier_id:
+        type: integer
+      update_time:
+        type: string
+    type: object
+  resp.H5Category:
+    properties:
+      category_id:
+        type: integer
+      is_special:
+        type: integer
+      name:
+        type: string
+      name_text:
+        type: string
+      parent_id:
+        type: integer
+      path_name_text:
+        type: string
+      product_count:
+        type: string
+      product_num:
+        type: integer
+    type: object
+  resp.H5CategoryList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.H5Category'
+        type: array
+    type: object
+  resp.H5Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+    type: object
   resp.LanguageResp:
     properties:
       default_language:
@@ -956,6 +1862,12 @@ definitions:
       finish_time:
         description: 完成时间（支付时间）（时间戳）
         type: integer
+      free_reason:
+        description: 免单原因
+        type: string
+      is_free:
+        description: 是否免单
+        type: boolean
       member_name:
         description: 会员名称
         type: string
@@ -1028,7 +1940,7 @@ definitions:
         description: 自助餐名称
         type: string
       cancel_reason:
-        description: 自助餐名称
+        description: 取消原因
         type: string
       cashier_name:
         description: 收银员名称
@@ -1068,6 +1980,9 @@ definitions:
       refund_amount:
         description: 退款金额
         type: number
+      remark:
+        description: 备注
+        type: string
       sale_bill_uuid:
         description: 销售账单UUID
         type: integer
@@ -1142,10 +2057,6 @@ definitions:
         type: integer
       data:
         description: 消息数据
-        type: string
-      message:
-        description: 消息内容
-        type: string
       remark:
         description: 备注
         type: string
@@ -1164,9 +2075,6 @@ definitions:
     type: object
   resp.OrderProduct:
     properties:
-      Price:
-        description: 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
-        type: number
       attributes:
         description: 规格属性加料
         type: string
@@ -1189,6 +2097,12 @@ definitions:
       num:
         description: 数量
         type: integer
+      price:
+        description: 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
+        type: number
+      refund_amount:
+        description: 退款金额
+        type: number
       refund_reason:
         description: 退菜原因
         type: string
@@ -1206,6 +2120,9 @@ definitions:
         type: number
       total_price:
         description: 应收金额(单商品)=最终单价+服务费+总税费
+        type: number
+      total_sale_price:
+        description: 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'
         type: number
       uuid:
         description: 销售订单商品ID
@@ -1701,13 +2618,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -2391,13 +3308,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -3073,11 +3990,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -3099,11 +4016,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -3121,46 +4038,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -3555,6 +4472,124 @@ paths:
       summary: 验证锁屏密码
       tags:
       - 收银端.基础信息
+  /index.php/scan/base.base/getInfo:
+    post:
+      consumes:
+      - application/json
+      description: 获取桌码基础信息，整个h5应用需要的基础信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.GetBaseInfoResponse'
+      security:
+      - JwtToken: []
+      summary: 桌码基础信息
+      tags:
+      - 扫码点餐
+  /index.php/scan/order.Order/buffetList:
+    post:
+      consumes:
+      - application/json
+      description: 获取自助餐套餐列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.H5Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/resp.H5Buffet'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 自助餐套餐信息
+      tags:
+      - 扫码点餐
+  /index.php/scan/order.Order/remark:
+    post:
+      consumes:
+      - application/json
+      description: 给商品添加备注
+      parameters:
+      - description: 添加备注参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddProductRemarkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.H5Response'
+      security:
+      - JwtToken: []
+      summary: 添加备注
+      tags:
+      - 扫码点餐
+  /index.php/scan/order.Order/setTable:
+    post:
+      consumes:
+      - application/json
+      description: 开台
+      parameters:
+      - description: 创建扫码桌台订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OpenDeskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.H5Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/resp.H5Buffet'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 开台
+      tags:
+      - 扫码点餐
+  /index.php/scan/product.category/index:
+    post:
+      consumes:
+      - application/json
+      description: 获取商品分类
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.H5Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.H5CategoryList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取商品分类
+      tags:
+      - 扫码点餐
   /kitchen/call/handle:
     post:
       consumes:
@@ -3875,11 +4910,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -3901,11 +4936,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -3923,46 +4958,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query

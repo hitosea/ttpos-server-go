@@ -168,9 +168,7 @@ func (h *CashierInstantHandler) OrderChangePopulation(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/remark [post]
 func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	staff := helper.GetStaff(c)
-	source := helper.GetSource(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderProductRemarkReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -178,7 +176,7 @@ func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductRemark(companyUuid, staff.Uuid, source, params)
+	_, err := h.orderService.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

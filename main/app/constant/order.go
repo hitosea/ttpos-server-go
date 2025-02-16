@@ -74,6 +74,7 @@ const (
 	OrderCancelRefundProduct = "CANCEL_REFUND"       // 取消退菜
 	OrderChangeTable         = "CHANGE_TABLE"        // 转台
 	OrderChangePrice         = "CHANGE_PRICE"        // 改价
+	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
 	OrderStayOrder           = "STAY_ORDER"          // 挂单
 	OrderPickOrder           = "PICK_ORDER"          // 取单

@@ -127,6 +127,10 @@ func GetSource(c *gin.Context) string {
 	return c.GetString(jwt.Source)
 }
 
+func GetDeskUuid(c *gin.Context) uint64 {
+	return c.GetUint64(jwt.DeskUuid)
+}
+
 // GetLanguage 获取语言
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
@@ -167,5 +171,10 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithGinContext(c.Copy()),
 		context.WithLanguage(GetLanguage(c)),
 		context.WithCompanyUuid(GetCompanyUuid(c)),
+		context.WithSource(GetSource(c)),
+		context.WithCompany(GetCompany(c)),
+		context.WithStaff(GetStaff(c)),
+		context.WithCompanySetting(GetCompanySetting(c)),
+		context.WithDeskUuid(GetDeskUuid(c)),
 	)
 }

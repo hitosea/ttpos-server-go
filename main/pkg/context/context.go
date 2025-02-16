@@ -2,23 +2,33 @@ package context
 
 import (
 	"context"
+	"ttpos-server-go/app/model"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Context interface {
-	GetLanguage() string
-	GetCompanyUuid() uint64
-	GetDbId() uint64
-	GetGinContext() *gin.Context
-	GetContext() context.Context
+	GetLanguage() string                     // 获取语言
+	GetCompanyUuid() uint64                  // 获取商家ID
+	GetDbId() uint64                         // 获取商家ID
+	GetGinContext() *gin.Context             // 获取gin上下文
+	GetContext() context.Context             // 获取上下文
+	GetSource() string                       // 获取请求来源
+	GetCompany() model.Company               // 获取商家信息
+	GetCompanySetting() model.CompanySetting // 获取商家设置
+	GetStaff() model.Staff                   // 获取员工信息
+	GetDeskUuid() uint64                     // 获取桌台ID
 }
-
 type ContextImpl struct {
 	context.Context
-	ginC        *gin.Context // gin context。记录当前请求的上下文
-	language    string       // 语言。记录当前请求的语言
-	companyUuid uint64       // 商家uuid。记录当前请求的商家
+	ginC           *gin.Context         // gin context。记录当前请求的上下文
+	language       string               // 语言。记录当前请求的语言
+	companyUuid    uint64               // 商家uuid。记录当前请求的商家
+	source         string               // 请求来源
+	company        model.Company        // 商家信息
+	companySetting model.CompanySetting // 商家设置信息
+	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
+	deskUuid       uint64               // 桌台ID
 }
 
 type Option func(*ContextImpl)
@@ -26,6 +36,36 @@ type Option func(*ContextImpl)
 func WithLanguage(language string) Option {
 	return func(ctx *ContextImpl) {
 		ctx.language = language
+	}
+}
+
+func WithDeskUuid(deskUuid uint64) Option {
+	return func(ctx *ContextImpl) {
+		ctx.deskUuid = deskUuid
+	}
+}
+
+func WithSource(source string) Option {
+	return func(ctx *ContextImpl) {
+		ctx.source = source
+	}
+}
+
+func WithCompany(company model.Company) Option {
+	return func(ctx *ContextImpl) {
+		ctx.company = company
+	}
+}
+
+func WithCompanySetting(companySetting model.CompanySetting) Option {
+	return func(ctx *ContextImpl) {
+		ctx.companySetting = companySetting
+	}
+}
+
+func WithStaff(staff model.Staff) Option {
+	return func(ctx *ContextImpl) {
+		ctx.staff = staff
 	}
 }
 
@@ -67,6 +107,14 @@ func (c *ContextImpl) GetLanguage() string {
 	return c.language
 }
 
+func (c *ContextImpl) GetDeskUuid() uint64 {
+	return c.deskUuid
+}
+
+func (c *ContextImpl) GetSource() string {
+	return c.source
+}
+
 func (c *ContextImpl) GetCompanyUuid() uint64 {
 	return c.companyUuid
 }
@@ -81,4 +129,16 @@ func (c *ContextImpl) GetGinContext() *gin.Context {
 
 func (c *ContextImpl) GetContext() context.Context {
 	return c.Context
+}
+
+func (c *ContextImpl) GetCompany() model.Company {
+	return c.company
+}
+
+func (c *ContextImpl) GetCompanySetting() model.CompanySetting {
+	return c.companySetting
+}
+
+func (c *ContextImpl) GetStaff() model.Staff {
+	return c.staff
 }

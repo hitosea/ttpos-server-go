@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"ttpos-server-go/app/constant"
 )
 
 type Where func(*gorm.DB) *gorm.DB
@@ -119,7 +121,7 @@ func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 // WhereBySoftDelete 根据软删除查询
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = 0")
+		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
 	}
 }
 
