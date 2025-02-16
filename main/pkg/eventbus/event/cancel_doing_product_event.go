@@ -8,6 +8,7 @@ const EventCancelDoingProduct EventName = "Event_Cancel_Doing_Product"
 // CancelDoingProductPayload 每个事件有一个数据结构
 type CancelDoingProductPayload struct {
 	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids"`
+	companyUuid           uint64
 }
 
 // CancelDoingProductHandler 每个事件的处理器

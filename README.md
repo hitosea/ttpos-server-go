@@ -36,6 +36,10 @@ http://your.domain.com/api/v1/passport/server_public_key
 ```
 # 定义事件，参考：
 main/pkg/eventbus/event/sample_event.go
+
+定义事件统一在/pkg/eventbus/event目录下，一个文件对应一个事件的定义，文件名为事件名称，格式为xxx_event.go
+
+例如：sample_event.go表示Sample事件的定义，定义在/pkg/eventbus/event/sample_event.go
 ```
 ```
 # 发布事件
@@ -46,6 +50,10 @@ main/pkg/eventbus/event/sample_event.go
 # 订阅事件
 引入这个包	     "ttpos-server-go/pkg/eventbus/event"
 订阅Sample事件 event.NewSystemBus().SubscribeSampleEvent(func(msg event.SamplePayload) {})
+
+订阅事件的事件处理器统一下在/app/event目录下，一个文件对应一个事件的处理。文件名为事件名称，格式为xxx_event_handler.go，
+
+举例如下cancel_order_event_handler.go表示取消订单事件的处理器，定义在/app/event/cancel_order_event_handler.go
 ```
 13. 并发控制uuid锁。在并发场景下，当操作同一个uuid资源时需要先获取uuid锁，先得到锁的协程先执行而其他协程等待锁。
 ```

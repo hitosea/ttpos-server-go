@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
+	_ "ttpos-server-go/app/event" // 注册事件
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
