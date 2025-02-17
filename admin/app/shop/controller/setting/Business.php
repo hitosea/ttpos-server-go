@@ -89,7 +89,6 @@ class Business extends Controller
     public function qrcode()
     {
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
-        $app_id = $this->store['app']['app_id'] ?: 0;
 
         $data = $this->postData();
         $action = $data['action'] ?? '';
@@ -105,7 +104,7 @@ class Business extends Controller
             (new SettingModel)->edit(SettingEnum::BUSINESS, $setting, $shop_supplier_id);
         }
 
-        $arr = ['s' => $shop_supplier_id, 'a' => $app_id, 'q' => $qr_code];
+        $arr = ['a' => request()->appId, 'q' => $qr_code];
         $auth = new AuthService();
         $token = $auth->generateToken($arr);
         $qrCode = new QrCode(base_url() . "menu/#/?token={$token}");

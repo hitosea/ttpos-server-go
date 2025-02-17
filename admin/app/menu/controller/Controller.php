@@ -2,8 +2,6 @@
 
 namespace app\menu\controller;
 
-use app\common\model\app\App;
-use app\common\model\store\Table;
 use app\common\enum\http\StatusCode;
 use app\controller as BaseController;
 use app\common\exception\BaseException;
@@ -77,21 +75,12 @@ class Controller extends BaseController
         }
         // 设置id
         request()->appId = $appId = $token['a'];
-        request()->shopSupplierId = $token['s'];
         // 系统设置状态
         $settingData = SettingModel::getAll(request()->appId ?? 0, request()->shopSupplierId ?? 0);
         $business = $settingData[SettingEnum::BUSINESS]['values'] ?? [];
         if (($business['qr_code'] ?? 0) != $token['q']) {
             throw new BaseException(['msg' => '二维码已失效，请联系商家', 'code' => StatusCode::VISIT_ERROR]);
         }
-        //
-        request()->userInfo = $this->table = [
-            'shop_supplier_id' => $token['s'] ?? 0,
-            'table_id' => $token['t'] ?? 0,
-            'app_id' => $token['a'] ?? 0,
-            'qrcode_token' => $token['q'] ?? 0,
-            'setting_data' => $settingData,
-        ];
         // 设置时区
         $setting = SettingModel::getSupplierItem(SettingEnum::STORE, request()->shopSupplierId);
         if ($timezone = ($setting['time_zone'] ?? '')) {
