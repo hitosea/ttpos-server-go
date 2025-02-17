@@ -6,7 +6,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\erp\ErpMonthlyStatistics;
 use app\shop\model\product\Category as CategoryModel;
-use app\shop\model\product\ProductSku as ProductSkuModel;
+use app\common\model\product\ProductBom as ProductBomModel;
 
 /**
  * 库存管理
@@ -38,7 +38,7 @@ class ErpInventory extends Controller
     {
         $data = $this->postData();
         $filterHavingMaterial = isset($data['filter_having_material']) ? $data['filter_having_material'] : 0;
-        $list = (new ProductSkuModel)->getSkuProductList($data, $filterHavingMaterial);
+        $list = (new ProductBomModel)->getProductBomList($data, $filterHavingMaterial);
         $category = CategoryModel::getCacheTree(1, 0, $this->store);
         return $this->renderSuccess('', compact('list', 'category'));
     }

@@ -237,7 +237,7 @@ class ErpDamagedProductRecord extends BaseModel
             return false;
         }
         //
-        $data['number'] = $model->generateNumber();
+        $data['form_no'] = $model->generateNumber();
         $data['type'] = $params['type'] ?? 1;;
         $data['product_id'] = $params['product_id'] ?? 0;
         $data['product_sku_id'] = $params['product_sku_id'] ?? 0;

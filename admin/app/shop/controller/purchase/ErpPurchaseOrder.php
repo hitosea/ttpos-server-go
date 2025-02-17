@@ -242,7 +242,7 @@ class ErpPurchaseOrder extends Controller
         if (empty($purchase_order_id)) {
             return $this->renderError('采购单ID不能为空');
         }
-        $detail = (new ErpPurchaseOrderModel)->detail($purchase_order_id);
+        $detail = (new ErpPurchaseOrderModel)->simpleDetail($purchase_order_id);
         if (!$detail) {
             return $this->renderError('采购单ID不存在');
         }
