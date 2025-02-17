@@ -45,9 +45,10 @@ type PaymentOrder struct {
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
 
+	SaleOrderUuid   uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:支付类型ID;NOT NULL" json:"sale_order_uuid"`
 	PaymentTypeUuid uint64 `gorm:"column:payment_type_uuid;type:bigint(20) unsigned;default:0;comment:支付类型ID;NOT NULL" json:"payment_type_uuid"`
 	RelatedUuid     uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:充值订单、销售订单ID;NOT NULL" json:"related_uuid"`
 
 	// 关联字段
-	PaymentMethod PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:uuid"`
+	PaymentMethod PaymentMethod `gorm:"foreignKey:PaymentTypeUuid;references:uuid"`
 }

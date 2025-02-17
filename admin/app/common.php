@@ -78,9 +78,9 @@ function signToken($uid, $source, $device_id = '', $pwd = '', $company_uuid = 0)
     $exp = ($source == 'admin' || $source == 'shop') ? 36000 : (30 * 86400 * 1200);
     $key = Config::get('app.salt');     //这里是自定义的一个随机字串，应该写在config文件中的，解密时也会用，相当    于加密中常用的 盐  salt
     $token = array(
-        "iat" => time(),                        //签发时间
-        "nbf" => time() + 3,                    //在什么时候jwt开始生效  （这里表示生成100秒后才生效）
-        "exp" => time() + $exp,                 //token 过期时间改为1200个月 86400=24小时 36000=10小时
+        "iat" => time(),                    //签发时间
+        "nbf" => time(),                    //在什么时候jwt开始生效  （这里表示生成100秒后才生效）
+        "exp" => time() + $exp,             //token 过期时间改为1200个月 86400=24小时 36000=10小时
         'pwd' => $pwd,
         'source' => $source,
         'device_id' => $device_id . '',
