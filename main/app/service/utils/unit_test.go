@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func TestProductMustPlanCheck_CheckResult(t *testing.T) {
@@ -16,10 +20,10 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 		{
 			name: "Test case 1: All required products are selected",
 			rule: Rule{
-				PerProductPlan: map[uint64]map[uint64]uint{
+				EachPersonProductPlan: map[uint64]map[uint64]uint{
 					1: {101: 2, 102: 3},
 				},
-				CombinationProductPlan: map[uint64]uint{
+				EachOrderProductPlan: map[uint64]uint{
 					2: 5,
 				},
 			},
@@ -39,10 +43,10 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 		{
 			name: "Test case 2: Some required products are not selected",
 			rule: Rule{
-				PerProductPlan: map[uint64]map[uint64]uint{
+				EachPersonProductPlan: map[uint64]map[uint64]uint{
 					1: {101: 2, 102: 3},
 				},
-				CombinationProductPlan: map[uint64]uint{
+				EachOrderProductPlan: map[uint64]uint{
 					2: 5,
 				},
 			},
@@ -66,10 +70,10 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 		{
 			name: "Test case 3: No products are selected",
 			rule: Rule{
-				PerProductPlan: map[uint64]map[uint64]uint{
+				EachPersonProductPlan: map[uint64]map[uint64]uint{
 					1: {101: 2, 102: 3},
 				},
-				CombinationProductPlan: map[uint64]uint{
+				EachOrderProductPlan: map[uint64]uint{
 					2: 5,
 				},
 			},
@@ -89,10 +93,10 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 		{
 			name: "Test case 4: Extra products are selected",
 			rule: Rule{
-				PerProductPlan: map[uint64]map[uint64]uint{
+				EachPersonProductPlan: map[uint64]map[uint64]uint{
 					1: {101: 2, 102: 3},
 				},
-				CombinationProductPlan: map[uint64]uint{
+				EachOrderProductPlan: map[uint64]uint{
 					2: 5,
 				},
 			},
@@ -119,9 +123,26 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 			}
 			result := checker.CheckResult()
 			fmt.Println("result::::::::::::", *result)
+
+			db := NewGormDB()
+			tips, err := Tips(db, result)
+			if err != nil {
+				t.Errorf("expected %v, got %v", tt.expect, result)
+			}
+			jsonData, _ := json.MarshalIndent(tips, "", "    ")
+			fmt.Println(fmt.Sprintf("tips: %s", string(jsonData)))
 			if !reflect.DeepEqual(result, &tt.expect) {
 				t.Errorf("expected %v, got %v", tt.expect, result)
 			}
 		})
 	}
+}
+
+func NewGormDB() *gorm.DB {
+	dsn := "root:123456@tcp(127.0.0.1:3306)/ttpos?charset=utf8mb4&parseTime=True&loc=Local"
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	return db
 }

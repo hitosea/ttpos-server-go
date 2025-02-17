@@ -20,6 +20,7 @@ type IOrderRepo interface {
 	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)           // 获取收银的订单列表
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
+	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                     // 获取桌台的销售账单详细信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)          // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
@@ -629,4 +630,17 @@ func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint6
 		Updates(map[string]interface{}{
 			"remark": remark,
 		}).Error
+}
+
+// GetSaleBillProductInfoByDesk 获取桌台的账单商品信息
+func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error) {
+	var saleBill model.SaleBill
+	if err := r.db.Preload("SaleOrders", func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ?", constant.NotDeleted)
+	}).Preload("SaleOrders.SaleOrderProducts", func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
+	}).Preload("SaleOrders.SaleOrderProducts.MultiLanguageName").Preload("SaleOrders.SaleOrderProducts.SaleOrderProductAttributes").Model(&model.SaleBill{}).Where("desk_uuid = ?", deskUuid).Find(&saleBill).Error; err != nil {
+		return model.SaleBill{}, err
+	}
+	return saleBill, nil
 }

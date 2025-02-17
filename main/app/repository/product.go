@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -9,6 +10,7 @@ import (
 // IProductRepo 定义商品仓库接口
 type IProductRepo interface {
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
+	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
@@ -320,4 +322,11 @@ func (r *productRepo) WithTakeoutTax() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutTax")
 	}
+}
+
+// GetProductPackageListByUuids 通过uuid列表获取商品列表
+func (r *productRepo) GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error) {
+	var productPackages []model.ProductPackage
+	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ? AND delete_time = ?", uuids, constant.NotDeleted).Find(&productPackages).Error
+	return productPackages, err
 }

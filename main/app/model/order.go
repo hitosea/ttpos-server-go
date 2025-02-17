@@ -120,7 +120,7 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 	return strings.Join(buffets, "+")
 }
 
-// SaleOrder 销售订单 ttpos_sale_order
+// SaleOrder 销售订单 `ttpos_sale_order`
 type SaleOrder struct {
 	BaseModel
 	// 基础标识字段

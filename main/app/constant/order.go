@@ -23,6 +23,11 @@ const (
 )
 
 const (
+	OrderProductIsAcceptOrderAccepted = 1 // 已接单
+	OrderProductIsAcceptOrderUnAccept = 0 // 未接单
+)
+
+const (
 	SaleBillSettingServiceFeeTypeNone       = 0 // 不收取服务费
 	SaleBillSettingServiceFeeTypeFixed      = 1 // 固定服务费
 	SaleBillSettingServiceFeeTypePercent    = 2 // 按比例-不收取税费
@@ -95,4 +100,14 @@ const (
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"  // 撤销拆单
 	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
+)
+
+const (
+	ProductDown            = "PRODUCT_DOWN"               // 商品已下架
+	ProductDelete          = "PRODUCT_DELETE"             // 删除已删除
+	ProductStockZero       = "PRODUCT_STOCK_ZERO"         // 库存不足
+	ProductPriceChange     = "PRODUCT_PRICE_CHANGE"       // 商品价格变化
+	ProductLimitOut        = "PRODUCT_LIMIT_OUT"          // 商品限购超出
+	ProductMustPlanNotPass = "PRODUCT_MUST_PLAN_NOT_PASS" // 商品还未满足限购要求
+	ProductPass            = "PRODUCT_PASS"               // 商品检查通过
 )

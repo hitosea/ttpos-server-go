@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -24,8 +25,8 @@ type IOrderProductSrv interface {
 	CheckOrderProductAttribute(productPackage model.ProductPackage, attributes []req.AddProductAttribute) error // 检查商品属性
 	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品规格库存
 	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                 // 检查商品加料库存
-	GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)          //
-	// 查询某个桌台的必点商品规则
+	GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)          // 检查销售订单的商品是否都是上架状态且未删除
+	GetMustPlanRuleByDeskUuid(ctx context.Context, deskUuid uint64) (*utils.Rule, *utils.Check, error)          // 查询某个桌台的必点商品规则
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
 	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
@@ -37,6 +38,7 @@ type IOrderProductSrv interface {
 type orderProductSrv struct {
 	dbm          *database.DBManager
 	orderCalcSrv IOrderCalcSrv
+	orderSrv     IOrderSrv
 }
 
 // NewOrderProductSrv 创建商品服务
@@ -180,6 +182,8 @@ func (o *orderProductSrv) CheckOrderProductSauceStock(productPackage model.Produ
 
 // GetInvalidProductList 检查销售订单的商品是否都是上架状态且未删除
 func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error) {
+	companyUuid := ctx.GetCompanyUuid()
+
 	companyId := ctx.GetDbId()
 	var downOrSaleOutProductList []model.SaleOrderProduct    // 下架或沽清的商品
 	var priceChangeProductList []model.SaleOrderProduct      // 价格变动的商品
@@ -260,6 +264,16 @@ func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrder
 		if uint(buyNum) > productPackageMap[productPackageUuid].LimitNum {
 			exceedLimitProductPackageList = append(exceedLimitProductPackageList, productPackageMap[productPackageUuid])
 		}
+	}
+	// 判断必点商品是否满足
+	isPass, resultTips, err := srv.GetMustProductStat(ctx, companyUuid)
+	if err != nil {
+		return nil, err
+	}
+	if !isPass {
+		//todo 怎么返回
+		fmt.Println(resultTips)
+		return nil, nil
 	}
 	return downOrSaleOutProductList, nil
 
@@ -496,4 +510,134 @@ func (o *orderProductSrv) UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderP
 	}
 
 	return nil
+}
+
+// GetRuleByDeskUuid 获取桌台的必点商品规则
+func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUuid uint64) (*utils.Rule, *utils.Check, error) {
+	// 查询桌台所属的区域
+	companyUuid := ctx.GetCompanyUuid()
+	desk, err := repository.NewDeskRepo(o.dbm.GetDB(companyUuid)).GetDeskAndSaleBillByDeskUuid(deskUuid)
+	if err != nil {
+		return nil, nil, err
+	}
+	// 桌台人数
+	mealNum := desk.SaleBill.MealNum
+
+	regionUuid := desk.RegionUuid
+	// 用regionUuid在product_must_plan_region表中查询得到该桌台关联的必选方案
+	productMustPlanList, err := repository.NewProductMustPlanRepo(o.dbm.GetDB(companyUuid)).GetProductMustPlanByRegionUuid(regionUuid)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rule := utils.Rule{
+		EachPersonProductPlan: make(map[uint64]map[uint64]uint),
+		EachOrderProductPlan:  make(map[uint64]uint),
+	}
+
+	productMustPlanMap := make(map[uint64]model.ProductMustPlan) // 必点方案列表
+	// product_must_plan_uuid -> product_package_uuid -> true  记录某个必点方案1有哪些商品
+	//                        -> product_package_uuid -> true
+	// product_must_plan_uuid -> product_package_uuid -> true  记录某个必点方案2有哪些商品
+	//                        -> product_package_uuid -> true
+	//                        -> product_package_uuid -> true
+	//                        -> product_package_uuid -> true
+	prodcutMustPlanProductMap := make(map[uint64]map[uint64]bool) // 必点方案商品列表
+
+	// 遍历必选方案列表
+	for _, productMustPlan := range productMustPlanList {
+		// 判断必选方案是否开启
+		if productMustPlan.Status == constant.ProductMustPlanStatusOn {
+			// 判断必选方案是全选还是任选
+			if productMustPlan.MustRule == constant.ProductMustPlanMustRuleAll {
+				// 全选
+				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItem {
+					num := uint(0)
+					if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachPerson {
+						num = mealNum
+					} else if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachOrder {
+						num = 1
+					}
+					rule.EachPersonProductPlan[productMustPlan.Uuid][productMustPlanItem.ProductPackageUuid] = uint(num)
+					prodcutMustPlanProductMap[productMustPlan.Uuid][productMustPlanItem.ProductPackageUuid] = true
+				}
+			} else if productMustPlan.MustRule == constant.ProductMustPlanMustRuleAny {
+				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItem {
+					prodcutMustPlanProductMap[productMustPlan.Uuid][productMustPlanItem.ProductPackageUuid] = true
+				}
+				// 任选
+				num := uint(0)
+				if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachPerson {
+					num = mealNum
+				} else if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachOrder {
+					num = 1
+				}
+				rule.EachOrderProductPlan[productMustPlan.Uuid] = uint(num)
+			}
+			// 记录必点方案
+			productMustPlanMap[productMustPlan.Uuid] = productMustPlan
+		}
+	}
+
+	check, err := o.getMustPlanCheck(prodcutMustPlanProductMap, productMustPlanMap)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &rule, check, nil
+}
+
+// 获取桌台的每个必点方案的点餐情况
+func (o *orderProductSrv) getMustPlanCheck(prodcutMustPlanProductMap map[uint64]map[uint64]bool, productMustPlanMap map[uint64]model.ProductMustPlan) (*utils.Check, error) {
+
+	check := utils.Check{
+		PerProduct:         make(map[uint64]map[uint64]uint),
+		CombinationProduct: make(map[uint64]uint),
+	}
+
+	// 获取销售订单商品列表
+	var saleOrderProductList []model.SaleOrderProduct
+
+	// 遍历销售订单商品列表
+	for _, saleOrderProduct := range saleOrderProductList {
+		// 判断销售订单商品是否属于某个必点方案
+		productPackageUuid := saleOrderProduct.ProductPackageUuid
+		for productMustPlanUuid, productPackageMap := range prodcutMustPlanProductMap {
+			if _, ok := productPackageMap[productPackageUuid]; ok {
+				// 判断是全选还是任选
+				if productMustPlanMap[productMustPlanUuid].MustRule == constant.ProductMustPlanMustRuleAll {
+					// 全选
+					pre := check.PerProduct[productMustPlanUuid][productPackageUuid]
+					check.PerProduct[productMustPlanUuid][productPackageUuid] = pre + saleOrderProduct.Num
+				} else if productMustPlanMap[productMustPlanUuid].MustRule == constant.ProductMustPlanMustRuleAny {
+					// 任选
+					pre := check.CombinationProduct[productMustPlanUuid]
+					check.CombinationProduct[productMustPlanUuid] = pre + saleOrderProduct.Num
+				}
+			}
+		}
+	}
+
+	return &check, nil
+}
+
+// 获取桌台的必点商品统计，判断是否通过必点校验。若不通过校验，返回还需加购的数量
+func (o *orderProductSrv) GetMustProductStat(ctx context.Context, deskUuid uint64) (bool, *utils.ProductMustPlanCheckResultTips, error) {
+	rule, check, err := o.GetMustPlanRuleByDeskUuid(ctx, deskUuid)
+	if err != nil {
+		return false, nil, err
+	}
+
+	obj := utils.ProductMustPlanCheck{
+		Rule:  *rule,
+		Check: *check,
+	}
+	result := obj.CheckResult()
+
+	resp, err := utils.Tips(o.dbm.GetDB(ctx.GetCompanyUuid()), result)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return resp.IsPass(), resp, nil
 }

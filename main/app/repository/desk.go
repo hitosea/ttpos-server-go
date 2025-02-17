@@ -11,6 +11,7 @@ import (
 // IDeskRepo 桌台
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
@@ -114,4 +115,11 @@ func (r *DeskRepoImpl) CloseDesk(deskUuid uint64, reason string) error {
 		return err
 	}
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("status", 1).Error
+}
+
+func (r *DeskRepoImpl) GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) {
+	var desk model.Desk
+	return desk, r.db.Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).Preload("SaleBill", func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", constant.SaleBillStatusPending)
+	}).First(&desk).Error
 }
