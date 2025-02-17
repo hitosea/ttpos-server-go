@@ -810,7 +810,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `expire_time` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
     `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '折扣,单位%,不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段',
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-exp到期 1-valid有效 2-repeal作废,管理员点击作废按钮 3-cover覆盖,领取了新的会员卡',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

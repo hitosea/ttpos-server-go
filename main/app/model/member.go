@@ -43,7 +43,6 @@ type MemberCard struct {
 	MemberUuid   uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
 	ExpireTime   int64  `gorm:"column:expire_time;type:int(11);default:0;comment:截止日期(时间戳);NOT NULL" json:"expire_time"`
 	Discount     int    `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;NOT NULL" json:"discount"`
-	Status       int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-exp到期 1-valid有效 2-repeal作废,管理员点击作废按钮 3-cover覆盖,领取了新的会员卡;NOT NULL" json:"status"`
 
 	Member         *Member         `gorm:"foreignKey:MemberUuid;references:Uuid"`
 	MemberCardType *MemberCardType `gorm:"foreignKey:CardTypeUuid;references:Uuid"`
