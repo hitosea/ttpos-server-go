@@ -91,26 +91,28 @@ type MemberBalanceLog struct {
 // MemberPointLog 会员积分变动记录表 `ttpos_member_point_log`
 type MemberPointLog struct {
 	BaseModel
-	MemberUuid uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
-	Scene      int    `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减;NOT NULL" json:"scene"`
-	Value      int    `gorm:"column:value;type:int(11);default:0;comment:数值,负数:减积分 正数:加积分;NOT NULL" json:"value"`
-	Describe   string `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
+	MemberUuid uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+	Scene      int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减;NOT NULL" json:"scene"`
+	Value      float64 `gorm:"column:value;type:decimal(12,2);default:0;comment:数值,负数:减积分 正数:加积分;NOT NULL" json:"value"`
+	Describe   string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
 }
 
 // MemberRechargeOrder 会员充值订单表 `ttpos_member_recharge_order`
 type MemberRechargeOrder struct {
 	BaseModel
 	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期;NOT NULL" json:"status"`
-	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:交易金额，确认充值后设置;NOT NULL" json:"amount"`           // 实付金额
-	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0.00;comment:充值金额;NOT NULL" json:"recharge_amount"` // 充值金额
-	GiftAmount     float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0.00;comment:赠送金额;NOT NULL" json:"gift_amount"`
-	GiftPoint      float64 `gorm:"column:gift_point;type:int(11);default:0;comment:赠送积分;NOT NULL" json:"gift_point"`
+	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额(应收金额)=充值金额+手续费;NOT NULL" json:"amount"`
+	ChargeDue      float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
+	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0;comment:充值金额;NOT NULL" json:"recharge_amount"`
+	GiftAmount     float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠送金额;NOT NULL" json:"gift_amount"`
+	GiftPoint      float64 `gorm:"column:gift_point;type:decimal(12,2);default:0;comment:赠送积分;NOT NULL" json:"gift_point"`
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`
 	StaffUuid      uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;comment:员工ID;NOT NULL" json:"staff_uuid"`
 	PaymentTime    uint    `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
-
+ 
 	PaymentOrders []PaymentOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 一个会员充值订单关联多个支付订单
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`  // 关联会员
+	Staff         *Staff         `gorm:"foreignKey:StaffUuid;references:Uuid"`   // 关联操作员工
 }
 
 // MemberRechargeOrderOperationLog 会员充值订单操作记录表 `ttpos_member_recharge_order_operation_log`

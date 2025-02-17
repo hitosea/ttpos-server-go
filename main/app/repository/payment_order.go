@@ -14,6 +14,9 @@ type IPaymentOrderRepo interface {
 	WherePaymentTypeUuid(uuid uint64) DBOption
 	WhereUuid(uuid uint64) DBOption
 
+	WithPaymentMethod() DBOption       // 关联支付方式
+	WithMemberRechargeOrder() DBOption // 关联会员充值订单
+
 	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
 
@@ -39,47 +42,49 @@ func NewPaymentOrderRepoImpl(db *gorm.DB) IPaymentOrderRepo {
 // GetPaymentOrder 获取详细信息
 func (r *paymentOrderRepo) GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) {
 	var paymentOrder model.PaymentOrder
+	db := r.db
 	for _, w := range opts {
-		r.db = w(r.db)
+		db = w(db)
 	}
-	r.db = CommonRepo.WhereBySoftDelete()(r.db)
-	err := r.db.Order("id asc").First(&paymentOrder).Error
+	db = CommonRepo.WhereBySoftDelete()(db)
+	err := db.Order("id asc").First(&paymentOrder).Error
 	return paymentOrder, err
 }
 
 // GetPaymentOrderList 获取列表
 func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error) {
 	var paymentOrders []model.PaymentOrder
+	db := r.db
 	for _, w := range opts {
-		r.db = w(r.db)
+		db = w(db)
 	}
-	r.db = CommonRepo.WhereBySoftDelete()(r.db)
-	err := r.db.Order("id asc").Find(&paymentOrders).Error
+	db = CommonRepo.WhereBySoftDelete()(db)
+	err := db.Order("id asc").Find(&paymentOrders).Error
 	return paymentOrders, err
 }
 
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
-	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
+	err := r.db.Model(&model.PaymentOrder{}).Debug().Create(&order).Error
 	return order, err
 }
 
 // Update 更新支付订单
 func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
-	err := r.db.Where("uuid = ?", uuid).Updates(vars).Error
+	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Debug().Updates(vars).Error
 	return err
 }
 
 // WhereRelatedUuid 根据related_uuid(销售订单、充值订单)查询
 func (r *paymentOrderRepo) WhereRelatedUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("related = ?", uuid)
+		return db.Where("related_uuid = ?", uuid)
 	}
 }
 
 // WherePaymentTypeUuid 根据支付方式Uuid查询
 func (r *paymentOrderRepo) WherePaymentTypeUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("payment_type_uuid = ?", uuid)
+		return db.Where("payment_method_uuid = ?", uuid)
 	}
 }
 
@@ -93,7 +98,7 @@ func (r *paymentOrderRepo) WhereUuid(uuid uint64) DBOption {
 // WhereRelatedUuids 根据related_uuids(销售订单、充值订单)查询
 func (r *paymentOrderRepo) WhereRelatedUuids(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("related in (?)", uuids)
+		return db.Where("related_uuid in (?)", uuids)
 	}
 }
 
@@ -101,5 +106,19 @@ func (r *paymentOrderRepo) WhereRelatedUuids(uuids []uint64) DBOption {
 func (r *paymentOrderRepo) WhereStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WithPaymentMethod 关联支付方式
+func (r *paymentOrderRepo) WithPaymentMethod() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("PaymentMethod")
+	}
+}
+
+// WithMemberRechargeOrder 关联会员充值订单
+func (r *paymentOrderRepo) WithMemberRechargeOrder() DBOption { // 关联会员充值订单
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MemberRechargeOrder")
 	}
 }

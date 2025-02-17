@@ -188,7 +188,7 @@ func processGroup(texts []string) {
 				continue
 			}
 
-			// Update existing keys and collect new entries
+			// UpdateBalance existing keys and collect new entries
 			newEntries := make(map[string]string)
 			for _, trans := range translations {
 				key := trans["key"]

@@ -44,7 +44,8 @@ type PendingRechargeOrder struct {
 type PaymentOrder struct {
 	Uuid              uint64  `json:"uuid"`                // 充值订单支付订单Uuid
 	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式Uuid
-	Amount            float64 `json:"amount"`              // 支付订单金额 = payment_amount + payment_commission_fee
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付订单金额
+	Amount            float64 `json:"amount"`              // 支付订单总金额 = 支付订单金额 + 手续费 + 找零
 }
 
 // ConfirmRechargeOrder 确认充值订单响应

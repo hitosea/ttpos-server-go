@@ -20,18 +20,13 @@ var AddMemberReqMessage = map[string]string{
 	"password.max":        "密码必须为4-16位纯数字",
 }
 
-// CreateRechargeOrderReq 创建充值订单请求
-type CreateRechargeOrderReq struct {
+// RechargeReq 充值请求
+type RechargeReq struct {
 	MemberUuid        uint64  `json:"member_uuid" binding:"required"`           // 会员Uuid
 	RechargeAmount    float64 `json:"recharge_amount" binding:"required,min=1"` // 充值金额
 	RechargeOrderUuid uint64  `json:"recharge_order_uuid"`                      // 进行中的充值订单，如果没有进行中的充值订单，传递0
 	GiftAmount        float64 `json:"gift_amount" binding:"omitempty,min=0"`    // 赠送金额
 	GiftPoint         float64 `json:"gift_point" binding:"omitempty,min=0"`     // 赠送积分
-
-	StaffEmail string `json:"-"` // 员工账号
-	StaffName  string `json:"-"` // 员工real_name
-	StaffUuid  uint64 `json:"-"` // 员工Uuid
-	Source     string `json:"-"` // 来源
 }
 
 var CreateRechargeOrderReqMessage = map[string]string{
@@ -42,17 +37,16 @@ var CreateRechargeOrderReqMessage = map[string]string{
 
 // RechargeOrderAddPaymentMethodReq 充值订单添加支付方式
 type RechargeOrderAddPaymentMethodReq struct {
-	RechargeOrderUuid uint64  `json:"recharge_order_uuid" binding:"required"`         // 充值订单Uuid
-	PaymentAmount     float64 `json:"payment_amount" binding:"required,min=0.01"`     // 支付金额
-	PaymentMethodUuid uint64  `json:"payment_method_uuid" binding:"omitempty,neq=10"` // 支付方式Uuid
-	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`                             // 充值订单支付订单Uuid
+	RechargeOrderUuid uint64  `json:"recharge_order_uuid" binding:"required"`     // 充值订单Uuid
+	PaymentAmount     float64 `json:"payment_amount" binding:"required,min=0.01"` // 支付金额，使用现金支付，可能大于充值金额，比如充值19，但是会员给了20
+	PaymentMethodUuid uint64  `json:"payment_method_uuid" binding:"required"`     // 支付方式Uuid
+	PaymentOrderUuid  uint64  `json:"-"`                                          // 在线充值订单支付订单Uuid，在线支付时需要
 
 	CompanySetting model.CompanySetting `json:"-"`
 }
 
 var RechargeOrderAddPaymentMethodReqMessage = map[string]string{
-	"payment_amount.min":      "支付金额最低0.01",
-	"payment_method_uuid.neq": "不能使用余额支付充值",
+	"payment_amount.min": "支付金额最低0.01",
 }
 
 // RechargeOrderCancelPaymentMethodReq 充值订单撤销支付方式
@@ -63,6 +57,6 @@ type RechargeOrderCancelPaymentMethodReq struct {
 
 // ConfirmRechargeOrder 确认充值订单
 type ConfirmRechargeOrder struct {
-	RechargeOrderUuId uint64 `json:"recharge_order_uuid"` // 充值订单Uuid
+	RechargeOrderUuid uint64 `json:"recharge_order_uuid"` // 充值订单Uuid
 	MemberUuid        uint64 `json:"member_uuid"`         // 会员Uuid
 }

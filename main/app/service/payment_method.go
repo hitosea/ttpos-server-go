@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/service/setting"
@@ -12,8 +13,8 @@ import (
 
 // IPaymentMethodSrv 定义支付方式服务接口
 type IPaymentMethodSrv interface {
-	IsAvailable(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否可以用
-	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, price float64) float64                       // 计算税费
+	IsEnabled(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否已启用
+	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64             // 计算税费
 }
 
 // paymentMethodSrv  支付方式服务结构体
@@ -35,32 +36,31 @@ func NewPaymentMethodSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) I
 	}
 }
 
-func (s *paymentMethodSrv) IsAvailable(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool {
-	if paymentMethod.ID == 0 {
-		return false
-	}
-	if paymentMethod.Status != 0 {
-		return false
-	}
+// IsEnabled 支付方式是否已启用
+func (s *paymentMethodSrv) IsEnabled(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool {
 	// 获取支付设置
 	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
 		ctx.Log().Error("获取支付设置失败", zap.Error(err))
 		return false
 	}
+	var availableCodes []int
 	if paymentSetting.IsBalance == "1" {
-		return paymentMethod.Code == constant.PaymentMethodCodeBalance
+		availableCodes = append(availableCodes, constant.PaymentMethodCodeBalance)
 	}
 	if paymentSetting.IsCash == "1" {
-		return paymentMethod.Code == constant.PaymentMethodCodeCash
+		availableCodes = append(availableCodes, constant.PaymentMethodCodeCash)
 	}
-	return true
+	if paymentSetting.IsOther == "1" && paymentMethod.Status == 1 {
+		availableCodes = append(availableCodes, paymentMethod.Code)
+	}
+	return slices.Contains(availableCodes, paymentMethod.Code)
 }
 
 // CalculatePaymentCommissionFee 计算支付手续费
-func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, price float64) float64 {
-	// 将 price 和 fee/100 转换为 decimal
-	decimalPrice := decimal.NewFromFloat(price)
+func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64 {
+	// 将 paymentAmount 和 fee/100 转换为 decimal
+	decimalPrice := decimal.NewFromFloat(paymentAmount)
 	feeRate := decimal.NewFromFloat(paymentMethod.FeePercent).Div(decimal.NewFromFloat(100))
 
 	// 计算费用，先保留3位小数，然后四舍五入到2位

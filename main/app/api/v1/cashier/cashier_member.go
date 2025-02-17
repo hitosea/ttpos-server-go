@@ -101,7 +101,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
-// @Router /cashier/member/in_progress_recharge_order [get]
+// @Router /cashier/member/recharge_order_in_progress [get]
 func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
 	order := h.memberSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
 	helper.Success(c, order)
@@ -114,12 +114,12 @@ func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.CreateRechargeOrderReq true "创建充值订单参数"
+// @param data body req.RechargeReq true "创建充值订单参数"
 // @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
 // @Router /cashier/member/create_recharge_order [post]
 func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 	var (
-		rechargeReq req.CreateRechargeOrderReq
+		rechargeReq req.RechargeReq
 		err         error
 		order       resp.PendingRechargeOrder
 	)
@@ -128,13 +128,14 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 		return
 	}
 
-	staff := helper.GetStaff(c)
-	rechargeReq.StaffEmail = staff.Username
-	rechargeReq.StaffName = staff.RealName
-	rechargeReq.StaffUuid = staff.Uuid
-	rechargeReq.Source = helper.GetSource(c)
+	ctx := helper.GetContext(c)
+	//staff := helper.GetStaff(c)
+	//rechargeReq.StaffEmail = staff.Username
+	//rechargeReq.StaffName = staff.RealName
+	//rechargeReq.StaffUuid = staff.Uuid
+	//rechargeReq.Source = helper.GetSource(c)
 
-	if order, err = h.memberSrv.CreateRechargeOrder(helper.GetCompanyUuid(c), rechargeReq); err != nil {
+	if order, err = h.memberSrv.CreateRechargeOrder(ctx, rechargeReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
@@ -215,7 +216,8 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
 		return
 	}
-	order, err := h.memberSrv.ConfirmRechargeOrder(helper.GetCompanyUuid(c), confirmRechargeOrder)
+	ctx := helper.GetContext(c)
+	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -231,8 +233,10 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 
-	memberSrv := service.NewMemberSrv(dbm, service.NewPaymentMethodSrv(dbm, settingSrv), settingSrv)
+	memberSrv := service.NewMemberSrv(dbm, paymentMethodSrv, settingSrv, cashBoxSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv: memberSrv,
@@ -246,7 +250,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 		privateApi.GET("/member/search", wrapper.SearchMember)            // 模糊搜索会员
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember) // 充值会员信息
 
-		privateApi.POST("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)       // 获取进行中的充值订单
+		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)        // 获取进行中的充值订单
 		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单
 		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)       // 充值订单添加支付方式
 		privateApi.POST("/member/recharge_order_cancel_payment_method", wrapper.CancelPaymentMethod) // 充值订单撤销支付方式
