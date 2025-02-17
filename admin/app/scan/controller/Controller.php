@@ -72,15 +72,14 @@ class Controller extends BaseController
         if (!$token) {
             throw new BaseException(['msg' => '访问失效', 'code' => StatusCode::VISIT_ERROR]);
         }
-        if (!isset($token['s']) || !isset($token['t']) || !isset($token['a']) || !isset($token['q'])) {
+        if (!isset($token['t']) || !isset($token['a']) || !isset($token['q'])) {
             throw new BaseException(['msg' => '访问失效', 'code' => StatusCode::VISIT_ERROR]);
         }
         // 设置id
         request()->appId = $appId = $token['a'];
-        request()->shopSupplierId = $token['s'];
         //
         $table = Table::detail($token['t']);
-        if (!$table || $table->qrcode_value != ($token['q'] ?: '')) {
+        if (!$table || $table->qrcode_token != ($token['q'] ?: '')) {
             throw new BaseException(['msg' => '访问失效', 'code' => StatusCode::VISIT_ERROR]);
         }
         if (!$table || $table?->switch_status != 1) {
@@ -103,7 +102,7 @@ class Controller extends BaseController
             'shop_supplier_id' => $token['s'] ?? 0,
             'table_id' => $token['t'] ?? 0,
             'app_id' => $token['a'] ?? 0,
-            'qrcode_value' => $token['q'] ?? 0,
+            'qrcode_token' => $token['q'] ?? 0,
             'setting_data' => $settingData,
         ];
         // 设置时区

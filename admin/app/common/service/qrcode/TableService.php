@@ -35,9 +35,10 @@ class TableService extends Base
      */
     public function getImage()
     {
+        $companyUuid = request()->appId;
         $table = TableModel::detail($this->id);
-        $qrCodeValue = $this->action == 'update' ? StringHelp::generatePassword(6, 1) : $table['qrcode_value'];
-        $arr = ['s' => $table['shop_supplier_id'], 'a' => $table['app_id'], 't' => $this->id, 'q' => $qrCodeValue];
+        $qrCodeValue = $this->action == 'update' ? StringHelp::generatePassword(6, 1) : $table['qrcode_token'];
+        $arr = ['a' => $companyUuid, 't' => $this->id, 'q' => $qrCodeValue];
         $auth = (new AuthService);
         $token = $auth->generateToken($arr);
         if ($this->source == 'wx') {
@@ -48,7 +49,7 @@ class TableService extends Base
         $qrCode->setSize(300);
         $qrCode->setMargin(10);
         if ($this->action == 'update') {
-            $table->save(['qrcode_value' => $qrCodeValue]);
+            $table->save(['qrcode_token' => $qrCodeValue]);
         }
         //
         return (new PngWriter())->write($qrCode)->getDataUri();
@@ -64,12 +65,13 @@ class TableService extends Base
     {
         $qrCodeData = [];
         $auth = new AuthService;
+        $companyUuid = request()->appId;
         //
         $tables = TableModel::where('table_id', 'in', $tableIds)->select()->toArray();
         foreach ($tables as $table) {
             $id = $table['table_id'];
-            $qrCodeValue = $this->action == 'update' ? StringHelp::generatePassword(6, 1) : $table['qrcode_value'];
-            $arr = ['s' => $table['shop_supplier_id'], 'a' => $table['app_id'], 't' => $id, 'q' => $qrCodeValue];
+            $qrCodeValue = $this->action == 'update' ? StringHelp::generatePassword(6, 1) : $table['qrcode_token'];
+            $arr = ['a' => $companyUuid, 't' => $id, 'q' => $qrCodeValue];
             $token = $auth->generateToken($arr);
             if ($this->source == 'wx') {
                 $qrCode = new QrCode($this->base_url . "pages/product/share-login/#/?token={$token}");
@@ -79,7 +81,7 @@ class TableService extends Base
             $qrCode->setSize(300);
             $qrCode->setMargin(10);
             if ($this->action == 'update') {
-                $table->save(['qrcode_value' => $qrCodeValue]);
+                $table->save(['qrcode_token' => $qrCodeValue]);
             }
             $qrCodeData[] = [
                 'table_id' => $id,
@@ -96,6 +98,7 @@ class TableService extends Base
     public function getDownload()
     {
         $table = TableModel::detail($this->id);
+        $companyUuid = request()->appId;
         // 保存目录
         $savePath = $this->getPosterPath($table['app_id']);
 
@@ -113,7 +116,7 @@ class TableService extends Base
         if ($this->source == 'wx') {
             $this->saveQrcodeToDir($table['app_id'], 'pages/product/share-login', $savePath, $this->id, $table['shop_supplier_id']);
         } else if ($this->source == 'mp' || $this->source == 'h5') {
-            $arr = ['s' => $table['shop_supplier_id'], 'a' => $table['app_id'], 't' => $this->id, 'q' => $table['qrcode_value']];
+            $arr = ['a' => $companyUuid, 't' => $this->id, 'q' => $table['qrcode_token']];
             $auth = (new AuthService);
             $token = $auth->generateToken($arr);
             $this->saveMpQrcodeToDir("scan/#/?token={$token}", $savePath);

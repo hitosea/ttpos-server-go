@@ -89,7 +89,7 @@ class Controller extends BaseController
             'shop_supplier_id' => $token['s'] ?? 0,
             'table_id' => $token['t'] ?? 0,
             'app_id' => $token['a'] ?? 0,
-            'qrcode_value' => $token['q'] ?? 0,
+            'qrcode_token' => $token['q'] ?? 0,
             'setting_data' => $settingData,
         ];
         // 设置时区
