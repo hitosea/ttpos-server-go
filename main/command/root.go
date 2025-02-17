@@ -71,6 +71,14 @@ var rootCommand = &cobra.Command{
 		// 注册路由
 		router.Setup(r, dbm, cache.Global)
 
+		internalRouter := gin.Default()
+		router.SetupInternal(internalRouter, dbm, cache.Global)
+		go func() {
+			// 启动内网服务
+			if err := internalRouter.Run(":9000"); err != nil {
+				fmt.Printf("Failed to start internal server: %v\n", err)
+			}
+		}()
 		// 启动服务器
 		if err := r.Run(":" + config.Server.Port); err != nil {
 			logger.Logger.Fatal("Error starting server", zap.Error(err))

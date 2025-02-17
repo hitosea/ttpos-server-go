@@ -2,14 +2,16 @@ package service
 
 import (
 	"errors"
-	"github.com/shopspring/decimal"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/utils"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+
+	"github.com/shopspring/decimal"
 
 	"gorm.io/gorm"
 )
@@ -23,6 +25,7 @@ type IOrderProductSrv interface {
 	CheckOrderProductFlavorStock(productPackage model.ProductPackage, sauceUuids []uint64) error                // 检查商品规格库存
 	CheckOrderProductSauceStock(productPackage model.ProductPackage, sauceUuids []uint64) error                 // 检查商品加料库存
 	GetInvalidProductList(ctx context.Context, saleOrderUuid uint64) ([]model.SaleOrderProduct, error)          //
+	// 查询某个桌台的必点商品规则
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
 	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
@@ -47,6 +50,27 @@ func NewOrderProductSrvImpl(dbm *database.DBManager, orderCalcSrv IOrderCalcSrv)
 		dbm:          dbm,
 		orderCalcSrv: orderCalcSrv,
 	}
+}
+
+// 查询某个桌台的必点商品规则
+func (o *orderProductSrv) GetDeskMustProductRule(ctx context.Context) (*utils.ProductMustPlanCheck, error) {
+	// 获取到桌台的必点商品规则
+	productMustPlanCheck := &utils.ProductMustPlanCheck{}
+	return productMustPlanCheck, nil
+}
+
+// 检查桌台的商品是否已经满足必点规则
+func (o *orderProductSrv) CheckDeskMustProductRule(ctx context.Context, deskUuid uint64) (bool, *utils.ProductMustPlanCheckResult, error) {
+	// 获取到桌台的必点商品规则
+	rule, err := o.GetDeskMustProductRule(ctx)
+	if err != nil {
+		return false, nil, err
+	}
+	result := rule.CheckResult()
+	if result.IsPassed() {
+		return true, nil, nil
+	}
+	return false, result, nil
 }
 
 // CheckProduct 检查商品
