@@ -104,7 +104,7 @@ func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 	var staff model.Staff
 	if config.Server.DeployMode == "cloud" { // 云上版本
 		companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
-		companyStaff := companyStaffRepo.GetByUsername(loginReq.Username)
+		companyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsername(loginReq.Username))
 		if companyStaff.Uuid == 0 {
 			return token, errors.New("账号或密码错误")
 		}
@@ -112,10 +112,10 @@ func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 			return token, errors.New("未找到绑定的商家，请确认登录信息")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
-		staff = staffRepo.GetByUuid(companyStaff.Uuid, staffRepo.WithCompany())
+		staff = staffRepo.GetStaff(staffRepo.WhereUuid(companyStaff.Uuid), staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
-		staff = staffRepo.GetByUsername(loginReq.Username, staffRepo.WithCompany())
+		staff = staffRepo.GetStaff(staffRepo.WhereUsername(loginReq.Username), staffRepo.WithCompany())
 	}
 	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
 		return token, errors.New("账号或密码错误")
@@ -144,7 +144,7 @@ func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		}
 		// 检查是否有未交班的收银员
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-		currentStaff := staffRepo.GetByDeviceId(loginReq.DeviceId)
+		currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
 		if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
 			return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 		}
@@ -216,7 +216,7 @@ func (s *AuthSrv) Logout(ctx context.Context) error {
 	if source == constant.SourceAssistant && assistantUuid != 0 {
 		staffUuid = assistantUuid
 	}
-	staff := staffRepo.GetByUuid(staffUuid)
+	staff := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid))
 	return s.bindRecordSrv.Unbind(companyUuid, source, staff.BindKey, staff.Uuid)
 }
 
@@ -296,7 +296,7 @@ func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	)
 
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(auth.CompanyUuid))
-	staff = staffRepo.GetByUuid(auth.StaffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff = staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
@@ -418,7 +418,7 @@ func (s *AuthSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 		return newToken, errors.New("用户信息错误")
 	}
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staff := staffRepo.GetByUuidAndDeviceId(bindReq.CashierUuid, bindReq.DeviceId, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff := staffRepo.GetStaff(staffRepo.WhereUuid(bindReq.CashierUuid), staffRepo.WhereDeviceId(bindReq.DeviceId), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	// 检查传递的收银设备
 	if staff.Uuid == 0 {
 		return newToken, errors.New("用户不存在")
@@ -454,7 +454,7 @@ func (s *AuthSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 // GetOnlineCashiers 获取在线收银机
 func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staffs := staffRepo.GetOnlineCashiers(staffRepo.WithDevice(constant.SettingCashier))
+	staffs := staffRepo.GetStaffs(staffRepo.WhereCashierOnline(), staffRepo.WithDevice(constant.SettingCashier))
 
 	var cashiers []resp.OnlineCashier
 	for _, staff := range staffs {

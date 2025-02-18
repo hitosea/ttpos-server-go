@@ -40,7 +40,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyUuid))
 	var companySetting model.CompanySetting
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staff := staffRepo.GetByUuid(staffUuid, staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {
 		return nil, companySetting, errors.New("获取商家信息错误")
@@ -48,11 +48,11 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 
 	companySetting = *staff.Company.CompanySetting
 
-	var where []repository.Where
+	var options []repository.DBOption
 
 	if staff.IsSuper == 1 { // 超级管理员
 		if staff.UserType == 1 {
-			where = append(where, accessRepo.WhereIsSupplier())
+			options = append(options, accessRepo.WhereIsSupplier())
 		}
 	} else {
 		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuidsByStaffUuid(staff.Uuid)
@@ -63,10 +63,10 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 		if err != nil {
 			return nil, companySetting, errors.New("获取角色权限失败")
 		}
-		where = append(where, accessRepo.WhereUuids(accessUuids))
+		options = append(options, accessRepo.WhereUuids(accessUuids))
 	}
 
-	dbPermissions, err := accessRepo.GetPermissions(where...)
+	dbPermissions, err := accessRepo.GetPermissions(options...)
 
 	if err != nil {
 		return nil, companySetting, errors.New("获取权限失败")

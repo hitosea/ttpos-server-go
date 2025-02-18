@@ -7,15 +7,17 @@ import (
 )
 
 type IStaffRepo interface {
-	WithCompany() With
-	WithCompanySetting() With
-	WithDevice(source string) With
+	WithCompany() DBOption             // 关联集团
+	WithCompanySetting() DBOption      // 关联集团设置
+	WithDevice(source string) DBOption // 关联设备
 
-	GetByUuid(uuid uint64, withs ...With) model.Staff                            // 根据Uuid查询员工
-	GetByUsername(username string, withs ...With) model.Staff                    // 根据用户名查询员工
-	GetByDeviceId(bindKey string) model.Staff                                    // 根据员工绑定的设备ID查询员工
-	GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff // 根据员工Uuid和绑定的设备ID查询员工
-	GetOnlineCashiers(withs ...With) []model.Staff                               // 获取在线收银机
+	WhereUuid(uuid uint64) DBOption         // Uuid 条件
+	WhereUsername(username string) DBOption // 用户名条件
+	WhereCashierOnline() DBOption           // 收银机在线条件
+	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
+
+	GetStaff(opts ...DBOption) model.Staff    // 查询员工
+	GetStaffs(opts ...DBOption) []model.Staff // 查询员工
 
 	CreateStaff(staff model.Staff) error           // 创建员工
 	Update(uuid uint64, vars map[string]any) error // 更新员工
@@ -37,51 +39,72 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 	return r.db.Create(&staff).Error
 }
 
-func (r *StaffRepo) GetByUuid(uuid uint64, withs ...With) model.Staff {
+func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
 	var staff model.Staff
-	handleWiths(r.db, withs).Where("uuid = ?", uuid).Debug().First(&staff)
+	db := r.db.Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Debug().First(&staff)
 	return staff
 }
 
-func (r *StaffRepo) WithCompanySetting() With {
+func (r *StaffRepo) GetStaffs(opts ...DBOption) []model.Staff {
+	var staffs []model.Staff
+	db := r.db.Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Debug().Find(&staffs)
+	return staffs
+}
+
+func (r *StaffRepo) WithCompanySetting() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Company.CompanySetting")
 	}
 }
 
-func (r *StaffRepo) WithCompany() With {
+func (r *StaffRepo) WithCompany() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Company")
 	}
 }
 
-func (r *StaffRepo) WithDevice(source string) With {
+func (r *StaffRepo) WithDevice(source string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Device", "source = ?", source)
 	}
 }
 
-func (r *StaffRepo) GetByUsername(username string, withs ...With) model.Staff {
-	var staff model.Staff
-	handleWiths(r.db, withs).Where("BINARY username = ? OR phone = ?", username, username).Debug().First(&staff)
-	return staff
+func (r *StaffRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
 }
 
-func (r *StaffRepo) GetByDeviceId(bindKey string) model.Staff {
-	var staff model.Staff
-	r.db.Where("bind_key = ? AND cashier_online = 1", bindKey).Debug().First(&staff)
-	return staff
+func (r *StaffRepo) WhereUsername(username string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("BINARY username = ? OR phone = ?", username, username)
+	}
 }
 
-func (r *StaffRepo) GetByUuidAndDeviceId(uuid uint64, bindKey string, withs ...With) model.Staff {
-	var staff model.Staff
-	handleWiths(r.db, withs).Where("uuid = ? AND bind_key = ?", uuid, bindKey).Debug().First(&staff)
-	return staff
+func (r *StaffRepo) WhereCashierOnlineDeviceId(bindKey string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("bind_key = ? AND cashier_online = 1", bindKey)
+	}
 }
-func (r *StaffRepo) GetOnlineCashiers(withs ...With) []model.Staff {
-	var staff []model.Staff
-	handleWiths(r.db, withs).Where("cashier_online = 1").Debug().Find(&staff)
-	return staff
+
+func (r *StaffRepo) WhereCashierOnline() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("cashier_online = 1")
+	}
+}
+
+func (r *StaffRepo) WhereDeviceId(bindKey string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("bind_key = ?", bindKey)
+	}
 }
 
 func (r *StaffRepo) Update(uuid uint64, vars map[string]any) error {
