@@ -67,7 +67,7 @@ class User extends UserModel
         // 货币信息
         $user['currency'] = SettingModel::getCurrency(0, $user['company_uuid']);
         // 写入登录日志
-        LoginLogModel::add($username, \request()->ip(), '登录成功', $user['app']['uuid']);
+        LoginLogModel::add($username, \request()->ip(), '登录成功', $user['uuid']);
         return $user;
     }
 
