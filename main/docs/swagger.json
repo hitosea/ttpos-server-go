@@ -1947,7 +1947,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2087,7 +2087,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2138,7 +2138,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2178,7 +2178,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -4224,7 +4224,7 @@
             "type": "object",
             "properties": {
                 "key": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -5064,8 +5064,12 @@
         "resp.ConfirmRechargeOrder": {
             "type": "object",
             "properties": {
-                "amount": {
+                "actual_amount": {
                     "description": "实收",
+                    "type": "number"
+                },
+                "amount": {
+                    "description": "应收",
                     "type": "number"
                 },
                 "charge_due": {
@@ -5078,10 +5082,6 @@
                     "items": {
                         "type": "string"
                     }
-                },
-                "recharge_amount": {
-                    "description": "应收",
-                    "type": "number"
                 }
             }
         },
@@ -5409,155 +5409,14 @@
                         },
                         "currency": {
                             "description": "货币信息",
-                            "type": "object",
-                            "properties": {
-                                "is_open": {
-                                    "description": "是否启用",
-                                    "type": "string"
-                                },
-                                "unit": {
-                                    "description": "单位",
-                                    "type": "string"
-                                },
-                                "unit_position": {
-                                    "description": "单位位置",
-                                    "type": "string"
-                                },
-                                "vices": {
-                                    "type": "object",
-                                    "properties": {
-                                        "unit_rate": {
-                                            "description": "单位换算率",
-                                            "type": "string"
-                                        },
-                                        "vice_unit": {
-                                            "description": "辅币单位",
-                                            "type": "string"
-                                        },
-                                        "vice_unit_position": {
-                                            "description": "辅币单位位置",
-                                            "type": "string"
-                                        }
-                                    }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/resp.H5Currency"
                                 }
-                            }
+                            ]
                         },
                         "h5": {
-                            "type": "object",
-                            "properties": {
-                                "buffet_order_limit": {
-                                    "description": "自助餐订单限制",
-                                    "type": "object",
-                                    "properties": {
-                                        "is_limit_num": {
-                                            "description": "是否限制数量",
-                                            "type": "string"
-                                        },
-                                        "is_limit_time": {
-                                            "description": "是否限制时间",
-                                            "type": "string"
-                                        },
-                                        "limit_num": {
-                                            "description": "限制数量",
-                                            "type": "string"
-                                        },
-                                        "limit_time": {
-                                            "description": "限制时间",
-                                            "type": "string"
-                                        }
-                                    }
-                                },
-                                "default_language": {
-                                    "description": "默认语言",
-                                    "type": "string"
-                                },
-                                "is_buffet_order_limit": {
-                                    "description": "是否自助餐订单限制",
-                                    "type": "string"
-                                },
-                                "is_call_service": {
-                                    "description": "是否呼叫服务",
-                                    "type": "string"
-                                },
-                                "is_customer_order": {
-                                    "description": "是否顾客订单",
-                                    "type": "string"
-                                },
-                                "is_order_limit": {
-                                    "description": "是否订单限制",
-                                    "type": "string"
-                                },
-                                "is_show_scan_sold_out": {
-                                    "description": "是否显示扫码售罄",
-                                    "type": "integer"
-                                },
-                                "is_show_sold_out": {
-                                    "description": "是否显示售罄",
-                                    "type": "string"
-                                },
-                                "is_voice_remind": {
-                                    "description": "是否语音提醒",
-                                    "type": "string"
-                                },
-                                "kitchen_language": {
-                                    "description": "厨房语言",
-                                    "type": "string"
-                                },
-                                "language": {
-                                    "description": "语言",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "language_list": {
-                                    "description": "语言列表",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "i": {
-                                                "description": "语言索引",
-                                                "type": "string"
-                                            },
-                                            "index": {
-                                                "description": "语言索引",
-                                                "type": "string"
-                                            },
-                                            "key": {
-                                                "description": "语言键",
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "description": "语言值",
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                },
-                                "order_limit": {
-                                    "description": "订单限制",
-                                    "type": "object",
-                                    "properties": {
-                                        "is_limit_num": {
-                                            "description": "是否限制数量",
-                                            "type": "string"
-                                        },
-                                        "is_limit_time": {
-                                            "description": "是否限制时间",
-                                            "type": "string"
-                                        },
-                                        "limit_num": {
-                                            "description": "限制数量",
-                                            "type": "string"
-                                        },
-                                        "limit_time": {
-                                            "description": "限制时间",
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
+                            "$ref": "#/definitions/resp.H5H5"
                         },
                         "is_accept_scan_order": {
                             "description": "是否接受扫码订单",
@@ -5588,313 +5447,7 @@
                             "type": "string"
                         },
                         "shop": {
-                            "description": "商家信息",
-                            "type": "object",
-                            "properties": {
-                                "address": {
-                                    "description": "地址",
-                                    "type": "string"
-                                },
-                                "app_id": {
-                                    "description": "应用ID",
-                                    "type": "integer"
-                                },
-                                "assistant_limit": {
-                                    "description": "助手限额",
-                                    "type": "integer"
-                                },
-                                "auto_close": {
-                                    "description": "自动关闭",
-                                    "type": "integer"
-                                },
-                                "bag_price": {
-                                    "description": "包装价格",
-                                    "type": "string"
-                                },
-                                "bag_type": {
-                                    "description": "包装类型",
-                                    "type": "integer"
-                                },
-                                "business_id": {
-                                    "description": "商家ID",
-                                    "type": "integer"
-                                },
-                                "cash_limit": {
-                                    "description": "现金限额",
-                                    "type": "integer"
-                                },
-                                "cash_money": {
-                                    "description": "现金金额",
-                                    "type": "string"
-                                },
-                                "category_set": {
-                                    "description": "分类设置",
-                                    "type": "integer"
-                                },
-                                "chain_number": {
-                                    "description": "连锁编号",
-                                    "type": "string"
-                                },
-                                "city_id": {
-                                    "description": "城市ID",
-                                    "type": "integer"
-                                },
-                                "close_time": {
-                                    "description": "关闭时间",
-                                    "type": "integer"
-                                },
-                                "create_time": {
-                                    "description": "创建时间",
-                                    "type": "string"
-                                },
-                                "delivery_distance": {
-                                    "description": "配送距离",
-                                    "type": "integer"
-                                },
-                                "delivery_set": {
-                                    "description": "配送设置",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "delivery_time": {
-                                    "description": "配送时间",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "deploy_mode": {
-                                    "description": "部署模式",
-                                    "type": "integer"
-                                },
-                                "deposit_money": {
-                                    "description": "押金金额",
-                                    "type": "string"
-                                },
-                                "description": {
-                                    "description": "描述",
-                                    "type": "string"
-                                },
-                                "fav_count": {
-                                    "description": "收藏数量",
-                                    "type": "integer"
-                                },
-                                "freeze_money": {
-                                    "description": "冻结金额",
-                                    "type": "string"
-                                },
-                                "is_accept_scan_order": {
-                                    "description": "是否接受扫码订单",
-                                    "type": "integer"
-                                },
-                                "is_delete": {
-                                    "description": "是否删除",
-                                    "type": "integer"
-                                },
-                                "is_main": {
-                                    "description": "是否主店",
-                                    "type": "integer"
-                                },
-                                "is_open_assistant": {
-                                    "description": "是否开启助手",
-                                    "type": "integer"
-                                },
-                                "is_open_buffet": {
-                                    "description": "是否开启自助餐",
-                                    "type": "integer"
-                                },
-                                "is_open_kitchen_kds": {
-                                    "description": "是否开启厨房KDS",
-                                    "type": "integer"
-                                },
-                                "is_open_local_print": {
-                                    "description": "是否开启本地打印",
-                                    "type": "integer"
-                                },
-                                "is_open_member": {
-                                    "description": "是否开启会员",
-                                    "type": "integer"
-                                },
-                                "is_open_scan": {
-                                    "description": "是否开启扫码",
-                                    "type": "integer"
-                                },
-                                "is_open_tablet": {
-                                    "description": "是否开启桌台",
-                                    "type": "integer"
-                                },
-                                "is_recycle": {
-                                    "description": "是否回收",
-                                    "type": "integer"
-                                },
-                                "kitchen_limit": {
-                                    "description": "厨房限额",
-                                    "type": "integer"
-                                },
-                                "languages": {
-                                    "description": "语言",
-                                    "type": "string"
-                                },
-                                "latitude": {
-                                    "description": "纬度",
-                                    "type": "string"
-                                },
-                                "level": {
-                                    "description": "商家等级",
-                                    "type": "integer"
-                                },
-                                "link_name": {
-                                    "description": "联系人名称",
-                                    "type": "string"
-                                },
-                                "link_phone": {
-                                    "description": "联系人电话",
-                                    "type": "string"
-                                },
-                                "logo": {
-                                    "description": "商家logo",
-                                    "type": "string"
-                                },
-                                "longitude": {
-                                    "description": "经度",
-                                    "type": "string"
-                                },
-                                "mac_addr": {
-                                    "description": "设备mac地址",
-                                    "type": "string"
-                                },
-                                "min_money": {
-                                    "description": "最小金额",
-                                    "type": "string"
-                                },
-                                "money": {
-                                    "description": "金额",
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "description": "商家名称",
-                                    "type": "string"
-                                },
-                                "parent_id": {
-                                    "description": "父级ID",
-                                    "type": "integer"
-                                },
-                                "pick_time": {
-                                    "description": "自提时间",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "printer_limit": {
-                                    "description": "打印机限额",
-                                    "type": "integer"
-                                },
-                                "province_id": {
-                                    "description": "省份ID",
-                                    "type": "integer"
-                                },
-                                "real_name": {
-                                    "description": "商家真实名称",
-                                    "type": "string"
-                                },
-                                "region_id": {
-                                    "description": "区域ID",
-                                    "type": "integer"
-                                },
-                                "reserve": {
-                                    "description": "预定",
-                                    "type": "integer"
-                                },
-                                "sale_stock": {
-                                    "description": "销售库存",
-                                    "type": "integer"
-                                },
-                                "serial_number": {
-                                    "description": "设备序列号",
-                                    "type": "string"
-                                },
-                                "service_money": {
-                                    "description": "服务金额",
-                                    "type": "string"
-                                },
-                                "service_type": {
-                                    "description": "服务类型",
-                                    "type": "integer"
-                                },
-                                "settle_type": {
-                                    "description": "结算方式",
-                                    "type": "integer"
-                                },
-                                "shipping_fee": {
-                                    "description": "运费",
-                                    "type": "string"
-                                },
-                                "shop_supplier_id": {
-                                    "description": "商家ID",
-                                    "type": "integer"
-                                },
-                                "status": {
-                                    "description": "状态",
-                                    "type": "integer"
-                                },
-                                "store_set": {
-                                    "description": "店铺设置",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "store_time": {
-                                    "description": "店铺营业时间",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "store_type": {
-                                    "description": "店铺类型",
-                                    "type": "integer"
-                                },
-                                "storebag_price": {
-                                    "description": "店铺包装价格",
-                                    "type": "string"
-                                },
-                                "storebag_type": {
-                                    "description": "店铺包装类型",
-                                    "type": "integer"
-                                },
-                                "table_limit": {
-                                    "description": "桌台限额",
-                                    "type": "integer"
-                                },
-                                "tablet_limit": {
-                                    "description": "桌台限额",
-                                    "type": "integer"
-                                },
-                                "timezone": {
-                                    "description": "时区",
-                                    "type": "string"
-                                },
-                                "total_gift": {
-                                    "description": "总赠菜",
-                                    "type": "integer"
-                                },
-                                "total_money": {
-                                    "description": "总金额",
-                                    "type": "string"
-                                },
-                                "update_time": {
-                                    "description": "更新时间",
-                                    "type": "string"
-                                },
-                                "user_id": {
-                                    "description": "用户ID",
-                                    "type": "integer"
-                                }
-                            }
+                            "$ref": "#/definitions/resp.H5Shop"
                         }
                     }
                 },
@@ -6551,6 +6104,139 @@
                 }
             }
         },
+        "resp.H5Currency": {
+            "type": "object",
+            "properties": {
+                "is_open": {
+                    "description": "是否启用",
+                    "type": "string"
+                },
+                "unit": {
+                    "description": "单位",
+                    "type": "string"
+                },
+                "unit_position": {
+                    "description": "单位位置",
+                    "type": "string"
+                },
+                "vices": {
+                    "type": "object",
+                    "properties": {
+                        "unit_rate": {
+                            "description": "单位换算率",
+                            "type": "string"
+                        },
+                        "vice_unit": {
+                            "description": "辅币单位",
+                            "type": "string"
+                        },
+                        "vice_unit_position": {
+                            "description": "辅币单位位置",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "resp.H5H5": {
+            "type": "object",
+            "properties": {
+                "buffet_order_limit": {
+                    "description": "自助餐订单限制",
+                    "type": "object",
+                    "properties": {
+                        "is_limit_num": {
+                            "description": "是否限制数量",
+                            "type": "string"
+                        },
+                        "is_limit_time": {
+                            "description": "是否限制时间",
+                            "type": "string"
+                        },
+                        "limit_num": {
+                            "description": "限制数量",
+                            "type": "string"
+                        },
+                        "limit_time": {
+                            "description": "限制时间",
+                            "type": "string"
+                        }
+                    }
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_buffet_order_limit": {
+                    "description": "是否自助餐订单限制",
+                    "type": "string"
+                },
+                "is_call_service": {
+                    "description": "是否呼叫服务",
+                    "type": "string"
+                },
+                "is_customer_order": {
+                    "description": "是否顾客订单",
+                    "type": "string"
+                },
+                "is_order_limit": {
+                    "description": "是否订单限制",
+                    "type": "string"
+                },
+                "is_show_scan_sold_out": {
+                    "description": "是否显示扫码售罄",
+                    "type": "integer"
+                },
+                "is_show_sold_out": {
+                    "description": "是否显示售罄",
+                    "type": "string"
+                },
+                "is_voice_remind": {
+                    "description": "是否语音提醒",
+                    "type": "string"
+                },
+                "kitchen_language": {
+                    "description": "厨房语言",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "语言",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Language"
+                    }
+                },
+                "order_limit": {
+                    "description": "订单限制",
+                    "type": "object",
+                    "properties": {
+                        "is_limit_num": {
+                            "description": "是否限制数量",
+                            "type": "string"
+                        },
+                        "is_limit_time": {
+                            "description": "是否限制时间",
+                            "type": "string"
+                        },
+                        "limit_num": {
+                            "description": "限制数量",
+                            "type": "string"
+                        },
+                        "limit_time": {
+                            "description": "限制时间",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "resp.H5Response": {
             "type": "object",
             "properties": {
@@ -6559,6 +6245,335 @@
                 },
                 "data": {},
                 "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.H5Shop": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string"
+                },
+                "app_id": {
+                    "description": "应用ID",
+                    "type": "integer"
+                },
+                "assistant_limit": {
+                    "description": "助手限额",
+                    "type": "integer"
+                },
+                "auto_close": {
+                    "description": "自动关闭",
+                    "type": "integer"
+                },
+                "bag_price": {
+                    "description": "包装价格",
+                    "type": "string"
+                },
+                "bag_type": {
+                    "description": "包装类型",
+                    "type": "integer"
+                },
+                "business_id": {
+                    "description": "商家ID",
+                    "type": "integer"
+                },
+                "cash_limit": {
+                    "description": "现金限额",
+                    "type": "integer"
+                },
+                "cash_money": {
+                    "description": "现金金额",
+                    "type": "string"
+                },
+                "category_set": {
+                    "description": "分类设置",
+                    "type": "integer"
+                },
+                "chain_number": {
+                    "description": "连锁编号",
+                    "type": "string"
+                },
+                "city_id": {
+                    "description": "城市ID",
+                    "type": "integer"
+                },
+                "close_time": {
+                    "description": "关闭时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "string"
+                },
+                "delivery_distance": {
+                    "description": "配送距离",
+                    "type": "integer"
+                },
+                "delivery_set": {
+                    "description": "配送设置",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "delivery_time": {
+                    "description": "配送时间",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "deploy_mode": {
+                    "description": "部署模式",
+                    "type": "integer"
+                },
+                "deposit_money": {
+                    "description": "押金金额",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "fav_count": {
+                    "description": "收藏数量",
+                    "type": "integer"
+                },
+                "freeze_money": {
+                    "description": "冻结金额",
+                    "type": "string"
+                },
+                "is_accept_scan_order": {
+                    "description": "是否接受扫码订单",
+                    "type": "integer"
+                },
+                "is_delete": {
+                    "description": "是否删除",
+                    "type": "integer"
+                },
+                "is_main": {
+                    "description": "是否主店",
+                    "type": "integer"
+                },
+                "is_open_assistant": {
+                    "description": "是否开启助手",
+                    "type": "integer"
+                },
+                "is_open_buffet": {
+                    "description": "是否开启自助餐",
+                    "type": "integer"
+                },
+                "is_open_kitchen_kds": {
+                    "description": "是否开启厨房KDS",
+                    "type": "integer"
+                },
+                "is_open_local_print": {
+                    "description": "是否开启本地打印",
+                    "type": "integer"
+                },
+                "is_open_member": {
+                    "description": "是否开启会员",
+                    "type": "integer"
+                },
+                "is_open_scan": {
+                    "description": "是否开启扫码",
+                    "type": "integer"
+                },
+                "is_open_tablet": {
+                    "description": "是否开启桌台",
+                    "type": "integer"
+                },
+                "is_recycle": {
+                    "description": "是否回收",
+                    "type": "integer"
+                },
+                "kitchen_limit": {
+                    "description": "厨房限额",
+                    "type": "integer"
+                },
+                "languages": {
+                    "description": "语言",
+                    "type": "string"
+                },
+                "latitude": {
+                    "description": "纬度",
+                    "type": "string"
+                },
+                "level": {
+                    "description": "商家等级",
+                    "type": "integer"
+                },
+                "link_name": {
+                    "description": "联系人名称",
+                    "type": "string"
+                },
+                "link_phone": {
+                    "description": "联系人电话",
+                    "type": "string"
+                },
+                "logo": {
+                    "description": "商家logo",
+                    "type": "string"
+                },
+                "longitude": {
+                    "description": "经度",
+                    "type": "string"
+                },
+                "mac_addr": {
+                    "description": "设备mac地址",
+                    "type": "string"
+                },
+                "min_money": {
+                    "description": "最小金额",
+                    "type": "string"
+                },
+                "money": {
+                    "description": "金额",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商家名称",
+                    "type": "string"
+                },
+                "parent_id": {
+                    "description": "父级ID",
+                    "type": "integer"
+                },
+                "pick_time": {
+                    "description": "自提时间",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "printer_limit": {
+                    "description": "打印机限额",
+                    "type": "integer"
+                },
+                "province_id": {
+                    "description": "省份ID",
+                    "type": "integer"
+                },
+                "real_name": {
+                    "description": "商家真实名称",
+                    "type": "string"
+                },
+                "region_id": {
+                    "description": "区域ID",
+                    "type": "integer"
+                },
+                "reserve": {
+                    "description": "预定",
+                    "type": "integer"
+                },
+                "sale_stock": {
+                    "description": "销售库存",
+                    "type": "integer"
+                },
+                "serial_number": {
+                    "description": "设备序列号",
+                    "type": "string"
+                },
+                "service_money": {
+                    "description": "服务金额",
+                    "type": "string"
+                },
+                "service_type": {
+                    "description": "服务类型",
+                    "type": "integer"
+                },
+                "settle_type": {
+                    "description": "结算方式",
+                    "type": "integer"
+                },
+                "shipping_fee": {
+                    "description": "运费",
+                    "type": "string"
+                },
+                "shop_supplier_id": {
+                    "description": "商家ID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "integer"
+                },
+                "store_set": {
+                    "description": "店铺设置",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "store_time": {
+                    "description": "店铺营业时间",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "store_type": {
+                    "description": "店铺类型",
+                    "type": "integer"
+                },
+                "storebag_price": {
+                    "description": "店铺包装价格",
+                    "type": "string"
+                },
+                "storebag_type": {
+                    "description": "店铺包装类型",
+                    "type": "integer"
+                },
+                "table_limit": {
+                    "description": "桌台限额",
+                    "type": "integer"
+                },
+                "tablet_limit": {
+                    "description": "桌台限额",
+                    "type": "integer"
+                },
+                "timezone": {
+                    "description": "时区",
+                    "type": "string"
+                },
+                "total_gift": {
+                    "description": "总赠菜",
+                    "type": "integer"
+                },
+                "total_money": {
+                    "description": "总金额",
+                    "type": "string"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "用户ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.Language": {
+            "type": "object",
+            "properties": {
+                "i": {
+                    "description": "语言索引",
+                    "type": "string"
+                },
+                "index": {
+                    "description": "语言索引",
+                    "type": "string"
+                },
+                "key": {
+                    "description": "语言键",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "语言值",
                     "type": "string"
                 }
             }
@@ -7038,12 +7053,20 @@
             "type": "object",
             "properties": {
                 "amount": {
-                    "description": "支付订单总金额 = 支付订单金额 + 手续费 + 找零",
+                    "description": "实收金额",
                     "type": "number"
                 },
                 "payment_amount": {
                     "description": "支付订单金额",
                     "type": "number"
+                },
+                "payment_commission_fee": {
+                    "description": "手续费",
+                    "type": "number"
+                },
+                "payment_method_code": {
+                    "description": "支付方式代号",
+                    "type": "integer"
                 },
                 "payment_method_uuid": {
                     "description": "支付方式Uuid",
@@ -7051,38 +7074,6 @@
                 },
                 "uuid": {
                     "description": "充值订单支付订单Uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.PendingRechargeOrder": {
-            "type": "object",
-            "properties": {
-                "gift_money": {
-                    "description": "赠送金额",
-                    "type": "number"
-                },
-                "gift_point": {
-                    "description": "赠送积分",
-                    "type": "number"
-                },
-                "member_uuid": {
-                    "description": "会员Uuid",
-                    "type": "integer"
-                },
-                "payment_orders": {
-                    "description": "充值订单支付类型列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.PaymentOrder"
-                    }
-                },
-                "recharge_money": {
-                    "description": "充值金额",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "充值订单Uuid",
                     "type": "integer"
                 }
             }
@@ -7153,6 +7144,42 @@
                 },
                 "uuid": {
                     "description": "会员Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.RechargeOrder": {
+            "type": "object",
+            "properties": {
+                "charge_due": {
+                    "description": "找零",
+                    "type": "number"
+                },
+                "gift_amount": {
+                    "description": "赠送金额",
+                    "type": "number"
+                },
+                "gift_point": {
+                    "description": "赠送积分",
+                    "type": "number"
+                },
+                "member_uuid": {
+                    "description": "会员Uuid",
+                    "type": "integer"
+                },
+                "payment_orders": {
+                    "description": "充值订单支付类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentOrder"
+                    }
+                },
+                "recharge_amount": {
+                    "description": "充值金额",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "充值订单Uuid",
                     "type": "integer"
                 }
             }

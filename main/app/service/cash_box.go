@@ -1,12 +1,19 @@
 package service
 
 import (
+	"errors"
+	"gorm.io/gorm"
+	"slices"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 )
 
 type ICashBoxSrv interface {
-	UpdateBalance(companyUuid uint64)
+	UpdateBalance(ctx context.Context, tx *gorm.DB, cashLogType int, amount float64, orderUuid uint64) error
 }
 
 func NewCashBoxSrv(dbm *database.DBManager) ICashBoxSrv {
@@ -26,8 +33,39 @@ func NewCashBoxSrvImpl(dbm *database.DBManager) *CashBoxSrv {
 }
 
 // UpdateBalance 更新钱箱余额
-func (s *CashBoxSrv) UpdateBalance(companyUuid uint64) {
+func (s *CashBoxSrv) UpdateBalance(ctx context.Context, tx *gorm.DB, cashBoxLogType int, amount float64, orderUuid uint64) error {
+	if !slices.Contains([]int{constant.CashBoxLogTypeIn, constant.CashBoxLogTypeOut}, cashBoxLogType) {
+		return errors.New("钱箱操作类型错误")
+	}
+	companyUuid := ctx.GetCompanyUuid()
 	s.uuidLock.LockUuid(companyUuid)
 	defer s.uuidLock.UnlockUuid(companyUuid)
 
+	cashBoxRepo := repository.NewCashBoxRepo(tx)
+	cashBox := cashBoxRepo.Get()
+
+	if cashBox.Uuid != 0 {
+		if err := cashBoxRepo.Update(cashBox.Uuid, map[string]any{
+			"balance": amount,
+		}); err != nil {
+			return errors.New("更新钱箱失败")
+		}
+	} else {
+		var err error
+		cashBox, err = cashBoxRepo.Create(model.CashBox{
+			Balance: amount,
+		})
+		if err != nil {
+			return errors.New("更新钱箱失败")
+		}
+	}
+
+	_, err := repository.NewCashBoxLogRepo(tx).Create(model.CashBoxLog{
+		Type:            cashBoxLogType,
+		Scene:           constant.CashBoxLogSceneRecharge,
+		Amount:          amount,
+		PaymentBillUuid: orderUuid,
+	})
+
+	return err
 }

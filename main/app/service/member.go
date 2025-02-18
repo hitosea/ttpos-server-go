@@ -25,15 +25,15 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                       // 获取等级列表
-	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                   // 模糊搜索
-	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                      // 添加会员
-	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                             // 获取充值会员信息
-	GetPendingRechargeOrder(companyUuid uint64) resp.PendingRechargeOrder                                                                    // 获取进行中的会员充值订单
-	CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.PendingRechargeOrder, error)                                 // 创建充值订单
-	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error)          // 充值订单添加支付方式
-	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) // 充值订单撤销支付方式
-	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)           // 确认充值订单
+	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                // 获取等级列表
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                            // 模糊搜索
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                               // 添加会员
+	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                      // 获取充值会员信息
+	GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrder                                                                    // 获取进行中的会员充值订单
+	CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.RechargeOrder, error)                                 // 创建充值订单
+	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)          // 充值订单添加支付方式
+	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) // 充值订单撤销支付方式
+	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
 }
 
 // memberSrv 会员服务结构体
@@ -144,12 +144,12 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 }
 
 // GetPendingRechargeOrder 进行中的会员充值订单
-func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.PendingRechargeOrder {
+func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrder {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
 	// 进行中的充值订单
 	rechargeOrder := rechargeOrderRepo.GetPendingRechargeOrder(rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	if rechargeOrder.Uuid == 0 {
-		return resp.PendingRechargeOrder{PaymentOrders: make([]resp.PaymentOrder, 0)}
+		return resp.RechargeOrder{PaymentOrders: make([]resp.PaymentOrder, 0)}
 	}
 
 	paymentOrderCount := len(rechargeOrder.PaymentOrders)
@@ -158,24 +158,20 @@ func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.PendingRech
 		var respPaymentOrder resp.PaymentOrder
 		for _, paymentOrder := range rechargeOrder.PaymentOrders {
 			copier.Copy(&respPaymentOrder, paymentOrder)
-			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash { // 如果是现金支付，需要加上找零
-				respPaymentOrder.Amount = respPaymentOrder.Amount + paymentOrder.ChargeDue
-			}
+			respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
 			respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 		}
 	}
-	return resp.PendingRechargeOrder{
-		MemberUuid:    rechargeOrder.MemberUuid,
-		Uuid:          rechargeOrder.Uuid,
-		RechargeMoney: rechargeOrder.RechargeAmount,
-		GiftMoney:     rechargeOrder.GiftAmount,
-		GiftPoint:     rechargeOrder.GiftPoint,
-		PaymentOrders: respPaymentOrders,
-	}
+
+	var respRechargeOrder resp.RechargeOrder
+	copier.Copy(&respRechargeOrder, rechargeOrder)
+
+	respRechargeOrder.PaymentOrders = respPaymentOrders
+	return respRechargeOrder
 }
 
-// 计算支付订单支付金额(payment_amount)
-func (s *memberSrv) sumPaymentOrderPaymentAmount(paymentOrders []model.PaymentOrder) float64 {
+// 计算支付订单初始金额
+func (s *memberSrv) sumPaymentAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
 		sum = sum + paymentOrder.PaymentAmount
@@ -183,17 +179,26 @@ func (s *memberSrv) sumPaymentOrderPaymentAmount(paymentOrders []model.PaymentOr
 	return sum
 }
 
-// 计算支付订单支付金额(payment_amount)
-func (s *memberSrv) sumPaymentOrderPaymentAmountWithChargeDue(paymentOrders []model.PaymentOrder) float64 {
+// 计算应收金额
+func (s *memberSrv) getRechargeOrderAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.PaymentAmount + paymentOrder.ChargeDue
+		sum = sum + paymentOrder.PaymentAmount + paymentOrder.PaymentCommissionFee
 	}
 	return sum
 }
 
-// 计算支付订单支付总金额(amount)
-func (s *memberSrv) sumPaymentOrderAmount(paymentOrders []model.PaymentOrder) float64 {
+// 计算找零
+func (s *memberSrv) getChargeDue(paymentOrders []model.PaymentOrder) float64 {
+	var sum float64
+	for _, paymentOrder := range paymentOrders {
+		sum = sum + paymentOrder.Amount - paymentOrder.PaymentCommissionFee - paymentOrder.PaymentAmount
+	}
+	return sum
+}
+
+// 计算支付订单实收金额
+func (s *memberSrv) getActualAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
 		sum = sum + paymentOrder.Amount
@@ -201,10 +206,19 @@ func (s *memberSrv) sumPaymentOrderAmount(paymentOrders []model.PaymentOrder) fl
 	return sum
 }
 
+// 计算支付订单手续费
+func (s *memberSrv) getPayFee(paymentOrders []model.PaymentOrder) float64 {
+	var sum float64
+	for _, paymentOrder := range paymentOrders {
+		sum = sum + paymentOrder.PaymentCommissionFee
+	}
+	return sum
+}
+
 // CreateRechargeOrder 创建充值订单
-func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.PendingRechargeOrder, error) {
+func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.RechargeOrder, error) {
 	companyUuid := ctx.GetCompanyUuid()
-	var orderResp resp.PendingRechargeOrder
+	var orderResp resp.RechargeOrder
 
 	// 判断会员是否存在
 	member := repository.NewMemberRepo(s.dbm.GetDB(companyUuid)).GetByUuid(rechargeReq.MemberUuid)
@@ -220,12 +234,7 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 		if rechargeOrder.Uuid != 0 {
 			oldRechargeAmount := rechargeOrder.Amount
 
-			// 如果要充值18元，使用非现金支付方式，且支付方式手续费为1%，充值10元，则payment_amount=10; payment_commission_fee=0.1，则amount=10.1（此时可以修改充值金额为10）
-			// 剩余8元使用现金支付，会员给了10元现金，需要找零2元，则payment_amount=8; charge_du=2（此时不可修改充值订单金额为19元）
-			//
-			// 所以，修改充值金额时，充值金额不能小于所有有支付订单的 payment_amount + charge_due
-
-			sumPaymentAmount := s.sumPaymentOrderPaymentAmountWithChargeDue(rechargeOrder.PaymentOrders)
+			sumPaymentAmount := s.sumPaymentAmount(rechargeOrder.PaymentOrders)
 			if rechargeReq.RechargeAmount < sumPaymentAmount {
 				return orderResp, errors.New("充值金额不能小于已充值金额")
 			}
@@ -243,7 +252,7 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 					"recharge_money":     rechargeReq.RechargeAmount,
 					"old_recharge_money": oldRechargeAmount,
 				})
-				err = repository.NewMemberRechargeOperationRepo(tx).Add(model.MemberRechargeOrderOperationLog{
+				err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 					OperatorName:      ctx.GetStaff().RealName,
 					OperatorEmail:     ctx.GetStaff().Username,
 					Client:            ctx.GetSource(),
@@ -285,7 +294,7 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 			return err
 		}
 		// 会员充值操作日志
-		err = repository.NewMemberRechargeOperationRepo(tx).Add(model.MemberRechargeOrderOperationLog{
+		err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 			OperatorName:      ctx.GetStaff().RealName,
 			OperatorEmail:     ctx.GetStaff().Username,
 			Client:            ctx.GetSource(),
@@ -305,9 +314,9 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 }
 
 // AddPaymentMethod 充值订单添加支付方式
-func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrderAddPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error) {
 	companyUuid := ctx.GetCompanyUuid()
-	var orderResp resp.PendingRechargeOrder
+	var orderResp resp.RechargeOrder
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
 	rechargeOrder := rechargeOrderRepo.GetByUuid(addReq.RechargeOrderUuid, rechargeOrderRepo.WithPaymentOrders())
@@ -318,7 +327,8 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 	// todo 在线支付订单暂不处理
 
 	// 根据Uuid 获取支付方式
-	paymentMethod := repository.NewPaymentMethodRepo(s.dbm.GetDB(companyUuid)).GetByUuid(addReq.PaymentMethodUuid)
+	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(companyUuid))
+	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(addReq.PaymentMethodUuid))
 	if paymentMethod.Uuid == 0 {
 		return orderResp, errors.New("支付方式不存在")
 	}
@@ -333,7 +343,7 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 	// 计算支付手续费
 	paymentCommissionFee := s.paymentMethodSrv.CalculatePaymentCommissionFee(paymentMethod, addReq.PaymentAmount)
 
-	sumPaymentAmount := s.sumPaymentOrderPaymentAmount(rechargeOrder.PaymentOrders)
+	sumPaymentAmount := s.sumPaymentAmount(rechargeOrder.PaymentOrders)
 	// 支付订单金额大于充值金额
 	if sumPaymentAmount >= rechargeOrder.RechargeAmount {
 		return orderResp, errors.New("当前已足额")
@@ -346,23 +356,29 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 	// 支付订单总金额 = 支付金额 + 支付手续费
 	amount := addReq.PaymentAmount + paymentCommissionFee
 
-	// 现金找零
-	var chargeDue float64
-	if paymentMethod.Code == constant.PaymentMethodCodeCash && sumPaymentAmount+addReq.PaymentAmount > rechargeOrder.RechargeAmount {
-		chargeDue = sumPaymentAmount + addReq.PaymentAmount - rechargeOrder.RechargeAmount
-		addReq.PaymentAmount = addReq.PaymentAmount - chargeDue
-		amount = amount - chargeDue
-	}
-
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	// 获取已存在的该支付方式的支付订单
-	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(paymentOrderRepo.WhereRelatedUuid(rechargeOrder.Uuid), paymentOrderRepo.WherePaymentTypeUuid(paymentMethod.Uuid))
+	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
+		paymentOrderRepo.WhereRelatedUuid(rechargeOrder.Uuid), paymentOrderRepo.WherePaymentTypeUuid(paymentMethod.Uuid))
+
+	var rechargeAmountLeft float64
+	var cashPaidPaymentAmount float64
+	if paymentMethod.Code == constant.PaymentMethodCodeCash {
+		// 如果现金支付订单存在
+		if paymentOrder.Uuid != 0 {
+			cashPaidPaymentAmount = paymentOrder.PaymentAmount
+		}
+		rechargeAmountLeft = rechargeOrder.RechargeAmount - (sumPaymentAmount - cashPaidPaymentAmount)
+		if rechargeAmountLeft > 0 && addReq.PaymentAmount > rechargeAmountLeft {
+			addReq.PaymentAmount = rechargeAmountLeft
+		}
+	}
+
 	if paymentOrder.Uuid != 0 { // 存在则更新
 		err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
 			"payment_amount":         addReq.PaymentAmount,
 			"amount":                 amount,
 			"payment_commission_fee": paymentCommissionFee,
-			"charge_due":             chargeDue,
 		})
 		if err != nil {
 			logger.Logger.Error("添加支付订单-更新支付方式", zap.Error(err))
@@ -383,7 +399,6 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 			PaymentAmount:        addReq.PaymentAmount,
 			PaymentCommissionFee: paymentCommissionFee,
 			Amount:               amount,
-			ChargeDue:            chargeDue,
 			Status:               constant.PaymentOrderStatusPaid, // ToDo 手动添加在线支付标为0，处理lianlianpay
 		})
 		if err != nil {
@@ -396,9 +411,9 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 }
 
 // CancelPaymentMethod 充值订单撤销支付方式
-func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelReq req.RechargeOrderCancelPaymentMethodReq) (resp.PendingRechargeOrder, error) {
+func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelReq req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) {
 	companyUuid := ctx.GetCompanyUuid()
-	var orderResp resp.PendingRechargeOrder
+	var orderResp resp.RechargeOrder
 
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	// 判断支付订单
@@ -420,11 +435,28 @@ func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelReq req.Recha
 		logger.Logger.Error("标记支付订单失败", zap.Error(err))
 		return orderResp, errors2.ErrInternal
 	}
+
+	// 更新现金支付订单
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
+	rechargeOrder := rechargeOrderRepo.GetByUuid(paymentOrder.RelatedUuid, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	var cashPaymentOrder model.PaymentOrder
+	var sumPaymentAmount float64
+	for _, order := range rechargeOrder.PaymentOrders {
+		if order.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			cashPaymentOrder = order
+		}
+		sumPaymentAmount = sumPaymentAmount + order.PaymentAmount
+	}
+	if cashPaymentOrder.Uuid != 0 {
+		paymentOrderRepo.Update(cashPaymentOrder.Uuid, map[string]any{
+			"payment_amount": rechargeOrder.RechargeAmount - sumPaymentAmount,
+		})
+	}
 	return s.GetPendingRechargeOrder(companyUuid), nil
 }
 
 // 计算非现金支付订单金额(payment_amount)
-func (s *memberSrv) sumPaymentOrderPaymentAmountNotCash(paymentOrders []model.PaymentOrder) float64 {
+func (s *memberSrv) sumPaymentAmountExcludeCash(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
 		if paymentOrder.PaymentMethod.Code != constant.PaymentMethodCodeCash {
@@ -452,27 +484,27 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 	}
 
 	// 非现金超额
-	if s.sumPaymentOrderPaymentAmountNotCash(rechargeOrder.PaymentOrders) > rechargeOrder.RechargeAmount {
+	sumPaymentAmountExcludeCash := s.sumPaymentAmountExcludeCash(rechargeOrder.PaymentOrders)
+	if sumPaymentAmountExcludeCash > rechargeOrder.RechargeAmount {
 		return confirmResp, errors.New("收款金额大于充值金额，请先修改收款金额")
 	}
 	// 所有支付订单金额总数小于充值订单充值金额
-	if s.sumPaymentOrderPaymentAmount(rechargeOrder.PaymentOrders) < rechargeOrder.RechargeAmount {
+	sumPaymentAmount := s.sumPaymentAmount(rechargeOrder.PaymentOrders)
+	if sumPaymentAmount < rechargeOrder.RechargeAmount {
 		return confirmResp, errors.New("未足额支付")
 	}
 
-	// ToDo 计算找零
-
 	// 更新充值订单
 	updates := map[string]any{
-		"amount":       s.sumPaymentOrderAmount(rechargeOrder.PaymentOrders), // PaymentOrder.Amount
-		"status":       constant.RechargeOrderStatusPaid,                     // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
+		"amount":       s.getRechargeOrderAmount(rechargeOrder.PaymentOrders), // 应收金额
+		"status":       constant.RechargeOrderStatusPaid,                      // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
 		"payment_time": time.Now().Unix(),
-		"charge_due":   "",
+		"charge_due":   s.getChargeDue(rechargeOrder.PaymentOrders), // 找零
 	}
 
 	err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
 
-		err := rechargeOrderRepo.Update(rechargeOrder.Uuid, updates)
+		err := repository.NewMemberRechargeOrderRepo(tx).Update(rechargeOrder.Uuid, updates)
 		if err != nil {
 			return errors.New("更新充值订单失败")
 		}
@@ -498,11 +530,19 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 		}
 
 		// 处理会员余额，充值金额+赠送金额 > 0
-		if rechargeOrder.RechargeAmount+rechargeOrder.GiftAmount > 0 {
+		money := rechargeOrder.RechargeAmount + rechargeOrder.GiftAmount
+		if money > 0 {
+			if err := repository.NewMemberRepo(tx).Update(confirmReq.MemberUuid, map[string]any{
+				"balance":                     gorm.Expr("balance + ?", rechargeOrder.RechargeAmount),
+				"gift_balance":                gorm.Expr("gift_balance + ?", rechargeOrder.GiftAmount),
+				"accumulated_recharge_amount": gorm.Expr("accumulated_recharge_amount + ?", rechargeOrder.RechargeAmount),
+			}); err != nil {
+				return errors.New("更新会员余额失败")
+			}
 			if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 				MemberUuid: rechargeOrder.MemberUuid,
 				Scene:      constant.MemberBalanceLogRecharge,
-				Money:      rechargeOrder.RechargeAmount + rechargeOrder.GiftAmount,
+				Money:      money,
 				GiftMoney:  rechargeOrder.GiftAmount,
 				Describe:   fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
 			}); err != nil {
@@ -510,7 +550,36 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 			}
 		}
 
-		// ToDo 现金支付-找零大于0，则更新钱箱余额
+		if sumPaymentAmount > sumPaymentAmountExcludeCash {
+			if err := s.cashBoxSrv.UpdateBalance(ctx, tx, constant.CashBoxLogTypeIn, sumPaymentAmount-sumPaymentAmountExcludeCash, rechargeOrder.Uuid); err != nil {
+				return err
+			}
+		}
+
+		rechargeOperation := map[string]any{
+			"order_price":    rechargeOrder.RechargeAmount,             //  订单金额
+			"recharge_money": rechargeOrder.RechargeAmount,             //  充值金额
+			"pay_price":      rechargeOrder.Amount,                     //  订单应付
+			"gift_money":     rechargeOrder.GiftAmount,                 //  赠送金额
+			"gift_point":     rechargeOrder.GiftPoint,                  //  赠送积分
+			"pay_fee":        s.getPayFee(rechargeOrder.PaymentOrders), //  支付手续费
+			"change_due":     rechargeOrder.ChargeDue,                  //  找零
+			"pay_type":       rechargeOrder.PaymentOrders,              //  支付方式
+		}
+
+		operationData, _ := json.Marshal(rechargeOperation)
+
+		if err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
+			OperatorName:      ctx.GetStaff().RealName,
+			OperatorEmail:     ctx.GetStaff().Username,
+			Client:            ctx.GetSource(),
+			Message:           "充值",
+			Action:            constant.RechargeOrderActionRecharge,
+			Data:              string(operationData),
+			RechargeOrderUuid: rechargeOrder.Uuid,
+		}); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -518,5 +587,21 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 		return confirmResp, err
 	}
 
-	return confirmResp, nil
+	return s.confirmRechargeOrderResp(companyUuid, rechargeOrder.Uuid), nil
+}
+
+func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUuid uint64) resp.ConfirmRechargeOrder {
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
+	rechargeOrder := rechargeOrderRepo.GetByUuid(rechargeOrderUuid, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+
+	paymentMethods := make([]string, 0, len(rechargeOrder.PaymentOrders))
+	for _, order := range rechargeOrder.PaymentOrders {
+		paymentMethods = append(paymentMethods, order.PaymentMethodName)
+	}
+	return resp.ConfirmRechargeOrder{
+		Amount:         rechargeOrder.Amount,
+		ActualAmount:   s.getActualAmount(rechargeOrder.PaymentOrders),
+		ChargeDue:      rechargeOrder.ChargeDue,
+		PaymentMethods: paymentMethods,
+	}
 }

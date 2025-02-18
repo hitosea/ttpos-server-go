@@ -100,7 +100,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/member/recharge_order_in_progress [get]
 func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
 	order := h.memberSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
@@ -115,13 +115,13 @@ func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.RechargeReq true "创建充值订单参数"
-// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/member/create_recharge_order [post]
 func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 	var (
 		rechargeReq req.RechargeReq
 		err         error
-		order       resp.PendingRechargeOrder
+		order       resp.RechargeOrder
 	)
 	if err = c.ShouldBindJSON(&rechargeReq); err != nil {
 		helper.HandleValidationError(c, err, rechargeReq, req.CreateRechargeOrderReqMessage)
@@ -150,14 +150,14 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.RechargeOrderAddPaymentMethodReq true "充值订单添加支付方式参数"
-// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/member/recharge_order_add_payment_method [post]
 func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var (
 		addPaymentMethodReq req.RechargeOrderAddPaymentMethodReq
 		err                 error
-		order               resp.PendingRechargeOrder
+		order               resp.RechargeOrder
 	)
 	if err = c.ShouldBindJSON(&addPaymentMethodReq); err != nil {
 		helper.HandleValidationError(c, err, addPaymentMethodReq, req.RechargeOrderAddPaymentMethodReqMessage)
@@ -180,14 +180,14 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.RechargeOrderCancelPaymentMethodReq true "充值订单撤销支付方式参数"
-// @Success 200 {object} dto.Response{data=resp.PendingRechargeOrder}
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/member/recharge_order_cancel_payment_method [post]
 func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var (
 		cancelPaymentMethodReq req.RechargeOrderCancelPaymentMethodReq
 		err                    error
-		order                  resp.PendingRechargeOrder
+		order                  resp.RechargeOrder
 	)
 	if err = c.ShouldBindJSON(&cancelPaymentMethodReq); err != nil {
 		helper.HandleValidationError(c, err, cancelPaymentMethodReq, nil)

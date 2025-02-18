@@ -33,16 +33,6 @@ func (model *PaymentMethod) GetSourceText(language string) string {
 	return ""
 }
 
-/**
-PaymentAmount:
-要充值的金额，现金支付可能大于这个值；比如要充值28块，但是会员给了30，则payment_amount=28；charge_due=2，且此时不可修改充值订单为29
-
-如果要充值18元，使用非现金支付方式，且支付方式手续费为1%，充值10元，则payment_amount=10; payment_commission_fee=0.1，则amount=10.1（此时可以修改充值金额为10）
-剩余8元使用现金支付，会员给了10元现金，需要找零2元，则payment_amount=8; charge_du=2（此时不可修改充值订单金额为19元）
-
-得出结论，修改充值金额时，充值金额不能小于所有有支付订单的 payment_amount + charge_due
-*/
-
 // PaymentOrder 支付订单 ttpos_payment_order
 type PaymentOrder struct {
 	BaseModel
@@ -53,8 +43,7 @@ type PaymentOrder struct {
 	CurrencyUnit         string  `gorm:"column:currency_unit;type:varchar(10);comment:货币单位;NOT NULL" json:"currency_unit"`
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额;NOT NULL" json:"payment_amount"`
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,支付金额*支付手续费百分比;NOT NULL" json:"payment_commission_fee"`
-	ChargeDue            float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
-	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:金额：支付金额+支付手续费;NOT NULL" json:"amount"`
+	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:实收金额;NOT NULL" json:"amount"`
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
 

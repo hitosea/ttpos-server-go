@@ -8,7 +8,8 @@ import (
 
 // IPaymentMethodRepo 定义仓库接口
 type IPaymentMethodRepo interface {
-	GetByUuid(uuid uint64) model.PaymentMethod
+	WhereUuid(uuid uint64) DBOption
+	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
 }
 
 // paymentMethodRepo 仓库
@@ -26,9 +27,19 @@ func NewPaymentMethodRepoImpl(db *gorm.DB) IPaymentMethodRepo {
 	return &paymentMethodRepo{db: db}
 }
 
-// GetByUuid 根据Uuid获取支付方式
-func (r *paymentMethodRepo) GetByUuid(uuid uint64) model.PaymentMethod {
+// GetPaymentMethod 根据Uuid获取支付方式
+func (r *paymentMethodRepo) GetPaymentMethod(opts ...DBOption) model.PaymentMethod {
 	var paymentMethod model.PaymentMethod
-	r.db.Model(&model.PaymentMethod{}).Where("uuid = ?", uuid).First(&paymentMethod)
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(&model.PaymentMethod{}).First(&paymentMethod)
 	return paymentMethod
+}
+
+func (r *paymentMethodRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
 }
