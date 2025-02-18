@@ -1,6 +1,7 @@
 package h5
 
 import (
+	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -9,6 +10,8 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,16 +31,22 @@ type H5Handler struct {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.GetBaseInfoResponse{}
-// @Router /index.php/scan/base.base/getInfo [post]
+// @Router /h5/index.php/scan/base.base/getInfo [post]
 func (h H5Handler) GetBaseInfo(c *gin.Context) {
+	fmt.Println("22222222222222")
 	ctx := helper.GetContext(c)
-	var deskUuid uint64
+	deskUuid := ctx.GetDeskUuid()
+	fmt.Println("33333333")
+	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
 	info, err := h.service.GetCompanyInfo(ctx, deskUuid)
 	if err != nil {
-		Fail(c, 500, "获取信息失败")
+		ctx.Log().Info("获取桌台基本信息失败", zap.String("error", err.Error()))
+		helper.H5Fail(c, 500, "获取信息失败")
 		return
 	}
-	Success(c, info)
+	fmt.Println("4444")
+
+	helper.H5Success(c, info)
 }
 
 // GetBaseInfo 获取自助餐套餐列表
@@ -48,16 +57,16 @@ func (h H5Handler) GetBaseInfo(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
-// @Router /index.php/scan/order.Order/buffetList [post]
+// @Router /h5/index.php/scan/order.Order/buffetList [post]
 func (h *H5Handler) GetBuffetList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var deskUuid uint64
 	list, err := h.service.GetBuffetList(ctx, deskUuid)
 	if err != nil {
-		Fail(c, 500, "获取信息失败")
+		helper.H5Fail(c, 500, "获取信息失败")
 		return
 	}
-	Success(c, list)
+	helper.H5Success(c, list)
 }
 
 // GetOpenDesk 开台
@@ -69,7 +78,7 @@ func (h *H5Handler) GetBuffetList(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.OpenDeskRequest true "创建扫码桌台订单参数"
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
-// @Router /index.php/scan/order.Order/setTable [post]
+// @Router /h5/index.php/scan/order.Order/setTable [post]
 func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
@@ -77,16 +86,16 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 	// 绑定请求参数
 	params := req.OpenDeskRequest{}
 	if err := c.ShouldBind(&params); err != nil {
-		Fail(c, 500, "参数错误")
+		helper.H5Fail(c, 500, "参数错误")
 		return
 	}
 
 	err := h.service.OpenH5Desk(ctx, deskUuid, req.OpenDeskRequest{})
 	if err != nil {
-		Fail(c, 500, "获取信息失败")
+		helper.H5Fail(c, 500, "获取信息失败")
 		return
 	}
-	SuccessWithMsg(c, "开台成功")
+	helper.H5SuccessWithMsg(c, "开台成功")
 }
 
 // RemarkProduct 给商品添加备注
@@ -98,20 +107,20 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.AddProductRemarkRequest true "添加备注参数"
 // @Success 200 {object} resp.H5Response{}
-// @Router /index.php/scan/order.Order/remark [post]
+// @Router /h5/index.php/scan/order.Order/remark [post]
 func (h *H5Handler) RemarkProduct(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	params := req.AddProductRemarkRequest{}
 	if err := c.ShouldBind(&params); err != nil {
-		Fail(c, 500, constant.RemarkFail)
+		helper.H5Fail(c, 500, constant.RemarkFail)
 		return
 	}
 	err := h.service.RemarkProduct(ctx, params.Remark, params.SaleOrderProductUuid)
 	if err != nil {
-		Fail(c, 500, constant.RemarkFail)
+		helper.H5Fail(c, 500, constant.RemarkFail)
 		return
 	}
-	SuccessWithMsg(c, constant.RemarkSuccess)
+	helper.H5SuccessWithMsg(c, constant.RemarkSuccess)
 }
 
 // GetOpenDesk 获取商品分类
@@ -122,15 +131,15 @@ func (h *H5Handler) RemarkProduct(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.H5Response{data=resp.H5CategoryList}
-// @Router /index.php/scan/product.category/index [post]
+// @Router /h5/index.php/scan/product.category/index [post]
 func (h *H5Handler) GetCategoryList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	list, err := h.service.GetCategoryList(ctx)
 	if err != nil {
-		Fail(c, 500, "获取信息失败")
+		helper.H5Fail(c, 500, "获取信息失败")
 		return
 	}
-	Success(c, list)
+	helper.H5Success(c, list)
 }
 
 // RegisterH5Handlers 注册扫码h5路由
@@ -143,10 +152,10 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
-	h5Srv := service.NewH5Srv(dbm, localeSrv, settingSrv)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv)
 	buffetSrv := service.NewBuffetSrv(dbm, localeSrv)
+	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
 
 	// 初始化处理器
 	wrapper := H5Handler{
@@ -156,7 +165,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.DeskAuth(authSrv))
 	{
 		privateApi.POST("/index.php/scan/base.base/getInfo", wrapper.GetBaseInfo)
 		privateApi.POST("/index.php/scan/order.Order/buffetList", wrapper.GetBuffetList)

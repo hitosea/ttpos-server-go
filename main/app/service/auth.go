@@ -28,6 +28,7 @@ type IAuthSrv interface {
 	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                    // 收银端基本信息
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                // 点餐助手端基本信息
 	Auth(ctx context.Context, authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
+	AuthDesk(ctx context.Context, qrcodeToken string) error                                                       // 鉴权桌台
 	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                               // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                  // 获取在线收银机
 }
@@ -361,6 +362,31 @@ func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 
 	return company, companySetting, staff, nil
+}
+
+func (s *AuthSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
+	companyUuid := ctx.GetCompanyUuid()
+	deskUuid := ctx.GetDeskUuid()
+	db := s.dbm.GetDB(companyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfo(ctx)
+	if err != nil {
+		return err
+	}
+	if company.IsDelete() {
+		return errors.New("商家已经删除")
+	}
+
+	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
+	if err != nil {
+		return err
+	}
+	if deskInfo.IsDelete() {
+		return errors.New("桌台已经删除")
+	}
+	if deskInfo.QrcodeToken != qrcodeToken {
+		return errors.New("二维码已失效，请联系商家")
+	}
+	return nil
 }
 
 // 检查收银是否开启

@@ -4472,7 +4472,7 @@ paths:
       summary: 验证锁屏密码
       tags:
       - 收银端.基础信息
-  /index.php/scan/base.base/getInfo:
+  /h5/index.php/scan/base.base/getInfo:
     post:
       consumes:
       - application/json
@@ -4489,7 +4489,7 @@ paths:
       summary: 桌码基础信息
       tags:
       - 扫码点餐
-  /index.php/scan/order.Order/buffetList:
+  /h5/index.php/scan/order.Order/buffetList:
     post:
       consumes:
       - application/json
@@ -4513,7 +4513,7 @@ paths:
       summary: 自助餐套餐信息
       tags:
       - 扫码点餐
-  /index.php/scan/order.Order/remark:
+  /h5/index.php/scan/order.Order/remark:
     post:
       consumes:
       - application/json
@@ -4537,7 +4537,7 @@ paths:
       summary: 添加备注
       tags:
       - 扫码点餐
-  /index.php/scan/order.Order/setTable:
+  /h5/index.php/scan/order.Order/setTable:
     post:
       consumes:
       - application/json
@@ -4568,7 +4568,7 @@ paths:
       summary: 开台
       tags:
       - 扫码点餐
-  /index.php/scan/product.category/index:
+  /h5/index.php/scan/product.category/index:
     post:
       consumes:
       - application/json
@@ -4843,7 +4843,7 @@ paths:
         name: client_id
         required: true
         type: string
-      - description: '加密类型: pgp\jsencrypt'
+      - description: '加密类型: jsencrypt'
         in: query
         name: type
         required: true

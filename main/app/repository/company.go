@@ -10,6 +10,7 @@ import (
 // ICompanyRepo 公司
 type ICompanyRepo interface {
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
+	GetCompanyInfoByUuid(ctx context.Context) (*model.Company, error)
 }
 
 func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
@@ -27,9 +28,10 @@ type CompanyRepoImpl struct {
 
 // GetCompanyInfo 获取公司信息
 func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error) {
+	companyUuid := ctx.GetCompanyUuid()
 	var company model.Company
 
-	db := r.db.Where("uuid = ?", ctx.GetCompanyUuid())
+	db := r.db.Where("uuid = ?", companyUuid)
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -41,4 +43,12 @@ func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) 
 	}
 
 	return company, nil
+}
+
+func (r *CompanyRepoImpl) GetCompanyInfoByUuid(ctx context.Context) (*model.Company, error) {
+	companyInfo, err := r.GetCompanyInfo(ctx, NotDeleted)
+	if err != nil {
+		return nil, err
+	}
+	return &companyInfo, nil
 }

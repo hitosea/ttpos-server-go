@@ -6,6 +6,117 @@ type H5Response struct {
 	Data any    `json:"data"`
 }
 
+type H5Shop struct {
+	ShopSupplierID    uint64   `json:"shop_supplier_id"`     // 商家ID
+	ParentID          int      `json:"parent_id"`            // 父级ID
+	Name              string   `json:"name"`                 // 商家名称
+	RealName          string   `json:"real_name"`            // 商家真实名称
+	LinkName          string   `json:"link_name"`            // 联系人名称
+	LinkPhone         string   `json:"link_phone"`           // 联系人电话
+	Logo              string   `json:"logo"`                 // 商家logo
+	Level             int      `json:"level"`                // 商家等级
+	SaleStock         int      `json:"sale_stock"`           // 销售库存
+	Reserve           int      `json:"reserve"`              // 预定
+	IsOpenMember      int      `json:"is_open_member"`       // 是否开启会员
+	IsOpenTablet      int      `json:"is_open_tablet"`       // 是否开启桌台
+	IsOpenScan        int      `json:"is_open_scan"`         // 是否开启扫码
+	IsOpenAssistant   int      `json:"is_open_assistant"`    // 是否开启助手
+	IsOpenKitchenKds  int      `json:"is_open_kitchen_kds"`  // 是否开启厨房KDS
+	IsOpenBuffet      int      `json:"is_open_buffet"`       // 是否开启自助餐
+	IsAcceptScanOrder int      `json:"is_accept_scan_order"` // 是否接受扫码订单
+	IsOpenLocalPrint  int      `json:"is_open_local_print"`  // 是否开启本地打印
+	CashLimit         int      `json:"cash_limit"`           // 现金限额
+	KitchenLimit      int      `json:"kitchen_limit"`        // 厨房限额
+	TabletLimit       int      `json:"tablet_limit"`         // 桌台限额
+	AssistantLimit    int      `json:"assistant_limit"`      // 助手限额
+	TableLimit        int      `json:"table_limit"`          // 桌台限额
+	PrinterLimit      int      `json:"printer_limit"`        // 打印机限额
+	Timezone          string   `json:"timezone"`             // 时区
+	Languages         string   `json:"languages"`            // 语言
+	Address           string   `json:"address"`              // 地址
+	DeployMode        int      `json:"deploy_mode"`          // 部署模式
+	MacAddr           string   `json:"mac_addr"`             // 设备mac地址
+	SerialNumber      string   `json:"serial_number"`        // 设备序列号
+	ChainNumber       string   `json:"chain_number"`         // 连锁编号
+	BusinessID        int      `json:"business_id"`          // 商家ID
+	Description       string   `json:"description"`          // 描述
+	TotalMoney        string   `json:"total_money"`          // 总金额
+	Money             string   `json:"money"`                // 金额
+	FreezeMoney       string   `json:"freeze_money"`         // 冻结金额
+	CashMoney         string   `json:"cash_money"`           // 现金金额
+	DepositMoney      string   `json:"deposit_money"`        // 押金金额
+	UserID            int      `json:"user_id"`              // 用户ID
+	FavCount          int      `json:"fav_count"`            // 收藏数量
+	Status            int      `json:"status"`               // 状态
+	StoreType         int      `json:"store_type"`           // 店铺类型
+	TotalGift         int      `json:"total_gift"`           // 总赠菜
+	IsRecycle         int      `json:"is_recycle"`           // 是否回收
+	IsMain            int      `json:"is_main"`              // 是否主店
+	ProvinceID        int      `json:"province_id"`          // 省份ID
+	CityID            int      `json:"city_id"`              // 城市ID
+	RegionID          int      `json:"region_id"`            // 区域ID
+	Longitude         string   `json:"longitude"`            // 经度
+	Latitude          string   `json:"latitude"`             // 纬度
+	ShippingFee       string   `json:"shipping_fee"`         // 运费
+	BagType           int      `json:"bag_type"`             // 包装类型
+	BagPrice          string   `json:"bag_price"`            // 包装价格
+	StorebagType      int      `json:"storebag_type"`        // 店铺包装类型
+	StorebagPrice     string   `json:"storebag_price"`       // 店铺包装价格
+	DeliveryTime      []string `json:"delivery_time"`        // 配送时间
+	PickTime          []string `json:"pick_time"`            // 自提时间
+	StoreTime         []string `json:"store_time"`           // 店铺营业时间
+	DeliveryDistance  int      `json:"delivery_distance"`    // 配送距离
+	DeliverySet       []string `json:"delivery_set"`         // 配送设置
+	StoreSet          []string `json:"store_set"`            // 店铺设置
+	MinMoney          string   `json:"min_money"`            // 最小金额
+	SettleType        int      `json:"settle_type"`          // 结算方式
+	ServiceType       int      `json:"service_type"`         // 服务类型
+	ServiceMoney      string   `json:"service_money"`        // 服务金额
+	AutoClose         int      `json:"auto_close"`           // 自动关闭
+	CloseTime         int      `json:"close_time"`           // 关闭时间
+	CategorySet       int      `json:"category_set"`         // 分类设置
+	IsDelete          int      `json:"is_delete"`            // 是否删除
+	AppID             uint64   `json:"app_id"`               // 应用ID
+	CreateTime        string   `json:"create_time"`          // 创建时间
+	UpdateTime        string   `json:"update_time"`          // 更新时间
+}
+
+type H5Currency struct {
+	Unit         string `json:"unit"`          // 单位
+	IsOpen       string `json:"is_open"`       // 是否启用
+	UnitPosition string `json:"unit_position"` // 单位位置
+	Vices        struct {
+		ViceUnit         string `json:"vice_unit"`          // 辅币单位
+		ViceUnitPosition string `json:"vice_unit_position"` // 辅币单位位置
+		UnitRate         string `json:"unit_rate"`          // 单位换算率
+	} `json:"vices"`
+}
+
+type H5 struct {
+	IsCallService      string `json:"is_call_service"`       // 是否呼叫服务
+	IsCustomerOrder    string `json:"is_customer_order"`     // 是否顾客订单
+	IsVoiceRemind      string `json:"is_voice_remind"`       // 是否语音提醒
+	IsShowSoldOut      string `json:"is_show_sold_out"`      // 是否显示售罄
+	IsBuffetOrderLimit string `json:"is_buffet_order_limit"` // 是否自助餐订单限制
+	BuffetOrderLimit   struct {
+		IsLimitTime string `json:"is_limit_time"` // 是否限制时间
+		LimitTime   string `json:"limit_time"`    // 限制时间
+		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
+		LimitNum    string `json:"limit_num"`     // 限制数量
+	} `json:"buffet_order_limit"` // 自助餐订单限制
+	IsOrderLimit string `json:"is_order_limit"` // 是否订单限制
+	OrderLimit   struct {
+		IsLimitTime string `json:"is_limit_time"` // 是否限制时间
+		LimitTime   string `json:"limit_time"`    // 限制时间
+		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
+		LimitNum    string `json:"limit_num"`     // 限制数量
+	} `json:"order_limit"` // 订单限制
+	Language          []string   `json:"language"`              // 语言
+	DefaultLanguage   string     `json:"default_language"`      // 默认语言
+	IsShowScanSoldOut int        `json:"is_show_scan_sold_out"` // 是否显示扫码售罄
+	KitchenLanguage   string     `json:"kitchen_language"`      // 厨房语言
+	LanguageList      []Language `json:"language_list"`         // 语言列表
+}
 type GetBaseInfoResponse struct {
 	TableInfo struct {
 		TableID        uint64 `json:"table_id"`
@@ -168,123 +279,12 @@ type GetBaseInfoResponse struct {
 		} `json:"underwayOrder"`
 	} `json:"tableInfo"` // 桌台信息
 	BaseInfo struct {
-		Shop struct {
-			ShopSupplierID    uint64   `json:"shop_supplier_id"`     // 商家ID
-			ParentID          int      `json:"parent_id"`            // 父级ID
-			Name              string   `json:"name"`                 // 商家名称
-			RealName          string   `json:"real_name"`            // 商家真实名称
-			LinkName          string   `json:"link_name"`            // 联系人名称
-			LinkPhone         string   `json:"link_phone"`           // 联系人电话
-			Logo              string   `json:"logo"`                 // 商家logo
-			Level             int      `json:"level"`                // 商家等级
-			SaleStock         int      `json:"sale_stock"`           // 销售库存
-			Reserve           int      `json:"reserve"`              // 预定
-			IsOpenMember      int      `json:"is_open_member"`       // 是否开启会员
-			IsOpenTablet      int      `json:"is_open_tablet"`       // 是否开启桌台
-			IsOpenScan        int      `json:"is_open_scan"`         // 是否开启扫码
-			IsOpenAssistant   int      `json:"is_open_assistant"`    // 是否开启助手
-			IsOpenKitchenKds  int      `json:"is_open_kitchen_kds"`  // 是否开启厨房KDS
-			IsOpenBuffet      int      `json:"is_open_buffet"`       // 是否开启自助餐
-			IsAcceptScanOrder int      `json:"is_accept_scan_order"` // 是否接受扫码订单
-			IsOpenLocalPrint  int      `json:"is_open_local_print"`  // 是否开启本地打印
-			CashLimit         int      `json:"cash_limit"`           // 现金限额
-			KitchenLimit      int      `json:"kitchen_limit"`        // 厨房限额
-			TabletLimit       int      `json:"tablet_limit"`         // 桌台限额
-			AssistantLimit    int      `json:"assistant_limit"`      // 助手限额
-			TableLimit        int      `json:"table_limit"`          // 桌台限额
-			PrinterLimit      int      `json:"printer_limit"`        // 打印机限额
-			Timezone          string   `json:"timezone"`             // 时区
-			Languages         string   `json:"languages"`            // 语言
-			Address           string   `json:"address"`              // 地址
-			DeployMode        int      `json:"deploy_mode"`          // 部署模式
-			MacAddr           string   `json:"mac_addr"`             // 设备mac地址
-			SerialNumber      string   `json:"serial_number"`        // 设备序列号
-			ChainNumber       string   `json:"chain_number"`         // 连锁编号
-			BusinessID        int      `json:"business_id"`          // 商家ID
-			Description       string   `json:"description"`          // 描述
-			TotalMoney        string   `json:"total_money"`          // 总金额
-			Money             string   `json:"money"`                // 金额
-			FreezeMoney       string   `json:"freeze_money"`         // 冻结金额
-			CashMoney         string   `json:"cash_money"`           // 现金金额
-			DepositMoney      string   `json:"deposit_money"`        // 押金金额
-			UserID            int      `json:"user_id"`              // 用户ID
-			FavCount          int      `json:"fav_count"`            // 收藏数量
-			Status            int      `json:"status"`               // 状态
-			StoreType         int      `json:"store_type"`           // 店铺类型
-			TotalGift         int      `json:"total_gift"`           // 总赠菜
-			IsRecycle         int      `json:"is_recycle"`           // 是否回收
-			IsMain            int      `json:"is_main"`              // 是否主店
-			ProvinceID        int      `json:"province_id"`          // 省份ID
-			CityID            int      `json:"city_id"`              // 城市ID
-			RegionID          int      `json:"region_id"`            // 区域ID
-			Longitude         string   `json:"longitude"`            // 经度
-			Latitude          string   `json:"latitude"`             // 纬度
-			ShippingFee       string   `json:"shipping_fee"`         // 运费
-			BagType           int      `json:"bag_type"`             // 包装类型
-			BagPrice          string   `json:"bag_price"`            // 包装价格
-			StorebagType      int      `json:"storebag_type"`        // 店铺包装类型
-			StorebagPrice     string   `json:"storebag_price"`       // 店铺包装价格
-			DeliveryTime      []string `json:"delivery_time"`        // 配送时间
-			PickTime          []string `json:"pick_time"`            // 自提时间
-			StoreTime         []string `json:"store_time"`           // 店铺营业时间
-			DeliveryDistance  int      `json:"delivery_distance"`    // 配送距离
-			DeliverySet       []string `json:"delivery_set"`         // 配送设置
-			StoreSet          []string `json:"store_set"`            // 店铺设置
-			MinMoney          string   `json:"min_money"`            // 最小金额
-			SettleType        int      `json:"settle_type"`          // 结算方式
-			ServiceType       int      `json:"service_type"`         // 服务类型
-			ServiceMoney      string   `json:"service_money"`        // 服务金额
-			AutoClose         int      `json:"auto_close"`           // 自动关闭
-			CloseTime         int      `json:"close_time"`           // 关闭时间
-			CategorySet       int      `json:"category_set"`         // 分类设置
-			IsDelete          int      `json:"is_delete"`            // 是否删除
-			AppID             uint64   `json:"app_id"`               // 应用ID
-			CreateTime        string   `json:"create_time"`          // 创建时间
-			UpdateTime        string   `json:"update_time"`          // 更新时间
-		} `json:"shop"` // 商家信息
-		Currency struct {
-			Unit         string `json:"unit"`          // 单位
-			IsOpen       string `json:"is_open"`       // 是否启用
-			UnitPosition string `json:"unit_position"` // 单位位置
-			Vices        struct {
-				ViceUnit         string `json:"vice_unit"`          // 辅币单位
-				ViceUnitPosition string `json:"vice_unit_position"` // 辅币单位位置
-				UnitRate         string `json:"unit_rate"`          // 单位换算率
-			} `json:"vices"`
-		} `json:"currency"` // 货币信息
-		H5 struct {
-			IsCallService      string `json:"is_call_service"`       // 是否呼叫服务
-			IsCustomerOrder    string `json:"is_customer_order"`     // 是否顾客订单
-			IsVoiceRemind      string `json:"is_voice_remind"`       // 是否语音提醒
-			IsShowSoldOut      string `json:"is_show_sold_out"`      // 是否显示售罄
-			IsBuffetOrderLimit string `json:"is_buffet_order_limit"` // 是否自助餐订单限制
-			BuffetOrderLimit   struct {
-				IsLimitTime string `json:"is_limit_time"` // 是否限制时间
-				LimitTime   string `json:"limit_time"`    // 限制时间
-				IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
-				LimitNum    string `json:"limit_num"`     // 限制数量
-			} `json:"buffet_order_limit"` // 自助餐订单限制
-			IsOrderLimit string `json:"is_order_limit"` // 是否订单限制
-			OrderLimit   struct {
-				IsLimitTime string `json:"is_limit_time"` // 是否限制时间
-				LimitTime   string `json:"limit_time"`    // 限制时间
-				IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
-				LimitNum    string `json:"limit_num"`     // 限制数量
-			} `json:"order_limit"` // 订单限制
-			Language          []string `json:"language"`              // 语言
-			DefaultLanguage   string   `json:"default_language"`      // 默认语言
-			IsShowScanSoldOut int      `json:"is_show_scan_sold_out"` // 是否显示扫码售罄
-			KitchenLanguage   string   `json:"kitchen_language"`      // 厨房语言
-			LanguageList      []struct {
-				Key   string `json:"key"`   // 语言键
-				Value string `json:"value"` // 语言值
-				I     string `json:"i"`     // 语言索引
-				Index string `json:"index"` // 语言索引
-			} `json:"language_list"` // 语言列表
-		} `json:"h5"`
-		Name   string `json:"name"`
-		Logo   string `json:"logo"` // 商家logo
-		Buffet struct {
+		Shop     H5Shop     `json:"shop"`
+		Currency H5Currency `json:"currency"` // 货币信息
+		H5       H5H5       `json:"h5"`
+		Name     string     `json:"name"`
+		Logo     string     `json:"logo"` // 商家logo
+		Buffet   struct {
 			IsOpen                   string   `json:"is_open"`                     // 是否开启自助餐
 			TabletEndTime            string   `json:"tablet_end_time"`             // 桌台结束时间
 			IsRemainContinue         string   `json:"is_remain_continue"`          // 是否继续剩余
@@ -364,7 +364,7 @@ type Vices struct {
 }
 
 // H5信息
-type H5 struct {
+type H5H5 struct {
 	IsCallService      string `json:"is_call_service"`       // 是否呼叫服务
 	IsCustomerOrder    string `json:"is_customer_order"`     // 是否顾客订单
 	IsVoiceRemind      string `json:"is_voice_remind"`       // 是否语音提醒

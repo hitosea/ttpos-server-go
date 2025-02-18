@@ -1,4 +1,4 @@
-package h5
+package helper
 
 import (
 	"github.com/gin-gonic/gin"
@@ -7,7 +7,7 @@ import (
 	"ttpos-server-go/i18n"
 )
 
-func Fail(c *gin.Context, code int, message string) {
+func H5Fail(c *gin.Context, code int, message string) {
 	msg := i18n.Translate(i18n.GetAcceptLanguage(c), message)
 	c.JSON(http.StatusOK, resp.H5Response{
 		Code: code,
@@ -16,7 +16,7 @@ func Fail(c *gin.Context, code int, message string) {
 	})
 }
 
-func Success(c *gin.Context, data interface{}) {
+func H5Success(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, resp.H5Response{
 		Code: 1,
 		Msg:  "",
@@ -24,7 +24,7 @@ func Success(c *gin.Context, data interface{}) {
 	})
 }
 
-func SuccessWithMsg(c *gin.Context, msg string) {
+func H5SuccessWithMsg(c *gin.Context, msg string) {
 	c.JSON(http.StatusOK, resp.H5Response{
 		Code: 1,
 		Msg:  i18n.Translate(i18n.GetAcceptLanguage(c), msg),

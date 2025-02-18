@@ -507,6 +507,7 @@ func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
 func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	var store setting.Store
 	st := s.getSettingByKey(ctx, constant.SettingStore)
+	ctx.Log().Info("", zap.String("st.Values", st.Values))
 	err := json.Unmarshal([]byte(st.Values), &store)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))

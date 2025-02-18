@@ -33,20 +33,24 @@ type h5Srv struct {
 }
 
 // NewH5Srv 创建H5服务实例
-func NewH5Srv(dbm *database.DBManager, localeSrv ILocaleSrv, cache setting.ISrv) IH5Srv {
-	return NewH5SrvImpl(dbm, localeSrv, cache)
+func NewH5Srv(dbm *database.DBManager, deskSrv IDeskSrv, orderSrv IOrderSrv, buffetSrv IBuffetSrv, settingSrv setting.ISrv) IH5Srv {
+	return NewH5SrvImpl(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
 }
 
 // NewH5SrvImpl 创建H5服务实例实现
-func NewH5SrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IH5Srv {
+func NewH5SrvImpl(dbm *database.DBManager, deskSrv IDeskSrv, orderSrv IOrderSrv, buffetSrv IBuffetSrv, settingSrv setting.ISrv) IH5Srv {
 	return &h5Srv{
 		dbm:        dbm,
 		settingSrv: settingSrv,
+		deskSrv:    deskSrv,
+		orderSrv:   orderSrv,
+		buffetSrv:  buffetSrv,
 	}
 }
 
 func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetBaseInfoResponse, error) {
-	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(ctx.GetDbId()))
+	dbId := ctx.GetDbId()
+	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(dbId))
 	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
 		return nil, err
@@ -67,7 +71,7 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 	if err != nil {
 		return nil, err
 	}
-	deskInfo, err := s.deskSrv.GetDeskInfo(ctx.GetDbId(), deskUuid)
+	deskInfo, err := s.deskSrv.GetDeskInfo(dbId, deskUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +114,7 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 	languages := []resp.Language{}
 	for _, language := range h5Setting.LanguageList {
 		languages = append(languages, resp.Language{
-			Key:   language.Key,
+			Key:   fmt.Sprintf("%d", language.Key),
 			Value: language.Value,
 			I:     language.Name,
 			Index: language.Name,
@@ -181,6 +185,7 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 		IsBind:         0,
 	}
 	res := &resp.GetBaseInfoResponse{}
+	h5Shop := resp.H5Shop{}
 	res.BaseInfo.Name = companyInfo.Name
 	res.BaseInfo.Logo = companyInfo.Logo
 	res.BaseInfo.IsAcceptScanOrder = companySetting.IsOpenH5Order
@@ -190,25 +195,25 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 		}
 		return 0
 	}()
-	err = copier.CopyWithOption(res.BaseInfo.Shop, shop, copier.Option{IgnoreEmpty: true})
+	err = copier.CopyWithOption(&h5Shop, &shop, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy shop info error: %w", err)
 	}
 	err = copier.CopyWithOption(res.BaseInfo.Currency, currency, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy currency info error: %w", err)
 	}
 	err = copier.CopyWithOption(res.BaseInfo.H5, h5, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy h5 info error: %w", err)
 	}
 	err = copier.CopyWithOption(res.BaseInfo.Buffet, h5BuffetResponse, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy buffet info error: %w", err)
 	}
 	err = copier.CopyWithOption(res.TableInfo, desk, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy desk info error: %w", err)
 	}
 	return res, nil
 }
