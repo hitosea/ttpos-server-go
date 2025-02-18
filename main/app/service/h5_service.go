@@ -166,7 +166,7 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 		AddClock:                 []string{},
 	}
 
-	desk := resp.DeskInfo{
+	desk := resp.H5DeskInfo{
 		TableID:        deskInfo.Uuid,
 		TableNo:        deskInfo.DeskNo,
 		Sort:           0,

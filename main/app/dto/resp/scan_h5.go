@@ -409,7 +409,7 @@ type H5BuffetResponse struct {
 	AddClock                 []string `json:"add_clock"`                   // 添加时钟
 }
 
-type DeskInfo struct {
+type H5DeskInfo struct {
 	TableID        uint64 `json:"table_id"`
 	TableNo        string `json:"table_no"`
 	Sort           int    `json:"sort"`
