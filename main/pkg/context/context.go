@@ -18,6 +18,7 @@ type Context interface {
 	GetCompany() model.Company               // 获取商家信息
 	GetCompanySetting() model.CompanySetting // 获取商家设置
 	GetStaff() model.Staff                   // 获取员工信息
+	GetStaffUuid() uint64                    // 获取员工uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
 	Log() *zap.Logger                        // 获取日志实例
 }
@@ -30,6 +31,7 @@ type ContextImpl struct {
 	company        model.Company        // 商家信息
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
+	staffUuid      uint64               // 员工uuid
 	deskUuid       uint64               // 桌台ID
 	log            *zap.Logger
 }
@@ -69,6 +71,12 @@ func WithCompanySetting(companySetting model.CompanySetting) Option {
 func WithStaff(staff model.Staff) Option {
 	return func(ctx *ContextImpl) {
 		ctx.staff = staff
+	}
+}
+
+func WithStaffUuid(staffUuid uint64) Option {
+	return func(ctx *ContextImpl) {
+		ctx.staffUuid = staffUuid
 	}
 }
 
@@ -150,6 +158,10 @@ func (c *ContextImpl) GetCompanySetting() model.CompanySetting {
 
 func (c *ContextImpl) GetStaff() model.Staff {
 	return c.staff
+}
+
+func (c *ContextImpl) GetStaffUuid() uint64 {
+	return c.staffUuid
 }
 
 func (c *ContextImpl) Log() *zap.Logger {

@@ -124,6 +124,11 @@ func GetCompanyUuid(c *gin.Context) uint64 {
 	return c.GetUint64(jwt.CompanyUuid)
 }
 
+// GetStaffUuid 获取员工Uuid
+func GetStaffUuid(c *gin.Context) uint64 {
+	return c.GetUint64(jwt.StaffUuid)
+}
+
 // GetSource 获取来源
 func GetSource(c *gin.Context) string {
 	return c.GetString(jwt.Source)
@@ -176,6 +181,7 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithSource(GetSource(c)),                 //在上下文中添加来源
 		context.WithCompany(GetCompany(c)),               // 在上下文中添加公司信息
 		context.WithStaff(GetStaff(c)),                   // 在上下文中添加员工信息
+		context.WithStaffUuid(GetStaffUuid(c)),           // 在上下文中添加员工Uuid
 		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
 		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息
 		context.WithLogger(func() *zap.Logger {

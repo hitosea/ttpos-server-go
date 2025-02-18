@@ -100,13 +100,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
 CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付订单ID',
-    `payment_type_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付类型名称',
-    `payment_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付类型ID',
+    `payment_method_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付类型名称',
+    `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付类型ID',
     `payment_fee_percent` DECIMAL(5, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费百分比',
-    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单、销售订单ID',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联的充值订单、销售订单ID',
     `currency_unit` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '货币单位',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,支付金额*支付手续费百分比',
+    `charge_due` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '金额：支付金额+支付手续费',
     `transaction_number` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '交易号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '支付状态, 0-未支付 1-已支付 2-已退款',
@@ -163,12 +164,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `member_discount_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣后的价格（单商品）=销售价*会员折扣率*会员卡折扣率',
     -- 最终单价=销售价*折扣率；总最终单价=最终单价*商品数量
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率',
-     -- 单个商品总税费=商品税费+服务费税费；总税费=单个商品总税费*商品数量
+    -- 单个商品总税费=商品税费+服务费税费；总税费=单个商品总税费*商品数量
     `service_tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费税费（单商品）,0-不收取税费；收取时，服务费税费=服务费*税率',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品税费（单商品）。商品已含税时，税费=规格原价*(1-1/(1+税率))；商品未含税时，税费=原始单价*税率',
     -- 服务费; 总服务费=单个商品服务费*商品数量
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例',
-   -- 单个商品应收金额=最终单价+服务费+总税费; 总应收金额=单个商品应收金额*商品数量
+    -- 单个商品应收金额=最终单价+服务费+总税费; 总应收金额=单个商品应收金额*商品数量
     `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)=最终单价+服务费+总税费',
     -- 打折金额；总打折金额=单个商品打折金额*商品数量
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额',
@@ -195,7 +196,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     -- 扫码订单相关
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品',
-    `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品', 
+    `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品',
     `is_h5_order_product` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为扫码订单商品, 0-否 1-是',
     `is_accept_order` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单',
     -- 时间信息
@@ -244,7 +245,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order_product` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码订单商品';
-
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -710,7 +710,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `stock_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `is_default_select` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态', 
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态',
     `is_sold_out` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否沽清, 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -793,9 +793,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-开启 1-关闭',
     `open_point` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送积分,0-否 1-是',
-    `open_point_num` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送积分数',
+    `open_point_num` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送积分数',
     `open_money` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送余额,0-否 1-是',
-    `open_money_num` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送余额数',
+    `open_money_num` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '开卡赠送余额数',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '使用须知',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -839,8 +839,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '余额变动记录ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减',
-    `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '变动金额,负数:减余额 整数:加余额',
-    `gift_money` decimal(12,2) DEFAULT 0.00 COMMENT '变动赠送金额',
+    `money` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '变动金额,负数:减余额 整数:加余额',
+    `gift_money` decimal(12, 2) DEFAULT 0.00 COMMENT '变动赠送金额',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -853,7 +853,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '积分变动记录ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减',
-    `value` INT(11) NOT NULL DEFAULT 0 COMMENT '数值,负数:减积分 正数:加积分',
+    `value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '数值,负数:减积分 正数:加积分',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -865,7 +865,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期',
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '交易金额，确认充值后设置',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '交易金额(应收金额)=充值金额+手续费',
+    `charge_due` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零',
     `recharge_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '充值金额',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送金额',
     `gift_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分',
@@ -885,6 +886,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_operation_log` (
     `operator_email` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '操作员电子邮件',
     `client` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '客户端信息',
     `message` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '消息内容',
+    `action` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作',
+    `data` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '数据',
     `recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -910,6 +913,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
 CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '库存入库单ID',
+    `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
     `type` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
@@ -927,10 +931,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单ID',
+    `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '采购单名称',
     `applicant_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '申请人ID',
     `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    `num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总数量',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总金额',
+    `status` int(11) DEFAULT 10 COMMENT '状态 0-待审核 1-已驳回 2-采购中 3-已采购 4-已入库',
     `arrival_time` INT(10) DEFAULT NULL COMMENT '到达时间(时间戳)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -943,6 +950,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_item` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单明细ID',
     `purchase_form_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单ID',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料ID',
+    `estimate_num` INT(11) NOT NULL DEFAULT 0 COMMENT '预计数量',
+    `estimate_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '预计单价',
+    `estimate_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '预计金额',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '单价',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '金额',
@@ -952,9 +962,25 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单明细表';
 
+CREATE TABLE `ttpos_purchase_form_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单日志UUID',
+    `purchase_form_uuid` int(11) DEFAULT 0 COMMENT '采购单ID',
+    `operator_uuid` int(11) DEFAULT 0 COMMENT '操作人ID',
+    `username` varchar(255) DEFAULT '' COMMENT '操作人员',
+    `status` int(11) DEFAULT 10 COMMENT '操作状态 0-待审核 1-已驳回 2-采购中 3-已采购 4-已入库',
+    `operation` varchar(255) DEFAULT '' COMMENT '操作动作',
+    `remark` varchar(2000) DEFAULT '' COMMENT '备注',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+   UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单日志表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单ID',
+    `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-success已出库 1-canceled已撤销',
@@ -983,6 +1009,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '报损单ID',
+    `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '报损类型,0-loss损耗 1-lost丢失',
     `numbers` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
@@ -1550,5 +1577,4 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_login_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工登录日志表';
 
-SET
-    FOREIGN_KEY_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;

@@ -5,13 +5,17 @@ namespace app\common\model\erp;
 use help\StringHelp;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
+use think\model\concern\SoftDelete;
 
 /**
  * 采购单操作日志模型
  */
 class ErpPurchaseOperationLog extends BaseModel
 {
-    protected $name = 'erp_purchase_operation_log';
+    use SoftDelete;
+    protected $name = 'purchase_form_log';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
@@ -30,20 +34,11 @@ class ErpPurchaseOperationLog extends BaseModel
         50 => '入库',
     ];
 
-    //
-    public static function onBeforeInsert($model)
-    {
-        if (!isset($model['id'])) {
-            $model['id'] = StringHelp::uuid();
-        }
-        return $model;
-    }
-
     /**
      * 操作人
      */
     public function operator()
     {
-        return $this->belongsTo(User::class, 'operator_id', 'shop_user_id')->field(['shop_user_id', 'user_name', 'real_name']);
+        return $this->belongsTo(User::class, 'operator_uuid', 'uuid')->field(['uuid', 'username', 'real_name']);
     }
 }

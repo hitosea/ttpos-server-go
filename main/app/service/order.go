@@ -390,8 +390,8 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			for k, order := range bill.SaleOrders {
 				payTypeNames := []string{}
 				for _, payment := range order.PaymentOrders {
-					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
-					payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+					payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 				}
 				orderExtra := resp.BillListsExtra{
 					IsCellRefund:        false,
@@ -442,7 +442,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			}
 			//
 			for _, payment := range order.PaymentOrders {
-				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentTypeName)
+				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
 			}
 			// 不等于免单 && 未退款 && 完成
 			if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
@@ -534,14 +534,14 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 			for _, payment := range order.PaymentOrders {
 				payTypes = append(payTypes, resp.OrderInfoPayTypes{
 					Uuid:            payment.Uuid,
-					PaymentTypeName: payment.PaymentTypeName,
+					PaymentTypeName: payment.PaymentMethodName,
 					CurrencyUnit:    payment.CurrencyUnit,
 					PaymentAmount:   payment.PaymentAmount,
 					Status:          uint(payment.Status),
 					Source:          uint(payment.PaymentMethod.Source),
 					SourceText:      payment.PaymentMethod.GetSourceText(language),
 				})
-				payTypeNames = append(payTypeNames, payment.PaymentTypeName)
+				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 			}
 		}
 		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {

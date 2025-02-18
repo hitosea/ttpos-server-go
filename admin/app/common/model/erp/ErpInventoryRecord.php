@@ -233,10 +233,10 @@ class ErpInventoryRecord extends BaseModel
     public function addNew($inventory_type, $params, $isSave = true)
     {
         if ($inventory_type == self::INVENTORY_TYPE_IN) {
-            $data['number'] = self::generateInCode();
+            $data['form_no'] = self::generateInCode();
             $data['in_time'] = time();
         } else {
-            $data['number'] = self::generateOutCode();
+            $data['form_no'] = self::generateOutCode();
             $data['out_time'] = time();
         }
         //

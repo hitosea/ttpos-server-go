@@ -7,8 +7,6 @@ const (
 	RechargeOrderStatusExpired  = 3 // 充值订单已过期
 )
 
-// status '支付状态, 0-未支付 1-已支付 2-已退款',
-
 const (
 	PaymentOrderStatusUnPay  = 0 // 支付订单未支付
 	PaymentOrderStatusPaid   = 1 // 支付订单已支付
@@ -26,4 +24,39 @@ const RechargeOrderActionRefund = "REFUND"                // 退款
 const (
 	PaymentMethodCodeBalance = 10 // 余额
 	PaymentMethodCodeCash    = 40 // 现金
+
+	PaymentMethodCodeLianLianPayWechat = 90111
+	PaymentMethodCodeAliPay            = 90222
+	PaymentMethodCodeLianLianQRPrompt  = 90333
+)
+
+const (
+	PaymentMethodSourceSystem      = 0
+	PaymentMethodSourceDefault     = 1
+	PaymentMethodSourceLianLianPay = 2
+)
+
+// 场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减
+const (
+	MemberPointLogSceneRecharge        = 10 // 用户充值
+	MemberPointLogSceneConsume         = 20 // 消费赠送/订单赠送
+	MemberPointLogSceneAdmin           = 30 // 管理员操作
+	MemberPointLogSceneRefund          = 40 // 退款扣除
+	MemberPointLogSceneReverse         = 60 // 订单反结账
+	MemberPointLogSceneRechargeGive    = 70 // 充值赠送
+	MemberPointLogSceneRechargeReverse = 80 // 充值反结账
+	MemberPointLogSceneDeduct          = 90 // 扣减
+)
+
+// 场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减
+const (
+	MemberBalanceLogRecharge        = 10 // 用户充值
+	MemberBalanceLogConsume         = 20 // 用户消费
+	MemberBalanceLogAdmin           = 30 // 管理员操作
+	MemberBalanceLogRefund          = 40 // 订单退款
+	MemberBalanceLogCash            = 50 // 余额提现
+	MemberBalanceLogReverse         = 60 // 订单反结账
+	MemberBalanceLogRechargeReverse = 70 // 充值反结账
+	MemberBalanceLogRechargeRefund  = 80 // 充值退款
+	MemberBalanceLogDeduct          = 90 // 扣减
 )

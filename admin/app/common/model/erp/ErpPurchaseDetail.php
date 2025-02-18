@@ -3,6 +3,7 @@
 namespace app\common\model\erp;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\ProductSku;
 
@@ -11,13 +12,44 @@ use app\common\model\product\ProductSku;
  */
 class ErpPurchaseDetail extends BaseModel
 {
-    protected $name = 'erp_purchase_detail';
+    use SoftDelete;
+    protected $name = 'purchase_form_item';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
      * @var string[]
      */
-    protected $append = [];
+    protected $append = ['estimate_purchase_num', 'estimate_purchase_price', 'estimate_total_amount', 'actual_purchase_num', 'actual_purchase_price', 'actual_total_amount'];
+
+    /**
+     * 兼容字段
+     */
+    public function getEstimatePurchaseNumAttr($value, $data)
+    {
+        return floatval($this->estimate_num ?: 0);
+    }
+    public function getEstimatePurchasePriceAttr($value, $data)
+    {
+        return floatval($this->estimate_price ?: 0);
+    }
+    public function getEstimateTotalAmountAttr($value, $data)
+    {
+        return floatval($this->estimate_amount ?: 0);
+    }
+    public function getActualPurchaseNumAttr($value, $data)
+    {
+        return floatval($this->num ?: 0);
+    }
+    public function getActualPurchasePriceAttr($value, $data)
+    {
+        return floatval($this->price ?: 0);
+    }
+    public function getActualTotalAmountAttr($value, $data)
+    {
+        return floatval($this->amount ?: 0);
+    }
 
     /**
      * 获取商品名称
@@ -33,62 +65,6 @@ class ErpPurchaseDetail extends BaseModel
     public function getProductSkuNameAttr($value)
     {
         return extractLanguage($value ?: '');
-    }
-
-    /**
-     * 去零
-     */
-    public function getActualPurchasePriceAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getActualPurchaseNumAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getActualTotalAmountAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getEstimatePurchaseNumAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getEstimatePurchasePriceAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getEstimateTotalAmountAttr($value)
-    {
-        return floatval($value ?: 0);
-    }
-
-    /**
-     * 去零
-     */
-    public function getProductStockAttr($value)
-    {
-        return floatval($value ?: 0);
     }
 
     /**
@@ -136,6 +112,6 @@ class ErpPurchaseDetail extends BaseModel
      */
     public static function detail($id)
     {
-        return self::find($id);
+        return self::where('uuid', $id)->find();
     }
 }

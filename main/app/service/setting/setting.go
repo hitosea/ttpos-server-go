@@ -619,13 +619,13 @@ func (s *Srv) GetPaymentSetting(ctx context.Context, companySetting model.Compan
 	if companySetting.IsOpenMember == 0 {
 		payment.IsBalance = "0"
 	}
-	tmp := s.getDefaultPayment()
-	err = copier.CopyWithOption(&tmp, payment, copier.Option{IgnoreEmpty: true})
+	defaultPayment := s.getDefaultPayment()
+	err = copier.CopyWithOption(&defaultPayment, payment, copier.Option{IgnoreEmpty: true})
 	if err != nil {
 		ctx.Log().Error("合并门店-支付方式失败", zap.Error(err))
 		return payment, errors.New("合并门店-支付方式失败")
 	}
-	return payment, nil
+	return defaultPayment, nil
 }
 
 // GetCurrencySetting 货币单位设置
