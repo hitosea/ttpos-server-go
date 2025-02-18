@@ -4,7 +4,7 @@ namespace app\shop\controller\inventory;
 
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\shop\model\erp\ErpInventoryRecord as ErpInventoryRecordModel;
+use app\common\model\erp\ErpWarehouseOutForm;
 
 /**
  * 出库记录
@@ -24,7 +24,7 @@ class ErpInventoryRecordOut extends Controller
      */
     public function list()
     {
-        $model = new ErpInventoryRecordModel;
+        $model = new ErpWarehouseOutForm;
         $list = $model->getList($this->postData(), $model::INVENTORY_TYPE_OUT);
         return $this->renderSuccess('', compact('list'));
     }
@@ -38,7 +38,7 @@ class ErpInventoryRecordOut extends Controller
      */
     public function cancel($erp_inventory_id)
     {
-        $detail = (new ErpInventoryRecordModel)->detail($erp_inventory_id ?? 0);
+        $detail = (new ErpWarehouseOutForm)->detail($erp_inventory_id ?? 0);
         if (!$detail) {
             return $this->renderError('数据不存在');
         }
@@ -57,7 +57,7 @@ class ErpInventoryRecordOut extends Controller
      */
     public function delete($erp_inventory_id)
     {
-        $detail = (new ErpInventoryRecordModel)->detail($erp_inventory_id ?? 0);
+        $detail = (new ErpWarehouseOutForm)->detail($erp_inventory_id ?? 0);
         if (!$detail) {
             return $this->renderError('数据不存在');
         }

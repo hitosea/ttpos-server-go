@@ -5,6 +5,7 @@ namespace app\common\model\erp;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
+use app\common\model\product\Material;
 use app\common\model\product\ProductSku;
 
 /**
@@ -16,6 +17,12 @@ class ErpPurchaseDetail extends BaseModel
     protected $name = 'purchase_form_item';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+
+    /**
+     * material_type 物料类型 0-商品 1-原料
+     */
+    const MATERIAL_TYPE_PRODUCT = 0;
+    const MATERIAL_TYPE_MATERIAL = 1;
 
     /**
      * 追加字段
@@ -80,7 +87,15 @@ class ErpPurchaseDetail extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id', 'product_id')->field('product_id, product_name, type, category_id, erp_supplier_id')->with(['sku', 'image', 'image.file', 'erpSupplier', 'erpSupplier.purchaser']);
+        return $this->belongsTo(Product::class, 'material_uuid', 'uuid')->field('uuid, name, category_uuid, supplier_uuid')->with(['sku', 'image', 'erpSupplier', 'erpSupplier.purchaser']);
+    }
+
+    /**
+     * 原料信息
+     */
+    public function material()
+    {
+        return $this->belongsTo(Material::class, 'material_uuid', 'uuid')->field('uuid, name, category_uuid, supplier_uuid')->with(['sku', 'erpSupplier', 'erpSupplier.purchaser']);
     }
 
     /**

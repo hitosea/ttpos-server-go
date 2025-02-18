@@ -12,10 +12,10 @@ use app\common\model\product\ProductSku;
 /**
  * 库存记录模型
  */
-class ErpInventoryRecord extends BaseModel
+class ErpWarehouseOutForm extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'warehouse_form';
+    protected $name = 'warehouse_out_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -151,7 +151,7 @@ class ErpInventoryRecord extends BaseModel
             'operator' => function ($q) {
                 $q->field('uuid as shop_user_id, username as user_name, real_name');
             }
-        ])->where('inventory_type', $type)->order('create_time desc')->paginate($params);
+        ])->order('create_time desc')->paginate($params);
         //
         foreach ($list as $item) {
             if ($type == self::INVENTORY_TYPE_IN) {

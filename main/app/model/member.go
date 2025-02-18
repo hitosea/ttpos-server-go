@@ -25,15 +25,16 @@ type Member struct {
 // MemberLevel 会员等级表 `ttpos_member_level`
 type MemberLevel struct {
 	BaseModel
-	Name         string `gorm:"column:name;type:varchar(255);comment:等级名称;NOT NULL" json:"name"`
-	OpenMoney    int    `gorm:"column:open_money;type:tinyint(3);default:0;comment:是否开放累计消费额升级，0-否 1-是" json:"open_money"`
-	UpgradeMoney int    `gorm:"column:upgrade_money;type:int(11);default:0;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`
-	OpenPoint    int    `gorm:"column:open_point;type:tinyint(3);default:0;comment:是否开放累计积分升级，0-否 1-是" json:"open_point"`
-	UpgradePoint int    `gorm:"column:upgrade_point;type:int(11);default:0;comment:升级条件，累计积分" json:"upgrade_point"`
-	Discount     int    `gorm:"column:discount;type:tinyint(3);default:0;comment:等级权益,百分比;NOT NULL" json:"discount"`
-	Priority     int    `gorm:"column:priority;type:int(11);default:0;comment:等级权重，越大等级越高;NOT NULL" json:"priority"`
-	IsDefault    int    `gorm:"column:is_default;type:tinyint(1);default:0;comment:是否默认, 1-是 0-否;NOT NULL" json:"is_default"`
-	Remark       string `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
+	Uuid         uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"uuid"`
+	Name         string  `gorm:"column:name;type:varchar(255);comment:等级名称;NOT NULL" json:"name"`
+	OpenMoney    int     `gorm:"column:open_money;type:tinyint(3);default:0;comment:是否开放累计消费额升级，0-否 1-是" json:"open_money"`
+	UpgradeMoney float64 `gorm:"column:upgrade_money;type:decimal(12,2);default:0.00;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`
+	OpenPoint    int     `gorm:"column:open_point;type:tinyint(3);default:0;comment:是否开放累计积分升级，0-否 1-是" json:"open_point"`
+	UpgradePoint float64 `gorm:"column:upgrade_point;type:decimal(12,2);default:0.00;comment:升级条件，累计积分" json:"upgrade_point"`
+	Discount     int     `gorm:"column:discount;type:tinyint(3);default:0;comment:等级权益,百分比;NOT NULL" json:"discount"`
+	Priority     int     `gorm:"column:priority;type:int(11);default:0;comment:等级权重，越大等级越高;NOT NULL" json:"priority"`
+	IsDefault    int     `gorm:"column:is_default;type:tinyint(1);default:0;comment:是否默认, 1-是 0-否;NOT NULL" json:"is_default"`
+	Remark       string  `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
 }
 
 // MemberCard 会员卡表 `ttpos_member_card`
@@ -101,7 +102,7 @@ type MemberPointLog struct {
 type MemberRechargeOrder struct {
 	BaseModel
 	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期;NOT NULL" json:"status"`
-	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额(应收金额)=充值金额+手续费;NOT NULL" json:"amount"`
+	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
 	ChargeDue      float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
 	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0;comment:充值金额;NOT NULL" json:"recharge_amount"`
 	GiftAmount     float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠送金额;NOT NULL" json:"gift_amount"`
@@ -109,7 +110,7 @@ type MemberRechargeOrder struct {
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`
 	StaffUuid      uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;comment:员工ID;NOT NULL" json:"staff_uuid"`
 	PaymentTime    uint    `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
- 
+
 	PaymentOrders []PaymentOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 一个会员充值订单关联多个支付订单
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`  // 关联会员
 	Staff         *Staff         `gorm:"foreignKey:StaffUuid;references:Uuid"`   // 关联操作员工
@@ -125,4 +126,13 @@ type MemberRechargeOrderOperationLog struct {
 	Action            string `gorm:"column:action;type:varchar(255);comment:操作类型;NOT NULL" json:"action"`
 	Data              string `gorm:"column:data;type:varchar(255);comment:数据;NOT NULL" json:"data"`
 	RechargeOrderUuid uint64 `gorm:"column:recharge_order_uuid;type:bigint(20) unsigned;default:0;comment:充值订单ID;NOT NULL" json:"recharge_order_uuid"`
+}
+
+type MemberLevelLog struct {
+	BaseModel
+	MemberUuid uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+	OldLevelId uint64 `gorm:"column:old_level_id;type:bigint(20) unsigned;default:0;comment:变更前的等级id;NOT NULL" json:"old_level_id"`
+	NewLevelId uint64 `gorm:"column:new_level_id;type:bigint(20) unsigned;default:0;comment:变更后的等级id;NOT NULL" json:"new_level_id"`
+	ChangeType uint   `gorm:"column:change_type;type:tinyint(3) unsigned;default:10;comment:变更类型(10后台管理员设置 20自动升级);NOT NULL" json:"change_type"`
+	Remark     string `gorm:"column:remark;type:varchar(500);comment:管理员备注" json:"remark"`
 }

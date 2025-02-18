@@ -7,7 +7,7 @@ import (
 )
 
 type IMemberRechargeOperationRepo interface {
-	Add(log model.MemberRechargeOrderOperationLog) error // 添加会员充值操作日志
+	AddLog(log model.MemberRechargeOrderOperationLog) error // 添加会员充值操作日志
 }
 
 func NewMemberRechargeOperationRepo(db *gorm.DB) IMemberRechargeOperationRepo {
@@ -22,7 +22,7 @@ func NewMemberRechargeOperationRepoImpl(db *gorm.DB) *MemberRechargeOperationRep
 	return &MemberRechargeOperationRepo{db: db}
 }
 
-// Add 添加会员充值操作日志
-func (r *MemberRechargeOperationRepo) Add(log model.MemberRechargeOrderOperationLog) error {
+// AddLog 添加会员充值操作日志
+func (r *MemberRechargeOperationRepo) AddLog(log model.MemberRechargeOrderOperationLog) error {
 	return r.db.Create(&log).Error
 }

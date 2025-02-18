@@ -33,7 +33,7 @@ class User extends UserModel
      */
     public function getBaseList($limit = 20)
     {
-        return $this->field('uuid, uuid as shop_user_id, user_name, real_name')
+        return $this->field('uuid, uuid as shop_user_id, username as user_name, real_name')
             ->order(['create_time' => 'desc'])
             ->paginate($limit);
     }
