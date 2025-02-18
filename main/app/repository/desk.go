@@ -13,6 +13,7 @@ type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetDesk(opts ...DBOption) (*model.Desk, error) // 获取桌台
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	CreateDesk(desk model.Desk) (uint64, error)
@@ -66,6 +67,22 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 	err := query.Order("sort asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
 
 	return desks, total, err
+}
+
+func (r *DeskRepoImpl) GetDesk(opts ...DBOption) (*model.Desk, error) {
+	var desk model.Desk
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.First(&desk)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &desk, nil
 }
 
 // GetDeskInfo 获取桌台信息

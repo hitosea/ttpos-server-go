@@ -2,6 +2,7 @@ package cashier
 
 import (
 	"errors"
+	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -184,6 +185,38 @@ func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderCartInfo 查询点餐购物车信息
+// @Summary 查询点餐购物车信息
+// @Description 查询点餐购物车信息
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartInfoReq true "查询参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/info [post]
+func (h *CashierInstantHandler) OrderCartInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	fmt.Println(fmt.Sprintf("debug: 222222222"))
+	// 绑定请求参数
+	params := req.OrderCartInfoReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		fmt.Println(fmt.Sprintf("debug: params:%+v", params))
+		return
+	}
+	fmt.Println(fmt.Sprintf("debug: params:%+v", params))
+
+	//
+	res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -204,11 +237,12 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)
-		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)
-		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)
-		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)
-		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)
-		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)
+		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)             // 创建点餐订单
+		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                    // 取消点餐订单
+		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)   // 删除点餐订单商品
+		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice) // 点餐订单商品改价
+		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)      // 点餐订单修改人数
+		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)     // 点餐订单商品备注
+		privateApi.POST("/instant/order/cart/info", wrapper.OrderCartInfo)               // 查询点餐购物车信息
 	}
 }

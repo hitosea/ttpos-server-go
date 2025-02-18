@@ -521,7 +521,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 		return nil, nil, err
 	}
 	// 桌台人数
-	mealNum := desk.SaleBill.MealNum
+	//mealNum := desk.SaleBill.MealNum
 
 	regionUuid := desk.RegionUuid
 	// 用regionUuid在product_must_plan_region表中查询得到该桌台关联的必选方案
@@ -554,7 +554,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItem {
 					num := uint(0)
 					if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachPerson {
-						num = mealNum
+						//num = mealNum
 					} else if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachOrder {
 						num = 1
 					}
@@ -568,7 +568,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 				// 任选
 				num := uint(0)
 				if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachPerson {
-					num = mealNum
+					//num = mealNum
 				} else if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachOrder {
 					num = 1
 				}

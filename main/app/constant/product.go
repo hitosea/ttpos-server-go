@@ -16,3 +16,8 @@ const (
 	ProductMustPlanMustTypeEachPerson = 1 // 每人必选
 	ProductMustPlanMustTypeEachOrder  = 0 // 每单必选
 )
+
+const (
+	ProductStatusNormal  = 0 // 未送厨
+	ProductStatusCooking = 1 // 送厨
+)

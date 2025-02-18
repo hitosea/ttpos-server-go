@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -104,61 +103,61 @@ func (s *deskSrv) GetDeskList(dbId uint64, req req.DeskListReq) (resp.DeskListWi
 	for i, desk := range desks {
 		// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
 		var deskStatus uint
-		var elapsedTime uint
-		if desk.SaleBill.ID == 0 {
-			if desk.Status == 1 {
-				deskStatus = constant.DeskStatusWait
-				extra.OccupyWaitNum++
-			} else {
-				deskStatus = constant.DeskStatusAvailable
-				extra.AvailableNum++
-			}
-			elapsedTime = constant.DeskStatusAvailable
-		} else {
-			extra.OccupyWaitNum++
-			//
-			if desk.SaleBill.IsLock == 1 {
-				deskStatus = constant.DeskStatusLock
-				extra.LockNum++
-			} else if desk.SaleBill.IsBuffet == 1 {
-				deskStatus = constant.DeskStatusBuffet
-			} else {
-				deskStatus = constant.DeskStatusNotBuffet
-			}
-			//
-			if desk.SaleBill.IsBuffet == 1 {
-				extra.OccupyBuffetNum++
-			} else {
-				extra.OccupyNotBuffetNum++
-			}
-			// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-			passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
-			if desk.SaleBill.IsBuffet == 1 {
-				if uint(passedTime) >= desk.SaleBill.BuffetDuration {
-					elapsedTime = 0
-				} else {
-					elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
-				}
-			} else {
-				elapsedTime = uint(passedTime)
-			}
-		}
+		//var elapsedTime uint
+		//if desk.SaleBill.ID == 0 {
+		//	if desk.Status == 1 {
+		//		deskStatus = constant.DeskStatusWait
+		//		extra.OccupyWaitNum++
+		//	} else {
+		//		deskStatus = constant.DeskStatusAvailable
+		//		extra.AvailableNum++
+		//	}
+		//	elapsedTime = constant.DeskStatusAvailable
+		//} else {
+		//	extra.OccupyWaitNum++
+		//	//
+		//	if desk.SaleBill.IsLock == 1 {
+		//		deskStatus = constant.DeskStatusLock
+		//		extra.LockNum++
+		//	} else if desk.SaleBill.IsBuffet == 1 {
+		//		deskStatus = constant.DeskStatusBuffet
+		//	} else {
+		//		deskStatus = constant.DeskStatusNotBuffet
+		//	}
+		//	//
+		//	if desk.SaleBill.IsBuffet == 1 {
+		//		extra.OccupyBuffetNum++
+		//	} else {
+		//		extra.OccupyNotBuffetNum++
+		//	}
+		//	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+		//	passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
+		//	if desk.SaleBill.IsBuffet == 1 {
+		//		if uint(passedTime) >= desk.SaleBill.BuffetDuration {
+		//			elapsedTime = 0
+		//		} else {
+		//			elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
+		//		}
+		//	} else {
+		//		elapsedTime = uint(passedTime)
+		//	}
+		//}
 		//
 		extra.TotalNum++
 		//
 		// todo  desk.SaleBill.PaymentAmount 需要等后面业务缓存中取
 		deskResp[i] = resp.Desk{
-			Uuid:          desk.Uuid,
-			DeskNo:        desk.DeskNo,
-			TypeUuid:      desk.TypeUuid,
-			RegionUuid:    desk.RegionUuid,
-			Status:        deskStatus,
-			CustomerCount: desk.SaleBill.MealNum,
-			IsLock:        desk.SaleBill.IsLock == 1,
-			IsBuffet:      desk.SaleBill.IsBuffet == 1,
-			Remark:        desk.SaleBill.Remark,
-			Time:          elapsedTime,
-			Price:         desk.SaleBill.PaymentAmount,
+			Uuid:       desk.Uuid,
+			DeskNo:     desk.DeskNo,
+			TypeUuid:   desk.TypeUuid,
+			RegionUuid: desk.RegionUuid,
+			Status:     deskStatus,
+			//CustomerCount: desk.SaleBill.MealNum,
+			//IsLock:        desk.SaleBill.IsLock == 1,
+			//IsBuffet:      desk.SaleBill.IsBuffet == 1,
+			//Remark:        desk.SaleBill.Remark,
+			//Time:          elapsedTime,
+			//Price:         desk.SaleBill.PaymentAmount,
 		}
 	}
 
@@ -182,48 +181,48 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 		return resp.DeskInfoResp{}, err
 	}
 	// 转换为响应对象
-	var deskStatus uint
-	var elapsedTime uint
-	if desk.SaleBill.ID == 0 {
-		if desk.Status == 1 {
-			deskStatus = constant.DeskStatusWait
-		} else {
-			deskStatus = constant.DeskStatusAvailable
-		}
-		elapsedTime = constant.DeskStatusAvailable
-	} else {
-		//
-		if desk.SaleBill.IsLock == 1 {
-			deskStatus = constant.DeskStatusLock
-		} else if desk.SaleBill.IsBuffet == 1 {
-			deskStatus = constant.DeskStatusBuffet
-		} else {
-			deskStatus = constant.DeskStatusNotBuffet
-		}
-		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-		passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
-		if desk.SaleBill.IsBuffet == 1 {
-			if uint(passedTime) >= desk.SaleBill.BuffetDuration {
-				elapsedTime = 0
-			} else {
-				elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
-			}
-		} else {
-			elapsedTime = uint(passedTime)
-		}
-	}
+	//var deskStatus uint
+	//var elapsedTime uint
+	//if desk.SaleBill.ID == 0 {
+	//	if desk.Status == 1 {
+	//		deskStatus = constant.DeskStatusWait
+	//	} else {
+	//		deskStatus = constant.DeskStatusAvailable
+	//	}
+	//	elapsedTime = constant.DeskStatusAvailable
+	//} else {
+	//	//
+	//	if desk.SaleBill.IsLock == 1 {
+	//		deskStatus = constant.DeskStatusLock
+	//	} else if desk.SaleBill.IsBuffet == 1 {
+	//		deskStatus = constant.DeskStatusBuffet
+	//	} else {
+	//		deskStatus = constant.DeskStatusNotBuffet
+	//	}
+	//	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+	//	passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
+	//	if desk.SaleBill.IsBuffet == 1 {
+	//		if uint(passedTime) >= desk.SaleBill.BuffetDuration {
+	//			elapsedTime = 0
+	//		} else {
+	//			elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
+	//		}
+	//	} else {
+	//		elapsedTime = uint(passedTime)
+	//	}
+	//}
 	//
 	return resp.DeskInfoResp{
-		Uuid:         desk.Uuid,
-		SaleBillUuid: desk.SaleBill.Uuid,
-		DeskNo:       desk.DeskNo,
-		TypeUuid:     desk.TypeUuid,
-		RegionUuid:   desk.RegionUuid,
-		Status:       deskStatus,
-		IsLock:       desk.SaleBill.IsLock == 1,
-		IsBuffet:     desk.SaleBill.IsBuffet == 1,
-		Remark:       desk.SaleBill.Remark,
-		Time:         elapsedTime,
+		Uuid: desk.Uuid,
+		//SaleBillUuid: desk.SaleBill.Uuid,
+		//DeskNo:       desk.DeskNo,
+		//TypeUuid:     desk.TypeUuid,
+		//RegionUuid:   desk.RegionUuid,
+		//Status:       deskStatus,
+		//IsLock:       desk.SaleBill.IsLock == 1,
+		//IsBuffet:     desk.SaleBill.IsBuffet == 1,
+		//Remark:       desk.SaleBill.Remark,
+		//Time:         elapsedTime,
 	}, nil
 }
 
@@ -334,34 +333,34 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	if desk.Status == 0 {
 		return model.Desk{}, errors.New("桌台已关闭")
 	}
-	if desk.SaleBill.ID == 0 {
-		return model.Desk{}, nil
-	}
-	if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
-		return model.Desk{}, err
-	}
+	//if desk.SaleBill.ID == 0 {
+	//	return model.Desk{}, nil
+	//}
+	//if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
+	//	return model.Desk{}, err
+	//}
 	return desk, nil
 }
 
 // 关闭桌台
 func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
-	dbId := ctx.GetDbId()
-	db := s.dbm.GetDB(dbId)
-	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
-	if err != nil {
-		return err
-	}
-	if desk.SaleBill.ID == 0 {
-		return nil
-	}
-	// 取消订单
-	if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
-		SaleBillUuid: desk.SaleBill.Uuid,
-		CancelReason: reqs.Reason,
-		Password:     reqs.Password,
-	}); err != nil {
-		return err
-	}
+	//dbId := ctx.GetDbId()
+	//db := s.dbm.GetDB(dbId)
+	//desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
+	//if err != nil {
+	//	return err
+	//}
+	//if desk.SaleBill.ID == 0 {
+	//	return nil
+	//}
+	//// 取消订单
+	//if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
+	//	SaleBillUuid: desk.SaleBill.Uuid,
+	//	CancelReason: reqs.Reason,
+	//	Password:     reqs.Password,
+	//}); err != nil {
+	//	return err
+	//}
 	//
 	return nil
 }

@@ -43,6 +43,7 @@ type IOrderSrv interface {
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                  // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)          // 创建销售账单设置
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                               // 获取购物车信息
 }
 
 // orderSrv 订单服务结构
@@ -296,10 +297,10 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 					}
 
 					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(model.SaleOrderBuffetCustomerType{
-						SaleOrderUuid:          saleOrder.Uuid,
-						BuffetPackageUuid:      buffetUuid,
-						BuffetCustomerTypeUuid: buffetCustomerType.Uuid,
-						Num:                    *buffetCustomerType.MealNum,
+						SaleOrderUuid:               saleOrder.Uuid,
+						BuffetPackageUuid:           buffetUuid,
+						BuffetCustomerTypePriceUuid: buffetCustomerType.Uuid,
+						Num:                         *buffetCustomerType.MealNum,
 					})
 					if err != nil {
 						return err
@@ -1072,4 +1073,130 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	return billInfo, nil
+}
+
+// GetOrderCartInfo 获取点餐购物车信息
+func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error) {
+	dbId := ctx.GetDbId()
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+
+	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
+
+	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	saleOrderList := make([]resp.SaleOrder, 0)
+	for _, saleOrder := range shopCart.SaleBill.SaleOrders {
+		productList := make([]resp.Product, 0)
+		// 给商品列表条件顾客类型
+		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
+		for _, buffet := range saleOrder.Buffets {
+			product := resp.Product{
+				Uuid:                buffet.Uuid,
+				LocaleName:          buffet.BuffetPackageMultiLanguageName.GetNames(),
+				LocaleAttributeName: buffet.BuffetCustomerTypeMultiLanguageName.GetNames(),
+				Num:                 buffet.Num,
+				Price:               buffet.CustomerPrice,
+				DiscountPrice:       buffet.Price,
+				Status:              1,
+				Remark:              "",
+				IsMust:              false,
+				IsGift:              false,
+				IsCancel:            false,
+				AboutBuffet: resp.AboutBuffet{
+					IsCustomer: true,
+					IsDelay:    false,
+				},
+			}
+			productList = append(productList, product)
+		}
+		// 添加加钟商品 todo
+
+		// 添加正常商品
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			language := ctx.GetLanguage()
+			fmt.Println(fmt.Sprintf("debug: 销售商品语言：%s", language))
+			fmt.Println(fmt.Sprintf("debug: 销售商品：%+v", saleOrderProduct))
+			product := resp.Product{
+				Uuid:                saleOrderProduct.Uuid,
+				LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+				LocaleAttributeName: saleOrderProduct.AttributeName(language),
+				Num:                 saleOrderProduct.Num,
+				Price:               saleOrderProduct.SalePrice,
+				DiscountPrice:       saleOrderProduct.Price,
+				Status:              saleOrderProduct.StatusValue(),
+				Remark:              saleOrderProduct.Remark,
+				IsMust:              saleOrderProduct.IsMustProduct(),
+				IsGift:              saleOrderProduct.IsGiftProduct(),
+				IsCancel:            saleOrderProduct.IsCancelProduct(),
+			}
+			productList = append(productList, product)
+		}
+
+		order := resp.SaleOrder{
+			Uuid:        saleOrder.Uuid,
+			OrderNo:     saleOrder.OrderNo,
+			ProductList: productList,
+			AmountInfo: resp.AmountInfo{
+				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
+				ProductAmount:         saleOrder.ProductAmount,
+				ServiceAmount:         saleOrder.ServiceFee,
+				TaxAmount:             saleOrder.TaxFee,
+				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroFee)).Round(2).InexactFloat64(),
+				MemberDiscountAmount:  saleOrder.MemberDiscountFee,
+				Amount:                saleOrder.Amount,
+			},
+		}
+		saleOrderList = append(saleOrderList, order)
+	}
+
+	shopCartInfo := &resp.ShopCart{
+		IsDeskOrder:   shopCart.IsDeskShopCart(),
+		Desk:          resp.DeskInfo{},
+		Buffet:        resp.BuffetInfo{},
+		DiningMethod:  shopCart.SaleBill.DiningMethod,
+		SaleOrderList: saleOrderList,
+	}
+	if shopCart.IsDeskShopCart() {
+		deskInfo := resp.DeskInfo{
+			Uuid:      shopCart.SaleBill.Desk.Uuid,
+			DeskNo:    shopCart.SaleBill.Desk.DeskNo,
+			MealNum:   shopCart.SaleBill.MealNum,
+			StartTime: shopCart.SaleBill.Desk.CreateTime,
+		}
+		shopCartInfo.Desk = deskInfo
+		if shopCart.SaleBill.IsBuffetSaleBill() {
+			shopCartInfo.Buffet = resp.BuffetInfo{
+				EndTime:    shopCart.SaleBill.BuffetEndTime(),
+				LocaleName: shopCart.SaleBill.GetBuffetName(),
+			}
+			// 给商品列表条件顾客类型
+			productList := make([]resp.Product, 0)
+			for _, saleOrder := range shopCart.SaleBill.SaleOrders {
+				for _, buffet := range saleOrder.Buffets {
+					product := resp.Product{
+						Uuid:                buffet.Uuid,
+						LocaleName:          buffet.BuffetPackageMultiLanguageName.GetNames(),
+						LocaleAttributeName: buffet.BuffetCustomerTypeMultiLanguageName.GetNames(),
+						Num:                 buffet.Num,
+						Price:               buffet.CustomerPrice,
+						DiscountPrice:       buffet.Price,
+						Status:              1,
+						Remark:              "",
+						IsMust:              false,
+						IsGift:              false,
+						IsCancel:            false,
+						AboutBuffet: resp.AboutBuffet{
+							IsCustomer: true,
+							IsDelay:    false,
+						},
+					}
+					productList = append(productList, product)
+				}
+			}
+		}
+	}
+	return shopCartInfo, nil
 }

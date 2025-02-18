@@ -17,3 +17,18 @@ func TestToken(t *testing.T) {
 		fmt.Println("Decoded token data:", result)
 	}
 }
+
+func TestGenerateToken(t *testing.T) {
+	token, err := auth.GenerateToken(
+		"cashier",
+		"123456789",
+		9490596162048000,
+		127800257351680,
+		"egfgregerkmljr",
+		36000, auth.Assistant{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println("token:", token)
+}

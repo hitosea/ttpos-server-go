@@ -27,6 +27,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			return
 		}
 		ParseJwt(c, authHeader, authSrv)
+		fmt.Println("2222222222222")
 		c.Next()
 	}
 }

@@ -1,6 +1,8 @@
-SET NAMES utf8mb4;
+SET
+    NAMES utf8mb4;
 
-SET FOREIGN_KEY_CHECKS = 0;
+SET
+    FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -28,10 +30,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,多次支付的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,关联销售订单的赠菜金额之和',
     `free_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额,关联销售订单的免单金额之和',
+    -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
-    `buffet_order_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐订单ID',
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
+    `buffet_package1_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐1的uuid',
+    `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
+    
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
@@ -48,18 +53,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-未结账 1-已结账',
-    `product_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，(订单商品.总最终单价)之和。商品已含税时，该金额包括了税费。当商品未含税时，该金额不包括税费',
-    `product_original_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额。 商品原始金额=(订单商品.总销售价)之和。',
+    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，订单商品的最终单价(折后价)之和。商品已含税时，该金额包括了税费。当商品未含税时，该金额不包括税费',
+    `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额(折前价)。 商品原始金额=订单商品的销售价(折前价)之和。',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费固定服务费时，服务费=固定服务费；按比例收服务费时，服务费=(订单商品.总服务费)之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费。税费=(订单商品.总税费)之和',
-    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。应收金额=(订单商品.总应收金额)之和。校验：当商品已含税时，应收金额=商品金额+服务费；当商品未含税时，应收金额=商品金额+服务费+税费',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
     -- 会员打折金额
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
     -- 自定义折扣金额
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和',
-    -- 总打折金额
-    `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总打折金额。总打折金额=(订单商品.打折金额)之和。校验：总打折金额=总会员折扣金额+总自定义折扣金额',
-    -- 结账抹零金额
+    -- 订单抹零
+    `zero_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
+    `zero_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零金额。',
+    `zero_checkout_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
     `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
     -- 实收金额。
     `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
@@ -69,6 +75,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `free_reason` TEXT COMMENT '免单原因',
+    -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     `sale_bill_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
@@ -86,8 +93,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `service_fee_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费',
     `service_fee_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
     `tax_fee_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
-    `zero` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
-    `zero_checkout` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
+    `zero_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
+    `zero_checkout_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
     `is_stat_gift` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣',
     `is_stat_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费',
     `discount_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '打折类型, 0-百分比打折% 1-百分比直接减免% off',
@@ -170,7 +177,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 服务费; 总服务费=单个商品服务费*商品数量
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例',
     -- 单个商品应收金额=最终单价+服务费+总税费; 总应收金额=单个商品应收金额*商品数量
-    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)=最终单价+服务费+总税费',
+    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)。商品已含税时，应收金额(单商品)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费',
     -- 打折金额；总打折金额=单个商品打折金额*商品数量
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额',
     -- 会员折扣金额
@@ -186,6 +193,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `deduct_stock_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注，顾客对商品的备注信息',
     `is_gift` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否赠菜, 0-否 1-是',
+    `is_cancel` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否退菜, 0-否 1-是',
     `gift_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '赠菜原因',
     `refund_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '退菜原因',
     `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品',
@@ -370,6 +378,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未开台 1-已开台',
     `is_disable` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否禁用, 0-否 1-是',
     `qrcode_token` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单',
     `device_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '平板设备uuid, 0-未绑定',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -478,10 +487,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
+    `customer_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格（折后价），只进行自定义打折，不进行会员打折',
+    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
+    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*(1-自定义折扣率)',
+    `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
+    `service_tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费税费（单人）,0-不收取税费；收取时，服务费税费=服务费*税率',
+    `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率',
+    `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单人)。自助餐顾客类型已含税时，应收金额(单人)=(自助餐顾客类型原价-自助餐顾客类型税费)+服务费+自助餐顾客类型税费；自助餐顾客类型未含税时，应收金额(单人)=自助餐顾客类型原价+服务费+自助餐顾客类型税费',
+    -- 关联ID
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `buffet_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
-    `buffet_customer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型ID',
-    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
+    `buffet_customer_type_price_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型价格ID',
+    `buffet_package_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐套餐多语言ID',
+    `buffet_customer_type_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐客户类型多语言ID',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -974,7 +996,7 @@ CREATE TABLE `ttpos_purchase_form_log` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-   UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单日志表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
@@ -1577,4 +1599,5 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_login_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工登录日志表';
 
-SET FOREIGN_KEY_CHECKS = 1;
+SET
+    FOREIGN_KEY_CHECKS = 1;

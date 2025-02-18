@@ -132,14 +132,16 @@ func (model *ProductPackage) IsUp() bool {
 // ProductBom 产品BOM表,定义产品BOM的相关信息 `ttpos_product_bom`
 type ProductBom struct {
 	BaseModel
-	Price              float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
-	ProductFlavorUuid  uint64  `gorm:"column:product_flavor_uuid;not null;default:0;comment:'商品规格UUID（仅商品使用）'"`
-	ProductSauceUuid   uint64  `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
-	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
-	IsDefaultSelect    uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
-	StockNum           float64 `gorm:"column:stock_num;not null;default:0;comment:'库存数量'"`
-	IsSoldOut          uint    `gorm:"column:is_sold_out;not null;default:0;comment:'是否售罄：0-否 1-是'"`
-	Status             uint    `gorm:"column:status;not null;default:0;comment:'状态, 0-下架 1-上架'"`
+	Price           float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
+	IsDefaultSelect uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
+	StockNum        float64 `gorm:"column:stock_num;not null;default:0;comment:'库存数量'"`
+	IsSoldOut       uint    `gorm:"column:is_sold_out;not null;default:0;comment:'是否售罄：0-否 1-是'"`
+	Status          uint    `gorm:"column:status;not null;default:0;comment:'状态, 0-下架 1-上架'"`
+
+	// 关联ID
+	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;not null;default:0;comment:'商品规格UUID（仅商品使用）'"`
+	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
+	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
 
 	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
