@@ -66,6 +66,13 @@ const (
 	CashBoxLogTypeIn  = 2 // 存现
 )
 
+// 变更类型(10后台管理员设置 20自动升级)
+
+const (
+	MemberLevelLogTypeAdminUser   = 10 // 后台管理员设置
+	MemberLevelLogTypeAutoUpgrade = 20 // 自动升级
+)
+
 // 场景 1-支付 2-退货退款 3-取消付款 4-中途取出 5-中途存入 6-会员充值
 
 const (

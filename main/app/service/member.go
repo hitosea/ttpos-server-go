@@ -502,6 +502,8 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 		"charge_due":   s.getChargeDue(rechargeOrder.PaymentOrders), // 找零
 	}
 
+	var updateMemberPoints bool
+
 	err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
 
 		err := repository.NewMemberRechargeOrderRepo(tx).Update(rechargeOrder.Uuid, updates)
@@ -525,8 +527,7 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 			}); err != nil {
 				return errors.New("处理会员积分失败")
 			}
-
-			// ToDo 异步处理用户等级，比如使用事件
+			updateMemberPoints = true
 		}
 
 		// 处理会员余额，充值金额+赠送金额 > 0
@@ -587,7 +588,69 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 		return confirmResp, err
 	}
 
+	if updateMemberPoints {
+		go s.handleMemberUpgrade(companyUuid, member.Uuid)
+	}
+	// ToDO 打印充值单
+
 	return s.confirmRechargeOrderResp(companyUuid, rechargeOrder.Uuid), nil
+}
+
+// 处理会员升级
+func (s *memberSrv) handleMemberUpgrade(companyUuid uint64, memberUuid uint64) {
+	db := s.dbm.GetDB(companyUuid)
+	memberRepo := repository.NewMemberRepo(db)
+	member := memberRepo.GetByUuid(memberUuid, memberRepo.WithMemberLevel())
+	if member.Uuid == 0 || member.MemberLevel == nil {
+		return
+	}
+	memberLevels := repository.NewMemberRepo(db).GetMemberLevels()
+	if len(memberLevels) == 0 {
+		return
+	}
+	var upgradeLevel model.MemberLevel
+	for _, level := range memberLevels {
+		if level.IsDefault == 1 {
+			continue
+		}
+		if s.checkCanUpgrade(member, level) {
+			upgradeLevel = level
+			break
+		}
+	}
+	if upgradeLevel.Uuid == 0 ||
+		member.MemberLevel.Priority > upgradeLevel.Priority ||
+		member.MemberLevel.Uuid == upgradeLevel.Uuid {
+		return
+	}
+	// 更新会员等级ID
+	if err := memberRepo.Update(member.Uuid, map[string]any{"member_level_uuid": upgradeLevel.Uuid}); err != nil {
+		return
+	}
+	// 添加等级变动日志
+	if _, err := repository.NewMemberLevelLogRepo(db).Create(model.MemberLevelLog{
+		MemberUuid: memberUuid,
+		OldLevelId: member.MemberLevelUuid,
+		NewLevelId: upgradeLevel.Uuid,
+		ChangeType: constant.MemberLevelLogTypeAutoUpgrade,
+	}); err != nil {
+		return
+	}
+}
+
+// checkCanUpgrade 检查会员是否可以升级
+func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel) bool {
+	if (level.OpenMoney == 1 && level.OpenPoint == 1) &&
+		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.Point >= level.UpgradePoint) {
+		return true
+	}
+	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {
+		return true
+	}
+	if level.OpenPoint == 1 && member.Point >= level.UpgradePoint {
+		return true
+	}
+	return false
 }
 
 func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUuid uint64) resp.ConfirmRechargeOrder {

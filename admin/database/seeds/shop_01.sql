@@ -769,9 +769,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员等级ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '等级名称',
     `open_money` TINYINT(3) DEFAULT 0 COMMENT '是否开放累计消费额升级，0-否 1-是',
-    `upgrade_money` INT(11) NOT NULL DEFAULT 0 COMMENT '升级条件，累计消费额',
+    `upgrade_money` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计消费额',
     `open_point` TINYINT(3) DEFAULT 0 COMMENT '是否开放累计积分升级，0-否 1-是',
-    `upgrade_point` INT(11) DEFAULT 0 COMMENT '升级条件，累计积分',
+    `upgrade_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计积分',
     `discount` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '等级权益,百分比',
     `priority` INT(11) NOT NULL DEFAULT 0 COMMENT '等级权重，越大等级越高',
     `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认, 1-是 0-否',
@@ -781,6 +781,20 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员等级表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_member_level_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '日志ID',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
+    `old_level_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '变更前的等级id',
+    `new_level_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT  '变更后的等级id',
+    `change_type` tinyint(3) unsigned NOT NULL DEFAULT 10 COMMENT '变更类型(10后台管理员设置 20自动升级)',
+    `remark` varchar(500) DEFAULT '' COMMENT '管理员备注',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPACT COMMENT='用户会员等级变更记录表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
