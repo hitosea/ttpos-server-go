@@ -12,7 +12,7 @@ use app\common\model\product\ProductSku;
 /**
  * 库存记录模型
  */
-class ErpInventoryRecord extends BaseModel
+class ErpWarehouseForm extends BaseModel
 {
     use SoftDelete;
     protected $name = 'warehouse_form';
@@ -85,7 +85,7 @@ class ErpInventoryRecord extends BaseModel
      */
     public function purchaseOrder()
     {
-        return $this->belongsTo(ErpPurchaseOrder::class, 'purchase_order_id', 'id');
+        return $this->belongsTo(ErpPurchaseOrder::class, 'purchase_order_uuid', 'uuid');
     }
 
     /**
@@ -109,7 +109,7 @@ class ErpInventoryRecord extends BaseModel
      */
     public function operator()
     {
-        return $this->belongsTo(User::class, 'operator_id', 'shop_user_id')->field(['shop_user_id', 'user_name', 'real_name']);
+        return $this->belongsTo(User::class, 'operator_uuid', 'uuid')->field(['uuid as shop_user_id', 'username as user_name', 'real_name']);
     }
 
     /**
@@ -118,7 +118,7 @@ class ErpInventoryRecord extends BaseModel
      * @param [type] $params
      * @return object
      */
-    public function getList($params, $type = self::INVENTORY_TYPE_IN)
+    public function getList($params)
     {
         $startTime = isset($params['date'][0]) ? strtotime($params['date'][0]) : 0;
         $endTime = isset($params['date'][1]) ? strtotime($params['date'][1] . ' 23:59:59') : 0;
@@ -142,38 +142,30 @@ class ErpInventoryRecord extends BaseModel
             'purchaseOrder' => function ($q) {
                 $q->field('id, name, number');
             },
-            'product' => function ($q) {
-                $q->field('product_id, product_name, type, product_unit');
-            },
-            'productSku' => function ($q) {
-                $q->field('product_sku_id, product_id, spec_name, stock_num, material_stock')->with('material');
-            },
+            // 'product' => function ($q) {
+            //     $q->field('product_id, product_name, type, product_unit');
+            // },
+            // 'productSku' => function ($q) {
+            //     $q->field('product_sku_id, product_id, spec_name, stock_num, material_stock')->with('material');
+            // },
             'operator' => function ($q) {
                 $q->field('uuid as shop_user_id, username as user_name, real_name');
             }
-        ])->where('inventory_type', $type)->order('create_time desc')->paginate($params);
+        ])->order('create_time desc')->paginate($params);
         //
         foreach ($list as $item) {
-            if ($type == self::INVENTORY_TYPE_IN) {
-                // 是否显示入库撤销按钮 1-显示 0-不显示
-                if ($item->purchase_order_id == 0) {
-                    $item['is_show_in_cancel'] = $this->checkStock($item);
-                } else {
-                    $purchaseDetailList = (new ErpPurchaseDetail)->getListAll($item->purchase_order_id);
-                    foreach ($purchaseDetailList as $detail) {
-                        if (!$detail->sku) {
-                            $item['is_show_in_cancel'] = 0;
-                        }
-                        if ($detail->sku?->product_sku_id == $detail->product_sku_id) {
-                            $item['is_show_in_cancel'] = $this->checkStock($detail, $detail->actual_purchase_num);
-                        }
-                    }
-                }
+            // 是否显示入库撤销按钮 1-显示 0-不显示
+            if ($item->purchase_order_uuid == 0) {
+                $item['is_show_in_cancel'] = $this->checkStock($item);
             } else {
-                // 是否显示出库撤销按钮 1-显示 0-不显示
-                $item['is_show_out_cancel'] = 1;
-                if (($item->product && $item->product['type'] == Product::TYPE_PRODUCT && $item->productSku?->material?->count() > 0) || self::TYPE_ADJUST_OUT_DEL == $item->type) {
-                    $item['is_show_out_cancel'] = 0;
+                $purchaseDetailList = (new ErpPurchaseDetail)->getListAll($item->purchase_order_uuid);
+                foreach ($purchaseDetailList as $detail) {
+                    if (!$detail->sku) {
+                        $item['is_show_in_cancel'] = 0;
+                    }
+                    if ($detail->sku?->product_sku_id == $detail->product_sku_id) {
+                        $item['is_show_in_cancel'] = $this->checkStock($detail, $detail->actual_purchase_num);
+                    }
                 }
             }
         }
@@ -196,7 +188,7 @@ class ErpInventoryRecord extends BaseModel
         $stockNum = 0;
         switch ($item->product['type']) {
             case Product::TYPE_PRODUCT:
-                if ($item?->purchase_order_id == 0) {
+                if ($item?->purchase_order_uuid == 0) {
                     if ($item->productSku?->material?->count() > 0) {
                         return 0;
                     }
@@ -230,15 +222,10 @@ class ErpInventoryRecord extends BaseModel
     /**
      * 新增（出/入库）
      */
-    public function addNew($inventory_type, $params, $isSave = true)
+    public function add($inventory_type, $params, $isSave = true)
     {
-        if ($inventory_type == self::INVENTORY_TYPE_IN) {
-            $data['form_no'] = self::generateInCode();
-            $data['in_time'] = time();
-        } else {
-            $data['form_no'] = self::generateOutCode();
-            $data['out_time'] = time();
-        }
+        $data['form_no'] = self::generateInCode();
+        $data['in_time'] = time();
         //
         $data['inventory_type'] = $inventory_type;
         $data['purchase_order_id'] = $params['purchase_order_id'] ?? 0;
@@ -249,7 +236,7 @@ class ErpInventoryRecord extends BaseModel
         $data['type'] = $params['type'] ?? 0;
         $data['num'] = $params['num'] ?? 0;
         $data['remark'] = $params['remark'] ?? '';
-        $data['operator_id'] = $params['operator_id'];
+        $data['operator_uuid'] = $params['operator_id'];
         $data['status'] = $params['status'] ?? 10;
         $data['shop_supplier_id'] = $params['shop_supplier_id'] ?? 0;
         $data['app_id'] = self::$app_id;
@@ -277,93 +264,59 @@ class ErpInventoryRecord extends BaseModel
         }
         $this->startTrans();
         try {
-            // 如果是入库，需要回滚库存
-            if ($this->inventory_type == self::INVENTORY_TYPE_IN) {
-                // 判断是否库存足够
-                if ($this->purchase_order_id == 0) {
-                    // 入库撤销操作，回滚减少库存
-                    switch ($this->product['type']) {
-                        case Product::TYPE_PRODUCT:
-                            if ($this->productSku?->stock_num < $this->num) {
-                                $this->error = '库存不足';
-                                return false;
-                            }
-                            Product::where(['product_id' => $this->product_id])->dec('product_stock', $this->num)->update();
-                            ProductSku::where(['product_sku_id' => $this->product_sku_id])->dec('stock_num', $this->num)->update();
-                            break;
-                        case Product::TYPE_MATERIAL:
-                            if ($this->productSku?->material_stock < $this->num) {
-                                $this->error = '库存不足';
-                                return false;
-                            }
-                            Product::where(['product_id' => $this->product_id])->dec('product_material_stock', $this->num)->update();
-                            ProductSku::where(['product_sku_id' => $this->product_sku_id])->dec('material_stock', $this->num)->update();
-                            break;
-                    }
-                } else {
-                    $purchaseDetailList = (new ErpPurchaseDetail)->getListAll($this->purchase_order_id);
-                    // 遍历回滚采购单数量
-                    foreach ($purchaseDetailList as $detail) {
-                        if (!$detail->sku) {
-                            $this->error = '规格不存在，无法进行撤销操作';
-                            return false;
-                        }
-                        if ($detail->sku?->product_sku_id == $detail->product_sku_id) {
-                            // 入库撤销操作，回滚减少库存
-                            switch ($detail->product['type']) {
-                                case Product::TYPE_PRODUCT:
-                                    if ($detail->sku?->stock_num < $this->actual_purchase_num) {
-                                        $this->error = '库存不足';
-                                        return false;
-                                    }
-                                    Product::where(['product_id' => $detail->product_id])->dec('product_stock', $detail->actual_purchase_num)->update();
-                                    ProductSku::where(['product_sku_id' => $detail->product_sku_id])->dec('stock_num', $detail->actual_purchase_num)->update();
-                                    break;
-                                case Product::TYPE_MATERIAL:
-                                    if ($detail->sku?->material_stock < $this->actual_purchase_num) {
-                                        $this->error = '库存不足';
-                                        return false;
-                                    }
-                                    Product::where(['product_id' => $detail->product_id])->dec('product_material_stock', $detail->actual_purchase_num)->update();
-                                    ProductSku::where(['product_sku_id' => $detail->product_sku_id])->dec('material_stock', $detail->actual_purchase_num)->update();
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
-            // 如果是出库，需要回滚库存
-            if ($this->inventory_type == self::INVENTORY_TYPE_OUT) {
-                // 如果是销售出库，不允许撤销
-                if ($this->type == self::TYPE_SALE_OUT) {
-                    $this->error = '销售出库不允许撤销';
-                    return false;
-                }
-                // 如果是删除出库，不允许撤销
-                if ($this->type == self::TYPE_ADJUST_OUT_DEL) {
-                    $this->error = '删除出库不允许撤销';
-                    return false;
-                }
-                if (!$this->productSku) {
-                    $this->error = '规格不存在，无法进行撤销操作';
-                    return false;
-                }
-                if ($this->product['type'] == Product::TYPE_PRODUCT && $this->productSku->material?->count() > 0) {
-                    $this->error = '关联材料商品无法进行撤销操作';
-                    return false;
-                }
-                // 出库撤销操作，回滚增加库存
+            // 判断是否库存足够
+            if ($this->purchase_order_uuid == 0) {
+                // 入库撤销操作，回滚减少库存
                 switch ($this->product['type']) {
                     case Product::TYPE_PRODUCT:
-                        Product::where(['product_id' => $this->product_id])->inc('product_stock', $this->num)->update();
-                        ProductSku::where(['product_sku_id' => $this->product_sku_id])->inc('stock_num', $this->num)->update();
+                        if ($this->productSku?->stock_num < $this->num) {
+                            $this->error = '库存不足';
+                            return false;
+                        }
+                        Product::where(['product_id' => $this->product_id])->dec('product_stock', $this->num)->update();
+                        ProductSku::where(['product_sku_id' => $this->product_sku_id])->dec('stock_num', $this->num)->update();
                         break;
                     case Product::TYPE_MATERIAL:
-                        Product::where(['product_id' => $this->product_id])->inc('product_material_stock', $this->num)->update();
-                        ProductSku::where(['product_sku_id' => $this->product_sku_id])->inc('material_stock', $this->num)->update();
+                        if ($this->productSku?->material_stock < $this->num) {
+                            $this->error = '库存不足';
+                            return false;
+                        }
+                        Product::where(['product_id' => $this->product_id])->dec('product_material_stock', $this->num)->update();
+                        ProductSku::where(['product_sku_id' => $this->product_sku_id])->dec('material_stock', $this->num)->update();
                         break;
                 }
+            } else {
+                $purchaseDetailList = (new ErpPurchaseDetail)->getListAll($this->purchase_order_uuid);
+                // 遍历回滚采购单数量
+                foreach ($purchaseDetailList as $detail) {
+                    if (!$detail->sku) {
+                        $this->error = '规格不存在，无法进行撤销操作';
+                        return false;
+                    }
+                    if ($detail->sku?->product_sku_id == $detail->product_sku_id) {
+                        // 入库撤销操作，回滚减少库存
+                        switch ($detail->product['type']) {
+                            case Product::TYPE_PRODUCT:
+                                if ($detail->sku?->stock_num < $this->actual_purchase_num) {
+                                    $this->error = '库存不足';
+                                    return false;
+                                }
+                                Product::where(['product_id' => $detail->product_id])->dec('product_stock', $detail->actual_purchase_num)->update();
+                                ProductSku::where(['product_sku_id' => $detail->product_sku_id])->dec('stock_num', $detail->actual_purchase_num)->update();
+                                break;
+                            case Product::TYPE_MATERIAL:
+                                if ($detail->sku?->material_stock < $this->actual_purchase_num) {
+                                    $this->error = '库存不足';
+                                    return false;
+                                }
+                                Product::where(['product_id' => $detail->product_id])->dec('product_material_stock', $detail->actual_purchase_num)->update();
+                                ProductSku::where(['product_sku_id' => $detail->product_sku_id])->dec('material_stock', $detail->actual_purchase_num)->update();
+                                break;
+                        }
+                    }
+                }
             }
+            //
             $this->status = self::STATUS_REVOKED;
             $this->revoke_time = time();
             $this->save();

@@ -53,24 +53,27 @@ class ErpInventory extends Controller
     public function monthlyStatistics()
     {
         $params = $this->postData();
-        $month_start_stock = ErpMonthlyStatistics::getMonthStartStock($params); //  月初原有库存
-        $month_end_stock = ErpMonthlyStatistics::getMonthEndStock($params); //  月末剩余库存
-        $month_entry_stock = ErpMonthlyStatistics::getMonthEntry($params); // 月入库数量
-        $month_exit_stock = ErpMonthlyStatistics::getMonthExit($params);                  //  月出库数量
-        $month_damaged_num = ErpMonthlyStatistics::getMonthDamagedNum($params);           //  损耗数量
-        $month_damaged_percent = ErpMonthlyStatistics::getMonthDamagedPercent($month_damaged_num, $month_entry_stock, $month_start_stock); //  损耗比例
+        // todo 兼容
+        // $month_start_stock = ErpMonthlyStatistics::getMonthStartStock($params); //  月初原有库存
+        // $month_end_stock = ErpMonthlyStatistics::getMonthEndStock($params); //  月末剩余库存
+        // $month_entry_stock = ErpMonthlyStatistics::getMonthEntry($params); // 月入库数量
+        // $month_exit_stock = ErpMonthlyStatistics::getMonthExit($params);                  //  月出库数量
+        // $month_damaged_num = ErpMonthlyStatistics::getMonthDamagedNum($params);           //  损耗数量
+        // $month_damaged_percent = ErpMonthlyStatistics::getMonthDamagedPercent($month_damaged_num, $month_entry_stock, $month_start_stock); //  损耗比例
 
         $data = [
             'info' => [
-                'month_start_stock' => $month_start_stock,           //  月初原有库存
-                'month_end_stock' => $month_end_stock,               //  月末剩余库存
-                'month_entry_stock' => $month_entry_stock,           //  月入库数量
-                'month_exit_stock' => $month_exit_stock,             //  月出库数量
-                'month_damaged_num' => $month_damaged_num,           //  损耗数量
-                'month_damaged_percent' => $month_damaged_percent,   //  损耗比例
+                'month_start_stock' => 0,           //  月初原有库存
+                'month_end_stock' => 0,               //  月末剩余库存
+                'month_entry_stock' => 0,           //  月入库数量
+                'month_exit_stock' => 0,             //  月出库数量
+                'month_damaged_num' => 0,           //  损耗数量
+                'month_damaged_percent' => 0,   //  损耗比例
             ],
-            'damaged_list' => ErpMonthlyStatistics::getMonthProductDamagedList($params),            //  月初损耗排行
-            'unsalable_list' => ErpMonthlyStatistics::getMonthProductUnsalableList($params),        //  月末滞销商品排行
+            // 'damaged_list' => ErpMonthlyStatistics::getMonthProductDamagedList($params),            //  月初损耗排行
+            // 'unsalable_list' => ErpMonthlyStatistics::getMonthProductUnsalableList($params),        //  月末滞销商品排行
+            'damaged_list' => 0,            //  月初损耗排行
+            'unsalable_list' => 0,        //  月末滞销商品排行
         ];
         return $this->renderSuccess('', $data);
     }

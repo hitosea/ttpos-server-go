@@ -18,7 +18,7 @@ use app\common\service\sync\SyncService;
 class ErpDamagedProductRecord extends BaseModel
 {
     use SoftDelete;
-    protected $name = 'erp_damaged_product_record';
+    protected $name = 'loss_report_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
@@ -120,7 +120,8 @@ class ErpDamagedProductRecord extends BaseModel
         if (isset($params['type']) && $params['type']) {
             $type = $params['type'];
         }
-        return $model->with(['sku.product', 'operator'])
+        return $model
+            // ->with(['sku.product', 'operator'])
             ->when($type && $type > 0, function ($q) use ($type) {
                 $q->where('type', $type);
             })
@@ -156,24 +157,25 @@ class ErpDamagedProductRecord extends BaseModel
             $type = $params['type'];
         }
         $list = $model->alias('dr')
-            ->join('product p', 'dr.product_id = p.product_id')
-            ->join('category c', 'p.category_id = c.category_id')
-            ->where('dr.delete_time', 0)
-            ->where('dr.review_status', 1)
-            ->when($type && $type > 0, function ($q) use ($type) {
-                $q->where('dr.type', $type);
-            })
-            ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
-                $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
-            })
-            ->field([
-                'IF(c.parent_id > 0, c.parent_id, p.category_id) AS category_id',
-                'c.parent_id',
-                'c.name',
-                'SUM(num) as damage_count'
-            ])
-            ->group('p.category_id')
-            ->order('p.category_id')
+            // todo 兼容
+            // ->join('product p', 'dr.product_id = p.product_id')
+            // ->join('category c', 'p.category_id = c.category_id')
+            // ->where('dr.delete_time', 0)
+            // ->where('dr.review_status', 1)
+            // ->when($type && $type > 0, function ($q) use ($type) {
+            //     $q->where('dr.type', $type);
+            // })
+            // ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
+            //     $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
+            // })
+            // ->field([
+            //     'IF(c.parent_id > 0, c.parent_id, p.category_id) AS category_id',
+            //     'c.parent_id',
+            //     'c.name',
+            //     'SUM(num) as damage_count'
+            // ])
+            // ->group('p.category_id')
+            // ->order('p.category_id')
             ->select()->toArray();
         // 对结果进行处理
         foreach ($list as &$damageCount) {

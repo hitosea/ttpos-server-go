@@ -5,6 +5,7 @@ namespace app\common\model\erp;
 use think\facade\Env;
 use app\common\library\helper;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\ProductSku;
 use app\common\model\supplier\Supplier as SupplierModel;
@@ -14,7 +15,10 @@ use app\common\model\supplier\Supplier as SupplierModel;
  */
 class ErpMonthlyStatistics extends BaseModel
 {
-    protected $name = 'erp_monthly_statistics';
+    use SoftDelete;
+    protected $name = 'warehouse_monthly_form';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加字段
@@ -86,7 +90,7 @@ class ErpMonthlyStatistics extends BaseModel
             $year = date("Y", $now);
             $month = date("m", $now);
         }
-        $total = self::where('year', $year)->where('month', $month)->where('record_type', self::MONTH_START)->value('stock') ?? 0;
+        $total = self::where('year', $year)->where('month', $month)->where('scene', self::MONTH_START)->value('stock') ?? 0;
         return floatval($total);
     }
 
@@ -102,7 +106,7 @@ class ErpMonthlyStatistics extends BaseModel
             $year = date("Y", $now);
             $month = date("m", $now);
         }
-        $total = self::where('year', $year)->where('month', $month)->where('record_type', self::MONTH_END)->value('stock') ?? 0;
+        $total = self::where('year', $year)->where('month', $month)->where('scene', self::MONTH_END)->value('stock') ?? 0;
         if ($total == 0) {
             // 当月为当前商品库存
             $productNum = Product::where('type', 10)->sum('product_stock');

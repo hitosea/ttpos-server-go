@@ -8,6 +8,7 @@ use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\ProductSku;
+use app\common\model\erp\ErpWarehouseForm;
 
 /**
  * 采购订单模型
@@ -479,7 +480,7 @@ class ErpPurchaseOrder extends BaseModel
 
         $this->startTrans();
         try {
-            $this->status = self::NEW_STATUS[$params['status']];
+            $this->status = self::NEW_STATUS[$params['status']] ?? 0;
             $this->save();
             // 采购单明细实际采购数量和实际价格
             $purchaseDetailModel = new ErpPurchaseDetail;
@@ -506,46 +507,51 @@ class ErpPurchaseOrder extends BaseModel
                 $operationLogData['id'] = $params['operation_log_id'];
             }
             $operationLog->save($operationLogData);
-            // todo 兼容 采购入库操作
+            // 采购入库操作
             $inventoryRecordId = 0;
             if ($params['status'] == self::STATUS_STORED) {
-                // // 商品库存增加
-                // $materialIds = [];
-                // foreach ($detailList as $detail) {
-                //     $product = $detail->product;
-                //     if (!$product) continue;
-                //     switch ($product['type']) {
-                //         case Product::TYPE_PRODUCT:
-                //             Product::where(['product_id' => $detail->product_id])->inc('product_stock', $detail->num)->update();
-                //             // 规格库存增加
-                //             ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('stock_num', $detail->num)->update();
-                //             break;
-                //         case Product::TYPE_MATERIAL:
-                //             $materialIds = array_merge($materialIds, [$detail->product_id]);
-                //             Product::where(['product_id' => $detail->product_id])->inc('product_material_stock', $detail->num)->update();
-                //             // 规格库存增加
-                //             ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('material_stock', $detail->num)->update();
-                //             break;
-                //     }
-                // }
-                // // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-                // (new Product)->reCalProductStock(array_unique($materialIds));
+                // 商品库存增加
+                $materialIds = [];
+                foreach ($detailList as $detail) {
+                    if ($detail->material_type == ErpPurchaseDetail::MATERIAL_TYPE_PRODUCT) {
+                        $product = $detail->product;
+                    } else {
+                        $product = $detail->material;
+                    }
+                    if (!$product) continue;
+                    switch ($product['type']) {
+                        case Product::TYPE_PRODUCT:
+                            Product::where(['product_id' => $detail->product_id])->inc('product_stock', $detail->num)->update();
+                            // 规格库存增加
+                            ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('stock_num', $detail->num)->update();
+                            break;
+                        case Product::TYPE_MATERIAL:
+                            $materialIds = array_merge($materialIds, [$detail->product_id]);
+                            Product::where(['product_id' => $detail->product_id])->inc('product_material_stock', $detail->num)->update();
+                            // 规格库存增加
+                            ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('material_stock', $detail->num)->update();
+                            break;
+                    }
+                }
+                // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
+                (new Product)->reCalProductStock(array_unique($materialIds));
                 // 入库记录
-                // $inventoryRecord = new ErpInventoryRecord;
-                // $inventoryRecordData = [
-                //     'purchase_form_uuid' => $this->uuid,
-                //     'type' => ErpInventoryRecord::TYPE_PURCHASE_IN,
-                //     'num' => $this->total_num,
-                //     'operator_uuid' => $operationLogData['operator_id'],
-                //     'username' => $operationLogData['username'],
-                //     'remark' => $this->remark ?: '',
-                // ];
-                // //
-                // if ($params['erp_inventory_record_id'] ?? '') {
-                //     $inventoryRecordData['id'] = $params['erp_inventory_record_id'];
-                // }
-                // //
-                // $inventoryRecord->addNew(ErpInventoryRecord::INVENTORY_TYPE_IN, $inventoryRecordData);
+                $inventoryRecord = new ErpWarehouseForm;
+                $inventoryRecordData = [
+                    'purchase_form_uuid' => $this->uuid,
+                    'type' => ErpWarehouseForm::TYPE_PURCHASE_IN,
+                    'num' => $this->total_num,
+                    'operator_uuid' => $operationLogData['operator_id'],
+                    'username' => $operationLogData['username'],
+                    'remark' => $this->remark ?: '',
+                ];
+                //
+                if ($params['erp_inventory_record_id'] ?? '') {
+                    $inventoryRecordData['id'] = $params['erp_inventory_record_id'];
+                }
+                //
+                /** @var ErpWarehouseForm $inventoryRecord */
+                $inventoryRecord->add(ErpWarehouseForm::INVENTORY_TYPE_IN, $inventoryRecordData);
             }
             $this->commit();
             //

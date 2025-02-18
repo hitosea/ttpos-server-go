@@ -4,7 +4,7 @@ namespace app\shop\controller\purchase;
 
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\shop\model\erp\ErpInventoryRecord as ErpInventoryRecordModel;
+use app\common\model\erp\ErpWarehouseForm;
 
 /**
  * 入库记录
@@ -25,7 +25,7 @@ class ErpInventoryRecordIn extends Controller
     public function list()
     {
         $param = $this->postData();
-        $list = (new ErpInventoryRecordModel)->getList(array_merge($param));
+        $list = (new ErpWarehouseForm)->getList(array_merge($param));
         return $this->renderSuccess('', compact('list'));
     }
 
@@ -38,7 +38,7 @@ class ErpInventoryRecordIn extends Controller
      */
     public function cancel($erp_inventory_id)
     {
-        $detail = (new ErpInventoryRecordModel)->detail($erp_inventory_id ?? 0);
+        $detail = (new ErpWarehouseForm)->detail($erp_inventory_id ?? 0);
         if (!$detail) {
             return $this->renderError('数据不存在');
         }
@@ -57,7 +57,7 @@ class ErpInventoryRecordIn extends Controller
      */
     public function delete($erp_inventory_id)
     {
-        $detail = (new ErpInventoryRecordModel)->detail($erp_inventory_id ?? 0);
+        $detail = (new ErpWarehouseForm)->detail($erp_inventory_id ?? 0);
         if (!$detail) {
             return $this->renderError('数据不存在');
         }
