@@ -423,7 +423,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
 CREATE TABLE IF NOT EXISTS `ttpos_buffet_delay` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐加钟价格名称',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐加钟商品名称',
     `delay_time` INT(11) NOT NULL DEFAULT 0 COMMENT '加钟时间(分钟)',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-启用',
@@ -438,7 +438,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_delay_product` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `buffet_delay_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐加钟价格ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐加钟商品名称，下单时固定不受后台改变',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格,下单时固定不受后台改变，结账时再检查是否改变',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+
+	"github.com/shopspring/decimal"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -218,6 +220,7 @@ type SaleOrder struct {
 	SaleOrderProducts            []SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 // TableName 指定表名
@@ -325,6 +328,18 @@ type SaleOrderProduct struct {
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 获取商品销售价(折前价)
+func (model *SaleOrderProduct) GetSalePrice() float64 {
+	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return salePrice
+}
+
+// 获取最终价格（折后价）
+func (model *SaleOrderProduct) GetPrice() float64 {
+	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
 }
 
 func (model *SaleOrderProduct) IsMustProduct() bool {
@@ -506,12 +521,37 @@ type SaleOrderBuffetCustomerType struct {
 	BuffetCustomerTypePrice        BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
 }
 
+// 获取顾客原价
+func (model *SaleOrderBuffetCustomerType) GetOriginPrice() float64 {
+	price := decimal.NewFromFloat(model.CustomerPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}
+
+// 获取顾客折后价
+func (model *SaleOrderBuffetCustomerType) GetDiscountPrice() float64 {
+	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}
+
 // SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`
 type SaleOrderBuffetDelayProduct struct {
 	BaseModel
+
+	// 数值字段
+	Name string `gorm:"default:'';column:name;comment:'自助餐加钟商品名称，下单时固定不受后台改变'"`
+	// 废弃，直接使用桌台人数即可
+	//Num   uint    `gorm:"default:0;column:num;comment:'数量'"`
+	Price float64 `gorm:"default:0;column:price;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
+
+	// 关联ID字段
 	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
 	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
-	Num             uint   `gorm:"default:0;column:num;comment:'数量'"`
+}
+
+// 获取商品的价格。单价*数量
+func (model *SaleOrderBuffetDelayProduct) GetPrice(num uint) float64 {
+	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromInt(int64(num))).Round(2).InexactFloat64()
+	return price
 }
 
 // SaleOrderProductMaterial 销售订单产品原料

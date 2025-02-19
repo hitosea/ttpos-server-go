@@ -50,7 +50,7 @@ type Product struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
 	Price               float64            `json:"price"`                 // 原价
-	DiscountPrice       float64            `json:"discount_price"`        // 折扣价
+	DiscountPrice       float64            `json:"discount_price"`        // 折扣价。折扣加为0的话表示没有对商品进行折扣，则显示原价
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨
 	Remark              string             `json:"remark"`                // 备注
 	IsMust              bool               `json:"is_must"`               // 是否必点

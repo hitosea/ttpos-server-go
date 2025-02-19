@@ -1087,68 +1087,107 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		return nil, err
 	}
 
+	// 给订单列表添加订单
 	saleOrderList := make([]resp.SaleOrder, 0)
 	for _, saleOrder := range shopCart.SaleBill.SaleOrders {
 		productList := make([]resp.Product, 0)
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
-		for _, buffet := range saleOrder.SaleOrderBuffetCustomerTypes {
-			fmt.Println(fmt.Sprintf("debug: buffet:%+v", buffet))
-			product := resp.Product{
-				Uuid:       buffet.Uuid,
-				LocaleName: buffet.BuffetPackageMultiLanguageName.GetNames(),
-				LocaleAttributeName: dto.LocaleResponse{
-					ZH:   buffet.Name,
-					TH:   buffet.Name,
-					EN:   buffet.Name,
-					ZHTW: buffet.Name,
-					JA:   buffet.Name,
-					KO:   buffet.Name,
-					MY:   buffet.Name,
-					TR:   buffet.Name,
-				},
-				Num:           buffet.Num,
-				Price:         buffet.CustomerPrice,
-				DiscountPrice: buffet.Price,
-				Status:        1,
-				Remark:        "",
-				IsMust:        false,
-				IsGift:        false,
-				IsCancel:      false,
-				AboutBuffet: resp.AboutBuffet{
-					IsCustomer: true,
-					IsDelay:    false,
-				},
+		{
+			for _, buffet := range saleOrder.SaleOrderBuffetCustomerTypes {
+				// 自助餐顾客价格收费列表
+				product := resp.Product{
+					Uuid:       buffet.Uuid,
+					LocaleName: buffet.BuffetPackageMultiLanguageName.GetNames(),
+					LocaleAttributeName: dto.LocaleResponse{
+						ZH:   buffet.Name,
+						TH:   buffet.Name,
+						EN:   buffet.Name,
+						ZHTW: buffet.Name,
+						JA:   buffet.Name,
+						KO:   buffet.Name,
+						MY:   buffet.Name,
+						TR:   buffet.Name,
+					},
+					Num:           buffet.Num, // 这种类型顾客多少个，如老人这个类型2人
+					Price:         buffet.GetOriginPrice(),
+					DiscountPrice: buffet.GetOriginPrice(),
+					Status:        1,
+					Remark:        "",
+					IsMust:        false,
+					IsGift:        false,
+					IsCancel:      false,
+					AboutBuffet: resp.AboutBuffet{
+						IsCustomer: true,
+						IsDelay:    false,
+					},
+				}
+				productList = append(productList, product)
 			}
-			productList = append(productList, product)
 		}
-		// 添加加钟商品 todo
+
+		// 添加加钟商品
+		{
+			for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+				product := resp.Product{
+					Uuid: delayProduct.Uuid,
+					LocaleName: dto.LocaleResponse{
+						ZH:   delayProduct.Name,
+						TH:   delayProduct.Name,
+						EN:   delayProduct.Name,
+						ZHTW: delayProduct.Name,
+						JA:   delayProduct.Name,
+						KO:   delayProduct.Name,
+						MY:   delayProduct.Name,
+						TR:   delayProduct.Name,
+					},
+					LocaleAttributeName: dto.LocaleResponse{},
+					Num:                 shopCart.SaleBill.MealNum, // 等于桌台人数
+					Price:               delayProduct.GetPrice(shopCart.SaleBill.MealNum),
+					DiscountPrice:       0,  // 加钟商品没有优惠价
+					Status:              1,  // 添加后标记送厨状态，不可修改
+					Remark:              "", // 加钟商品没有备注
+					IsMust:              false,
+					IsGift:              false,
+					IsCancel:            false,
+					AboutBuffet: resp.AboutBuffet{
+						IsCustomer: false,
+						IsDelay:    true, // 标记该商品是加钟商品
+					},
+				}
+				productList = append(productList, product)
+			}
+		}
 
 		// 添加正常商品
-		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-			language := ctx.GetLanguage()
-			fmt.Println(fmt.Sprintf("debug: 销售商品语言：%s", language))
-			fmt.Println(fmt.Sprintf("debug: 销售商品：%+v", saleOrderProduct))
-			product := resp.Product{
-				Uuid:                saleOrderProduct.Uuid,
-				LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-				LocaleAttributeName: saleOrderProduct.AttributeName(language),
-				Num:                 saleOrderProduct.Num,
-				Price:               saleOrderProduct.SalePrice,
-				DiscountPrice:       saleOrderProduct.Price,
-				Status:              saleOrderProduct.StatusValue(),
-				Remark:              saleOrderProduct.Remark,
-				IsMust:              saleOrderProduct.IsMustProduct(),
-				IsGift:              saleOrderProduct.IsGiftProduct(),
-				IsCancel:            saleOrderProduct.IsCancelProduct(),
+		{
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				language := ctx.GetLanguage()
+				fmt.Println(fmt.Sprintf("debug: 销售商品语言：%s", language))
+				fmt.Println(fmt.Sprintf("debug: 销售商品：%+v", saleOrderProduct))
+				product := resp.Product{
+					Uuid:                saleOrderProduct.Uuid,
+					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+					LocaleAttributeName: saleOrderProduct.AttributeName(language),
+					Num:                 saleOrderProduct.Num,
+					Price:               saleOrderProduct.GetSalePrice(),
+					DiscountPrice:       saleOrderProduct.GetPrice(),
+					Status:              saleOrderProduct.StatusValue(),
+					Remark:              saleOrderProduct.Remark,
+					IsMust:              saleOrderProduct.IsMustProduct(),
+					IsGift:              saleOrderProduct.IsGiftProduct(),
+					IsCancel:            saleOrderProduct.IsCancelProduct(),
+				}
+				productList = append(productList, product)
 			}
-			productList = append(productList, product)
 		}
 
+		// 填写订单信息
 		order := resp.SaleOrder{
 			Uuid:        saleOrder.Uuid,
 			OrderNo:     saleOrder.OrderNo,
 			ProductList: productList,
+			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
 				ProductAmount:         saleOrder.ProductAmount,
@@ -1169,6 +1208,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
 	}
+	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
 		deskInfo := resp.DeskInfo{
 			Uuid:      shopCart.SaleBill.Desk.Uuid,
@@ -1177,6 +1217,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			StartTime: shopCart.SaleBill.Desk.CreateTime,
 		}
 		shopCartInfo.Desk = deskInfo
+		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
 			shopCartInfo.Buffet = resp.BuffetInfo{
 				EndTime:    shopCart.SaleBill.BuffetEndTime(),
