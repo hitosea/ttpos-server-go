@@ -435,7 +435,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 		ProductPackageUuid:    req.ProductPackage.Uuid,
 		SaleBillUuid:          req.SaleBill.Uuid,
 		SaleOrderUuid:         req.SaleOrder.Uuid,
-		IsOpenMemberDiscount:  req.ProductPackage.OpenDiscount,
+		OpenMemberDiscount:    req.ProductPackage.OpenDiscount,
 		TaxRate:               taxRate,
 	}
 

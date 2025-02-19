@@ -106,9 +106,10 @@ type ProductPackage struct {
 	Sort                  uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
-	SauceRequired         uint8  `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
-	SauceMaxSelection     uint   `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
-	OpenDiscount          uint   `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
+
+	SauceRequired     uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
+	SauceMaxSelection uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
+	OpenDiscount      uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
@@ -116,6 +117,13 @@ type ProductPackage struct {
 	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
 	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
 	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
+}
+
+func (model *ProductPackage) TaxRate(dineType uint) float64 {
+	if dineType == constant.SaleBillDiningMethodDineIn {
+		return model.DineTax.TaxRate
+	}
+	return model.TakeoutTax.TaxRate
 }
 
 // IsUp 判断商品是否是上架状态。排除下架、删除状态

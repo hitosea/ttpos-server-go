@@ -378,6 +378,28 @@ definitions:
         description: 销售账单UUID
         type: integer
     type: object
+  req.OrderCartProductAddReq:
+    properties:
+      attribute_uuid:
+        description: 规格ID
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 某个规格商品ID
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单ID
+        type: integer
+      sauce_uuid:
+        description: 小料ID
+        items:
+          type: integer
+        type: array
+    type: object
   req.OrderChangePopulationReq:
     properties:
       population:
@@ -3717,6 +3739,35 @@ paths:
         "404":
           description: 未找到
       summary: 查询点餐购物车信息
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 向购物车添加商品
       tags:
       - 收银端.点餐
   /cashier/instant/order/create:

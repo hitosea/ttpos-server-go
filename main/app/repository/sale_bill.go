@@ -8,6 +8,7 @@ import (
 
 type ISaleBillRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
+	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 }
 
 type saleBillRepo struct {
@@ -32,4 +33,12 @@ func (r *saleBillRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 	}
 
 	return saleBill, nil
+}
+
+func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(CommonRepo.WhereByUuid(uuid))
+	if err != nil {
+		return nil, err
+	}
+	return &saleBill, nil
 }

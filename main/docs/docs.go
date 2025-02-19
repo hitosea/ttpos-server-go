@@ -1648,6 +1648,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/cart/product/add": {
+            "post": {
+                "description": "向购物车添加商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "向购物车添加商品",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/create": {
             "post": {
                 "description": "创建点餐订单",
@@ -4619,6 +4668,37 @@ const docTemplate = `{
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.OrderCartProductAddReq": {
+            "type": "object",
+            "properties": {
+                "attribute_uuid": {
+                    "description": "规格ID",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "flavor_uuid": {
+                    "description": "某个规格商品ID",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单ID",
+                    "type": "integer"
+                },
+                "sauce_uuid": {
+                    "description": "小料ID",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },

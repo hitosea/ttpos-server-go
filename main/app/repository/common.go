@@ -2,9 +2,10 @@ package repository
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"ttpos-server-go/app/constant"
 )
 
 type DBOption func(*gorm.DB) *gorm.DB
@@ -28,6 +29,7 @@ func Like(keyword string) string {
 type ICommonRepo interface {
 	WhereByID(id uint) DBOption                                     // 根据ID查询
 	WhereByUuid(uuid uint64) DBOption                               // 根据UUID查询
+	WhereInUuids(uuids []uint64) DBOption                           // 根据UUID列表查询
 	WhereByDeskUuid(uuid uint64) DBOption                           // 根据桌台UUID查询
 	WhereBySaleBillUuid(uuid uint64) DBOption                       // 根据销售单UUID查询
 	WhereBySaleOrderUuid(uuid uint64) DBOption                      // 根据销售订单UUID查询
@@ -82,6 +84,13 @@ func (r *commonRepo) WhereByID(id uint) DBOption {
 func (r *commonRepo) WhereByUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereInUuids 根据UUID列表查询
+func (r *commonRepo) WhereInUuids(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid IN (?)", uuids)
 	}
 }
 

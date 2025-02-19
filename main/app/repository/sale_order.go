@@ -8,6 +8,7 @@ import (
 
 type ISaleOrderRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
+	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 }
 
 type saleOrderRepo struct {
@@ -32,4 +33,12 @@ func (r *saleOrderRepo) GetSaleOrder(opts ...DBOption) (model.SaleOrder, error) 
 	}
 
 	return saleOrder, nil
+}
+
+func (r *saleOrderRepo) GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error) {
+	order, err := r.GetSaleOrder(CommonRepo.WhereByUuid(uuid))
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
 }

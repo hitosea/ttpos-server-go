@@ -9,6 +9,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -283,7 +284,7 @@ type SaleOrderProduct struct {
 
 	// 折扣相关字段
 	IsCustomPrice          uint    `gorm:"column:is_custom_price;type:tinyint(1);not null;default:0;comment:'是否自定义价格（单商品）, 0-否 1-是'" json:"is_custom_price"`
-	IsOpenMemberDiscount   uint    `gorm:"column:is_open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"is_open_member_discount"`
+	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"` // 快照设置相关，不受后台改变，结账时检查
 	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`
 	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`
 	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`
@@ -316,11 +317,10 @@ type SaleOrderProduct struct {
 	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20);not null;default:0;comment:'商品包ID'" json:"product_package_uuid"`
 	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);not null;default:0;comment:'销售账单ID'" json:"sale_bill_uuid"`
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:'销售订单ID'" json:"sale_order_uuid"`
-	QrcodeOrderUuid       uint64 `gorm:"column:qrcode_order_uuid;type:bigint(20);not null;default:0;comment:'扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品'" json:"qrcode_order_uuid"`
 
 	// 其他字段
-	Sign                 string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
-	IsQrcodeOrderProduct uint   `gorm:"column:is_qrcode_order_product;type:tinyint(1);not null;default:0;comment:'是否为扫码订单商品, 0-否 1-是'" json:"is_qrcode_order_product"`
+	Sign             string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
+	IsH5OrderProduct uint   `gorm:"column:is_h5_order_product;type:tinyint(1);not null;default:0;comment:'是否为扫码订单商品, 0-否 1-是'" json:"is_qrcode_order_product"`
 
 	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
@@ -328,6 +328,100 @@ type SaleOrderProduct struct {
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+type Sauce struct {
+	Name           string
+	Price          float64
+	ProductBomUuid uint64
+}
+type Flavor struct {
+	Name           string
+	Price          float64
+	ProductBomUuid uint64
+}
+type Attribute struct {
+	Name                 string
+	ProductAttributeUuid uint64
+}
+type DefaultSaleOrderProduct struct {
+	Name                   string
+	IsRequire              uint
+	IsOpenMemberDiscount   uint
+	TaxRate                float64
+	DeductStockType        uint
+	MultiLanguageNameUuid  uint64
+	ImageFileUuid          uint64
+	ProductPackageUuid     uint64
+	SaleBillUuid           uint64
+	SaleOrderUuid          uint64
+	MemberDiscountRate     float64
+	MemberCardDiscountRate float64
+	CustomDiscountRate     float64
+	Sauces                 []Sauce
+	Flavor                 Flavor
+	Attribute              []Attribute
+}
+
+func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
+	saleOrderProductUuid, _ := utils.GetID()
+	saleOrderProductBoms := make([]SaleOrderProductBom, 0)
+	for _, bom := range def.Sauces {
+		saleOrderProductBom := SaleOrderProductBom{
+			Name:                 bom.Name,
+			Price:                bom.Price,
+			IsFlavorBom:          0,
+			SaleOrderProductUuid: saleOrderProductUuid,
+			SaleOrderUuid:        def.SaleOrderUuid,
+			ProductBomUuid:       bom.ProductBomUuid,
+		}
+		saleOrderProductBoms = append(saleOrderProductBoms, saleOrderProductBom)
+	}
+	saleOrderProductBoms = append(saleOrderProductBoms, SaleOrderProductBom{
+		Name:                 def.Flavor.Name,
+		Price:                def.Flavor.Price,
+		IsFlavorBom:          1,
+		SaleOrderUuid:        def.SaleOrderUuid,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		ProductBomUuid:       def.Flavor.ProductBomUuid,
+	})
+
+	saleOrderProductAttributes := []SaleOrderProductAttribute{}
+	for _, attribute := range def.Attribute {
+		saleOrderProductAttribute := SaleOrderProductAttribute{
+			Name:                 attribute.Name,
+			SaleOrderUuid:        def.SaleOrderUuid,
+			SaleOrderProductUuid: saleOrderProductUuid,
+			ProductAttributeUuid: attribute.ProductAttributeUuid,
+		}
+		saleOrderProductAttributes = append(saleOrderProductAttributes, saleOrderProductAttribute)
+	}
+	product := SaleOrderProduct{
+		BaseModel: BaseModel{
+			Uuid: saleOrderProductUuid,
+		},
+		Name:                       def.Name,
+		FlavorName:                 def.Flavor.Name,
+		Num:                        1,
+		Status:                     constant.OrderProductStatusUnSending,
+		IsAcceptOrder:              1,
+		IsRequire:                  def.IsRequire,
+		FlavorPrice:                def.Flavor.Price,
+		OpenMemberDiscount:         def.IsOpenMemberDiscount,
+		MemberDiscountRate:         def.MemberDiscountRate,
+		MemberCardDiscountRate:     def.MemberCardDiscountRate,
+		CustomDiscountRate:         def.CustomDiscountRate,
+		TaxRate:                    def.TaxRate,
+		DeductStockType:            def.DeductStockType,
+		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
+		ImageFileUuid:              def.ImageFileUuid,
+		ProductPackageUuid:         def.ProductPackageUuid,
+		SaleBillUuid:               def.SaleBillUuid,
+		SaleOrderUuid:              def.SaleOrderUuid,
+		SaleOrderProductBoms:       saleOrderProductBoms,
+		SaleOrderProductAttributes: saleOrderProductAttributes,
+	}
+	return &product
 }
 
 // 获取商品销售价(折前价)

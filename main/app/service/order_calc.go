@@ -44,7 +44,7 @@ func (o *orderCalcSrv) CalcOrderProductAmount(saleBill model.SaleBill, saleOrder
 	// 计算订单商品折扣金额
 	discountAmount := o.CalcOrderProductDiscountAmount(CalcOrderProductDiscountAmountReq{
 		SalePrice:              orderProduct.SalePrice,
-		IsOpenMemberDiscount:   orderProduct.IsOpenMemberDiscount,
+		IsOpenMemberDiscount:   orderProduct.OpenMemberDiscount,
 		MemberDiscountRate:     saleOrder.MemberDiscountRate,
 		MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
 		CustomDiscountRate:     saleOrder.CustomDiscountRate,
