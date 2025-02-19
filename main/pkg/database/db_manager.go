@@ -63,8 +63,6 @@ func (m *DBManager) getConnection(conf config.DatabaseConf, dbName string) (*gor
 	switch conf.DBType {
 	case "mysql":
 		return NewMySQLConnection(conf, dbName)
-	case "postgres":
-		return NewPostgreSQLConnection(conf, dbName)
 	case "sqlite":
 		return NewSQLiteConnection(conf)
 	default:

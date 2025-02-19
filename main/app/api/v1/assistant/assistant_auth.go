@@ -60,7 +60,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, "退出成功")
+	helper.Success(c, gin.H{}, "退出成功")
 }
 
 // BindCashier 点餐助手绑定收银机

@@ -73,7 +73,7 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, "操作成功")
+	helper.Success(c, gin.H{}, "操作成功")
 }
 
 // CancelSoldOut 取消沽清商品
@@ -101,7 +101,7 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, "取消成功")
+	helper.Success(c, gin.H{}, "取消成功")
 }
 
 // CancelAllSoldOut 全部取消沽清商品
@@ -122,7 +122,7 @@ func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, "取消成功")
+	helper.Success(c, gin.H{}, "取消成功")
 }
 
 // RegisterSoldOutHandlers 注册沽清路由

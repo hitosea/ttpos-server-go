@@ -300,6 +300,10 @@ func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
 	}
+	// 修改密码后，token失效
+	if staff.PasswordChangeTime > auth.TokenIssuedAt {
+		return company, companySetting, staff, errors.New("无效的token")
+	}
 
 	if staff.DeleteTime != 0 {
 		return company, companySetting, staff, errors.New("用户被删除")

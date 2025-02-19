@@ -1373,6 +1373,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff` (
     `password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '登录密码',
     `phone` VARCHAR(20) DEFAULT '' COMMENT '手机号',
     `password_change_count` INT(11) DEFAULT 0 COMMENT '修改密码次数',
+    `password_change_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改密码时间',
     `real_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '姓名',
     `is_super` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否为超级管理员0不是,1是',
     `user_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账号类型0总台1门店',

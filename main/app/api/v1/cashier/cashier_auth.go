@@ -59,7 +59,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, "退出成功")
+	helper.Success(c, gin.H{}, "退出成功")
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

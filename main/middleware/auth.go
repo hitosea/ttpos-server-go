@@ -61,8 +61,6 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 		return
 	}
 
-	fmt.Println(config.JWT.Secret)
-
 	// 验证token
 	claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
 	if err != nil {
@@ -89,6 +87,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 			DeviceId:  claims.Assistant.DeviceId,
 			StaffUuid: claims.Assistant.StaffUuid,
 		},
+		TokenIssuedAt: claims.IssuedAt.Unix(),
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
