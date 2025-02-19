@@ -1092,19 +1092,29 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		productList := make([]resp.Product, 0)
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
-		for _, buffet := range saleOrder.Buffets {
+		for _, buffet := range saleOrder.SaleOrderBuffetCustomerTypes {
+			fmt.Println(fmt.Sprintf("debug: buffet:%+v", buffet))
 			product := resp.Product{
-				Uuid:                buffet.Uuid,
-				LocaleName:          buffet.BuffetPackageMultiLanguageName.GetNames(),
-				LocaleAttributeName: buffet.BuffetCustomerTypeMultiLanguageName.GetNames(),
-				Num:                 buffet.Num,
-				Price:               buffet.CustomerPrice,
-				DiscountPrice:       buffet.Price,
-				Status:              1,
-				Remark:              "",
-				IsMust:              false,
-				IsGift:              false,
-				IsCancel:            false,
+				Uuid:       buffet.Uuid,
+				LocaleName: buffet.BuffetPackageMultiLanguageName.GetNames(),
+				LocaleAttributeName: dto.LocaleResponse{
+					ZH:   buffet.Name,
+					TH:   buffet.Name,
+					EN:   buffet.Name,
+					ZHTW: buffet.Name,
+					JA:   buffet.Name,
+					KO:   buffet.Name,
+					MY:   buffet.Name,
+					TR:   buffet.Name,
+				},
+				Num:           buffet.Num,
+				Price:         buffet.CustomerPrice,
+				DiscountPrice: buffet.Price,
+				Status:        1,
+				Remark:        "",
+				IsMust:        false,
+				IsGift:        false,
+				IsCancel:      false,
 				AboutBuffet: resp.AboutBuffet{
 					IsCustomer: true,
 					IsDelay:    false,
@@ -1171,30 +1181,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			shopCartInfo.Buffet = resp.BuffetInfo{
 				EndTime:    shopCart.SaleBill.BuffetEndTime(),
 				LocaleName: shopCart.SaleBill.GetBuffetName(),
-			}
-			// 给商品列表条件顾客类型
-			productList := make([]resp.Product, 0)
-			for _, saleOrder := range shopCart.SaleBill.SaleOrders {
-				for _, buffet := range saleOrder.Buffets {
-					product := resp.Product{
-						Uuid:                buffet.Uuid,
-						LocaleName:          buffet.BuffetPackageMultiLanguageName.GetNames(),
-						LocaleAttributeName: buffet.BuffetCustomerTypeMultiLanguageName.GetNames(),
-						Num:                 buffet.Num,
-						Price:               buffet.CustomerPrice,
-						DiscountPrice:       buffet.Price,
-						Status:              1,
-						Remark:              "",
-						IsMust:              false,
-						IsGift:              false,
-						IsCancel:            false,
-						AboutBuffet: resp.AboutBuffet{
-							IsCustomer: true,
-							IsDelay:    false,
-						},
-					}
-					productList = append(productList, product)
-				}
 			}
 		}
 	}

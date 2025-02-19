@@ -406,6 +406,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 					},
 				),
+				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackageMultiLanguageName",
+					},
+				),
 			)
 			if errDesk != nil {
 				return nil, errDesk
@@ -636,12 +641,6 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 			},
 			WithPreload{
 				Query: "Cashier",
-			},
-			WithPreload{
-				Query: "SaleOrders.Buffets.BuffetPackageMultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.Buffets.BuffetCustomerTypeMultiLanguageName",
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),

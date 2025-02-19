@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `buffet_package1_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐1的uuid',
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
-    
+
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
@@ -486,6 +486,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '顾客类型名称',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
     `customer_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格（折后价），只进行自定义打折，不进行会员打折',
