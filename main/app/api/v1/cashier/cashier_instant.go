@@ -2,7 +2,7 @@ package cashier
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -191,24 +191,18 @@ func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
-// @param data body req.OrderCartInfoReq true "查询参数"
+// @Param id path string true "账单ID"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/cart/info [post]
+// @Router /cashier/instant/order/cart/info [get]
 func (h *CashierInstantHandler) OrderCartInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	fmt.Println(fmt.Sprintf("debug: 222222222"))
-	// 绑定请求参数
-	params := req.OrderCartInfoReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		fmt.Println(fmt.Sprintf("debug: params:%+v", params))
+	saleBillUuid, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	fmt.Println(fmt.Sprintf("debug: params:%+v", params))
-
-	//
-	res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid)
+	res, err := h.orderService.GetOrderCartInfo(ctx, saleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -243,6 +237,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice) // 点餐订单商品改价
 		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)      // 点餐订单修改人数
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)     // 点餐订单商品备注
-		privateApi.POST("/instant/order/cart/info", wrapper.OrderCartInfo)               // 查询点餐购物车信息
+		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                // 查询点餐购物车信息
 	}
 }

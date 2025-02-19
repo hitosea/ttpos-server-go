@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总打折金额,关联销售订单的折扣费用之和',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣费用,关联销售订单的会员折扣费用之和',
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣费用,关联销售订单的会员折扣费用之和',
-    `product_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
+    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
     `product_original_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额。 商品原始金额=(订单.原始商品金额)之和。',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付金额,支付金额-订单总金额=支付手续费',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,多次支付的支付手续费之和',

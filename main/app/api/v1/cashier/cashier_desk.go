@@ -1,6 +1,7 @@
 package cashier
 
 import (
+	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -304,6 +305,32 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderCartInfo 处理查询点餐购物车信息
+// @Summary 查询点餐购物车信息
+// @Description 查询点餐购物车信息
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Param id path string true "账单ID"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/info [get]
+func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	saleBillUuid, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	res, err := h.orderService.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterProductHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -330,15 +357,16 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
-		privateApi.GET("/desk/list", wrapper.GetDeskList)
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
-		privateApi.POST("/desk/close", wrapper.CloseDesk)
-		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)
-		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)
-		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)
-		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)
-		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)
-		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)         // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                             // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                             // 获取桌台详情
+		privateApi.POST("/desk/close", wrapper.CloseDesk)                             // 关闭桌台
+		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)                // 创建桌台订单
+		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                // 取消桌台订单
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)   // 删除桌台订单商品
+		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice) // 桌台订单商品改价
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)      // 桌台订单修改人数
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)     // 桌台订单商品备注
+		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                // 查询点餐购物车信息
 	}
 }

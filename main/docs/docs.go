@@ -1321,6 +1321,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/cart/info": {
+            "get": {
+                "description": "查询点餐购物车信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "查询点餐购物车信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "账单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/create": {
             "post": {
                 "description": "创建桌台订单",
@@ -1555,7 +1602,7 @@ const docTemplate = `{
             }
         },
         "/cashier/instant/order/cart/info": {
-            "post": {
+            "get": {
                 "description": "查询点餐购物车信息",
                 "consumes": [
                     "application/json"
@@ -1567,6 +1614,15 @@ const docTemplate = `{
                     "收银端.点餐"
                 ],
                 "summary": "查询点餐购物车信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "账单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1991,7 +2047,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2131,7 +2187,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2182,7 +2238,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -2222,7 +2278,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PendingRechargeOrder"
+                                            "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
                                 }
@@ -4772,6 +4828,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.AboutBuffet": {
+            "type": "object",
+            "properties": {
+                "is_customer": {
+                    "description": "是否是自助餐顾客",
+                    "type": "boolean"
+                },
+                "is_delay": {
+                    "description": "是否是加钟",
+                    "type": "boolean"
+                }
+            }
+        },
         "resp.Ads": {
             "type": "object",
             "properties": {
@@ -4786,8 +4855,12 @@ const docTemplate = `{
         "resp.AmountInfo": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "description": "总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）",
+                    "type": "number"
+                },
                 "discount_amount": {
-                    "description": "优惠折扣金额",
+                    "description": "优惠折扣金额(整单打折优惠金额+订单抹零金额)",
                     "type": "number"
                 },
                 "member_discount_amount": {
@@ -4795,7 +4868,11 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "product_amount": {
-                    "description": "商品金额",
+                    "description": "商品金额(折后价)",
+                    "type": "number"
+                },
+                "product_origin_amount": {
+                    "description": "商品金额(原价)",
                     "type": "number"
                 },
                 "service_amount": {
@@ -4803,11 +4880,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "tax_amount": {
-                    "description": "税费",
-                    "type": "number"
-                },
-                "total_amount": {
-                    "description": "总金额",
+                    "description": "税费（商品税费+服务费税费）",
                     "type": "number"
                 }
             }
@@ -5045,6 +5118,14 @@ const docTemplate = `{
                 "end_time": {
                     "description": "自助餐结束时间",
                     "type": "integer"
+                },
+                "locale_name": {
+                    "description": "自助餐名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -5146,8 +5227,12 @@ const docTemplate = `{
         "resp.ConfirmRechargeOrder": {
             "type": "object",
             "properties": {
-                "amount": {
+                "actual_amount": {
                     "description": "实收",
+                    "type": "number"
+                },
+                "amount": {
+                    "description": "应收",
                     "type": "number"
                 },
                 "charge_due": {
@@ -5160,10 +5245,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                },
-                "recharge_amount": {
-                    "description": "应收",
-                    "type": "number"
                 }
             }
         },
@@ -7156,12 +7237,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "description": "支付订单总金额 = 支付订单金额 + 手续费 + 找零",
+                    "description": "实收金额",
                     "type": "number"
                 },
                 "payment_amount": {
                     "description": "支付订单金额",
                     "type": "number"
+                },
+                "payment_commission_fee": {
+                    "description": "手续费",
+                    "type": "number"
+                },
+                "payment_method_code": {
+                    "description": "支付方式代号",
+                    "type": "integer"
                 },
                 "payment_method_uuid": {
                     "description": "支付方式Uuid",
@@ -7169,38 +7258,6 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "充值订单支付订单Uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.PendingRechargeOrder": {
-            "type": "object",
-            "properties": {
-                "gift_money": {
-                    "description": "赠送金额",
-                    "type": "number"
-                },
-                "gift_point": {
-                    "description": "赠送积分",
-                    "type": "number"
-                },
-                "member_uuid": {
-                    "description": "会员Uuid",
-                    "type": "integer"
-                },
-                "payment_orders": {
-                    "description": "充值订单支付类型列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.PaymentOrder"
-                    }
-                },
-                "recharge_money": {
-                    "description": "充值金额",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "充值订单Uuid",
                     "type": "integer"
                 }
             }
@@ -7249,21 +7306,45 @@ const docTemplate = `{
         "resp.Product": {
             "type": "object",
             "properties": {
-                "attribute": {
-                    "description": "商品属性",
-                    "type": "string"
+                "about_buffet": {
+                    "description": "自助餐信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AboutBuffet"
+                        }
+                    ]
                 },
                 "discount_price": {
-                    "description": "折扣价",
+                    "description": "折扣价。折扣加为0的话表示没有对商品进行折扣，则显示原价",
                     "type": "number"
+                },
+                "is_cancel": {
+                    "description": "是否退菜",
+                    "type": "boolean"
+                },
+                "is_gift": {
+                    "description": "是否是赠菜",
+                    "type": "boolean"
                 },
                 "is_must": {
                     "description": "是否必点",
                     "type": "boolean"
                 },
-                "name": {
-                    "description": "商品名称",
-                    "type": "string"
+                "locale_attribute_name": {
+                    "description": "商品属性",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "自助餐名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "num": {
                     "description": "数量",
@@ -7278,7 +7359,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "0: 未送厨 1:已送厨 2:退菜 3:赠菜",
+                    "description": "0: 未送厨 1:已送厨",
                     "type": "integer"
                 },
                 "uuid": {
@@ -7312,6 +7393,42 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "会员Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.RechargeOrder": {
+            "type": "object",
+            "properties": {
+                "charge_due": {
+                    "description": "找零",
+                    "type": "number"
+                },
+                "gift_amount": {
+                    "description": "赠送金额",
+                    "type": "number"
+                },
+                "gift_point": {
+                    "description": "赠送积分",
+                    "type": "number"
+                },
+                "member_uuid": {
+                    "description": "会员Uuid",
+                    "type": "integer"
+                },
+                "payment_orders": {
+                    "description": "充值订单支付类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentOrder"
+                    }
+                },
+                "recharge_amount": {
+                    "description": "充值金额",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "充值订单Uuid",
                     "type": "integer"
                 }
             }
