@@ -51,5 +51,5 @@ func (r *BindRecordRepo) Update(uuid uint64, vars map[string]interface{}) error 
 }
 
 func (r *BindRecordRepo) Create(bindRecord model.Device) error {
-	return r.db.Create(&bindRecord).Error
+	return r.db.Model(&model.Device{}).Create(&bindRecord).Error
 }

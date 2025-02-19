@@ -31,7 +31,7 @@ func NewOrderOperationRecordRepoImpl(db *gorm.DB) *OrderOperationRecordRepoImpl 
 	return &OrderOperationRecordRepoImpl{db: db}
 }
 
-// GetOrderOperationRecordList 获取订单操作记录列表
+// GetRecordList 获取订单操作记录列表
 func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleBillOperationRecord, int64, error) {
 	var orderOperationRecords []model.SaleBillOperationRecord
 	var total int64
@@ -52,14 +52,14 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts 
 	return orderOperationRecords, total, err
 }
 
-// GetOrderOperationRecordList 获取订单操作记录列表
+// GetRecordLists 获取订单操作记录列表
 func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error) {
 	var orderOperationRecords []model.SaleBillOperationRecord
 	err := r.db.Model(&model.SaleBillOperationRecord{}).Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderOperationRecords).Error
 	return orderOperationRecords, err
 }
 
-// GetOrderOperationRecordInfo 获取订单操作记录信息
+// GetRecordInfo 获取订单操作记录信息
 func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error) {
 	var orderOperationRecord model.SaleBillOperationRecord
 	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).First(&orderOperationRecord).Error; err != nil {
@@ -68,7 +68,7 @@ func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model
 	return orderOperationRecord, nil
 }
 
-// UpdateOrderOperationRecord 更新订单操作记录
+// UpdateRecord 更新订单操作记录
 func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error {
 	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).Updates(record).Error; err != nil {
 		return err
@@ -76,7 +76,7 @@ func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record 
 	return nil
 }
 
-// CreateOrderOperationRecord 创建订单操作记录
+// CreateRecord 创建订单操作记录
 func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error) {
 	record.Action = Action
 	record.SaleBillUuid = saleBillUuid
@@ -107,7 +107,7 @@ func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action 
 	return record.Uuid, nil
 }
 
-// DeleteOrderOperationRecord 软删除订单操作记录
+// DeleteRecord 软删除订单操作记录
 func (r *OrderOperationRecordRepoImpl) DeleteRecord(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).Update("delete_time", uint(time.Now().Unix())).Error
 }

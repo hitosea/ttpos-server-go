@@ -19,12 +19,13 @@ type DeskHandler struct {
 	Service service.IDeskSrv // 主服务
 }
 
-// GetAssistantDeskRegionAndType 处理获取桌台的区域和类型
+// GetDeskRegionAndType 处理获取桌台的区域和类型
 // @Summary 获取桌台的区域和类型
 // @Description 获取桌台的区域和类型
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/region_and_type [get]
@@ -41,12 +42,13 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetAssistantDeskList 处理获取桌台列表
+// GetDeskList 处理获取桌台列表
 // @Summary 获取桌台列表
 // @Description 获取桌台列表
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.DeskListReq true "列表参数"
 // @Success 200 {array} resp.DeskListWithPaginationResp "桌台列表"
 // @Failure 404 {object} nil "未找到"
@@ -54,13 +56,13 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.DeskListReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+	deskListReq := req.DeskListReq{}
+	if err := c.ShouldBindQuery(&deskListReq); err != nil {
+		helper.HandleValidationError(c, err, deskListReq, dto.PageReqMessage)
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(companyId, req)
+	res, err := h.Service.GetDeskList(companyId, deskListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -70,12 +72,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetAssistantDeskInfo 处理获取桌台详情
+// GetDeskInfo 处理获取桌台详情
 // @Summary 获取桌台详情
 // @Description 获取桌台详情
 // @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.DeskInfoReq true "详情参数"
 // @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
@@ -83,13 +86,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.DeskInfoReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
+	deskInfoReq := req.DeskInfoReq{}
+	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskInfo(companyId, req.Uuid)
+	res, err := h.Service.GetDeskInfo(companyId, deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -99,7 +102,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// RegisterProductHandlers 注册收银产品路由
+// RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

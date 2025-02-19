@@ -19,7 +19,7 @@ func NewProductPrinterRegionRepo(db *gorm.DB) IProductPrinterRegionRepo {
 	return NewProductPrinterRegionRepoImpl(db)
 }
 
-// NewProductPrinterRepoImpl 创建新的商品打印（档口）仓库实现
+// NewProductPrinterRegionRepoImpl 创建新的商品打印（档口）仓库实现
 func NewProductPrinterRegionRepoImpl(db *gorm.DB) *ProductPrinterRegionRepoImpl {
 	return &ProductPrinterRegionRepoImpl{db: db}
 }

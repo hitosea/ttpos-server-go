@@ -16,8 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CashierOrderHandler 收银点餐处理程序
-type CashierOrderHandler struct {
+// OrderHandler 收银点餐处理程序
+type OrderHandler struct {
 	service     service.IOrderSrv // 订单服务
 	deskService service.IDeskSrv  // 桌台服务
 }
@@ -28,11 +28,12 @@ type CashierOrderHandler struct {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderListReq true "列表参数"
 // @Success 200 {object} resp.OrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/list [get]
-func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
+func (h *OrderHandler) GetCashierOrderList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
@@ -59,11 +60,12 @@ func (h *CashierOrderHandler) GetCashierOrderList(c *gin.Context) {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderInfoReq true "详情参数"
 // @Success 200 {object} resp.OrderInfosResp "订单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/info [get]
-func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
+func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
@@ -91,11 +93,12 @@ func (h *CashierOrderHandler) GetOrderInfo(c *gin.Context) {
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCancelReq true "详情参数"
 // @Success 200 {object} nil "取消订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/cancel [post]
-func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
@@ -113,17 +116,18 @@ func (h *CashierOrderHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// CancelOrder 处理删除订单
+// DeleteOrder 处理删除订单
 // @Summary 删除订单
 // @Description 删除订单
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderDeleteReq true "详情参数"
 // @Success 200 {object} nil "取消订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/delete [delete]
-func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
+func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	req := req.OrderDeleteReq{}
@@ -141,16 +145,17 @@ func (h *CashierOrderHandler) DeleteOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// IsCellCloseDesk 判断订单是否可关闭
+// IsCellClose 判断订单是否可关闭
 // @Summary 判断订单是否可关闭
 // @Description 判断订单是否可关闭
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderIsCellCloseReq true "详情参数"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/is_cell_close [get]
-func (h *CashierOrderHandler) IsCellClose(c *gin.Context) {
+func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	//
 	params := req.OrderIsCellCloseReq{}
@@ -189,7 +194,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv)
 
 	// 初始化处理器
-	wrapper := CashierOrderHandler{
+	wrapper := OrderHandler{
 		service: orderSrv,
 		deskService: service.NewDeskSrv( // 订单服务
 			dbm,

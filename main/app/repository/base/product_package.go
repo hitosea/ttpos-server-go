@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 产品包
+// ProductPackageRepoInterface 产品包
 type ProductPackageRepoInterface interface {
 	GetProductPackageList() ([]model.ProductPackage, error)                   // 获取产品包列表
 	UpdateProductPackage(id uint, productPackage model.ProductPackage) error  // 更新产品包
@@ -19,7 +19,7 @@ func NewProductPackageRepo(db *gorm.DB) ProductPackageRepoInterface {
 	return NewProductPackageRepoImpl(db)
 }
 
-// 创建新的产品包仓库实现
+// NewProductPackageRepoImpl 创建新的产品包仓库实现
 func NewProductPackageRepoImpl(db *gorm.DB) *ProductPackageRepoImpl {
 	return &ProductPackageRepoImpl{db: db}
 }
@@ -28,14 +28,14 @@ type ProductPackageRepoImpl struct {
 	db *gorm.DB
 }
 
-// 获取产品包列表，排除逻辑删除的产品包
+// GetProductPackageList 获取产品包列表，排除逻辑删除的产品包
 func (r *ProductPackageRepoImpl) GetProductPackageList() ([]model.ProductPackage, error) {
 	var productPackages []model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productPackages).Error
 	return productPackages, err
 }
 
-// 更新产品包
+// UpdateProductPackage 更新产品包
 func (r *ProductPackageRepoImpl) UpdateProductPackage(id uint, productPackage model.ProductPackage) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -57,7 +57,7 @@ func (r *ProductPackageRepoImpl) UpdateProductPackage(id uint, productPackage mo
 	return tx.Commit().Error // 提交事务
 }
 
-// 创建产品包
+// CreateProductPackage 创建产品包
 func (r *ProductPackageRepoImpl) CreateProductPackage(productPackage model.ProductPackage) (uint64, error) {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
@@ -81,7 +81,7 @@ func (r *ProductPackageRepoImpl) CreateProductPackage(productPackage model.Produ
 	return productPackage.Uuid, tx.Commit().Error // 提交事务
 }
 
-// 软删除产品包
+// DeleteProductPackage 软删除产品包
 func (r *ProductPackageRepoImpl) DeleteProductPackage(id uint) error {
 	return r.db.Model(&model.ProductPackage{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

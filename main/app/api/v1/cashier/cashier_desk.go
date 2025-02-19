@@ -20,12 +20,13 @@ type DeskHandler struct {
 	orderService service.IOrderSrv
 }
 
-// GetCashierDeskRegionAndType 处理获取桌台的区域和类型
+// GetDeskRegionAndType 处理获取桌台的区域和类型
 // @Summary 获取桌台的区域和类型
 // @Description 获取桌台的区域和类型
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} resp.DeskRegionAndTypeListWithPaginationResp "桌台区域和类型列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
@@ -42,12 +43,13 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetCashierDeskList 处理获取桌台列表
+// GetDeskList 处理获取桌台列表
 // @Summary 获取桌台列表
 // @Description 获取桌台列表
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.DeskListReq true "列表参数"
 // @Success 200 {array} resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
@@ -71,12 +73,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetCashierDeskList 处理获取收银台列表
+// GetDeskInfo 处理获取收银台列表
 // @Summary 获取桌台详情
 // @Description 获取桌台详情
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.DeskInfoReq true "详情参数"
 // @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
@@ -106,6 +109,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.DeskOrderCreateReq true "创建桌台订单参数"
 // @Success 200 {object} resp.CreateDeskOrderResp "创建桌台订单成功"
 // @Failure 404 {object} nil "未找到"
@@ -136,6 +140,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.DeskCloseReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -164,6 +169,7 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderCancelReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -192,6 +198,7 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductDeleteReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -222,6 +229,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductChangePriceReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -252,6 +260,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderChangePopulationReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -282,6 +291,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductRemarkReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
@@ -304,7 +314,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// RegisterProductHandlers 注册收银产品路由
+// RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

@@ -42,7 +42,7 @@ func (r *PrinterTagRepoImpl) UpdatePrinterTag(id uint, printerTag model.PrinterT
 
 // CreatePrinterTag 创建打印机标签
 func (r *PrinterTagRepoImpl) CreatePrinterTag(printerTag model.PrinterTag) (uint, error) {
-	return printerTag.ID, r.db.Create(&printerTag).Error
+	return printerTag.ID, r.db.Model(&model.PrinterTag{}).Create(&printerTag).Error
 }
 
 // DeletePrinterTag 软删除打印机标签

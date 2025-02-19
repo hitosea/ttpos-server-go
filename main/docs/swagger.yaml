@@ -378,6 +378,12 @@ definitions:
         description: 销售账单UUID
         type: integer
     type: object
+  req.OrderCartInfoReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售订单ID
+        type: integer
+    type: object
   req.OrderChangePopulationReq:
     properties:
       population:
@@ -527,6 +533,15 @@ definitions:
     required:
     - password
     type: object
+  resp.AboutBuffet:
+    properties:
+      is_customer:
+        description: 是否是自助餐顾客
+        type: boolean
+      is_delay:
+        description: 是否是加钟
+        type: boolean
+    type: object
   resp.Ads:
     properties:
       list:
@@ -536,23 +551,26 @@ definitions:
     type: object
   resp.AmountInfo:
     properties:
+      amount:
+        description: 总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）
+        type: number
       discount_amount:
-        description: 优惠折扣金额
+        description: 优惠折扣金额(整单打折优惠金额+订单抹零金额)
         type: number
       member_discount_amount:
         description: 会员优惠折扣金额
         type: number
       product_amount:
-        description: 商品金额
+        description: 商品金额(折后价)
+        type: number
+      product_origin_amount:
+        description: 商品金额(原价)
         type: number
       service_amount:
         description: 服务费
         type: number
       tax_amount:
-        description: 税费
-        type: number
-      total_amount:
-        description: 总金额
+        description: 税费（商品税费+服务费税费）
         type: number
     type: object
   resp.AssistantBase:
@@ -718,6 +736,10 @@ definitions:
       end_time:
         description: 自助餐结束时间
         type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 自助餐名称
     type: object
   resp.BuffetListPaginationResp:
     properties:
@@ -779,8 +801,11 @@ definitions:
     type: object
   resp.ConfirmRechargeOrder:
     properties:
-      amount:
+      actual_amount:
         description: 实收
+        type: number
+      amount:
+        description: 应收
         type: number
       charge_due:
         description: 找零
@@ -790,9 +815,6 @@ definitions:
         items:
           type: string
         type: array
-      recharge_amount:
-        description: 应收
-        type: number
     type: object
   resp.CreateDeskOrderResp:
     properties:
@@ -2176,42 +2198,47 @@ definitions:
         description: 销售订单商品ID
         type: integer
     type: object
+  resp.PaymentMethodItem:
+    properties:
+      fee_percent:
+        type: number
+      logo:
+        type: string
+      payment_name:
+        type: string
+      qrcode:
+        type: string
+      source_text:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.PaymentMethodList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PaymentMethodItem'
+        type: array
+    type: object
   resp.PaymentOrder:
     properties:
       amount:
-        description: 支付订单总金额 = 支付订单金额 + 手续费 + 找零
+        description: 实收金额
         type: number
       payment_amount:
         description: 支付订单金额
         type: number
+      payment_commission_fee:
+        description: 手续费
+        type: number
+      payment_method_code:
+        description: 支付方式代号
+        type: integer
       payment_method_uuid:
         description: 支付方式Uuid
         type: integer
       uuid:
         description: 充值订单支付订单Uuid
-        type: integer
-    type: object
-  resp.PendingRechargeOrder:
-    properties:
-      gift_money:
-        description: 赠送金额
-        type: number
-      gift_point:
-        description: 赠送积分
-        type: number
-      member_uuid:
-        description: 会员Uuid
-        type: integer
-      payment_orders:
-        description: 充值订单支付类型列表
-        items:
-          $ref: '#/definitions/resp.PaymentOrder'
-        type: array
-      recharge_money:
-        description: 充值金额
-        type: number
-      uuid:
-        description: 充值订单Uuid
         type: integer
     type: object
   resp.Permission:
@@ -2243,18 +2270,30 @@ definitions:
     type: object
   resp.Product:
     properties:
-      attribute:
-        description: 商品属性
-        type: string
+      about_buffet:
+        allOf:
+        - $ref: '#/definitions/resp.AboutBuffet'
+        description: 自助餐信息
       discount_price:
-        description: 折扣价
+        description: 折扣价。折扣加为0的话表示没有对商品进行折扣，则显示原价
         type: number
+      is_cancel:
+        description: 是否退菜
+        type: boolean
+      is_gift:
+        description: 是否是赠菜
+        type: boolean
       is_must:
         description: 是否必点
         type: boolean
-      name:
-        description: 商品名称
-        type: string
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 自助餐名称
       num:
         description: 数量
         type: integer
@@ -2265,7 +2304,7 @@ definitions:
         description: 备注
         type: string
       status:
-        description: '0: 未送厨 1:已送厨 2:退菜 3:赠菜'
+        description: '0: 未送厨 1:已送厨'
         type: integer
       uuid:
         description: 商品uuid
@@ -2290,6 +2329,32 @@ definitions:
         type: number
       uuid:
         description: 会员Uuid
+        type: integer
+    type: object
+  resp.RechargeOrder:
+    properties:
+      charge_due:
+        description: 找零
+        type: number
+      gift_amount:
+        description: 赠送金额
+        type: number
+      gift_point:
+        description: 赠送积分
+        type: number
+      member_uuid:
+        description: 会员Uuid
+        type: integer
+      payment_orders:
+        description: 充值订单支付类型列表
+        items:
+          $ref: '#/definitions/resp.PaymentOrder'
+        type: array
+      recharge_amount:
+        description: 充值金额
+        type: number
+      uuid:
+        description: 充值订单Uuid
         type: integer
     type: object
   resp.SaleOrder:
@@ -2700,6 +2765,8 @@ paths:
             $ref: '#/definitions/resp.BuffetListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取自助餐列表
       tags:
       - 点餐助手端.自助餐
@@ -2723,6 +2790,8 @@ paths:
             $ref: '#/definitions/resp.DeskInfoResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台详情
       tags:
       - 点餐助手端.桌台
@@ -2735,13 +2804,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -2754,6 +2823,8 @@ paths:
             type: array
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台列表
       tags:
       - 点餐助手端.桌台
@@ -2771,6 +2842,8 @@ paths:
             $ref: '#/definitions/resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台的区域和类型
       tags:
       - 点餐助手端.桌台
@@ -3338,6 +3411,8 @@ paths:
             $ref: '#/definitions/resp.BuffetListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取自助餐列表
       tags:
       - 收银端.自助餐
@@ -3390,6 +3465,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 关闭桌台
       tags:
       - 收银端.桌台
@@ -3413,6 +3490,8 @@ paths:
             $ref: '#/definitions/resp.DeskInfoResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台详情
       tags:
       - 收银端.桌台
@@ -3425,13 +3504,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -3444,6 +3523,8 @@ paths:
             type: array
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台列表
       tags:
       - 收银端.桌台
@@ -3472,6 +3553,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消桌台订单
       tags:
       - 收银端.桌台
@@ -3496,6 +3579,8 @@ paths:
             $ref: '#/definitions/resp.CreateDeskOrderResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 创建桌台订单
       tags:
       - 收银端.桌台
@@ -3518,6 +3603,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单修改人数
       tags:
       - 收银端.桌台
@@ -3540,6 +3627,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除桌台订单商品
       tags:
       - 收银端.桌台
@@ -3562,6 +3651,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单商品改价
       tags:
       - 收银端.桌台
@@ -3584,6 +3675,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单商品备注
       tags:
       - 收银端.桌台
@@ -3601,6 +3694,8 @@ paths:
             $ref: '#/definitions/resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台的区域和类型
       tags:
       - 收银端.桌台
@@ -3623,6 +3718,8 @@ paths:
           description: 取消点餐订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消点餐订单
       tags:
       - 收银端.点餐
@@ -3631,6 +3728,13 @@ paths:
       consumes:
       - application/json
       description: 查询点餐购物车信息
+      parameters:
+      - description: 查询参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartInfoReq'
       produces:
       - application/json
       responses:
@@ -3645,6 +3749,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 查询点餐购物车信息
       tags:
       - 收银端.点餐
@@ -3660,6 +3766,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/resp.CreateOrderResp'
+      security:
+      - JwtToken: []
       summary: 创建点餐订单
       tags:
       - 收银端.点餐
@@ -3682,6 +3790,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单修改人数
       tags:
       - 收银端.点餐
@@ -3704,6 +3814,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除点餐订单商品
       tags:
       - 收银端.点餐
@@ -3726,6 +3838,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单商品改价
       tags:
       - 收银端.点餐
@@ -3748,6 +3862,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单商品备注
       tags:
       - 收银端.点餐
@@ -3892,7 +4008,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PendingRechargeOrder'
+                  $ref: '#/definitions/resp.RechargeOrder'
               type: object
       security:
       - JwtToken: []
@@ -3971,7 +4087,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PendingRechargeOrder'
+                  $ref: '#/definitions/resp.RechargeOrder'
               type: object
       security:
       - JwtToken: []
@@ -4000,7 +4116,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PendingRechargeOrder'
+                  $ref: '#/definitions/resp.RechargeOrder'
               type: object
       security:
       - JwtToken: []
@@ -4022,7 +4138,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PendingRechargeOrder'
+                  $ref: '#/definitions/resp.RechargeOrder'
               type: object
       security:
       - JwtToken: []
@@ -4075,6 +4191,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消订单
       tags:
       - 收银端.订单
@@ -4097,6 +4215,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除订单
       tags:
       - 收银端.订单
@@ -4129,11 +4249,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -4144,6 +4264,8 @@ paths:
             $ref: '#/definitions/resp.OrderInfosResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单详情
       tags:
       - 收银端.订单
@@ -4155,17 +4277,19 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
       responses:
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 判断订单是否可关闭
       tags:
       - 收银端.订单
@@ -4177,46 +4301,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -4231,6 +4355,8 @@ paths:
             $ref: '#/definitions/resp.OrderListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单列表
       tags:
       - 收银端.订单
@@ -4406,6 +4532,28 @@ paths:
       summary: 拆包收银订单
       tags:
       - 收银端
+  /cashier/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PaymentMethodList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式列表
+      tags:
+      - 收银端.支付方式
   /cashier/product/category/list:
     get:
       consumes:
@@ -4420,6 +4568,8 @@ paths:
             $ref: '#/definitions/cashier_resp.ProductCategoryListResp'
         "400":
           description: 错误请求
+      security:
+      - JwtToken: []
       summary: 获取收银产品类别列表
       tags:
       - 收银端.产品
@@ -4448,6 +4598,8 @@ paths:
             $ref: '#/definitions/cashier_resp.ProductListWithPaginationResp'
         "400":
           description: 错误请求
+      security:
+      - JwtToken: []
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
@@ -4470,6 +4622,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 添加沽清商品
       tags:
       - 收银端.沽清
@@ -4492,6 +4646,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 取消沽清商品
       tags:
       - 收银端.沽清
@@ -4507,6 +4663,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 全部取消沽清商品
       tags:
       - 收银端.沽清
@@ -4536,6 +4694,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.SoldOutPaginationResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 沽清售罄列表
       tags:
       - 收银端.沽清
@@ -5016,6 +5176,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消订单
       tags:
       - 商家端.订单
@@ -5038,6 +5200,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除订单
       tags:
       - 商家端.订单
@@ -5049,11 +5213,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -5064,6 +5228,8 @@ paths:
             $ref: '#/definitions/resp.OrderInfosResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单详情
       tags:
       - 商家端.订单
@@ -5075,17 +5241,19 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
       responses:
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 判断订单是否可关闭
       tags:
       - 商家端.订单
@@ -5097,46 +5265,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -5151,6 +5319,8 @@ paths:
             $ref: '#/definitions/resp.OrderListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单列表
       tags:
       - 商家端.订单

@@ -30,11 +30,11 @@ func NewMemberRechargeOrderRepoImpl(db *gorm.DB) *MemberRechargeOrderRepo {
 // GetRechargeOrder 获取充值订单
 func (r *MemberRechargeOrderRepo) GetRechargeOrder(opts ...DBOption) model.MemberRechargeOrder {
 	var rechargeOrder model.MemberRechargeOrder
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.MemberRechargeOrder{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Model(&model.MemberRechargeOrder{}).First(&rechargeOrder)
+	db.First(&rechargeOrder)
 	return rechargeOrder
 }
 

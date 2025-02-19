@@ -15,8 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CashierInstantHandler 收银点餐处理程序
-type CashierInstantHandler struct {
+// InstantHandler 收银点餐处理程序
+type InstantHandler struct {
 	orderService service.IOrderSrv // 订单服务
 }
 
@@ -26,9 +26,10 @@ type CashierInstantHandler struct {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} resp.CreateOrderResp
 // @Router /cashier/instant/order/create [post]
-func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
+func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 创建订单
 	res, err := h.orderService.CreateInstantOrder(ctx)
@@ -45,11 +46,12 @@ func (h *CashierInstantHandler) CreateInstantOrder(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCancelReq true "详情参数"
 // @Success 200 {object} nil "取消点餐订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cancel [post]
-func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
+func (h *InstantHandler) CancelOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
@@ -73,11 +75,12 @@ func (h *CashierInstantHandler) CancelOrder(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductDeleteReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/delete [delete]
-func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
+func (h *InstantHandler) OrderProductDelete(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	staff := helper.GetStaff(c)
 	source := helper.GetSource(c)
@@ -103,11 +106,12 @@ func (h *CashierInstantHandler) OrderProductDelete(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductChangePriceReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/price [post]
-func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
+func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
@@ -133,11 +137,12 @@ func (h *CashierInstantHandler) OrderProductChangePrice(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderChangePopulationReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/population [post]
-func (h *CashierInstantHandler) OrderChangePopulation(c *gin.Context) {
+func (h *InstantHandler) OrderChangePopulation(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	staff := helper.GetStaff(c)
 	source := helper.GetSource(c)
@@ -163,11 +168,12 @@ func (h *CashierInstantHandler) OrderChangePopulation(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderProductRemarkReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/remark [post]
-func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
+func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderProductRemarkReq{}
@@ -191,11 +197,12 @@ func (h *CashierInstantHandler) OrderProductRemark(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartInfoReq true "查询参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cart/info [post]
-func (h *CashierInstantHandler) OrderCartInfo(c *gin.Context) {
+func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	fmt.Println(fmt.Sprintf("debug: 222222222"))
 	// 绑定请求参数
@@ -230,7 +237,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
 
 	// 创建收银产品处理程序
-	wrapper := CashierInstantHandler{
+	wrapper := InstantHandler{
 		orderService: orderSrv, // 订单服务
 	}
 

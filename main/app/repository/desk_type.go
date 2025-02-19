@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// IDeskRepo 桌台
+// IDeskTypeRepo 桌台
 type IDeskTypeRepo interface {
 	GetDeskTypeList() ([]model.DeskType, error)
 	UpdateDeskType(uuid uint, deskType model.DeskType) error
@@ -19,7 +19,7 @@ func NewDeskTypeRepo(db *gorm.DB) IDeskTypeRepo {
 	return NewDeskTypeRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+// NewDeskTypeRepoImpl 创建新的商品规格仓库实现
 func NewDeskTypeRepoImpl(db *gorm.DB) *DeskTypeRepoImpl {
 	return &DeskTypeRepoImpl{db: db}
 }
@@ -46,13 +46,13 @@ func (r *DeskTypeRepoImpl) UpdateDeskType(uuid uint, deskType model.DeskType) er
 // CreateDeskType 创建桌台类型
 func (r *DeskTypeRepoImpl) CreateDeskType(deskType model.DeskType) (uint64, error) {
 	// 创建桌台类型
-	if err := r.db.Create(&deskType).Error; err != nil {
+	if err := r.db.Model(&model.DeskType{}).Create(&deskType).Error; err != nil {
 		return 0, err
 	}
 	return deskType.Uuid, nil
 }
 
-// DeleteProductFlavor 软删除商品规格
+// DeleteDeskType 软删除商品规格
 func (r *DeskTypeRepoImpl) DeleteDeskType(id uint) error {
 	return r.db.Model(&model.DeskType{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }

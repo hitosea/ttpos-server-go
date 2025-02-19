@@ -108,7 +108,7 @@ func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffe
 	return model, nil
 }
 
-// GetOrderList 获取订单列表
+// GetOrderListWithPagination 获取订单列表
 func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error) {
 	var orders []model.SaleBill
 	var total int64
@@ -131,7 +131,7 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 	return orders, total, err
 }
 
-// 获取订单的数量
+// GetOrderNum 获取订单的数量
 func (r *orderRepo) GetOrderNum(opts ...DBOption) (int64, error) {
 	var count int64
 	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
@@ -144,7 +144,7 @@ func (r *orderRepo) GetOrderNum(opts ...DBOption) (int64, error) {
 	return count, result.Error
 }
 
-// GetCashierOrderListWithPagination 获取收银台订单列表-参数
+// GetCashierOrderListWithPaginationType 获取收银台订单列表-参数
 type GetCashierOrderListWithPaginationType struct {
 	PageNo           int    // 页码
 	PageSize         int    // 页面大小
@@ -604,9 +604,9 @@ func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid
 	return info, nil
 }
 
-// 根据销售订单商品uuid列表获取销售订单商品列表
+// GetSaleOrderProductListBySaleOrderProductUuids 根据销售订单商品uuid列表获取销售订单商品列表
 func (r *orderRepo) GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error) {
-	products := []model.SaleOrderProduct{}
+	products := make([]model.SaleOrderProduct, 0)
 	err := r.db.Model(&model.SaleOrderProduct{}).Where("uuid in ?", saleOrderProductUuids).Find(&products).Error
 	if err != nil {
 		return nil, err
@@ -746,7 +746,7 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 	return tx.Commit().Error
 }
 
-// isPartiallyPaid 是否已经被部分支付
+// IsPartiallyPaid 是否已经被部分支付
 func (r *orderRepo) IsPartiallyPaid(param any) bool {
 	var info model.SaleBill
 	var ok bool

@@ -27,7 +27,7 @@ func NewSettingRepoImpl(db *gorm.DB) *SettingRepo {
 
 func (r *SettingRepo) GetAll() ([]model.Setting, error) {
 	var settings []model.Setting
-	err := r.db.Find(&settings).Error
+	err := r.db.Model(&model.Setting{}).Find(&settings).Error
 	return settings, err
 }
 
@@ -42,6 +42,6 @@ func (r *SettingRepo) GetByKey(key string) model.Setting {
 }
 
 func (r *SettingRepo) Create(setting model.Setting) (model.Setting, error) {
-	err := r.db.Create(&setting).Error
+	err := r.db.Model(&model.Setting{}).Create(&setting).Error
 	return setting, err
 }

@@ -144,6 +144,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers) // 获取在线的收银机
 		privateApi.POST("/bind_cashier", wrapper.BindCashier)         // 绑定收银机
 		privateApi.GET("/base", wrapper.GetAssistantBase)             // 获取基本信息
-		privateApi.POST("/logout", wrapper.Logout)                    // 获取基本信息
+		privateApi.POST("/logout", wrapper.Logout)                    // 退出登录
 	}
 }

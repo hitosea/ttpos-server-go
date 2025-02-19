@@ -49,7 +49,7 @@ func (r *ProductPackageAttributeGroupRepoImpl) UpdateProductPackageAttributeGrou
 // CreateProductPackageAttributeGroup 创建产品包属性组
 func (r *ProductPackageAttributeGroupRepoImpl) CreateProductPackageAttributeGroup(productPackageAttributeGroup model.ProductPackageAttributeGroup) (uint, error) {
 	// 创建产品包属性组
-	if err := r.db.Create(&productPackageAttributeGroup).Error; err != nil {
+	if err := r.db.Model(&model.ProductPackageAttributeGroup{}).Create(&productPackageAttributeGroup).Error; err != nil {
 		return 0, err
 	}
 

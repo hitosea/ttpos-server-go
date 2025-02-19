@@ -28,12 +28,12 @@ func NewAccessRepoImpl(db *gorm.DB) *AccessRepo {
 }
 
 func (r *AccessRepo) CreateAccess(access *model.Access) error {
-	return r.db.Create(access).Error
+	return r.db.Model(&model.Access{}).Create(access).Error
 }
 
 func (r *AccessRepo) GetPermissions(opts ...DBOption) ([]model.Access, error) {
 	var access []model.Access
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.Access{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

@@ -24,6 +24,6 @@ func NewCompanySettingRepoImpl(db *gorm.DB) *CompanySettingRepo {
 
 func (r *CompanySettingRepo) Get() model.CompanySetting {
 	var companySetting model.CompanySetting
-	r.db.First(&companySetting)
+	r.db.Model(&model.CompanySetting{}).First(&companySetting)
 	return companySetting
 }

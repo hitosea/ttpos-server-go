@@ -25,6 +25,7 @@ type SoldOutHandler struct {
 // @Tags 收银端.沽清
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} dto.Response{data=resp.SoldOutPaginationResp}
@@ -53,6 +54,7 @@ func (h *SoldOutHandler) SoldOutList(c *gin.Context) {
 // @Tags 收银端.沽清
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.AddSoldOutReq true "添加沽清商品参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/add [post]
@@ -80,6 +82,7 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 // @Tags 收银端.沽清
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.CancelSoldOutReq true "取消沽清商品参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/cancel [post]
@@ -107,6 +110,7 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 // @Tags 收银端.沽清
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/cancel_all [post]
 func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {

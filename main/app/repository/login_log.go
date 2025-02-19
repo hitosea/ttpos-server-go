@@ -1,28 +1,28 @@
 package repository
 
 import (
+	"gorm.io/gorm"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/database"
 )
 
 type ILoginLogRepo interface {
 	Save(companyId uint64, username, ip, result string) error
 }
 
-func NewLoginLogRepo(dbm *database.DBManager) ILoginLogRepo {
-	return NewLoginLogRepoImpl(dbm)
+func NewLoginLogRepo(db *gorm.DB) ILoginLogRepo {
+	return NewLoginLogRepoImpl(db)
 }
 
 type LoginLogRepo struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
-func NewLoginLogRepoImpl(dbm *database.DBManager) *LoginLogRepo {
-	return &LoginLogRepo{dbm: dbm}
+func NewLoginLogRepoImpl(db *gorm.DB) *LoginLogRepo {
+	return &LoginLogRepo{db: db}
 }
 
 func (r *LoginLogRepo) Save(companyId uint64, username, ip, result string) error {
-	return r.dbm.GetDB(companyId).Debug().Create(&model.StaffLoginLog{
+	return r.db.Model(&model.StaffLoginLog{}).Debug().Create(&model.StaffLoginLog{
 		StaffUuid: 0, // todo
 		Username:  "",
 		Ip:        "",

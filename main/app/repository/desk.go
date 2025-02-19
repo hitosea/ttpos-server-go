@@ -25,7 +25,7 @@ func NewDeskRepo(db *gorm.DB) IDeskRepo {
 	return NewDeskRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的桌台仓库实现
+// NewDeskRepoImpl 创建新的桌台仓库实现
 func NewDeskRepoImpl(db *gorm.DB) *DeskRepoImpl {
 	return &DeskRepoImpl{db: db}
 }
@@ -71,7 +71,7 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 
 func (r *DeskRepoImpl) GetDesk(opts ...DBOption) (*model.Desk, error) {
 	var desk model.Desk
-	db := r.db
+	db := r.db.Model(&model.Desk{})
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -87,20 +87,20 @@ func (r *DeskRepoImpl) GetDesk(opts ...DBOption) (*model.Desk, error) {
 
 // GetDeskInfo 获取桌台信息
 func (r *DeskRepoImpl) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) {
-	var model model.Desk
+	var desk model.Desk
 
-	db := r.db.Where("uuid = ?", deskUuid)
+	db := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid)
 
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
-	result := db.Preload("SaleBill", "status = ?", constant.SaleBillStatusPending).First(&model)
+	result := db.Preload("SaleBill", "status = ?", constant.SaleBillStatusPending).First(&desk)
 	if result.Error != nil {
-		return model, result.Error
+		return desk, result.Error
 	}
 
-	return model, nil
+	return desk, nil
 }
 
 // UpdateDesk 更新桌台
@@ -136,7 +136,7 @@ func (r *DeskRepoImpl) CloseDesk(deskUuid uint64, reason string) error {
 
 func (r *DeskRepoImpl) GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) {
 	var desk model.Desk
-	return desk, r.db.Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).Preload("SaleBill", func(db *gorm.DB) *gorm.DB {
+	return desk, r.db.Model(&model.Desk{}).Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).Preload("SaleBill", func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", constant.SaleBillStatusPending)
 	}).First(&desk).Error
 }

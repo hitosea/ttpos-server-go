@@ -24,7 +24,7 @@ func NewStaffRoleRepoImpl(db *gorm.DB) *StaffRoleRepo {
 }
 
 func (r *StaffRoleRepo) CreateStaffRole(staffRole model.StaffRole) error {
-	return r.db.Create(&staffRole).Error
+	return r.db.Model(&model.StaffRole{}).Create(&staffRole).Error
 }
 
 func (r *StaffRoleRepo) GetRoleUuidsByStaffUuid(staffUuid uint64) ([]uint64, error) {

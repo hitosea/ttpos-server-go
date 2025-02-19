@@ -19,7 +19,7 @@ func NewBuffetCustomerTypeRepo(db *gorm.DB) IBuffetCustomerTypeRepo {
 	return NewBuffetCustomerTypeRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+// NewBuffetCustomerTypeRepoImpl 创建新的商品规格仓库实现
 func NewBuffetCustomerTypeRepoImpl(db *gorm.DB) *BuffetCustomerTypeRepoImpl {
 	return &BuffetCustomerTypeRepoImpl{db: db}
 }
@@ -28,7 +28,7 @@ type BuffetCustomerTypeRepoImpl struct {
 	db *gorm.DB
 }
 
-// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
+// GetBuffetCustomerTypeList 获取商品规格列表，排除逻辑删除的规格
 func (r *BuffetCustomerTypeRepoImpl) GetBuffetCustomerTypeList() ([]model.BuffetCustomerType, error) {
 	var buffetCustomerTypes []model.BuffetCustomerType
 	err := r.db.Model(&model.BuffetCustomerType{}).Where("delete_time = ?", 0).Find(&buffetCustomerTypes).Error
@@ -53,7 +53,7 @@ func (r *BuffetCustomerTypeRepoImpl) CreateBuffetCustomerType(buffetCustomerType
 	return buffetCustomerType.Uuid, nil
 }
 
-// DeleteProductFlavor 软删除商品规格
+// DeleteBuffetCustomerType 软删除商品规格
 func (r *BuffetCustomerTypeRepoImpl) DeleteBuffetCustomerType(uuid uint) error {
 	return r.db.Model(&model.BuffetCustomerType{}).Where("uuid = ?", uuid).Update("delete_time", uint(time.Now().Unix())).Error
 }
