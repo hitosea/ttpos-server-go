@@ -2,16 +2,14 @@
 
 namespace app\common\model\erp;
 
-use help\StringHelp;
 use app\common\library\helper;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
-use app\common\model\product\Product;
 use app\common\model\product\Category;
-use app\common\model\product\ProductSku;
-use app\common\service\sync\SyncService;
-
+use app\common\model\product\Material;
+use app\common\model\product\ProductBom;
+use app\common\model\erp\ErpWarehouseForm;
 /**
  * 报损记录模型
  */
@@ -26,38 +24,63 @@ class ErpDamagedProductRecord extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = [];
+    protected $append = ['number', 'type', 'product_id', 'product_sku_id', 'review_status', 'operator_id', 'refused', 'approved_time', 'rejected_time'];
 
     /**
-     * type 损坏类型 1-丢失 2-损坏
+     * 报损类型, 0-损耗 1-丢失
      */
-    const TYPE_LOST = 1;
-    const TYPE_DAMAGED = 2;
+    const SCENE_LOSS = 0;
+    const SCENE_LOST = 1;
+    const OLD_SCENE_LOSS = [
+        1 => self::SCENE_LOSS,
+        2 => self::SCENE_LOST
+    ];
 
     /**
-     * 审核类型 0-待审核 1-通过 2-拒绝
+     * 状态,0-pending待审核 1-approved已通过 2-rejected已驳回
      */
-    const REVIEW_PENDING = 0;
-    const REVIEW_APPROVED = 1;
-    const REVIEW_REJECTED = 2;
+    const STATUS_PENDING = 0;
+    const STATUS_APPROVED = 1;
+    const STATUS_REJECTED = 2;
 
-    //
-    public static function onBeforeInsert($model)
+    /**
+     * 兼容字段
+     */
+    public function getNumberAttr($value, $data = [])
     {
-        if (!isset($model['id'])) {
-            $model['id'] = StringHelp::uuid();
-        }
-        return $model;
+        return $this?->form_no ?: '';
     }
-
-    public static function getApprovedTimeAttr($value, $data = [])
+    public function getTypeAttr($value, $data = [])
     {
-        return date("Y-m-d H:i:s", $data['approved_time'] ?? 0);
+        return $this?->scene ?: 0;
     }
-
-    public static function getRejectedTimeAttr($value, $data = [])
+    public function getProductIdAttr($value, $data = [])
     {
-        return date("Y-m-d H:i:s", $data['rejected_time'] ?? 0);
+        return $this?->material_uuid ?: 0;
+    }
+    public function getProductSkuIdAttr($value, $data = [])
+    {
+        return $this?->material_uuid ?: 0;
+    }
+    public function getReviewStatusAttr($value, $data = [])
+    {
+        return $this?->status ?: 0;
+    }
+    public function getRejectedTimeAttr($value, $data = [])
+    {
+        return $this?->status == self::STATUS_REJECTED ? date("Y-m-d H:i:s", intval($this?->update_time ?: 0)) : '';
+    }
+    public function getApprovedTimeAttr($value, $data = [])
+    {
+        return $this?->status == self::STATUS_APPROVED ? date("Y-m-d H:i:s", intval($this?->update_time ?: 0)) : '';
+    }
+    public function getOperatorIdAttr($value, $data = [])
+    {
+        return $this?->operator_uuid ?: 0;
+    }
+    public function getRefusedAttr($value, $data = [])
+    {
+        return $this?->reject_reason ?: 0;
     }
 
     /**
@@ -73,7 +96,7 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+        return $this->belongsTo(Product::class, 'material_uuid', 'uuid');
     }
 
     /**
@@ -81,7 +104,7 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function operator()
     {
-        return $this->belongsTo(User::class, 'operator_id', 'shop_user_id')->field(['shop_user_id', 'user_name', 'real_name']);
+        return $this->belongsTo(User::class, 'operator_uuid', 'uuid')->field(['uuid', 'uuid as shop_user_id', 'username as user_name', 'real_name']);
     }
 
     /**
@@ -89,7 +112,7 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo('app\\common\\model\\product\\ProductBom', 'material_uuid', 'uuid');
     }
 
 
@@ -121,9 +144,9 @@ class ErpDamagedProductRecord extends BaseModel
             $type = $params['type'];
         }
         return $model
-            // ->with(['sku.product', 'operator'])
+            ->with(['sku', 'operator'])
             ->when($type && $type > 0, function ($q) use ($type) {
-                $q->where('type', $type);
+                $q->where('scene', self::OLD_SCENE_LOSS[$type]);
             })
             ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
                 $q->where('create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
@@ -157,40 +180,37 @@ class ErpDamagedProductRecord extends BaseModel
             $type = $params['type'];
         }
         $list = $model->alias('dr')
-            // todo 兼容
-            // ->join('product p', 'dr.product_id = p.product_id')
-            // ->join('category c', 'p.category_id = c.category_id')
-            // ->where('dr.delete_time', 0)
-            // ->where('dr.review_status', 1)
-            // ->when($type && $type > 0, function ($q) use ($type) {
-            //     $q->where('dr.type', $type);
-            // })
-            // ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
-            //     $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
-            // })
-            // ->field([
-            //     'IF(c.parent_id > 0, c.parent_id, p.category_id) AS category_id',
-            //     'c.parent_id',
-            //     'c.name',
-            //     'SUM(num) as damage_count'
-            // ])
-            // ->group('p.category_id')
-            // ->order('p.category_id')
+            ->leftJoin('product_package p', 'dr.material_uuid = p.uuid')
+            ->leftJoin('product_category c', 'p.category_uuid = c.uuid')
+            ->where('dr.status', self::STATUS_APPROVED)
+            ->when($type && $type > 0, function ($q) use ($type) {
+                $q->where('dr.scene', $type);
+            })
+            ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
+                $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
+            })
+            ->field([
+                'IF(c.parent_uuid > 0, c.parent_uuid, p.category_uuid) AS category_uuid',
+                'c.parent_uuid',
+                'c.name',
+                'SUM(num) as damage_count'
+            ])
+            ->group('p.category_uuid')
+            ->order('p.category_uuid')
             ->select()->toArray();
         // 对结果进行处理
         foreach ($list as &$damageCount) {
-            $category_id = $damageCount['category_id'];
+            $category_uuid = $damageCount['category_uuid'];
             $damageCount['name'] = Category::getNameTextAttr($damageCount['name']);
             // 入库数
-            $entry_num = (new ErpInventoryRecord())->alias('eir')
-                ->join('product p', 'eir.product_id = p.product_id')
-                ->join('category c', 'p.category_id = c.category_id')
-                ->where('eir.delete_time', 0)
-                ->where(function ($q) use ($category_id) {
-                    $q->where('c.category_id', $category_id)->whereOr('c.parent_id', $category_id);
+            $entry_num = (new ErpWarehouseForm())->alias('eir')
+                ->leftJoin('product_package p', 'eir.material_uuid = p.uuid')
+                ->leftJoin('product_category c', 'p.category_uuid = c.uuid')
+                ->where(function ($q) use ($category_uuid) {
+                    $q->where('c.uuid', $category_uuid)->whereOr('c.parent_uuid', $category_uuid);
                 })
                 ->where('eir.create_time', '<=', strtotime($end_time))
-                ->where('eir.status', '=', 10)  // 10-已入库 20-已出库
+                ->where('eir.status', '=', ErpWarehouseForm::STATUS_SUCCESS)
                 ->sum('num');
             // 出库数
             $exit_num = 0;
@@ -224,14 +244,17 @@ class ErpDamagedProductRecord extends BaseModel
             $this->error = '数量不能为0';
             return false;
         }
+        $product = ProductBom::where('uuid', $params['product_sku_id'])->find();
+        $material = Material::where('uuid', $params['product_sku_id'])->find();
 
-        $product = Product::where('product_id', $params['product_id'])->find();
         $stock_num = 0;
-        if ($product['type'] == Product::TYPE_PRODUCT) {
-            $stock_num = ProductSku::where('product_sku_id', $params['product_sku_id'])->value('stock_num');
+        if ($product) {
+            $stock_num = ProductBom::where('uuid', $params['product_sku_id'])->value('stock_num');
         }
-        if ($product['type'] == Product::TYPE_MATERIAL) {
-            $stock_num = ProductSku::where('product_sku_id', $params['product_sku_id'])->value('material_stock');
+
+        // 原料
+        if ($material) {
+            $stock_num = Material::where('uuid', $params['product_sku_id'])->value('stock_num');
         }
 
         if ($num > $stock_num) {
@@ -240,15 +263,12 @@ class ErpDamagedProductRecord extends BaseModel
         }
         //
         $data['form_no'] = $model->generateNumber();
-        $data['type'] = $params['type'] ?? 1;;
-        $data['product_id'] = $params['product_id'] ?? 0;
-        $data['product_sku_id'] = $params['product_sku_id'] ?? 0;
+        $data['scene'] = self::OLD_SCENE_LOSS[$params['type'] ?? 1];
+        $data['material_uuid'] = $params['product_sku_id'] ?? 0;
         $data['num'] = $num;
         $data['remark'] = $params['remark'] ?? 0;
-        $data['review_status'] = 0;
-        $data['operator_id'] = $params['operator_id'];
-        $data['shop_supplier_id'] = $params['shop_supplier_id'] ?? 0;
-        $data['app_id'] = self::$app_id;
+        $data['status'] = self::STATUS_PENDING;
+        $data['operator_uuid'] = $params['operator_id'];
         $model->save($data);
         return $model->id;
     }
@@ -264,66 +284,13 @@ class ErpDamagedProductRecord extends BaseModel
             return false;
         }
         //
-        $updateArr['type'] = $params['type'] ?? 1;;
-        $updateArr['product_id'] = $params['product_id'] ?? 0;
+        $updateArr['scene'] = self::OLD_SCENE_LOSS[$params['type'] ?? 1];
+        $updateArr['material_uuid'] = $params['product_sku_id'] ?? 0;
         $updateArr['num'] = $params['num'] ?? 0;
         $updateArr['remark'] = $params['remark'] ?? 0;
-        $updateArr['operator_id'] = $params['operator_id'];
+        $updateArr['operator_uuid'] = $params['operator_id'];
 
         return $detail->save($updateArr);
-    }
-
-    /**
-     * 云端同步操作
-     *
-     */
-    public function syncReview($params)
-    {
-        $id = $this->id;
-        $reviewStatus = $params['review_status'] ?? 0;
-        $refused = $params['refused'] ?? '';
-        if (!$id) {
-            $this->error = '报损单不存在';
-            return false;
-        }
-        //
-        $syncService = new SyncService();
-        //
-        $syncDetailData = $syncService->syncInventoryDetail($id);
-        if (!$syncDetailData) {
-            $this->error = $syncService->getError() ?: '网络连接异常，请重试';
-            return false;
-        } else if (($syncDetailData['code'] ?? 0) == 502) {
-            $syncService->syncTables();
-        } else {
-            $syncDetail = $syncDetailData['data'] ?? [];
-            if (!$syncDetail) {
-                $this->error = '云端数据异常，请重试';
-                return false;
-            }
-            // 状态对比，如果状态不同，则更新本地状态
-            if ($this['review_status'] != $syncDetail['review_status']) {
-                $this->review([
-                    'review_status' => $syncDetail['review_status'],
-                    'refused' => $syncDetail['refused'],
-                ]);
-            }
-            //
-            if ($syncDetail['review_status'] == $reviewStatus) {
-                return true;
-            }
-        }
-        // 状态对比，如果状态相同，先请求云上操作，再更新本地操作方法
-        $syncOperateData = $syncService->syncInventoryReview($id, $reviewStatus, $refused);
-        if (!$syncOperateData) {
-            $this->error = $syncService->getError() ?: '网络连接异常，请重试';
-            return false;
-        }
-        if ($syncOperateData['code'] != 1) {
-            $this->error = $syncOperateData['msg'] ?? '操作失败';
-            return false;
-        }
-        return $this->review($params);
     }
 
     /**
@@ -331,7 +298,7 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function review($params)
     {
-        if ($this->review_status != 0) {
+        if ($this->status != 0) {
             $this->error = '当前状态不可操作';
             return false;
         }
@@ -339,50 +306,52 @@ class ErpDamagedProductRecord extends BaseModel
         $this->startTrans();
         try {
             if (($params['review_status'] ?? 0) == 1) {
-                $updateArr['review_status'] = 1;
+                $updateArr['status'] = 1;
                 $updateArr['approved_time'] = time();
                 // 减少库存
-                $product = Product::where('product_id', $this->product_id)->find();
+                $product = ProductBom::where('uuid', $this->material_uuid)->find();
+                $material = Material::where('uuid', $this->material_uuid)->find();
                 // 成品
-                if ($product['type'] == Product::TYPE_PRODUCT) {
-                    $productSku = ProductSku::where('product_sku_id', $this->product_sku_id)->find();
+                if ($product) {
+                    $productSku = ProductBom::where('uuid', $this->material_uuid)->find();
                     if ($this->num > $productSku->stock_num) {
                         $this->error = '报损数量大于剩余库存数量';
                         return false;
                     }
                     $skuStock = helper::bcsub($productSku->stock_num, $this->num);
                     $productSku->save(['stock_num' => $skuStock]);
-                    $productStock = helper::bcsub($product->product_stock, $this->num);
-                    $product->save(['product_stock' => $productStock]);
+                    $productStock = helper::bcsub($product->stock_num, $this->num);
+                    $product->save(['stock_num' => $productStock]);
                 }
                 // 材料
-                else if ($product['type'] == Product::TYPE_MATERIAL) {
-                    $productSku = ProductSku::where('product_sku_id', $this['product_sku_id'])->find();
-                    if ($this['num'] > $productSku->material_stock) {
+                else if ($material) {
+                    $productSku = Material::where('uuid', $this->material_uuid)->find();
+                    if ($this['stock_num'] > $productSku->stock_num) {
                         $this->error = '报损数量大于剩余库存数量';
                         return false;
                     }
-                    $skuStock = helper::bcsub($productSku->material_stock, $this->num, 4);
-                    $productSku->save(['material_stock' => $skuStock]);
-                    $productMaterialStock = helper::bcsub($product->product_material_stock, $this->num, 4);
-                    $product->save(['product_material_stock' => $productMaterialStock]);
+                    $skuStock = helper::bcsub($productSku->stock_num, $this->num, 4);
+                    $productSku->save(['stock_num' => $skuStock]);
+                    $productMaterialStock = helper::bcsub($product->stock_num, $this->num, 4);
+                    $product->save(['stock_num' => $productMaterialStock]);
                 } else {
                     $this->error = '记录不存在';
                     return false;
                 }
             }
             if (($params['review_status'] ?? 0) == 2) {
-                $updateArr['review_status'] = 2;
+                $updateArr['status'] = 2;
                 $updateArr['rejected_time'] = time();
-                $updateArr['refused'] = $params['refused'] ?? '';
+                $updateArr['reject_reason'] = $params['refused'] ?? '';
             }
             //
             $this->save($updateArr);
             $this->commit();
 
             // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-            if (($params['review_status'] ?? 0) == 1 && $product['type'] == Product::TYPE_MATERIAL) {
-                $product->reCalProductStock([$this->product_id]);
+            if (($params['review_status'] ?? 0) == 1 && $material) {
+                /** @var Product $product */
+                $product->reCalProductStock([$this->material_uuid]);
             }
             return true;
         } catch (\Exception $e) {

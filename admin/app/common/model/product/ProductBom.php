@@ -23,7 +23,7 @@ class ProductBom extends BaseModel
     /**
      * 追加字段
      */
-    protected $append = ['product_sku_id', 'spec_name_text'];
+    protected $append = ['product_sku_id', 'product_id', 'spec_name_text'];
 
     /**
      * 兼容字段
@@ -31,6 +31,10 @@ class ProductBom extends BaseModel
     public function getProductSkuIdAttr($value, $data = [])
     {
         return $this->uuid ?: 0;
+    }
+    public function getProductIdAttr($value, $data = [])
+    {
+        return $this->product_package_uuid ?: 0;
     }
     public static function getSpecNameTextAttr($value, $data)
     {

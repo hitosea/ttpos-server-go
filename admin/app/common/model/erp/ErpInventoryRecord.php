@@ -149,7 +149,7 @@ class ErpInventoryRecord extends BaseModel
                 $q->field('product_sku_id, product_id, spec_name, stock_num, material_stock')->with('material');
             },
             'operator' => function ($q) {
-                $q->field('uuid as shop_user_id, username as user_name, real_name');
+                $q->field('uuid, uuid as shop_user_id, username as user_name, real_name');
             }
         ])->where('inventory_type', $type)->order('create_time desc')->paginate($params);
         //

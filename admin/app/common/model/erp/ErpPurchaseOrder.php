@@ -7,6 +7,8 @@ use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
+use app\common\model\product\Material;
+use app\common\model\product\ProductBom;
 use app\common\model\product\ProductSku;
 use app\common\model\erp\ErpWarehouseForm;
 
@@ -286,6 +288,7 @@ class ErpPurchaseOrder extends BaseModel
                 $value['estimate_amount'] = floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
                 $value['estimate_num'] = $value['estimate_purchase_num'];
                 $value['estimate_price'] = $value['estimate_purchase_price'];
+                $value['material_uuid'] = $value['product_sku_id'];
             }
             $purchaseDetailModel = new ErpPurchaseDetail;
             $purchaseDetailModel->saveAll($params['purchase_detail']);
@@ -342,6 +345,7 @@ class ErpPurchaseOrder extends BaseModel
                 $value['estimate_num'] = $value['estimate_purchase_num'];
                 $value['estimate_price'] = $value['estimate_purchase_price'];
                 $value['estimate_amount'] = floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
+                $value['material_uuid'] = $value['product_sku_id'];
             }
 
             $data = [
@@ -514,22 +518,18 @@ class ErpPurchaseOrder extends BaseModel
                 $materialIds = [];
                 foreach ($detailList as $detail) {
                     if ($detail->material_type == ErpPurchaseDetail::MATERIAL_TYPE_PRODUCT) {
-                        $product = $detail->product;
+                        $product = $detail->sku;
                     } else {
                         $product = $detail->material;
                     }
                     if (!$product) continue;
-                    switch ($product['type']) {
-                        case Product::TYPE_PRODUCT:
-                            Product::where(['product_id' => $detail->product_id])->inc('product_stock', $detail->num)->update();
-                            // 规格库存增加
-                            ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('stock_num', $detail->num)->update();
+                    switch ($detail->material_type ) {
+                        case ErpPurchaseDetail::MATERIAL_TYPE_PRODUCT:
+                            ProductBom::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
                             break;
-                        case Product::TYPE_MATERIAL:
-                            $materialIds = array_merge($materialIds, [$detail->product_id]);
-                            Product::where(['product_id' => $detail->product_id])->inc('product_material_stock', $detail->num)->update();
-                            // 规格库存增加
-                            ProductSku::where(['product_sku_id' => $detail->product_sku_id])->inc('material_stock', $detail->num)->update();
+                        case ErpPurchaseDetail::MATERIAL_TYPE_MATERIAL:
+                            $materialIds = array_merge($materialIds, [$detail->material_uuid]);
+                            Material::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
                             break;
                     }
                 }
@@ -538,10 +538,10 @@ class ErpPurchaseOrder extends BaseModel
                 // 入库记录
                 $inventoryRecord = new ErpWarehouseForm;
                 $inventoryRecordData = [
-                    'purchase_form_uuid' => $this->uuid,
-                    'type' => ErpWarehouseForm::TYPE_PURCHASE_IN,
+                    'purchase_order_uuid' => $this->uuid,
+                    'scene' => ErpWarehouseForm::SCENE_PURCHASE_IN,
                     'num' => $this->total_num,
-                    'operator_uuid' => $operationLogData['operator_id'],
+                    'operator_uuid' => $operationLogData['operator_uuid'],
                     'username' => $operationLogData['username'],
                     'remark' => $this->remark ?: '',
                 ];
@@ -551,7 +551,7 @@ class ErpPurchaseOrder extends BaseModel
                 }
                 //
                 /** @var ErpWarehouseForm $inventoryRecord */
-                $inventoryRecord->add(ErpWarehouseForm::INVENTORY_TYPE_IN, $inventoryRecordData);
+                $inventoryRecord->add($inventoryRecordData);
             }
             $this->commit();
             //
