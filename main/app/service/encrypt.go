@@ -19,18 +19,18 @@ func NewEncryptSrv(cache cache.Cache) IEncryptSrv {
 	return NewEncryptSrvImpl(cache)
 }
 
-type EncryptSrv struct {
+type encryptSrv struct {
 	cache cache.Cache
 }
 
-func NewEncryptSrvImpl(cache cache.Cache) *EncryptSrv {
-	return &EncryptSrv{
+func NewEncryptSrvImpl(cache cache.Cache) IEncryptSrv {
+	return &encryptSrv{
 		cache: cache,
 	}
 }
 
 // GetServerPublicKey 获取服务端公钥
-func (s *EncryptSrv) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKey, error) {
+func (s *encryptSrv) GetServerPublicKey(clientId string, encryptType string) (*resp.ServerKey, error) {
 	cacheKey := config.Encrypt.CachePrefix + clientId + "_" + encryptType
 	if data, ok := s.cache.Get(cacheKey); ok {
 		var keyPair encrypt.KeyPair

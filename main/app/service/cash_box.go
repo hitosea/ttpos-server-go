@@ -20,20 +20,20 @@ func NewCashBoxSrv(dbm *database.DBManager) ICashBoxSrv {
 	return NewCashBoxSrvImpl(dbm)
 }
 
-type CashBoxSrv struct {
+type cashBoxSrv struct {
 	dbm      *database.DBManager
 	uuidLock lock.Lock
 }
 
-func NewCashBoxSrvImpl(dbm *database.DBManager) *CashBoxSrv {
-	return &CashBoxSrv{
+func NewCashBoxSrvImpl(dbm *database.DBManager) ICashBoxSrv {
+	return &cashBoxSrv{
 		dbm:      dbm,
 		uuidLock: lock.NewSystemLock(),
 	}
 }
 
 // UpdateBalance 更新钱箱余额
-func (s *CashBoxSrv) UpdateBalance(ctx context.Context, tx *gorm.DB, cashBoxLogType int, amount float64, orderUuid uint64) error {
+func (s *cashBoxSrv) UpdateBalance(ctx context.Context, tx *gorm.DB, cashBoxLogType int, amount float64, orderUuid uint64) error {
 	if !slices.Contains([]int{constant.CashBoxLogTypeIn, constant.CashBoxLogTypeOut}, cashBoxLogType) {
 		return errors.New("钱箱操作类型错误")
 	}

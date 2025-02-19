@@ -18,14 +18,14 @@ func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv
 	return NewShiftSrvImpl(cache, dbm)
 }
 
-type StaffShiftSrv struct {
+type staffShiftSrv struct {
 	dbm            *database.DBManager
 	cache          cache.Cache
 	cacheKeyPrefix string
 }
 
-func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) *StaffShiftSrv {
-	return &StaffShiftSrv{
+func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
+	return &staffShiftSrv{
 		dbm:            dbm,
 		cache:          cache,
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
@@ -33,7 +33,7 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) *StaffShiftSrv 
 }
 
 // CreateWorkingLog 创建当班记录
-func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error) {
+func (s *staffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
 	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash()
 	startTime := staff.CashierLoginTime
@@ -53,7 +53,7 @@ func (s *StaffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog
 	return shiftLog, nil
 }
 
-func (s *StaffShiftSrv) generateNumber() string {
+func (s *staffShiftSrv) generateNumber() string {
 	// 日期部分：年月日
 	datePart := time.Now().Format("20060102")
 	// 固定部分

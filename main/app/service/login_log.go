@@ -1,21 +1,31 @@
 package service
 
 import (
-	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/database"
 )
 
-type LoginLogService struct {
-	shopLoginLogRepo *repository.LoginLogRepo
+// ILoginLogSrv 多语言名称服务接口
+type ILoginLogSrv interface {
+	Save() error
 }
 
-func NewLoginLogService(
-	shopLoginLogRepo *repository.LoginLogRepo,
-) *LoginLogService {
-	return &LoginLogService{
-		shopLoginLogRepo: shopLoginLogRepo,
+// NewLoginLogSrv 登录日志服务
+func NewLoginLogSrv(dbm *database.DBManager) ILoginLogSrv {
+	return NewLoginLogServiceImpl(dbm)
+}
+
+type loginLogSrv struct {
+	dbm *database.DBManager
+}
+
+func NewLoginLogServiceImpl(dbm *database.DBManager) ILoginLogSrv {
+	return &loginLogSrv{
+		dbm: dbm,
 	}
 }
 
-func (s *LoginLogService) Save() error {
-	return s.shopLoginLogRepo.Save(1, "", "", "")
+func (s *loginLogSrv) Save() error {
+	//return s.shopLoginLogRepo.Save(1, "", "", "")
+
+	return nil
 }

@@ -141,6 +141,7 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		LevelName: level,
 		Balance:   member.Balance + member.GiftBalance,
 		Points:    member.Point,
+		Phone:     member.Phone,
 	}
 }
 
@@ -677,4 +678,13 @@ func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUu
 		ChargeDue:      rechargeOrder.ChargeDue,
 		PaymentMethods: paymentMethods,
 	}
+}
+
+func (s *memberSrv) GetMemberDiscount(ctx context.Context, getDiscountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error) {
+
+	// 判断会员是否存在
+
+	// 根据 order_uuid 获取订单，关联订单产品
+
+	return resp.MemberDiscountResp{}, nil
 }

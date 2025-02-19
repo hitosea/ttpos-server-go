@@ -44,7 +44,7 @@ func NewAuthSrv(
 	return NewAuthSrvImpl(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 }
 
-type AuthSrv struct {
+type authSrv struct {
 	dbm           *database.DBManager
 	captchaSrv    ICaptchaSrv
 	roleAccessSrv IRoleAccessSrv
@@ -63,8 +63,8 @@ func NewAuthSrvImpl(
 	bindRecordSrv IBindRecordSrv,
 	staffShiftSrv IStaffShiftSrv,
 	settingSrv setting.ISrv,
-) *AuthSrv {
-	return &AuthSrv{
+) IAuthSrv {
+	return &authSrv{
 		dbm:           dbm,
 		captchaSrv:    captchaSrv,
 		roleAccessSrv: roleAccessSrv,
@@ -95,7 +95,7 @@ func NewAuthSrvImpl(
 }
 
 // Login 登录
-func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, error) {
+func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, error) {
 	var token string
 	// 验证验证码
 	if !s.captchaSrv.Verify(ctx.GetGinContext().GetHeader("X-Sign"), loginReq.Code) {
@@ -206,7 +206,7 @@ func (s *AuthSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 }
 
 // Logout 退出登录
-func (s *AuthSrv) Logout(ctx context.Context) error {
+func (s *authSrv) Logout(ctx context.Context) error {
 	companyUuid := helper.GetCompanyUuid(ctx.GetGinContext())
 	source := helper.GetSource(ctx.GetGinContext())
 	staffUuid := ctx.GetGinContext().GetUint64(jwt.StaffUuid)
@@ -221,7 +221,7 @@ func (s *AuthSrv) Logout(ctx context.Context) error {
 }
 
 // CashierBase 获取收银端基本信息
-func (s *AuthSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
+func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	var cashierBase resp.CashierBase
 	company := helper.GetCompany(ctx.GetGinContext())
 	companySetting := helper.GetCompanySetting(ctx.GetGinContext())
@@ -273,7 +273,7 @@ func (s *AuthSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 }
 
 // AssistantBase 获取收银端基本信息
-func (s *AuthSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
+func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
 	company := helper.GetCompany(ctx.GetGinContext())
 	staff := helper.GetStaff(ctx.GetGinContext())
 	var (
@@ -288,7 +288,7 @@ func (s *AuthSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 }
 
 // Auth 鉴权
-func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
+func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
@@ -368,7 +368,7 @@ func (s *AuthSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	return company, companySetting, staff, nil
 }
 
-func (s *AuthSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
+func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
 	companyUuid := ctx.GetCompanyUuid()
 	deskUuid := ctx.GetDeskUuid()
 	db := s.dbm.GetDB(companyUuid)
@@ -394,7 +394,7 @@ func (s *AuthSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
 }
 
 // 检查收银是否开启
-func (s *AuthSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
+func (s *authSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
@@ -406,7 +406,7 @@ func (s *AuthSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
 }
 
 // 检查桌台功能是否开启
-func (s *AuthSrv) isTableOpen(ctx context.Context) bool {
+func (s *authSrv) isTableOpen(ctx context.Context) bool {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
@@ -415,7 +415,7 @@ func (s *AuthSrv) isTableOpen(ctx context.Context) bool {
 }
 
 // BindCashier 绑定收银机
-func (s *AuthSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, error) {
+func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, error) {
 	var newToken string
 	companyUuid := helper.GetCompanyUuid(ctx.GetGinContext())
 	if helper.GetSource(ctx.GetGinContext()) != constant.SourceAssistant {
@@ -456,7 +456,7 @@ func (s *AuthSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 }
 
 // GetOnlineCashiers 获取在线收银机
-func (s *AuthSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
+func (s *authSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staffs := staffRepo.GetStaffs(staffRepo.WhereCashierOnline(), staffRepo.WithDevice(constant.SettingCashier))
 
