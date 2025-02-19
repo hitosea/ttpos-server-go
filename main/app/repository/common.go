@@ -7,19 +7,6 @@ import (
 	"ttpos-server-go/app/constant"
 )
 
-type Where func(*gorm.DB) *gorm.DB
-
-func handleWiths(db *gorm.DB, withs []With) *gorm.DB {
-	if len(withs) == 0 {
-		return db
-	}
-	for _, with := range withs {
-		db = with(db)
-	}
-	return db
-}
-
-type With func(*gorm.DB) *gorm.DB
 type DBOption func(*gorm.DB) *gorm.DB
 
 // WithPreload 预加载

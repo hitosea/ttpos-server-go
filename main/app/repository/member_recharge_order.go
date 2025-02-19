@@ -2,16 +2,15 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 )
 
 type IMemberRechargeOrderRepo interface {
-	WithPaymentOrders() With             // 预加载支付订单
-	WithPaymentOrderPaymentMethod() With // 预加载支付订单.支付方式
-
-	GetByUuid(uuid uint64, withs ...With) model.MemberRechargeOrder                    // 根据uuid获取进行中的充值订单
-	GetPendingRechargeOrder(withs ...With) model.MemberRechargeOrder                   // 获取进行中的充值订单
+	WithPaymentOrders() DBOption                                                       // 预加载支付订单
+	WithPaymentOrderPaymentMethod() DBOption                                           // 预加载支付订单.支付方式
+	WhereUuid(uuid uint64) DBOption                                                    // Uuid条件
+	WhereStatus(status int) DBOption                                                   // 状态条件
+	GetRechargeOrder(opts ...DBOption) model.MemberRechargeOrder                       // 获取充值订单
 	Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error) // 创建充值订单
 	Update(uuid uint64, vars map[string]any) error                                     // 更新充值订单
 }
@@ -28,24 +27,19 @@ func NewMemberRechargeOrderRepoImpl(db *gorm.DB) *MemberRechargeOrderRepo {
 	return &MemberRechargeOrderRepo{db: db}
 }
 
-// GetPendingRechargeOrder 获取充值订单
-func (r *MemberRechargeOrderRepo) GetPendingRechargeOrder(withs ...With) model.MemberRechargeOrder {
+// GetRechargeOrder 获取充值订单
+func (r *MemberRechargeOrderRepo) GetRechargeOrder(opts ...DBOption) model.MemberRechargeOrder {
 	var rechargeOrder model.MemberRechargeOrder
 	db := r.db.Scopes(NotDeleted)
-	handleWiths(db, withs).Model(&model.MemberRechargeOrder{}).Where("status = ?", constant.RechargeOrderStatusPending).First(&rechargeOrder)
-	return rechargeOrder
-}
-
-// GetByUuid 获取充值订单
-func (r *MemberRechargeOrderRepo) GetByUuid(uuid uint64, withs ...With) model.MemberRechargeOrder {
-	var rechargeOrder model.MemberRechargeOrder
-	db := r.db.Scopes(NotDeleted)
-	handleWiths(db, withs).Model(&model.MemberRechargeOrder{}).Where("uuid = ? ", uuid).First(&rechargeOrder)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(&model.MemberRechargeOrder{}).First(&rechargeOrder)
 	return rechargeOrder
 }
 
 // WithPaymentOrders 预加载支付订单
-func (r *MemberRechargeOrderRepo) WithPaymentOrders() With {
+func (r *MemberRechargeOrderRepo) WithPaymentOrders() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("PaymentOrders", func(db *gorm.DB) *gorm.DB {
 			return db.Scopes(NotDeleted)
@@ -53,8 +47,22 @@ func (r *MemberRechargeOrderRepo) WithPaymentOrders() With {
 	}
 }
 
+// WhereUuid uuid 条件
+func (r *MemberRechargeOrderRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereStatus status 条件
+func (r *MemberRechargeOrderRepo) WhereStatus(status int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
+	}
+}
+
 // WithPaymentOrderPaymentMethod 预加载支付订单.支付方式
-func (r *MemberRechargeOrderRepo) WithPaymentOrderPaymentMethod() With {
+func (r *MemberRechargeOrderRepo) WithPaymentOrderPaymentMethod() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("PaymentOrders.PaymentMethod")
 	}

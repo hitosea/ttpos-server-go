@@ -18,7 +18,7 @@ type buffetSrv struct {
 	localeSrv ILocaleSrv          // 多语言名称服务
 }
 
-// NewProductSrv 创建新的收银产品类别服务
+// NewBuffetSrv 创建新的收银产品类别服务
 func NewBuffetSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv {
 	return NewBuffetSrvImpl(dbm, localeSrv)
 }

@@ -7,11 +7,12 @@ import (
 )
 
 type IAccessRepo interface {
-	GetPermissions(where ...Where) ([]model.Access, error)
+	WhereUuids(accessUuids []uint64) DBOption
+	WhereIsSupplier() DBOption
+
+	GetPermissions(opts ...DBOption) ([]model.Access, error)
 	GetAccessUuids(roleUuids []uint64) ([]uint64, error)
 	CreateAccess(access *model.Access) error
-	WhereUuids(accessUuids []uint64) Where
-	WhereIsSupplier() Where
 }
 
 func NewAccessRepo(db *gorm.DB) IAccessRepo {
@@ -30,12 +31,13 @@ func (r *AccessRepo) CreateAccess(access *model.Access) error {
 	return r.db.Create(access).Error
 }
 
-func (r *AccessRepo) GetPermissions(where ...Where) ([]model.Access, error) {
+func (r *AccessRepo) GetPermissions(opts ...DBOption) ([]model.Access, error) {
 	var access []model.Access
-	for _, w := range where {
-		r.db = w(r.db)
+	db := r.db.Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
 	}
-	err := r.db.Order("sort asc, create_time asc").Debug().Find(&access).Error
+	err := db.Order("sort asc, create_time asc").Debug().Find(&access).Error
 	return access, err
 }
 
@@ -45,13 +47,13 @@ func (r *AccessRepo) GetAccessUuids(roleIds []uint64) ([]uint64, error) {
 	return accessUuids, err
 }
 
-func (r *AccessRepo) WhereUuids(accessIds []uint64) Where {
+func (r *AccessRepo) WhereUuids(accessIds []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid in (?)", accessIds)
 	}
 }
 
-func (r *AccessRepo) WhereIsSupplier() Where {
+func (r *AccessRepo) WhereIsSupplier() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_supplier", 1)
 	}

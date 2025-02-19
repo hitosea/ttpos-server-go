@@ -6,17 +6,21 @@ import (
 )
 
 type IMemberRepo interface {
-	GetMemberLevels() []model.MemberLevel              // 获取会员等级
-	SearchMember(keyword string) []model.Member        // 关键字搜索会员
-	CreateMember(member model.Member) error            // 添加会员
-	CheckMemberExists(phone string) bool               // 根据手机号检查是否存在
-	CheckLevelExists(uuid uint64) bool                 // 根据Uuid检查等级是否存在
-	GetByUuid(uuid uint64, withs ...With) model.Member // 根据Uuid查询会员
-	Update(uuid uint64, vars map[string]any) error     // 更新会员信息
+	WithMemberLevel() DBOption    // Member 预加载会员等级
+	WithMemberCard() DBOption     // Member 预加载会员卡
+	WithMemberCardType() DBOption // Member 预加载会员卡.卡类型
 
-	WithMemberLevel() With    // Member 预加载会员等级
-	WithMemberCard() With     // Member 预加载会员卡
-	WithMemberCardType() With // Member 预加载会员卡.卡类型
+	WhereUuid(uuid uint64) DBOption // Uuid 条件
+
+	GetMember(opts ...DBOption) model.Member    // 获取会员
+	GetMemberLevels() []model.MemberLevel       // 获取会员等级
+	SearchMember(keyword string) []model.Member // 关键字搜索会员
+	CheckMemberExists(phone string) bool        // 根据手机号检查是否存在
+	CheckLevelExists(uuid uint64) bool          // 根据Uuid检查等级是否存在
+
+	CreateMember(member model.Member) error        // 添加会员
+	Update(uuid uint64, vars map[string]any) error // 更新会员信息
+
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {
@@ -65,10 +69,14 @@ func (r *MemberRepo) CheckLevelExists(uuid uint64) bool {
 	return exists > 0
 }
 
-// GetByUuid 根据uuid查询会员
-func (r *MemberRepo) GetByUuid(uuid uint64, withs ...With) model.Member {
+// GetMember 查询会员
+func (r *MemberRepo) GetMember(opts ...DBOption) model.Member {
 	var member model.Member
-	handleWiths(r.db, withs).Scopes(NotDeleted).Model(&model.Member{}).Where("uuid = ?", uuid).Debug().First(&member)
+	db := r.db.Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(&model.Member{}).Debug().First(&member)
 	return member
 }
 
@@ -78,22 +86,29 @@ func (r *MemberRepo) Update(uuid uint64, vars map[string]any) error {
 }
 
 // WithMemberLevel Member 预加载会员等级
-func (r *MemberRepo) WithMemberLevel() With {
+func (r *MemberRepo) WithMemberLevel() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MemberLevel")
 	}
 }
 
 // WithMemberCard Member 预加载会员卡
-func (r *MemberRepo) WithMemberCard() With {
+func (r *MemberRepo) WithMemberCard() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MemberCard")
 	}
 }
 
 // WithMemberCardType Member 预加载会员卡.卡类型
-func (r *MemberRepo) WithMemberCardType() With {
+func (r *MemberRepo) WithMemberCardType() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MemberCard.MemberCardType")
+	}
+}
+
+// WhereUuid Uuid 条件
+func (r *MemberRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
 	}
 }

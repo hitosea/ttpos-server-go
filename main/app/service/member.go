@@ -123,7 +123,8 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 // GetRechargeMember 获取充值会员信息
 func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember {
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
-	member := memberRepo.GetByUuid(memberUuid, memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel())
+	member := memberRepo.GetMember(memberRepo.WhereUuid(memberUuid),
+		memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel())
 
 	var cardName string
 	if member.MemberCard != nil && member.MemberCard.MemberCardType != nil {
@@ -147,7 +148,9 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrder {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
 	// 进行中的充值订单
-	rechargeOrder := rechargeOrderRepo.GetPendingRechargeOrder(rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereStatus(constant.RechargeOrderStatusPending),
+		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	if rechargeOrder.Uuid == 0 {
 		return resp.RechargeOrder{PaymentOrders: make([]resp.PaymentOrder, 0)}
 	}
@@ -221,7 +224,8 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 	var orderResp resp.RechargeOrder
 
 	// 判断会员是否存在
-	member := repository.NewMemberRepo(s.dbm.GetDB(companyUuid)).GetByUuid(rechargeReq.MemberUuid)
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+	member := memberRepo.GetMember(memberRepo.WhereUuid(rechargeReq.MemberUuid))
 	if member.ID == 0 {
 		return orderResp, errors.New("会员不存在")
 	}
@@ -230,7 +234,8 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 
 	if rechargeReq.RechargeOrderUuid != 0 {
 		// 如果已经存在已支付的payment_order，则充值金额不能小于现有的 "充值金额不能小于已充值金额"
-		rechargeOrder := rechargeOrderRepo.GetPendingRechargeOrder(rechargeOrderRepo.WithPaymentOrders())
+		rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereStatus(constant.RechargeOrderStatusPending),
+			rechargeOrderRepo.WithPaymentOrders())
 		if rechargeOrder.Uuid != 0 {
 			oldRechargeAmount := rechargeOrder.Amount
 
@@ -276,7 +281,7 @@ func (s *memberSrv) CreateRechargeOrder(ctx context.Context, rechargeReq req.Rec
 	}
 
 	// 如果已存在进行中的充值订单，且未传递进行中的充值订单Uuid，则直接返回
-	pendingRechargeOrder := rechargeOrderRepo.GetPendingRechargeOrder()
+	pendingRechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereStatus(constant.RechargeOrderStatusPending))
 	if pendingRechargeOrder.Uuid != 0 {
 		return s.GetPendingRechargeOrder(companyUuid), nil
 	}
@@ -319,7 +324,8 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 	var orderResp resp.RechargeOrder
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	rechargeOrder := rechargeOrderRepo.GetByUuid(addReq.RechargeOrderUuid, rechargeOrderRepo.WithPaymentOrders())
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(addReq.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders())
 	if rechargeOrder.Uuid == 0 || rechargeOrder.Status != constant.RechargeOrderStatusPending {
 		return orderResp, errors.New("充值订单不存在")
 	}
@@ -417,7 +423,8 @@ func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelReq req.Recha
 
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	// 判断支付订单
-	paymentOrder, err := paymentOrderRepo.GetPaymentOrder(paymentOrderRepo.WhereUuid(cancelReq.PaymentOrderUuid), paymentOrderRepo.WithPaymentMethod(), paymentOrderRepo.WithMemberRechargeOrder())
+	paymentOrder, err := paymentOrderRepo.GetPaymentOrder(paymentOrderRepo.WhereUuid(cancelReq.PaymentOrderUuid),
+		paymentOrderRepo.WithPaymentMethod(), paymentOrderRepo.WithMemberRechargeOrder())
 	if err != nil || paymentOrder.Uuid == 0 {
 		return orderResp, errors.New("支付订单不存在")
 	}
@@ -438,7 +445,8 @@ func (s *memberSrv) CancelPaymentMethod(ctx context.Context, cancelReq req.Recha
 
 	// 更新现金支付订单
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	rechargeOrder := rechargeOrderRepo.GetByUuid(paymentOrder.RelatedUuid, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(paymentOrder.RelatedUuid),
+		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	var cashPaymentOrder model.PaymentOrder
 	var sumPaymentAmount float64
 	for _, order := range rechargeOrder.PaymentOrders {
@@ -472,13 +480,14 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 
 	companyUuid := ctx.GetCompanyUuid()
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
-	member := memberRepo.GetByUuid(confirmReq.MemberUuid)
+	member := memberRepo.GetMember(memberRepo.WhereUuid(confirmReq.MemberUuid))
 	if member.Uuid == 0 {
 		return confirmResp, errors.New("会员不存在")
 	}
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	rechargeOrder := rechargeOrderRepo.GetByUuid(confirmReq.RechargeOrderUuid, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	if rechargeOrder.Uuid == 0 || rechargeOrder.Status != constant.RechargeOrderStatusPending {
 		return confirmResp, errors.New("充值订单不存在")
 	}
@@ -600,7 +609,7 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 func (s *memberSrv) handleMemberUpgrade(companyUuid uint64, memberUuid uint64) {
 	db := s.dbm.GetDB(companyUuid)
 	memberRepo := repository.NewMemberRepo(db)
-	member := memberRepo.GetByUuid(memberUuid, memberRepo.WithMemberLevel())
+	member := memberRepo.GetMember(memberRepo.WhereUuid(memberUuid), memberRepo.WithMemberLevel())
 	if member.Uuid == 0 || member.MemberLevel == nil {
 		return
 	}
@@ -655,7 +664,8 @@ func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel
 
 func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUuid uint64) resp.ConfirmRechargeOrder {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	rechargeOrder := rechargeOrderRepo.GetByUuid(rechargeOrderUuid, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(rechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 
 	paymentMethods := make([]string, 0, len(rechargeOrder.PaymentOrders))
 	for _, order := range rechargeOrder.PaymentOrders {
