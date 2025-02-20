@@ -47,6 +47,7 @@ type IOrderSrv interface {
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)          // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                          // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                               // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                           // 向购物车添加商品
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 向购物车添加商品
 }
 
@@ -1262,6 +1263,29 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		}
 	}
 	return shopCartInfo, nil
+}
+
+// 点餐页面，往购物车添加商品。
+func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error) {
+	// 当不填销售账单ID时，表示要新建一个销售账单
+	if req.SaleBillUuid == 0 {
+		order, err := s.CreateInstantOrder(ctx)
+		if err != nil {
+			ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+			return nil, errors.New(err.Error())
+		}
+		ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
+		req.SaleBillUuid = order.SaleBillUuid
+		req.SaleOrderUuid = order.SaleOrderUuid
+	}
+
+	// 往销售账单里添加商品
+	shopCart, err := s.OrderCartProductAdd(ctx, req)
+	if err != nil {
+		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", req), zap.Any("error", err))
+		return nil, errors.New(err.Error())
+	}
+	return shopCart, nil
 }
 
 // OrderCartProductAdd 向购物车添加商品

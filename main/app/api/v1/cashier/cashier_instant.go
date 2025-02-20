@@ -240,8 +240,8 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	// 添加商品
-	res, err := h.orderService.OrderCartProductAdd(ctx, params)
+	// 添加商品。 若没有点餐账单则新建一个
+	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
