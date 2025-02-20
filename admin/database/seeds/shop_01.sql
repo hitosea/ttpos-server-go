@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `buffet_package1_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐1的uuid',
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
-
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
@@ -75,6 +74,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `free_reason` TEXT COMMENT '免单原因',
+    -- 订单设置相关
+    `member_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '会员折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `member_card_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '会员卡折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `custom_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '自定义折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -147,7 +150,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 快照的商品设置信息
     `open_member_discount` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是。添加商品时记录下状态不受后台改变，结账时检查是否改变',
-
     -- 基本信息
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
@@ -508,7 +510,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `buffet_customer_type_price_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型价格ID',
     `buffet_package_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐套餐多语言ID',
     `buffet_customer_type_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐客户类型多语言ID',
-
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -815,14 +816,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '日志ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `old_level_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '变更前的等级id',
-    `new_level_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT  '变更后的等级id',
+    `new_level_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '变更后的等级id',
     `change_type` tinyint(3) unsigned NOT NULL DEFAULT 10 COMMENT '变更类型(10后台管理员设置 20自动升级)',
     `remark` varchar(500) DEFAULT '' COMMENT '管理员备注',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPACT COMMENT='用户会员等级变更记录表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = COMPACT COMMENT = '用户会员等级变更记录表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1068,17 +1069,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '报损单表';
 
 CREATE TABLE `ttpos_warehouse_monthly_form` (
-  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-  `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表ID',
-  `year` int(11) DEFAULT 0 COMMENT '年',
-  `month` int(11) DEFAULT 0 COMMENT '月',
-  `scene` int(11) DEFAULT 0 COMMENT '记录类型,0-月初 1-月末',
-  `stock` decimal(20,4) DEFAULT 0.0000 COMMENT '库存',
-  `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-  `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-  `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-  UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='月度报表';
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表ID',
+    `year` int(11) DEFAULT 0 COMMENT '年',
+    `month` int(11) DEFAULT 0 COMMENT '月',
+    `scene` int(11) DEFAULT 0 COMMENT '记录类型,0-月初 1-月末',
+    `stock` decimal(20, 4) DEFAULT 0.0000 COMMENT '库存',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '月度报表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

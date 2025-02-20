@@ -50,6 +50,7 @@ type IOrderSrv interface {
 // orderSrv 订单服务结构
 type orderSrv struct {
 	dbm        *database.DBManager // 数据库管理器
+	lock       lock.Lock
 	localeSrv  ILocaleSrv
 	settingSrv setting.ISrv
 }
@@ -63,6 +64,7 @@ func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache setting.IS
 func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IOrderSrv {
 	return &orderSrv{
 		dbm:        dbm,
+		lock:       lock.NewSystemLock(),
 		localeSrv:  localeSrv,
 		settingSrv: settingSrv,
 	}
@@ -1231,112 +1233,124 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 
 // OrderCartProductAdd 向购物车添加商品
 func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error) {
-	dbId := ctx.GetDbId()
-	//orderRepo := repository.NewSaleOrderProductRepo(s.dbm.GetDB(dbId))
-	productPackageRepo := repository.NewProductPackageRepo(s.dbm.GetDB(dbId))
-
-	// 获取商品包信息
-	productBom, err := productPackageRepo.GetProductPackageBaseInfoByBomUuid(req.FlavorUuid)
-	if err != nil {
-		return nil, err
-	}
-	if productBom.IsDelete() {
-		return nil, errors.New("商品规格已经删除")
-	}
-
-	// 获取账单信息
-	saleBill, errSaleBill := repository.NewSaleBillRepo(s.dbm.GetDB(ctx.GetDbId())).GetSaleBillByUuid(req.SaleBillUuid)
+	s.lock.LockUuid(req.SaleBillUuid)
+	defer s.lock.UnlockUuid(req.SaleBillUuid)
+	var saleOrderProduct *model.SaleOrderProduct
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 当前销售账单数据
+	//var saleBill *model.SaleBill
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-
-	// 获取订单信息
-	saleOrder, errSaleOrder := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).GetSaleOrderByUuid(req.SaleOrderUuid)
-	if errSaleOrder != nil {
-		return nil, errSaleOrder
-	}
-
-	// 获取某商品规格信息
-	flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(s.dbm.GetDB(ctx.GetDbId())).GetFlavorProductBomByUuid(req.FlavorUuid)
-	if errFlavorProductBom != nil {
-		return nil, errFlavorProductBom
-	}
-
-	// 获取加料信息
-	sauceProductBoms := make(map[uint64]*model.ProductBom)
-	if len(req.SauceUuidList) > 0 {
-		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(s.dbm.GetDB(ctx.GetDbId())).GetSauceProductBomsByUuids(req.SauceUuidList)
-		if errSauceProductBomList != nil {
-			return nil, errSauceProductBomList
+	// 录入订单商品数据
+	{
+		// 获取商品包信息
+		productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(req.FlavorUuid)
+		if err != nil {
+			return nil, err
 		}
-		for i, bom := range sauceProductBomList {
-			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+		if productBom.IsDelete() {
+			return nil, errors.New("商品规格已经删除")
 		}
-	}
 
-	// 获取属性信息
-	var productAttributes map[uint64]*model.ProductPackageAttribute
-	if len(productAttributes) > 0 {
-		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(s.dbm.GetDB(ctx.GetDbId())).GetProductPackageAttributesByUuids(req.AttributeUuidList)
-		if errProductAttributeList != nil {
-			return nil, errProductAttributeList
-		}
-		for i, attribute := range productAttributeList {
-			productAttributes[attribute.Uuid] = productAttributeList[i]
-		}
-	}
+		// 获取账单信息
+		//saleBill, errSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByUuid(req.SaleBillUuid)
+		//if errSaleBill != nil {
+		//	return nil, errSaleBill
+		//}
 
-	// 判断销售账单是否存在且未结账
-
-	productPackage := productBom.ProductPackage
-	sauces := make([]model.Sauce, 0)
-	for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
-		sauce := model.Sauce{
-			Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-			Price:          sauceProductBom.Price,
-			ProductBomUuid: sauceProductBomUuid,
+		// 获取订单信息
+		saleOrder, errSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(req.SaleOrderUuid)
+		if errSaleOrder != nil {
+			return nil, errSaleOrder
 		}
-		sauces = append(sauces, sauce)
-	}
 
-	attributes := make([]model.Attribute, 0)
-	for productAttributeUuid, productAttribute := range productAttributes {
-		attribute := model.Attribute{
-			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-			ProductAttributeUuid: productAttributeUuid,
+		// 获取某商品规格信息
+		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(req.FlavorUuid)
+		if errFlavorProductBom != nil {
+			return nil, errFlavorProductBom
 		}
-		attributes = append(attributes, attribute)
+
+		// 获取加料信息
+		sauceProductBoms := make(map[uint64]*model.ProductBom)
+		if len(req.SauceUuidList) > 0 {
+			sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(req.SauceUuidList)
+			if errSauceProductBomList != nil {
+				return nil, errSauceProductBomList
+			}
+			for i, bom := range sauceProductBomList {
+				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+			}
+		}
+
+		// 获取属性信息
+		var productAttributes map[uint64]*model.ProductPackageAttribute
+		if len(productAttributes) > 0 {
+			productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(req.AttributeUuidList)
+			if errProductAttributeList != nil {
+				return nil, errProductAttributeList
+			}
+			for i, attribute := range productAttributeList {
+				productAttributes[attribute.Uuid] = productAttributeList[i]
+			}
+		}
+
+		// 判断销售账单是否存在且未结账
+
+		productPackage := productBom.ProductPackage
+		sauces := make([]model.Sauce, 0)
+		for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
+			sauce := model.Sauce{
+				Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				Price:          sauceProductBom.Price,
+				ProductBomUuid: sauceProductBomUuid,
+			}
+			sauces = append(sauces, sauce)
+		}
+
+		attributes := make([]model.Attribute, 0)
+		for productAttributeUuid, productAttribute := range productAttributes {
+			attribute := model.Attribute{
+				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				ProductAttributeUuid: productAttributeUuid,
+			}
+			attributes = append(attributes, attribute)
+		}
+		saleOrderProduct = model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
+			Name:                   productPackage.Name,
+			IsRequire:              0, // todo 判断该productPackage是不是必点商品
+			OpenMemberDiscount:     productPackage.OpenDiscount,
+			TaxRate:                productPackage.TaxRate(saleBill.DiningMethod),
+			DeductStockType:        productPackage.DeductStockType,
+			MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
+			ImageFileUuid:          productPackage.ImageFileUuid,
+			ProductPackageUuid:     productPackage.Uuid,
+			SaleBillUuid:           req.SaleBillUuid,
+			SaleOrderUuid:          req.SaleOrderUuid,
+			MemberDiscountRate:     saleOrder.MemberDiscountRate,
+			MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
+			CustomDiscountRate:     saleOrder.CustomDiscountRate,
+			Sauces:                 sauces,
+			Flavor: model.Flavor{
+				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
+				Price:          flavorProductBom.Price,
+				ProductBomUuid: req.FlavorUuid,
+			},
+			Attribute: attributes,
+		})
 	}
-	saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
-		Name:                   productPackage.Name,
-		IsRequire:              0, // todo 判断该productPackage是不是必点商品
-		IsOpenMemberDiscount:   productPackage.OpenDiscount,
-		TaxRate:                productPackage.TaxRate(saleBill.DiningMethod),
-		DeductStockType:        productPackage.DeductStockType,
-		MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
-		ImageFileUuid:          productPackage.ImageFileUuid,
-		ProductPackageUuid:     productPackage.Uuid,
-		SaleBillUuid:           req.SaleBillUuid,
-		SaleOrderUuid:          req.SaleOrderUuid,
-		MemberDiscountRate:     saleOrder.MemberDiscountRate,
-		MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
-		CustomDiscountRate:     saleOrder.CustomDiscountRate,
-		Sauces:                 sauces,
-		Flavor: model.Flavor{
-			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
-			Price:          flavorProductBom.Price,
-			ProductBomUuid: req.FlavorUuid,
-		},
-		Attribute: attributes,
-	})
+	// 计算商品数据。折扣、税费、服务
+	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
 
 	// 创建销售订单商品
-	_, errCreate := repository.NewSaleOrderProductRepo(s.dbm.GetDB(ctx.GetDbId())).CreateSaleOrderProduct(*saleOrderProduct)
+	_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(*saleOrderProduct)
 	if errCreate != nil {
 		return nil, errCreate
 	}
-
-	// 重新计算订单价格 todo
 
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

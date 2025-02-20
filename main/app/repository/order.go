@@ -36,6 +36,7 @@ type IOrderRepo interface {
 	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
 	ChangePopulation(saleBillUuid uint64, population int) error                                                               // 修改订单人数
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
+	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
 }
 
 // orderRepo 订单仓库
@@ -622,7 +623,7 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 				Query: "SaleOrders",
 				Args: []interface{}{
 					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", 0)
+						db = db.Where("delete_time = ?", constant.NotDeleted)
 						if saleOrderUuid > 0 {
 							db = db.Where("uuid = ?", saleOrderUuid)
 						}
@@ -744,6 +745,98 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 	}
 
 	return tx.Commit().Error
+}
+
+// GetSaleBillAllInfo 获取销售账单所有信息
+func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", constant.NotDeleted)
+						return db
+					},
+				},
+			},
+			// ==================== 销售账单的桌台信息 ====================
+			// 加载桌台信息
+			WithPreload{
+				Query: "Desk",
+			},
+			// ==================== 销售账单的自助餐套餐1、2信息 ====================
+			// 加载自助餐套餐1多语言名称
+			WithPreload{
+				Query: "BuffetPackage1.MultiLanguageName",
+			},
+			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
+			WithPreload{
+				Query: "BuffetPackage1.BuffetCustomerTypePrices",
+			},
+			// 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
+			WithPreload{
+				Query: "BuffetPackage1.BuffetProducts.ProductBoms",
+			},
+			// 加载自助餐套餐2多语言名称
+			WithPreload{
+				Query: "BuffetPackage2.MultiLanguageName",
+			},
+			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
+			WithPreload{
+				Query: "BuffetPackage2.BuffetCustomerTypePrices",
+			},
+			// 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
+			WithPreload{
+				Query: "BuffetPackage2.BuffetProducts.ProductBoms",
+			},
+			// ==================== 销售账单的账单设置 ====================
+			WithPreload{
+				Query: "SaleBillSetting",
+			},
+			// ==================== 销售账单的订单信息 ====================
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackageMultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			// ==================== 销售账单的收银员信息 ====================
+			WithPreload{
+				Query: "Cashier",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &info, nil
 }
 
 // isPartiallyPaid 是否已经被部分支付

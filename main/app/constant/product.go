@@ -21,3 +21,14 @@ const (
 	ProductStatusNormal  = 0 // 未送厨
 	ProductStatusCooking = 1 // 送厨
 )
+
+const (
+	CustomPriceOn  = 1 // 是, 商品已改价
+	CustomPriceOff = 0 // 否, 商品未改价
+)
+
+const (
+	// 商品是否开启会员打折
+	ProductMemberDiscountOn  = 1 // 是, 商品开启会员打折
+	ProductMemberDiscountOff = 0 // 否, 商品不开启会员打折
+)
