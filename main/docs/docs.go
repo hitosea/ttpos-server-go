@@ -96,6 +96,11 @@ const docTemplate = `{
         },
         "/assistant/buffet/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取自助餐列表",
                 "consumes": [
                     "application/json"
@@ -122,6 +127,11 @@ const docTemplate = `{
         },
         "/assistant/desk/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台详情",
                 "consumes": [
                     "application/json"
@@ -157,6 +167,11 @@ const docTemplate = `{
         },
         "/assistant/desk/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台列表",
                 "consumes": [
                     "application/json"
@@ -203,6 +218,11 @@ const docTemplate = `{
         },
         "/assistant/desk/region_and_type": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台的区域和类型",
                 "consumes": [
                     "application/json"
@@ -1092,6 +1112,11 @@ const docTemplate = `{
         },
         "/cashier/buffet/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取自助餐列表",
                 "consumes": [
                     "application/json"
@@ -1155,6 +1180,11 @@ const docTemplate = `{
         },
         "/cashier/desk/close": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "关闭桌台",
                 "consumes": [
                     "application/json"
@@ -1199,6 +1229,11 @@ const docTemplate = `{
         },
         "/cashier/desk/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台详情",
                 "consumes": [
                     "application/json"
@@ -1234,6 +1269,11 @@ const docTemplate = `{
         },
         "/cashier/desk/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台列表",
                 "consumes": [
                     "application/json"
@@ -1280,6 +1320,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消桌台订单",
                 "consumes": [
                     "application/json"
@@ -1370,6 +1415,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/create": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "创建桌台订单",
                 "consumes": [
                     "application/json"
@@ -1407,6 +1457,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/population": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "桌台订单修改人数",
                 "consumes": [
                     "application/json"
@@ -1441,6 +1496,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/product/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除桌台订单商品",
                 "consumes": [
                     "application/json"
@@ -1475,6 +1535,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/product/price": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "桌台订单商品改价",
                 "consumes": [
                     "application/json"
@@ -1509,6 +1574,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/product/remark": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "桌台订单商品备注",
                 "consumes": [
                     "application/json"
@@ -1543,6 +1613,11 @@ const docTemplate = `{
         },
         "/cashier/desk/region_and_type": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取桌台的区域和类型",
                 "consumes": [
                     "application/json"
@@ -1569,6 +1644,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消点餐订单",
                 "consumes": [
                     "application/json"
@@ -1603,6 +1683,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "查询点餐购物车信息",
                 "consumes": [
                     "application/json"
@@ -1699,6 +1784,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/create": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "创建点餐订单",
                 "consumes": [
                     "application/json"
@@ -1722,6 +1812,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/population": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "点餐订单修改人数",
                 "consumes": [
                     "application/json"
@@ -1756,6 +1851,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/product/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除点餐订单商品",
                 "consumes": [
                     "application/json"
@@ -1790,6 +1890,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/product/price": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "点餐订单商品改价",
                 "consumes": [
                     "application/json"
@@ -1824,6 +1929,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/product/remark": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "点餐订单商品备注",
                 "consumes": [
                     "application/json"
@@ -2011,7 +2121,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "确认充值订单",
+                "description": "获取会员优惠",
                 "consumes": [
                     "application/json"
                 ],
@@ -2021,16 +2131,14 @@ const docTemplate = `{
                 "tags": [
                     "收银端.会员"
                 ],
-                "summary": "确认充值订单",
+                "summary": "获取会员优惠",
                 "parameters": [
                     {
-                        "description": "确认充值订单参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ConfirmRechargeOrder"
-                        }
+                        "type": "number",
+                        "description": "会员Uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2387,6 +2495,11 @@ const docTemplate = `{
         },
         "/cashier/order/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消订单",
                 "consumes": [
                     "application/json"
@@ -2421,6 +2534,11 @@ const docTemplate = `{
         },
         "/cashier/order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除订单",
                 "consumes": [
                     "application/json"
@@ -2487,6 +2605,11 @@ const docTemplate = `{
         },
         "/cashier/order/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取订单详情",
                 "consumes": [
                     "application/json"
@@ -2527,6 +2650,11 @@ const docTemplate = `{
         },
         "/cashier/order/is_cell_close": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "判断订单是否可关闭",
                 "consumes": [
                     "application/json"
@@ -2561,6 +2689,11 @@ const docTemplate = `{
         },
         "/cashier/order/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取订单列表",
                 "consumes": [
                     "application/json"
@@ -2918,8 +3051,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/payment_method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.支付方式"
+                ],
+                "summary": "获取支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PaymentMethodList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/product/category/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取收银产品类别列表",
                 "consumes": [
                     "application/json"
@@ -2946,6 +3124,11 @@ const docTemplate = `{
         },
         "/cashier/product/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取收银产品列表",
                 "consumes": [
                     "application/json"
@@ -2988,6 +3171,11 @@ const docTemplate = `{
         },
         "/cashier/sold_out/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "添加沽清商品",
                 "consumes": [
                     "application/json"
@@ -3022,6 +3210,11 @@ const docTemplate = `{
         },
         "/cashier/sold_out/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消沽清商品",
                 "consumes": [
                     "application/json"
@@ -3056,6 +3249,11 @@ const docTemplate = `{
         },
         "/cashier/sold_out/cancel_all": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "全部取消沽清商品",
                 "consumes": [
                     "application/json"
@@ -3079,6 +3277,11 @@ const docTemplate = `{
         },
         "/cashier/sold_out/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "沽清售罄列表",
                 "consumes": [
                     "application/json"
@@ -3863,6 +4066,11 @@ const docTemplate = `{
         },
         "/shop/order/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消订单",
                 "consumes": [
                     "application/json"
@@ -3897,6 +4105,11 @@ const docTemplate = `{
         },
         "/shop/order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除订单",
                 "consumes": [
                     "application/json"
@@ -3931,6 +4144,11 @@ const docTemplate = `{
         },
         "/shop/order/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取订单详情",
                 "consumes": [
                     "application/json"
@@ -3971,6 +4189,11 @@ const docTemplate = `{
         },
         "/shop/order/is_cell_close": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "判断订单是否可关闭",
                 "consumes": [
                     "application/json"
@@ -4005,6 +4228,11 @@ const docTemplate = `{
         },
         "/shop/order/list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取订单列表",
                 "consumes": [
                     "application/json"
@@ -7313,6 +7541,40 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "fee_percent": {
+                    "type": "number"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "payment_name": {
+                    "type": "string"
+                },
+                "qrcode": {
+                    "type": "string"
+                },
+                "source_text": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PaymentMethodList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodItem"
+                    }
+                }
+            }
+        },
         "resp.PaymentOrder": {
             "type": "object",
             "properties": {
@@ -7465,6 +7727,10 @@ const docTemplate = `{
                 },
                 "nickname": {
                     "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
                     "type": "string"
                 },
                 "points": {

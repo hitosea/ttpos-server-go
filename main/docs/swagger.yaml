@@ -2214,6 +2214,28 @@ definitions:
         description: 销售订单商品ID
         type: integer
     type: object
+  resp.PaymentMethodItem:
+    properties:
+      fee_percent:
+        type: number
+      logo:
+        type: string
+      payment_name:
+        type: string
+      qrcode:
+        type: string
+      source_text:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.PaymentMethodList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PaymentMethodItem'
+        type: array
+    type: object
   resp.PaymentOrder:
     properties:
       amount:
@@ -2317,6 +2339,9 @@ definitions:
         type: string
       nickname:
         description: 会员昵称
+        type: string
+      phone:
+        description: 手机号
         type: string
       points:
         description: 会员积分
@@ -2759,6 +2784,8 @@ paths:
             $ref: '#/definitions/resp.BuffetListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取自助餐列表
       tags:
       - 点餐助手端.自助餐
@@ -2782,6 +2809,8 @@ paths:
             $ref: '#/definitions/resp.DeskInfoResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台详情
       tags:
       - 点餐助手端.桌台
@@ -2813,6 +2842,8 @@ paths:
             type: array
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台列表
       tags:
       - 点餐助手端.桌台
@@ -2830,6 +2861,8 @@ paths:
             $ref: '#/definitions/resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台的区域和类型
       tags:
       - 点餐助手端.桌台
@@ -3397,6 +3430,8 @@ paths:
             $ref: '#/definitions/resp.BuffetListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取自助餐列表
       tags:
       - 收银端.自助餐
@@ -3449,6 +3484,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 关闭桌台
       tags:
       - 收银端.桌台
@@ -3472,6 +3509,8 @@ paths:
             $ref: '#/definitions/resp.DeskInfoResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台详情
       tags:
       - 收银端.桌台
@@ -3503,6 +3542,8 @@ paths:
             type: array
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台列表
       tags:
       - 收银端.桌台
@@ -3531,6 +3572,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消桌台订单
       tags:
       - 收银端.桌台
@@ -3583,6 +3626,8 @@ paths:
             $ref: '#/definitions/resp.CreateDeskOrderResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 创建桌台订单
       tags:
       - 收银端.桌台
@@ -3605,6 +3650,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单修改人数
       tags:
       - 收银端.桌台
@@ -3627,6 +3674,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除桌台订单商品
       tags:
       - 收银端.桌台
@@ -3649,6 +3698,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单商品改价
       tags:
       - 收银端.桌台
@@ -3671,6 +3722,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 桌台订单商品备注
       tags:
       - 收银端.桌台
@@ -3688,6 +3741,8 @@ paths:
             $ref: '#/definitions/resp.DeskRegionAndTypeListWithPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取桌台的区域和类型
       tags:
       - 收银端.桌台
@@ -3710,6 +3765,8 @@ paths:
           description: 取消点餐订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消点餐订单
       tags:
       - 收银端.点餐
@@ -3738,6 +3795,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 查询点餐购物车信息
       tags:
       - 收银端.点餐
@@ -3782,6 +3841,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/resp.CreateOrderResp'
+      security:
+      - JwtToken: []
       summary: 创建点餐订单
       tags:
       - 收银端.点餐
@@ -3804,6 +3865,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单修改人数
       tags:
       - 收银端.点餐
@@ -3826,6 +3889,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除点餐订单商品
       tags:
       - 收银端.点餐
@@ -3848,6 +3913,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单商品改价
       tags:
       - 收银端.点餐
@@ -3870,6 +3937,8 @@ paths:
           description: OK
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 点餐订单商品备注
       tags:
       - 收银端.点餐
@@ -3967,14 +4036,13 @@ paths:
     post:
       consumes:
       - application/json
-      description: 确认充值订单
+      description: 获取会员优惠
       parameters:
-      - description: 确认充值订单参数
-        in: body
-        name: data
+      - description: 会员Uuid
+        in: query
+        name: uuid
         required: true
-        schema:
-          $ref: '#/definitions/req.ConfirmRechargeOrder'
+        type: number
       produces:
       - application/json
       responses:
@@ -3989,7 +4057,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 确认充值订单
+      summary: 获取会员优惠
       tags:
       - 收银端.会员
   /cashier/member/create_recharge_order:
@@ -4197,6 +4265,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消订单
       tags:
       - 收银端.订单
@@ -4219,6 +4289,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除订单
       tags:
       - 收银端.订单
@@ -4266,6 +4338,8 @@ paths:
             $ref: '#/definitions/resp.OrderInfosResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单详情
       tags:
       - 收银端.订单
@@ -4288,6 +4362,8 @@ paths:
       responses:
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 判断订单是否可关闭
       tags:
       - 收银端.订单
@@ -4353,6 +4429,8 @@ paths:
             $ref: '#/definitions/resp.OrderListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单列表
       tags:
       - 收银端.订单
@@ -4528,6 +4606,28 @@ paths:
       summary: 拆包收银订单
       tags:
       - 收银端
+  /cashier/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PaymentMethodList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式列表
+      tags:
+      - 收银端.支付方式
   /cashier/product/category/list:
     get:
       consumes:
@@ -4542,6 +4642,8 @@ paths:
             $ref: '#/definitions/cashier_resp.ProductCategoryListResp'
         "400":
           description: 错误请求
+      security:
+      - JwtToken: []
       summary: 获取收银产品类别列表
       tags:
       - 收银端.产品
@@ -4570,6 +4672,8 @@ paths:
             $ref: '#/definitions/cashier_resp.ProductListWithPaginationResp'
         "400":
           description: 错误请求
+      security:
+      - JwtToken: []
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
@@ -4592,6 +4696,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 添加沽清商品
       tags:
       - 收银端.沽清
@@ -4614,6 +4720,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 取消沽清商品
       tags:
       - 收银端.沽清
@@ -4629,6 +4737,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 全部取消沽清商品
       tags:
       - 收银端.沽清
@@ -4658,6 +4768,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.SoldOutPaginationResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 沽清售罄列表
       tags:
       - 收银端.沽清
@@ -5138,6 +5250,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消订单
       tags:
       - 商家端.订单
@@ -5160,6 +5274,8 @@ paths:
           description: 取消订单成功
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 删除订单
       tags:
       - 商家端.订单
@@ -5186,6 +5302,8 @@ paths:
             $ref: '#/definitions/resp.OrderInfosResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单详情
       tags:
       - 商家端.订单
@@ -5208,6 +5326,8 @@ paths:
       responses:
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 判断订单是否可关闭
       tags:
       - 商家端.订单
@@ -5273,6 +5393,8 @@ paths:
             $ref: '#/definitions/resp.OrderListPaginationResp'
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 获取订单列表
       tags:
       - 商家端.订单

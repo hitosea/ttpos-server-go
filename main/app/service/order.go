@@ -1113,7 +1113,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 						TR:   buffet.Name,
 					},
 					Num:           buffet.Num, // 这种类型顾客多少个，如老人这个类型2人
-					Price:         buffet.GetOriginPrice(),
+					SalePrice:     buffet.GetOriginPrice(),
 					DiscountPrice: buffet.GetOriginPrice(),
 					Status:        1,
 					Remark:        "",
@@ -1146,7 +1146,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
 					Num:                 shopCart.SaleBill.MealNum, // 等于桌台人数
-					Price:               delayProduct.GetPrice(shopCart.SaleBill.MealNum),
+					SalePrice:           delayProduct.GetPrice(shopCart.SaleBill.MealNum),
 					DiscountPrice:       0,  // 加钟商品没有优惠价
 					Status:              1,  // 添加后标记送厨状态，不可修改
 					Remark:              "", // 加钟商品没有备注
@@ -1166,14 +1166,12 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		{
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 				language := ctx.GetLanguage()
-				fmt.Println(fmt.Sprintf("debug: 销售商品语言：%s", language))
-				fmt.Println(fmt.Sprintf("debug: 销售商品：%+v", saleOrderProduct))
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: saleOrderProduct.AttributeName(language),
 					Num:                 saleOrderProduct.Num,
-					Price:               saleOrderProduct.GetSalePrice(),
+					SalePrice:           saleOrderProduct.GetSalePrice(),
 					DiscountPrice:       saleOrderProduct.GetPrice(),
 					Status:              saleOrderProduct.StatusValue(),
 					Remark:              saleOrderProduct.Remark,
@@ -1206,8 +1204,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 
 	shopCartInfo := &resp.ShopCart{
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
-		Desk:          resp.DeskInfo{},
-		Buffet:        resp.BuffetInfo{},
+		Desk:          nil,
+		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
 	}
@@ -1219,10 +1217,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			MealNum:   shopCart.SaleBill.MealNum,
 			StartTime: shopCart.SaleBill.Desk.CreateTime,
 		}
-		shopCartInfo.Desk = deskInfo
+		shopCartInfo.Desk = &deskInfo
 		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
-			shopCartInfo.Buffet = resp.BuffetInfo{
+			shopCartInfo.Buffet = &resp.BuffetInfo{
 				EndTime:    shopCart.SaleBill.BuffetEndTime(),
 				LocaleName: shopCart.SaleBill.GetBuffetName(),
 			}

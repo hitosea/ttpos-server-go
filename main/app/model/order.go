@@ -205,9 +205,9 @@ type SaleOrder struct {
 	// 时间相关字段
 	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);default:100;comment:会员折扣率(0-100%)" json:"member_discount_rate"`
-	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:100;comment:会员卡折扣率(0-100%)" json:"member_card_discount_rate"`
-	CustomDiscountRate     float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:100;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);default:0;comment:会员折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1	" json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:0;comment:会员卡折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);default:0;comment:自定义折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"custom_discount_rate"`
 
 	// 抹零相关
 	ZeroRule         uint8   `gorm:"column:zero_rule;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero_rule"`
@@ -454,7 +454,8 @@ func (model *SaleOrderProduct) CalcSalePrice() float64 {
 	if model.IsCustomPriceBool() {
 		return model.SalePrice
 	}
-	return model.SalePrice
+	fmt.Println("=======23333333333===========", model.ProductPrice)
+	return model.ProductPrice
 }
 
 // 计算商品的折扣率。 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
@@ -485,8 +486,13 @@ func (model *SaleOrderProduct) CalcMemberDiscountRate() float64 {
 // todo 会员折扣率 要除100才是%为单位。无折扣时，会员折扣率为0。会员折扣率的取值范围0-1，0表示没有折扣，1表示全免、满折扣、无需付钱
 // 计算商品的会员折扣费用。商品销售价-商品销售价*会员折扣率=商品销售价*（1-会员折扣率）
 func (model *SaleOrderProduct) CalcMemberDiscountFee() float64 {
+	// 当会员折扣率为0时，会员折扣费用=0
+	memberDiscountRate := model.CalcMemberDiscountRate()
+	if memberDiscountRate == 0 {
+		return 0
+	}
 	// 1-会员折扣率
-	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(model.CalcMemberDiscountRate()))
+	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
 	// 商品销售价*（1-会员折扣率）
 	memberDiscountFee := decimal.NewFromFloat(model.CalcSalePrice()).Mul(discount)
 	return memberDiscountFee.InexactFloat64()
@@ -496,10 +502,14 @@ func (model *SaleOrderProduct) CalcMemberDiscountFee() float64 {
 // 当没有会员折扣时，自定义折扣费= 商品销售价- 商品销售价*自定义折扣率 = 商品销售价*（1-自定义折扣率）= （商品销售价-会员折扣费0）*（1-自定义折扣率）
 // 当没有会员折扣时，会员折扣费为0，则两个情况的算法可以都用 自定义折扣费=会员折扣价*（1-自定义折扣率）
 func (model *SaleOrderProduct) CalcCustomDiscountFee() float64 {
+	customDiscountRate := model.CustomDiscountRate
+	if customDiscountRate == 0 {
+		return 0
+	}
 	// 会员折扣价 = 商品销售价-会员折扣费。没有会员时，会员折扣费为0。
 	memberDiscountPrice := decimal.NewFromFloat(model.CalcSalePrice()).Sub(decimal.NewFromFloat(model.CalcMemberDiscountFee()))
 	//（1-自定义折扣率）
-	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(model.CustomDiscountRate))
+	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(customDiscountRate))
 	// 会员折扣价*（1-自定义折扣率）
 	customDiscountFee := memberDiscountPrice.Mul(discount)
 	return customDiscountFee.InexactFloat64()
@@ -633,27 +643,26 @@ func (model *SaleOrderProduct) CalcSaleOrderProduct(serviceFeeRate float64, taxF
 	calc := Calc{}
 	// 开始计算
 	calc.SaucePrice = model.CalcSaucePrice()
-	calc.ProductPrice = model.CalcProductPrice()
-	calc.SalePrice = model.CalcSalePrice()
-	calc.Price = model.CalcPrice()
-	calc.MemberDiscountFee = model.CalcMemberDiscountFee()
-	calc.CustomDiscountFee = model.CalcCustomDiscountFee()
-	calc.DiscountFee = model.CalcDiscountFee()
-	calc.TaxFee = model.CalcTaxFee(taxFeeType)
-	calc.ServiceFee = model.CalcServiceFee(serviceFeeRate, taxFeeType)
-	calc.ServiceTaxFee = model.CalcServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)
-	calc.TotalPrice = model.CalcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
-	// 将计算结果计入model字段中
 	model.SaucePrice = calc.SaucePrice
+	calc.ProductPrice = model.CalcProductPrice()
 	model.ProductPrice = calc.ProductPrice
+	calc.SalePrice = model.CalcSalePrice()
 	model.SalePrice = calc.SalePrice
+	calc.Price = model.CalcPrice()
 	model.Price = calc.Price
+	calc.MemberDiscountFee = model.CalcMemberDiscountFee()
 	model.MemberDiscountFee = calc.MemberDiscountFee
+	calc.CustomDiscountFee = model.CalcCustomDiscountFee()
 	model.CustomDiscountFee = calc.CustomDiscountFee
+	calc.DiscountFee = model.CalcDiscountFee()
 	model.DiscountFee = calc.DiscountFee
+	calc.TaxFee = model.CalcTaxFee(taxFeeType)
 	model.TaxFee = calc.TaxFee
+	calc.ServiceFee = model.CalcServiceFee(serviceFeeRate, taxFeeType)
 	model.ServiceFee = calc.ServiceFee
+	calc.ServiceTaxFee = model.CalcServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.ServiceTaxFee = calc.ServiceTaxFee
+	calc.TotalPrice = model.CalcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
 }
 
