@@ -30,10 +30,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `free_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '免单金额,关联销售订单的免单金额之和',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
-    `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
+    `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID。系统自动创建的销售账单，收银员ID为0',
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `buffet_package1_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐1的uuid',
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
+    `device_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询',
+
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',

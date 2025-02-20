@@ -2,7 +2,7 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
+	errors2 "errors"
 	"fmt"
 	"go.uber.org/zap"
 	"slices"
@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -44,6 +45,7 @@ type IOrderSrv interface {
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                  // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)          // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                          // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                               // 获取购物车信息
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 向购物车添加商品
 }
@@ -86,7 +88,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			commonRepo.WhereByStatus(constant.SaleBillStatusPending),
 			commonRepo.WhereByIsHide(false),
 		)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		if err != nil && !errors2.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		if order.Uuid > 0 {
@@ -353,7 +355,7 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 			continue
 		}
 
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors2.Is(err, gorm.ErrRecordNotFound) {
 			orderNo = ""
 			break
 		} else {
@@ -1079,6 +1081,37 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	return billInfo, nil
 }
 
+func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error) {
+	var saleBillUuid uint64
+	// 通过设备sn查询设备ID
+	db := s.dbm.GetDB(ctx.GetDbId())
+	device, errDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, deviceSn)
+	if errDevice != nil {
+		return nil, errors.New(errDevice.Error())
+	}
+	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
+	if device.IsDelete() {
+		return nil, errors.NewWithCode(constant.CodeBadRequest, "设备不存在")
+	}
+	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
+	// 通过设备ID查询未挂单的销售账单
+	if saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); errGetSaleBill != nil {
+		if errors2.Is(errGetSaleBill, gorm.ErrRecordNotFound) {
+			return nil, nil // 没有点餐账单
+		}
+		return nil, errors.New(errGetSaleBill.Error())
+	} else {
+		saleBillUuid = saleBill.Uuid
+	}
+	ctx.Log().Debug("查询购物车信息", zap.Any("saleBillUuid", saleBillUuid))
+	// 查询购物车信息
+	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if errInfo != nil {
+		return nil, errInfo
+	}
+	return cartInfo, nil
+}
+
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
@@ -1204,6 +1237,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	}
 
 	shopCartInfo := &resp.ShopCart{
+		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
 		Desk:          nil,
 		Buffet:        nil,

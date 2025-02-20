@@ -75,6 +75,20 @@ func Fail(c *gin.Context, code int, message ...string) {
 	})
 }
 
+func ResponseFail(c *gin.Context, code int, err error) {
+	var appErr apperrors.AppError
+	bizCode := 0
+	if errors.As(err, &appErr) {
+		bizCode = appErr.GetCode()
+	}
+	msg := i18n.Translate(i18n.GetAcceptLanguage(c), err.Error())
+	c.JSON(code, dto.Response{
+		Code:    bizCode,
+		Message: msg,
+		Data:    gin.H{},
+	})
+}
+
 // FailWithData 返回失败携带数据
 func FailWithData(c *gin.Context, code int, data interface{}, message ...string) {
 	msg := "fail"
@@ -138,6 +152,10 @@ func GetDeskUuid(c *gin.Context) uint64 {
 	return c.GetUint64(jwt.DeskUuid)
 }
 
+func GetDeviceSn(c *gin.Context) string {
+	return c.GetString(jwt.DeviceId)
+}
+
 // GetLanguage 获取语言
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
@@ -184,6 +202,7 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithStaffUuid(GetStaffUuid(c)),           // 在上下文中添加员工Uuid
 		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
 		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息
+		context.WithDeviceSn(GetDeviceSn(c)),             // 在上小文中添加设备SN信息
 		context.WithLogger(func() *zap.Logger {
 			if logger.Logger == nil {
 				return zap.NewNop() // 避免未初始化日志导致nil空指针错误

@@ -1,11 +1,12 @@
 package cashier
 
 import (
-	"errors"
-	"strconv"
+	"go.uber.org/zap"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -20,15 +21,6 @@ type InstantHandler struct {
 	orderService service.IOrderSrv // 订单服务
 }
 
-// CreateInstantOrder 创建点餐订单
-// @Summary 创建点餐订单
-// @Description 创建点餐订单
-// @Tags 收银端.点餐
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} resp.CreateOrderResp
-// @Router /cashier/instant/order/create [post]
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 创建订单
@@ -198,22 +190,34 @@ func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param id path string true "账单ID"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cart/info [get]
 func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
+	// 点餐桌台查询时没有销售账单ID，只能通过判断请求来自哪个收银机判断是哪个销售账单。
+	// 一个收银机只一个未挂单的点餐销售账单
 	ctx := helper.GetContext(c)
-	saleBillUuid, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	deviceSn := ctx.GetDeviceSn()
+	ctx.Log().Debug("查询点餐销售账单", zap.Any("deviceSn", deviceSn))
+	if deviceSn == "" {
+		helper.ResponseFail(c, constant.CodeBadRequest, errors.ErrNoDeviceSn)
+		return
+	}
+	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
+
+	res, err := h.orderService.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	res, err := h.orderService.GetOrderCartInfo(ctx, saleBillUuid)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	ctx.Log().Debug("GetOrderCartInfoByDeviceSn", zap.Any("res", res))
+	if res == nil {
+		ctx.Log().Debug("没有查询到点餐销售账单")
+		// 没有查询到属于该收银机的未挂单销售账单
+		helper.Success(c, resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)})
 		return
 	}
+	ctx.Log().Debug("查询到点餐销售账单", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -266,7 +270,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)             // 创建点餐订单
+		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)             // 创建点餐订单。 废弃，点餐点餐由系统自动创建
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                    // 取消点餐订单
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)   // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice) // 点餐订单商品改价

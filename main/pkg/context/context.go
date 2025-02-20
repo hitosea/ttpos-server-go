@@ -19,6 +19,7 @@ type Context interface {
 	GetCompanySetting() model.CompanySetting // 获取商家设置
 	GetStaff() model.Staff                   // 获取员工信息
 	GetStaffUuid() uint64                    // 获取员工uuid
+	GetDeviceSn() string                     // 获取设备SN
 	GetDeskUuid() uint64                     // 获取桌台ID
 	Log() *zap.Logger                        // 获取日志实例
 }
@@ -33,6 +34,7 @@ type ContextImpl struct {
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
 	staffUuid      uint64               // 员工uuid
 	deskUuid       uint64               // 桌台ID
+	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
 	log            *zap.Logger
 }
 
@@ -47,6 +49,12 @@ func WithLanguage(language string) Option {
 func WithDeskUuid(deskUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.deskUuid = deskUuid
+	}
+}
+
+func WithDeviceSn(deviceSn string) Option {
+	return func(ctx *ContextImpl) {
+		ctx.deviceSn = deviceSn
 	}
 }
 
@@ -162,6 +170,10 @@ func (c *ContextImpl) GetStaff() model.Staff {
 
 func (c *ContextImpl) GetStaffUuid() uint64 {
 	return c.staffUuid
+}
+
+func (c *ContextImpl) GetDeviceSn() string {
+	return c.deviceSn
 }
 
 func (c *ContextImpl) Log() *zap.Logger {

@@ -1699,15 +1699,6 @@ const docTemplate = `{
                     "收银端.点餐"
                 ],
                 "summary": "查询点餐购物车信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "账单ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1778,34 +1769,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/instant/order/create": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "创建点餐订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "创建点餐订单",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resp.CreateOrderResp"
-                        }
                     }
                 }
             }
@@ -4914,11 +4877,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "sale_bill_uuid": {
-                    "description": "销售账单ID",
+                    "description": "销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。",
                     "type": "integer"
                 },
                 "sale_order_uuid": {
-                    "description": "销售订单ID",
+                    "description": "销售订单ID。可选，参数不填时默认加购到第一个销售订单中",
                     "type": "integer"
                 },
                 "sauce_uuid": {
@@ -5565,15 +5528,6 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CreateOrderResp": {
-            "type": "object",
-            "properties": {
-                "uuid": {
-                    "description": "订单UUID",
                     "type": "integer"
                 }
             }

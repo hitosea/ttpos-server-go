@@ -4,6 +4,7 @@ import "ttpos-server-go/app/dto"
 
 // 桌台购物车
 type ShopCart struct {
+	SaleBillUuid  uint64      `json:"sale_bill_uuid"`   // 销售账单ID
 	IsDeskOrder   bool        `json:"is_desk_order"`    // 购物车类型 true:桌台购物车 false:点餐购物车
 	Desk          *DeskInfo   `json:"desk,omitempty"`   // 桌台信息
 	Buffet        *BuffetInfo `json:"buffet,omitempty"` // 自助餐信息

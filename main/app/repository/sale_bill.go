@@ -9,6 +9,7 @@ import (
 type ISaleBillRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
+	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 }
 
 type saleBillRepo struct {
@@ -37,6 +38,17 @@ func (r *saleBillRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 
 func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(CommonRepo.WhereByUuid(uuid))
+	if err != nil {
+		return nil, err
+	}
+	return &saleBill, nil
+}
+
+// 通过deviceSn查询点餐页面未挂单的账单
+func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_uuid = ? AND hide_bill_time = 0", deviceUuid)
+	})
 	if err != nil {
 		return nil, err
 	}
