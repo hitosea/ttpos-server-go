@@ -1110,8 +1110,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机名称',
     `printer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
     `config_json` TEXT DEFAULT "" COMMENT '打印机json配置',
-    `copies` INT NOT NULL DEFAULT 0 COMMENT '打印份数',
-    `sort` INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `copies` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印份数',
+    `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1150,6 +1150,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 8 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印日志表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_printer_read_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印读取日志ID',
+    `log_uuid` int(11) DEFAULT 0 COMMENT '打印uuid',
+    `device_id` varchar(255) DEFAULT '' COMMENT '设备id',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印读取日志表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1329,6 +1340,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_customer_call` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '客户呼叫记录ID',
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台ID',
     `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号,不随后台改变',
+    `call_type` TINYINT UNSIGNED DEFAULT NULL DEFAULT 1 COMMENT '呼叫类型(1服务员,2结账)',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-unhandled未处理 1-handled已处理',
     `is_send` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '消息发送状态 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

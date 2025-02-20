@@ -1,16 +1,28 @@
 package service
 
 import (
+	"errors"
+	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
 // ICallSrv 定义沽清服务接口
 type ICallSrv interface {
-	Unprocessed() resp.UnprocessedResp
-	CallList(companyUuid uint64, soldOutReq req.CallListReq) (resp.CallList, error)                           // 呼叫列表
-	PrintExceptionList(companyUuid uint64, soldOutReq req.PrintExceptionReq) (resp.PrintExceptionList, error) // 打印异常列表
+	GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) // 获取未处理的呼叫列表
+	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error)    // 异常打印列表
+	Processed(companyUuid uint64, callUuid uint64) error                                                             // 呼叫已处理
+	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
+	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
+
+	Unprocessed(companyUuid uint64) (resp.UnprocessedResp, error) // todo 获取未处理消息数量
 }
 
 // callSrv 沽清服务结构体
@@ -31,17 +43,161 @@ func NewCallSrvImpl(dbm *database.DBManager) ICallSrv {
 	}
 }
 
-// CallList 获取呼叫列表
-func (s *callSrv) CallList(companyUuid uint64, soldOutReq req.CallListReq) (resp.CallList, error) {
-	return resp.CallList{}, nil
+// GetUnprocessedCallList 获取未处理的呼叫列表
+func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) {
+	var res resp.UnprocessedCallList
+	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
+	calls, total, err := callRepo.PaginateGet(listReq.PageNo, listReq.PageSize, callRepo.WhereC1Status(constant.CallStatusUnprocessed))
+	if err != nil {
+		return res, errors.New("获取呼叫列表失败")
+	}
+	callItems := make([]resp.UnprocessedCallItem, 0, len(calls))
+	for _, call := range calls {
+		var item resp.UnprocessedCallItem
+		copier.Copy(&item, call)
+		callItems = append(callItems, item)
+	}
+	return resp.UnprocessedCallList{
+		List: callItems,
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageNo,
+			PageSize: listReq.PageSize,
+			Total:    total,
+		},
+	}, nil
 }
 
-// PrintExceptionList 获取打印异常列表
-func (s *callSrv) PrintExceptionList(companyUuid uint64, soldOutReq req.PrintExceptionReq) (resp.PrintExceptionList, error) {
-	return resp.PrintExceptionList{}, nil
+// GetAbnormalPrintList 获取异常打印列表
+func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error) {
+	var res resp.AbnormalPrintList
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
+	printerLogs, total, err := printerLogRepo.PaginateGet(listReq.PageNo, listReq.PageSize,
+		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd), printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WithPrinter(), printerLogRepo.WithSaleBill(), printerLogRepo.WithSaleBillDesk())
+	if err != nil {
+		return res, errors.New("获取呼叫列表失败")
+	}
+	abnormalPrintItems := make([]resp.AbnormalPrintItem, 0, len(printerLogs))
+	for _, printerLog := range printerLogs {
+		var printerName, deskNo string
+		if printerLog.Printer != nil {
+			printerName = printerLog.Printer.Name
+		}
+		if printerLog.SaleBill != nil {
+			deskNo = printerLog.SaleBill.Desk.DeskNo
+		}
+		var item resp.AbnormalPrintItem
+		copier.Copy(&item, printerLog)
+
+		item.PrinterName = printerName
+		item.DeskNo = deskNo
+		abnormalPrintItems = append(abnormalPrintItems, item)
+	}
+	return resp.AbnormalPrintList{
+		List: abnormalPrintItems,
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageNo,
+			PageSize: listReq.PageSize,
+			Total:    total,
+		},
+	}, nil
 }
 
 // Unprocessed 获取未处理消息数量
-func (s *callSrv) Unprocessed() resp.UnprocessedResp {
-	return resp.UnprocessedResp{}
+func (s *callSrv) Unprocessed(companyUuid uint64) (resp.UnprocessedResp, error) {
+	var res resp.UnprocessedResp
+
+	// 对应前端
+	// unreadQuantity.js
+	// notification.vue
+
+	// 10条未处理的呼叫，返回呼叫uuid，用于设置已处理
+	// 获取未处理的呼叫条数
+
+	// 未处理的接单条数，返回h5扫码端订单uuid，用于接单或者拒单
+	// 10条未处理的接单信息
+
+	// 授权剩余天数
+	// 是否提醒即将授权结束
+
+	// 10条打印异常
+	// 获取打印异常条数
+
+	return res, nil
+}
+
+// Processed 消息已处理
+func (s *callSrv) Processed(companyUuid uint64, callUuid uint64) error {
+	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
+	err := callRepo.Update(map[string]any{"status": constant.CallStatusProcessed},
+		[]repository.DBOption{callRepo.WhereStatus(constant.CallStatusUnprocessed), callRepo.WhereDeskUuidByCallUuid(callUuid)})
+	if err != nil {
+		return errors.New("处理呼叫失败")
+	}
+	return nil
+}
+
+// Reprint 重新打印
+func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error) {
+	var res resp.ReprintResp
+	companyUuid := ctx.GetCompanyUuid()
+	deviceId := ctx.GetDeviceId()
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
+	printerLog := printerLogRepo.GetPrinterLog(printerLogRepo.WhereUuid(printerLogUuid),
+		printerLogRepo.WithPrinter(), printerLogRepo.WithPrinterPrinterType())
+	if printerLog.PrinterUuid > 0 && printerLog.Printer == nil && printerLog.Printer.IsDelete() {
+		return res, errors.New("打印失败，打印机已不存在")
+	}
+	if printerLog.Data == "" {
+		return res, errors.New("打印失败，打印机已不存在")
+	}
+	if printerLog.PrinterUuid > 0 && printerLog.Type == constant.PrinterLogTypeDefault {
+		// todo 调用打印接口
+	} else if printerLog.Type == constant.PrinterLogTypeCloud && printerLog.CashierDeviceId != "" && printerLog.CashierDeviceId != deviceId {
+		err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
+			if err := repository.NewPrinterReadLogRepo(s.dbm.GetDB(companyUuid)).
+				Update(deviceId, map[string]any{"delete_time": time.Now().Unix()}); err != nil {
+				return err
+			}
+			if err := printerLogRepo.Update(printerLogUuid, map[string]any{"status": constant.PrinterLogStatusInProgress}); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return res, errors.New("打印失败")
+		}
+		res = resp.ReprintResp{PrinterLogUuid: printerLogUuid}
+	} else {
+		var printerName, printerType, printerConfig string
+		if printerLog.Printer != nil {
+			printerName = printerLog.Printer.Name
+			if printerLog.Printer.PrinterType != nil {
+				printerType = printerLog.Printer.PrinterType.Name
+			}
+			printerConfig = printerLog.Printer.ConfigJson
+		}
+		res = resp.ReprintResp{
+			Data:          printerLog.Data,
+			PrintMethod:   printerLog.PrintMethod,
+			PrinterUuid:   printerLog.PrinterUuid,
+			PrinterTime:   time.Now().Unix(),
+			PrinterName:   printerName,
+			PrinterType:   printerType,
+			PrinterConfig: printerConfig,
+			PrintTimes:    1,
+		}
+	}
+	return res, nil
+}
+
+// DeletePrint 删除打印
+func (s *callSrv) DeletePrint(companyUuid uint64, printLogUuid uint64) error {
+	err := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid)).Update(printLogUuid, map[string]any{
+		"delete_time": time.Now().Unix(),
+	})
+	if err != nil {
+		return errors.New("删除打印失败")
+	}
+	return nil
 }

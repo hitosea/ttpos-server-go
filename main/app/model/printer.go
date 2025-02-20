@@ -3,19 +3,48 @@ package model
 // Printer 打印机信息表 ttpos_printer
 type Printer struct {
 	BaseModel
-	Name            string `gorm:"default:'';column:name;comment:'打印机名称'"`
-	PrinterTypeUuid uint   `gorm:"default:0;column:printer_type_uuid;comment:'打印机类型ID'"`
-	ConfigJson      string `gorm:"default:'';column:config_json;comment:'打印机json配置'"`
-	Copies          uint   `gorm:"default:0;column:copies;comment:'打印份数'"`
-	Sort            uint   `gorm:"default:0;column:sort;comment:'排序'"`
+	Name            string `gorm:"column:name;type:varchar(255);comment:打印机名称;NOT NULL" json:"name"`
+	PrinterTypeUuid uint64 `gorm:"column:printer_type_uuid;type:bigint(20) unsigned;default:0;comment:打印机类型ID;NOT NULL" json:"printer_type_uuid"`
+	ConfigJson      string `gorm:"column:config_json;type:text;comment:打印机json配置" json:"config_json"`
+	Copies          uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"copies"`
+	Sort            uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序;NOT NULL" json:"sort"`
+
+	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
 }
 
 // PrinterType 打印机类型信息表 ttpos_printer_type
 type PrinterType struct {
 	BaseModel
-	Name       string `gorm:"default:'';column:name;comment:'打印机类型名称'"`
-	Key        string `gorm:"default:'';column:key;comment:'打印机类型key'"`
-	ConfigJson string `gorm:"default:'';column:config_json;comment:'打印机类型json配置,描述需要填写的字段'"`
+	Name       string `gorm:"column:name;type:varchar(255);comment:打印机类型名称;NOT NULL" json:"name"`
+	Key        string `gorm:"column:key;type:varchar(255);comment:打印机类型key;NOT NULL" json:"key"`
+	ConfigJson string `gorm:"column:config_json;type:text;comment:打印机类型json配置,描述需要填写的字段" json:"config_json"`
+}
+
+// PrinterLog 打印日志表 ttpos_printer_log
+type PrinterLog struct {
+	BaseModel
+	PrinterUuid     uint64 `gorm:"column:printer_uuid;type:bigint(20) unsigned;default:0;comment:打印机id;NOT NULL" json:"printer_uuid"`
+	CashierDeviceId string `gorm:"column:cashier_device_id;type:varchar(255);comment:收银机绑定的id;NOT NULL" json:"cashier_device_id"`
+	SaleBillUuid    uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单id;NOT NULL" json:"sale_bill_uuid"`
+	Data            string `gorm:"column:data;type:varchar(255);comment:打印数据" json:"data"`
+	Type            int    `gorm:"column:type;type:int(11);default:0;comment:类型:0系统默认队列,1云上服务下放;NOT NULL" json:"type"`
+	DataType        int    `gorm:"column:data_type;type:tinyint(2);default:1;comment:数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;NOT NULL" json:"data_type"`
+	PrintMethod     int    `gorm:"column:print_method;type:tinyint(2);default:1;comment:打印方式 1文本打印, 2图片打印;NOT NULL" json:"print_method"`
+	Num             int    `gorm:"column:num;type:int(11);default:0;comment:打印次数;NOT NULL" json:"num"`
+	Status          int    `gorm:"column:status;type:tinyint(2);default:1;comment:状态(0结束,1进行中,2成功);NOT NULL" json:"status"`
+	Reason          string `gorm:"column:reason;type:varchar(255);comment:原因" json:"reason"`
+	PrinterTime     int    `gorm:"column:printer_time;type:int(11);default:0;comment:打印时间;NOT NULL" json:"printer_time"`
+	FirstExecution  int    `gorm:"column:first_execution;type:tinyint(2);default:0;comment:是否首次执行打印 1-是 0-否;NOT NULL" json:"first_execution"`
+
+	Printer  *Printer  `gorm:"foreignKey:PrinterUuid;references:Uuid"`  // 关联 printer
+	SaleBill *SaleBill `gorm:"foreignKey:SaleBillUuid;references:Uuid"` // 关联 sale_order
+}
+
+// PrinterReadLog 打印读取日志表 ttpos_printer_read_log
+type PrinterReadLog struct {
+	BaseModel
+	LogUuid  int    `gorm:"column:log_uuid;type:int(11);default:0;comment:打印uuid" json:"log_uuid"`
+	DeviceId string `gorm:"column:device_id;type:varchar(255);comment:设备id" json:"device_id"`
 }
 
 // ProductPrinter 产品打印机信息表 ttpos_product_printer

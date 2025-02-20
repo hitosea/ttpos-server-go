@@ -476,6 +476,20 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.PrinterLogReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProcessedCallReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
   req.RechargeOrderAddPaymentMethodReq:
     properties:
       payment_amount:
@@ -548,6 +562,32 @@ definitions:
         type: string
     required:
     - password
+    type: object
+  resp.AbnormalPrintItem:
+    properties:
+      create_time:
+        type: integer
+      desk_no:
+        type: string
+      printer_name:
+        type: string
+      printer_uuid:
+        type: integer
+      reason:
+        type: string
+      sale_bill_uuid:
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  resp.AbnormalPrintList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AbnormalPrintItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
     type: object
   resp.AboutBuffet:
     properties:
@@ -2376,6 +2416,28 @@ definitions:
         description: 充值订单Uuid
         type: integer
     type: object
+  resp.ReprintResp:
+    properties:
+      data:
+        type: string
+      print_method:
+        description: 打印方式 1文本打印, 2图片打印
+        type: integer
+      print_times:
+        type: integer
+      printer_config:
+        type: string
+      printer_log_uuid:
+        type: integer
+      printer_name:
+        type: string
+      printer_time:
+        type: integer
+      printer_type:
+        type: string
+      printer_uuid:
+        type: integer
+    type: object
   resp.SaleOrder:
     properties:
       amount_info:
@@ -2450,6 +2512,30 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.SoldOut'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.UnprocessedCallItem:
+    properties:
+      call_type:
+        type: integer
+      desk_no:
+        type: string
+      desk_uuid:
+        type: integer
+      is_send:
+        type: integer
+      status:
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  resp.UnprocessedCallList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.UnprocessedCallItem'
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
@@ -2823,13 +2909,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -3435,6 +3521,117 @@ paths:
       summary: 获取自助餐列表
       tags:
       - 收银端.自助餐
+  /cashier/call/abnormal_print_list:
+    get:
+      consumes:
+      - application/json
+      description: 异常打印列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.AbnormalPrintList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 异常打印列表
+      tags:
+      - 收银端.呼叫
+  /cashier/call/print:
+    delete:
+      consumes:
+      - application/json
+      description: 重新打印
+      parameters:
+      - description: 重新打印参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterLogReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ReprintResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 重新打印
+      tags:
+      - 收银端.呼叫
+  /cashier/call/processed:
+    post:
+      consumes:
+      - application/json
+      description: 处理呼叫
+      parameters:
+      - description: 处理呼叫参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProcessedCallReq'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
+      summary: 处理呼叫
+      tags:
+      - 收银端.呼叫
+  /cashier/call/unprocessed_list:
+    get:
+      consumes:
+      - application/json
+      description: 未处理呼叫列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedCallList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 未处理呼叫列表
+      tags:
+      - 收银端.呼叫
   /cashier/check_update:
     get:
       consumes:
@@ -3523,13 +3720,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -4323,11 +4520,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -4351,11 +4548,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -4375,46 +4572,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -5287,11 +5484,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -5315,11 +5512,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -5339,46 +5536,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query

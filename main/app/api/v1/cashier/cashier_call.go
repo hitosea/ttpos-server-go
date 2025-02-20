@@ -16,116 +16,130 @@ import (
 
 // CallHandler 自助餐处理程序
 type CallHandler struct {
-	soldOutSrv service.ISoldOutSrv
+	callSrv service.ICallSrv
 }
 
-// SoldOutList 沽清售罄列表
-// @Summary 沽清售罄列表
-// @Description 沽清售罄列表
-// @Tags 收银端.沽清
+// GetAbnormalPrintList 异常打印列表
+// @Summary 异常打印列表
+// @Description 异常打印列表
+// @Tags 收银端.呼叫
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
-// @Success 200 {object} dto.Response{data=resp.SoldOutPaginationResp}
-// @Router /cashier/sold_out/list [get]
-func (h *CallHandler) SoldOutList(c *gin.Context) {
-	// 绑定请求参数
-	var soldOutListReq req.SoldOutListReq
-	if err := c.ShouldBindQuery(&soldOutListReq); err != nil {
-		helper.HandleValidationError(c, err, soldOutListReq, dto.PageReqMessage)
+// @Success 200 {object} dto.Response{data=resp.AbnormalPrintList}
+// @Router /cashier/call/abnormal_print_list [get]
+func (h *CallHandler) GetAbnormalPrintList(c *gin.Context) {
+	var listReq req.AbnormalPrintListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
-	// 获取沽清列表
-	res, err := h.soldOutSrv.GetSoldOutList(helper.GetCompanyUuid(c), soldOutListReq)
-	// 处理错误
+	res, err := h.callSrv.GetAbnormalPrintList(helper.GetCompanyUuid(c), listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 返回结果
 	helper.Success(c, res)
 }
 
-// AddSoldOut 添加沽清商品
-// @Summary 添加沽清商品
-// @Description 添加沽清商品
-// @Tags 收银端.沽清
+// GetUnprocessedCallList 未处理呼叫列表
+// @Summary 未处理呼叫列表
+// @Description 未处理呼叫列表
+// @Tags 收银端.呼叫
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.AddSoldOutReq true "添加沽清商品参数"
-// @Success 200 {object} dto.Response
-// @Router /cashier/sold_out/add [post]
-func (h *CallHandler) AddSoldOut(c *gin.Context) {
-	// 绑定请求参数
-	var addSoldOutReq req.AddSoldOutReq
-	if err := c.ShouldBindJSON(&addSoldOutReq); err != nil {
-		helper.HandleValidationError(c, err, addSoldOutReq, nil)
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} dto.Response{data=resp.UnprocessedCallList}
+// @Router /cashier/call/unprocessed_list [get]
+func (h *CallHandler) GetUnprocessedCallList(c *gin.Context) {
+	var listReq req.UnprocessedCallListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
-	// 获取沽清列表
-	err := h.soldOutSrv.AddSoldOut(helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
-	// 处理错误
+	res, err := h.callSrv.GetUnprocessedCallList(helper.GetCompanyUuid(c), listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 返回结果
-	helper.Success(c, gin.H{}, "操作成功")
+	helper.Success(c, res)
 }
 
-// CancelSoldOut 取消沽清商品
-// @Summary 取消沽清商品
-// @Description 取消沽清商品
-// @Tags 收银端.沽清
+// Processed 处理呼叫
+// @Summary 处理呼叫
+// @Description 处理呼叫
+// @Tags 收银端.呼叫
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.CancelSoldOutReq true "取消沽清商品参数"
-// @Success 200 {object} dto.Response
-// @Router /cashier/sold_out/cancel [post]
-func (h *CallHandler) CancelSoldOut(c *gin.Context) {
-	// 绑定请求参数
-	var cancelSoldOut req.CancelSoldOutReq
-	if err := c.ShouldBindJSON(&cancelSoldOut); err != nil {
-		helper.HandleValidationError(c, err, cancelSoldOut, nil)
+// @param data body req.ProcessedCallReq true "处理呼叫参数"
+// @Router /cashier/call/processed [post]
+func (h *CallHandler) Processed(c *gin.Context) {
+	var processedReq req.ProcessedCallReq
+	if err := c.ShouldBindJSON(&processedReq); err != nil {
+		helper.HandleValidationError(c, err, processedReq, nil)
 		return
 	}
-	// 取消沽清商品
-	err := h.soldOutSrv.CancelSoldOut(helper.GetCompanyUuid(c), cancelSoldOut.ProductBomUuid)
-	// 处理错误
+	err := h.callSrv.Processed(helper.GetCompanyUuid(c), processedReq.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 返回结果
-	helper.Success(c, gin.H{}, "取消成功")
+	helper.Success(c, gin.H{}, "成功")
 }
 
-// CancelAllSoldOut 全部取消沽清商品
-// @Summary 全部取消沽清商品
-// @Description 全部取消沽清商品
-// @Tags 收银端.沽清
+// DeletePrint 删除打印
+// @Summary 删除打印
+// @Description 删除打印
+// @Tags 收银端.呼叫
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response
-// @Router /cashier/sold_out/cancel_all [post]
-func (h *CallHandler) CancelAllSoldOut(c *gin.Context) {
-	// 取消沽清全部商品
-	err := h.soldOutSrv.CancelAllSoldOut(helper.GetCompanyUuid(c))
-	// 处理错误
+// @param data body req.PrinterLogReq true "删除打印参数"
+// @Router /cashier/call/print [delete]
+func (h *CallHandler) DeletePrint(c *gin.Context) {
+	var printerLogReq req.PrinterLogReq
+	if err := c.ShouldBindJSON(&printerLogReq); err != nil {
+		helper.HandleValidationError(c, err, printerLogReq, nil)
+		return
+	}
+	err := h.callSrv.DeletePrint(helper.GetCompanyUuid(c), printerLogReq.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 返回结果
-	helper.Success(c, gin.H{}, "取消成功")
+	helper.Success(c, gin.H{}, "成功")
 }
 
-// RegisterCallHandlers 注册沽清路由
+// Reprint 重新打印
+// @Summary 重新打印
+// @Description 重新打印
+// @Tags 收银端.呼叫
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.PrinterLogReq true "重新打印参数"
+// @Success 200 {object} dto.Response{data=resp.ReprintResp}
+// @Router /cashier/call/print [delete]
+func (h *CallHandler) Reprint(c *gin.Context) {
+	var printerLogReq req.PrinterLogReq
+	if err := c.ShouldBindJSON(&printerLogReq); err != nil {
+		helper.HandleValidationError(c, err, printerLogReq, nil)
+		return
+	}
+	res, err := h.callSrv.Reprint(helper.GetContext(c), printerLogReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, res, "成功")
+}
+
+// RegisterCallHandlers 注册呼叫路由
 func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -137,15 +151,16 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 初始化处理器
 	wrapper := CallHandler{
-		soldOutSrv: service.NewSoldOutSrv(dbm, service.NewLocaleSrv()),
+		callSrv: service.NewCallSrv(dbm),
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/sold_out/list", wrapper.SoldOutList)             // 沽清售罄列表
-		privateApi.POST("/sold_out/add", wrapper.AddSoldOut)              // 添加沽清商品
-		privateApi.POST("/sold_out/cancel", wrapper.CancelSoldOut)        // 取消沽清商品
-		privateApi.POST("/sold_out/cancel_all", wrapper.CancelAllSoldOut) // 取消全部沽清商品
+		privateApi.GET("/call/unprocessed_list", wrapper.GetUnprocessedCallList)  // 分页获取呼叫列表
+		privateApi.POST("/call/processed", wrapper.Processed)                     // 处理呼叫
+		privateApi.GET("/call/abnormal_print_list", wrapper.GetAbnormalPrintList) // 异常打印列表
+		privateApi.DELETE("/call/print", wrapper.DeletePrint)                     // 删除异常打印
+		privateApi.POST("/call/reprint", wrapper.Reprint)                         // 重新打印
 	}
 }

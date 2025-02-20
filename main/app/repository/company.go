@@ -18,16 +18,16 @@ func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
 }
 
 // NewCompanyRepoImpl 创建新的公司仓库实现
-func NewCompanyRepoImpl(db *gorm.DB) *CompanyRepoImpl {
-	return &CompanyRepoImpl{db: db}
+func NewCompanyRepoImpl(db *gorm.DB) ICompanyRepo {
+	return &companyRepo{db: db}
 }
 
-type CompanyRepoImpl struct {
+type companyRepo struct {
 	db *gorm.DB
 }
 
 // GetCompanyInfo 获取公司信息
-func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error) {
+func (r *companyRepo) GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	var company model.Company
 
@@ -45,7 +45,7 @@ func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) 
 	return company, nil
 }
 
-func (r *CompanyRepoImpl) GetCompanyInfoByUuid(ctx context.Context) (*model.Company, error) {
+func (r *companyRepo) GetCompanyInfoByUuid(ctx context.Context) (*model.Company, error) {
 	companyInfo, err := r.GetCompanyInfo(ctx, NotDeleted)
 	if err != nil {
 		return nil, err

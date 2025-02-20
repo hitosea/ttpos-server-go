@@ -20,6 +20,7 @@ type Context interface {
 	GetStaff() model.Staff                   // 获取员工信息
 	GetStaffUuid() uint64                    // 获取员工uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
+	GetDeviceId() string                     // 获取设备ID
 	Log() *zap.Logger                        // 获取日志实例
 }
 type ContextImpl struct {
@@ -33,6 +34,7 @@ type ContextImpl struct {
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
 	staffUuid      uint64               // 员工uuid
 	deskUuid       uint64               // 桌台ID
+	deviceId       string               // 设备ID
 	log            *zap.Logger
 }
 
@@ -77,6 +79,12 @@ func WithStaff(staff model.Staff) Option {
 func WithStaffUuid(staffUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.staffUuid = staffUuid
+	}
+}
+
+func WithDeviceId(deviceId string) Option {
+	return func(ctx *ContextImpl) {
+		ctx.deviceId = deviceId
 	}
 }
 
@@ -126,6 +134,10 @@ func (c *ContextImpl) GetLanguage() string {
 
 func (c *ContextImpl) GetDeskUuid() uint64 {
 	return c.deskUuid
+}
+
+func (c *ContextImpl) GetDeviceId() string {
+	return c.deviceId
 }
 
 func (c *ContextImpl) GetSource() string {

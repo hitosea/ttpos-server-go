@@ -138,6 +138,10 @@ func GetDeskUuid(c *gin.Context) uint64 {
 	return c.GetUint64(jwt.DeskUuid)
 }
 
+func GetDeviceId(c *gin.Context) string {
+	return c.GetString(jwt.DeviceId)
+}
+
 // GetLanguage 获取语言
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
@@ -184,6 +188,7 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithStaffUuid(GetStaffUuid(c)),           // 在上下文中添加员工Uuid
 		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
 		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息
+		context.WithDeviceId(GetDeviceId(c)),             // 在上下文中添加设备ID信息
 		context.WithLogger(func() *zap.Logger {
 			if logger.Logger == nil {
 				return zap.NewNop() // 避免未初始化日志导致nil空指针错误

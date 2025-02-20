@@ -14,7 +14,7 @@ type IBindRecordRepo interface {
 	Create(bindRecord model.Device) error                               // 创建绑定记录
 }
 
-type BindRecordRepo struct {
+type bindRecordRepo struct {
 	db *gorm.DB
 }
 
@@ -22,11 +22,11 @@ func NewBindRecordRepo(db *gorm.DB) IBindRecordRepo {
 	return NewBindRecordRepoImpl(db)
 }
 
-func NewBindRecordRepoImpl(db *gorm.DB) *BindRecordRepo {
-	return &BindRecordRepo{db: db}
+func NewBindRecordRepoImpl(db *gorm.DB) IBindRecordRepo {
+	return &bindRecordRepo{db: db}
 }
 
-func (r *BindRecordRepo) Unbind(source string, deviceId string, staffUuid uint64) error {
+func (r *bindRecordRepo) Unbind(source string, deviceId string, staffUuid uint64) error {
 	return r.db.Model(&model.Device{}).Select("finally_login_uuid").
 		Where("`source` = ? AND `device_id` = ? AND `finally_login_uuid` = ?", source, deviceId, staffUuid).Debug().
 		Updates(map[string]interface{}{
@@ -34,22 +34,22 @@ func (r *BindRecordRepo) Unbind(source string, deviceId string, staffUuid uint64
 		}).Error
 }
 
-func (r *BindRecordRepo) GetBindCountBySource(source string) uint {
+func (r *bindRecordRepo) GetBindCountBySource(source string) uint {
 	var count int64
 	r.db.Model(&model.Device{}).Where("source = ? AND finally_login_uuid > 0", source).Count(&count)
 	return uint(count)
 }
 
-func (r *BindRecordRepo) GetBySourceAndDeviceId(source string, deviceId string) model.Device {
+func (r *bindRecordRepo) GetBySourceAndDeviceId(source string, deviceId string) model.Device {
 	var bindRecord model.Device
 	r.db.Model(&model.Device{}).Where("source = ? AND device_id = ?", source, deviceId).First(&bindRecord)
 	return bindRecord
 }
 
-func (r *BindRecordRepo) Update(uuid uint64, vars map[string]interface{}) error {
+func (r *bindRecordRepo) Update(uuid uint64, vars map[string]interface{}) error {
 	return r.db.Model(&model.Device{}).Where("uuid = ?", uuid).Updates(vars).Error
 }
 
-func (r *BindRecordRepo) Create(bindRecord model.Device) error {
+func (r *bindRecordRepo) Create(bindRecord model.Device) error {
 	return r.db.Model(&model.Device{}).Create(&bindRecord).Error
 }

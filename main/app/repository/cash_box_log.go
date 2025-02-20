@@ -13,15 +13,15 @@ func NewCashBoxLogRepo(db *gorm.DB) ICashBoxLogRepo {
 	return NewCashBoxLogRepoImpl(db)
 }
 
-type CashBoxLogRepo struct {
+type cashBoxLogRepo struct {
 	db *gorm.DB
 }
 
-func NewCashBoxLogRepoImpl(db *gorm.DB) *CashBoxLogRepo {
-	return &CashBoxLogRepo{db: db}
+func NewCashBoxLogRepoImpl(db *gorm.DB) ICashBoxLogRepo {
+	return &cashBoxLogRepo{db: db}
 }
 
-func (r *CashBoxLogRepo) Create(cashBoxLog model.CashBoxLog) (model.CashBoxLog, error) {
+func (r *cashBoxLogRepo) Create(cashBoxLog model.CashBoxLog) (model.CashBoxLog, error) {
 	err := r.db.Create(&cashBoxLog).Error
 	return cashBoxLog, err
 }
