@@ -21,7 +21,7 @@ func NewQrcodeOrderRepo(db *gorm.DB) IH5OrderRepo {
 	return NewH5OrderRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的仓库实现
+// NewH5OrderRepoImpl 创建新的仓库实现
 func NewH5OrderRepoImpl(db *gorm.DB) *H5OrderRepoImpl {
 	return &H5OrderRepoImpl{db: db}
 }
@@ -47,10 +47,10 @@ func (r *H5OrderRepoImpl) GetQrcodeOrderList(pageNo, pageSize int) ([]model.H5Or
 	return qrcodeOrders, total, err
 }
 
-// GetQrcodeOrderInfo 获取接单信息
+// GetH5OrderInfoByDeskUuid 获取接单信息
 func (r *H5OrderRepoImpl) GetH5OrderInfoByDeskUuid(deskUuid uint64) (model.H5Order, error) {
 	var qrcodeOrder model.H5Order
-	if err := r.db.Preload("H5OrderProducts").Model(&model.H5Order{}).Where("desk_uuid = ? AND status = ？ AND delete_time = 0", deskUuid, model.H5OrderStatusUnpaid).First(&qrcodeOrder).Error; err != nil {
+	if err := r.db.Model(&model.H5Order{}).Preload("H5OrderProducts").Where("desk_uuid = ? AND status = ？ AND delete_time = 0", deskUuid, model.H5OrderStatusUnpaid).First(&qrcodeOrder).Error; err != nil {
 		return model.H5Order{}, err
 	}
 	return qrcodeOrder, nil

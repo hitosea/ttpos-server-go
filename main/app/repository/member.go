@@ -38,7 +38,7 @@ func NewMemberRepoImpl(db *gorm.DB) *MemberRepo {
 // GetMemberLevels 获取会员等级
 func (r *MemberRepo) GetMemberLevels() []model.MemberLevel {
 	var levels []model.MemberLevel
-	r.db.Scopes(NotDeleted).Model(&model.MemberLevel{}).Select("uuid, name, priority, create_time").Order("priority asc, create_time asc").Find(&levels)
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time").Order("priority asc, create_time asc").Find(&levels)
 	return levels
 }
 
@@ -46,7 +46,7 @@ func (r *MemberRepo) GetMemberLevels() []model.MemberLevel {
 func (r *MemberRepo) SearchMember(keyword string) []model.Member {
 	var members []model.Member
 	keyword = Like(keyword)
-	r.db.Scopes(NotDeleted).Model(&model.Member{}).Select("uuid, nickname, phone").Where("phone LIKE ? OR uuid LIKE ?", keyword, keyword).Find(&members)
+	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR uuid LIKE ?", keyword, keyword).Find(&members)
 	return members
 }
 
@@ -58,25 +58,25 @@ func (r *MemberRepo) CreateMember(member model.Member) error {
 // CheckMemberExists 根据手机号检查是否存在
 func (r *MemberRepo) CheckMemberExists(phone string) bool {
 	var memberUuid uint64
-	r.db.Scopes(NotDeleted).Model(&model.Member{}).Where("phone = ?", phone).Select("uuid").Scan(&memberUuid)
+	r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("phone = ?", phone).Select("uuid").Scan(&memberUuid)
 	return memberUuid > 0
 }
 
 // CheckLevelExists 根据uuid检查等级是否存在
 func (r *MemberRepo) CheckLevelExists(uuid uint64) bool {
 	var exists uint64
-	r.db.Scopes(NotDeleted).Model(&model.MemberLevel{}).Where("uuid = ?", uuid).Select("uuid").Scan(&exists)
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Where("uuid = ?", uuid).Select("uuid").Scan(&exists)
 	return exists > 0
 }
 
 // GetMember 查询会员
 func (r *MemberRepo) GetMember(opts ...DBOption) model.Member {
 	var member model.Member
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.Member{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Model(&model.Member{}).Debug().First(&member)
+	db.Debug().First(&member)
 	return member
 }
 

@@ -1,23 +1,23 @@
 package repository
 
 import (
-	"ttpos-server-go/pkg/database"
+	"gorm.io/gorm"
 )
 
 type IOptLogRepo interface {
 	Save(source string, key string, shopUserId uint) error
 }
 
-func NewOptLogRepo(dbm *database.DBManager) IOptLogRepo {
-	return NewOptLogRepoImpl(dbm)
+func NewOptLogRepo(db *gorm.DB) IOptLogRepo {
+	return NewOptLogRepoImpl(db)
 }
 
 type OptLogRepo struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
-func NewOptLogRepoImpl(dbm *database.DBManager) *OptLogRepo {
-	return &OptLogRepo{dbm: dbm}
+func NewOptLogRepoImpl(db *gorm.DB) *OptLogRepo {
+	return &OptLogRepo{db: db}
 }
 
 func (r *OptLogRepo) Save(source string, key string, shopUserId uint) error {

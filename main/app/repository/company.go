@@ -31,7 +31,7 @@ func (r *CompanyRepoImpl) GetCompanyInfo(ctx context.Context, opts ...DBOption) 
 	companyUuid := ctx.GetCompanyUuid()
 	var company model.Company
 
-	db := r.db.Where("uuid = ?", companyUuid)
+	db := r.db.Model(&model.Company{}).Where("uuid = ?", companyUuid)
 
 	for _, opt := range opts {
 		db = opt(db)

@@ -25,18 +25,18 @@ func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
 	return NewRoleAccessSrvImpl(dbm)
 }
 
-type RoleAccessSrv struct {
+type roleAccessSrv struct {
 	dbm *database.DBManager
 }
 
-func NewRoleAccessSrvImpl(dbm *database.DBManager) *RoleAccessSrv {
-	return &RoleAccessSrv{
+func NewRoleAccessSrvImpl(dbm *database.DBManager) IRoleAccessSrv {
+	return &roleAccessSrv{
 		dbm: dbm,
 	}
 }
 
 // 从数据库获取权限
-func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, error) {
+func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, error) {
 	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyUuid))
 	var companySetting model.CompanySetting
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
@@ -76,7 +76,7 @@ func (s *RoleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 }
 
 // GetPermission 获取权限
-func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error) {
+func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error) {
 
 	var permissions []resp.Permission
 	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
@@ -99,7 +99,7 @@ func (s *RoleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 }
 
 // 筛选权限
-func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
+func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 暂时去掉外卖管理
@@ -144,7 +144,7 @@ func (s *RoleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 }
 
 // 构建权限树
-func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
+func (s *roleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
 	permissionMap := make(map[uint64]*resp.Permission)
 	var roots []*resp.Permission
 	var accessIds []string
@@ -183,7 +183,7 @@ func (s *RoleAccessSrv) buildPermissionTree(permissions []resp.Permission, route
 	return filteredRoots
 }
 
-func (s *RoleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
+func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
 	accesses, _, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, err

@@ -5,8 +5,11 @@ import (
 	"go.uber.org/zap"
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
@@ -15,6 +18,7 @@ import (
 type IPaymentMethodSrv interface {
 	IsEnabled(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否已启用
 	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64             // 计算税费
+	GetList(ctx context.Context) resp.PaymentMethodList                                                         // 获取支付方式列表
 }
 
 // paymentMethodSrv  支付方式服务结构体
@@ -69,4 +73,39 @@ func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.Pay
 	// 转换回 float64
 	result, _ := feeMoney.Float64()
 	return result
+}
+
+// GetList 获取支付方式列表
+func (s *paymentMethodSrv) GetList(ctx context.Context) resp.PaymentMethodList {
+	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	opts := []repository.DBOption{
+		paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
+	}
+	if ctx.GetSource() == constant.SourceCashier {
+		opts = append(opts, paymentMethodRepo.WhereCashier())
+	} else if ctx.GetSource() == constant.SourceAssistant {
+		opts = append(opts, paymentMethodRepo.WhereAssistant())
+	}
+	opts = append(opts, paymentMethodRepo.WithLogoFile(), paymentMethodRepo.WithQrcodeFile())
+	paymentMethods := paymentMethodRepo.GetPaymentMethods(opts...)
+
+	paymentMethodItems := make([]resp.PaymentMethodItem, 0, len(paymentMethods))
+	for _, method := range paymentMethods {
+		var logo, qrcode string
+		if method.QrcodeFile != nil {
+			logo = method.LogoFile.FileUrl
+		}
+		if method.QrcodeFile != nil {
+			qrcode = method.QrcodeFile.FileUrl
+		}
+		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
+			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGinContext()), constant.SourceTextMap[method.Source]),
+			Uuid:        method.Uuid,
+			PaymentName: method.PaymentName,
+			FeePercent:  method.FeePercent,
+			Logo:        logo,
+			Qrcode:      qrcode,
+		})
+	}
+	return resp.PaymentMethodList{List: paymentMethodItems}
 }

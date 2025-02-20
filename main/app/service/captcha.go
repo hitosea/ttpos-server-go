@@ -69,13 +69,13 @@ func (d *CustomMathDriver) GenerateIdQuestionAnswer() (id, question, answer stri
 	return
 }
 
-type CaptchaSrv struct {
+type captchaSrv struct {
 	cache  cache.Cache
 	driver *CustomMathDriver
 	store  base64Captcha.Store
 }
 
-func NewCaptchaSrvImpl(cache cache.Cache) *CaptchaSrv {
+func NewCaptchaSrvImpl(cache cache.Cache) ICaptchaSrv {
 	// 配置验证码选项
 	driver := &CustomMathDriver{
 		DriverMath: base64Captcha.DriverMath{
@@ -93,7 +93,7 @@ func NewCaptchaSrvImpl(cache cache.Cache) *CaptchaSrv {
 		},
 	}
 
-	return &CaptchaSrv{
+	return &captchaSrv{
 		cache:  cache,
 		driver: driver,
 		store:  base64Captcha.DefaultMemStore,
@@ -109,7 +109,7 @@ func generateSign() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (s *CaptchaSrv) Generate() (*resp.Captcha, error) {
+func (s *captchaSrv) Generate() (*resp.Captcha, error) {
 	// 生成随机标识
 	sign, err := generateSign()
 	if err != nil {
@@ -141,7 +141,7 @@ func (s *CaptchaSrv) Generate() (*resp.Captcha, error) {
 	}, nil
 }
 
-func (s *CaptchaSrv) Verify(sign, answer string) bool {
+func (s *captchaSrv) Verify(sign, answer string) bool {
 	// 开发调试使用
 	if config.Server.Mode == "debug" && answer == "123456" {
 		return true

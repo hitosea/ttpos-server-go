@@ -60,3 +60,9 @@ type ConfirmRechargeOrder struct {
 	RechargeOrderUuid uint64 `json:"recharge_order_uuid"` // 充值订单Uuid
 	MemberUuid        uint64 `json:"member_uuid"`         // 会员Uuid
 }
+
+// GetMemberDiscountReq 确认充值订单
+type GetMemberDiscountReq struct {
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单 Uuid
+	MemberUuid    uint64 `json:"member_uuid"`     // 会员 Uuid
+}

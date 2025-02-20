@@ -140,7 +140,7 @@ class UserShiftLog extends BaseModel
 
         $orderSort = ['a.create_time' => 'desc'];
         $list = $model->with(['user' => function ($query) {
-            $query->field('uuid as shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
+            $query->field('uuid, uuid as shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
         }])
             ->field("a.*")
             ->where('a.status', 1)
@@ -433,7 +433,7 @@ class UserShiftLog extends BaseModel
     public function getExistUserList($limit = 1000)
     {
         return (new User)->alias('u')
-            ->field('u.uuid as shop_user_id, u.username as user_name, IF(u.real_name = "", u.username, u.real_name) as real_name')
+            ->field('u.uuid, u.uuid as shop_user_id, u.username as user_name, IF(u.real_name = "", u.username, u.real_name) as real_name')
             ->join('staff_shift_log s', 'u.uuid = s.staff_uuid')
             ->where('s.id', '>', 0)
             ->where('s.status', '>', 0)

@@ -31,7 +31,7 @@ func (r *CompanyStaffRepo) WhereUsername(username string) DBOption {
 
 func (r *CompanyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff {
 	var companyStaff model.CompanyStaff
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.CompanyStaff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

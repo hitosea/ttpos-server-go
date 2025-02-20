@@ -46,7 +46,7 @@ func (r *DeskRegionRepoImpl) UpdateDeskRegion(uuid uint, deskRegion model.DeskRe
 // CreateDeskRegion 创建桌台区域
 func (r *DeskRegionRepoImpl) CreateDeskRegion(deskRegion model.DeskRegion) (uint64, error) {
 	// 创建桌台区域
-	if err := r.db.Create(&deskRegion).Error; err != nil {
+	if err := r.db.Model(&model.DeskRegion{}).Create(&deskRegion).Error; err != nil {
 		return 0, err
 	}
 	return deskRegion.Uuid, nil

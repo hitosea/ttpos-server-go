@@ -49,7 +49,7 @@ func (r *ProductPackageAttributeRepoImpl) UpdateProductPackageAttribute(productP
 // CreateProductPackageAttribute 创建产品包属性
 func (r *ProductPackageAttributeRepoImpl) CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint64, error) {
 	// 创建产品包属性
-	if err := r.db.Create(&productPackageAttribute).Error; err != nil {
+	if err := r.db.Model(&model.ProductPackageAttribute{}).Create(&productPackageAttribute).Error; err != nil {
 		return 0, err
 	}
 

@@ -19,7 +19,7 @@ func NewBuffetDelayRepo(db *gorm.DB) IBuffetDelayRepo {
 	return NewBuffetDelayRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+// NewBuffetDelayRepoImpl 创建新的商品规格仓库实现
 func NewBuffetDelayRepoImpl(db *gorm.DB) *BuffetDelayRepoImpl {
 	return &BuffetDelayRepoImpl{db: db}
 }
@@ -28,7 +28,7 @@ type BuffetDelayRepoImpl struct {
 	db *gorm.DB
 }
 
-// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
+// GetBuffetDelayList 获取商品规格列表，排除逻辑删除的规格
 func (r *BuffetDelayRepoImpl) GetBuffetDelayList() ([]model.BuffetDelay, error) {
 	var buffetDelays []model.BuffetDelay
 	err := r.db.Model(&model.BuffetDelay{}).Where("delete_time = ?", 0).Find(&buffetDelays).Error

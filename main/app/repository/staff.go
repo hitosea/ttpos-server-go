@@ -36,12 +36,12 @@ func NewStaffRepoImpl(db *gorm.DB) *StaffRepo {
 }
 
 func (r *StaffRepo) CreateStaff(staff model.Staff) error {
-	return r.db.Create(&staff).Error
+	return r.db.Model(&model.Staff{}).Create(&staff).Error
 }
 
 func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
 	var staff model.Staff
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -51,7 +51,7 @@ func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
 
 func (r *StaffRepo) GetStaffs(opts ...DBOption) []model.Staff {
 	var staffs []model.Staff
-	db := r.db.Scopes(NotDeleted)
+	db := r.db.Model(&model.Setting{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

@@ -17,12 +17,13 @@ type BuffetHandler struct {
 	Service service.IBuffetSrv // 主服务
 }
 
-// GetAssistantDeskList 处理获取自助餐列表
+// GetBuffetList 处理获取自助餐列表
 // @Summary 获取自助餐列表
 // @Description 获取自助餐列表
 // @Tags 点餐助手端.自助餐
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} resp.BuffetListPaginationResp "自助餐列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/buffet/list [get]
@@ -39,7 +40,7 @@ func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// RegisterProductHandlers 注册收银产品路由
+// RegisterBuffetHandlers 注册收银产品路由
 func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

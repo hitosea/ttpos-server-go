@@ -33,7 +33,7 @@ func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory
 // CreateProductCategory 创建商品类别
 func (r *ProductCategoryRepoImpl) CreateProductCategory(productCategory model.ProductCategory) (uint64, error) {
 	// 实现创建商品类别的逻辑
-	err := r.db.Create(&productCategory).Error
+	err := r.db.Model(&model.ProductCategory{}).Create(&productCategory).Error
 	return productCategory.Uuid, err
 }
 

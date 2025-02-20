@@ -26,7 +26,7 @@ func NewCashBoxRepoImpl(db *gorm.DB) *CashBoxRepo {
 
 func (r *CashBoxRepo) Get() model.CashBox {
 	var cashBox model.CashBox
-	r.db.First(&cashBox)
+	r.db.Model(&model.CashBox{}).First(&cashBox)
 	return cashBox
 }
 

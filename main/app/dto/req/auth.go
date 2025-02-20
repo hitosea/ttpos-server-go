@@ -31,4 +31,6 @@ type Authenticate struct {
 	StaffUuid   uint64
 	UrlPath     string
 	Assistant   Assistant
+
+	TokenIssuedAt int64
 }

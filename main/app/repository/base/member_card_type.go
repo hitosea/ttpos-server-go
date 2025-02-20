@@ -19,7 +19,7 @@ func NewMemberCardTypeRepo(db *gorm.DB) IMemberCardTypeRepo {
 	return NewMemberCardTypeRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+// NewMemberCardTypeRepoImpl 创建新的商品规格仓库实现
 func NewMemberCardTypeRepoImpl(db *gorm.DB) *MemberCardTypeRepo {
 	return &MemberCardTypeRepo{db: db}
 }
@@ -28,14 +28,14 @@ type MemberCardTypeRepo struct {
 	db *gorm.DB
 }
 
-// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
+// GetMemberCardTypeList 获取商品规格列表，排除逻辑删除的规格
 func (r *MemberCardTypeRepo) GetMemberCardTypeList() ([]model.MemberCardType, error) {
 	var memberCardTypes []model.MemberCardType
 	err := r.db.Model(&model.MemberCardType{}).Where("delete_time = ?", 0).Find(&memberCardTypes).Error
 	return memberCardTypes, err
 }
 
-// UpdateBuffetCustomerType 更新自助餐客户类型
+// UpdateMemberCardType 更新自助餐客户类型
 func (r *MemberCardTypeRepo) UpdateMemberCardType(uuid uint, memberCardType model.MemberCardType) error {
 	if err := r.db.Model(&model.MemberCardType{}).Where("uuid = ?", uuid).Updates(memberCardType).Error; err != nil {
 		return err

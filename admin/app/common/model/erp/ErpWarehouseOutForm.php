@@ -7,6 +7,7 @@ use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
+use app\common\model\product\ProductBom;
 use app\common\model\product\ProductSku;
 
 /**
@@ -67,7 +68,7 @@ class ErpWarehouseOutForm extends BaseModel
             return extractLanguage($value ?: $data['product_sku_name'] ?? '');
         } else {
             // 兼容旧数据
-            $sku = ProductSku::where('product_sku_id', $data['product_sku_id'])->find();
+            $sku = ProductBom::where('uuid', $data['product_sku_uuid'])->find();
             return extractLanguage($value ?: $sku['spec_name'] ?? '');
         }
     }
@@ -85,7 +86,7 @@ class ErpWarehouseOutForm extends BaseModel
      */
     public function purchaseOrder()
     {
-        return $this->belongsTo(ErpPurchaseOrder::class, 'purchase_order_id', 'id');
+        return $this->belongsTo(ErpPurchaseOrder::class, 'purchase_order_uuid', 'uuid');
     }
 
     /**
@@ -93,7 +94,7 @@ class ErpWarehouseOutForm extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+        return $this->belongsTo(Product::class, 'product_uuid', 'uuid');
     }
 
     /**
@@ -101,7 +102,7 @@ class ErpWarehouseOutForm extends BaseModel
      */
     public function productSku()
     {
-        return $this->belongsTo(ProductSku::class, 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo(ProductBom::class, 'product_sku_uuid', 'uuid');
     }
 
     /**
@@ -109,7 +110,7 @@ class ErpWarehouseOutForm extends BaseModel
      */
     public function operator()
     {
-        return $this->belongsTo(User::class, 'operator_id', 'shop_user_id')->field(['shop_user_id', 'user_name', 'real_name']);
+        return $this->belongsTo(User::class, 'operator_uuid', 'uuid')->field(['shop_user_id', 'user_name', 'real_name']);
     }
 
     /**
@@ -149,7 +150,7 @@ class ErpWarehouseOutForm extends BaseModel
                 $q->field('product_sku_id, product_id, spec_name, stock_num, material_stock')->with('material');
             },
             'operator' => function ($q) {
-                $q->field('uuid as shop_user_id, username as user_name, real_name');
+                $q->field('uuid, uuid as shop_user_id, username as user_name, real_name');
             }
         ])->order('create_time desc')->paginate($params);
         //

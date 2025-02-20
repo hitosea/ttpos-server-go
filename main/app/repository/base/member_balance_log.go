@@ -28,14 +28,14 @@ type MemberBalanceLogRepo struct {
 	db *gorm.DB
 }
 
-// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
+// GetMemberBalanceLogList 获取商品规格列表，排除逻辑删除的规格
 func (r *MemberBalanceLogRepo) GetMemberBalanceLogList() ([]model.MemberBalanceLog, error) {
 	var memberBalanceLogs []model.MemberBalanceLog
 	err := r.db.Model(&model.MemberBalanceLog{}).Where("delete_time = ?", 0).Find(&memberBalanceLogs).Error
 	return memberBalanceLogs, err
 }
 
-// UpdateBuffetCustomerType 更新自助餐客户类型
+// UpdateMemberBalanceLog 更新自助餐客户类型
 func (r *MemberBalanceLogRepo) UpdateMemberBalanceLog(uuid uint, memberBalanceLog model.MemberBalanceLog) error {
 	if err := r.db.Model(&model.MemberBalanceLog{}).Where("uuid = ?", uuid).Updates(memberBalanceLog).Error; err != nil {
 		return err

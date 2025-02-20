@@ -14,8 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CashierProductHandler 收银产品处理程序
-type CashierProductHandler struct {
+// ProductHandler 收银产品处理程序
+type ProductHandler struct {
 	productService service.IProductSrv // 产品服务
 }
 
@@ -25,12 +25,13 @@ type CashierProductHandler struct {
 // @Tags 收银端.产品
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Param pageNo query int true "页码"
 // @Param pageSize query int true "每页条数"
 // @Success 200 {object} cashier_resp.ProductListWithPaginationResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /cashier/product/list [get]
-func (h *CashierProductHandler) GetProductList(c *gin.Context) {
+func (h *ProductHandler) GetProductList(c *gin.Context) {
 	// 绑定请求参数
 	req := req.ProductListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -57,10 +58,11 @@ func (h *CashierProductHandler) GetProductList(c *gin.Context) {
 // @Tags 收银端.产品
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} cashier_resp.ProductCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /cashier/product/category/list [get]
-func (h *CashierProductHandler) GetProductCategoryList(c *gin.Context) {
+func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	// 获取收银产品类别列表
 	res, err := h.productService.GetProductCategoryList(helper.GetCompanyUuid(c))
 
@@ -85,7 +87,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	// 创建收银产品处理程序
-	wrapper := CashierProductHandler{
+	wrapper := ProductHandler{
 		productService: service.NewProductSrv(
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务

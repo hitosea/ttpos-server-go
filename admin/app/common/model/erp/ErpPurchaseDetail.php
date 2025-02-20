@@ -6,6 +6,7 @@ use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\Material;
+use app\common\model\product\ProductBom;
 use app\common\model\product\ProductSku;
 
 /**
@@ -79,7 +80,7 @@ class ErpPurchaseDetail extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo(ProductSku::class, 'product_sku_id', 'product_sku_id')->with(['product']);
+        return $this->belongsTo(ProductBom::class, 'material_uuid', 'uuid')->with(['product']);
     }
 
     /**
@@ -109,17 +110,17 @@ class ErpPurchaseDetail extends BaseModel
     /**
      * 根据规格汇总采购数量
      */
-    public function sumActualPurchaseNum($product_sku_id)
+    public function sumActualPurchaseNum($material_uuid)
     {
-        return (new ErpPurchaseDetail())->where('product_sku_id', $product_sku_id)->sum('actual_purchase_num');;
+        return (new ErpPurchaseDetail())->where('material_uuid', $material_uuid)->sum('actual_purchase_num');;
     }
 
     /**
      * 全部列表
      */
-    public function getListAll($purchase_order_id)
+    public function getListAll($purchase_order_uuid)
     {
-        return $this->with(['product', 'sku'])->where('purchase_order_id', '=', $purchase_order_id)->select();
+        return $this->with(['product', 'sku'])->where('purchase_form_uuid', '=', $purchase_order_uuid)->select();
     }
 
     /**

@@ -29,19 +29,19 @@ func NewBindRecordSrv(settingSrv setting.ISrv, dbm *database.DBManager) IBindRec
 	return NewBindRecordSrvImpl(settingSrv, dbm)
 }
 
-type BindRecordSrv struct {
+type bindRecordSrv struct {
 	settingSrv setting.ISrv
 	dbm        *database.DBManager
 }
 
-func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) *BindRecordSrv {
-	return &BindRecordSrv{
+func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) IBindRecordSrv {
+	return &bindRecordSrv{
 		dbm:        dbm,
 		settingSrv: settingSrv,
 	}
 }
 
-func (s *BindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) error {
+func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) error {
 	if !slices.Contains([]string{constant.SourceCashier, constant.SourceTablet, constant.SourceKitchen, constant.SourceAssistant}, addReq.Source) ||
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return errors.New("来源设备错误")
@@ -145,17 +145,17 @@ func (s *BindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 	})
 }
 
-func (s *BindRecordSrv) Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error {
+func (s *bindRecordSrv) Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
 	return bindRecordRepo.Unbind(source, deviceId, staffUuid)
 }
 
-func (s *BindRecordSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {
+func (s *bindRecordSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
 	return bindRecordRepo.GetBySourceAndDeviceId(source, deviceId).Remark
 }
 
-func (s *BindRecordSrv) IsDeviceBind(companyUuid uint64, source string, deviceId string) bool {
+func (s *bindRecordSrv) IsDeviceBind(companyUuid uint64, source string, deviceId string) bool {
 	bindRecordRepo := repository.NewBindRecordRepo(s.dbm.GetDB(companyUuid))
 	return bindRecordRepo.GetBySourceAndDeviceId(source, deviceId).Uuid > 0
 }

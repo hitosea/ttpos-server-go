@@ -16,8 +16,9 @@ import (
 
 // BaseHandler 结构体
 type BaseHandler struct {
-	authSrv    service.IAuthSrv
-	settingSrv setting.ISrv
+	authSrv          service.IAuthSrv
+	settingSrv       setting.ISrv
+	paymentMethodSrv service.IPaymentMethodSrv
 }
 
 // GetCashierBase 收银端基础信息
@@ -172,6 +173,19 @@ func (h *BaseHandler) checkUpdate(c *gin.Context) {
 	helper.Success(c, updateInfo)
 }
 
+// GetPaymentMethodList 获取支付方式列表
+// @Summary 获取支付方式列表
+// @Description 获取支付方式列表
+// @Tags 收银端.支付方式
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.PaymentMethodList}
+// @Router /cashier/payment_method/list [get]
+func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {
+	helper.Success(c, h.paymentMethodSrv.GetList(helper.GetContext(c)))
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -181,9 +195,12 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+
 	wrapper := &BaseHandler{
-		authSrv:    authSrv,
-		settingSrv: settingSrv,
+		authSrv:          authSrv,
+		settingSrv:       settingSrv,
+		paymentMethodSrv: paymentMethodSrv,
 	}
 
 	// 需要认证
@@ -196,6 +213,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
 		privateApi.GET("/check_update", wrapper.checkUpdate)                         // 检查更新
-		privateApi.GET("/print_data", nil)                                           // 获取打印数据
+		privateApi.GET("/print_data", nil)                                           // todo 获取打印数据
+
+		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList) // 获取支付方式列表
 	}
 }

@@ -29,6 +29,7 @@ type RechargeMember struct {
 	LevelName string  `json:"level_name"` // 会员等级
 	Balance   float64 `json:"balance"`    // 会员余额
 	Points    float64 `json:"points"`     // 会员积分
+	Phone     string  `json:"phone"`      // 手机号
 }
 
 // RechargeOrder 进行中的充值订单
@@ -57,4 +58,11 @@ type ConfirmRechargeOrder struct {
 	ActualAmount   float64  `json:"actual_amount"`   // 实收
 	ChargeDue      float64  `json:"charge_due"`      // 找零
 	PaymentMethods []string `json:"payment_methods"` // 支付方式
+}
+
+// MemberDiscountResp 会员优惠响应
+type MemberDiscountResp struct {
+	RechargeMember
+	HasPassword     bool    `json:"has_password"`     // 是否设置了密码
+	DiscountedPrice float64 `json:"discounted_price"` // 折扣后价格
 }

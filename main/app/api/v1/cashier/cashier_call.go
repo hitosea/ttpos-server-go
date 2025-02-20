@@ -14,8 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SoldOutHandler 自助餐处理程序
-type SoldOutHandler struct {
+// CallHandler 自助餐处理程序
+type CallHandler struct {
 	soldOutSrv service.ISoldOutSrv
 }
 
@@ -30,7 +30,7 @@ type SoldOutHandler struct {
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} dto.Response{data=resp.SoldOutPaginationResp}
 // @Router /cashier/sold_out/list [get]
-func (h *SoldOutHandler) SoldOutList(c *gin.Context) {
+func (h *CallHandler) SoldOutList(c *gin.Context) {
 	// 绑定请求参数
 	var soldOutListReq req.SoldOutListReq
 	if err := c.ShouldBindQuery(&soldOutListReq); err != nil {
@@ -58,7 +58,7 @@ func (h *SoldOutHandler) SoldOutList(c *gin.Context) {
 // @param data body req.AddSoldOutReq true "添加沽清商品参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/add [post]
-func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
+func (h *CallHandler) AddSoldOut(c *gin.Context) {
 	// 绑定请求参数
 	var addSoldOutReq req.AddSoldOutReq
 	if err := c.ShouldBindJSON(&addSoldOutReq); err != nil {
@@ -86,7 +86,7 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 // @param data body req.CancelSoldOutReq true "取消沽清商品参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/cancel [post]
-func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
+func (h *CallHandler) CancelSoldOut(c *gin.Context) {
 	// 绑定请求参数
 	var cancelSoldOut req.CancelSoldOutReq
 	if err := c.ShouldBindJSON(&cancelSoldOut); err != nil {
@@ -113,7 +113,7 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 // @Security JwtToken
 // @Success 200 {object} dto.Response
 // @Router /cashier/sold_out/cancel_all [post]
-func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
+func (h *CallHandler) CancelAllSoldOut(c *gin.Context) {
 	// 取消沽清全部商品
 	err := h.soldOutSrv.CancelAllSoldOut(helper.GetCompanyUuid(c))
 	// 处理错误
@@ -125,8 +125,8 @@ func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 	helper.Success(c, gin.H{}, "取消成功")
 }
 
-// RegisterSoldOutHandlers 注册沽清路由
-func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+// RegisterCallHandlers 注册沽清路由
+func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
@@ -136,7 +136,7 @@ func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	// 初始化处理器
-	wrapper := SoldOutHandler{
+	wrapper := CallHandler{
 		soldOutSrv: service.NewSoldOutSrv(dbm, service.NewLocaleSrv()),
 	}
 

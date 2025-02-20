@@ -16,8 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ShopOrderHandler 商家端处理程序
-type ShopOrderHandler struct {
+// OrderHandler 商家端处理程序
+type OrderHandler struct {
 	service     service.IOrderSrv // 订单服务
 	deskService service.IDeskSrv  // 桌台服务
 }
@@ -28,22 +28,23 @@ type ShopOrderHandler struct {
 // @Tags 商家端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderListReq true "列表参数"
 // @Success 200 {object} resp.OrderListPaginationResp "订单列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/list [get]
-func (h *ShopOrderHandler) GetShopOrderList(c *gin.Context) {
+func (h *OrderHandler) GetShopOrderList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
 	// 绑定请求参数
-	req := req.OrderListReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+	orderListReq := req.OrderListReq{}
+	if err := c.ShouldBindQuery(&orderListReq); err != nil {
+		helper.HandleValidationError(c, err, orderListReq, dto.PageReqMessage)
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetOrderLists(companyUuid, staff, source, req)
+	res, err := h.service.GetOrderLists(companyUuid, staff, source, orderListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -59,23 +60,24 @@ func (h *ShopOrderHandler) GetShopOrderList(c *gin.Context) {
 // @Tags 商家端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderInfoReq true "详情参数"
 // @Success 200 {object} resp.OrderInfosResp "订单详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/info [get]
-func (h *ShopOrderHandler) GetOrderInfo(c *gin.Context) {
+func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	source := helper.GetSource(c)
 	staff := helper.GetStaff(c)
 	language := helper.GetLanguage(c)
 	// 绑定请求参数
-	req := req.OrderInfoReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
+	orderInfoReq := req.OrderInfoReq{}
+	if err := c.ShouldBindQuery(&orderInfoReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetOrderInfos(companyUuid, staff, source, language, req)
+	res, err := h.service.GetOrderInfos(companyUuid, staff, source, language, orderInfoReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -91,20 +93,21 @@ func (h *ShopOrderHandler) GetOrderInfo(c *gin.Context) {
 // @Tags 商家端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCancelReq true "详情参数"
 // @Success 200 {object} nil "取消订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/cancel [post]
-func (h *ShopOrderHandler) CancelOrder(c *gin.Context) {
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	req := req.OrderCancelReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	orderCancelReq := req.OrderCancelReq{}
+	if err := c.ShouldBindJSON(&orderCancelReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	//
-	err := h.service.CancelOrder(ctx, req)
+	err := h.service.CancelOrder(ctx, orderCancelReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -113,26 +116,27 @@ func (h *ShopOrderHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// CancelOrder 处理删除订单
+// DeleteOrder 处理删除订单
 // @Summary 删除订单
 // @Description 删除订单
 // @Tags 商家端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderDeleteReq true "详情参数"
 // @Success 200 {object} nil "取消订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/delete [delete]
-func (h *ShopOrderHandler) DeleteOrder(c *gin.Context) {
+func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.OrderDeleteReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	orderDeleteReq := req.OrderDeleteReq{}
+	if err := c.ShouldBindJSON(&orderDeleteReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	//
-	err := h.service.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	err := h.service.DeleteOrder(companyUuid, orderDeleteReq.SaleBillUuid, orderDeleteReq.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -141,16 +145,17 @@ func (h *ShopOrderHandler) DeleteOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// IsCellCloseDesk 判断订单是否可关闭
+// IsCellClose 判断订单是否可关闭
 // @Summary 判断订单是否可关闭
 // @Description 判断订单是否可关闭
 // @Tags 商家端.订单
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query req.OrderIsCellCloseReq true "详情参数"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/is_cell_close [get]
-func (h *ShopOrderHandler) IsCellClose(c *gin.Context) {
+func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	//
 	params := req.OrderIsCellCloseReq{}
@@ -188,7 +193,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv)
 
 	// 初始化处理器
-	wrapper := ShopOrderHandler{
+	wrapper := OrderHandler{
 		service: orderSrv,
 		deskService: service.NewDeskSrv( // 订单服务
 			dbm,

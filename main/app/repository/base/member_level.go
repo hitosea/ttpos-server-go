@@ -19,7 +19,7 @@ func NewMemberLevelRepo(db *gorm.DB) IMemberLevelRepo {
 	return NewMemberLevelRepoImpl(db)
 }
 
-// NewProductFlavorRepoImpl 创建新的商品规格仓库实现
+// NewMemberLevelRepoImpl 创建新的商品规格仓库实现
 func NewMemberLevelRepoImpl(db *gorm.DB) *MemberLevelRepo {
 	return &MemberLevelRepo{db: db}
 }
@@ -28,14 +28,14 @@ type MemberLevelRepo struct {
 	db *gorm.DB
 }
 
-// GetProductFlavorList 获取商品规格列表，排除逻辑删除的规格
+// GetMemberLevelList 获取商品规格列表，排除逻辑删除的规格
 func (r *MemberLevelRepo) GetMemberLevelList() ([]model.MemberLevel, error) {
 	var memberLevels []model.MemberLevel
 	err := r.db.Model(&model.MemberLevel{}).Where("delete_time = ?", 0).Find(&memberLevels).Error
 	return memberLevels, err
 }
 
-// UpdateBuffetCustomerType 更新自助餐客户类型
+// UpdateMemberLevel 更新自助餐客户类型
 func (r *MemberLevelRepo) UpdateMemberLevel(uuid uint, memberLevel model.MemberLevel) error {
 	if err := r.db.Model(&model.MemberLevel{}).Where("uuid = ?", uuid).Updates(memberLevel).Error; err != nil {
 		return err

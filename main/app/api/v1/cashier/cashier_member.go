@@ -225,6 +225,31 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 	helper.Success(c, order)
 }
 
+// GetMemberDiscount 获取会员优惠
+// @Summary 获取会员优惠
+// @Description 获取会员优惠
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param uuid query number true "会员Uuid"
+// @Success 200 {object} dto.Response{data=resp.ConfirmRechargeOrder}
+// @Router /cashier/member/confirm_recharge_order [post]
+func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
+	var confirmRechargeOrder req.ConfirmRechargeOrder
+	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
+		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
 func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -249,6 +274,11 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 		privateApi.POST("/member/add", wrapper.AddMember)                 // 添加会员
 		privateApi.GET("/member/search", wrapper.SearchMember)            // 模糊搜索会员
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember) // 充值会员信息
+
+		privateApi.GET("/member/discount", wrapper.GetMemberDiscount) // 获取会员优惠
+
+		// 使用会员优惠验证密码
+		// 获取会员优惠
 
 		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)        // 获取进行中的充值订单
 		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单
