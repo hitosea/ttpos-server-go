@@ -32,3 +32,12 @@ const (
 	ProductMemberDiscountOn  = 1 // 是, 商品开启会员打折
 	ProductMemberDiscountOff = 0 // 否, 商品不开启会员打折
 )
+
+const (
+	// 商品赠菜
+	ProductGiftOn  = 1 // 是, 商品已赠菜
+	ProductGiftOff = 0 // 否, 商品未赠菜
+	// 商品退菜
+	ProductCancelOn  = 1 // 是, 商品已退菜
+	ProductCancelOff = 0 // 否, 商品未退菜
+)

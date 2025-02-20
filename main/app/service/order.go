@@ -1350,6 +1350,8 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		return nil, errCreate
 	}
 
+	// 计算订单金额
+
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
