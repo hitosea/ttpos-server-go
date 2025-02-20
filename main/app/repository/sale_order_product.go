@@ -17,17 +17,11 @@ type saleOrderProductRepo struct {
 func NewSaleOrderProductRepo(db *gorm.DB) ISaleOrderProductRepo {
 	return &saleOrderProductRepo{db: db}
 }
+
 func (r *saleOrderProductRepo) CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error) {
 	db := r.db
-	err := db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&model).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+	if err := db.Create(&model).Error; err != nil {
 		return 0, err
 	}
-
 	return model.Uuid, nil
 }

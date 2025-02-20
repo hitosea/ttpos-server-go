@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"slices"
 	"strconv"
 	"strings"
@@ -1241,6 +1242,15 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
+	var saleOrder *model.SaleOrder
+	for i, _ := range saleBill.SaleOrders {
+		order := saleBill.SaleOrders[i]
+		if order.Uuid == req.SaleOrderUuid {
+			saleOrder = &saleBill.SaleOrders[i]
+			break
+		}
+	}
+
 	// 录入订单商品数据
 	{
 		// 获取商品包信息
@@ -1258,11 +1268,11 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		//	return nil, errSaleBill
 		//}
 
-		// 获取订单信息
-		saleOrder, errSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(req.SaleOrderUuid)
-		if errSaleOrder != nil {
-			return nil, errSaleOrder
-		}
+		//// 获取订单信息
+		//saleOrder, errSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(req.SaleOrderUuid)
+		//if errSaleOrder != nil {
+		//	return nil, errSaleOrder
+		//}
 
 		// 获取某商品规格信息
 		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(req.FlavorUuid)
@@ -1343,14 +1353,34 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-
 	// 创建销售订单商品
 	_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(*saleOrderProduct)
 	if errCreate != nil {
 		return nil, errCreate
 	}
 
+	newSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	var newSaleOrder model.SaleOrder
+	for i, _ := range newSaleBill.SaleOrders {
+		order := saleBill.SaleOrders[i]
+		if order.Uuid == req.SaleOrderUuid {
+			newSaleOrder = newSaleBill.SaleOrders[i]
+			break
+		}
+	}
+
+	productNum := len(newSaleBill.SaleOrders[0].SaleOrderProducts)
+	ctx.Log().Info("订单产品数量", zap.Any("productNum", productNum))
 	// 计算订单金额
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	newSaleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	// 更新订单记录
+	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(&newSaleOrder); errUpdate != nil {
+		return nil, errUpdate
+	}
 
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

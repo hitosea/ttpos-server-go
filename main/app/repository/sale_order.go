@@ -9,6 +9,7 @@ import (
 type ISaleOrderRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
+	UpdateSaleOrder(model *model.SaleOrder) error
 }
 
 type saleOrderRepo struct {
@@ -41,4 +42,8 @@ func (r *saleOrderRepo) GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error
 		return nil, err
 	}
 	return &order, nil
+}
+
+func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
+	return r.db.Model(model).Save(model).Error
 }
