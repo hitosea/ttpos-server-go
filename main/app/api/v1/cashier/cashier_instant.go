@@ -228,7 +228,7 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cart/product/add [post]
-func (h *CashierInstantHandler) OrderCartProductAdd(c *gin.Context) {
+func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderCartProductAddReq{}
