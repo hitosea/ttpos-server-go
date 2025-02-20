@@ -29,20 +29,19 @@ class Attribute extends AttributeModel
         // 属性值
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('a')
-            ->field('a.*');
-
-        // todo 兼容
-        // ->field("IFNULL(pa.product_ids, '') AS product_ids")
-        // ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
-        // ->leftJoin("
-        //     (
-        //         SELECT pa.attribute_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pa.attribute_id) AS attribute_count
-        //         FROM {$prefix}product_attribute pa
-        //         LEFT JOIN {$prefix}product product ON pa.product_id = product.product_id
-        //         WHERE product.is_delete = 0
-        //         GROUP BY pa.attribute_id
-        //     ) pa
-        // ", 'a.attribute_id = pa.attribute_id');
+            ->field('a.*')
+            ->field("IFNULL(pa.product_ids, '') AS product_ids")
+            ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
+            ->leftJoin("
+                (
+                    SELECT pp.attribute_uuid, pp.attribute_uuid as attribute_id, GROUP_CONCAT(DISTINCT product.uuid) AS product_ids, COUNT(DISTINCT pp.attribute_uuid) AS attribute_count
+                    FROM {$prefix}product_package_attribute pp
+                    LEFT JOIN {$prefix}product_package_attribute_group pag ON pp.product_package_attribute_group_uuid = pag.uuid
+                    LEFT JOIN {$prefix}product_package product ON pag.product_package_uuid = product.uuid
+                    WHERE product.delete_time = 0
+                    GROUP BY pp.attribute_uuid
+                ) pa
+            ", 'a.uuid = pa.attribute_uuid');
 
         // 名称
         if (isset($data['attribute_name']) && $data['attribute_name'] != '') {
@@ -115,9 +114,6 @@ class Attribute extends AttributeModel
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name, $this['multi_language_name_uuid']);
         $data['attribute_group_uuid'] = $parent_id;
         $this->save($data);
-        // todo 兼容 更新关联产品表中的属性数组
-        // $attribute_id = $this['attribute_id'];
-        // $this->maintainProductAttribute($this->productAttribute($attribute_id)->column('product_id'));
         return true;
     }
 
@@ -160,10 +156,12 @@ class Attribute extends AttributeModel
      */
     public function relatedProduct($attribute_id, $product_ids)
     {
+        $prefix = Env::get('DB_PREFIX');
         $this->startTrans();
         try {
             // 获取当前关联的产品ID
             $current_product_ids = $this->productAttribute($attribute_id)->column('product_id') ?: [];
+
             // 计算需要删除的产品ID
             $delete_product_ids = array_diff($current_product_ids, $product_ids) ?: [];
             // 计算需要新增的产品ID
@@ -173,48 +171,62 @@ class Attribute extends AttributeModel
                 $chunks = array_chunk($delete_product_ids, 1000);
                 foreach ($chunks as $chunk) {
                     // 删除属性值
-                    ProductAttribute::where('attribute_id', $attribute_id)->whereIn('product_id', $chunk)->delete();
+                    $attributeList =  ProductAttribute::alias('pa')
+                        ->field('pa.*')
+                        ->leftJoin('product_package_attribute_group pag', 'pa.product_package_attribute_group_uuid = pag.uuid')
+                        ->leftJoin('product_package product', 'pag.product_package_uuid = product.uuid')
+                        ->where('product.delete_time', 0)
+                        ->where('pa.attribute_uuid', $attribute_id)
+                        ->whereIn('product.uuid', $chunk)
+                        ->select();
+
+                    foreach ($attributeList as $attribute) {
+                        (new ProductAttribute())->destroy(['attribute_uuid', $attribute['attribute_uuid']], true); // 强制删除
+                    }
+
                     // 删除无属性值的属性组
-                    $prefix = env('DB_PREFIX');
-                    ProductAttributeGroup::whereIn('product_id', $chunk)
-                        ->whereRaw('group_attribute_id NOT IN (SELECT DISTINCT group_attribute_id FROM ' . $prefix . 'product_attribute WHERE product_id IN (' . implode(',', $chunk) . '))')
-                        ->delete();
+                    $attributeGroupList = ProductAttributeGroup::alias('pag')
+                        ->whereNotExists(function ($query) use ($prefix) {
+                            $query->table($prefix . 'product_package_attribute')
+                                ->where('product_package_attribute_group_uuid = pag.uuid');
+                        })
+                        ->whereIn('pag.product_package_uuid', $chunk)
+                        ->select();
+                    foreach ($attributeGroupList as $attributeGroup) {
+                        (new ProductAttributeGroup())->destroy(['uuid', $attributeGroup['uuid']], true); // 强制删除
+                    }
                 }
             }
             // 添加新关系
             if (!empty($add_product_ids)) {
                 $insert_data = [];
-                $parent_attribute_id = $this['parent_id'] ?? 0; // 父级属性ID
+                $parent_attribute_id = $this['attribute_group_uuid'] ?? 0; // 父级属性ID
                 foreach ($add_product_ids as $product_id) {
                     // 先查看是否存在属性组
-                    $group_attribute = ProductAttributeGroup::where('product_id', $product_id)->where('attribute_id', $parent_attribute_id)->field('group_attribute_id')->find();
+                    $group_attribute = ProductAttributeGroup::where('product_package_uuid', $product_id)->where('product_attribute_group_uuid', $parent_attribute_id)->field('uuid')->find();
                     if (empty($group_attribute)) {
                         $group_attribute_insert_data = [
-                            'product_id'       => $product_id,
-                            'attribute_id'     => $parent_attribute_id,
-                            'create_time'      => time(),
-                            'update_time'      => time(),
+                            'product_package_uuid' => $product_id,
+                            'product_attribute_group_uuid' => $parent_attribute_id,
+                            'create_time'          => time(),
+                            'update_time'          => time(),
                         ];
-                        $group_attribute_id = ProductAttributeGroup::insertGetId($group_attribute_insert_data);
+                        $group_attribute = new ProductAttributeGroup();
+                        $group_attribute->save($group_attribute_insert_data);
+                        $group_attribute_id = $group_attribute->uuid;
                     } else {
-                        $group_attribute_id = $group_attribute['group_attribute_id'];
+                        $group_attribute_id = $group_attribute['uuid'];
                     }
                     //
                     $insert_data[] = [
-                        'product_id'         => $product_id,
-                        'group_attribute_id' => $group_attribute_id,
-                        'attribute_id'       => $attribute_id,
-                        'shop_supplier_id'   => $this['shop_supplier_id'],
-                        'app_id'             => $this['app_id'],
+                        'product_package_attribute_group_uuid' => $group_attribute_id,
+                        'attribute_uuid'       => $attribute_id,
                         'create_time'        => time(),
                         'update_time'        => time(),
                     ];
                 }
-                ProductAttribute::where('product_id', $product_id)->insertAll($insert_data);
+                (new ProductAttribute())->saveAll($insert_data);
             }
-            // 维护产品表中的属性数组
-            $total_product_ids = array_unique(array_merge($product_ids, $current_product_ids)) ?: [];
-            $this->maintainProductAttribute($total_product_ids, $delete_product_ids);
             $this->commit();
             return true;
         } catch (\Exception $e) {

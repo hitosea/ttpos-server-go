@@ -85,11 +85,12 @@ class Attribute extends BaseModel
     public function productAttribute($attribute_id): Collection
     {
         return $this->alias('attr')
-            ->field('product.product_id')
-            ->leftJoin('product_attribute pa', 'attr.attribute_id = pa.attribute_id')
-            ->leftJoin('product product', 'product.product_id = pa.product_id')
-            ->where('product.is_delete', 0)
-            ->where('attr.attribute_id', $attribute_id)
+            ->field('product.uuid as product_id')
+            ->leftJoin('product_package_attribute pa', 'attr.uuid = pa.attribute_uuid')
+            ->leftJoin('product_package_attribute_group pag', 'pa.product_package_attribute_group_uuid = pag.uuid')
+            ->leftJoin('product_package product', 'product.uuid = pag.product_package_uuid')
+            ->where('product.delete_time', 0)
+            ->where('attr.uuid', $attribute_id)
             ->select();
     }
 

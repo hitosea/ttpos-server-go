@@ -3,11 +3,14 @@
 namespace app\shop\controller;
 
 use help\DiskHelp;
+use think\facade\Db;
 use help\LicenseHelp;
 use app\shop\service\ShopService;
 use app\shop\service\CheckService;
 use hg\apidoc\annotation as Apidoc;
+use app\common\model\product\Product;
 use app\common\model\shop\BindRecord;
+use app\common\model\product\Material;
 use app\common\service\sync\SyncService;
 use app\common\enum\settings\SettingEnum;
 use app\common\library\language\engine\OpenAi;
@@ -487,51 +490,83 @@ class Index extends Controller
      */
     public function productList()
     {
+        $appId = request()->appId;
         $params = $this->postData();
         $mode = $params['mode'] ?? 'all';
         $type = ($params['type'] ?? 'product') ?: 'product';
         $productName = $params['product_name'] ?? '';
         $categoryIds = $params['category_ids'] ?? '';
         $labelIds = $params['label_ids'] ?? '';
-
-        // 商品列表
-        $list = ProductModel::where('product_type', 1)->alias('p')
-            ->leftJoin('category c', 'c.category_id = p.category_id')
-            ->when($type, function ($q) use ($type) {
-                if ($type == 'product') {
-                    $q->where('p.type', ProductModel::TYPE_PRODUCT);
+        //
+        $commonFields = [
+            'p.uuid',
+            'p.uuid as product_id',
+            'p.name as product_name',
+            'p.image_name as img_name',
+            'p.category_uuid as category_id',
+            'p.create_time',
+            'p.sort',
+            'CAST(IFNULL(c.parent_uuid, 0) AS UNSIGNED) as parent_category_id'
+        ];
+        $buildQuery = function($table, $additionalFields = []) use ($commonFields) {
+            return $table->alias('p')
+                ->leftJoin('product_category c', 'c.uuid = p.category_uuid')
+                ->field(array_merge($commonFields, $additionalFields));
+        };
+        $productQuery = $buildQuery(new Product, [
+            'printer_tag_uuid as label_id',
+            '"product" as source_type'
+        ]);
+        $materialQuery = $buildQuery(new Material, [
+            '0 as label_id',
+            '"material" as source_type'
+        ]);
+        $applyConditions = function($query) use ($categoryIds, $labelIds, $productName, $mode) {
+            if ($categoryIds) {
+                $query->whereIn('category_uuid', explode(',', $categoryIds));
+            }
+            if ($labelIds) {
+                $query->whereIn('printer_tag_uuid', explode(',', $labelIds));
+            }
+            if ($productName) {
+                $query->jsonLike('name', $productName);
+            }
+            if ($mode !== 'all') {
+                if ($mode === 'category') {
+                    $query->where('category_uuid', '>', 0);
+                } elseif ($mode === 'label') {
+                    $query->where('printer_tag_uuid', '>', 0);
                 }
-                if ($type == 'materials') {
-                    $q->where('p.type', ProductModel::TYPE_MATERIAL);
-                }
-            })
-            ->when($categoryIds, function ($q) use ($categoryIds) {
-                $q->whereIn('p.category_id', explode(',', $categoryIds));
-            })
-            ->when($labelIds, function ($q) use ($labelIds) {
-                $q->whereIn('p.label_id', explode(',', $labelIds));
-            })
-            ->when($productName, function ($q) use ($productName) {
-                $q->jsonLike('p.product_name', $productName);
-            })
-            ->when($mode != 'all', function ($q) use ($mode) {
-                if ($mode == 'category') {
-                    $q->where('p.category_id', '>', 0);
-                }
-                if ($mode == 'label') {
-                    $q->where('p.label_id', '>', 0);
-                }
-            })
-            ->field('p.product_id, p.product_name, p.img_name, p.label_id, p.category_id,  CAST(IFNULL(c.parent_id, 0) AS UNSIGNED) as parent_category_id')
-            ->hidden(['p.product_name'])
-            ->order(['p.product_sort', 'p.product_id' => 'desc'])
-            ->paginate($params)
-            ->append(['product_name_text']);
-        // 商品分类
-        $category = CategoryModel::getCacheTree(1, 0, $this->store);
-        // 打印标签
-        $label = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
-        // 数量
-        return $this->renderSuccess('', compact('list', 'category', 'label'));
+            }
+            return $query;
+        };
+        $productQuery = $applyConditions($productQuery);
+        $materialQuery = $applyConditions($materialQuery);
+        //
+        $unionQuery = match($type) {
+            'product' => $productQuery,
+            'materials' => $materialQuery,
+            default => $productQuery->union(function() use ($materialQuery) {
+                return $materialQuery;
+            }, true)
+        };
+        //
+        try {
+            $dbName = 'shop' . $appId;
+            $list = Db::connect($dbName)
+                ->table($unionQuery->buildSql().' as union_table')
+                ->order(['sort' => 'asc', 'create_time' => 'desc'])
+                ->paginate($params)
+                ->each(function($item) {
+                    $item['product_name_text'] = extractLanguage($item['product_name']);
+                    return $item;
+                });
+            //
+            $category = CategoryModel::getCacheTree(1, 0, $this->store);
+            $label = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
+            return $this->renderSuccess('', compact('list', 'category', 'label'));
+        } catch (\Exception $e) {
+            return $this->renderError($e->getMessage() ?: '获取商品列表失败');
+        }
     }
 }
