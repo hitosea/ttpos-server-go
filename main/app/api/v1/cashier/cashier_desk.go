@@ -52,7 +52,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.DeskListReq true "列表参数"
-// @Success 200 {array} resp.DeskListWithPaginationResp "收银台列表"
+// @Success 200 {object} resp.DeskListWithPaginationResp "收银台列表"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
