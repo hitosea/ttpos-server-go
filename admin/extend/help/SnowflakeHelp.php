@@ -47,13 +47,18 @@ class SnowflakeHelp
 
         $this->_lastTimestamp = $ts;
 
-        $return_pack = $this->pack();
-        return str_pad($return_pack, 16, '0', STR_PAD_RIGHT);
+        // 生成ID并确保16位
+        $id = $this->pack();
+        return str_pad($id, 16, '0', STR_PAD_RIGHT);
     }
 
     private function pack()
     {
-        return ($this->_lastTimestamp << (NUMWORKERBITS + NUMSEQUENCEBITS)) | ($this->_workerId << NUMSEQUENCEBITS) | $this->_sequence;
+        // 调整移位以确保结果在16位范围内
+        $timestamp = $this->_lastTimestamp & 0x1FFFFF; // 取低21位时间戳
+        return ($timestamp << (NUMWORKERBITS + NUMSEQUENCEBITS))
+             | ($this->_workerId << NUMSEQUENCEBITS)
+             | $this->_sequence;
     }
 
     private function waitNextMilli($ts)
