@@ -3,6 +3,7 @@
 namespace app\shop\model\product;
 
 use help\ValidateHelp;
+use app\common\model\product\Material;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Unit as UnitModel;
 
@@ -115,8 +116,10 @@ class Unit extends UnitModel
         try {
             // 删除原有关系
             $this->product()->update(['unit_uuid' => 0]);
+            $this->material()->update(['unit_uuid' => 0]);
             // 添加新关系
             Product::whereIn('uuid', $product_ids)->update(['unit_uuid' => $unit_id]);
+            Material::whereIn('uuid', $product_ids)->update(['unit_uuid' => $unit_id]);
             $this->commit();
             return true;
         } catch (\Exception $e) {

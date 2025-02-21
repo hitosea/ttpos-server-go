@@ -3,6 +3,7 @@
 namespace app\common\model\product;
 
 use think\facade\Db;
+use think\facade\Env;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 
@@ -47,7 +48,17 @@ class Unit extends BaseModel
      */
     public function getProductIdsAttr($value, $data = [])
     {
-        return $this->product()->column('uuid');
+        $prefix = Env::get('DB_PREFIX');
+        $dbName = 'shop' . request()->appId;
+        $results = Db::connect($dbName)->query("SELECT uuid FROM (
+            SELECT uuid FROM " . $prefix . "product_package
+            WHERE unit_uuid = ? AND delete_time = 0
+            UNION ALL
+            SELECT uuid FROM " . $prefix . "material
+            WHERE unit_uuid = ? AND delete_time = 0
+        ) as product_ids", [$this->uuid, $this->uuid]);
+
+        return array_column($results, 'uuid');
     }
 
     /**
@@ -59,23 +70,11 @@ class Unit extends BaseModel
     }
 
     /**
-     * 更新单位
-     * @param mixed $unit_name
-     * @param mixed $shop_supplier_id
-     * @return void
+     * 关联原料
      */
-    public function updateUnit($unit_name, $shop_supplier_id)
+    public function material()
     {
-        // todo 不用再次校验单位新增，单位添加是已固定单位，先注释掉
-        // if ($unit_name) {
-        //     $isExit = $this->where('unit_name', '=', $unit_name)->count();
-        //     if ($isExit == 0) {
-        //         $addData = [
-        //             'unit_name'        => $unit_name,
-        //         ];
-        //         $this->save($addData);
-        //     }
-        // }
+        return $this->hasMany('app\\common\\model\\product\\Material', 'unit_uuid', 'uuid');
     }
 
     /**
