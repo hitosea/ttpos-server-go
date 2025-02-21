@@ -34,11 +34,11 @@ class Category extends BaseModel
      */
     public function getCategoryIdAttr($value, $data = [])
     {
-        return $this->uuid . "" ?: "0";
+        return $this->uuid ?: 0;
     }
     public function getParentIdAttr($value, $data = [])
     {
-        return $this->parent_uuid . "" ?: "0";
+        return $this->parent_uuid ?: 0;
     }
 
     /**

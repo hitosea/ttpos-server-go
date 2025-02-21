@@ -27,7 +27,7 @@ class Spec extends BaseModel
      */
     public function getSpecIdAttr($value, $data)
     {
-        return $this->uuid . "" ?: "0";
+        return $this->uuid ?: 0;
     }
     public function getSpecNameAttr($value)
     {
