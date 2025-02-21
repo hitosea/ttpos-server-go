@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
-	"go.uber.org/zap"
 	"slices"
 	"strconv"
 	"strings"
@@ -23,6 +22,8 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/jinzhu/copier"
@@ -48,7 +49,8 @@ type IOrderSrv interface {
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                          // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                               // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                           // 向购物车添加商品
-	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 向购物车添加商品
+	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 修改购物车商品数量
+	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 }
 
 // orderSrv 订单服务结构
@@ -1447,4 +1449,78 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	}
 
 	return info, nil
+}
+
+// OrderCartProductNum 修改购物车商品数量
+func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error) {
+	s.lock.LockUuid(req.SaleBillUuid)
+	defer s.lock.UnlockUuid(req.SaleBillUuid)
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 检查商品销售库存是否充足
+	// todo
+	ctx.Log().Debug("获取账单信息")
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	ctx.Log().Debug("获取到账单信息")
+
+	saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
+	if errSaleOrder != nil {
+		return nil, errSaleOrder
+	}
+
+	// 获取销售订单商品信息
+	saleOrderProduct, errSaleOrderProduct := getSaleOrderProduct(req.SaleOrderProductUuid, saleOrder)
+	if errSaleOrderProduct != nil {
+		return nil, errSaleOrderProduct
+	}
+
+	// 修改销售订单商品数量
+	saleOrderProduct.Num = uint(req.Num)
+
+	// 计算商品数据。折扣、税费、服务
+	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+
+	// 计算订单金额
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+
+	// 更新销售账单
+	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
+		return nil, errUpdate
+	}
+
+	// 获取新的桌台数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
+func getSaleOrder(saleOrderUuid uint64, saleBill *model.SaleBill) (*model.SaleOrder, error) {
+	for i, _ := range saleBill.SaleOrders {
+		order := saleBill.SaleOrders[i]
+		if order.Uuid == saleOrderUuid {
+			return &saleBill.SaleOrders[i], nil
+		}
+	}
+	return nil, errors.New("销售订单不存在")
+}
+
+func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder) (*model.SaleOrderProduct, error) {
+	for i, _ := range saleOrder.SaleOrderProducts {
+		orderProduct := saleOrder.SaleOrderProducts[i]
+		if orderProduct.Uuid == saleOrderProductUuid {
+			return &saleOrder.SaleOrderProducts[i], nil
+		}
+	}
+	return nil, errors.New("销售订单商品不存在")
 }

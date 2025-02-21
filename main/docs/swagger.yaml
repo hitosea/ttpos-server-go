@@ -400,6 +400,21 @@ definitions:
           type: integer
         type: array
     type: object
+  req.OrderCartProductNumReq:
+    properties:
+      num:
+        description: 数量
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_product_uuid:
+        description: 销售订单商品ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单ID
+        type: integer
+    type: object
   req.OrderChangePopulationReq:
     properties:
       population:
@@ -2419,6 +2434,9 @@ definitions:
       is_desk_order:
         description: 购物车类型 true:桌台购物车 false:点餐购物车
         type: boolean
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
       sale_order_list:
         description: 销售订单列表
         items:
@@ -3815,6 +3833,35 @@ paths:
         "404":
           description: 未找到
       summary: 向购物车添加商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product/num:
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品数量
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductNumReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 修改购物车某个商品的数量
       tags:
       - 收银端.点餐
   /cashier/instant/order/population:

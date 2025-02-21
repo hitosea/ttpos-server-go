@@ -10,6 +10,7 @@ type ISaleBillRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
+	UpdateSaleBill(saleBill *model.SaleBill) error
 }
 
 type saleBillRepo struct {
@@ -53,4 +54,8 @@ func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBi
 		return nil, err
 	}
 	return &saleBill, nil
+}
+
+func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(saleBill).Error
 }

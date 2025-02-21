@@ -1773,6 +1773,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/cart/product/num": {
+            "post": {
+                "description": "修改购物车商品数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "修改购物车某个商品的数量",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductNumReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/population": {
             "post": {
                 "security": [
@@ -4893,6 +4942,27 @@ const docTemplate = `{
                 }
             }
         },
+        "req.OrderCartProductNumReq": {
+            "type": "object",
+            "properties": {
+                "num": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_product_uuid": {
+                    "description": "销售订单商品ID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单ID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.OrderChangePopulationReq": {
             "type": "object",
             "required": [
@@ -7808,6 +7878,10 @@ const docTemplate = `{
                 "is_desk_order": {
                     "description": "购物车类型 true:桌台购物车 false:点餐购物车",
                     "type": "boolean"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
                 },
                 "sale_order_list": {
                     "description": "销售订单列表",

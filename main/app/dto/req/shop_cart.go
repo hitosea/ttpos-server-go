@@ -8,3 +8,11 @@ type OrderCartProductAddReq struct {
 	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 规格ID
 }
+
+// OrderCartProductNumReq 修改购物车商品数量请求参数
+type OrderCartProductNumReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+	Num                  int    `json:"num"`                     // 数量
+}

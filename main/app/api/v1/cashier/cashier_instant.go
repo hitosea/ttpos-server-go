@@ -1,7 +1,6 @@
 package cashier
 
 import (
-	"go.uber.org/zap"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -12,6 +11,8 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -250,6 +251,37 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductNum 修改购物车商品数量
+// @Summary 修改购物车某个商品的数量
+// @Description 修改购物车商品数量
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductNumReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/product/num [post]
+func (h *InstantHandler) OrderCartProductNum(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面修改购物车商品数量接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductNumReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 修改购物车商品数量
+	res, err := h.orderService.InstantOrderCartProductNum(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("修改商品数量成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -278,5 +310,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)     // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)  // 向购物车添加商品
+		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)  // 修改购物车商品数量
 	}
 }
