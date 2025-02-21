@@ -29,3 +29,14 @@ type GetInstantOrderInfoResp struct {
 	IsKitchen     bool               `json:"is_kitchen"`      // 是否送厨: false-否 true-是
 	SaleOrderList []InstantOrderList `json:"sale_order_list"` // 销售订单列表
 }
+
+// OrderMustPlanResp 点餐必点方案响应
+type OrderMustPlanResp struct {
+	MustPlanList []MustPlan `json:"must_plan_list"` // 必点方案列表
+}
+
+// MustPlan 必点方案
+type MustPlan struct {
+	ProductUuid uint64 `json:"product_uuid"` // 商品UUID
+	ProductName string `json:"product_name"` // 商品名称
+}

@@ -313,6 +313,36 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductCooking 送厨购物车商品
+// @Summary 送厨购物车商品
+// @Description 送厨购物车商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/must_plan [get]
+func (h *InstantHandler) OrderMustPlan(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面必点方案接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductCookingReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("点餐页面送厨购物车商品接口请求", zap.Any("params", params))
+	// 送厨购物车商品
+	res, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -343,5 +373,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)  // 向购物车添加商品
 		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)  // 修改购物车商品数量
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)  // 送厨购物车商品
+		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                // 获取点餐必点方案
 	}
 }
