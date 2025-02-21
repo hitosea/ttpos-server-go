@@ -234,6 +234,7 @@ class BindRecord extends BaseModel
         foreach ($list as &$item) {
             if ($item['source'] == self::SOURCE_CASHIER) {
                 $item['is_cashier_shift'] = 1;
+                $item['key'] = $item['device_id'];
                 $user = User::where(['bind_key' => $item['key']])->find();
                 if ($user) {
                     $item['is_cashier_shift'] = $user->cashier_online ? 0 : 1;
