@@ -66,3 +66,16 @@ type GetMemberDiscountReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单 Uuid
 	MemberUuid    uint64 `json:"member_uuid"`     // 会员 Uuid
 }
+
+// CheckMemberPasswordReq 使用会员优惠验证密码
+type CheckMemberPasswordReq struct {
+	Password   string `json:"password" binding:"omitempty,number,min=4,max=16"` // 会员密码
+	MemberUuid uint64 `json:"member_uuid" binding:"required"`                   // 会员 Uuid
+}
+
+// CheckMemberPasswordMessage 使用会员优惠验证密码错误提示
+var CheckMemberPasswordMessage = map[string]string{
+	"password.number": "密码必须为4-16位纯数字",
+	"password.min":    "密码必须为4-16位纯数字",
+	"password.max":    "密码必须为4-16位纯数字",
+}

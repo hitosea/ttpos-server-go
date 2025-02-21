@@ -232,22 +232,48 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param uuid query number true "会员Uuid"
-// @Success 200 {object} dto.Response{data=resp.ConfirmRechargeOrder}
-// @Router /cashier/member/confirm_recharge_order [post]
+// @param sale_order_uuid query number true "销售订单uuid"
+// @param member_uuid query number true "会员Uuid"
+// @Success 200 {object} dto.Response
+// @Router /cashier/member/confirm_recharge_order [get]
 func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
-	var confirmRechargeOrder req.ConfirmRechargeOrder
-	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
-		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
+	var discountReq req.GetMemberDiscountReq
+	if err := c.ShouldBindQuery(&discountReq); err != nil {
+		helper.HandleValidationError(c, err, discountReq, nil)
 		return
 	}
 	ctx := helper.GetContext(c)
-	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
+	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, order)
+}
+
+// CheckPassword 使用会员优惠验证密码
+// @Summary 使用会员优惠验证密码
+// @Description 使用会员优惠验证密码
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CheckMemberPasswordReq true "使用会员优惠验证密码"
+// @Success 200 {object} dto.Response
+// @Router /cashier/member/check_password [get]
+func (h *MemberHandler) CheckPassword(c *gin.Context) {
+	var passwordReq req.CheckMemberPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.memberSrv.CheckMemberPassword(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{}, "密码正确")
 }
 
 func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -270,16 +296,12 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/member/levels", wrapper.GetMemberLevels)         // 获取会员等级列表
-		privateApi.POST("/member/add", wrapper.AddMember)                 // 添加会员
-		privateApi.GET("/member/search", wrapper.SearchMember)            // 模糊搜索会员
-		privateApi.GET("/member/recharge_member", wrapper.RechargeMember) // 充值会员信息
-
-		privateApi.GET("/member/discount", wrapper.GetMemberDiscount) // 获取会员优惠
-
-		// 使用会员优惠验证密码
-		// 获取会员优惠
-
+		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                    // 获取会员等级列表
+		privateApi.POST("/member/add", wrapper.AddMember)                                            // 添加会员
+		privateApi.GET("/member/search", wrapper.SearchMember)                                       // 模糊搜索会员
+		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)                            // 充值会员信息
+		privateApi.GET("/member/discount", wrapper.GetMemberDiscount)                                // todo 获取会员优惠
+		privateApi.GET("/member/check_password", wrapper.CheckPassword)                              // 使用会员优惠验证密码
 		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)        // 获取进行中的充值订单
 		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单
 		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)       // 充值订单添加支付方式
