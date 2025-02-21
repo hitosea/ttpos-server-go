@@ -4117,6 +4117,37 @@ paths:
       summary: 修改购物车某个商品的数量
       tags:
       - 收银端.点餐
+  /cashier/instant/order/must_plan:
+    get:
+      consumes:
+      - application/json
+      description: 获取点餐必点方案
+      parameters:
+      - description: 销售账单ID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 获取点餐必点方案
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/population:
     post:
       consumes:
