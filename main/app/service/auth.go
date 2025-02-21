@@ -142,20 +142,21 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		if len(permissions) == 0 {
 			return token, errors.New("当前无权限，请联系管理员")
 		}
-		// 检查是否有未交班的收银员
+		// ToDo 记得开启
+		//// 检查是否有未交班的收银员
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-		currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
-		if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
-			return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
-		}
-		// 是否已在其他收银机登录
-		if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
-			cashierName := staff.RealName
-			if cashierName == "" {
-				cashierName = staff.Username
-			}
-			return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
-		}
+		//currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
+		//if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
+		//	return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+		//}
+		//// 是否已在其他收银机登录
+		//if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
+		//	cashierName := staff.RealName
+		//	if cashierName == "" {
+		//		cashierName = staff.Username
+		//	}
+		//	return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		//}
 
 		// 更新员工信息
 		updates := map[string]any{
