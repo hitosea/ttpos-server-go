@@ -141,7 +141,7 @@ func (s *callSrv) Processed(companyUuid uint64, callUuid uint64) error {
 func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error) {
 	var res resp.ReprintResp
 	companyUuid := ctx.GetCompanyUuid()
-	deviceId := ctx.GetDeviceId()
+	deviceId := ctx.GetDeviceSn()
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 	printerLog := printerLogRepo.GetPrinterLog(printerLogRepo.WhereUuid(printerLogUuid),
 		printerLogRepo.WithPrinter(), printerLogRepo.WithPrinterPrinterType())

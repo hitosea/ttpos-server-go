@@ -21,7 +21,6 @@ type Context interface {
 	GetStaffUuid() uint64                    // 获取员工uuid
 	GetDeviceSn() string                     // 获取设备SN
 	GetDeskUuid() uint64                     // 获取桌台ID
-	GetDeviceId() string                     // 获取设备ID
 	Log() *zap.Logger                        // 获取日志实例
 }
 type ContextImpl struct {
@@ -36,7 +35,6 @@ type ContextImpl struct {
 	staffUuid      uint64               // 员工uuid
 	deskUuid       uint64               // 桌台ID
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
-	deviceId       string               // 设备ID
 	log            *zap.Logger
 }
 
@@ -90,12 +88,6 @@ func WithStaffUuid(staffUuid uint64) Option {
 	}
 }
 
-func WithDeviceId(deviceId string) Option {
-	return func(ctx *ContextImpl) {
-		ctx.deviceId = deviceId
-	}
-}
-
 func WithCompanyUuid(companyUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.companyUuid = companyUuid
@@ -142,10 +134,6 @@ func (c *ContextImpl) GetLanguage() string {
 
 func (c *ContextImpl) GetDeskUuid() uint64 {
 	return c.deskUuid
-}
-
-func (c *ContextImpl) GetDeviceId() string {
-	return c.deviceId
 }
 
 func (c *ContextImpl) GetSource() string {

@@ -206,7 +206,6 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithStaffUuid(GetStaffUuid(c)),           // 在上下文中添加员工Uuid
 		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
 		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息
-		context.WithDeviceId(GetDeviceId(c)),             // 在上下文中添加设备ID信息
 		context.WithDeviceSn(GetDeviceSn(c)),             // 在上小文中添加设备SN信息
 		context.WithLogger(func() *zap.Logger {
 			if logger.Logger == nil {

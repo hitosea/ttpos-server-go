@@ -107,11 +107,16 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.New("订单编号生成失败")
 		}
 
+		device, errGetDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, ctx.GetDeviceSn())
+		if errGetDevice != nil {
+			return errors.New("获取设备uuid失败")
+		}
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
+			DeviceUuid:   device.Uuid,
 		})
 		if err != nil {
 			return err
