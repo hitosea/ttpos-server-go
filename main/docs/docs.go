@@ -2071,7 +2071,7 @@ const docTemplate = `{
         },
         "/cashier/instant/order/must_plan": {
             "get": {
-                "description": "送厨购物车商品",
+                "description": "获取点餐必点方案",
                 "consumes": [
                     "application/json"
                 ],
@@ -2081,7 +2081,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.点餐"
                 ],
-                "summary": "送厨购物车商品",
+                "summary": "获取点餐必点方案",
                 "parameters": [
                     {
                         "type": "integer",

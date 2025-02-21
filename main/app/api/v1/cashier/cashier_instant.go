@@ -314,8 +314,8 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 }
 
 // OrderMustPlan 获取点餐必点方案
-// @Summary 送厨购物车商品
-// @Description 送厨购物车商品
+// @Summary 获取点餐必点方案
+// @Description 获取点餐必点方案
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
