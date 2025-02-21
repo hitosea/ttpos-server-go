@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 
@@ -46,7 +47,7 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	m.dbs[constant.DefaultDB] = db
 	// 根据 APP 表实例化数据库连接
 	var companies []model.Company
-	if err := db.Find(&companies).Error; err != nil {
+	if err := db.Scopes(repository.NotDeleted).Debug().Find(&companies).Error; err != nil {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, company := range companies {
