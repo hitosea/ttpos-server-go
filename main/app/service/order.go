@@ -33,23 +33,23 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                      // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)          // 获取订单列表
-	GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error)         // 获取订单详情
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                    // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                         // 删除订单
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                               // 判断桌台是否可取消
-	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)           // 删除订单商品
-	OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) // 修改订单商品价格
-	OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error)     // 修改订单商品人数
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                  // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error)                                    // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)          // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                          // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                               // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                           // 向购物车添加商品
-	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 修改购物车商品数量
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                              // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                        // 创建桌台订单
+	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)  // 获取订单列表
+	GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error) // 获取订单详情
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                            // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                 // 删除订单
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                       // 判断桌台是否可取消
+	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)   // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                  // 修改订单商品价格
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                      // 修改订单人数
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                          // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                            // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)  // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                  // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                       // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                   // 向购物车添加商品
+	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                          // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
 }
@@ -900,9 +900,9 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, staffUuid uint64, source stri
 }
 
 // OrderProductChangePrice  修改订单商品价格
-func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source string, req req.OrderProductChangePriceReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error) {
 	if req.Price < 0 || req.Price > 1000000 {
-		return model.SaleBill{}, errors.New("价格错误")
+		return nil, errors.New("价格错误")
 	}
 
 	// 禁止并发操作
@@ -910,7 +910,7 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 
 	// 获取信息源
-	db := s.dbm.GetDB(dbId)
+	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 	orderProductRepo := repository.NewOrderProductRepo(db)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
@@ -918,18 +918,18 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断商品
 	product, err := orderProductRepo.GetProductInfoByUuid(req.OrderProductUuid)
 	if err != nil {
-		return model.SaleBill{}, errors.New("找不到订单商品")
+		return nil, errors.New("找不到订单商品")
 	}
 
 	// 开始事务
@@ -942,7 +942,7 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 
 	// 修改订单商品价格
 	if err := orderRepo.ChangeProductPrice(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Price); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// todo - 重算价格 - 等王总的逻辑
@@ -950,11 +950,11 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 
 	// 添加操作日志
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
-		Source:        source,
+		Source:        ctx.GetSource(),
 		Remark:        "改价",
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
-		OperatorUuid:  staffUuid,
+		OperatorUuid:  ctx.GetStaffUuid(),
 	}, map[string]interface{}{
 		"order_product_id": req.OrderProductUuid,
 		"product_id":       product.Uuid,
@@ -966,16 +966,22 @@ func (s *orderSrv) OrderProductChangePrice(dbId uint64, staffUuid uint64, source
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
-	return billInfo, nil
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
 
 // OrderChangePopulation  修改订单人数
-func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source string, req req.OrderChangePopulationReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error) {
 	if req.Population < 0 || req.Population > 999 {
-		return model.SaleBill{}, errors.New("人数错误")
+		return nil, errors.New("人数错误")
 	}
 
 	// 禁止并发操作
@@ -983,19 +989,19 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 
 	// 获取信息源
-	db := s.dbm.GetDB(dbId)
+	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, constant.OptionalUuid)
 	if err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, 0); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 开始事务
@@ -1008,7 +1014,7 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 
 	// 修改订单商品人数
 	if err := orderRepo.ChangePopulation(req.SaleBillUuid, req.Population); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// todo - 重算价格 - 等王总的逻辑
@@ -1016,11 +1022,11 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 
 	// 添加操作日志
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
-		Source:        source,
+		Source:        ctx.GetSource(),
 		Remark:        "修改桌台就餐人数",
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: 0,
-		OperatorUuid:  staffUuid,
+		OperatorUuid:  ctx.GetStaffUuid(),
 	}, map[string]interface{}{
 		"old_meal_num": billInfo.MealNum,
 		"new_meal_num": req.Population,
@@ -1028,10 +1034,16 @@ func (s *orderSrv) OrderChangePopulation(dbId uint64, staffUuid uint64, source s
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
-	return billInfo, nil
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
 
 // GetSaleBillByDeskId  获取桌台账单信息
@@ -1050,7 +1062,7 @@ func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, err
 }
 
 // OrderProductRemark  修改订单商品备注
-func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
 	_ = ctx.GetStaff().Uuid // 员工ID
 	_ = ctx.GetSource()     // 操作来源
@@ -1064,25 +1076,31 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断商品
 	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
-		return model.SaleBill{}, errors.New("找不到订单商品")
+		return nil, errors.New("找不到订单商品")
 	}
 
 	// 修改订单商品备注
 	if err := orderRepo.ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
-	return billInfo, nil
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
 
 func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error) {

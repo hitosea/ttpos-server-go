@@ -101,13 +101,11 @@ func (h *InstantHandler) OrderProductDelete(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderProductChangePriceReq true "详情参数"
-// @Success 200 {object} nil
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/price [post]
 func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderProductChangePriceReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -115,13 +113,13 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductChangePrice(companyUuid, staff.Uuid, source, params)
+	info, err := h.orderService.OrderProductChangePrice(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // OrderChangePopulation 处理点餐订单修改人数
@@ -132,13 +130,11 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderChangePopulationReq true "详情参数"
-// @Success 200 {object} nil
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/population [post]
 func (h *InstantHandler) OrderChangePopulation(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	staff := helper.GetStaff(c)
-	source := helper.GetSource(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderChangePopulationReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -146,13 +142,13 @@ func (h *InstantHandler) OrderChangePopulation(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderChangePopulation(companyUuid, staff.Uuid, source, params)
+	info, err := h.orderService.OrderChangePopulation(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // OrderProductRemark 处理点餐订单商品备注
@@ -163,7 +159,7 @@ func (h *InstantHandler) OrderChangePopulation(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderProductRemarkReq true "详情参数"
-// @Success 200 {object} nil
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/product/remark [post]
 func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
@@ -175,13 +171,13 @@ func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductRemark(ctx, params)
+	info, err := h.orderService.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // OrderCartInfo 查询点餐购物车信息

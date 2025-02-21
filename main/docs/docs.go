@@ -436,680 +436,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/bill/cancel/{id}": {
-            "delete": {
-                "description": "删除收银账单取消",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "删除收银账单取消",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "账单ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/discount": {
-            "post": {
-                "description": "发布收银账单折扣",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银账单折扣",
-                "parameters": [
-                    {
-                        "description": "折扣详情",
-                        "name": "discount",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/discount/change_price/{id}": {
-            "post": {
-                "description": "更改收银账单折扣价格",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "更改收银账单折扣价格",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "折扣ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "新价格",
-                        "name": "price",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "number"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/discount/gift": {
-            "post": {
-                "description": "发布收银账单折扣礼物",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银账单折扣礼物",
-                "parameters": [
-                    {
-                        "description": "礼物详情",
-                        "name": "gift",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/discount/small_change": {
-            "post": {
-                "description": "发布收银账单小额变更",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银账单小额变更",
-                "parameters": [
-                    {
-                        "description": "小额变更详情",
-                        "name": "change",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/discount/{id}": {
-            "delete": {
-                "description": "删除收银账单折扣",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "删除收银账单折扣",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "折扣ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/check/{orderId}": {
-            "get": {
-                "description": "检查收银账单订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "检查收银账单订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "订单详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/finish_payment/{orderId}": {
-            "post": {
-                "description": "完成收银账单订单支付",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "完成收银账单订单支付",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/member": {
-            "post": {
-                "description": "添加成员到收银账单订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "添加成员到收银账单订单",
-                "parameters": [
-                    {
-                        "description": "成员详情",
-                        "name": "member",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/member/{memberId}": {
-            "delete": {
-                "description": "删除收银账单订单中的成员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "删除收银账单订单中的成员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "成员ID",
-                        "name": "memberId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/pay/{orderId}": {
-            "post": {
-                "description": "收银账单订单支付",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "收银账单订单支付",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/payment_small_change_strategy": {
-            "post": {
-                "description": "处理收银账单订单的小额支付策略",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "收银账单订单的小额支付策略",
-                "parameters": [
-                    {
-                        "description": "小额支付策略详情",
-                        "name": "strategy",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/printer/invoice/{orderId}": {
-            "post": {
-                "description": "打印收银账单订单发票",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "打印收银账单订单发票",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/printer/payment_bill/{orderId}": {
-            "post": {
-                "description": "打印收银账单订单支付账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "打印收银账单订单支付账单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/printer/pre_payment_bill/{orderId}": {
-            "post": {
-                "description": "打印收银账单订单预付款账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "打印收银账单订单预付款账单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/production/cancel_return/{orderId}": {
-            "post": {
-                "description": "取消收银账单订单的退货",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "取消收银账单订单的退货",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/production_order/finished_product/status/{orderId}": {
-            "get": {
-                "description": "获取收银账单订单的成品状态",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银账单订单的成品状态",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "产品状态"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/order/revoke_pay/{orderId}": {
-            "post": {
-                "description": "撤销收银账单订单支付",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "撤销收银账单订单支付",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/sub_bill": {
-            "post": {
-                "description": "发布收银账单的子账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银账单的子账单",
-                "parameters": [
-                    {
-                        "description": "子账单详情",
-                        "name": "subBill",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/sub_bill/product/move": {
-            "post": {
-                "description": "在子账单中移动产品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "在子账单中移动产品",
-                "parameters": [
-                    {
-                        "description": "移动详情",
-                        "name": "moveDetails",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/bill/sub_bill/{subBillId}": {
-            "delete": {
-                "description": "删除收银账单的子账单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "删除收银账单的子账单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "子账单ID",
-                        "name": "subBillId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/cashier/buffet/list": {
             "get": {
                 "security": [
@@ -1684,7 +1010,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -1762,7 +1103,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -1801,7 +1157,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -2152,7 +1523,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -2230,7 +1616,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -2269,7 +1670,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -2965,38 +2381,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/order/hide_order/{orderId}": {
-            "post": {
-                "description": "隐藏收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "隐藏收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/cashier/order/info": {
             "get": {
                 "security": [
@@ -3179,268 +2563,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/order/pack/{orderId}": {
-            "post": {
-                "description": "打包收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "打包收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/order/product/cancel_gift/{productId}": {
-            "delete": {
-                "description": "取消收银订单产品的礼物",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "取消收银订单产品的礼物",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "无内容"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/order/product/gift": {
-            "post": {
-                "description": "发布收银订单产品的礼物",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银订单产品的礼物",
-                "parameters": [
-                    {
-                        "description": "礼物详情",
-                        "name": "gift",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "已创建"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/order/product/price/{productId}": {
-            "post": {
-                "description": "发布收银订单产品的价格",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银订单产品的价格",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "新价格",
-                        "name": "price",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "number"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/order/product/remark/{productId}": {
-            "get": {
-                "description": "获取收银订单产品的备注",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银订单产品的备注",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "备注详情"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            },
-            "post": {
-                "description": "发布收银订单产品的备注",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "发布收银订单产品的备注",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "产品ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "备注详情",
-                        "name": "remark",
-                        "in": "body",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/cashier/order/show_order/list": {
-            "get": {
-                "description": "获取收银订单列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "获取收银订单列表",
-                "responses": {
-                    "200": {
-                        "description": "订单列表",
-                        "schema": {
-                            "type": "array"
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/order/unpack/{orderId}": {
-            "post": {
-                "description": "拆包收银订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端"
-                ],
-                "summary": "拆包收银订单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "订单ID",
-                        "name": "orderId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
                     }
                 }
             }
