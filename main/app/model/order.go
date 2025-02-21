@@ -585,6 +585,7 @@ type SaleOrderProduct struct {
 	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
 func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
@@ -971,7 +972,14 @@ func (model *SaleOrderProduct) IsDiscount() bool {
 func (model *SaleOrderProduct) StatusValue() int {
 	return int(model.Status)
 }
-func (model *SaleOrderProduct) AttributeName(language string) dto.LocaleResponse {
+
+// 获取该订单商品的材料组成及用量。
+// 如一个珍珠奶茶加料珍珠，则计算成分珍珠、奶、茶等各个原材料等用量
+func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
+	return nil // todo
+}
+
+func (model *SaleOrderProduct) AttributeName(language string) *dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
@@ -998,7 +1006,7 @@ func (model *SaleOrderProduct) AttributeName(language string) dto.LocaleResponse
 		nameList = append(nameList, sauceNames...)
 	}
 	if len(nameList) == 0 {
-		return dto.LocaleResponse{}
+		return &dto.LocaleResponse{}
 	}
 
 	attributeResultNames := dto.LocaleResponse{}
@@ -1023,7 +1031,7 @@ func (model *SaleOrderProduct) AttributeName(language string) dto.LocaleResponse
 		}
 	}
 
-	return attributeResultNames
+	return &attributeResultNames
 }
 
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`

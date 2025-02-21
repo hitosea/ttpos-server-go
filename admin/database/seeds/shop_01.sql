@@ -339,6 +339,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称,不随后台改变',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '原料数量',
+    `is_product_bom` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为商品BOM, 0-否 1-是, 没有原料的规格商品为1',
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台改变',
     `production_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',

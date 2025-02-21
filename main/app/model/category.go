@@ -12,3 +12,12 @@ type ProductCategory struct {
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
+
+// 获取一级分类uuid
+func (model *ProductCategory) GetFirstCategoryUuid() uint64 {
+	// 如果没有父级uuid，则该分类时一级
+	if model.ParentUuid == 0 {
+		return model.Uuid
+	}
+	return model.ParentUuid
+}

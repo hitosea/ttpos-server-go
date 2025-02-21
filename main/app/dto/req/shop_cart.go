@@ -16,3 +16,9 @@ type OrderCartProductNumReq struct {
 	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 	Num                  int    `json:"num"`                     // 数量
 }
+
+// OrderCartProductCookingReq 送厨购物车商品请求参数
+type OrderCartProductCookingReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID
+}

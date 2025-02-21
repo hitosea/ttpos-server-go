@@ -117,6 +117,7 @@ type ProductPackage struct {
 	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
 	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
 	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
+	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid"`            // 类别
 }
 
 func (model *ProductPackage) TaxRate(dineType uint) float64 {

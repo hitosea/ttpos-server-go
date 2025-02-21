@@ -18,8 +18,16 @@ const (
 )
 
 const (
-	ProductStatusNormal  = 0 // 未送厨
-	ProductStatusCooking = 1 // 送厨
+	SaleOrderProductStatusNormal  = 0 // 未送厨
+	SaleOrderProductStatusCooking = 1 // 送厨
+)
+
+// 生产单商品状态, 0-待制作 1-制作中 2-已完成 3-已退菜
+const (
+	ProductionOrderProductStatusWait     = 0 // 待制作
+	ProductionOrderProductStatusCooking  = 1 // 制作中
+	ProductionOrderProductStatusFinished = 2 // 已完成
+	ProductionOrderProductStatusCancel   = 3 // 已退菜
 )
 
 const (

@@ -51,6 +51,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                           // 向购物车添加商品
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
 }
 
 // orderSrv 订单服务结构
@@ -1206,7 +1207,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: saleOrderProduct.AttributeName(language),
+					LocaleAttributeName: *saleOrderProduct.AttributeName(language),
 					Num:                 saleOrderProduct.Num,
 					SalePrice:           saleOrderProduct.GetSalePrice(),
 					DiscountPrice:       saleOrderProduct.GetPrice(),
@@ -1541,4 +1542,103 @@ func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder
 		}
 	}
 	return nil, 0, errors.New("销售订单商品不存在")
+}
+
+func getSaleOrderProductUnCooking(saleOrder *model.SaleOrder) ([]*model.SaleOrderProduct, error) {
+	unCookingSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
+	for i, _ := range saleOrder.SaleOrderProducts {
+		orderProduct := saleOrder.SaleOrderProducts[i]
+		if orderProduct.Status == constant.SaleOrderProductStatusNormal {
+			unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+		}
+	}
+	return unCookingSaleOrderProducts, nil
+}
+
+// InstantOrderCartProductCooking 送厨购物车商品
+func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error) {
+	s.lock.LockUuid(req.SaleBillUuid)
+	defer s.lock.UnlockUuid(req.SaleBillUuid)
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	ctx.Log().Debug("获取销售账单信息")
+	// 获取销售订单信息
+	saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
+	if errSaleOrder != nil {
+		return nil, errSaleOrder
+	}
+
+	ctx.Log().Debug("获取销售订单信息")
+	// 获取销售订单商品信息
+	unCookingSaleOrderProducts, errUnCookingSaleOrderProducts := getSaleOrderProductUnCooking(saleOrder)
+	if errUnCookingSaleOrderProducts != nil {
+		return nil, errUnCookingSaleOrderProducts
+	}
+
+	for index, _ := range unCookingSaleOrderProducts {
+		product := unCookingSaleOrderProducts[index]
+		product.Status = constant.SaleOrderProductStatusCooking
+	}
+
+	productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
+
+	ctx.Log().Debug("准备开始更新")
+	errUpdate := db.Transaction(func(tx *gorm.DB) error {
+		// 修改订单商品状态为已送厨
+		errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
+		if errUpdateSaleProductStatus != nil {
+			ctx.Log().Debug("商品状态更新失败", zap.Error(errUpdateSaleProductStatus))
+			return errors.New(errUpdateSaleProductStatus.Error())
+		}
+		ctx.Log().Debug("商品状态成功")
+		errCreateProduction := repository.NewProductionOrderRepo(tx).CreateProductionOrder(productionOrder)
+		if errCreateProduction != nil {
+			ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
+			return errors.New(errCreateProduction.Error())
+		}
+		return nil
+	})
+	if errUpdate != nil {
+		ctx.Log().Debug("更新数据失败", zap.Any("error", errUpdate))
+		return nil, errors.New(errUpdate.Error())
+	}
+
+	ctx.Log().Debug("获取新的购物车信息")
+	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if errGetCartInfo != nil {
+		return nil, errors.New(errGetCartInfo.Error())
+	}
+	return cartInfo, nil
+}
+
+func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct) *model.ProductionOrder {
+	productionOrderUuid, _ := utils.GetID()
+	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
+	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+		productionOrderProduct := model.ProductionOrderProduct{
+			ProductionOrderUuid:   productionOrderUuid,
+			SaleOrderProductUuid:  unCookingSaleOrderProduct.Uuid,
+			FirstCategoryUuid:     unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid(),
+			Num:                   unCookingSaleOrderProduct.Num,
+			FlavorName:            unCookingSaleOrderProduct.Name,
+			ProductAttributeNames: unCookingSaleOrderProduct.AttributeName(ctx.GetLanguage()).GetLocale(ctx.GetLanguage()),
+			Status:                constant.ProductionOrderProductStatusCooking,
+			Remark:                unCookingSaleOrderProduct.Remark,
+			//HasMaterial:              unCookingSaleOrderProduct, todo
+			ProductionOrderMaterials: unCookingSaleOrderProduct.GetMaterialBom(), // 获取这个商品各个材料的用量
+		}
+		productionOrderProducts = append(productionOrderProducts, &productionOrderProduct)
+	}
+	productionOrder := model.ProductionOrder{
+		BaseModel:               model.BaseModel{Uuid: productionOrderUuid},
+		SaleOrderUuid:           saleOrderUuid,
+		SaleBillUuid:            saleBillUuid,
+		ProductionOrderProducts: productionOrderProducts,
+	}
+	return &productionOrder
 }

@@ -9,6 +9,7 @@ import (
 type ISaleOrderProductRepo interface {
 	CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
+	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 }
 
 type saleOrderProductRepo struct {
@@ -31,6 +32,16 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProd
 	db := r.db
 	if err := db.Model(&model).Updates(model).Error; err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error {
+	db := r.db
+	for _, m := range models {
+		if err := db.Model(&m).Updates(m).Error; err != nil {
+			return err
+		}
 	}
 	return nil
 }
