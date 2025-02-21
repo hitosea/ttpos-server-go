@@ -14,15 +14,15 @@ func NewCompanySettingRepo(db *gorm.DB) ICompanySettingRepo {
 	return NewCompanySettingRepoImpl(db)
 }
 
-type CompanySettingRepo struct {
+type companySettingRepo struct {
 	db *gorm.DB
 }
 
-func NewCompanySettingRepoImpl(db *gorm.DB) *CompanySettingRepo {
-	return &CompanySettingRepo{db: db}
+func NewCompanySettingRepoImpl(db *gorm.DB) ICompanySettingRepo {
+	return &companySettingRepo{db: db}
 }
 
-func (r *CompanySettingRepo) Get() model.CompanySetting {
+func (r *companySettingRepo) Get() model.CompanySetting {
 	var companySetting model.CompanySetting
 	r.db.Model(&model.CompanySetting{}).First(&companySetting)
 	return companySetting

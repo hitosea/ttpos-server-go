@@ -98,7 +98,7 @@ func databaseConf(opt copier.Option) {
 		Password:        "password",
 		RootPassword:    "root-password",
 		Database:        "db",
-		TablePrefix:     "pre_",
+		TablePrefix:     "ttpos_",
 		SlowQueryTime:   2,
 		MaxIdleConns:    10,
 		MaxOpenConns:    100,

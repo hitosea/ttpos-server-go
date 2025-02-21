@@ -30,7 +30,7 @@ class UpdateColumnSaleOrderAmount extends Migrator
     {
         // 销售订单表
         $table = $this->table('sale_order');
-        if ($table->hasColumn('total_price')) {
+        if ($table->hasColumn('total_price') && !$table->hasColumn('amount')) {
             $table->renameColumn('total_price', 'amount')
                   ->changeColumn('amount', 'decimal', ['precision' => 12, 'scale' => 2, 'default' => 0, 'comment' => '应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）', 'after' => 'uuid'])
                   ->update();

@@ -48,7 +48,7 @@ class SnowflakeHelp
         $this->_lastTimestamp = $ts;
 
         $return_pack = $this->pack();
-        return substr(str_pad($return_pack, 16, '0', STR_PAD_LEFT), -16);
+        return str_pad($return_pack, 16, '0', STR_PAD_RIGHT);
     }
 
     private function pack()
