@@ -52,6 +52,7 @@ type ICommonRepo interface {
 	Preload(preloads ...WithPreload) DBOption                       // 预加载
 	IncrementNum(num uint) clause.Expr                              // 增加商品数量
 	DecrementNum(num uint) clause.Expr                              // 减少商品数量
+	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error      // 事务
 }
 
 // commonRepo 公共仓库实现
@@ -247,4 +248,9 @@ func (r *commonRepo) IncrementNum(num uint) clause.Expr {
 // DecrementNum 减少商品数量
 func (r *commonRepo) DecrementNum(num uint) clause.Expr {
 	return gorm.Expr("num - ?", num)
+}
+
+// Transaction 事务
+func (r *commonRepo) Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
+	return db.Transaction(fn)
 }

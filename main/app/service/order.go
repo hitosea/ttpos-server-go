@@ -84,7 +84,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 判断是否有待支付、未挂单的订单
 		commonRepo := repository.NewCommonRepo()
 		orderRepo := repository.NewOrderRepo(tx)
@@ -1777,11 +1777,18 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 	var shopCart *resp.ShopCart
 	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
 	if len(autoFlavorProduct) > 0 {
-		// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
-		shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
-		if err != nil {
+		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
+			shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
+			if err != nil {
+				ctx.Log().Debug("自动添加必点商品失败", zap.Error(err))
+				return errors.New(err.Error())
+			}
+			return nil
+		})
+		if errTx != nil {
 			ctx.Log().Debug("自动添加必点商品失败", zap.Error(err))
-			return nil, errors.New(err.Error())
+			return nil, errors.New(errTx.Error())
 		}
 	}
 
