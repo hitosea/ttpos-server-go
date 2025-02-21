@@ -4,6 +4,7 @@ namespace app\shop\model\product;
 
 use think\facade\Env;
 use help\ValidateHelp;
+use app\common\model\product\ProductBom;
 use app\common\model\product\ProductFeed;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Feed as FeedModel;
@@ -21,25 +22,22 @@ class Feed extends FeedModel
     {
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('feed')
-            ->field('feed.*');
-
-            // todo 兼容
-            // ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
-            // ->field("IFNULL(pf.product_ids, '') AS product_ids")
-            // ->leftJoin("
-            //     (
-            //         SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
-            //         FROM {$prefix}product_feed pf
-            //         LEFT JOIN {$prefix}product product ON pf.product_id = product.product_id
-            //         WHERE product.is_delete = 0
-            //         GROUP BY pf.feed_id
-            //     ) pf
-            // ", 'feed.feed_id = pf.feed_id');
-
+            ->field('feed.*')
+            ->field("IF(pb.sku_count IS NULL, 0, 1) AS is_used")
+            ->field("IFNULL(pb.product_ids, '') AS product_ids")
+            ->leftJoin("
+                (
+                    SELECT pb.product_sauce_uuid, GROUP_CONCAT(DISTINCT pb.product_package_uuid) AS product_ids, COUNT(DISTINCT pb.product_sauce_uuid) AS sku_count
+                    FROM {$prefix}product_bom pb
+                    WHERE pb.delete_time = 0 AND pb.product_sauce_uuid > 0
+                    GROUP BY pb.product_sauce_uuid
+                ) pb
+            ", 'feed.uuid = pb.product_sauce_uuid');
         //
         if (isset($data['feed_name']) && $data['feed_name'] != '') {
             $model = $model->jsonLike('feed.name', trim($data['feed_name']));
         }
+        // todo 兼容
         // $list = $model->with(['material'])->order(['feed.create_time' => 'desc'])->paginate($data);
         $list = $model->order(['feed.create_time' => 'desc'])->paginate($data);
         return $list;
@@ -136,11 +134,11 @@ class Feed extends FeedModel
      */
     public function setDelete($feed_id)
     {
-        // todo 判断是否关联产品
-        // if ($this->isUseWithProduct($feed_id)) {
-        //     $this->error = '该加料下存在商品，不允许删除';
-        //     return false;
-        // }
+        // 判断是否关联产品
+        if ($this->isUseWithProduct($feed_id)) {
+            $this->error = '该加料下存在商品，不允许删除';
+            return false;
+        }
         $this->startTrans();
         try {
             // 删除多语言数据
@@ -178,18 +176,22 @@ class Feed extends FeedModel
             $delete_product_ids = array_diff($current_product_ids, $product_ids) ?: [];
             // 计算需要新增的产品ID
             $add_product_ids = array_diff($product_ids, $current_product_ids) ?: [];
-            // 获取材料最小库存
-            $stock = ProductFeedMaterial::alias('pfm')
-                ->join('product p', 'pfm.material_id = p.product_id')
-                ->field('pfm.feed_id, LEAST(FLOOR(MIN(p.product_material_stock / pfm.material_num)), 99999999) AS min_stock_num')
-                ->where('pfm.feed_id', $feed_id)
-                ->find();
-            $min_stock_num = $stock['min_stock_num'] ?: self::MAX_MATERIAL_NUM;
+            // todo 兼容 获取材料最小库存
+            // $stock = ProductFeedMaterial::alias('pfm')
+            //     ->join('product p', 'pfm.material_id = p.product_id')
+            //     ->field('pfm.feed_id, LEAST(FLOOR(MIN(p.product_material_stock / pfm.material_num)), 99999999) AS min_stock_num')
+            //     ->where('pfm.feed_id', $feed_id)
+            //     ->find();
+            // $min_stock_num = $stock['min_stock_num'] ?: self::MAX_MATERIAL_NUM;
+            $min_stock_num = self::MAX_MATERIAL_NUM;
             // 删除变动的关系
             if (!empty($delete_product_ids)) {
                 $chunks = array_chunk($delete_product_ids, 1000);
                 foreach ($chunks as $chunk) {
-                    ProductFeed::where('feed_id', $feed_id)->whereIn('product_id', $chunk)->delete();
+                    $list = ProductBom::where('product_sauce_uuid', $feed_id)->whereIn('product_package_uuid', $chunk)->select();
+                    foreach ($list as $item) {
+                        $item->force()->delete();
+                    }
                 }
             }
             // 添加新关系
@@ -197,20 +199,18 @@ class Feed extends FeedModel
                 $insert_data = [];
                 foreach ($add_product_ids as $product_id) {
                     $insert_data[] = [
-                        'product_id'       => $product_id,
-                        'feed_id'          => $feed_id,
-                        'feed_name'        => $this['feed_name'],
+                        'uuid' => createUuid(),
+                        'product_package_uuid'       => $product_id,
+                        'product_sauce_uuid'          => $feed_id,
+                        'name'        => $this['name'],
                         'price'            => $this['price'],
                         'stock_num'        => $min_stock_num,
                         'create_time'      => time(),
                         'update_time'      => time(),
                     ];
                 }
-                productFeed::where('product_id', $product_id)->insertAll($insert_data);
+                ProductBom::insertAll($insert_data);
             }
-            // 维护产品表中的加料数组
-            $total_product_ids = array_unique(array_merge($product_ids, $current_product_ids)) ?: [];
-            $this->maintainProductFeed($total_product_ids, $delete_product_ids);
             $this->commit();
             return true;
         } catch (\Exception $e) {
