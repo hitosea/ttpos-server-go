@@ -281,6 +281,19 @@ definitions:
     required:
     - product_bom_uuid
     type: object
+  req.CheckMemberPasswordReq:
+    properties:
+      member_uuid:
+        description: 会员 Uuid
+        type: integer
+      password:
+        description: 会员密码
+        maxLength: 16
+        minLength: 4
+        type: string
+    required:
+    - member_uuid
+    type: object
   req.ConfirmRechargeOrder:
     properties:
       member_uuid:
@@ -3803,7 +3816,12 @@ paths:
       parameters:
       - description: 账单ID
         in: path
-        name: id
+        name: sale_bill_uuid
+        required: true
+        type: string
+      - description: 销售订单UUID
+        in: path
+        name: sale_order_uuid
         required: true
         type: string
       produces:
@@ -4285,17 +4303,69 @@ paths:
       summary: 添加会员
       tags:
       - 收银端.会员
+  /cashier/member/check_password:
+    get:
+      consumes:
+      - application/json
+      description: 使用会员优惠验证密码
+      parameters:
+      - description: 使用会员优惠验证密码
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckMemberPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 使用会员优惠验证密码
+      tags:
+      - 收银端.会员
   /cashier/member/confirm_recharge_order:
-    post:
+    get:
       consumes:
       - application/json
       description: 获取会员优惠
       parameters:
-      - description: 会员Uuid
+      - description: 销售订单uuid
         in: query
-        name: uuid
+        name: sale_order_uuid
         required: true
         type: number
+      - description: 会员Uuid
+        in: query
+        name: member_uuid
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取会员优惠
+      tags:
+      - 收银端.会员
+    post:
+      consumes:
+      - application/json
+      description: 确认充值订单
+      parameters:
+      - description: 确认充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ConfirmRechargeOrder'
       produces:
       - application/json
       responses:
@@ -4310,7 +4380,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 获取会员优惠
+      summary: 确认充值订单
       tags:
       - 收银端.会员
   /cashier/member/create_recharge_order:

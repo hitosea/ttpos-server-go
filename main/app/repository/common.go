@@ -18,7 +18,7 @@ type WithPreload struct {
 
 // NotDeleted 筛选未被删除的
 func NotDeleted(db *gorm.DB) *gorm.DB {
-	return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	return db.Where("delete_time = ?", constant.NotDeleted)
 }
 
 func Like(keyword string) string {

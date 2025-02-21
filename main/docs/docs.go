@@ -1574,7 +1574,14 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "账单ID",
-                        "name": "id",
+                        "name": "sale_bill_uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
                         "in": "path",
                         "required": true
                     }
@@ -2366,8 +2373,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member/check_password": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "使用会员优惠验证密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "使用会员优惠验证密码",
+                "parameters": [
+                    {
+                        "description": "使用会员优惠验证密码",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CheckMemberPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member/confirm_recharge_order": {
-            "post": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
@@ -2387,10 +2433,54 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "number",
-                        "description": "会员Uuid",
-                        "name": "uuid",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "会员Uuid",
+                        "name": "member_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "确认充值订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "确认充值订单",
+                "parameters": [
+                    {
+                        "description": "确认充值订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ConfirmRechargeOrder"
+                        }
                     }
                 ],
                 "responses": {
@@ -5012,6 +5102,24 @@ const docTemplate = `{
                 "product_bom_uuid": {
                     "description": "商品规格Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.CheckMemberPasswordReq": {
+            "type": "object",
+            "required": [
+                "member_uuid"
+            ],
+            "properties": {
+                "member_uuid": {
+                    "description": "会员 Uuid",
+                    "type": "integer"
+                },
+                "password": {
+                    "description": "会员密码",
+                    "type": "string",
+                    "maxLength": 16,
+                    "minLength": 4
                 }
             }
         },

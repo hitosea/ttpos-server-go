@@ -34,6 +34,8 @@ type IMemberSrv interface {
 	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)          // 充值订单添加支付方式
 	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) // 充值订单撤销支付方式
 	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
+	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error)                     // 获取会员折扣
+	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                            // 使用会员优惠验证密码
 }
 
 // memberSrv 会员服务结构体
@@ -94,12 +96,10 @@ func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) resp.Search
 func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error {
 	companyUuid := ctx.GetCompanyUuid()
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
-
 	// 判断等级是否存在
 	if !memberRepo.CheckLevelExists(addMemberReq.LevelUuid) {
 		return errors.New("会员等级不存在")
 	}
-
 	// 判断是否存在
 	if memberRepo.CheckMemberExists(addMemberReq.Phone) {
 		return errors.New("会员已存在")
@@ -111,7 +111,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		MemberNo:        utils.RandomNumber(5), // 5位数字
 		Nickname:        addMemberReq.Nickname,
 		Phone:           addMemberReq.Phone,
-		Password:        "",
+		Password:        addMemberReq.Password,
 		MemberLevelUuid: addMemberReq.LevelUuid,
 	}); err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
@@ -680,11 +680,23 @@ func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUu
 	}
 }
 
-func (s *memberSrv) GetMemberDiscount(ctx context.Context, getDiscountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error) {
-
-	// 判断会员是否存在
-
-	// 根据 order_uuid 获取订单，关联订单产品
-
+func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error) {
+	// 获取会员信息
+	// ToDo 调用订单计算价格接口
 	return resp.MemberDiscountResp{}, nil
+}
+
+func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error {
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	member := memberRepo.GetMember(memberRepo.WhereUuid(discountReq.MemberUuid))
+	if member.Uuid == 0 {
+		return errors.New("会员不存在")
+	}
+	if member.Password == "" {
+		return errors.New("密码错误")
+	}
+	if member.Password != cryptor.Md5String(discountReq.Password) {
+		return errors.New("密码错误")
+	}
+	return nil
 }
