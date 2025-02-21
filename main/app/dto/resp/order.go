@@ -25,12 +25,12 @@ type BillListsOrder struct {
 
 // 账单列表额外信息响应
 type BillListsExtra struct { // 通过当前数据控制按钮是否显示
-	IsCellRefund        bool `json:"is_cell_refund"`                   // 是否可退款
-	IsCellCancel        bool `json:"is_cell_cancel"`                   // 是否可取消
-	IsCellReverseSettle bool `json:"is_cell_reverse_settle,omitempty"` // 是否可反结账
-	IsCellPrint         bool `json:"is_cell_print,omitempty"`          // 是否可打印小票
-	IsCellDelete        bool `json:"is_cell_delete,omitempty"`         // 是否可删除
-	IsCellInvoice       bool `json:"is_cell_invoice,omitempty"`        // 是否可打印发票
+	IsCellRefund        bool `json:"is_cell_refund"`         // 是否可退款
+	IsCellCancel        bool `json:"is_cell_cancel"`         // 是否可取消
+	IsCellReverseSettle bool `json:"is_cell_reverse_settle"` // 是否可反结账
+	IsCellPrint         bool `json:"is_cell_print"`          // 是否可打印小票
+	IsCellDelete        bool `json:"is_cell_delete"`         // 是否可删除
+	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
 }
 
 // 订单列表响应
