@@ -6779,6 +6779,10 @@
                     "description": "订单类型\t0:桌台订单 1:点餐订单",
                     "type": "integer"
                 },
+                "dining_method": {
+                    "description": "用餐方式,0-堂食 1-打包",
+                    "type": "integer"
+                },
                 "finish_time": {
                     "description": "完成时间（支付时间）（时间戳）",
                     "type": "integer"

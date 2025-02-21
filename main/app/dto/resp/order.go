@@ -96,6 +96,7 @@ type OrderProduct struct {
 type OrderInfo struct {
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	DiningMethod  uint           `json:"dining_method"`   // 用餐方式,0-堂食 1-打包
 	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
 	OrderNo       string         `json:"order_no"`        // 订单编号
 	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消

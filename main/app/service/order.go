@@ -33,23 +33,23 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                              // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                        // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)  // 获取订单列表
-	GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error) // 获取订单详情
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                            // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                 // 删除订单
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                       // 判断桌台是否可取消
-	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)   // 删除订单商品
-	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                  // 修改订单商品价格
-	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                      // 修改订单人数
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                          // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                            // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)  // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                  // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                       // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                   // 向购物车添加商品
-	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                          // 修改购物车商品数量
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                             // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                       // 创建桌台订单
+	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error) // 获取订单列表
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                    // 获取订单详情
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                           // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                // 删除订单
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                      // 判断桌台是否可取消
+	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)  // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                 // 修改订单商品价格
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                     // 修改订单人数
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                         // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                           // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                 // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                      // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                  // 向购物车添加商品
+	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                         // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
 }
@@ -511,8 +511,8 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 }
 
 // GetOrderInfos 获取收银端订单信息
-func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, language string, req req.OrderInfoReq) (resp.OrderInfosResp, error) {
-	db := s.dbm.GetDB(dbId)
+func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
@@ -533,14 +533,14 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 		if order.IsFree == 1 {
 			payTypes = append(payTypes, resp.OrderInfoPayTypes{
 				Uuid:            0,
-				PaymentTypeName: i18n.Translate(language, "免单"),
+				PaymentTypeName: i18n.Translate(ctx.GetLanguage(), "免单"),
 				CurrencyUnit:    "",
 				PaymentAmount:   order.PaymentAmount,
 				Status:          2,
 				Source:          0,
 				SourceText:      "",
 			})
-			payTypeNames = append(payTypeNames, i18n.Translate(language, "免单"))
+			payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 		} else {
 			for _, payment := range order.PaymentOrders {
 				payTypes = append(payTypes, resp.OrderInfoPayTypes{
@@ -550,7 +550,7 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 					PaymentAmount:   payment.PaymentAmount,
 					Status:          uint(payment.Status),
 					Source:          uint(payment.PaymentMethod.Source),
-					SourceText:      payment.PaymentMethod.GetSourceText(language),
+					SourceText:      payment.PaymentMethod.GetSourceText(ctx.GetLanguage()),
 				})
 				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 			}
@@ -589,6 +589,7 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 		orderList[i] = resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
 			BillType:      info.BillType,
+			DiningMethod:  info.DiningMethod,
 			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
 			OrderNo:       order.OrderNo,
 			Status:        order.Status,
@@ -638,7 +639,7 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
 			CashierName:   info.Cashier.RealName,
 			IsBuffet:      info.IsBuffet == 1,
-			BuffetNames:   info.GetBuffetNames(language),
+			BuffetNames:   info.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  info.Reason,
 			PayTypes:      payTypes,
 			SaleOrders:    orderList,
@@ -648,7 +649,7 @@ func (s *orderSrv) GetOrderInfos(dbId uint64, staff model.Staff, source, languag
 			List []resp.OrderOperationLog `json:"list"`
 		}{
 			List: func() []resp.OrderOperationLog {
-				logs, err := s.GetRecordList(dbId, req.SaleBillUuid, 0)
+				logs, err := s.GetRecordList(ctx.GetDbId(), req.SaleBillUuid, 0)
 				if err != nil {
 					return []resp.OrderOperationLog{}
 				}

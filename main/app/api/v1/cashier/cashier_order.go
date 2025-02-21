@@ -66,10 +66,7 @@ func (h *OrderHandler) GetCashierOrderList(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/info [get]
 func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
-	language := helper.GetLanguage(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -77,7 +74,7 @@ func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetOrderInfos(companyUuid, staff, source, language, req)
+	res, err := h.service.GetOrderInfos(ctx, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
