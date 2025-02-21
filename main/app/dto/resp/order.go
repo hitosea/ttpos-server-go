@@ -25,12 +25,12 @@ type BillListsOrder struct {
 
 // 账单列表额外信息响应
 type BillListsExtra struct { // 通过当前数据控制按钮是否显示
-	IsCellRefund        bool `json:"is_cell_refund"`                   // 是否可退款
-	IsCellCancel        bool `json:"is_cell_cancel"`                   // 是否可取消
-	IsCellReverseSettle bool `json:"is_cell_reverse_settle,omitempty"` // 是否可反结账
-	IsCellPrint         bool `json:"is_cell_print,omitempty"`          // 是否可打印小票
-	IsCellDelete        bool `json:"is_cell_delete,omitempty"`         // 是否可删除
-	IsCellInvoice       bool `json:"is_cell_invoice,omitempty"`        // 是否可打印发票
+	IsCellRefund        bool `json:"is_cell_refund"`         // 是否可退款
+	IsCellCancel        bool `json:"is_cell_cancel"`         // 是否可取消
+	IsCellReverseSettle bool `json:"is_cell_reverse_settle"` // 是否可反结账
+	IsCellPrint         bool `json:"is_cell_print"`          // 是否可打印小票
+	IsCellDelete        bool `json:"is_cell_delete"`         // 是否可删除
+	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
 }
 
 // 订单列表响应
@@ -96,6 +96,7 @@ type OrderProduct struct {
 type OrderInfo struct {
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	DiningMethod  uint           `json:"dining_method"`   // 用餐方式,0-堂食 1-打包
 	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
 	OrderNo       string         `json:"order_no"`        // 订单编号
 	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消

@@ -188,7 +188,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			return func(db *gorm.DB) *gorm.DB {
 				// 订单编号
 				if param.OrderNo != "" {
-					db = db.Where("order_no = ?", param.OrderNo)
+					db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
 				}
 				// 账单类型
 				if param.BillType != -1 {

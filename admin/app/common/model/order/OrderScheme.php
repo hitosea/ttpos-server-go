@@ -7,6 +7,8 @@ use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\store\TableArea;
+use app\common\model\order\OrderSchemeArea;
+use app\common\model\order\OrderSchemeProduct;
 
 /**
  * 订单方案模型
@@ -27,7 +29,15 @@ class OrderScheme extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = ['name_text'];
+    protected $append = ['name_text', 'table_area_ids', 'product_ids'];
+
+    /**
+     * 兼容字段
+     */
+    public function getIdAttr($value, $data)
+    {
+        return $this->uuid ?: 0;
+    }
 
     /**
      * 名称
@@ -48,9 +58,14 @@ class OrderScheme extends BaseModel
     /**
      * 获取桌台区域ids
      */
-    public function getTableAreaIdsAttr($value)
+    public function getTableAreaIdsAttr($value, $data)
     {
-        return $value ? explode(',', $value) : [];
+        $list = OrderSchemeArea::alias('oa')
+            ->field(['oa.desk_region_uuid'])
+            ->where('oa.product_must_plan_uuid', $data['uuid'] ?? 0)
+            ->select();
+
+        return array_column($list->toArray(), 'desk_region_uuid');
     }
 
     /**
@@ -58,12 +73,14 @@ class OrderScheme extends BaseModel
      */
     public function getProductIdsAttr($value, $data)
     {
-        $product_ids = $data['product_ids'] ? json_decode($data['product_ids'], true) : [];
-        $list = Product::alias('product')
-            ->field(['product.product_id', 'product.product_name'])
-            ->where('product_id', 'in', $product_ids)
-            ->where('product_status', 10)
-            ->select()?->append(['product_name_text']);
+        $list = OrderSchemeProduct::alias('op')
+            ->leftJoin('product_package pp', 'pp.uuid = op.product_package_uuid')
+            ->field(['op.product_package_uuid', 'pp.name as product_name'])
+            ->where('op.product_must_plan_uuid', $data['uuid'] ?? 0)
+            ->select();
+        foreach ($list as &$item) {
+            $item['product_name_text'] = extractLanguage($item['product_name']);
+        }
         return $list->toArray();
     }
 
@@ -116,7 +133,7 @@ class OrderScheme extends BaseModel
      */
     public function detail($id)
     {
-        return $this->where('id', $id)->find();
+        return $this->where('uuid', $id)->find();
     }
 
     /**
@@ -136,7 +153,7 @@ class OrderScheme extends BaseModel
             $this->error = '方案名称不能超过50个字符';
             return false;
         }
-        if ($this->checkNameExist($params['name'], $id ? $this['shop_supplier_id'] : $params['shop_supplier_id'], $id)) {
+        if ($this->checkNameExist($params['name'], 0, $id)) {
             $this->error = '方案名称已存在';
             return false;
         }
@@ -158,7 +175,7 @@ class OrderScheme extends BaseModel
         if (!empty($params['table_area_ids'])) {
             $tableAreaIds = is_array($params['table_area_ids']) ? $params['table_area_ids'] : explode(',', $params['table_area_ids']);
             $tableAreaModel = new TableArea();
-            $tableAreaList = $tableAreaModel->where('area_id', 'in', $tableAreaIds)->select();
+            $tableAreaList = $tableAreaModel->where('uuid', 'in', $tableAreaIds)->select();
             if (count($tableAreaList) != count($tableAreaIds)) {
                 $this->error = '桌台区域参数错误';
                 return false;
@@ -194,9 +211,7 @@ class OrderScheme extends BaseModel
         if (!empty($params['product_ids'])) {
             $productIds = is_array($params['product_ids']) ? $params['product_ids'] : explode(',', $params['product_ids']);
             $productModel = new Product();
-            $productList = $productModel->where('product_id', 'in', $productIds)
-                ->where('type', 10)
-                ->select();
+            $productList = $productModel->where('uuid', 'in', $productIds)->select();
             if (count($productList) != count($productIds)) {
                 $this->error = '商品参数错误';
                 return false;
@@ -215,21 +230,48 @@ class OrderScheme extends BaseModel
             return false;
         }
 
-        $data = [
-            'name' => $params['name'] ?? '',
-            'use_channel' => $params['use_channel'] ?? '',
-            'table_area_ids' => $params['table_area_ids'] ?? '',
-            'must_type' => $params['must_type'] ?? 1,
-            'must_rule' => $params['must_rule'] ?? 1,
-            'product_ids' => $params['product_ids'] ?? '',
-            'status' => $params['status'] ?? 1,
-            'auto_cart' => $params['auto_cart'] ?? 1,
-            'auto_change' => $params['auto_change'] ?? 1,
-            'auto_check' => $params['auto_check'] ?? 1,
-            'auto_checkout' => $params['auto_checkout'] ?? 1,
-        ];
+        $this->startTrans();
+        try {
+            $data = [
+                'name' => $params['name'] ?? '',
+                'use_channel' => $params['use_channel'] ?? '',
+                'must_type' => $params['must_type'] ?? 1,
+                'must_rule' => $params['must_rule'] ?? 1,
+                'status' => $params['status'] ?? 1,
+                'auto_cart' => $params['auto_cart'] ?? 1,
+                'auto_change' => $params['auto_change'] ?? 1,
+                'auto_check' => $params['auto_check'] ?? 1,
+                'auto_checkout' => $params['auto_checkout'] ?? 1,
+            ];
+            $this->save($data);
 
-        return $this->save($data);
+            // 保存桌台区域
+            if (!empty($params['table_area_ids'])) {
+                $tableAreaIds = is_array($params['table_area_ids']) ? $params['table_area_ids'] : explode(',', $params['table_area_ids']);
+                $tableAreaData = array_map(fn($id) => [
+                    'product_must_plan_uuid' => $this->uuid,
+                    'desk_region_uuid' => $id,
+                ], $tableAreaIds);
+                (new OrderSchemeArea)->saveAll($tableAreaData);
+            }
+
+            // 保存商品
+            if (!empty($params['product_ids'])) {
+                $productIds = is_array($params['product_ids']) ? $params['product_ids'] : explode(',', $params['product_ids']);
+                $productData = array_map(fn($id) => [
+                    'product_must_plan_uuid' => $this->uuid,
+                    'product_package_uuid' => $id,
+                ], $productIds);
+                (new OrderSchemeProduct)->saveAll($productData);
+            }
+
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**
@@ -237,11 +279,60 @@ class OrderScheme extends BaseModel
      */
     public function edit($params)
     {
-        if (!$this->validateSchemeParams($params, $this['id'])) {
+        if (!$this->validateSchemeParams($params, $this['uuid'])) {
             return false;
         }
 
-        return $this->save($params);
+        $this->startTrans();
+        try {
+            $data = [
+                'name' => $params['name'] ?? '',
+                'use_channel' => $params['use_channel'] ?? '',
+                'must_type' => $params['must_type'] ?? 1,
+                'must_rule' => $params['must_rule'] ?? 1,
+                'status' => $params['status'] ?? 1,
+                'auto_cart' => $params['auto_cart'] ?? 1,
+                'auto_change' => $params['auto_change'] ?? 1,
+                'auto_check' => $params['auto_check'] ?? 1,
+                'auto_checkout' => $params['auto_checkout'] ?? 1,
+            ];
+
+            // 保存桌台区域
+            if (!empty($params['table_area_ids'])) {
+                $areaList = OrderSchemeArea::where('product_must_plan_uuid', $this->uuid)->select();
+                foreach ($areaList as $area) {
+                    $area->force()->delete();
+                }
+                $tableAreaIds = is_array($params['table_area_ids']) ? $params['table_area_ids'] : explode(',', $params['table_area_ids']);
+                $tableAreaData = array_map(fn($id) => [
+                    'product_must_plan_uuid' => $this->uuid,
+                    'desk_region_uuid' => $id,
+                ], $tableAreaIds);
+                (new OrderSchemeArea)->saveAll($tableAreaData);
+            }
+
+            // 保存商品
+            if (!empty($params['product_ids'])) {
+                $productList = OrderSchemeProduct::where('product_must_plan_uuid', $this->uuid)->select();
+                foreach ($productList as $product) {
+                    $product->force()->delete();
+                }
+                $productIds = is_array($params['product_ids']) ? $params['product_ids'] : explode(',', $params['product_ids']);
+                $productData = array_map(fn($id) => [
+                    'product_must_plan_uuid' => $this->uuid,
+                    'product_package_uuid' => $id,
+                ], $productIds);
+                (new OrderSchemeProduct)->saveAll($productData);
+            }
+
+            $this->save($data);
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**
@@ -257,7 +348,7 @@ class OrderScheme extends BaseModel
      */
     public function setStatus($params)
     {
-        return $this->where('id', $params['id'])->update(['status' => $params['status']]);
+        return $this->where('uuid', $params['id'])->update(['status' => $params['status']]);
     }
 
     /**
@@ -269,7 +360,7 @@ class OrderScheme extends BaseModel
             'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
         return static::where($filter)->value('id') ? true : false;
     }

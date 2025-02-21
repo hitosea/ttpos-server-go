@@ -276,9 +276,9 @@ class PayType extends BaseModel
         $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
         $param['payment_name'] = $remark;
         $param['fee_percent'] = $param['fee'];
-        $param['is_show_cashier'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
-        $param['is_show_assistant'] = in_array(self::ASSISTANT_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
-        $param['is_show_member_recharge'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_recharge']) ? 1 : 0;
+        $param['is_show_cashier'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_checkout'] ?: []) ? 1 : 0;
+        $param['is_show_assistant'] = in_array(self::ASSISTANT_SHOW_VALUE, $param['is_show_checkout'] ?: []) ? 1 : 0;
+        $param['is_show_member_recharge'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_recharge'] ?: []) ? 1 : 0;
         $param['uuid'] = createUuid();
         return $param;
     }
