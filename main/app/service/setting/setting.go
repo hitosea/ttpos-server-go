@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -33,26 +35,26 @@ type GetSettingReq struct {
 }
 
 type ISrv interface {
-	GetAll(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (map[string]any, error)                 // 获取所有设置，性能问题慎用
-	GetStoreSetting(ctx context.Context) (setting.Store, error)                                                                               // 获取商家设置
-	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                                                     // 获取商家语言
-	GetPrinterSetting(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Printer, error)     // 获取打印机设置
-	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                          // 获取收银机设置
-	GetAssistantSetting(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Assistant, error) // 获取点餐助手设置
-	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                    // 获取扫码H5设置
-	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                                         // 获取门店业务设置
-	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)                                        // 获取自助餐设置
-	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                                                         // 获取货币单位设置
-	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                                                      // 获取公司设置
-	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)                                      // 获取门店-支付方式设置
-	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                                                          // 获取收银机语言
-	GetCashierAd(ctx context.Context) (resp.Ads, error)                                                                                       // 获取收银机副屏广告
-	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                                                  // 获取服务费设置
-	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                           // 获取税率设置
-	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool                                          // 收银机验证密码
-	Updates(companyUuid uint64, settingKey string, values any) error                                                                          // 更新设置
-	VerifyAdvancedPassword(ctx context.Context, password string) error                                                                        // 验证高级密码
-	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                     // 检查更新
+	GetStoreSetting(ctx context.Context) (setting.Store, error)                                              // 获取商家设置
+	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                    // 获取商家语言
+	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)         // 获取打印机设置
+	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) setting.PrinterInfo // 获取打印机信息
+	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)         // 获取收银机设置
+	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)     // 获取点餐助手设置
+	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                   // 获取扫码H5设置
+	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                        // 获取门店业务设置
+	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)       // 获取自助餐设置
+	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                        // 获取货币单位设置
+	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                     // 获取公司设置
+	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)     // 获取门店-支付方式设置
+	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                         // 获取收银机语言
+	GetCashierAd(ctx context.Context) (resp.Ads, error)                                                      // 获取收银机副屏广告
+	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                 // 获取服务费设置
+	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                          // 获取税率设置
+	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool         // 收银机验证密码
+	Updates(companyUuid uint64, settingKey string, values any) error                                         // 更新设置
+	VerifyAdvancedPassword(ctx context.Context, password string) error                                       // 验证高级密码
+	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)    // 检查更新
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -102,9 +104,9 @@ func (s *Srv) fromCache(ctx context.Context) ([]model.Setting, error) {
 }
 
 // GetAll 获取所有设置
-func (s *Srv) GetAll(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (map[string]any, error) {
+func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.LanguageItem) (map[string]any, error) {
 	// 获取company_setting
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	companySetting := companySettingRepo.Get()
 
 	var retSettings = make(map[string]any)
@@ -534,7 +536,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 }
 
 // GetPrinterSetting 获取打印机设置
-func (s *Srv) GetPrinterSetting(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Printer, error) {
+func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error) {
 	var (
 		err     error
 		printer setting.Printer
@@ -554,13 +556,56 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, companyUuid uint64, languag
 	// 过滤佛历、过滤打印方式，使用默认
 	printer.CalendarList = nil
 	printer.PrintList = nil
-	defaultPrinter := s.getDefaultPrinter(language, languageList)
+	defaultPrinter := s.getDefaultPrinter(ctx.GetLanguage(), languageList)
 	err = copier.CopyWithOption(&defaultPrinter, printer, copier.Option{IgnoreEmpty: true})
 	if err != nil {
 		ctx.Log().Error("合并小票打印机设置失败", zap.Error(err))
 		return printer, errors.New("合并小票打印机设置失败")
 	}
 	return defaultPrinter, nil
+}
+
+// GetPrinterInfo 获取打印机设置
+func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) setting.PrinterInfo {
+	var (
+		printer          model.Printer
+		printerBrand     string
+		printerUuid      uint64
+		printerUuidStr   string
+		cashierBindKey   string
+		isCashierPrinter bool
+		isCashierOpen    bool
+	)
+	if printerSetting.CashierOpen == "1" {
+		isCashierOpen = true
+		for _, cashierPrinter := range printerSetting.CashierPrinter {
+			if cashierPrinter.Key == deviceId {
+				printerUuidStr = cashierPrinter.PrinterId // ToDo 这里的printer_id 是什么类型
+				break
+			}
+		}
+		printerUuid, _ = strconv.ParseUint(printerUuidStr, 10, 64)
+		matched, _ := regexp.MatchString(`^-?\d+$`, printerUuidStr)
+		if len(printerUuidStr) > 12 || !matched {
+			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+			printerBrand = deviceRepo.GetDeviceBrand(deviceRepo.WhereDeviceId(deviceId))
+			cashierBindKey = printerUuidStr
+			printerUuid = 0
+			isCashierPrinter = true
+		} else if printerUuid != 0 {
+			printerRepo := repository.NewPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+			printer = printerRepo.Get(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())
+		}
+	}
+
+	return setting.PrinterInfo{
+		PrinterBrand:     printerBrand,
+		Printer:          printer,
+		PrinterUuid:      printerUuid,
+		IsCashierPrinter: isCashierPrinter,
+		IsCashierOpen:    isCashierOpen,
+		CashierBindKey:   cashierBindKey,
+	}
 }
 
 // GetBusinessSetting 门店业务设置
@@ -689,7 +734,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 }
 
 // GetAssistantSetting 获取点餐助手设置
-func (s *Srv) GetAssistantSetting(ctx context.Context, companyUuid uint64, language string, languageList []dto.LanguageItem) (setting.Assistant, error) {
+func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error) {
 	var (
 		err       error
 		assistant setting.Assistant
@@ -709,7 +754,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, companyUuid uint64, langu
 	if len(assistant.LanguageList) == 0 {
 		assistant.LanguageList = nil
 	}
-	defaultAssistant := s.getDefaultAssistant(language, languageList)
+	defaultAssistant := s.getDefaultAssistant(ctx.GetLanguage(), languageList)
 	err = copier.CopyWithOption(&defaultAssistant, assistant, copier.Option{IgnoreEmpty: true})
 	if err != nil {
 		ctx.Log().Error("合并各端-点餐助手设置失败", zap.Error(err))

@@ -6,16 +6,17 @@ import (
 )
 
 type CashierBase struct {
-	Username     string           `json:"username"`      // 登录账号
-	CashierUuid  uint64           `json:"cashier_uuid"`  // 收银员UUID
-	DeviceId     string           `json:"device_id"`     // 设备ID
-	DeviceRemark string           `json:"device_remark"` // 设备备注
-	Cashier      setting.Cashier  `json:"cashier"`       // 收银机设置
-	Business     setting.Business `json:"business"`      // 门店业务设置
-	Buffet       setting.Buffet   `json:"buffet"`        // 自助餐设置
-	Currency     setting.Currency `json:"currency"`      // 货币单位
-	Permissions  []*Permission    `json:"permissions"`   // 页面权限
-	Company      Company          `json:"company"`       // 商家信息
+	Username     string           `json:"username"`       // 登录账号
+	CashierUuid  uint64           `json:"cashier_uuid"`   // 收银员UUID
+	DeviceId     string           `json:"device_id"`      // 设备ID
+	DeviceRemark string           `json:"device_remark"`  // 设备备注
+	IsFirstLogin string           `json:"is_first_login"` // 是否首次登录
+	Cashier      setting.Cashier  `json:"cashier"`        // 收银机设置
+	Business     setting.Business `json:"business"`       // 门店业务设置
+	Buffet       setting.Buffet   `json:"buffet"`         // 自助餐设置
+	Currency     setting.Currency `json:"currency"`       // 货币单位
+	Permissions  []*Permission    `json:"permissions"`    // 页面权限
+	Company      Company          `json:"company"`        // 商家信息
 }
 
 type AssistantBase struct {
@@ -24,8 +25,9 @@ type AssistantBase struct {
 }
 
 type Company struct {
-	Uuid uint64 `json:"uuid"` // 商家UUID
-	Name string `json:"name"` // 商家名称
+	Uuid     uint64 `json:"uuid"`      // 商家UUID
+	Name     string `json:"name"`      // 商家名称
+	TimeZone string `json:"time_zone"` // 时区，形如 Asia/Shanghai
 }
 
 type Permission struct {
@@ -66,4 +68,14 @@ type UpdateInfo struct {
 	ForcedUpdate int    `json:"forced_update"`
 	UpdateLog    string `json:"update_log"`
 	DownloadURL  string `json:"download_url"`
+}
+
+type LoginResp struct {
+	Token               string `json:"token"`
+	CashierIsFirstLogin bool   `json:"cashier_is_first_login"`
+}
+
+type CashierLoginResp struct {
+	Token        string `json:"token"`           // token
+	IsFirstLogin bool   `json:" is_first_login"` // 是否首次登录
 }

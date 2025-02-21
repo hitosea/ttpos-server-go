@@ -23,7 +23,7 @@ import (
 )
 
 type IAuthSrv interface {
-	Login(ctx context.Context, loginReq req.LoginReq) (string, error)                                             // 登录
+	Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)                                     // 登录
 	Logout(ctx context.Context) error                                                                             // 退出登录
 	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                    // 收银端基本信息
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                // 点餐助手端基本信息
@@ -95,21 +95,22 @@ func NewAuthSrvImpl(
 }
 
 // Login 登录
-func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, error) {
+func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error) {
+	var loginResp resp.LoginResp
 	var token string
 	// 验证验证码
 	if !s.captchaSrv.Verify(ctx.GetGinContext().GetHeader("X-Sign"), loginReq.Code) {
-		return token, errors.New("验证码错误")
+		return loginResp, errors.New("验证码错误")
 	}
 	var staff model.Staff
 	if config.Server.DeployMode == "cloud" { // 云上版本
 		companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		companyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsername(loginReq.Username))
 		if companyStaff.Uuid == 0 {
-			return token, errors.New("账号或密码错误")
+			return loginResp, errors.New("账号或密码错误")
 		}
 		if companyStaff.CompanyUuid == 0 {
-			return token, errors.New("未找到绑定的商家，请确认登录信息")
+			return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
 		staff = staffRepo.GetStaff(staffRepo.WhereUuid(companyStaff.Uuid), staffRepo.WithCompany())
@@ -118,36 +119,38 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		staff = staffRepo.GetStaff(staffRepo.WhereUsername(loginReq.Username), staffRepo.WithCompany())
 	}
 	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
-		return token, errors.New("账号或密码错误")
+		return loginResp, errors.New("账号或密码错误")
 	}
 	// 检查员工状态
 	if staff.DeleteTime != 0 {
-		return token, errors.New("账号被删除，请联系管理员")
+		return loginResp, errors.New("账号被删除，请联系管理员")
 	}
 	if staff.IsDisable == 1 {
-		return token, errors.New("账号被禁用，请联系管理员")
+		return loginResp, errors.New("账号被禁用，请联系管理员")
 	}
 	// 商家状态
 	if staff.Company == nil || staff.Company.Uuid == 0 || staff.Company.DeleteTime != 0 {
-		return token, errors.New("未找到绑定的商家，请确认登录信息")
+		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
+
+	isFirstLogin := staff.CashierOnline == 0
 
 	switch loginReq.Source {
 	case constant.SourceCashier: // 收银端登录
 		// 判断权限
 		permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 		if err != nil {
-			return token, err
+			return loginResp, err
 		}
 		if len(permissions) == 0 {
-			return token, errors.New("当前无权限，请联系管理员")
+			return loginResp, errors.New("当前无权限，请联系管理员")
 		}
 		// ToDo 记得开启
 		//// 检查是否有未交班的收银员
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
 		//currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
 		//if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
-		//	return token, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+		//	return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 		//}
 		//// 是否已在其他收银机登录
 		//if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
@@ -155,7 +158,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		//	if cashierName == "" {
 		//		cashierName = staff.Username
 		//	}
-		//	return token, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+		//	return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 		//}
 
 		// 更新员工信息
@@ -167,22 +170,22 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
 			shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
 			if err != nil {
-				return "", apperrors.ErrInternal
+				return loginResp, apperrors.ErrInternal
 			}
 			updates["cashier_login_time"] = shiftLog.ShiftStartTime
 			updates["duty_no"] = shiftLog.ShiftNo
 		}
 		err = staffRepo.Update(staff.Uuid, updates)
 		if err != nil {
-			return token, errors.New("更新信息失败")
+			return loginResp, errors.New("更新信息失败")
 		}
 	case constant.SourceAssistant: // 点餐助手登录
 		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
 		if companySetting.IsOpenAssistant != 1 {
-			return token, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+			return loginResp, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 		}
 	default:
-		return token, errors.New("登录来源错误")
+		return loginResp, errors.New("登录来源错误")
 	}
 
 	// 添加绑定记录
@@ -195,22 +198,25 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (string, err
 		CompanyUuid:      staff.CompanyUuid,
 	})
 	if err != nil {
-		return token, err
+		return loginResp, err
 	}
 
 	// 生成 JWT token
 	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{})
 	if err != nil {
-		return token, errors.New("生成token失败")
+		return loginResp, errors.New("生成token失败")
 	}
-	return token, nil
+	return resp.LoginResp{
+		Token:               token,
+		CashierIsFirstLogin: isFirstLogin,
+	}, nil
 }
 
 // Logout 退出登录
 func (s *authSrv) Logout(ctx context.Context) error {
-	companyUuid := helper.GetCompanyUuid(ctx.GetGinContext())
-	source := helper.GetSource(ctx.GetGinContext())
-	staffUuid := ctx.GetGinContext().GetUint64(jwt.StaffUuid)
+	companyUuid := ctx.GetCompanyUuid()
+	source := ctx.GetSource()
+	staffUuid := ctx.GetStaffUuid()
 	assistantUuid := ctx.GetGinContext().GetUint64(jwt.AssistantStaffUuid)
 
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
@@ -224,11 +230,11 @@ func (s *authSrv) Logout(ctx context.Context) error {
 // CashierBase 获取收银端基本信息
 func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	var cashierBase resp.CashierBase
-	company := helper.GetCompany(ctx.GetGinContext())
-	companySetting := helper.GetCompanySetting(ctx.GetGinContext())
-	staff := helper.GetStaff(ctx.GetGinContext())
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	staff := ctx.GetStaff()
 	var (
-		source   = helper.GetSource(ctx.GetGinContext())
+		source   = ctx.GetSource()
 		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
 	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
@@ -267,8 +273,9 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		Currency:     currencySetting,
 		Permissions:  permissions,
 		Company: resp.Company{
-			Uuid: company.Uuid,
-			Name: company.Name,
+			Uuid:     company.Uuid,
+			Name:     company.Name,
+			TimeZone: companySetting.Timezone,
 		},
 	}, nil
 }

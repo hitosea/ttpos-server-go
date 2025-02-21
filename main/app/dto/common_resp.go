@@ -6,14 +6,14 @@ type Response struct {
 	Data    any    `json:"data"`
 }
 
-// 分页响应
+// PageResponse 分页响应
 type PageResponse struct {
 	PageNo   int   `json:"page_no"`   // 当前页码
 	PageSize int   `json:"page_size"` // 每页大小
 	Total    int64 `json:"total"`     // 总数
 }
 
-// 语言响应
+// LocaleResponse 语言响应
 type LocaleResponse struct {
 	ZH   string `json:"zh"`   // 中文
 	TH   string `json:"th"`   // 泰语
@@ -38,7 +38,7 @@ const (
 	LocaleTR   LocaleType = "tr"
 )
 
-// 获取语言
+// GetLocale 获取语言
 func (l *LocaleResponse) GetLocale(locale string) string {
 	switch locale {
 	case "zh":

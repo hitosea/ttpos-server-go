@@ -16,11 +16,11 @@ import (
 
 // ICallSrv 定义沽清服务接口
 type ICallSrv interface {
-	GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) // 获取未处理的呼叫列表
-	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error)    // 异常打印列表
-	Processed(companyUuid uint64, callUuid uint64) error                                                             // 呼叫已处理
-	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
-	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
+	AddLog(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error)              // 获取未处理的呼叫列表
+	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error) // 异常打印列表
+	Processed(companyUuid uint64, callUuid uint64) error                                                          // 呼叫已处理
+	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                    // 打印删除
+	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                 // 重新打印
 
 	Unprocessed(companyUuid uint64) (resp.UnprocessedResp, error) // todo 获取未处理消息数量
 }
@@ -44,7 +44,7 @@ func NewCallSrvImpl(dbm *database.DBManager) ICallSrv {
 }
 
 // GetUnprocessedCallList 获取未处理的呼叫列表
-func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) {
+func (s *callSrv) AddLog(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) {
 	var res resp.UnprocessedCallList
 	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
 	calls, total, err := callRepo.PaginateGet(listReq.PageNo, listReq.PageSize, callRepo.WhereC1Status(constant.CallStatusUnprocessed))

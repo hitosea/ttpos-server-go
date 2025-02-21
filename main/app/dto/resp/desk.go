@@ -67,7 +67,7 @@ type DeskInfoResp struct {
 	Time          uint   `json:"time"`                     // 桌台用餐时间（秒）
 }
 
-// 创建桌台订单响应
+// CreateDeskOrderResp 创建桌台订单响应
 type CreateDeskOrderResp struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID

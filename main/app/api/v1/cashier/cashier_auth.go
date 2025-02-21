@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -25,22 +26,25 @@ type AuthHandler struct {
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.CashierLoginResp}
 // @Router /cashier/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var loginRequest req.LoginReq
-	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
+	var loginReq req.LoginReq
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
 		return
 	}
-	loginRequest.Source = constant.SourceCashier
-	token, err := h.authSrv.Login(ctx, loginRequest)
+	loginReq.Source = constant.SourceCashier
+	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, gin.H{"token": token})
+	helper.Success(c, resp.CashierLoginResp{
+		Token:        loginResp.Token,
+		IsFirstLogin: loginResp.CashierIsFirstLogin,
+	})
 }
 
 // Logout 收银端退出登录

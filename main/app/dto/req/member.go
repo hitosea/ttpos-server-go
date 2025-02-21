@@ -79,3 +79,9 @@ var CheckMemberPasswordMessage = map[string]string{
 	"password.min":    "密码必须为4-16位纯数字",
 	"password.max":    "密码必须为4-16位纯数字",
 }
+
+// PrintRechargeOrderReq 打印充值订单
+type PrintRechargeOrderReq struct {
+	RechargeOrderUuid uint64 `json:"recharge_order_uuid" binding:"required"` // 充值订单Uuid
+	PrintLang         string `json:"print_lang"`                             // 打印语言
+}

@@ -19,6 +19,8 @@ type IPrinterLogRepo interface {
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
 	Update(uuid uint64, vars map[string]any) error
+
+	Create(printerLog model.PrinterLog) (model.PrinterLog, error)
 }
 
 func NewPrinterLogRepo(db *gorm.DB) IPrinterLogRepo {
@@ -108,4 +110,9 @@ func (r *printerLogRepo) WhereUuid(uuid uint64) DBOption {
 
 func (r *printerLogRepo) Update(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.PrinterLog{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {
+	err := r.db.Model(&model.PrinterLog{}).Create(&printerLog).Error
+	return printerLog, err
 }
