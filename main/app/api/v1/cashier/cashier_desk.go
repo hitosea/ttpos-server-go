@@ -321,13 +321,14 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
-// @Param id path string true "账单ID"
+// @Param sale_bill_uuid path string true "账单ID"
+// @Param sale_order_uuid path string true "销售订单UUID"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cart/info [get]
 func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	saleBillUuid, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	saleBillUuid, err := strconv.ParseUint(c.Query("sale_bill_uuid"), 10, 64)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
