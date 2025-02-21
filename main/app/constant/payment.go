@@ -49,3 +49,9 @@ const (
 	PaymentOrderStatusPaid   = 1 // 支付订单已支付
 	PaymentOrderStatusRefund = 2 // 支付订单已退款
 )
+
+// 支付订单关联的订单类型
+const (
+	PaymentOrderRelatedTypeSaleOrder     = 0 // 销售订单
+	PaymentOrderRelatedTypeRechargeOrder = 1 // 充值订单
+)

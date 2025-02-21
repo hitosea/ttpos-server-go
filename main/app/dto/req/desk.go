@@ -8,24 +8,24 @@ var DeskReqMessage = map[string]string{
 	"sale_order_uuid.required": "销售订单UUID不能为空",
 }
 
-// 桌台列表查询
+// DeskListReq 桌台列表查询
 type DeskListReq struct {
 	dto.PageReq // 分页参数
 }
 
-// 桌台信息
+// DeskInfoReq 桌台信息
 type DeskInfoReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
 }
 
-// 关闭桌台
+// DeskCloseReq 关闭桌台
 type DeskCloseReq struct {
 	Uuid     uint64 `form:"uuid" binding:"required"` // 桌台uuid
 	Reason   string `form:"reason"`                  // 关闭原因
 	Password string `form:"password"`                // 密码 后台开启的时候才传
 }
 
-// 关闭桌台订单
+// DeskOrderCloseReq 关闭桌台订单
 type DeskOrderCloseReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"  binding:"required"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"  binding:"required"` // 销售订单UUID
@@ -33,13 +33,13 @@ type DeskOrderCloseReq struct {
 	Password      string `form:"password"`                            // 密码 后台开启的时候才传
 }
 
-// 自助餐顾客类型
+// DeskBuffetCustomerType 自助餐顾客类型
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
 	MealNum *uint  `json:"meal_num"` // 就餐人数
 }
 
-// 桌台订单创建
+// DeskOrderCreateReq 桌台订单创建
 type DeskOrderCreateReq struct {
 	DeskUuid            uint64                   `json:"desk_uuid"`             // 桌台uuid, 必填
 	IsBuffet            *bool                    `json:"is_buffet"`             // 是否是自助餐: false-否, true-是

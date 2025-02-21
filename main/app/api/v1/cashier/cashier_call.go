@@ -61,7 +61,7 @@ func (h *CallHandler) GetUnprocessedCallList(c *gin.Context) {
 		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
-	res, err := h.callSrv.GetUnprocessedCallList(helper.GetCompanyUuid(c), listReq)
+	res, err := h.callSrv.AddLog(helper.GetCompanyUuid(c), listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

@@ -1,6 +1,9 @@
 package setting
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/model"
+)
 
 // Printer 小票打印机设置
 type Printer struct {
@@ -34,5 +37,14 @@ type PrintItem struct {
 
 type CashierPrinterItem struct {
 	Key       string `json:"key"`
-	PrinterId string `json:"printer_id"`
+	PrinterId string `json:"printer_id"` // ToDo 这里是什么类型
+}
+
+type PrinterInfo struct {
+	PrinterBrand     string
+	Printer          model.Printer
+	PrinterUuid      uint64
+	IsCashierPrinter bool
+	IsCashierOpen    bool
+	CashierBindKey   string
 }

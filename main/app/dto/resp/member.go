@@ -66,3 +66,8 @@ type MemberDiscountResp struct {
 	HasPassword     bool    `json:"has_password"`     // 是否设置了密码
 	DiscountedPrice float64 `json:"discounted_price"` // 折扣后价格
 }
+
+// PrintRechargeOrderResp 打印充值订单
+type PrintRechargeOrderResp struct {
+	PrinterData string `json:"printer_data"`
+}

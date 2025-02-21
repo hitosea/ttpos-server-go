@@ -54,7 +54,7 @@ func (h *MemberHandler) SearchMember(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param uuid query number true "uuid"
+// @param uuid query integer true "uuid"
 // @Success 200 {object} dto.Response{data=resp.RechargeMember}
 // @Router /cashier/member/recharge_member [get]
 func (h *MemberHandler) RechargeMember(c *gin.Context) {
@@ -232,8 +232,8 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param sale_order_uuid query number true "销售订单uuid"
-// @param member_uuid query number true "会员Uuid"
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param member_uuid query integer true "会员Uuid"
 // @Success 200 {object} dto.Response
 // @Router /cashier/member/confirm_recharge_order [get]
 func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {

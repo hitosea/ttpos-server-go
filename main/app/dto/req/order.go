@@ -12,7 +12,7 @@ var OrderReqMessage = map[string]string{
 	"remark.required":             "备注不能为空",
 }
 
-// 订单列表查询
+// OrderListReq 订单列表查询
 type OrderListReq struct {
 	dto.PageReq             // 分页参数
 	OrderNo          string `form:"order_no"`                 // 订单编号
@@ -26,39 +26,39 @@ type OrderListReq struct {
 	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式,-1=全都、 0-堂食 1-打包
 }
 
-// 订单信息查询
+// OrderInfoReq 订单信息查询
 type OrderInfoReq struct {
 	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
 }
 
-// 订单取消
+// OrderCancelReq 订单取消
 type OrderCancelReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
 	CancelReason string `json:"cancel_reason"`  // 取消原因
 	Password     string `form:"password"`       // 高级密码 后台开启的时候才传
 }
 
-// 订单删除
+// OrderDeleteReq 订单删除
 type OrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
 }
 
-// 是否可关闭订单
+// OrderIsCellCloseReq 是否可关闭订单
 type OrderIsCellCloseReq struct {
 	DeskUuid     uint64 `form:"desk_uuid"`      // 桌台UUID	   二选一, 销售账单UUID权重最大
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
 }
 
-// 删除订单商品
+// OrderProductDeleteReq 删除订单商品
 type OrderProductDeleteReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
 	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
 	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
 }
 
-// 订单商品改价
+// OrderProductChangePriceReq 订单商品改价
 type OrderProductChangePriceReq struct {
 	SaleBillUuid     uint64  `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
 	SaleOrderUuid    uint64  `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
@@ -66,13 +66,13 @@ type OrderProductChangePriceReq struct {
 	Price            float64 `json:"price" binding:"required"`              // 改价
 }
 
-// 订单人数
+// OrderChangePopulationReq 订单人数
 type OrderChangePopulationReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
 	Population   int    `json:"population" binding:"required"`     // 人数
 }
 
-// 订单商品remark
+// OrderProductRemarkReq 订单商品remark
 type OrderProductRemarkReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
 	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID

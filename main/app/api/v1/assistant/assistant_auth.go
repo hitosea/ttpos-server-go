@@ -30,18 +30,18 @@ type AuthHandler struct {
 // @Router /assistant/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var loginRequest req.LoginReq
-	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		helper.HandleValidationError(c, err, loginRequest, req.LoginRequestMessage)
+	var loginReq req.LoginReq
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
 		return
 	}
-	loginRequest.Source = constant.SourceAssistant
-	token, err := h.authSrv.Login(ctx, loginRequest)
+	loginReq.Source = constant.SourceAssistant
+	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
-	helper.Success(c, gin.H{"token": token})
+	helper.Success(c, gin.H{"token": loginResp.Token})
 }
 
 // Logout 点餐助手退出登录

@@ -22,13 +22,13 @@ type AmountInfo struct {
 	Amount                float64 `json:"amount"`                 // 总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）
 }
 
-// 自助餐信息
+// BuffetInfo 自助餐信息
 type BuffetInfo struct {
 	EndTime    int64              `json:"end_time"`    // 自助餐结束时间
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 自助餐名称
 }
 
-// 桌台信息
+// DeskInfo 桌台信息
 type DeskInfo struct {
 	Uuid      uint64 `json:"uuid"`       // 桌台ID
 	DeskNo    string `json:"desk_no"`    // 桌台编号
@@ -36,7 +36,7 @@ type DeskInfo struct {
 	StartTime int64  `json:"start_time"` // 开台时间
 }
 
-// 购物车销售订单信息
+// SaleOrder 购物车销售订单信息
 type SaleOrder struct {
 	Uuid        uint64     `json:"uuid"`
 	OrderNo     string     `json:"order_no"`
@@ -44,7 +44,7 @@ type SaleOrder struct {
 	AmountInfo  AmountInfo `json:"amount_info"`
 }
 
-// 购物车商品
+// Product 购物车商品
 type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 自助餐名称

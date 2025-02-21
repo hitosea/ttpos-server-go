@@ -7,7 +7,6 @@ import (
 	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 
 	"ttpos-server-go/app/constant"
@@ -106,7 +105,7 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, addReq.CompanyUuid, i18n.GetAcceptLanguage(ctx.GetGinContext()), []dto.LanguageItem{})
+		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
 		if err != nil {
 			return err
 		}

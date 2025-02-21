@@ -2,12 +2,12 @@ package resp
 
 import "ttpos-server-go/app/dto"
 
-// 创建订单响应
+// CreateOrderResp 创建订单响应
 type CreateOrderResp struct {
 	Uuid uint64 `json:"uuid"` // 订单UUID
 }
 
-// 账单列表订单响应
+// BillListsOrder 账单列表订单响应
 type BillListsOrder struct {
 	SaleBillUuid  uint64         `json:"sale_bill_uuid"`  // 销售订单UUID
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
@@ -23,7 +23,7 @@ type BillListsOrder struct {
 	Extra         BillListsExtra `json:"extra,omitempty"`
 }
 
-// 账单列表额外信息响应
+// BillListsExtra 账单列表额外信息响应
 type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellRefund        bool `json:"is_cell_refund"`         // 是否可退款
 	IsCellCancel        bool `json:"is_cell_cancel"`         // 是否可取消
@@ -33,7 +33,7 @@ type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
 }
 
-// 订单列表响应
+// BillLists 订单列表响应
 type BillLists struct {
 	SaleBillUuid  uint64           `json:"sale_bill_uuid"`  // 销售账单UUID
 	BillType      uint             `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
@@ -50,7 +50,7 @@ type BillLists struct {
 	Extra         BillListsExtra   `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
 
-// 订单列表分页响应
+// OrderListPaginationResp 订单列表分页响应
 type OrderListPaginationResp struct {
 	List []BillLists `json:"list"` // 订单列表
 	Meta struct {
@@ -85,14 +85,14 @@ type OrderProduct struct {
 	RefundAmount   float64            `json:"refund_amount"`    // 退款金额
 	Status         uint               `json:"status"`           // 状态, 0-正常 1-退菜
 	Remark         string             `json:"remark"`           // 备注
-	IsGift         bool               `json:"is_gift"`          // 是否赠品, fasle-否 true-是
+	IsGift         bool               `json:"is_gift"`          // 是否赠品, false-否 true-是
 	GiftReason     string             `json:"gift_reason"`      // 赠品原因
 	Attributes     string             `json:"attributes"`       // 规格属性加料
 	ImageUrl       string             `json:"image_url"`        // 图片地址
 	RefundReason   string             `json:"refund_reason"`    // 退菜原因
 }
 
-// 订单信息响应
+// OrderInfo 订单信息响应
 type OrderInfo struct {
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
@@ -112,7 +112,7 @@ type OrderInfo struct {
 	Products      []OrderProduct `json:"products"`        // 产品列表
 }
 
-// 订单信息响应
+// OrderInfos 订单信息响应
 type OrderInfos struct {
 	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
 	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单

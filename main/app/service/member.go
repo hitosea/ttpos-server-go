@@ -36,6 +36,7 @@ type IMemberSrv interface {
 	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
 	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error)                     // 获取会员折扣
 	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                            // 使用会员优惠验证密码
+	PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrintRechargeOrderResp, error)               // 打印充值订单
 }
 
 // memberSrv 会员服务结构体
@@ -401,6 +402,7 @@ func (s *memberSrv) AddPaymentMethod(ctx context.Context, addReq req.RechargeOrd
 			PaymentMethodName:    paymentMethod.PaymentName,
 			PaymentMethodUuid:    paymentMethod.Uuid,
 			PaymentFeePercent:    paymentMethod.FeePercent,
+			RelatedType:          constant.PaymentOrderRelatedTypeRechargeOrder,
 			RelatedUuid:          rechargeOrder.Uuid,
 			CurrencyUnit:         currencySetting.Unit, // 留档使用
 			PaymentAmount:        addReq.PaymentAmount,
@@ -699,4 +701,16 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 		return errors.New("密码错误")
 	}
 	return nil
+}
+
+func (s *memberSrv) PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrintRechargeOrderResp, error) {
+	var res resp.PrintRechargeOrderResp
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(discountReq.RechargeOrderUuid))
+	if rechargeOrder.Uuid == 0 {
+		return res, errors.New("充值订单不存在")
+	}
+	//s.settingSrv
+
+	return resp.PrintRechargeOrderResp{}, nil
 }

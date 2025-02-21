@@ -9,6 +9,9 @@ import (
 
 type IDeviceRepo interface {
 	GetDeviceBySn(ctx context.Context, deviceSn string) (*model.Device, error)
+	GetDeviceBrand(opts ...DBOption) string
+
+	WhereDeviceId(deviceId string) DBOption
 }
 
 func NewDeviceRepo(db *gorm.DB) IDeviceRepo {
@@ -29,4 +32,20 @@ func (r *DeviceRepo) GetDeviceBySn(ctx context.Context, deviceSn string) (*model
 		return nil, err
 	}
 	return &device, nil
+}
+
+func (r *DeviceRepo) GetDeviceBrand(opts ...DBOption) string {
+	var brand string
+	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("brand").Scan(&brand)
+	return brand
+}
+
+func (r *DeviceRepo) WhereDeviceId(deviceId string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_id = ?", deviceId)
+	}
 }
