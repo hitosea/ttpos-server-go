@@ -3,7 +3,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"sort"
 	"strconv"
@@ -69,12 +68,12 @@ type SaleBill struct {
 	DeviceUuid         uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
 
 	// 关联模型
-	SaleOrders      []SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	SaleBillSetting SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	Cashier         Staff           `gorm:"foreignKey:CashierUuid;references:uuid"`
-	Desk            Desk            `gorm:"foreignKey:DeskUuid;references:uuid"`
-	BuffetPackage1  BuffetPackage   `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
-	BuffetPackage2  BuffetPackage   `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+	SaleOrders      []*SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	SaleBillSetting *SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	Cashier         Staff            `gorm:"foreignKey:CashierUuid;references:uuid"`
+	Desk            Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
+	BuffetPackage1  BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
+	BuffetPackage2  BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
 func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
@@ -220,7 +219,7 @@ type SaleOrder struct {
 	// 关联对象
 	PaymentOrders                []PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"`
 	Member                       Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
-	SaleOrderProducts            []SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	SaleOrderProducts            []*SaleOrderProduct           `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
@@ -230,7 +229,6 @@ type SaleOrder struct {
 func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 	sumSalePrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
-		fmt.Println(fmt.Sprintf("-----333333333334234234orderProduct.SalePrice:%v", orderProduct.SalePrice))
 		// 销售订单商品已接单且未删除商品
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？要累计上
@@ -238,8 +236,10 @@ func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 			if orderProduct.IsCancelBool() {
 				continue
 			}
-			fmt.Println(fmt.Sprintf("-----23424324234-2-34234234orderProduct.SalePrice:%v", orderProduct.SalePrice))
-			sumSalePrice = sumSalePrice.Add(decimal.NewFromFloat(orderProduct.SalePrice))
+			// SalePrice * Num
+			saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+			sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
+			fmt.Println("sumSalePrice:", sumSalePrice.InexactFloat64())
 		}
 	}
 	return sumSalePrice.InexactFloat64()
@@ -256,7 +256,9 @@ func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 			if orderProduct.IsGiftBool() || orderProduct.IsCancelBool() {
 				continue
 			}
-			sumPrice = sumPrice.Add(decimal.NewFromFloat(orderProduct.Price))
+			// price * num
+			price := decimal.NewFromFloat(orderProduct.Price).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+			sumPrice = sumPrice.Add(price)
 		}
 	}
 	return sumPrice.InexactFloat64()
@@ -264,8 +266,6 @@ func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 
 // 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格CustomerPrice之和 + 自助餐加钟商品价格Price之和
 func (model *SaleOrder) CalcProductOriginalAmount() float64 {
-	num := len(model.SaleOrderProducts)
-	log.Println("SaleOrderProducts len:", num)
 	return model.calcSumOrderProductSalePrice() // todo + 自助餐顾客价格之和 + 自助餐加钟商品价格之和
 }
 
@@ -446,19 +446,21 @@ func (model *SaleOrder) CalcServiceFee(serviceFeeType int, serviceFeeValue float
 	return 0
 }
 
-func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) {
-	type Calc struct {
-		ProductOriginalAmount float64 `json:"product_original_amount"`
-		ProductAmount         float64 `json:"product_amount"`
-		ServiceFee            float64 `json:"service_fee"`
-		TaxFee                float64 `json:"tax_fee"`
-		CustomDiscountFee     float64 `json:"custom_discount_fee"`
-		MemberDiscountFee     float64 `json:"member_discount_fee"`
-		Amount                float64 `json:"amount"`
-		ZeroFee               float64 `json:"zero_fee"`
-		//ZeroCheckoutFee       float64
-		//PaymentAmount         float64
-	}
+type Calc struct {
+	ProductOriginalAmount float64 `json:"product_original_amount"`
+	ProductAmount         float64 `json:"product_amount"`
+	ServiceFee            float64 `json:"service_fee"`
+	TaxFee                float64 `json:"tax_fee"`
+	CustomDiscountFee     float64 `json:"custom_discount_fee"`
+	MemberDiscountFee     float64 `json:"member_discount_fee"`
+	Amount                float64 `json:"amount"`
+	ZeroFee               float64 `json:"zero_fee"`
+	//ZeroCheckoutFee       float64
+	//PaymentAmount         float64
+}
+
+func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
+
 	calc := Calc{}
 	calc.ProductOriginalAmount = model.CalcProductOriginalAmount()
 	model.ProductOriginalAmount = calc.ProductOriginalAmount
@@ -476,6 +478,7 @@ func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.Amount = calc.Amount
 	calc.ZeroFee = model.CalcZeroFee()
 	model.ZeroFee = calc.ZeroFee
+	return &calc
 }
 
 // TableName 指定表名

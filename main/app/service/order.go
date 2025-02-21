@@ -1306,7 +1306,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	for i, _ := range saleBill.SaleOrders {
 		order := saleBill.SaleOrders[i]
 		if order.Uuid == req.SaleOrderUuid {
-			saleOrder = &saleBill.SaleOrders[i]
+			saleOrder = saleBill.SaleOrders[i]
 			break
 		}
 	}
@@ -1423,7 +1423,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	var newSaleOrder model.SaleOrder
+	var newSaleOrder *model.SaleOrder
 	for i, _ := range newSaleBill.SaleOrders {
 		order := saleBill.SaleOrders[i]
 		if order.Uuid == req.SaleOrderUuid {
@@ -1438,7 +1438,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	newSaleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	// 更新订单记录
-	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(&newSaleOrder); errUpdate != nil {
+	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(newSaleOrder); errUpdate != nil {
 		return nil, errUpdate
 	}
 
@@ -1489,13 +1489,13 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, req req.Order
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-	ctx.Log().Debug("重新计算了商品金额")
-	saleOrder.SaleOrderProducts[index] = *saleOrderProduct
+	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
+	saleOrder.SaleOrderProducts[index] = saleOrderProduct
 
 	// 计算订单金额
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
-	ctx.Log().Debug("重新计算了订单金额")
+	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
 
 	if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 		return nil, errUpdate
@@ -1527,7 +1527,7 @@ func getSaleOrder(saleOrderUuid uint64, saleBill *model.SaleBill) (*model.SaleOr
 	for i, _ := range saleBill.SaleOrders {
 		order := saleBill.SaleOrders[i]
 		if order.Uuid == saleOrderUuid {
-			return &saleBill.SaleOrders[i], nil
+			return saleBill.SaleOrders[i], nil
 		}
 	}
 	return nil, errors.New("销售订单不存在")
@@ -1537,7 +1537,7 @@ func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder
 	for i, _ := range saleOrder.SaleOrderProducts {
 		orderProduct := saleOrder.SaleOrderProducts[i]
 		if orderProduct.Uuid == saleOrderProductUuid {
-			return &saleOrder.SaleOrderProducts[i], i, nil
+			return saleOrder.SaleOrderProducts[i], i, nil
 		}
 	}
 	return nil, 0, errors.New("销售订单商品不存在")

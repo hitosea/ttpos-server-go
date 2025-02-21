@@ -10,10 +10,10 @@ import (
 
 // 订单计算服务
 type IOrderCalcSrv interface {
-	CalcOrderProductAmount(saleBill model.SaleBill, saleOrder model.SaleOrder, orderProduct model.SaleOrderProduct) CalcOrderProductAmountResp // 计算订单商品金额
-	CalcOrderProductDiscountAmount(req CalcOrderProductDiscountAmountReq) CalcOrderProductDiscountAmountResp                                   // 计算订单商品折扣金额
-	CalcOrderProductTaxAmount(req CalcOrderProductTaxAmountReq) CalcOrderProductTaxAmountResp                                                  // 计算订单商品税费
-	CalcOrderProductServiceAmount(req CalcOrderProductServiceAmountReq) CalcOrderProductServiceAmountResp                                      // 计算订单商品服务费
+	CalcOrderProductAmount(saleBill *model.SaleBill, saleOrder *model.SaleOrder, orderProduct *model.SaleOrderProduct) CalcOrderProductAmountResp // 计算订单商品金额
+	CalcOrderProductDiscountAmount(req CalcOrderProductDiscountAmountReq) CalcOrderProductDiscountAmountResp                                      // 计算订单商品折扣金额
+	CalcOrderProductTaxAmount(req CalcOrderProductTaxAmountReq) CalcOrderProductTaxAmountResp                                                     // 计算订单商品税费
+	CalcOrderProductServiceAmount(req CalcOrderProductServiceAmountReq) CalcOrderProductServiceAmountResp                                         // 计算订单商品服务费
 }
 
 // 订单计算服务实现
@@ -40,7 +40,7 @@ type CalcOrderProductAmountResp struct {
 }
 
 // CalcOrderProductAmount 计算订单商品金额
-func (o *orderCalcSrv) CalcOrderProductAmount(saleBill model.SaleBill, saleOrder model.SaleOrder, orderProduct model.SaleOrderProduct) CalcOrderProductAmountResp {
+func (o *orderCalcSrv) CalcOrderProductAmount(saleBill *model.SaleBill, saleOrder *model.SaleOrder, orderProduct *model.SaleOrderProduct) CalcOrderProductAmountResp {
 	// 计算订单商品折扣金额
 	discountAmount := o.CalcOrderProductDiscountAmount(CalcOrderProductDiscountAmountReq{
 		SalePrice:              orderProduct.SalePrice,

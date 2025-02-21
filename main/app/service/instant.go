@@ -90,9 +90,9 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 	// 生成订单商品
 	err = s.orderProductSrv.CreateOrderProduct(dbId, CreateOrderProductReq{
 		Lang:           lang,
-		SaleBill:       saleBill,
+		SaleBill:       &saleBill,
 		SaleOrder:      saleBill.SaleOrders[0],
-		ProductPackage: *productPackage,
+		ProductPackage: productPackage,
 		SauceUuids:     req.Product.SauceUuids,
 		Num:            1,
 	})

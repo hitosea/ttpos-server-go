@@ -14,10 +14,10 @@ type IOrderProductRepo interface {
 	WhereSaleOrderUuids(uuids []uint64) DBOption
 	GetProductList(opts ...DBOption) ([]model.SaleOrderProduct, error) // 获取商品列表
 	GetProductInfoByUuid(uuid uint64) (model.SaleOrderProduct, error)  // 通过UUID获取商品详情
-	GetProductInfo(opts ...DBOption) (model.SaleOrderProduct, error)   // 获取商品详情
+	GetProductInfo(opts ...DBOption) (*model.SaleOrderProduct, error)  // 获取商品详情
 	Delete(uuid uint64) error
-	Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) // 创建订单商品
-	Update(data map[string]interface{}, opts ...DBOption) error          // 更新订单商品
+	Create(model *model.SaleOrderProduct) (*model.SaleOrderProduct, error) // 创建订单商品
+	Update(data map[string]interface{}, opts ...DBOption) error            // 更新订单商品
 }
 
 // orderProductRepo 商品仓库
@@ -71,8 +71,8 @@ func (r *orderProductRepo) Delete(uuid uint64) error {
 }
 
 // Create 创建订单产品
-func (r *orderProductRepo) Create(model model.SaleOrderProduct) (model.SaleOrderProduct, error) {
-	err := r.db.Create(&model).Error
+func (r *orderProductRepo) Create(model *model.SaleOrderProduct) (*model.SaleOrderProduct, error) {
+	err := r.db.Create(model).Error
 
 	return model, err
 }
@@ -91,7 +91,7 @@ func (r *orderProductRepo) GetProductInfoByUuid(uuid uint64) (model.SaleOrderPro
 }
 
 // GetProductInfo 获取商品详情
-func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (model.SaleOrderProduct, error) {
+func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (*model.SaleOrderProduct, error) {
 	var product model.SaleOrderProduct
 
 	db := r.db.Model(&model.SaleOrderProduct{}).Session(&gorm.Session{})
@@ -103,10 +103,10 @@ func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (model.SaleOrderProd
 	err := db.First(&product).Error
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return product, err
+		return &product, err
 	}
 
-	return product, nil
+	return &product, nil
 }
 
 // Update 更新

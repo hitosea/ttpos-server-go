@@ -30,7 +30,7 @@ type IOrderProductSrv interface {
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
 	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
-	GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct                    // 生成订单商品
+	GenerateOrderProduct(req GenerateOrderProductReq) *model.SaleOrderProduct                   // 生成订单商品
 	UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error                // 更新订单商品金额
 }
 
@@ -309,9 +309,9 @@ func (o *orderProductSrv) CheckCreateOrderProduct(dbId uint64, product req.AddPr
 // CreateOrderProductReq 创建订单商品请求
 type CreateOrderProductReq struct {
 	Lang           string
-	SaleBill       model.SaleBill
-	SaleOrder      model.SaleOrder
-	ProductPackage model.ProductPackage
+	SaleBill       *model.SaleBill
+	SaleOrder      *model.SaleOrder
+	ProductPackage *model.ProductPackage
 	SauceUuids     []uint64
 	Num            uint
 }
@@ -395,15 +395,15 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 // GenerateOrderProductReq 生成订单商品请求
 type GenerateOrderProductReq struct {
 	Lang           string
-	ProductPackage model.ProductPackage
-	SaleBill       model.SaleBill
-	SaleOrder      model.SaleOrder
+	ProductPackage *model.ProductPackage
+	SaleBill       *model.SaleBill
+	SaleOrder      *model.SaleOrder
 	SauceUuids     []uint64
 	Num            uint
 }
 
 // GenerateOrderProduct 生成订单商品
-func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) model.SaleOrderProduct {
+func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) *model.SaleOrderProduct {
 	// 获取商品规格名称
 	flavorName := ""
 	flavor := req.ProductPackage.GetFlavor()
@@ -476,14 +476,14 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) mode
 	orderProduct.SaleOrderProductAttributes = orderProductAttributes
 	orderProduct.Sign = orderProduct.GenerateProductSign()
 
-	return orderProduct
+	return &orderProduct
 }
 
 // UpdateOrderProductAmountReq 更新订单商品金额请求
 type UpdateOrderProductAmountReq struct {
-	SaleBill     model.SaleBill
-	SaleOrder    model.SaleOrder
-	OrderProduct model.SaleOrderProduct
+	SaleBill     *model.SaleBill
+	SaleOrder    *model.SaleOrder
+	OrderProduct *model.SaleOrderProduct
 }
 
 // UpdateOrderProductAmount 更新订单商品金额
