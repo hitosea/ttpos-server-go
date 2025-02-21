@@ -76,7 +76,7 @@ EOT
                 //
                 $this->migrate($version, 1);
                 //
-                foreach (Db::name('company')->column('uuid') as $appid) {
+                foreach (Db::name('company')->where('delete_time', '!=', 0)->column('uuid') as $appid) {
                     $mysql['database'] = 'shop' . $appid;
                     $mysql['username'] = 'root';
                     $mysql['password'] = env('DB_ROOT_PASSWORD');
