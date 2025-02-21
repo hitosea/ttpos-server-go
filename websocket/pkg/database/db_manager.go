@@ -47,7 +47,7 @@ func (m *DBManager) initDBs(conf config.DatabaseConf) {
 	}
 	// 根据 APP 表实例化数据库连接
 	var companies []model.Company
-	if err := m.dbs[0].Find(&companies).Error; err != nil {
+	if err := m.dbs[0].Where("delete_time = ?", 0).Find(&companies).Error; err != nil {
 		log.Fatalf("Error querying companies: %s", err)
 	}
 	for _, app := range companies {
