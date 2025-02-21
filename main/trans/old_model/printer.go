@@ -125,7 +125,7 @@ func (s *PrinterService) ConvertPrinter() error {
 	return nil
 }
 
-func (s *PrinterService) parsePrinterType(printerTypeString string) uint {
+func (s *PrinterService) parsePrinterType(printerTypeString string) uint64 {
 	switch printerTypeString {
 	case "CODESOFT_LAN":
 		return 1

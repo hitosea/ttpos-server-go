@@ -3,6 +3,7 @@ package lock
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"sync"
 	"testing"
 	"ttpos-server-go/pkg/cache"
@@ -16,8 +17,8 @@ func TestOpenDesk(t *testing.T) {
 		//Password: "",
 		//DB:       1,
 
-		Host:     "156.255.90.128",
-		Port:     "7001",
+		Host:     "156.255.90.128,156.255.90.128,156.255.90.128,156.255.90.101,156.255.90.101,156.255.90.101,156.255.90.227,156.255.90.227,156.255.90.227",
+		Port:     "7001,7002,7003,7001,7002,7003,7001,7002,7003",
 		Password: "sass@123.com!",
 		//DB:       1,
 	})
@@ -135,4 +136,47 @@ func TestLockUuid(t *testing.T) {
 	if _, err := mutex.UnlockContext(ctx); err != nil {
 		panic(err)
 	}
+}
+
+func TestName(t *testing.T) {
+	ctx := context.Background()
+
+	// 创建一个 Redis 集群客户端
+	rdb := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs: []string{
+			"156.255.90.128:7001", // 主节点地址
+			"156.255.90.128:7002", // 主节点地址
+			"156.255.90.128:7003", // 主节点地址
+			"156.255.90.101:7001", // 主节点地址
+			"156.255.90.101:7002", // 主节点地址
+			"156.255.90.101:7003", // 主节点地址
+			"156.255.90.227:7001", // 主节点地址
+			"156.255.90.227:7002", // 主节点地址
+			"156.255.90.227:7003", // 主节点地址
+		},
+		Password: "sass@123.com!", // 如果有密码，设置密码
+	})
+
+	// 测试连接
+	err := rdb.Ping(ctx).Err()
+	if err != nil {
+		panic(err)
+	} else {
+		fmt.Println("连接成功", rdb)
+	}
+	fmt.Println("Connected to Redis cluster!")
+
+	// 设置一个键值
+	err = rdb.Set(ctx, "key", "value11111111", 0).Err()
+	if err != nil {
+		panic(err)
+	}
+
+	// 获取一个键值
+	val, err := rdb.Get(ctx, "key").Result()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("key:", val)
 }

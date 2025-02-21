@@ -12,6 +12,12 @@ type ShopCart struct {
 	SaleOrderList []SaleOrder `json:"sale_order_list"`  // 销售订单列表
 }
 
+type InstantShopCart struct {
+	SaleBillUuid  uint64      `json:"sale_bill_uuid"`  // 销售账单ID
+	DiningMethod  uint        `json:"dining_method"`   // 用餐方式 0:堂食 1:打包
+	SaleOrderList []SaleOrder `json:"sale_order_list"` // 销售订单列表
+}
+
 type AmountInfo struct {
 	ProductOriginalAmount float64 `json:"product_origin_amount"`  // 商品金额(原价)
 	ProductAmount         float64 `json:"product_amount"`         // 商品金额(折后价)

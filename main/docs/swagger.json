@@ -2065,7 +2065,7 @@
         },
         "/cashier/instant/order/must_plan": {
             "get": {
-                "description": "送厨购物车商品",
+                "description": "获取点餐必点方案",
                 "consumes": [
                     "application/json"
                 ],
@@ -2075,24 +2075,10 @@
                 "tags": [
                     "收银端.点餐"
                 ],
-                "summary": "送厨购物车商品",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "销售账单ID",
-                        "name": "sale_bill_uuid",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "销售订单ID",
-                        "name": "sale_order_uuid",
-                        "in": "query"
-                    }
-                ],
+                "summary": "获取点餐必点方案",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "获取必点方案信息",
                         "schema": {
                             "allOf": [
                                 {
@@ -2102,15 +2088,30 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
+                                            "$ref": "#/definitions/resp.OrderMustPlanResp"
                                         }
                                     }
                                 }
                             ]
                         }
                     },
-                    "404": {
-                        "description": "未找到"
+                    "201": {
+                        "description": "当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderMustPlanAutoSelectResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -7542,6 +7543,113 @@
                 }
             }
         },
+        "resp.InstantMustPlan": {
+            "type": "object",
+            "properties": {
+                "auto_cart": {
+                    "description": "自动加入购物车",
+                    "type": "boolean"
+                },
+                "can_change_num": {
+                    "description": "顾客可修改必点数量",
+                    "type": "boolean"
+                },
+                "must_rule": {
+                    "description": "必点规则.1-固定商品 2-可选商品",
+                    "type": "integer"
+                },
+                "must_type": {
+                    "description": "必点类型.1-每人必点1份 2-每笔订单必点1份",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "方案名称",
+                    "type": "string"
+                },
+                "product_list": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantMustPlanProduct"
+                    }
+                }
+            }
+        },
+        "resp.InstantMustPlanProduct": {
+            "type": "object",
+            "properties": {
+                "attribute_group_list": {
+                    "description": "商品属性组列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductAttributeGroup"
+                    }
+                },
+                "flavor_list": {
+                    "description": "商品规格列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductFlavor"
+                    }
+                },
+                "image": {
+                    "description": "商品图片url",
+                    "type": "string"
+                },
+                "limit_num": {
+                    "description": "商品限购数量,0-不限购",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品价格",
+                    "type": "number"
+                },
+                "sauces": {
+                    "description": "商品小料信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductSauces"
+                        }
+                    ]
+                },
+                "unit": {
+                    "description": "商品单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.InstantShopCart": {
+            "type": "object",
+            "properties": {
+                "dining_method": {
+                    "description": "用餐方式 0:堂食 1:打包",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_list": {
+                    "description": "销售订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SaleOrder"
+                    }
+                }
+            }
+        },
         "resp.Language": {
             "type": "object",
             "properties": {
@@ -7921,6 +8029,38 @@
                 }
             }
         },
+        "resp.OrderMustPlanAutoSelectResp": {
+            "type": "object",
+            "properties": {
+                "must_plan_list": {
+                    "description": "必点方案列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantMustPlan"
+                    }
+                },
+                "shop_cart_info": {
+                    "description": "购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.InstantShopCart"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.OrderMustPlanResp": {
+            "type": "object",
+            "properties": {
+                "must_plan_list": {
+                    "description": "必点方案列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantMustPlan"
+                    }
+                }
+            }
+        },
         "resp.OrderOperationLog": {
             "type": "object",
             "properties": {
@@ -8199,6 +8339,133 @@
                 },
                 "uuid": {
                     "description": "商品uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductAttributeGroup": {
+            "type": "object",
+            "properties": {
+                "is_must": {
+                    "description": "是否必选",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品属性组名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "max_select": {
+                    "description": "最大可选的属性数量",
+                    "type": "integer"
+                },
+                "product_attribute_list": {
+                    "description": "商品属性列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductAttributeValueList"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.ProductAttributeValue": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品属性名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductAttributeValueList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductAttributeValue"
+                    }
+                }
+            }
+        },
+        "resp.ProductFlavor": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品规格价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductSauce": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品小料名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品小料价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品小料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductSauces": {
+            "type": "object",
+            "properties": {
+                "is_must": {
+                    "description": "是否必选小料",
+                    "type": "boolean"
+                },
+                "list": {
+                    "description": "小料列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductSauce"
+                    }
+                },
+                "max_select": {
+                    "description": "小料最大可选数量",
                     "type": "integer"
                 }
             }

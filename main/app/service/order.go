@@ -52,6 +52,7 @@ type IOrderSrv interface {
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                  // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
+	InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPlanAutoSelectResp, error)
 }
 
 // orderSrv 订单服务结构
@@ -91,6 +92,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			commonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
 			commonRepo.WhereByStatus(constant.SaleBillStatusPending),
 			commonRepo.WhereByIsHide(false),
+			commonRepo.WhereBySoftDelete(),
 		)
 		if err != nil && !errors2.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -1641,4 +1643,196 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 		ProductionOrderProducts: productionOrderProducts,
 	}
 	return &productionOrder
+}
+
+// InstantOrderMustPlan 获取点餐必点方案
+func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPlanAutoSelectResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	mustPlanList := make([]resp.InstantMustPlan, 0)
+	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+
+	// 获取必选方案信息
+	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListAllInfos(ctx)
+	if err != nil {
+		return nil, errors.New(err.Error())
+	}
+
+	// 构建必点方案响应列表
+	for _, plan := range productMustPlans {
+		if plan.IsDeskMustPlan() {
+			// 忽略桌台必点方案
+			continue
+		}
+		if plan.IsDelete() {
+			continue
+		}
+		productPackageList := make([]*resp.InstantMustPlanProduct, 0)
+		for _, planItem := range plan.ProductMustPlanItems {
+			if planItem.IsDelete() {
+				continue
+			}
+			flavorList := make([]resp.ProductFlavor, 0)
+			sauceList := make([]resp.ProductSauce, 0)
+			productAttributeGroupList := make([]resp.ProductAttributeGroup, 0)
+			for _, productBom := range planItem.ProductPackage.ProductBoms {
+				if productBom.IsDelete() {
+					continue
+				}
+				if productBom.IsFlavorProduct() {
+					flavor := resp.ProductFlavor{
+						Uuid:       productBom.Uuid,
+						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+						Price:      productBom.Price,
+					}
+					flavorList = append(flavorList, flavor)
+				} else {
+					sauce := resp.ProductSauce{
+						Uuid:              productBom.Uuid,
+						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
+						Price:             productBom.Price,
+						IsDefaultSelected: productBom.IsDefaultSelectBool(),
+					}
+					sauceList = append(sauceList, sauce)
+				}
+			}
+			for _, group := range planItem.ProductPackage.ProductPackageAttributeGroups {
+				if group.IsDelete() {
+					continue
+				}
+				productAttributeList := make([]resp.ProductAttribute, 0)
+				for _, attribute := range group.ProductPackageAttributes {
+					if attribute.IsDelete() {
+						continue
+					}
+					productAttribute := resp.ProductAttribute{
+						Uuid:              attribute.Uuid,
+						LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
+						IsDefaultSelected: attribute.IsDefaultSelectedBool(),
+					}
+					productAttributeList = append(productAttributeList, productAttribute)
+				}
+				productAttributeGroup := resp.ProductAttributeGroup{
+					LocaleName:           group.ProductAttributeGroup.MultiLanguageName.GetNames(),
+					ProductAttributeList: productAttributeList,
+					IsMust:               group.IsMustBool(),
+					MaxSelect:            group.MaxSelection,
+				}
+				productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
+			}
+			productPackage := &resp.InstantMustPlanProduct{
+				LocaleName: planItem.ProductPackage.MultiLanguageName.GetNames(),
+				Image:      planItem.ProductPackage.ImageFile.GetUrl(),
+				Unit:       planItem.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
+				LimitNum:   planItem.ProductPackage.LimitNum,
+				FlavorList: flavorList,
+				Sauces: resp.ProductSauces{
+					List:      sauceList,
+					IsMust:    planItem.ProductPackage.GetSauceRequired(),
+					MaxSelect: int(planItem.ProductPackage.SauceMaxSelection),
+				},
+				AttributeGroupList: productAttributeGroupList,
+			}
+			// 该必点计划开启自动加购功能且有商品能满足自动加购条件时，将这些商品加入待加购列表中。
+			if plan.IsAutoCart() && productPackage.CanAutoJoinCart() {
+				autoFlavorProduct[flavorList[0].Uuid] = productPackage
+			}
+			productPackageList = append(productPackageList, productPackage)
+		}
+		mustPlan := resp.InstantMustPlan{
+			Name:         plan.Name,
+			MustType:     plan.GetMustType(),
+			MustRule:     plan.GetMustRule(),
+			IsAutoCart:   plan.IsAutoCart(),
+			CanChangeNum: plan.IsCustomerCanChange(),
+			ProductList:  productPackageList,
+		}
+		mustPlanList = append(mustPlanList, mustPlan)
+	}
+
+	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
+	var shopCart *resp.ShopCart
+	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
+	if len(autoFlavorProduct) > 0 {
+		// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
+		shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
+		if err != nil {
+			ctx.Log().Debug("自动添加必点商品失败", zap.Error(err))
+			return nil, errors.New(err.Error())
+		}
+	}
+
+	var cartInfo *resp.InstantShopCart
+	if shopCart != nil {
+		cartInfo = &resp.InstantShopCart{
+			SaleBillUuid:  shopCart.SaleBillUuid,
+			DiningMethod:  shopCart.DiningMethod,
+			SaleOrderList: shopCart.SaleOrderList,
+		}
+	}
+
+	return &resp.OrderMustPlanAutoSelectResp{MustPlanList: mustPlanList, ShopCartInfo: cartInfo}, nil
+}
+
+func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProduct) (*resp.ShopCart, error) {
+	var saleBillUuid uint64
+	deviceSn := ctx.GetDeviceSn()
+	ctx.Log().Debug("autoAddSaleOrderProduct", zap.Any("deviceSn", deviceSn))
+	if deviceSn == "" {
+		ctx.Log().Debug("自动加购必选商品失败，上下文中没有device_sn")
+		return nil, errors.New("自动加购必选商品失败，上下文中没有device_sn")
+	}
+
+	device, errDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, deviceSn)
+	if errDevice != nil {
+		return nil, errors.New(errDevice.Error())
+	}
+	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
+	if device.IsDelete() {
+		return nil, errors.NewWithCode(constant.CodeBadRequest, "设备不存在")
+	}
+	ctx.Log().Debug("通过设备ID查询未挂单的销售账单2222", zap.Any("device_uuid", device.Uuid))
+	// 通过设备ID查询未挂单的销售账单
+	saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid)
+	if errGetSaleBill != nil {
+		if !errors2.Is(errGetSaleBill, gorm.ErrRecordNotFound) {
+			return nil, errors.New(errGetSaleBill.Error())
+		}
+	}
+	if saleBill != nil {
+		saleBillUuid = saleBill.Uuid
+	}
+
+	ctx.Log().Debug("查询到的账单", zap.Any("saleBillUuid", saleBillUuid))
+
+	var shopCartInfo *resp.ShopCart
+	if saleBillUuid == 0 {
+		// 如果没有未挂单的点餐销售账单，则新建一个点餐销售账单并接入自动必点商品
+		ctx.Log().Debug("没有未挂单的点餐销售账单，新建一个点餐销售账单并接入自动必点商品")
+		saleBillUuid := uint64(0)
+		saleOrderUuid := uint64(0)
+		for flavorUuid, _ := range autoFlavorProduct {
+			if saleBillUuid != 0 {
+				ctx.Log().Debug("新建的销售账单号", zap.Any("saleBillUuid", saleBillUuid))
+			}
+			ctx.Log().Debug("添加商品", zap.Any("flavorUuid", flavorUuid))
+			shopCart, errAdd := s.InstantOrderCartProductAdd(ctx, req.OrderCartProductAddReq{
+				SaleBillUuid:  saleBillUuid,
+				SaleOrderUuid: saleOrderUuid,
+				FlavorUuid:    flavorUuid,
+			})
+			if errAdd != nil {
+				return nil, errAdd
+			}
+			saleBillUuid = shopCart.SaleBillUuid
+			if len(shopCart.SaleOrderList) != 1 {
+				return nil, errors.New("业务错误")
+			}
+			saleOrderUuid = shopCart.SaleOrderList[0].Uuid
+			shopCartInfo = shopCart
+		}
+
+	} else {
+		// 如果有未挂单的点餐销售账单。未有这个需求，暂时不做
+	}
+	return shopCartInfo, nil
 }

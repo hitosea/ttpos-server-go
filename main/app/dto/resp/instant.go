@@ -1,5 +1,7 @@
 package resp
 
+import "ttpos-server-go/app/dto"
+
 // 创建点餐订单响应
 type CreateInstantOrderResp struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
@@ -32,11 +34,94 @@ type GetInstantOrderInfoResp struct {
 
 // OrderMustPlanResp 点餐必点方案响应
 type OrderMustPlanResp struct {
-	MustPlanList []MustPlan `json:"must_plan_list"` // 必点方案列表
+	MustPlanList []InstantMustPlan `json:"must_plan_list"` // 必点方案列表
+}
+type OrderMustPlanAutoSelectResp struct {
+	MustPlanList []InstantMustPlan `json:"must_plan_list"`           // 必点方案列表
+	ShopCartInfo *InstantShopCart  `json:"shop_cart_info,omitempty"` // 购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面
 }
 
-// MustPlan 必点方案
-type MustPlan struct {
-	ProductUuid uint64 `json:"product_uuid"` // 商品UUID
-	ProductName string `json:"product_name"` // 商品名称
+// InstantMustPlan 必点方案
+type InstantMustPlan struct {
+	Name         string                    `json:"name"`           // 方案名称
+	MustType     int                       `json:"must_type"`      // 必点类型.0-每笔订单必点1份 1-每人必点1份
+	MustRule     int                       `json:"must_rule"`      // 必点规则.1-固定商品 2-可选商品
+	IsAutoCart   bool                      `json:"is_auto_cart"`   // 自动加入购物车
+	CanChangeNum bool                      `json:"can_change_num"` // 顾客可修改必点数量
+	ProductList  []*InstantMustPlanProduct `json:"product_list"`   // 商品列表
+}
+
+type InstantMustPlanProduct struct {
+	LocaleName         dto.LocaleResponse      `json:"locale_name"`          // 商品名称
+	Image              string                  `json:"image"`                // 商品图片url
+	Unit               dto.LocaleResponse      `json:"unit"`                 // 商品单位
+	LimitNum           uint                    `json:"limit_num"`            // 商品限购数量,0-不限购
+	FlavorList         []ProductFlavor         `json:"flavor_list"`          // 商品规格列表
+	Sauces             ProductSauces           `json:"sauces"`               // 商品小料信息
+	AttributeGroupList []ProductAttributeGroup `json:"attribute_group_list"` // 商品属性组列表
+}
+
+func (obj InstantMustPlanProduct) CanAutoJoinCart() bool {
+	// 能自动加购的商品:单规格、无属性、无加料
+	if len(obj.FlavorList) == 1 {
+		if len(obj.AttributeGroupList) == 0 && len(obj.Sauces.List) == 0 {
+			return true
+		}
+	}
+	return false
+	// 能自动加购的商品:单规格、属性不要求选、无加料
+	//if len(obj.FlavorList) == 1 {
+	//	if len(obj.AttributeGroupList) >= 0 && len(obj.Sauces.List) == 0 {
+	//		isMust := false
+	//		for _, group := range obj.AttributeGroupList {
+	//			if group.IsMust == true {
+	//				isMust = true
+	//			}
+	//		}
+	//		if isMust == false {
+	//			return true
+	//		}
+	//	}
+	//}
+	//// 能自动加购的商品:单规格、无属性、加料不要求选
+	//if len(obj.FlavorList) == 1 {
+	//	if len(obj.AttributeGroupList) == 0 && len(obj.Sauces.List) >= 0 {
+	//			if obj.Sauces.IsMust == false {
+	//				return true
+	//			}
+	//		}
+	//	}
+	//}
+}
+
+type ProductFlavor struct {
+	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
+	Price      float64            `json:"price"`       // 商品规格价格
+}
+
+type ProductSauces struct {
+	List      []ProductSauce `json:"list"`       // 小料列表
+	IsMust    bool           `json:"is_must"`    // 是否必选小料
+	MaxSelect int            `json:"max_select"` // 小料最大可选数量
+}
+
+type ProductSauce struct {
+	Uuid              uint64             `json:"uuid"`                // 商品小料UUID
+	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品小料名称
+	Price             float64            `json:"price"`               // 商品小料价格
+	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
+}
+
+type ProductAttributeGroup struct {
+	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 商品属性组名称
+	ProductAttributeList []ProductAttribute `json:"product_attribute_list"` // 商品属性列表
+	IsMust               bool               `json:"is_must"`                // 是否必选
+	MaxSelect            uint               `json:"max_select"`             // 最大可选的属性数量
+}
+
+type ProductAttribute struct {
+	Uuid              uint64             `json:"uuid"`                // 商品属性UUID
+	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品属性名称
+	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
 }

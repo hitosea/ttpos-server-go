@@ -551,7 +551,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 			// 判断必选方案是全选还是任选
 			if productMustPlan.MustRule == constant.ProductMustPlanMustRuleAll {
 				// 全选
-				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItem {
+				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItems {
 					num := uint(0)
 					if productMustPlan.MustType == constant.ProductMustPlanMustTypeEachPerson {
 						//num = mealNum
@@ -562,7 +562,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 					prodcutMustPlanProductMap[productMustPlan.Uuid][productMustPlanItem.ProductPackageUuid] = true
 				}
 			} else if productMustPlan.MustRule == constant.ProductMustPlanMustRuleAny {
-				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItem {
+				for _, productMustPlanItem := range productMustPlan.ProductMustPlanItems {
 					prodcutMustPlanProductMap[productMustPlan.Uuid][productMustPlanItem.ProductPackageUuid] = true
 				}
 				// 任选

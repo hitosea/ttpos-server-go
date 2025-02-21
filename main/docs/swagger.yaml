@@ -1936,6 +1936,77 @@ definitions:
         description: 用户ID
         type: integer
     type: object
+  resp.InstantMustPlan:
+    properties:
+      auto_cart:
+        description: 自动加入购物车
+        type: boolean
+      can_change_num:
+        description: 顾客可修改必点数量
+        type: boolean
+      must_rule:
+        description: 必点规则.1-固定商品 2-可选商品
+        type: integer
+      must_type:
+        description: 必点类型.1-每人必点1份 2-每笔订单必点1份
+        type: integer
+      name:
+        description: 方案名称
+        type: string
+      product_list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.InstantMustPlanProduct'
+        type: array
+    type: object
+  resp.InstantMustPlanProduct:
+    properties:
+      attribute_group_list:
+        description: 商品属性组列表
+        items:
+          $ref: '#/definitions/resp.ProductAttributeGroup'
+        type: array
+      flavor_list:
+        description: 商品规格列表
+        items:
+          $ref: '#/definitions/resp.ProductFlavor'
+        type: array
+      image:
+        description: 商品图片url
+        type: string
+      limit_num:
+        description: 商品限购数量,0-不限购
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      price:
+        description: 商品价格
+        type: number
+      sauces:
+        allOf:
+        - $ref: '#/definitions/resp.ProductSauces'
+        description: 商品小料信息
+      unit:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位
+    type: object
+  resp.InstantShopCart:
+    properties:
+      dining_method:
+        description: 用餐方式 0:堂食 1:打包
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_list:
+        description: 销售订单列表
+        items:
+          $ref: '#/definitions/resp.SaleOrder'
+        type: array
+    type: object
   resp.Language:
     properties:
       i:
@@ -2204,6 +2275,26 @@ definitions:
             type: integer
         type: object
     type: object
+  resp.OrderMustPlanAutoSelectResp:
+    properties:
+      must_plan_list:
+        description: 必点方案列表
+        items:
+          $ref: '#/definitions/resp.InstantMustPlan'
+        type: array
+      shop_cart_info:
+        allOf:
+        - $ref: '#/definitions/resp.InstantShopCart'
+        description: 购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面
+    type: object
+  resp.OrderMustPlanResp:
+    properties:
+      must_plan_list:
+        description: 必点方案列表
+        items:
+          $ref: '#/definitions/resp.InstantMustPlan'
+        type: array
+    type: object
   resp.OrderOperationLog:
     properties:
       action:
@@ -2395,6 +2486,86 @@ definitions:
         type: integer
       uuid:
         description: 商品uuid
+        type: integer
+    type: object
+  resp.ProductAttributeGroup:
+    properties:
+      is_must:
+        description: 是否必选
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性组名称
+      max_select:
+        description: 最大可选的属性数量
+        type: integer
+      product_attribute_list:
+        allOf:
+        - $ref: '#/definitions/resp.ProductAttributeValueList'
+        description: 商品属性列表
+    type: object
+  resp.ProductAttributeValue:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
+  resp.ProductAttributeValueList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ProductAttributeValue'
+        type: array
+    type: object
+  resp.ProductFlavor:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      price:
+        description: 商品规格价格
+        type: number
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  resp.ProductSauce:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品小料名称
+      price:
+        description: 商品小料价格
+        type: number
+      uuid:
+        description: 商品小料UUID
+        type: integer
+    type: object
+  resp.ProductSauces:
+    properties:
+      is_must:
+        description: 是否必选小料
+        type: boolean
+      list:
+        description: 小料列表
+        items:
+          $ref: '#/definitions/resp.ProductSauce'
+        type: array
+      max_select:
+        description: 小料最大可选数量
         type: integer
     type: object
   resp.RechargeMember:
@@ -4121,31 +4292,29 @@ paths:
     get:
       consumes:
       - application/json
-      description: 送厨购物车商品
-      parameters:
-      - description: 销售账单ID
-        in: query
-        name: sale_bill_uuid
-        type: integer
-      - description: 销售订单ID
-        in: query
-        name: sale_order_uuid
-        type: integer
+      description: 获取点餐必点方案
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 获取必点方案信息
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ShopCart'
+                  $ref: '#/definitions/resp.OrderMustPlanResp'
               type: object
-        "404":
-          description: 未找到
-      summary: 送厨购物车商品
+        "201":
+          description: 当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderMustPlanAutoSelectResp'
+              type: object
+      summary: 获取点餐必点方案
       tags:
       - 收银端.点餐
   /cashier/instant/order/population:

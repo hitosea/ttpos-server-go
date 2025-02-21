@@ -72,6 +72,10 @@ type ProductPackageAttributeGroup struct {
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"` // 产品包属性
 }
 
+func (model *ProductPackageAttributeGroup) IsMustBool() bool {
+	return model.IsMust == constant.ProductAttributeGroupRequiredOn
+}
+
 // ProductPackageAttribute 产品包属性表,定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
 	BaseModel
@@ -80,6 +84,10 @@ type ProductPackageAttribute struct {
 	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
 
 	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
+}
+
+func (model *ProductPackageAttribute) IsDefaultSelectedBool() bool {
+	return model.IsDefaultSelected == constant.ProductAttributeDefaultSelectionOn
 }
 
 // ProductPackage 产品包表,定义产品包的相关信息 `ttpos_product_package`
@@ -118,6 +126,11 @@ type ProductPackage struct {
 	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
 	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
 	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid"`            // 类别
+	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid"`          // 图片
+}
+
+func (model *ProductPackage) GetSauceRequired() bool {
+	return model.SauceRequired == constant.ProductPackageSauceRequiredOn
 }
 
 func (model *ProductPackage) TaxRate(dineType uint) float64 {
@@ -160,6 +173,10 @@ type ProductBom struct {
 // IsSoldOutStatus 判断是否标记沽清、或售罄无库存
 func (model *ProductBom) IsSoldOutStatus() bool {
 	return model.IsSoldOut == constant.ProductStatusSaleOut || model.StockNum <= 0
+}
+
+func (model *ProductBom) IsDefaultSelectBool() bool {
+	return model.IsDefaultSelect == constant.ProductPackageSauceDefaultSelectionOn
 }
 
 // IsNotSoldOutStatus 判断bom是否还可以销售
