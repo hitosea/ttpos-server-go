@@ -27,9 +27,6 @@ class Feed extends BaseModel
      */
     protected $append = ['feed_id', 'feed_name', 'feed_name_text'];
 
-    // 定义事件 onBeforeDelete
-    protected $delete = ['onBeforeDelete'];
-
     /**
      * 兼容字段
      */
@@ -51,6 +48,19 @@ class Feed extends BaseModel
     }
 
     /**
+     * 关联产品ids
+     */
+    public function getProductIdsAttr($value, $data = [])
+    {
+        $product_ids = $data['product_ids'] ?? $value ?? '';
+        if (empty($product_ids)) {
+            return [];
+        }
+        $arr = array_map('intval', explode(',', $product_ids));
+        return array_values($arr);
+    }
+
+    /**
      * 加料名称
      *
      * @param [type] $value
@@ -63,29 +73,15 @@ class Feed extends BaseModel
     }
 
     /**
-     * todo 关联产品ids
-     */
-    public function getProductIdsAttr($value, $data = [])
-    {
-        // $product_ids = $data['product_ids'] ?? $value ?? '';
-        // if (empty($product_ids)) {
-        //     return [];
-        // }
-        // $arr = array_map('intval', explode(',', $product_ids));
-        // return array_values($arr);
-    }
-
-    /**
      * 关联产品
      */
     public function productFeed($feed_id)
     {
         return $this->alias('feed')
-            ->field('product.product_id')
-            ->leftJoin('product_feed pf', 'feed.feed_id = pf.feed_id')
-            ->leftJoin('product product', 'product.product_id = pf.product_id')
-            ->where('product.is_delete', 0)
-            ->where('feed.feed_id', $feed_id)
+            ->field('pb.product_package_uuid as product_id')
+            ->leftJoin('product_bom pb', 'pb.product_sauce_uuid = feed.uuid')
+            ->where('pb.delete_time', 0)
+            ->where('feed.uuid', $feed_id)
             ->select();
     }
 
@@ -136,11 +132,7 @@ class Feed extends BaseModel
      */
     public function isUseWithProduct($feed_id)
     {
-        // 兼容旧数据，先删除产品已删除的关联数据
-        ProductFeed::where('product_id', 'in', function ($query) {
-            $query->name('product')->field('product_id');
-        })->delete();
-        return ProductFeed::where('feed_id', 'in', $feed_id)->count() > 0;
+        return ProductBom::where('product_sauce_uuid', 'in', $feed_id)->count() > 0;
     }
 
     /**

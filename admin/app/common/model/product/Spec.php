@@ -71,10 +71,10 @@ class Spec extends BaseModel
     public function productSku($spec_id)
     {
         return $this->alias('spec')
-            ->field('sku.product_package_uuid as product_id')
-            ->leftJoin('product_bom sku', 'sku.product_flavor_uuid = spec.uuid')
-            ->where('sku.delete_time', 0)
-            ->where('sku.product_flavor_uuid', $spec_id)
+            ->field('pb.product_package_uuid as product_id')
+            ->leftJoin('product_bom pb', 'pb.product_flavor_uuid = spec.uuid')
+            ->where('pb.delete_time', 0)
+            ->where('pb.product_flavor_uuid', $spec_id)
             ->select();
     }
 

@@ -505,7 +505,6 @@ class Index extends Controller
             'p.image_name as img_name',
             'p.category_uuid as category_id',
             'p.create_time',
-            'p.sort',
             'CAST(IFNULL(c.parent_uuid, 0) AS UNSIGNED) as parent_category_id'
         ];
         $buildQuery = function($table, $additionalFields = []) use ($commonFields) {
@@ -543,19 +542,25 @@ class Index extends Controller
         $productQuery = $applyConditions($productQuery);
         $materialQuery = $applyConditions($materialQuery);
         //
+        $dbName = 'shop' . $appId;
         $unionQuery = match($type) {
             'product' => $productQuery,
             'materials' => $materialQuery,
-            default => $productQuery->union(function() use ($materialQuery) {
-                return $materialQuery;
-            }, true)
+            default => Db::connect($dbName)
+                ->table('(' . $productQuery->buildSql() . ' UNION ' . $materialQuery->buildSql() . ') as union_table')
+                ->order(['create_time' => 'desc'])
+                ->paginate($params)
+                ->each(function($item) {
+                    $item['product_name_text'] = extractLanguage($item['product_name']);
+                    return $item;
+                })
         };
         //
         try {
             $dbName = 'shop' . $appId;
-            $list = Db::connect($dbName)
-                ->table($unionQuery->buildSql().' as union_table')
-                ->order(['sort' => 'asc', 'create_time' => 'desc'])
+            $list = ($type === 'all') ? $unionQuery : Db::connect($dbName)
+                ->table($unionQuery->buildSql() . ' as union_table')
+                ->order(['create_time' => 'desc'])
                 ->paginate($params)
                 ->each(function($item) {
                     $item['product_name_text'] = extractLanguage($item['product_name']);

@@ -21,16 +21,16 @@ class Spec extends SpecModel
         $prefix = env('DB_PREFIX');
         $model = $this->alias('sku')
             ->field('sku.*')
-            ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
-            ->field("IFNULL(psku.product_ids, '') AS product_ids")
+            ->field("IF(pb.sku_count IS NULL, 0, 1) AS is_used")
+            ->field("IFNULL(pb.product_ids, '') AS product_ids")
             ->leftJoin("
                 (
-                    SELECT psku.product_flavor_uuid, GROUP_CONCAT(DISTINCT psku.product_package_uuid) AS product_ids, COUNT(DISTINCT psku.product_flavor_uuid) AS sku_count
-                    FROM {$prefix}product_bom psku
-                    WHERE psku.delete_time = 0
-                    GROUP BY psku.product_flavor_uuid
-                ) psku
-            ", 'sku.uuid = psku.product_flavor_uuid');
+                    SELECT pb.product_flavor_uuid, GROUP_CONCAT(DISTINCT pb.product_package_uuid) AS product_ids, COUNT(DISTINCT pb.product_flavor_uuid) AS sku_count
+                    FROM {$prefix}product_bom pb
+                    WHERE pb.delete_time = 0 AND pb.product_flavor_uuid > 0
+                    GROUP BY pb.product_flavor_uuid
+                ) pb
+            ", 'sku.uuid = pb.product_flavor_uuid');
 
         //
         if (isset($data['spec_name']) && $data['spec_name'] != '') {
