@@ -1465,42 +1465,60 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, req req.Order
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	ctx.Log().Debug("获取到账单信息")
+	ctx.Log().Debug("获取到账单信息成功")
 
 	saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
 	if errSaleOrder != nil {
 		return nil, errSaleOrder
 	}
+	ctx.Log().Debug("获取到订单信息成功")
 
 	// 获取销售订单商品信息
-	saleOrderProduct, errSaleOrderProduct := getSaleOrderProduct(req.SaleOrderProductUuid, saleOrder)
+	saleOrderProduct, index, errSaleOrderProduct := getSaleOrderProduct(req.SaleOrderProductUuid, saleOrder)
 	if errSaleOrderProduct != nil {
 		return nil, errSaleOrderProduct
 	}
+	ctx.Log().Debug("获取到订单商品信息成功")
 
 	// 修改销售订单商品数量
 	saleOrderProduct.Num = uint(req.Num)
+	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 	// 计算商品数据。折扣、税费、服务
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	ctx.Log().Debug("重新计算了商品金额")
+	saleOrder.SaleOrderProducts[index] = *saleOrderProduct
 
 	// 计算订单金额
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("重新计算了订单金额")
 
-	// 更新销售账单
-	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
+	if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 		return nil, errUpdate
 	}
+	ctx.Log().Debug("更新销售订单商品成功")
+
+	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		return nil, errUpdate
+	}
+	ctx.Log().Debug("更新销售订单成功")
+
+	// // 更新销售账单
+	// if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
+	// 	return nil, errUpdate
+	// }
+	// ctx.Log().Debug("更加数据")
 
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
 		return nil, err
 	}
+	ctx.Log().Debug("获取新的账单数据")
 
 	return info, nil
 }
@@ -1515,12 +1533,12 @@ func getSaleOrder(saleOrderUuid uint64, saleBill *model.SaleBill) (*model.SaleOr
 	return nil, errors.New("销售订单不存在")
 }
 
-func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder) (*model.SaleOrderProduct, error) {
+func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder) (*model.SaleOrderProduct, int, error) {
 	for i, _ := range saleOrder.SaleOrderProducts {
 		orderProduct := saleOrder.SaleOrderProducts[i]
 		if orderProduct.Uuid == saleOrderProductUuid {
-			return &saleOrder.SaleOrderProducts[i], nil
+			return &saleOrder.SaleOrderProducts[i], i, nil
 		}
 	}
-	return nil, errors.New("销售订单商品不存在")
+	return nil, 0, errors.New("销售订单商品不存在")
 }

@@ -8,6 +8,7 @@ import (
 
 type ISaleOrderProductRepo interface {
 	CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error)
+	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 }
 
 type saleOrderProductRepo struct {
@@ -24,4 +25,12 @@ func (r *saleOrderProductRepo) CreateSaleOrderProduct(model model.SaleOrderProdu
 		return 0, err
 	}
 	return model.Uuid, nil
+}
+
+func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProduct) error {
+	db := r.db
+	if err := db.Model(&model).Updates(model).Error; err != nil {
+		return err
+	}
+	return nil
 }
