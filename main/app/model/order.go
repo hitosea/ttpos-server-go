@@ -608,6 +608,20 @@ type SaleOrderProduct struct {
 	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
+// 标记该订单商品相关的资源为删除
+func (model *SaleOrderProduct) DeleteProduct() {
+	deleteTime := time.Now().Unix()
+	model.DeleteTime = deleteTime
+	for index, _ := range model.SaleOrderProductBoms {
+		saleOrderProductBom := model.SaleOrderProductBoms[index]
+		saleOrderProductBom.DeleteTime = deleteTime
+	}
+	for index, _ := range model.SaleOrderProductAttributes {
+		saleOrderProductAttribute := model.SaleOrderProductAttributes[index]
+		saleOrderProductAttribute.DeleteTime = deleteTime
+	}
+}
+
 func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
 }

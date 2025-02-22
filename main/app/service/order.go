@@ -40,7 +40,7 @@ type IOrderSrv interface {
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                    // 删除订单
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                          // 判断桌台是否可取消
-	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error) // 删除订单商品
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                     // 修改订单商品价格
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                         // 修改订单人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                             // 通过桌台uuid获取到销售账单信息
@@ -852,55 +852,71 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 }
 
 // OrderProductDelete 删除订单商品
-func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
-	orderRepo := repository.NewOrderRepo(db)
+	//orderRepo := repository.NewOrderRepo(db)
 
 	// 获取操作的销售账单信息
-	//saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
-	//if errGetSaleOrder != nil {
-	//	ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
-	//	return nil, errors.New("查询销售订单信息失败")
-	//}
-
-	// 获取订单信息
-	saleBill, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
-	if err != nil {
-		return model.SaleBill{}, err
+	saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	if errGetSaleOrder != nil {
+		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
+		return nil, errors.New("查询销售订单信息失败")
 	}
 
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
-		return model.SaleBill{}, err
+		return nil, err
 	}
 
 	// 判断订单商品状态
 	if len(saleBill.SaleOrders) == 0 || len(saleBill.SaleOrders[0].SaleOrderProducts) == 0 {
-		return model.SaleBill{}, errors.New("找不到订单商品")
+		return nil, errors.New("找不到订单商品")
 	}
 	for _, product := range saleBill.SaleOrders[0].SaleOrderProducts {
 		if product.Uuid == req.OrderProductUuid && product.Status == constant.OrderProductStatusSentKitchen {
-			return model.SaleBill{}, errors.New("商品已送厨，禁止删除")
+			return nil, errors.New("商品已送厨，禁止删除")
 		}
 	}
 
-	// 开始事务
+	saleOrderProduct.DeleteProduct()
 
-	// 删除订单商品
-	err = orderRepo.DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
-	if err != nil {
-		return model.SaleBill{}, err
+	// 计算订单金额
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	ctx.Log().Debug("删除商品前,销售订单信息", zap.Any("saleOrder calc", saleOrder.BeforeCalc()))
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
+
+	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 删除订单商品
+		err := repository.NewOrderRepo(db).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+		if err != nil {
+			return err
+		}
+		// 更新完整个销售订单
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+			return errUpdate
+		}
+		return nil
+	})
+	if errUpdate != nil {
+		ctx.Log().Info("更新销售订单失败", zap.Error(errUpdate))
+		return nil, errors.New("更新销售订单失败")
 	}
 
-	// todo - 重算价格 - 等王总的逻辑
-	// (new OrderModel)->reloadPrice($order_id);
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
 
-	return saleBill, nil
+	return info, nil
 }
 
 func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrderUuid, saleOrderProductUuid uint64) (*model.SaleBill, *model.SaleOrder, *model.SaleOrderProduct, error) {
@@ -1191,6 +1207,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
 		{
 			for _, buffet := range saleOrder.SaleOrderBuffetCustomerTypes {
+				if buffet.IsDelete() {
+					continue
+				}
 				// 自助餐顾客价格收费列表
 				product := resp.Product{
 					Uuid:       buffet.Uuid,
@@ -1225,6 +1244,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 添加加钟商品
 		{
 			for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+				if delayProduct.IsDelete() {
+					continue
+				}
 				product := resp.Product{
 					Uuid: delayProduct.Uuid,
 					LocaleName: dto.LocaleResponse{
@@ -1258,6 +1280,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 添加正常商品
 		{
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsDelete() {
+					continue
+				}
 				language := ctx.GetLanguage()
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,

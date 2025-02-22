@@ -202,7 +202,7 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderProductDeleteReq true "详情参数"
-// @Success 200 {object} nil
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/product/delete [delete]
 func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
@@ -217,13 +217,13 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	shopCart, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // OrderProductChangePrice 处理桌台订单商品改价
