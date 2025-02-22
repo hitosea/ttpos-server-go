@@ -55,6 +55,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Router /assistant/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	deskListReq := req.DeskListReq{}
 	if err := c.ShouldBindQuery(&deskListReq); err != nil {
@@ -62,7 +63,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(companyId, deskListReq)
+	res, err := h.Service.GetDeskList(ctx, companyId, deskListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)

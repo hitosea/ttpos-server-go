@@ -31,5 +31,5 @@ type Desk struct {
 	DeviceUuid   uint64 `gorm:"default:0;column:device_uuid;comment:'平板设备uuid, 0-未绑定'"`
 	SaleBillUuid uint64 `gorm:"default:0;column:sale_bill_uuid;comment:'销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单'"`
 
-	//SaleBill SaleBill `gorm:"foreignKey:desk_uuid;references:uuid"` // 销售账单
+	SaleBill *SaleBill `gorm:"foreignKey:desk_uuid;references:uuid"` // 销售账单
 }

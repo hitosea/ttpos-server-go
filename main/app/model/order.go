@@ -72,7 +72,7 @@ type SaleBill struct {
 	SaleOrders      []*SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	SaleBillSetting *SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	Cashier         Staff            `gorm:"foreignKey:CashierUuid;references:uuid"`
-	Desk            Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
+	Desk            *Desk            `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }

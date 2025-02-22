@@ -57,6 +57,7 @@ func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 // @Router /cashier/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.DeskListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -64,7 +65,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetDeskList(companyUuid, req)
+	res, err := h.service.GetDeskList(ctx, companyUuid, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -208,6 +209,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	staff := helper.GetStaff(c)
 	source := helper.GetSource(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderProductDeleteReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -215,7 +217,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductDelete(companyUuid, staff.Uuid, source, params)
+	_, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

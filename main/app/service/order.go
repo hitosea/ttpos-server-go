@@ -33,23 +33,23 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                             // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                       // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error) // 获取订单列表
-	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                    // 获取订单详情
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                           // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                // 删除订单
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                      // 判断桌台是否可取消
-	OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error)  // 删除订单商品
-	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                 // 修改订单商品价格
-	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                     // 修改订单人数
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                         // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                           // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                 // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                      // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                  // 向购物车添加商品
-	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                         // 修改购物车商品数量
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                 // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                           // 创建桌台订单
+	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                     // 获取订单列表
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                        // 获取订单详情
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
+	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                    // 删除订单
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                          // 判断桌台是否可取消
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error) // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                     // 修改订单商品价格
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                         // 修改订单人数
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                             // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                               // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                     // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                     // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                          // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                      // 向购物车添加商品
+	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
 	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)
@@ -852,7 +852,7 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 }
 
 // OrderProductDelete 删除订单商品
-func (s *orderSrv) OrderProductDelete(dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error) {
+func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (model.SaleBill, error) {
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
@@ -861,34 +861,35 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, staffUuid uint64, source stri
 	db := s.dbm.GetDB(dbId)
 	orderRepo := repository.NewOrderRepo(db)
 
+	// 获取操作的销售账单信息
+	//saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	//if errGetSaleOrder != nil {
+	//	ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
+	//	return nil, errors.New("查询销售订单信息失败")
+	//}
+
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	saleBill, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 	if err != nil {
 		return model.SaleBill{}, err
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
 		return model.SaleBill{}, err
 	}
 
 	// 判断订单商品状态
-	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
+	if len(saleBill.SaleOrders) == 0 || len(saleBill.SaleOrders[0].SaleOrderProducts) == 0 {
 		return model.SaleBill{}, errors.New("找不到订单商品")
 	}
-	for _, product := range billInfo.SaleOrders[0].SaleOrderProducts {
+	for _, product := range saleBill.SaleOrders[0].SaleOrderProducts {
 		if product.Uuid == req.OrderProductUuid && product.Status == constant.OrderProductStatusSentKitchen {
 			return model.SaleBill{}, errors.New("商品已送厨，禁止删除")
 		}
 	}
 
 	// 开始事务
-	tx := db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback() // 如果发生恐慌，回滚事务
-		}
-	}()
 
 	// 删除订单商品
 	err = orderRepo.DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
@@ -899,12 +900,7 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, staffUuid uint64, source stri
 	// todo - 重算价格 - 等王总的逻辑
 	// (new OrderModel)->reloadPrice($order_id);
 
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return model.SaleBill{}, err
-	}
-
-	return billInfo, nil
+	return saleBill, nil
 }
 
 func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrderUuid, saleOrderProductUuid uint64) (*model.SaleBill, *model.SaleOrder, *model.SaleOrderProduct, error) {
