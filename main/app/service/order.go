@@ -1314,8 +1314,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
 			shopCartInfo.Buffet = &resp.BuffetInfo{
-				EndTime:    shopCart.SaleBill.BuffetEndTime(),
-				LocaleName: shopCart.SaleBill.GetBuffetName(),
+				RemainingSeconds: shopCart.SaleBill.BuffetRemainingSeconds(),
+				LocaleName:       shopCart.SaleBill.GetBuffetName(),
 			}
 		}
 	}

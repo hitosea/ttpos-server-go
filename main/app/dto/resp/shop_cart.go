@@ -30,8 +30,8 @@ type AmountInfo struct {
 
 // BuffetInfo 自助餐信息
 type BuffetInfo struct {
-	EndTime    int64              `json:"end_time"`    // 自助餐结束时间
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 自助餐名称
+	RemainingSeconds int64              `json:"remaining_seconds"` // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
+	LocaleName       dto.LocaleResponse `json:"locale_name"`       // 自助餐名称
 }
 
 // DeskInfo 桌台信息

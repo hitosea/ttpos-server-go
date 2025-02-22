@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/pkg/utils"
@@ -120,6 +121,12 @@ func (model *SaleBill) IsBuffetSaleBill() bool {
 func (model *SaleBill) BuffetEndTime() int64 {
 	endTime := model.BaseModel.CreateTime + int64(model.BuffetDuration)
 	return endTime
+}
+
+// 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
+func (model *SaleBill) BuffetRemainingSeconds() int64 {
+	remainingTime := model.BuffetEndTime() - time.Now().Unix()
+	return remainingTime
 }
 
 // ValidateOrderStatus 判断订单是否可操作
