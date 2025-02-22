@@ -135,12 +135,14 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		image := ""
 		// 添加到列表
 		list = append(list, cashier_resp.Product{
-			Uuid:       product.Uuid,
-			Image:      image,
-			LocaleName: s.localeSrv.GetLocaleNames(product.MultiLanguageName),
-			Unit:       s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
-			Price:      prices[0],
-			LimitNum:   product.LimitNum,
+			Uuid:                product.Uuid,
+			Image:               image,
+			LocaleName:          s.localeSrv.GetLocaleNames(product.MultiLanguageName),
+			Unit:                s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
+			Price:               prices[0],
+			LimitNum:            product.LimitNum,
+			CategoryUuid:        product.CategoryUuid,
+			SpecialCategoryUuid: product.SpecialCategoryUuid,
 			Flavors: cashier_resp.ProductFlavorList{
 				List: flavors,
 			},
