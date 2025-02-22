@@ -7,6 +7,7 @@ import (
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -36,7 +37,7 @@ type IMemberSrv interface {
 	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
 	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error)                     // 获取会员折扣
 	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                            // 使用会员优惠验证密码
-	PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrintRechargeOrderResp, error)               // 打印充值订单
+	PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrinterLogData, error)                       // 打印充值订单
 }
 
 // memberSrv 会员服务结构体
@@ -45,20 +46,22 @@ type memberSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	settingSrv       setting.ISrv
 	cashBoxSrv       ICashBoxSrv
+	rechargePrintSrv IRechargePrintSrv
 }
 
 // NewMemberSrv 创建新的会员服务
-func NewMemberSrv(dbm *database.DBManager, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv) IMemberSrv {
-	return NewMemberSrvImpl(dbm, paymentMethodSrv, settingSrv, cashBoxSrv)
+func NewMemberSrv(dbm *database.DBManager, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, rechargePrintSrv IRechargePrintSrv) IMemberSrv {
+	return NewMemberSrvImpl(dbm, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv)
 }
 
 // NewMemberSrvImpl 创建新的会员服务实现
-func NewMemberSrvImpl(dbm *database.DBManager, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv) IMemberSrv {
+func NewMemberSrvImpl(dbm *database.DBManager, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, rechargePrintSrv IRechargePrintSrv) IMemberSrv {
 	return &memberSrv{
 		dbm:              dbm,
 		paymentMethodSrv: paymentMethodSrv,
 		settingSrv:       settingSrv,
 		cashBoxSrv:       cashBoxSrv,
+		rechargePrintSrv: rechargePrintSrv,
 	}
 }
 
@@ -164,6 +167,10 @@ func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrd
 		for _, paymentOrder := range rechargeOrder.PaymentOrders {
 			copier.Copy(&respPaymentOrder, paymentOrder)
 			respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
+			respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
+			respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
+				constant.PaymentMethodCodeLianLianAliPay,
+				constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
 			respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 		}
 	}
@@ -703,14 +710,21 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	return nil
 }
 
-func (s *memberSrv) PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrintRechargeOrderResp, error) {
-	var res resp.PrintRechargeOrderResp
+func (s *memberSrv) PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrinterLogData, error) {
+	var res resp.PrinterLogData
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	rechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(discountReq.RechargeOrderUuid))
 	if rechargeOrder.Uuid == 0 {
 		return res, errors.New("充值订单不存在")
 	}
-	//s.settingSrv
-
-	return resp.PrintRechargeOrderResp{}, nil
+	printerData, err := s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
+		RechargeOrder: rechargeOrder,
+		IsQueue:       false,
+		DeviceId:      ctx.GetDeviceSn(),
+		PrintLang:     ctx.GetLanguage(),
+	})
+	if err != nil {
+		return res, err
+	}
+	return printerData, nil
 }

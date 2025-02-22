@@ -182,7 +182,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -190,7 +190,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -461,7 +461,7 @@
                 }
             }
         },
-        "/cashier/call/abnormal_print_list": {
+        "/cashier/call/abnormal_print/list": {
             "get": {
                 "security": [
                     {
@@ -522,6 +522,70 @@
                         "JwtToken": []
                     }
                 ],
+                "description": "删除打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.呼叫"
+                ],
+                "summary": "删除打印",
+                "parameters": [
+                    {
+                        "description": "删除打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterLogReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/cashier/call/processed": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "处理呼叫",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.呼叫"
+                ],
+                "summary": "处理呼叫",
+                "parameters": [
+                    {
+                        "description": "处理呼叫参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProcessedCallReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/cashier/call/reprint": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "重新打印",
                 "consumes": [
                     "application/json"
@@ -566,14 +630,14 @@
                 }
             }
         },
-        "/cashier/call/processed": {
-            "post": {
+        "/cashier/call/unprocessed": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "处理呼叫",
+                "description": "获取未处理消息数量",
                 "consumes": [
                     "application/json"
                 ],
@@ -583,22 +647,30 @@
                 "tags": [
                     "收银端.呼叫"
                 ],
-                "summary": "处理呼叫",
-                "parameters": [
-                    {
-                        "description": "处理呼叫参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
+                "summary": "获取未处理消息数量",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/req.ProcessedCallReq"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                ],
-                "responses": {}
+                }
             }
         },
-        "/cashier/call/unprocessed_list": {
+        "/cashier/call/unprocessed/list": {
             "get": {
                 "security": [
                     {
@@ -801,7 +873,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -809,7 +881,7 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -2050,6 +2122,57 @@
                 }
             }
         },
+        "/cashier/member/print_recharge_order": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印充值订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "打印充值订单",
+                "parameters": [
+                    {
+                        "description": "打印充值订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrintRechargeOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterLogData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member/recharge_member": {
             "get": {
                 "security": [
@@ -2389,13 +2512,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -2434,13 +2557,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -2473,44 +2596,44 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -2518,19 +2641,19 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -3666,13 +3789,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -3711,13 +3834,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -3750,44 +3873,44 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
-                        "name": "page_no",
+                        "name": "pageNo",
                         "in": "query"
                     },
                     {
@@ -3795,19 +3918,19 @@
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
-                        "name": "page_size",
+                        "name": "pageSize",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -4609,6 +4732,22 @@
                 }
             }
         },
+        "req.PrintRechargeOrderReq": {
+            "type": "object",
+            "required": [
+                "recharge_order_uuid"
+            ],
+            "properties": {
+                "print_lang": {
+                    "description": "打印语言",
+                    "type": "string"
+                },
+                "recharge_order_uuid": {
+                    "description": "充值订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PrinterLogReq": {
             "type": "object",
             "required": [
@@ -4616,6 +4755,7 @@
             ],
             "properties": {
                 "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -4736,24 +4876,31 @@
             "type": "object",
             "properties": {
                 "create_time": {
+                    "description": "创建时间",
                     "type": "integer"
                 },
                 "desk_no": {
+                    "description": "桌台编号",
                     "type": "string"
                 },
                 "printer_name": {
+                    "description": "打印时间",
                     "type": "string"
                 },
                 "printer_uuid": {
+                    "description": "打印机Uuid",
                     "type": "integer"
                 },
                 "reason": {
+                    "description": "异常原因",
                     "type": "string"
                 },
                 "sale_bill_uuid": {
+                    "description": "销售账单uuid",
                     "type": "integer"
                 },
                 "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -4762,6 +4909,7 @@
             "type": "object",
             "properties": {
                 "list": {
+                    "description": "异常打印列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.AbnormalPrintItem"
@@ -5102,10 +5250,6 @@
         "resp.BuffetInfo": {
             "type": "object",
             "properties": {
-                "end_time": {
-                    "description": "自助餐结束时间",
-                    "type": "integer"
-                },
                 "locale_name": {
                     "description": "自助餐名称",
                     "allOf": [
@@ -5113,6 +5257,10 @@
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "remaining_seconds": {
+                    "description": "自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒",
+                    "type": "integer"
                 }
             }
         },
@@ -5183,10 +5331,6 @@
                 },
                 "device_remark": {
                     "description": "设备备注",
-                    "type": "string"
-                },
-                "is_first_login": {
-                    "description": "是否首次登录",
                     "type": "string"
                 },
                 "permissions": {
@@ -5353,6 +5497,10 @@
                 "desk_no": {
                     "description": "桌台编号",
                     "type": "string"
+                },
+                "duration": {
+                    "description": "用餐时长，单位：秒，表示从开台时间到当前时间的时间差。避免前端计算时间不准",
+                    "type": "integer"
                 },
                 "meal_num": {
                     "description": "就餐人数",
@@ -7384,10 +7532,6 @@
                     "description": "代号: -1 免单; 10 余额支付; 40 现金支付; 20 微信支付; 30 支付宝支付; 50 自有微信; 60 自有支付宝; 70 自有POS刷卡; 80 QR PromptPay; 90 QR code; 100 SCB easy; 110 Krungthai NEXT; 120 Krungsri Mobile; 130 Cross-Border QR; 140 TrueMoneyWallet; 150 LINE Pay; 160 ja  credit card; 170 ja  credit card; 180 JA QRCODE; 190 JA QRCODE; 90111 LianLianWechatPay; 90222 LianLianAliPay; 90333 LianLianQRPromptPay;",
                     "type": "integer"
                 },
-                "disabled_cancel": {
-                    "description": "禁止撤销，false-不禁止；true-禁止",
-                    "type": "boolean"
-                },
                 "fee_percent": {
                     "description": "手续费率",
                     "type": "number"
@@ -7436,6 +7580,10 @@
                     "description": "实收金额",
                     "type": "number"
                 },
+                "disabled_cancel": {
+                    "description": "禁止撤销，false-不禁止；true-禁止",
+                    "type": "boolean"
+                },
                 "payment_amount": {
                     "description": "支付订单金额",
                     "type": "number"
@@ -7447,6 +7595,10 @@
                 "payment_method_code": {
                     "description": "支付方式代号",
                     "type": "integer"
+                },
+                "payment_method_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
                 },
                 "payment_method_uuid": {
                     "description": "支付方式Uuid",
@@ -7495,6 +7647,79 @@
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrinterLogData": {
+            "type": "object",
+            "properties": {
+                "cashier_device_id": {
+                    "description": "收银机绑定的设备ID",
+                    "type": "string"
+                },
+                "copies": {
+                    "description": "打印机.份数 =\u003e 对应旧表print_times",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "日志创建时间戳",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "打印数据",
+                    "type": "string"
+                },
+                "data_type": {
+                    "description": "数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;",
+                    "type": "integer"
+                },
+                "first_execution": {
+                    "description": "是否首次执行打印 1-是 0-否;",
+                    "type": "integer"
+                },
+                "no": {
+                    "description": "OrderId         uint64 `json:\"order_id\"`          // 关联销售订单ID，废弃，直接传递No",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "打印次数",
+                    "type": "integer"
+                },
+                "print_method": {
+                    "description": "打印方式 1文本打印, 2图片打印'",
+                    "type": "integer"
+                },
+                "printer_config": {
+                    "description": "打印机.配置",
+                    "type": "string"
+                },
+                "printer_time": {
+                    "description": "打印时间",
+                    "type": "integer"
+                },
+                "printer_type": {
+                    "description": "打印机.类型",
+                    "type": "string"
+                },
+                "printer_uuid": {
+                    "description": "打印机uuid",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "原因",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态(0结束,1进行中,2成功)",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "类型:0系统默认队列,1云上服务下放",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -7916,21 +8141,23 @@
             "type": "object",
             "properties": {
                 "call_type": {
+                    "description": "呼叫类型:呼叫类型(1服务员,2结账)",
                     "type": "integer"
                 },
                 "desk_no": {
+                    "description": "桌台编号",
                     "type": "string"
                 },
                 "desk_uuid": {
+                    "description": "桌台Uuid",
                     "type": "integer"
                 },
                 "is_send": {
-                    "type": "integer"
-                },
-                "status": {
+                    "description": "是否已发送：1-是；0-否",
                     "type": "integer"
                 },
                 "uuid": {
+                    "description": "呼叫Uuid",
                     "type": "integer"
                 }
             }
@@ -7939,6 +8166,7 @@
             "type": "object",
             "properties": {
                 "list": {
+                    "description": "未处理呼叫列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.UnprocessedCallItem"
@@ -7946,6 +8174,15 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.UnprocessedResp": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "角标数量",
+                    "type": "integer"
                 }
             }
         },

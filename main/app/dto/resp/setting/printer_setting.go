@@ -2,7 +2,6 @@ package setting
 
 import (
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/model"
 )
 
 // Printer 小票打印机设置
@@ -36,14 +35,15 @@ type PrintItem struct {
 }
 
 type CashierPrinterItem struct {
-	Key       string `json:"key"`
-	PrinterId string `json:"printer_id"` // ToDo 这里是什么类型
+	Key       string `json:"key"`        // 收银机设备ID
+	PrinterId string `json:"printer_id"` // 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
 }
 
 type PrinterInfo struct {
-	PrinterBrand     string
-	Printer          model.Printer
-	PrinterUuid      uint64
+	PrinterUuid      uint64 // 0 或者 model.Printer 的Uuid
+	PrinterType      string // 打印机类型
+	Copies           uint   // 打印份数
+	PrinterConfig    string // 打印机设置
 	IsCashierPrinter bool
 	IsCashierOpen    bool
 	CashierBindKey   string

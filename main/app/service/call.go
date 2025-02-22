@@ -14,29 +14,26 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-// ICallSrv 定义沽清服务接口
+// ICallSrv 定义呼叫服务接口
 type ICallSrv interface {
-	AddLog(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error)              // 获取未处理的呼叫列表
-	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error) // 异常打印列表
-	Processed(companyUuid uint64, callUuid uint64) error                                                          // 呼叫已处理
-	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                    // 打印删除
-	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                 // 重新打印
-
-	Unprocessed(companyUuid uint64) (resp.UnprocessedResp, error) // todo 获取未处理消息数量
+	GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) // 获取未处理的呼叫列表
+	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error)    // 异常打印列表
+	Processed(companyUuid uint64, callUuid uint64) error                                                             // 呼叫已处理
+	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
+	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
+	GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error)                                                 // 获取未处理消息数量
 }
 
-// callSrv 沽清服务结构体
+// callSrv 呼叫服务结构体
 type callSrv struct {
 	dbm *database.DBManager // 数据库管理
 
 }
 
-// NewCallSrv 创建新的收银产品类别服务
 func NewCallSrv(dbm *database.DBManager) ICallSrv {
 	return NewCallSrvImpl(dbm)
 }
 
-// NewCallSrvImpl 创建新的收银服务实现
 func NewCallSrvImpl(dbm *database.DBManager) ICallSrv {
 	return &callSrv{
 		dbm: dbm,
@@ -44,10 +41,11 @@ func NewCallSrvImpl(dbm *database.DBManager) ICallSrv {
 }
 
 // GetUnprocessedCallList 获取未处理的呼叫列表
-func (s *callSrv) AddLog(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) {
+func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.UnprocessedCallListReq) (resp.UnprocessedCallList, error) {
 	var res resp.UnprocessedCallList
 	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
-	calls, total, err := callRepo.PaginateGet(listReq.PageNo, listReq.PageSize, callRepo.WhereC1Status(constant.CallStatusUnprocessed))
+	calls, total, err := callRepo.PaginateGet(listReq.PageNo, listReq.PageSize,
+		callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
 		return res, errors.New("获取呼叫列表失败")
 	}
@@ -103,27 +101,25 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 	}, nil
 }
 
-// Unprocessed 获取未处理消息数量
-func (s *callSrv) Unprocessed(companyUuid uint64) (resp.UnprocessedResp, error) {
-	var res resp.UnprocessedResp
-
-	// 对应前端
-	// unreadQuantity.js
-	// notification.vue
-
-	// 10条未处理的呼叫，返回呼叫uuid，用于设置已处理
-	// 获取未处理的呼叫条数
-
-	// 未处理的接单条数，返回h5扫码端订单uuid，用于接单或者拒单
-	// 10条未处理的接单信息
-
-	// 授权剩余天数
-	// 是否提醒即将授权结束
-
-	// 10条打印异常
-	// 获取打印异常条数
-
-	return res, nil
+// GetUnprocessed 获取未处理消息数量
+func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error) {
+	var (
+		res                    resp.UnprocessedResp
+		unprocessedCallCount   int64
+		unacceptedH5OrderCount int64
+		err                    error
+	)
+	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
+	unprocessedCallCount, err = callRepo.GetUnprocessedCallCount(callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
+	if err != nil {
+		return res, errors.New("获取未处理呼叫数量失败")
+	}
+	h5OrderRepo := repository.NewQrcodeOrderRepo(s.dbm.GetDB(companyUuid))
+	unacceptedH5OrderCount, err = h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus(constant.H5OrderStatusOrder))
+	if err != nil {
+		return res, errors.New("获取未处理接单数量失败")
+	}
+	return resp.UnprocessedResp{Count: unprocessedCallCount + unacceptedH5OrderCount}, nil
 }
 
 // Processed 消息已处理
@@ -152,14 +148,14 @@ func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.Repr
 		return res, errors.New("打印失败，打印机已不存在")
 	}
 	if printerLog.PrinterUuid > 0 && printerLog.Type == constant.PrinterLogTypeDefault {
-		// todo 调用打印接口
+		// todo 调用打印接口，实例化驱动对象传参 打印内容，打印机类型，打印机配置，打印份数
 	} else if printerLog.Type == constant.PrinterLogTypeCloud && printerLog.CashierDeviceId != "" && printerLog.CashierDeviceId != deviceId {
 		err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
-			if err := repository.NewPrinterReadLogRepo(s.dbm.GetDB(companyUuid)).
+			if err := repository.NewPrinterReadLogRepo(tx).
 				Update(deviceId, map[string]any{"delete_time": time.Now().Unix()}); err != nil {
 				return err
 			}
-			if err := printerLogRepo.Update(printerLogUuid, map[string]any{"status": constant.PrinterLogStatusInProgress}); err != nil {
+			if err := repository.NewPrinterLogRepo(tx).Update(printerLogUuid, map[string]any{"status": constant.PrinterLogStatusInProgress}); err != nil {
 				return err
 			}
 			return nil

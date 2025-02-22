@@ -839,7 +839,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	return &info, nil
 }
 
-// isPartiallyPaid 是否已经被部分支付
+// IsPartiallyPaid 是否已经被部分支付
 func (r *orderRepo) IsPartiallyPaid(param any) bool {
 	var info model.SaleBill
 	var ok bool

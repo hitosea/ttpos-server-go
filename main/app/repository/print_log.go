@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"time"
 	"ttpos-server-go/app/model"
 )
 
@@ -11,14 +12,16 @@ type IPrinterLogRepo interface {
 	WithSaleBill() DBOption           // 关联销售账单
 	WithSaleBillDesk() DBOption       // 关联销售账单.桌台
 
-	WhereStatus(status uint8) DBOption // 状态查询条件
-	WhereType(typ uint8) DBOption      // 类型查询条件
-	WhereUuid(uuid uint64) DBOption    // uuid 查询条件
+	WhereStatus(status uint8) DBOption     // 状态查询条件
+	WhereType(typ uint8) DBOption          // 类型查询条件
+	WhereUuid(uuid uint64) DBOption        // uuid 查询条件
+	WhereCreatedBefore(days uint) DBOption // n天前的数据
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
 	Update(uuid uint64, vars map[string]any) error
+	UpdateByWhere(vars map[string]any, opts ...DBOption) error
 
 	Create(printerLog model.PrinterLog) (model.PrinterLog, error)
 }
@@ -108,8 +111,22 @@ func (r *printerLogRepo) WhereUuid(uuid uint64) DBOption {
 	}
 }
 
+func (r *printerLogRepo) WhereCreatedBefore(days uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("create_time < ?", time.Now().Add(time.Duration(-days*24)*time.Hour))
+	}
+}
+
 func (r *printerLogRepo) Update(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.PrinterLog{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+func (r *printerLogRepo) UpdateByWhere(vars map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.PrinterLog{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(vars).Error
 }
 
 func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {
