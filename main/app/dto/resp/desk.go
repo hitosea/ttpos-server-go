@@ -6,9 +6,10 @@ type Desk struct {
 	Uuid          uint64  `json:"uuid"`           // 桌台UUID
 	DeskNo        string  `json:"desk_no"`        // 桌台名称
 	CustomerCount uint    `json:"customer_count"` // 桌台人数
-	Status        uint    `json:"status"`         // 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
+	Status        uint    `json:"status"`         // 桌台状态  0-未开台 1-已开台
 	IsLock        bool    `json:"is_lock"`        // 是否锁单
 	IsBuffet      bool    `json:"is_buffet"`      // 是否自助餐
+	IsWait        bool    `json:"is_wait"`        // 是否待清台
 	Time          uint    `json:"time"`           // 桌台用餐时间（秒）
 	Price         float64 `json:"price"`          // 桌台价格
 	Remark        string  `json:"remark"`         // 桌台备注
