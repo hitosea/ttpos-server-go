@@ -10,7 +10,7 @@ type IPrinterRepo interface {
 
 	WithPrinterType() DBOption
 
-	Get(opts ...DBOption) model.Printer
+	GetPrinter(opts ...DBOption) (model.Printer, error)
 }
 
 func NewPrinterRepo(db *gorm.DB) IPrinterRepo {
@@ -25,7 +25,7 @@ func NewPrinterRepoImpl(db *gorm.DB) IPrinterRepo {
 	return &printerRepo{db: db}
 }
 
-func (r *printerRepo) Get(opts ...DBOption) model.Printer {
+func (r *printerRepo) GetPrinter(opts ...DBOption) (model.Printer, error) {
 
 	var printer model.Printer
 	db := r.db.Model(&model.Printer{}).Scopes(NotDeleted)
@@ -33,9 +33,9 @@ func (r *printerRepo) Get(opts ...DBOption) model.Printer {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.First(&printer)
+	err := db.First(&printer).Error
 
-	return printer
+	return printer, err
 }
 func (r *printerRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {

@@ -104,7 +104,11 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 // @Router /cashier/member/recharge_order_in_progress [get]
 func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
 	order := h.memberSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
-	helper.Success(c, order)
+	if order.Uuid == 0 {
+		helper.Success(c, gin.H{})
+	} else {
+		helper.Success(c, order)
+	}
 }
 
 // CreateRechargeOrder 创建充值订单
@@ -127,19 +131,16 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, rechargeReq, req.CreateRechargeOrderReqMessage)
 		return
 	}
-
 	ctx := helper.GetContext(c)
-	//staff := helper.GetStaff(c)
-	//rechargeReq.StaffEmail = staff.Username
-	//rechargeReq.StaffName = staff.RealName
-	//rechargeReq.StaffUuid = staff.Uuid
-	//rechargeReq.Source = helper.GetSource(c)
-
 	if order, err = h.memberSrv.CreateRechargeOrder(ctx, rechargeReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, order)
+	if order.Uuid == 0 {
+		helper.Success(c, gin.H{})
+	} else {
+		helper.Success(c, order)
+	}
 }
 
 // AddPaymentMethod 充值订单添加支付方式
@@ -169,7 +170,11 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, order)
+	if order.Uuid == 0 {
+		helper.Success(c, gin.H{})
+	} else {
+		helper.Success(c, order)
+	}
 }
 
 // CancelPaymentMethod 充值订单撤销支付方式
@@ -197,7 +202,11 @@ func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, order)
+	if order.Uuid == 0 {
+		helper.Success(c, gin.H{})
+	} else {
+		helper.Success(c, order)
+	}
 }
 
 // ConfirmRechargeOrder 确认充值订单
@@ -211,6 +220,31 @@ func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.ConfirmRechargeOrder}
 // @Router /cashier/member/confirm_recharge_order [post]
 func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
+	var confirmRechargeOrder req.ConfirmRechargeOrder
+	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
+		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
+// PrintRechargeOrder 打印充值订单
+// @Summary 打印充值订单
+// @Description 打印充值订单
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.PrintRechargeOrderReq true "打印充值订单参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterLogData}
+// @Router /cashier/member/print_recharge_order [post]
+func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 	var confirmRechargeOrder req.ConfirmRechargeOrder
 	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
 		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
@@ -286,8 +320,10 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	printerLogSrv := service.NewPrinterLogSrv(dbm, settingSrv)
+	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
 
-	memberSrv := service.NewMemberSrv(dbm, paymentMethodSrv, settingSrv, cashBoxSrv)
+	memberSrv := service.NewMemberSrv(dbm, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv: memberSrv,
@@ -307,6 +343,6 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)       // 充值订单添加支付方式
 		privateApi.POST("/member/recharge_order_cancel_payment_method", wrapper.CancelPaymentMethod) // 充值订单撤销支付方式
 		privateApi.POST("/member/confirm_recharge_order", wrapper.ConfirmRechargeOrder)              // 确认充值订单
-
+		privateApi.POST("/member/print_recharge_order", wrapper.PrintRechargeOrder)                  // 打印充值订单
 	}
 }

@@ -2050,6 +2050,57 @@
                 }
             }
         },
+        "/cashier/member/print_recharge_order": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印充值订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "打印充值订单",
+                "parameters": [
+                    {
+                        "description": "打印充值订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrintRechargeOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterLogData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member/recharge_member": {
             "get": {
                 "security": [
@@ -4609,6 +4660,22 @@
                 }
             }
         },
+        "req.PrintRechargeOrderReq": {
+            "type": "object",
+            "required": [
+                "recharge_order_uuid"
+            ],
+            "properties": {
+                "print_lang": {
+                    "description": "打印语言",
+                    "type": "string"
+                },
+                "recharge_order_uuid": {
+                    "description": "充值订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PrinterLogReq": {
             "type": "object",
             "required": [
@@ -5183,10 +5250,6 @@
                 },
                 "device_remark": {
                     "description": "设备备注",
-                    "type": "string"
-                },
-                "is_first_login": {
-                    "description": "是否首次登录",
                     "type": "string"
                 },
                 "permissions": {
@@ -7495,6 +7558,79 @@
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrinterLogData": {
+            "type": "object",
+            "properties": {
+                "cashier_device_id": {
+                    "description": "收银机绑定的设备ID",
+                    "type": "string"
+                },
+                "copies": {
+                    "description": "打印机.份数 =\u003e 对应旧表print_times",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "日志创建时间戳",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "打印数据",
+                    "type": "string"
+                },
+                "data_type": {
+                    "description": "数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;",
+                    "type": "integer"
+                },
+                "first_execution": {
+                    "description": "是否首次执行打印 1-是 0-否;",
+                    "type": "integer"
+                },
+                "no": {
+                    "description": "OrderId         uint64 `json:\"order_id\"`          // 关联销售订单ID，废弃，直接传递No",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "打印次数",
+                    "type": "integer"
+                },
+                "print_method": {
+                    "description": "打印方式 1文本打印, 2图片打印'",
+                    "type": "integer"
+                },
+                "printer_config": {
+                    "description": "打印机.配置",
+                    "type": "string"
+                },
+                "printer_time": {
+                    "description": "打印时间",
+                    "type": "integer"
+                },
+                "printer_type": {
+                    "description": "打印机.类型",
+                    "type": "string"
+                },
+                "printer_uuid": {
+                    "description": "打印机uuid",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "原因",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态(0结束,1进行中,2成功)",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "类型:0系统默认队列,1云上服务下放",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }

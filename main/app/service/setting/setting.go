@@ -35,26 +35,26 @@ type GetSettingReq struct {
 }
 
 type ISrv interface {
-	GetStoreSetting(ctx context.Context) (setting.Store, error)                                              // 获取商家设置
-	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                    // 获取商家语言
-	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)         // 获取打印机设置
-	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) setting.PrinterInfo // 获取打印机信息
-	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)         // 获取收银机设置
-	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)     // 获取点餐助手设置
-	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                   // 获取扫码H5设置
-	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                        // 获取门店业务设置
-	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)       // 获取自助餐设置
-	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                        // 获取货币单位设置
-	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                     // 获取公司设置
-	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)     // 获取门店-支付方式设置
-	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                         // 获取收银机语言
-	GetCashierAd(ctx context.Context) (resp.Ads, error)                                                      // 获取收银机副屏广告
-	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                 // 获取服务费设置
-	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                          // 获取税率设置
-	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool         // 收银机验证密码
-	Updates(companyUuid uint64, settingKey string, values any) error                                         // 更新设置
-	VerifyAdvancedPassword(ctx context.Context, password string) error                                       // 验证高级密码
-	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)    // 检查更新
+	GetStoreSetting(ctx context.Context) (setting.Store, error)                                                       // 获取商家设置
+	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                             // 获取商家语言
+	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                  // 获取打印机设置
+	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error) // 获取打印机信息
+	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                  // 获取收银机设置
+	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)              // 获取点餐助手设置
+	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                            // 获取扫码H5设置
+	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                 // 获取门店业务设置
+	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)                // 获取自助餐设置
+	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                                 // 获取货币单位设置
+	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                              // 获取公司设置
+	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)              // 获取门店-支付方式设置
+	GetCashierLanguage(c context.Context) (resp.LanguageResp, error)                                                  // 获取收银机语言
+	GetCashierAd(ctx context.Context) (resp.Ads, error)                                                               // 获取收银机副屏广告
+	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                          // 获取服务费设置
+	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                   // 获取税率设置
+	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool                  // 收银机验证密码
+	Updates(companyUuid uint64, settingKey string, values any) error                                                  // 更新设置
+	VerifyAdvancedPassword(ctx context.Context, password string) error                                                // 验证高级密码
+	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)             // 检查更新
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -566,46 +566,54 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 }
 
 // GetPrinterInfo 获取打印机设置
-func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) setting.PrinterInfo {
+func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error) {
 	var (
-		printer          model.Printer
-		printerBrand     string
+		isCashierOpen    = printerSetting.CashierOpen == "1"
+		printerId        string
 		printerUuid      uint64
-		printerUuidStr   string
+		printer          model.Printer
+		err              error
+		copies           uint = 1
+		printerConfig    string
+		printerType      string
 		cashierBindKey   string
-		isCashierPrinter bool
-		isCashierOpen    bool
+		isCashierPrinter bool // 是否收银机自带打印机
 	)
-	if printerSetting.CashierOpen == "1" {
-		isCashierOpen = true
+	if isCashierOpen {
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
 			if cashierPrinter.Key == deviceId {
-				printerUuidStr = cashierPrinter.PrinterId // ToDo 这里的printer_id 是什么类型
+				printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
 				break
 			}
 		}
-		printerUuid, _ = strconv.ParseUint(printerUuidStr, 10, 64)
-		matched, _ := regexp.MatchString(`^-?\d+$`, printerUuidStr)
-		if len(printerUuidStr) > 12 || !matched {
-			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			printerBrand = deviceRepo.GetDeviceBrand(deviceRepo.WhereDeviceId(deviceId))
-			cashierBindKey = printerUuidStr
-			printerUuid = 0
-			isCashierPrinter = true
-		} else if printerUuid != 0 {
+		matched, _ := regexp.MatchString(`^\d+$`, printerId)
+		if len(printerId) == 18 && matched { // 普通打印机 uuid uint64 字符串
+			printerUuid, _ = strconv.ParseUint(printerId, 10, 64)
 			printerRepo := repository.NewPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			printer = printerRepo.Get(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())
+			printer, err = printerRepo.GetPrinter(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())
+			if err != nil {
+				return setting.PrinterInfo{}, err
+			}
+			copies = printer.Copies
+			printerConfig = printer.ConfigJson
+			printerType = printer.PrinterType.Key
+		} else if printerId != "0" { // 收银机内置的打印机
+			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+			printerType = deviceRepo.GetDeviceBrand(deviceRepo.WhereDeviceId(deviceId))
+			cashierBindKey = printerId
+			isCashierPrinter = true
 		}
 	}
 
 	return setting.PrinterInfo{
-		PrinterBrand:     printerBrand,
-		Printer:          printer,
-		PrinterUuid:      printerUuid,
+		PrinterType:      printerType,
+		PrinterUuid:      printerUuid, // 默认为0，如果是普通打印机，则为model.Printer的Uuid
+		Copies:           copies,
+		PrinterConfig:    printerConfig,
 		IsCashierPrinter: isCashierPrinter,
 		IsCashierOpen:    isCashierOpen,
 		CashierBindKey:   cashierBindKey,
-	}
+	}, nil
 }
 
 // GetBusinessSetting 门店业务设置
