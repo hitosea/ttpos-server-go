@@ -715,7 +715,7 @@ func (s *memberSrv) PrintRechargeOrder(ctx context.Context, discountReq req.Prin
 	printerData, err := s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
 		RechargeOrder: rechargeOrder,
 		IsQueue:       false,
-		DeviceId:      ctx.GetDeviceId(),
+		DeviceId:      ctx.GetDeviceSn(),
 		PrintLang:     ctx.GetLanguage(),
 	})
 	if err != nil {
