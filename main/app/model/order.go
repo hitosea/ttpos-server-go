@@ -467,8 +467,20 @@ type Calc struct {
 	//PaymentAmount         float64
 }
 
-func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
+func (model *SaleOrder) BeforeCalc() Calc {
+	return Calc{
+		ProductOriginalAmount: model.ProductOriginalAmount,
+		ProductAmount:         model.ProductAmount,
+		ServiceFee:            model.ServiceFee,
+		TaxFee:                model.TaxFee,
+		CustomDiscountFee:     model.CustomDiscountFee,
+		MemberDiscountFee:     model.MemberDiscountFee,
+		Amount:                model.Amount,
+		ZeroFee:               model.ZeroFee,
+	}
+}
 
+func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
 	calc := Calc{}
 	calc.ProductOriginalAmount = model.CalcProductOriginalAmount()
 	model.ProductOriginalAmount = calc.ProductOriginalAmount
@@ -716,7 +728,12 @@ func (model *SaleOrderProduct) CalcSaucePrice() float64 {
 }
 
 // 计算商品价格。某个规格商品价+小料价
+// 当商品没有改价时,ProductPrice= 某个规格商品价+小料价
+// 当商品改价时，ProductPrice= ProductPrice
 func (model *SaleOrderProduct) CalcProductPrice() float64 {
+	if model.IsCustomPrice == constant.CustomPriceOn {
+		return model.ProductPrice
+	}
 	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.CalcSaucePrice()))
 	return productPrice.InexactFloat64()
 }
@@ -726,7 +743,7 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 	return model.IsCustomPrice == constant.CustomPriceOn
 }
 
-// 计算商品销售价。如果商品改价，则直接修改SalePrice。如果没有改价，销售价=ProductPrice
+// 计算商品销售价。如果商品改价，则直接修改ProductPrice。如果没有改价，销售价=ProductPrice
 func (model *SaleOrderProduct) CalcSalePrice() float64 {
 	if model.IsCustomPriceBool() {
 		return model.SalePrice
@@ -746,6 +763,7 @@ func (model *SaleOrderProduct) CalcDiscountRate() float64 {
 func (model *SaleOrderProduct) CalcPrice() float64 {
 	discountRate := model.CalcDiscountRate()
 	if discountRate == 0 {
+		fmt.Println("-3333333----model.SalePrice:", model.SalePrice)
 		return model.SalePrice
 	}
 	// 销售价*折扣率
@@ -906,22 +924,45 @@ func (model *SaleOrderProduct) CalcTotalPrice(serviceFeeRate float64, taxFeeType
 	return totalPrice.InexactFloat64()
 }
 
+func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
+	model.IsCustomPrice = 1
+	model.SalePrice = price
+}
+
+type SaleOrderProductCalc struct {
+	SaucePrice        float64 `json:"sauce_price"`
+	ProductPrice      float64 `json:"product_price"`
+	SalePrice         float64 `json:"sale_price"`
+	Price             float64 `json:"price"`
+	MemberDiscountFee float64 `json:"member_discount_fee"`
+	CustomDiscountFee float64 `json:"custom_discount_fee"`
+	DiscountFee       float64 `json:"discount_fee"`
+	TaxFee            float64 `json:"tax_fee"`
+	ServiceFee        float64 `json:"service_fee"`
+	ServiceTaxFee     float64 `json:"service_tax_fee"`
+	TotalPrice        float64 `json:"total_price"`
+}
+
+// 获取价格变动前的信息
+func (model *SaleOrderProduct) BeforeCalc() SaleOrderProductCalc {
+	calc := SaleOrderProductCalc{}
+	calc.SaucePrice = model.SaucePrice
+	calc.ProductPrice = model.ProductPrice
+	calc.SalePrice = model.SalePrice
+	calc.Price = model.Price
+	calc.MemberDiscountFee = model.MemberDiscountFee
+	calc.CustomDiscountFee = model.CustomDiscountFee
+	calc.DiscountFee = model.DiscountFee
+	calc.TaxFee = model.TaxFee
+	calc.ServiceFee = model.ServiceFee
+	calc.ServiceTaxFee = model.ServiceTaxFee
+	calc.TotalPrice = model.TotalPrice
+	return calc
+}
+
 // 计算销售订单商品的所有计算值字段
-func (model *SaleOrderProduct) CalcSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) {
-	type Calc struct {
-		SaucePrice        float64
-		ProductPrice      float64
-		SalePrice         float64
-		Price             float64
-		MemberDiscountFee float64
-		CustomDiscountFee float64
-		DiscountFee       float64
-		TaxFee            float64
-		ServiceFee        float64
-		ServiceTaxFee     float64
-		TotalPrice        float64
-	}
-	calc := Calc{}
+func (model *SaleOrderProduct) CalcSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderProductCalc {
+	calc := SaleOrderProductCalc{}
 	// 开始计算
 	calc.SaucePrice = model.CalcSaucePrice()
 	model.SaucePrice = calc.SaucePrice
@@ -945,16 +986,19 @@ func (model *SaleOrderProduct) CalcSaleOrderProduct(serviceFeeRate float64, taxF
 	model.ServiceTaxFee = calc.ServiceTaxFee
 	calc.TotalPrice = model.CalcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
+	return calc
 }
 
 // 获取商品销售价(折前价)
 func (model *SaleOrderProduct) GetSalePrice() float64 {
+	// 销售价*数量
 	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
 	return salePrice
 }
 
 // 获取最终价格（折后价）
 func (model *SaleOrderProduct) GetPrice() float64 {
+	// 最终价格*数量
 	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
 	return price
 }

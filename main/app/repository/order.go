@@ -917,7 +917,7 @@ func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
 		Updates(map[string]interface{}{
 			"is_custom_price": 1,
-			"sale_price":      price,
+			"product_price":   price,
 		}).Error
 }
 

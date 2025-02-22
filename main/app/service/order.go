@@ -907,6 +907,39 @@ func (s *orderSrv) OrderProductDelete(dbId uint64, staffUuid uint64, source stri
 	return billInfo, nil
 }
 
+func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrderUuid, saleOrderProductUuid uint64) (*model.SaleBill, *model.SaleOrder, *model.SaleOrderProduct, error) {
+	newSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, nil, nil, errSaleBill
+	}
+	var newSaleOrder *model.SaleOrder
+	var newSaleOrderProduct *model.SaleOrderProduct
+	for i, _ := range newSaleBill.SaleOrders {
+		order := newSaleBill.SaleOrders[i]
+		if order.Uuid == saleOrderUuid {
+			newSaleOrder = newSaleBill.SaleOrders[i]
+			break
+		}
+	}
+	for i, order := range newSaleBill.SaleOrders {
+		for j, product := range order.SaleOrderProducts {
+			if product.Uuid == saleOrderProductUuid {
+				newSaleOrderProduct = newSaleBill.SaleOrders[i].SaleOrderProducts[j]
+				break
+			}
+		}
+	}
+	if newSaleOrder == nil {
+		ctx.Log().Error("改价商品时无法查询到销售订单信息", zap.Any("saleBillUuid", saleBillUuid), zap.Any("saleOrderUuid", saleOrderUuid))
+		return nil, nil, nil, errors.New("业务错误")
+	}
+	if newSaleOrderProduct == nil {
+		ctx.Log().Error("改价商品时无法查询到销售订单商品信息", zap.Any("saleBillUuid", saleBillUuid), zap.Any("saleOrderUuid", saleOrderUuid), zap.Any("saleOrderProductUuid", saleOrderProductUuid))
+		return nil, nil, nil, errors.New("业务错误")
+	}
+	return newSaleBill, newSaleOrder, newSaleOrderProduct, nil
+}
+
 // OrderProductChangePrice  修改订单商品价格
 func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error) {
 	if req.Price < 0 || req.Price > 1000000 {
@@ -919,14 +952,12 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
-	orderRepo := repository.NewOrderRepo(db)
-	orderProductRepo := repository.NewOrderProductRepo(db)
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
-	// 获取订单信息
-	saleBill, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
-	if err != nil {
-		return nil, err
+	// 获取操作的销售账单信息
+	saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	if errGetSaleOrder != nil {
+		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
+		return nil, errors.New("查询销售订单信息失败")
 	}
 
 	// 判断订单状态
@@ -934,67 +965,35 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, err
 	}
 
-	// 判断商品
-	product, err := orderProductRepo.GetProductInfoByUuid(req.OrderProductUuid)
-	if err != nil {
-		return nil, errors.New("找不到订单商品")
-	}
-
-	// 开始事务
-	tx := db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback() // 如果发生恐慌，回滚事务
-		}
-	}()
-
-	// 修改订单商品价格
-	if err := orderRepo.ChangeProductPrice(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Price); err != nil {
-		return nil, err
-	}
-
-	saleOrderProduct, errGetSaleOrder := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductByUuid(req.OrderProductUuid)
-	if errGetSaleOrder != nil {
-		ctx.Log().Error("改价商品时，查询销售订单商品信息失败", zap.Error(errGetSaleOrder))
-		return nil, errors.New("查询销售订单商品信息失败")
-	}
-	ctx.Log().Debug("商品改价后的价格", zap.Any("price", saleOrderProduct.Price))
-
-	newSaleOrder, errGetSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(saleOrderProduct.SaleOrderUuid)
-	if errGetSaleOrder != nil {
-		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
-		return nil, errors.New("查询销售订单信息失败")
-	}
+	ctx.Log().Debug("改价前", zap.Any("SalePrice", saleOrderProduct.SalePrice))
+	ctx.Log().Debug("改价前", zap.Any("saleOrderProduct calc", saleOrderProduct.BeforeCalc()))
+	// 改价
+	saleOrderProduct.ChangeProductPrice(req.Price)
+	ctx.Log().Debug("改价后", zap.Any("SalePrice", saleOrderProduct.SalePrice))
 
 	// 计算商品数据。折扣、税费、服务
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	afterCalc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	ctx.Log().Debug("改价后", zap.Any("saleOrderProduct calc", afterCalc))
+
 	// 计算订单金额
-	ctx.Log().Debug("开始进行商品改价")
+	ctx.Log().Debug("改价前,销售订单信息", zap.Any("saleOrder calc", saleOrder.BeforeCalc()))
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	newSaleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("改价后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
 
-	// 添加操作日志
-	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
-		Source:        ctx.GetSource(),
-		Remark:        "改价",
-		SaleBillUuid:  req.SaleBillUuid,
-		SaleOrderUuid: req.SaleOrderUuid,
-		OperatorUuid:  ctx.GetStaffUuid(),
-	}, map[string]interface{}{
-		"order_product_id": req.OrderProductUuid,
-		"product_id":       product.Uuid,
-		"product_name":     product.Name,
-		"total_num":        product.Num,
-		"price":            req.Price,
-		"product_attr":     product.GetAttributeNames(),
+	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新完整个销售订单
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+			return errUpdate
+		}
+		return nil
 	})
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return nil, err
+	if errUpdate != nil {
+		ctx.Log().Info("更新销售订单失败", zap.Error(errUpdate))
+		return nil, errors.New("更新销售订单失败")
 	}
 
 	// 获取新的数据
@@ -1002,6 +1001,20 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	if err != nil {
 		return nil, err
 	}
+
+	// 发布事件，记录销售账单操作记录
+	event.NewSystemBus().PublishAddSaleBillRecordEvent(event.AddSaleBillRecordPayload{
+		SaleBillUuid:     req.SaleBillUuid,
+		SaleOrderUuid:    req.SaleOrderUuid,
+		OrderProductUuid: req.OrderProductUuid,
+		OrderProductName: saleOrderProduct.Name,
+		OrderProductNum:  saleOrderProduct.Num,
+		CompanyUuid:      ctx.GetCompanyUuid(),
+		StaffUuid:        ctx.GetStaffUuid(),
+		Price:            req.Price,
+		AttributeNames:   saleOrderProduct.GetAttributeNames(),
+		Source:           ctx.GetSource(),
+	})
 
 	return info, nil
 }
@@ -1483,7 +1496,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	}
 	var newSaleOrder *model.SaleOrder
 	for i, _ := range newSaleBill.SaleOrders {
-		order := saleBill.SaleOrders[i]
+		order := newSaleBill.SaleOrders[i]
 		if order.Uuid == req.SaleOrderUuid {
 			newSaleOrder = newSaleBill.SaleOrders[i]
 			break
