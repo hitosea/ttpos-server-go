@@ -40,6 +40,7 @@ type DeskInfo struct {
 	DeskNo    string `json:"desk_no"`    // 桌台编号
 	MealNum   uint   `json:"meal_num"`   // 就餐人数
 	StartTime int64  `json:"start_time"` // 开台时间
+	Duration  int64  `json:"duration"`   // 用餐时长，单位：秒，表示从开台时间到当前时间的时间差。避免前端计算时间不准
 }
 
 // SaleOrder 购物车销售订单信息

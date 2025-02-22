@@ -10,6 +10,7 @@ type ISaleOrderProductRepo interface {
 	CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
+	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 }
 
 type saleOrderProductRepo struct {
@@ -44,4 +45,13 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOr
 		}
 	}
 	return nil
+}
+
+func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error) {
+	db := r.db
+	var model model.SaleOrderProduct
+	if err := db.Where("uuid = ?", uuid).First(&model).Error; err != nil {
+		return nil, err
+	}
+	return &model, nil
 }

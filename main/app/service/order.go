@@ -924,13 +924,13 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
+	saleBill, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, err
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
 
@@ -953,8 +953,28 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, err
 	}
 
-	// todo - 重算价格 - 等王总的逻辑
-	// (new OrderModel)->reloadPrice($order_id);
+	saleOrderProduct, errGetSaleOrder := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductByUuid(req.OrderProductUuid)
+	if errGetSaleOrder != nil {
+		ctx.Log().Error("改价商品时，查询销售订单商品信息失败", zap.Error(errGetSaleOrder))
+		return nil, errors.New("查询销售订单商品信息失败")
+	}
+	ctx.Log().Debug("商品改价后的价格", zap.Any("price", saleOrderProduct.Price))
+
+	newSaleOrder, errGetSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(saleOrderProduct.SaleOrderUuid)
+	if errGetSaleOrder != nil {
+		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
+		return nil, errors.New("查询销售订单信息失败")
+	}
+
+	// 计算商品数据。折扣、税费、服务
+	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	// 计算订单金额
+	ctx.Log().Debug("开始进行商品改价")
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	newSaleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 
 	// 添加操作日志
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
@@ -1287,7 +1307,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			Uuid:      shopCart.SaleBill.Desk.Uuid,
 			DeskNo:    shopCart.SaleBill.Desk.DeskNo,
 			MealNum:   shopCart.SaleBill.MealNum,
-			StartTime: shopCart.SaleBill.Desk.CreateTime,
+			StartTime: shopCart.SaleBill.CreateTime,
+			Duration:  time.Now().Unix() - shopCart.SaleBill.Desk.CreateTime,
 		}
 		shopCartInfo.Desk = &deskInfo
 		// 如果是自助餐桌台
@@ -1718,6 +1739,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProdu
 						Uuid:       productBom.Uuid,
 						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 						Price:      productBom.Price,
+						StockNum:   int(productBom.StockNum),
 					}
 					flavorList = append(flavorList, flavor)
 				} else {
@@ -1726,6 +1748,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProdu
 						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 						Price:             productBom.Price,
 						IsDefaultSelected: productBom.IsDefaultSelectBool(),
+						StockNum:          int(productBom.StockNum),
 					}
 					sauceList = append(sauceList, sauce)
 				}

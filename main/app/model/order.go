@@ -237,6 +237,7 @@ func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 				continue
 			}
 			// SalePrice * Num
+			fmt.Println("orderProduct.SalePrice", orderProduct.SalePrice, "orderProduct.uuid", orderProduct.Uuid)
 			saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
 			sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
 			fmt.Println("sumSalePrice:", sumSalePrice.InexactFloat64())
