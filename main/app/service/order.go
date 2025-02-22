@@ -1754,11 +1754,21 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProdu
 				}
 				productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
 			}
+			minPrice := float64(0)
+			for index, flavor := range flavorList {
+				if index == 0 {
+					minPrice = flavor.Price
+				}
+				if flavor.Price < minPrice {
+					minPrice = flavor.Price
+				}
+			}
 			productPackage := &resp.InstantMustPlanProduct{
 				LocaleName: planItem.ProductPackage.MultiLanguageName.GetNames(),
 				Image:      planItem.ProductPackage.ImageFile.GetUrl(),
 				Unit:       planItem.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
 				LimitNum:   planItem.ProductPackage.LimitNum,
+				Price:      minPrice,
 				Flavors:    resp.Flavors{List: flavorList},
 				Sauces: resp.ProductSauces{
 					List:      sauceList,

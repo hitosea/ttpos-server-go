@@ -54,6 +54,7 @@ type InstantMustPlanProduct struct {
 	Image           string             `json:"image"`            // 商品图片url
 	Unit            dto.LocaleResponse `json:"unit"`             // 商品单位
 	LimitNum        uint               `json:"limit_num"`        // 商品限购数量,0-不限购
+	Price           float64            `json:"price"`            // 商品价格.所有规格中价格最小的价格
 	Flavors         Flavors            `json:"flavors"`          // 商品规格列表
 	Sauces          ProductSauces      `json:"sauces"`           // 商品小料信息
 	AttributeGroups AttributeGroups    `json:"attribute_groups"` // 商品属性组列表

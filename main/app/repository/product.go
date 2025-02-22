@@ -29,6 +29,7 @@ type IProductRepo interface {
 	WithProductPackageAttributeGroupProductPackageAttributes() DBOption                                             // 预加载产品包装属性组产品包装属性
 	WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption                                    // 预加载产品包装属性组产品包装属性属性
 	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption                   // 预加载产品包装属性组产品包装属性属性多语言名称
+	WithProductPackageImageFile() DBOption                                                                          // 预加载产品包的图片信息
 	WithDineTax() DBOption                                                                                          // 预加载堂食税
 	WithTakeoutTax() DBOption                                                                                       // 预加载外卖税
 
@@ -256,6 +257,12 @@ func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAt
 func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName")
+	}
+}
+
+func (r *productRepo) WithProductPackageImageFile() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ImageFile")
 	}
 }
 

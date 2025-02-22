@@ -14,15 +14,14 @@ type Product struct {
 	LimitNum            uint                      `json:"limit_num"`             // 商品限购数量
 	Flavors             ProductFlavorList         `json:"flavors"`               // 商品规格
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
-	Attributes          ProductAttributeGroupList `json:"attributes"`            // 商品属性组
+	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 }
 
 // ProductFlavor 商品规格
 type ProductFlavor struct {
-	Uuid              uint64             `json:"uuid"`                // 商品规格UUID
-	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品规格名称
-	Price             float64            `json:"price"`               // 商品规格价格
-	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
+	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
+	Price      float64            `json:"price"`       // 商品规格价格
 }
 
 // ProductSauce 商品小料
@@ -37,7 +36,7 @@ type ProductSauce struct {
 type ProductAttributeGroup struct {
 	Uuid       uint64                    `json:"uuid"`        // 商品属性组UUID
 	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品属性组名称
-	Value      ProductAttributeValueList `json:"value"`       // 商品属性值
+	Attributes ProductAttributeValueList `json:"attributes"`  // 商品属性值列表
 	IsMust     bool                      `json:"is_must"`     // 是否必选
 	MaxSelect  uint                      `json:"max_select"`  // 最大可选数量
 }
@@ -56,7 +55,9 @@ type ProductFlavorList struct {
 
 // ProductSauceList 商品小料列表
 type ProductSauceList struct {
-	List []ProductSauce `json:"list"`
+	List      []ProductSauce `json:"list"`
+	IsMust    bool           `json:"is_must"`    // 是否必选小料
+	MaxSelect int            `json:"max_select"` // 小料最大可选数量
 }
 
 // ProductAttributeGroupList 商品属性组列表

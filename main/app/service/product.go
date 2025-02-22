@@ -61,6 +61,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
+		productRepo.WithProductPackageImageFile(),
 		commonRepo.WhereByIsShowCashier(1),
 		commonRepo.WhereByStatus(1),
 		commonRepo.WhereBySoftDelete(),
@@ -85,10 +86,9 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 			for _, bom := range product.ProductBoms {
 				if bom.ProductFlavor.Uuid > 0 {
 					flavors = append(flavors, cashier_resp.ProductFlavor{
-						Uuid:              bom.ProductFlavor.Uuid,
-						LocaleName:        s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
-						Price:             bom.Price,
-						IsDefaultSelected: bom.IsDefaultSelect == 1,
+						Uuid:       bom.ProductFlavor.Uuid,
+						LocaleName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
+						Price:      bom.Price,
 					})
 					if len(prices) == 0 {
 						prices = append(prices, bom.Price)
@@ -125,7 +125,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 					LocaleName: s.localeSrv.GetLocaleNames(group.ProductAttributeGroup.MultiLanguageName),
 					IsMust:     group.IsMust == 1,
 					MaxSelect:  group.MaxSelection,
-					Value: cashier_resp.ProductAttributeValueList{
+					Attributes: cashier_resp.ProductAttributeValueList{
 						List: values,
 					},
 				})
@@ -133,7 +133,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		}
 
 		// todo 去 ttpos_file表中获取图片url
-		image := ""
+		image := product.ImageFile.GetUrl()
 		// 添加到列表
 		minPrice := float64(0)
 		if len(prices) > 0 {
@@ -154,7 +154,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 			Sauces: cashier_resp.ProductSauceList{
 				List: sauces,
 			},
-			Attributes: cashier_resp.ProductAttributeGroupList{
+			AttributeGroups: cashier_resp.ProductAttributeGroupList{
 				List: attributes,
 			},
 		})
