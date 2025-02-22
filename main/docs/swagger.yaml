@@ -2,7 +2,7 @@ basePath: /
 definitions:
   cashier_resp.Product:
     properties:
-      attributes:
+      attribute_groups:
         allOf:
         - $ref: '#/definitions/cashier_resp.ProductAttributeGroupList'
         description: 商品属性组
@@ -43,6 +43,10 @@ definitions:
     type: object
   cashier_resp.ProductAttributeGroup:
     properties:
+      attributes:
+        allOf:
+        - $ref: '#/definitions/cashier_resp.ProductAttributeValueList'
+        description: 商品属性值列表
       is_must:
         description: 是否必选
         type: boolean
@@ -56,10 +60,6 @@ definitions:
       uuid:
         description: 商品属性组UUID
         type: integer
-      value:
-        allOf:
-        - $ref: '#/definitions/cashier_resp.ProductAttributeValueList'
-        description: 商品属性值
     type: object
   cashier_resp.ProductAttributeGroupList:
     properties:
@@ -117,9 +117,6 @@ definitions:
     type: object
   cashier_resp.ProductFlavor:
     properties:
-      is_default_selected:
-        description: 是否默认选中
-        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -127,6 +124,9 @@ definitions:
       price:
         description: 商品规格价格
         type: number
+      stock_num:
+        description: 商品库存数量
+        type: integer
       uuid:
         description: 商品规格UUID
         type: integer
@@ -159,16 +159,25 @@ definitions:
       price:
         description: 商品小料价格
         type: number
+      stock_num:
+        description: 小料库存数量
+        type: integer
       uuid:
         description: 商品小料UUID
         type: integer
     type: object
   cashier_resp.ProductSauceList:
     properties:
+      is_must:
+        description: 是否必选小料
+        type: boolean
       list:
         items:
           $ref: '#/definitions/cashier_resp.ProductSauce'
         type: array
+      max_select:
+        description: 小料最大可选数量
+        type: integer
     type: object
   dto.LanguageItem:
     properties:
@@ -681,6 +690,33 @@ definitions:
         description: 登录账号
         type: string
     type: object
+  resp.Attribute:
+    properties:
+      is_default_selected:
+        description: 是否默认选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
+  resp.AttributeGroups:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ProductAttributeGroup'
+        type: array
+    type: object
+  resp.Attributes:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Attribute'
+        type: array
+    type: object
   resp.BillLists:
     properties:
       bill_type:
@@ -1097,6 +1133,13 @@ definitions:
       uuid:
         description: 餐桌类型ID
         type: integer
+    type: object
+  resp.Flavors:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ProductFlavor'
+        type: array
     type: object
   resp.GetBaseInfoResponse:
     properties:
@@ -1957,7 +2000,39 @@ definitions:
         description: 用户ID
         type: integer
     type: object
-  resp.InstantMustPlan:
+  resp.InstantMustPlanProduct:
+    properties:
+      attribute_groups:
+        allOf:
+        - $ref: '#/definitions/resp.AttributeGroups'
+        description: 商品属性组列表
+      flavors:
+        allOf:
+        - $ref: '#/definitions/resp.Flavors'
+        description: 商品规格列表
+      image:
+        description: 商品图片url
+        type: string
+      limit_num:
+        description: 商品限购数量,0-不限购
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      price:
+        description: 商品价格.所有规格中价格最小的价格
+        type: number
+      sauces:
+        allOf:
+        - $ref: '#/definitions/resp.ProductSauces'
+        description: 商品小料信息
+      unit:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位
+    type: object
+  resp.InstantProductMustPlan:
     properties:
       can_change_num:
         description: 顾客可修改必点数量
@@ -1974,42 +2049,22 @@ definitions:
       name:
         description: 方案名称
         type: string
-      product_list:
+      products:
+        allOf:
+        - $ref: '#/definitions/resp.ProductPackageList'
         description: 商品列表
-        items:
-          $ref: '#/definitions/resp.InstantMustPlanProduct'
-        type: array
     type: object
-  resp.InstantMustPlanProduct:
+  resp.InstantProductMustPlanResp:
     properties:
-      attribute_group_list:
-        description: 商品属性组列表
+      list:
+        description: 必点方案列表
         items:
-          $ref: '#/definitions/resp.ProductAttributeGroup'
+          $ref: '#/definitions/resp.InstantProductMustPlan'
         type: array
-      flavor_list:
-        description: 商品规格列表
-        items:
-          $ref: '#/definitions/resp.ProductFlavor'
-        type: array
-      image:
-        description: 商品图片url
-        type: string
-      limit_num:
-        description: 商品限购数量,0-不限购
-        type: integer
-      locale_name:
+      shop_cart_info:
         allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品名称
-      sauces:
-        allOf:
-        - $ref: '#/definitions/resp.ProductSauces'
-        description: 商品小料信息
-      unit:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品单位
+        - $ref: '#/definitions/resp.InstantShopCart'
+        description: 购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面
     type: object
   resp.InstantShopCart:
     properties:
@@ -2296,26 +2351,6 @@ definitions:
             type: integer
         type: object
     type: object
-  resp.OrderMustPlanAutoSelectResp:
-    properties:
-      must_plan_list:
-        description: 必点方案列表
-        items:
-          $ref: '#/definitions/resp.InstantMustPlan'
-        type: array
-      shop_cart_info:
-        allOf:
-        - $ref: '#/definitions/resp.InstantShopCart'
-        description: 购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面
-    type: object
-  resp.OrderMustPlanResp:
-    properties:
-      must_plan_list:
-        description: 必点方案列表
-        items:
-          $ref: '#/definitions/resp.InstantMustPlan'
-        type: array
-    type: object
   resp.OrderOperationLog:
     properties:
       action:
@@ -2493,7 +2528,7 @@ definitions:
         - $ref: '#/definitions/resp.AboutBuffet'
         description: 自助餐信息
       discount_price:
-        description: 折扣价。折扣加为0的话表示没有对商品进行折扣，则显示原价
+        description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
         type: number
       is_cancel:
         description: 是否退菜
@@ -2528,21 +2563,12 @@ definitions:
         description: 商品uuid
         type: integer
     type: object
-  resp.ProductAttribute:
-    properties:
-      is_default_selected:
-        description: 是否默认选中
-        type: boolean
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品属性名称
-      uuid:
-        description: 商品属性UUID
-        type: integer
-    type: object
   resp.ProductAttributeGroup:
     properties:
+      attributes:
+        allOf:
+        - $ref: '#/definitions/resp.Attributes'
+        description: 商品属性列表
       is_must:
         description: 是否必选
         type: boolean
@@ -2551,13 +2577,8 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品属性组名称
       max_select:
-        description: 最大可选的属性数量
+        description: 最大可选的属性数量。0时不限制选择数量
         type: integer
-      product_attribute_list:
-        description: 商品属性列表
-        items:
-          $ref: '#/definitions/resp.ProductAttribute'
-        type: array
     type: object
   resp.ProductFlavor:
     properties:
@@ -2568,9 +2589,19 @@ definitions:
       price:
         description: 商品规格价格
         type: number
+      stock_num:
+        description: 库存数量
+        type: integer
       uuid:
         description: 商品规格UUID
         type: integer
+    type: object
+  resp.ProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.InstantMustPlanProduct'
+        type: array
     type: object
   resp.ProductSauce:
     properties:
@@ -2584,6 +2615,9 @@ definitions:
       price:
         description: 商品小料价格
         type: number
+      stock_num:
+        description: 库存数量
+        type: integer
       uuid:
         description: 商品小料UUID
         type: integer
@@ -2685,6 +2719,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.Product'
         type: array
+      product_num:
+        description: 商品数量
+        type: integer
       uuid:
         type: integer
     type: object
@@ -3909,15 +3946,6 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: 获取必点方案信息
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.OrderMustPlanResp'
-              type: object
         "201":
           description: 当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息
           schema:
@@ -3925,7 +3953,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.OrderMustPlanAutoSelectResp'
+                  $ref: '#/definitions/resp.InstantProductMustPlanResp'
               type: object
       summary: 获取点餐必点方案
       tags:

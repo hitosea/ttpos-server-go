@@ -1451,24 +1451,6 @@ const docTemplate = `{
                 ],
                 "summary": "获取点餐必点方案",
                 "responses": {
-                    "200": {
-                        "description": "获取必点方案信息",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.OrderMustPlanResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
                     "201": {
                         "description": "当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息",
                         "schema": {
@@ -1480,7 +1462,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.OrderMustPlanAutoSelectResp"
+                                            "$ref": "#/definitions/resp.InstantProductMustPlanResp"
                                         }
                                     }
                                 }
@@ -3859,7 +3841,7 @@ const docTemplate = `{
         "cashier_resp.Product": {
             "type": "object",
             "properties": {
-                "attributes": {
+                "attribute_groups": {
                     "description": "商品属性组",
                     "allOf": [
                         {
@@ -3928,6 +3910,14 @@ const docTemplate = `{
         "cashier_resp.ProductAttributeGroup": {
             "type": "object",
             "properties": {
+                "attributes": {
+                    "description": "商品属性值列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/cashier_resp.ProductAttributeValueList"
+                        }
+                    ]
+                },
                 "is_must": {
                     "description": "是否必选",
                     "type": "boolean"
@@ -3947,14 +3937,6 @@ const docTemplate = `{
                 "uuid": {
                     "description": "商品属性组UUID",
                     "type": "integer"
-                },
-                "value": {
-                    "description": "商品属性值",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/cashier_resp.ProductAttributeValueList"
-                        }
-                    ]
                 }
             }
         },
@@ -4048,10 +4030,6 @@ const docTemplate = `{
         "cashier_resp.ProductFlavor": {
             "type": "object",
             "properties": {
-                "is_default_selected": {
-                    "description": "是否默认选中",
-                    "type": "boolean"
-                },
                 "locale_name": {
                     "description": "商品规格名称",
                     "allOf": [
@@ -4063,6 +4041,10 @@ const docTemplate = `{
                 "price": {
                     "description": "商品规格价格",
                     "type": "number"
+                },
+                "stock_num": {
+                    "description": "商品库存数量",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品规格UUID",
@@ -4114,6 +4096,10 @@ const docTemplate = `{
                     "description": "商品小料价格",
                     "type": "number"
                 },
+                "stock_num": {
+                    "description": "小料库存数量",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "商品小料UUID",
                     "type": "integer"
@@ -4123,11 +4109,19 @@ const docTemplate = `{
         "cashier_resp.ProductSauceList": {
             "type": "object",
             "properties": {
+                "is_must": {
+                    "description": "是否必选小料",
+                    "type": "boolean"
+                },
                 "list": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/cashier_resp.ProductSauce"
                     }
+                },
+                "max_select": {
+                    "description": "小料最大可选数量",
+                    "type": "integer"
                 }
             }
         },
@@ -4854,6 +4848,49 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Attribute": {
+            "type": "object",
+            "properties": {
+                "is_default_selected": {
+                    "description": "是否默认选中",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品属性名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.AttributeGroups": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductAttributeGroup"
+                    }
+                }
+            }
+        },
+        "resp.Attributes": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Attribute"
+                    }
+                }
+            }
+        },
         "resp.BillLists": {
             "type": "object",
             "properties": {
@@ -5464,6 +5501,17 @@ const docTemplate = `{
                 "uuid": {
                     "description": "餐桌类型ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.Flavors": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductFlavor"
+                    }
                 }
             }
         },
@@ -6709,7 +6757,64 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.InstantMustPlan": {
+        "resp.InstantMustPlanProduct": {
+            "type": "object",
+            "properties": {
+                "attribute_groups": {
+                    "description": "商品属性组列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AttributeGroups"
+                        }
+                    ]
+                },
+                "flavors": {
+                    "description": "商品规格列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Flavors"
+                        }
+                    ]
+                },
+                "image": {
+                    "description": "商品图片url",
+                    "type": "string"
+                },
+                "limit_num": {
+                    "description": "商品限购数量,0-不限购",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品价格.所有规格中价格最小的价格",
+                    "type": "number"
+                },
+                "sauces": {
+                    "description": "商品小料信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductSauces"
+                        }
+                    ]
+                },
+                "unit": {
+                    "description": "商品单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.InstantProductMustPlan": {
             "type": "object",
             "properties": {
                 "can_change_num": {
@@ -6732,61 +6837,31 @@ const docTemplate = `{
                     "description": "方案名称",
                     "type": "string"
                 },
-                "product_list": {
+                "products": {
                     "description": "商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.InstantMustPlanProduct"
-                    }
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductPackageList"
+                        }
+                    ]
                 }
             }
         },
-        "resp.InstantMustPlanProduct": {
+        "resp.InstantProductMustPlanResp": {
             "type": "object",
             "properties": {
-                "attribute_group_list": {
-                    "description": "商品属性组列表",
+                "list": {
+                    "description": "必点方案列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.ProductAttributeGroup"
+                        "$ref": "#/definitions/resp.InstantProductMustPlan"
                     }
                 },
-                "flavor_list": {
-                    "description": "商品规格列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ProductFlavor"
-                    }
-                },
-                "image": {
-                    "description": "商品图片url",
-                    "type": "string"
-                },
-                "limit_num": {
-                    "description": "商品限购数量,0-不限购",
-                    "type": "integer"
-                },
-                "locale_name": {
-                    "description": "商品名称",
+                "shop_cart_info": {
+                    "description": "购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "sauces": {
-                    "description": "商品小料信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.ProductSauces"
-                        }
-                    ]
-                },
-                "unit": {
-                    "description": "商品单位",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
+                            "$ref": "#/definitions/resp.InstantShopCart"
                         }
                     ]
                 }
@@ -7195,38 +7270,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.OrderMustPlanAutoSelectResp": {
-            "type": "object",
-            "properties": {
-                "must_plan_list": {
-                    "description": "必点方案列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.InstantMustPlan"
-                    }
-                },
-                "shop_cart_info": {
-                    "description": "购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.InstantShopCart"
-                        }
-                    ]
-                }
-            }
-        },
-        "resp.OrderMustPlanResp": {
-            "type": "object",
-            "properties": {
-                "must_plan_list": {
-                    "description": "必点方案列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.InstantMustPlan"
-                    }
-                }
-            }
-        },
         "resp.OrderOperationLog": {
             "type": "object",
             "properties": {
@@ -7474,7 +7517,7 @@ const docTemplate = `{
                     ]
                 },
                 "discount_price": {
-                    "description": "折扣价。折扣加为0的话表示没有对商品进行折扣，则显示原价",
+                    "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
                     "type": "number"
                 },
                 "is_cancel": {
@@ -7527,30 +7570,17 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.ProductAttribute": {
-            "type": "object",
-            "properties": {
-                "is_default_selected": {
-                    "description": "是否默认选中",
-                    "type": "boolean"
-                },
-                "locale_name": {
-                    "description": "商品属性名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "uuid": {
-                    "description": "商品属性UUID",
-                    "type": "integer"
-                }
-            }
-        },
         "resp.ProductAttributeGroup": {
             "type": "object",
             "properties": {
+                "attributes": {
+                    "description": "商品属性列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Attributes"
+                        }
+                    ]
+                },
                 "is_must": {
                     "description": "是否必选",
                     "type": "boolean"
@@ -7564,15 +7594,8 @@ const docTemplate = `{
                     ]
                 },
                 "max_select": {
-                    "description": "最大可选的属性数量",
+                    "description": "最大可选的属性数量。0时不限制选择数量",
                     "type": "integer"
-                },
-                "product_attribute_list": {
-                    "description": "商品属性列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ProductAttribute"
-                    }
                 }
             }
         },
@@ -7591,9 +7614,24 @@ const docTemplate = `{
                     "description": "商品规格价格",
                     "type": "number"
                 },
+                "stock_num": {
+                    "description": "库存数量",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "商品规格UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ProductPackageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantMustPlanProduct"
+                    }
                 }
             }
         },
@@ -7615,6 +7653,10 @@ const docTemplate = `{
                 "price": {
                     "description": "商品小料价格",
                     "type": "number"
+                },
+                "stock_num": {
+                    "description": "库存数量",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品小料UUID",
@@ -7759,6 +7801,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.Product"
                     }
+                },
+                "product_num": {
+                    "description": "商品数量",
+                    "type": "integer"
                 },
                 "uuid": {
                     "type": "integer"

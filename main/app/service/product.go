@@ -89,6 +89,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 						Uuid:       bom.ProductFlavor.Uuid,
 						LocaleName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
 						Price:      bom.Price,
+						StockNum:   int(bom.StockNum),
 					})
 					if len(prices) == 0 {
 						prices = append(prices, bom.Price)
@@ -104,6 +105,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 						LocaleName:        s.localeSrv.GetLocaleNames(bom.ProductSauce.MultiLanguageName),
 						Price:             bom.Price,
 						IsDefaultSelected: bom.IsDefaultSelect == 1,
+						StockNum:          int(bom.StockNum),
 					})
 				}
 			}

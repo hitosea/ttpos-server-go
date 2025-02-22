@@ -105,6 +105,7 @@ type ProductFlavor struct {
 	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
 	Price      float64            `json:"price"`       // 商品规格价格
+	StockNum   int                `json:"stock_num"`   // 库存数量
 }
 
 type ProductSauces struct {
@@ -118,6 +119,7 @@ type ProductSauce struct {
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品小料名称
 	Price             float64            `json:"price"`               // 商品小料价格
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
+	StockNum          int                `json:"stock_num"`           // 库存数量
 }
 
 type ProductAttributeGroup struct {
