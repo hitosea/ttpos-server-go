@@ -26,6 +26,9 @@ class CheckService
                 case 'product_barcode':
                     $unique = (new \app\common\model\product\ProductSku)->checkProductBarcodeExist($name, $id);
                     break;
+                case 'product_bom_barcode':
+                    $unique = (new \app\common\model\product\ProductBom)->checkProductBarcodeExist($name, $id);
+                    break;
                 case 'product_img':
                     $unique = (new \app\common\model\product\Product)->checkProductImgExist($name, $shop_supplier_id, $id);
                     break;

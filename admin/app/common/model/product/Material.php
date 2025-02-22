@@ -80,6 +80,14 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联加料
+     */
+    public function feed()
+    {
+        return $this->belongsToMany(Feed::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
+    }
+
+    /**
      * 详情
      */
     public static function detail($id)

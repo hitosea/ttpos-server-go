@@ -23,12 +23,24 @@ class Attribute extends AttributeModel
         // 属性组
         $type = $data['type'] ?? 1;
         if ($type == 1) {
-            return AttributeGroup::with(['children'])->order(['create_time' => 'desc'])->paginate($data);
+            return AttributeGroup::with(['children' => function ($query) {
+                $query->withAttr('id', function ($value, $data) {
+                    return $data['uuid'] ?: 0;
+                });
+            }])
+            ->withAttr('id', function ($value, $data) {
+                return $data['uuid'] ?: 0;
+            })
+            ->order(['create_time' => 'desc'])
+            ->paginate($data);
         }
 
         // 属性值
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('a')
+            ->withAttr('id', function ($value, $data) {
+                return $data['uuid'] ?: 0;
+            })
             ->field('a.*')
             ->field("IFNULL(pa.product_ids, '') AS product_ids")
             ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
