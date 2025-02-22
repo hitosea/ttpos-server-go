@@ -6,6 +6,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/cashier_resp.ProductAttributeGroupList'
         description: 商品属性组
+      category_uuid:
+        description: 商品类别UUID
+        type: integer
       flavors:
         allOf:
         - $ref: '#/definitions/cashier_resp.ProductFlavorList'
@@ -27,6 +30,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/cashier_resp.ProductSauceList'
         description: 商品小料
+      special_category_uuid:
+        description: 商品特殊类别UUID
+        type: integer
       unit:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'

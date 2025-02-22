@@ -3867,6 +3867,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "category_uuid": {
+                    "description": "商品类别UUID",
+                    "type": "integer"
+                },
                 "flavors": {
                     "description": "商品规格",
                     "allOf": [
@@ -3902,6 +3906,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/cashier_resp.ProductSauceList"
                         }
                     ]
+                },
+                "special_category_uuid": {
+                    "description": "商品特殊类别UUID",
+                    "type": "integer"
                 },
                 "unit": {
                     "description": "商品单位",
