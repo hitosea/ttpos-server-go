@@ -673,7 +673,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品包名称',
+    `name` TEXT DEFAULT NULL COMMENT '商品包名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片ID',
@@ -733,7 +733,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称或小料名称(不用于业务显示)',
+    `name` TEXT DEFAULT NULL COMMENT '商品名称或小料名称(不用于业务显示)',
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
