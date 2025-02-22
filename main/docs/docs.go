@@ -467,7 +467,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/call/abnormal_print_list": {
+        "/cashier/call/abnormal_print/list": {
             "get": {
                 "security": [
                     {
@@ -528,6 +528,70 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
+                "description": "删除打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.呼叫"
+                ],
+                "summary": "删除打印",
+                "parameters": [
+                    {
+                        "description": "删除打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterLogReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/cashier/call/processed": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "处理呼叫",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.呼叫"
+                ],
+                "summary": "处理呼叫",
+                "parameters": [
+                    {
+                        "description": "处理呼叫参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProcessedCallReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/cashier/call/reprint": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "重新打印",
                 "consumes": [
                     "application/json"
@@ -572,14 +636,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/call/processed": {
-            "post": {
+        "/cashier/call/unprocessed": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "处理呼叫",
+                "description": "获取未处理消息数量",
                 "consumes": [
                     "application/json"
                 ],
@@ -589,22 +653,30 @@ const docTemplate = `{
                 "tags": [
                     "收银端.呼叫"
                 ],
-                "summary": "处理呼叫",
-                "parameters": [
-                    {
-                        "description": "处理呼叫参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
+                "summary": "获取未处理消息数量",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/req.ProcessedCallReq"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
-                ],
-                "responses": {}
+                }
             }
         },
-        "/cashier/call/unprocessed_list": {
+        "/cashier/call/unprocessed/list": {
             "get": {
                 "security": [
                     {
@@ -4689,6 +4761,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -4809,24 +4882,31 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "create_time": {
+                    "description": "创建时间",
                     "type": "integer"
                 },
                 "desk_no": {
+                    "description": "桌台编号",
                     "type": "string"
                 },
                 "printer_name": {
+                    "description": "打印时间",
                     "type": "string"
                 },
                 "printer_uuid": {
+                    "description": "打印机Uuid",
                     "type": "integer"
                 },
                 "reason": {
+                    "description": "异常原因",
                     "type": "string"
                 },
                 "sale_bill_uuid": {
+                    "description": "销售账单uuid",
                     "type": "integer"
                 },
                 "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -4835,6 +4915,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "list": {
+                    "description": "异常打印列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.AbnormalPrintItem"
@@ -8066,21 +8147,23 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "call_type": {
+                    "description": "呼叫类型:呼叫类型(1服务员,2结账)",
                     "type": "integer"
                 },
                 "desk_no": {
+                    "description": "桌台编号",
                     "type": "string"
                 },
                 "desk_uuid": {
+                    "description": "桌台Uuid",
                     "type": "integer"
                 },
                 "is_send": {
-                    "type": "integer"
-                },
-                "status": {
+                    "description": "是否已发送：1-是；0-否",
                     "type": "integer"
                 },
                 "uuid": {
+                    "description": "呼叫Uuid",
                     "type": "integer"
                 }
             }
@@ -8089,6 +8172,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "list": {
+                    "description": "未处理呼叫列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.UnprocessedCallItem"
@@ -8096,6 +8180,15 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.UnprocessedResp": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "角标数量",
+                    "type": "integer"
                 }
             }
         },

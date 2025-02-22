@@ -29,7 +29,7 @@ type CallHandler struct {
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} dto.Response{data=resp.AbnormalPrintList}
-// @Router /cashier/call/abnormal_print_list [get]
+// @Router /cashier/call/abnormal_print/list [get]
 func (h *CallHandler) GetAbnormalPrintList(c *gin.Context) {
 	var listReq req.AbnormalPrintListReq
 	if err := c.ShouldBindQuery(&listReq); err != nil {
@@ -54,14 +54,32 @@ func (h *CallHandler) GetAbnormalPrintList(c *gin.Context) {
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} dto.Response{data=resp.UnprocessedCallList}
-// @Router /cashier/call/unprocessed_list [get]
+// @Router /cashier/call/unprocessed/list [get]
 func (h *CallHandler) GetUnprocessedCallList(c *gin.Context) {
 	var listReq req.UnprocessedCallListReq
 	if err := c.ShouldBindQuery(&listReq); err != nil {
 		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
-	res, err := h.callSrv.AddLog(helper.GetCompanyUuid(c), listReq)
+	res, err := h.callSrv.GetUnprocessedCallList(helper.GetCompanyUuid(c), listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
+// GetUnprocessed 获取未处理消息数量
+// @Summary 获取未处理消息数量
+// @Description 获取未处理消息数量
+// @Tags 收银端.呼叫
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.UnprocessedResp}
+// @Router /cashier/call/unprocessed [get]
+func (h *CallHandler) GetUnprocessed(c *gin.Context) {
+	res, err := h.callSrv.GetUnprocessed(helper.GetCompanyUuid(c))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -124,7 +142,7 @@ func (h *CallHandler) DeletePrint(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.PrinterLogReq true "重新打印参数"
 // @Success 200 {object} dto.Response{data=resp.ReprintResp}
-// @Router /cashier/call/print [delete]
+// @Router /cashier/call/reprint [post]
 func (h *CallHandler) Reprint(c *gin.Context) {
 	var printerLogReq req.PrinterLogReq
 	if err := c.ShouldBindJSON(&printerLogReq); err != nil {
@@ -157,10 +175,11 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/call/unprocessed_list", wrapper.GetUnprocessedCallList)  // 分页获取呼叫列表
+		privateApi.GET("/call/unprocessed/list", wrapper.GetUnprocessedCallList)  // 分页获取呼叫列表
 		privateApi.POST("/call/processed", wrapper.Processed)                     // 处理呼叫
-		privateApi.GET("/call/abnormal_print_list", wrapper.GetAbnormalPrintList) // 异常打印列表
+		privateApi.GET("/call/abnormal_print/list", wrapper.GetAbnormalPrintList) // 异常打印列表
 		privateApi.DELETE("/call/print", wrapper.DeletePrint)                     // 删除异常打印
 		privateApi.POST("/call/reprint", wrapper.Reprint)                         // 重新打印
+		privateApi.GET("/call/unprocessed", wrapper.GetUnprocessed)               // 获取未处理消息数量
 	}
 }

@@ -10,11 +10,14 @@ import (
 // IH5OrderRepo 接单
 type IH5OrderRepo interface {
 	GetQrcodeOrderList(pageNo, pageSize int) ([]model.H5Order, int64, error)
+	GetH5OrderCount(opts ...DBOption) (int64, error)
 	GetH5OrderInfoByDeskUuid(qrcodeOrderUuid uint64) (model.H5Order, error)
 	UpdateQrcodeOrder(qrcodeOrderUuid uint64, qrcodeOrder model.H5Order) error
 	CreateQrcodeOrder(qrcodeOrder model.H5Order) (uint64, error)
 	DeleteQrcodeOrder(qrcodeOrderUuid uint64) error
 	Reject(DeskUuid uint64) error
+
+	WhereStatus(status int) DBOption
 }
 
 func NewQrcodeOrderRepo(db *gorm.DB) IH5OrderRepo {
@@ -45,6 +48,20 @@ func (r *H5OrderRepoImpl) GetQrcodeOrderList(pageNo, pageSize int) ([]model.H5Or
 	// 获取分页数据
 	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&qrcodeOrders).Error
 	return qrcodeOrders, total, err
+}
+
+// GetH5OrderCount 获取H5订单数量
+func (r *H5OrderRepoImpl) GetH5OrderCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.H5Order{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	// 获取总数
+	if err := db.Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // GetH5OrderInfoByDeskUuid 获取接单信息
@@ -87,4 +104,11 @@ func (r *H5OrderRepoImpl) Reject(DeskUuid uint64) error {
 			"status":      2,
 			"handle_time": uint(time.Now().Unix()),
 		}).Error
+}
+
+// WhereStatus 状态条件
+func (r *H5OrderRepoImpl) WhereStatus(status int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
+	}
 }

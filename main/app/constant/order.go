@@ -118,3 +118,12 @@ const (
 	ProductMustPlanNotPass = "PRODUCT_MUST_PLAN_NOT_PASS" // 商品还未满足限购要求
 	ProductPass            = "PRODUCT_PASS"               // 商品检查通过
 )
+
+// 状态, 0-未下单 1-未接单 2-已接单 3-已拒单
+
+const (
+	H5OrderStatusChooseProduct = 0 // 未下单
+	H5OrderStatusOrder         = 1 // 未接单
+	H5OrderStatusAccept        = 2 // 已接单
+	H5OrderStatusReject        = 3 // 已拒单
+)

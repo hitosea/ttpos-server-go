@@ -19,5 +19,5 @@ type ProcessedCallReq struct {
 
 // PrinterLogReq 打印日志ID
 type PrinterLogReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"`
+	Uuid uint64 `json:"uuid" binding:"required"` // 打印日志Uuid
 }

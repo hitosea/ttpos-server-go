@@ -542,6 +542,7 @@ definitions:
   req.PrinterLogReq:
     properties:
       uuid:
+        description: 打印日志Uuid
         type: integer
     required:
     - uuid
@@ -629,23 +630,31 @@ definitions:
   resp.AbnormalPrintItem:
     properties:
       create_time:
+        description: 创建时间
         type: integer
       desk_no:
+        description: 桌台编号
         type: string
       printer_name:
+        description: 打印时间
         type: string
       printer_uuid:
+        description: 打印机Uuid
         type: integer
       reason:
+        description: 异常原因
         type: string
       sale_bill_uuid:
+        description: 销售账单uuid
         type: integer
       uuid:
+        description: 打印日志Uuid
         type: integer
     type: object
   resp.AbnormalPrintList:
     properties:
       list:
+        description: 异常打印列表
         items:
           $ref: '#/definitions/resp.AbnormalPrintItem'
         type: array
@@ -2863,26 +2872,36 @@ definitions:
   resp.UnprocessedCallItem:
     properties:
       call_type:
+        description: 呼叫类型:呼叫类型(1服务员,2结账)
         type: integer
       desk_no:
+        description: 桌台编号
         type: string
       desk_uuid:
+        description: 桌台Uuid
         type: integer
       is_send:
-        type: integer
-      status:
+        description: 是否已发送：1-是；0-否
         type: integer
       uuid:
+        description: 呼叫Uuid
         type: integer
     type: object
   resp.UnprocessedCallList:
     properties:
       list:
+        description: 未处理呼叫列表
         items:
           $ref: '#/definitions/resp.UnprocessedCallItem'
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.UnprocessedResp:
+    properties:
+      count:
+        description: 角标数量
+        type: integer
     type: object
   setting.AddClockItem:
     properties:
@@ -3425,7 +3444,7 @@ paths:
       summary: 获取自助餐列表
       tags:
       - 收银端.自助餐
-  /cashier/call/abnormal_print_list:
+  /cashier/call/abnormal_print/list:
     get:
       consumes:
       - application/json
@@ -3460,6 +3479,46 @@ paths:
     delete:
       consumes:
       - application/json
+      description: 删除打印
+      parameters:
+      - description: 删除打印参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterLogReq'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
+      summary: 删除打印
+      tags:
+      - 收银端.呼叫
+  /cashier/call/processed:
+    post:
+      consumes:
+      - application/json
+      description: 处理呼叫
+      parameters:
+      - description: 处理呼叫参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProcessedCallReq'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
+      summary: 处理呼叫
+      tags:
+      - 收银端.呼叫
+  /cashier/call/reprint:
+    post:
+      consumes:
+      - application/json
       description: 重新打印
       parameters:
       - description: 重新打印参数
@@ -3485,27 +3544,29 @@ paths:
       summary: 重新打印
       tags:
       - 收银端.呼叫
-  /cashier/call/processed:
-    post:
+  /cashier/call/unprocessed:
+    get:
       consumes:
       - application/json
-      description: 处理呼叫
-      parameters:
-      - description: 处理呼叫参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.ProcessedCallReq'
+      description: 获取未处理消息数量
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedResp'
+              type: object
       security:
       - JwtToken: []
-      summary: 处理呼叫
+      summary: 获取未处理消息数量
       tags:
       - 收银端.呼叫
-  /cashier/call/unprocessed_list:
+  /cashier/call/unprocessed/list:
     get:
       consumes:
       - application/json

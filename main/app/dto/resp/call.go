@@ -3,36 +3,35 @@ package resp
 import "ttpos-server-go/app/dto"
 
 type UnprocessedCallItem struct {
-	CallType int    `json:"call_type"`
-	Uuid     int    `json:"uuid"`
-	IsSend   int    `json:"is_send"`
-	Status   int    `json:"status"`
-	DeskUuid int    `json:"desk_uuid"`
-	DeskNo   string `json:"desk_no"`
+	CallType int    `json:"call_type"` // 呼叫类型:呼叫类型(1服务员,2结账)
+	Uuid     int    `json:"uuid"`      // 呼叫Uuid
+	IsSend   int    `json:"is_send"`   // 是否已发送：1-是；0-否
+	DeskUuid int    `json:"desk_uuid"` // 桌台Uuid
+	DeskNo   string `json:"desk_no"`   // 桌台编号
 }
 
 type UnprocessedCallList struct {
-	List []UnprocessedCallItem `json:"list"`
+	List []UnprocessedCallItem `json:"list"` // 未处理呼叫列表
 	Meta dto.PageResponse      `json:"meta"`
 }
 
 type AbnormalPrintItem struct {
-	Uuid         int    `json:"uuid"`
-	Reason       string `json:"reason"`
-	PrinterUuid  uint64 `json:"printer_uuid"`
-	SaleBillUuid uint64 `json:"sale_bill_uuid"`
-	CreateTime   int64  `json:"create_time"`
-	PrinterName  string `json:"printer_name"`
-	DeskNo       string `json:"desk_no"`
+	Uuid         int    `json:"uuid"`           // 打印日志Uuid
+	Reason       string `json:"reason"`         // 异常原因
+	PrinterUuid  uint64 `json:"printer_uuid"`   // 打印机Uuid
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单uuid
+	CreateTime   int64  `json:"create_time"`    // 创建时间
+	PrinterName  string `json:"printer_name"`   // 打印时间
+	DeskNo       string `json:"desk_no"`        // 桌台编号
 }
 
 type AbnormalPrintList struct {
-	List []AbnormalPrintItem `json:"list"`
+	List []AbnormalPrintItem `json:"list"` // 异常打印列表
 	Meta dto.PageResponse    `json:"meta"`
 }
 
 type UnprocessedResp struct {
-	Count uint `json:"count"`
+	Count int64 `json:"count"` // 角标数量
 }
 
 type ReprintResp struct {
