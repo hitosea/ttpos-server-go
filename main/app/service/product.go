@@ -147,7 +147,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 			Sauces: cashier_resp.ProductSauceList{
 				List: sauces,
 			},
-			Attributes: cashier_resp.ProductAttributeGroupList{
+			AttributeGroups: cashier_resp.ProductAttributeGroupList{
 				List: attributes,
 			},
 		})

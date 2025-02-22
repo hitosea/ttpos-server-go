@@ -315,8 +315,7 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=resp.OrderMustPlanResp} "获取必点方案信息"
-// @Failure 201 {object} dto.Response{data=resp.OrderMustPlanAutoSelectResp} "当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息"
+// @Failure 201 {object} dto.Response{data=resp.InstantProductMustPlanResp} "当必点方案中有自购加购的商品时，除返回必点方案信息还返回新的购物车信息"
 // @Router /cashier/instant/order/must_plan [get]
 func (h *InstantHandler) OrderMustPlan(c *gin.Context) {
 	ctx := helper.GetContext(c)

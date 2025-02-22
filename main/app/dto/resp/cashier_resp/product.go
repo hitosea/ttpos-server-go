@@ -4,15 +4,15 @@ import "ttpos-server-go/app/dto"
 
 // Product 商品
 type Product struct {
-	Uuid       uint64                    `json:"uuid"`        // 商品UUID
-	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品名称
-	Image      string                    `json:"image"`       // 商品图片
-	Unit       dto.LocaleResponse        `json:"unit"`        // 商品单位
-	Price      float64                   `json:"price"`       // 商品价格
-	LimitNum   uint                      `json:"limit_num"`   // 商品限购数量
-	Flavors    ProductFlavorList         `json:"flavors"`     // 商品规格
-	Sauces     ProductSauceList          `json:"sauces"`      // 商品小料
-	Attributes ProductAttributeGroupList `json:"attributes"`  // 商品属性组
+	Uuid            uint64                    `json:"uuid"`        // 商品UUID
+	LocaleName      dto.LocaleResponse        `json:"locale_name"` // 商品名称
+	Image           string                    `json:"image"`       // 商品图片
+	Unit            dto.LocaleResponse        `json:"unit"`        // 商品单位
+	Price           float64                   `json:"price"`       // 商品价格
+	LimitNum        uint                      `json:"limit_num"`   // 商品限购数量
+	Flavors         ProductFlavorList         `json:"flavors"`     // 商品规格
+	Sauces          ProductSauceList          `json:"sauces"`      // 商品小料
+	AttributeGroups ProductAttributeGroupList `json:"attributes"`  // 商品属性组
 }
 
 // ProductFlavor 商品规格

@@ -52,7 +52,7 @@ type IOrderSrv interface {
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                         // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
-	InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPlanAutoSelectResp, error)
+	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)
 }
 
 // orderSrv 订单服务结构
@@ -1680,9 +1680,9 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 }
 
 // InstantOrderMustPlan 获取点餐必点方案
-func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPlanAutoSelectResp, error) {
+func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	mustPlanList := make([]resp.InstantMustPlan, 0)
+	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 
 	// 获取必选方案信息
@@ -1702,6 +1702,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 		}
 		productPackageList := make([]*resp.InstantMustPlanProduct, 0)
 		for _, planItem := range plan.ProductMustPlanItems {
+
 			if planItem.IsDelete() {
 				continue
 			}
@@ -1733,12 +1734,12 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 				if group.IsDelete() {
 					continue
 				}
-				productAttributeList := make([]resp.ProductAttribute, 0)
+				productAttributeList := make([]resp.Attribute, 0)
 				for _, attribute := range group.ProductPackageAttributes {
 					if attribute.IsDelete() {
 						continue
 					}
-					productAttribute := resp.ProductAttribute{
+					productAttribute := resp.Attribute{
 						Uuid:              attribute.Uuid,
 						LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
 						IsDefaultSelected: attribute.IsDefaultSelectedBool(),
@@ -1746,10 +1747,10 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 					productAttributeList = append(productAttributeList, productAttribute)
 				}
 				productAttributeGroup := resp.ProductAttributeGroup{
-					LocaleName:           group.ProductAttributeGroup.MultiLanguageName.GetNames(),
-					ProductAttributeList: productAttributeList,
-					IsMust:               group.IsMustBool(),
-					MaxSelect:            group.MaxSelection,
+					LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
+					Attributes: resp.Attributes{List: productAttributeList},
+					IsMust:     group.IsMustBool(),
+					MaxSelect:  group.MaxSelection,
 				}
 				productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
 			}
@@ -1758,13 +1759,13 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 				Image:      planItem.ProductPackage.ImageFile.GetUrl(),
 				Unit:       planItem.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
 				LimitNum:   planItem.ProductPackage.LimitNum,
-				FlavorList: flavorList,
+				Flavors:    resp.Flavors{List: flavorList},
 				Sauces: resp.ProductSauces{
 					List:      sauceList,
 					IsMust:    planItem.ProductPackage.GetSauceRequired(),
 					MaxSelect: int(planItem.ProductPackage.SauceMaxSelection),
 				},
-				AttributeGroupList: productAttributeGroupList,
+				AttributeGroups: resp.AttributeGroups{List: productAttributeGroupList},
 			}
 			// 该必点计划开启自动加购功能且有商品能满足自动加购条件时，将这些商品加入待加购列表中。
 			if plan.IsAutoCart() && productPackage.CanAutoJoinCart() {
@@ -1772,13 +1773,13 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 			}
 			productPackageList = append(productPackageList, productPackage)
 		}
-		mustPlan := resp.InstantMustPlan{
+		mustPlan := resp.InstantProductMustPlan{
 			Name:         plan.Name,
 			MustType:     plan.GetMustType(),
 			MustRule:     plan.GetMustRule(),
 			IsAutoCart:   plan.IsAutoCart(),
 			CanChangeNum: plan.IsCustomerCanChange(),
-			ProductList:  productPackageList,
+			Products:     resp.ProductPackageList{List: productPackageList},
 		}
 		mustPlanList = append(mustPlanList, mustPlan)
 	}
@@ -1811,7 +1812,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.OrderMustPla
 		}
 	}
 
-	return &resp.OrderMustPlanAutoSelectResp{MustPlanList: mustPlanList, ShopCartInfo: cartInfo}, nil
+	return &resp.InstantProductMustPlanResp{List: mustPlanList, ShopCartInfo: cartInfo}, nil
 }
 
 func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProduct) (*resp.ShopCart, error) {
