@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"slices"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp/cashier_resp"
@@ -134,12 +135,16 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		// todo 去 ttpos_file表中获取图片url
 		image := ""
 		// 添加到列表
+		minPrice := float64(0)
+		if len(prices) > 0 {
+			minPrice = slices.Min(prices)
+		}
 		list = append(list, cashier_resp.Product{
 			Uuid:                product.Uuid,
 			Image:               image,
 			LocaleName:          s.localeSrv.GetLocaleNames(product.MultiLanguageName),
 			Unit:                s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
-			Price:               prices[0],
+			Price:               minPrice,
 			LimitNum:            product.LimitNum,
 			CategoryUuid:        product.CategoryUuid,
 			SpecialCategoryUuid: product.SpecialCategoryUuid,
