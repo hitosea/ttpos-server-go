@@ -47,6 +47,7 @@ type SaleOrder struct {
 	Uuid        uint64     `json:"uuid"`
 	OrderNo     string     `json:"order_no"`
 	ProductList []Product  `json:"product_list"` // 商品列表
+	ProductNum  int        `json:"product_num"`  // 商品数量
 	AmountInfo  AmountInfo `json:"amount_info"`
 }
 

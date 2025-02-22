@@ -1247,10 +1247,17 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			}
 		}
 
+		// 商品计数
+		productNum := 0
+		for _, product := range productList {
+			productNum += int(product.Num)
+		}
+
 		// 填写订单信息
 		order := resp.SaleOrder{
 			Uuid:        saleOrder.Uuid,
 			OrderNo:     saleOrder.OrderNo,
+			ProductNum:  productNum,
 			ProductList: productList,
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
@@ -1336,6 +1343,9 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 			saleOrder = saleBill.SaleOrders[i]
 			break
 		}
+	}
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
 	}
 
 	// 录入订单商品数据
