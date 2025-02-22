@@ -46,10 +46,12 @@ type RechargeOrder struct {
 type PaymentOrder struct {
 	Uuid                 uint64  `json:"uuid"`                   // 充值订单支付订单Uuid
 	PaymentMethodUuid    uint64  `json:"payment_method_uuid"`    // 支付方式Uuid
+	PaymentMethodName    string  `json:"payment_method_name"`    // 支付方式名称
 	PaymentMethodCode    int     `json:"payment_method_code"`    // 支付方式代号
 	PaymentAmount        float64 `json:"payment_amount"`         // 支付订单金额
 	PaymentCommissionFee float64 `json:"payment_commission_fee"` // 手续费
 	Amount               float64 `json:"amount"`                 // 实收金额
+	DisabledCancel       bool    `json:"disabled_cancel"`        // 禁止撤销，false-不禁止；true-禁止
 }
 
 // ConfirmRechargeOrder 确认充值订单响应

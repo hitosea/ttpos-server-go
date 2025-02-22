@@ -7,6 +7,7 @@ import (
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -166,6 +167,10 @@ func (s *memberSrv) GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrd
 		for _, paymentOrder := range rechargeOrder.PaymentOrders {
 			copier.Copy(&respPaymentOrder, paymentOrder)
 			respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
+			respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
+			respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
+				constant.PaymentMethodCodeLianLianAliPay,
+				constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
 			respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 		}
 	}

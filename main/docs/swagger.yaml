@@ -2452,9 +2452,6 @@ definitions:
           LINE Pay; 160 ja  credit card; 170 ja  credit card; 180 JA QRCODE; 190 JA
           QRCODE; 90111 LianLianWechatPay; 90222 LianLianAliPay; 90333 LianLianQRPromptPay;'
         type: integer
-      disabled_cancel:
-        description: 禁止撤销，false-不禁止；true-禁止
-        type: boolean
       fee_percent:
         description: 手续费率
         type: number
@@ -2489,6 +2486,9 @@ definitions:
       amount:
         description: 实收金额
         type: number
+      disabled_cancel:
+        description: 禁止撤销，false-不禁止；true-禁止
+        type: boolean
       payment_amount:
         description: 支付订单金额
         type: number
@@ -2498,6 +2498,9 @@ definitions:
       payment_method_code:
         description: 支付方式代号
         type: integer
+      payment_method_name:
+        description: 支付方式名称
+        type: string
       payment_method_uuid:
         description: 支付方式Uuid
         type: integer
