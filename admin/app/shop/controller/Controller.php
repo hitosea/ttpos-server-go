@@ -188,10 +188,6 @@ class Controller extends BaseController
             return;
         }
         // 如果不记录查询日志
-        $config = Setting::getItem('store');
-        if (!$config || !$config['is_get_log']) {
-            return;
-        }
         //
         try {
             $title = (new AuthService($this->store))::getAccessNameByApiPath($this->routeUri, $this->store['app']['app_id']);

@@ -85,6 +85,13 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+
+		// 获取设备uuid
+		device, errGetDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, ctx.GetDeviceSn())
+		if errGetDevice != nil {
+			return errors.New("获取设备uuid失败")
+		}
+
 		// 判断是否有待支付、未挂单的订单
 		commonRepo := repository.NewCommonRepo()
 		orderRepo := repository.NewOrderRepo(tx)
@@ -97,7 +104,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		if err != nil && !errors2.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		if order.Uuid > 0 {
+		if order.Uuid > 0 && device.Uuid == order.DeviceUuid {
 			return errors.New("有待支付、未挂单的订单")
 		}
 
@@ -107,10 +114,6 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.New("订单编号生成失败")
 		}
 
-		device, errGetDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, ctx.GetDeviceSn())
-		if errGetDevice != nil {
-			return errors.New("获取设备uuid失败")
-		}
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
 			OrderNo:      orderNo,
