@@ -31,7 +31,8 @@ type AbnormalPrintList struct {
 }
 
 type UnprocessedResp struct {
-	Count int64 `json:"count"` // 角标数量
+	UnprocessedCallCount int64 `json:"unprocessed_call_count"` // 未处理呼叫数量
+	AbnormalPrintCount   int64 `json:"abnormal_print_count"`   // 异常打印数量
 }
 
 type ReprintResp struct {

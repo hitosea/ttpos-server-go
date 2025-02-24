@@ -12,12 +12,14 @@ type IPrinterLogRepo interface {
 	WithSaleBill() DBOption           // 关联销售账单
 	WithSaleBillDesk() DBOption       // 关联销售账单.桌台
 
-	WhereStatus(status uint8) DBOption     // 状态查询条件
-	WhereType(typ uint8) DBOption          // 类型查询条件
-	WhereUuid(uuid uint64) DBOption        // uuid 查询条件
-	WhereCreatedBefore(days uint) DBOption // n天前的数据
+	WhereStatus(status uint8) DBOption               // 状态查询条件
+	WhereType(typ uint8) DBOption                    // 类型查询条件
+	WhereFirstExecution(firstExecution int) DBOption // 是否首次执行
+	WhereUuid(uuid uint64) DBOption                  // uuid 查询条件
+	WhereCreatedBefore(days uint) DBOption           // n天前的数据
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
+	GetPrintLogCount(opts ...DBOption) (int64, error)
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
 	Update(uuid uint64, vars map[string]any) error
@@ -58,6 +60,22 @@ func (r *printerLogRepo) PaginateGet(page, pageSize int, opts ...DBOption) ([]mo
 		return printerLog, 0, err
 	}
 	return printerLog, total, nil
+}
+
+// GetPrintLogCount 根据条件或者打印日志数量
+func (r *printerLogRepo) GetPrintLogCount(opts ...DBOption) (int64, error) {
+	var total int64
+	// 构建基础查询
+	builder := r.db.Model(&model.PrinterLog{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		builder = opt(builder)
+	}
+	// 获取总记录数
+	err := builder.Count(&total).Error
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *printerLogRepo) GetPrinterLog(opts ...DBOption) model.PrinterLog {
@@ -102,6 +120,12 @@ func (r *printerLogRepo) WhereStatus(status uint8) DBOption {
 func (r *printerLogRepo) WhereType(typ uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("type = ?", typ)
+	}
+}
+
+func (r *printerLogRepo) WhereFirstExecution(firstExecution int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("first_execution = ?", firstExecution)
 	}
 }
 
