@@ -30,8 +30,8 @@ class addIsH5OrderProductToSaleOrderProduct extends Migrator
     {
         $table = $this->table('sale_order_product');
         if (!$table->hasColumn('is_h5_order_product')) {
-            $table->addColumn('is_h5_order_product', 'tinyint', ['default' => 0, 'comment' => '是否为扫码订单商品, 0-否 1-是', 'after' => 'h5_order_product_uuid'])
-                  ->update();
+            $table->addColumn(Column::tinyInteger('is_h5_order_product')->setDefault(0)->setComment('是否为扫码订单商品, 0-否 1-是')->setAfter('h5_order_product_uuid'));
+            $table->update();
         }
     }
 }
