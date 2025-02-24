@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/copier"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -20,6 +17,10 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/jinzhu/copier"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	"github.com/duke-git/lancet/v2/cryptor"
 )
@@ -35,7 +36,7 @@ type IMemberSrv interface {
 	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)          // 充值订单添加支付方式
 	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) // 充值订单撤销支付方式
 	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
-	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error)                     // 获取会员折扣
+	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error)                    // 获取会员折扣
 	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                            // 使用会员优惠验证密码
 	PrintRechargeOrder(ctx context.Context, discountReq req.PrintRechargeOrderReq) (resp.PrinterLogData, error)                       // 打印充值订单
 }
@@ -689,10 +690,72 @@ func (s *memberSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUu
 	}
 }
 
-func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (resp.MemberDiscountResp, error) {
+func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
 	// 获取会员信息
-	// ToDo 调用订单计算价格接口
-	return resp.MemberDiscountResp{}, nil
+	member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, discountReq.MemberUuid)
+	if errMember != nil {
+		return nil, errMember
+	}
+	// 获取账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
+	if errSaleBill != nil {
+		ctx.Log().Error("查询销售账单失败", zap.Error(errSaleBill))
+		return nil, errors.New("查询销售账单失败")
+	}
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(discountReq.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	var cardDiscountRate float64
+	if member.MemberCard != nil {
+		cardDiscountRate = member.MemberCard.Discount
+	}
+	var levelDiscountRate float64
+	if member.MemberLevel != nil {
+		levelDiscountRate = member.MemberLevel.Discount
+	}
+	saleOrder.MemberCardDiscountRate = cardDiscountRate
+	saleOrder.MemberDiscountRate = levelDiscountRate
+
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	for i, _ := range saleOrder.SaleOrderProducts {
+		saleOrderProduct := saleOrder.SaleOrderProducts[i]
+		saleOrderProduct.MemberCardDiscountRate = cardDiscountRate
+		saleOrderProduct.MemberDiscountRate = levelDiscountRate
+		calc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeValue, taxFeeType, serviceFeeType)
+		ctx.Log().Debug("商品会员优惠金额", zap.Any("discount", calc.MemberDiscountFee))
+	}
+	ctx.Log().Debug("获取会员优惠金额", zap.Any("levelDiscountRate", levelDiscountRate), zap.Any("cardDiscountRate", cardDiscountRate))
+	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	memberDiscountFee := calc.MemberDiscountFee
+
+	var cardName string
+	var levelName string
+	if member.MemberCard != nil {
+		cardName = member.MemberCard.MemberCardType.Name
+	}
+	if member.MemberLevel != nil {
+		levelName = member.MemberLevel.Name
+	}
+
+	return &resp.MemberDiscountResp{
+		Member: resp.RechargeMember{
+			Uuid:      member.Uuid,
+			Nickname:  member.Nickname,
+			CardName:  cardName,
+			LevelName: levelName,
+			Balance:   member.Balance,
+			Points:    member.Point,
+			Phone:     member.Phone,
+		},
+		HasPassword:     member.HasPassword(),
+		DiscountedPrice: memberDiscountFee,
+	}, nil
 }
 
 func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error {

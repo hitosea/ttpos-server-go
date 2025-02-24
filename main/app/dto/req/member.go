@@ -63,8 +63,9 @@ type ConfirmRechargeOrder struct {
 
 // GetMemberDiscountReq 确认充值订单
 type GetMemberDiscountReq struct {
-	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单 Uuid
-	MemberUuid    uint64 `json:"member_uuid"`     // 会员 Uuid
+	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单 Uuid
+	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单 Uuid
+	MemberUuid    uint64 `form:"member_uuid"`     // 会员 Uuid
 }
 
 // CheckMemberPasswordReq 使用会员优惠验证密码

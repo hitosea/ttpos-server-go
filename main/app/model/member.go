@@ -22,6 +22,10 @@ type Member struct {
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
+func (model *Member) HasPassword() bool {
+	return model.Password != ""
+}
+
 // MemberLevel 会员等级表 `ttpos_member_level`
 type MemberLevel struct {
 	BaseModel
@@ -31,7 +35,7 @@ type MemberLevel struct {
 	UpgradeMoney float64 `gorm:"column:upgrade_money;type:decimal(12,2);default:0.00;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`
 	OpenPoint    int     `gorm:"column:open_point;type:tinyint(3);default:0;comment:是否开放累计积分升级，0-否 1-是" json:"open_point"`
 	UpgradePoint float64 `gorm:"column:upgrade_point;type:decimal(12,2);default:0.00;comment:升级条件，累计积分" json:"upgrade_point"`
-	Discount     int     `gorm:"column:discount;type:tinyint(3);default:0;comment:等级权益,百分比;NOT NULL" json:"discount"`
+	Discount     float64 `gorm:"column:discount;type:decimal(12,2);default:0;comment:等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8;NOT NULL" json:"discount"`
 	Priority     int     `gorm:"column:priority;type:int(11);default:0;comment:等级权重，越大等级越高;NOT NULL" json:"priority"`
 	IsDefault    int     `gorm:"column:is_default;type:tinyint(1);default:0;comment:是否默认, 1-是 0-否;NOT NULL" json:"is_default"`
 	Remark       string  `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
@@ -40,10 +44,10 @@ type MemberLevel struct {
 // MemberCard 会员卡表 `ttpos_member_card`
 type MemberCard struct {
 	BaseModel
-	CardTypeUuid uint64 `gorm:"column:card_type_uuid;type:bigint(20) unsigned;default:0;comment:会员卡类型ID;NOT NULL" json:"card_type_uuid"`
-	MemberUuid   uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
-	ExpireTime   int64  `gorm:"column:expire_time;type:int(11);default:0;comment:截止日期(时间戳);NOT NULL" json:"expire_time"`
-	Discount     int    `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;NOT NULL" json:"discount"`
+	CardTypeUuid uint64  `gorm:"column:card_type_uuid;type:bigint(20) unsigned;default:0;comment:会员卡类型ID;NOT NULL" json:"card_type_uuid"`
+	MemberUuid   uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+	ExpireTime   int64   `gorm:"column:expire_time;type:int(11);default:0;comment:截止日期(时间戳);NOT NULL" json:"expire_time"`
+	Discount     float64 `gorm:"column:discount;type:decimal(12, 2);default:0;comment:折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;NOT NULL" json:"discount"`
 
 	Member         *Member         `gorm:"foreignKey:MemberUuid;references:Uuid"`
 	MemberCardType *MemberCardType `gorm:"foreignKey:CardTypeUuid;references:Uuid"`

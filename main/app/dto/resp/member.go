@@ -64,7 +64,7 @@ type ConfirmRechargeOrder struct {
 
 // MemberDiscountResp 会员优惠响应
 type MemberDiscountResp struct {
-	RechargeMember
-	HasPassword     bool    `json:"has_password"`     // 是否设置了密码
-	DiscountedPrice float64 `json:"discounted_price"` // 折扣后价格
+	Member          RechargeMember `json:"member"`
+	HasPassword     bool           `json:"has_password"`     // 是否设置了密码
+	DiscountedPrice float64        `json:"discounted_price"` // 折扣后价格
 }

@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 )
 
 type IMemberRepo interface {
@@ -21,6 +23,7 @@ type IMemberRepo interface {
 	CreateMember(member model.Member) error        // 添加会员
 	Update(uuid uint64, vars map[string]any) error // 更新会员信息
 
+	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {
@@ -111,4 +114,12 @@ func (r *MemberRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
 	}
+}
+
+func (r *MemberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) {
+	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel())
+	if member.Uuid == 0 {
+		return nil, errors.New("会员不存在")
+	}
+	return &member, nil
 }

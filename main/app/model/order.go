@@ -675,6 +675,7 @@ func (model *SaleOrder) BeforeCalc() Calc {
 	}
 }
 
+// 重新计算销售订单的金额
 func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
 	calc := Calc{}
 	calc.ProductOriginalAmount = model.CalcProductOriginalAmount()
@@ -987,8 +988,16 @@ func (model *SaleOrderProduct) CalcMemberDiscountRate() float64 {
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
 		return 0
 	}
-	memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
-	return memberDiscountRate.InexactFloat64()
+	if model.MemberDiscountRate == 0 && model.MemberCardDiscountRate != 0 {
+		return model.MemberCardDiscountRate
+	} else if model.MemberCardDiscountRate == 0 && model.MemberDiscountRate != 0 {
+		return model.MemberDiscountRate
+	} else if model.MemberCardDiscountRate != 0 && model.MemberDiscountRate != 0 {
+		memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
+		return memberDiscountRate.InexactFloat64()
+	}
+	// 不匹配时默认为0
+	return 0
 }
 
 // todo 会员折扣率 要除100才是%为单位。无折扣时，会员折扣率为0。会员折扣率的取值范围0-1，0表示没有折扣，1表示全免、满折扣、无需付钱
@@ -996,9 +1005,12 @@ func (model *SaleOrderProduct) CalcMemberDiscountRate() float64 {
 func (model *SaleOrderProduct) CalcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.CalcMemberDiscountRate()
+	fmt.Println("memberDiscountRate1111111::", memberDiscountRate)
+
 	if memberDiscountRate == 0 {
 		return 0
 	}
+	fmt.Println("memberDiscountRate::", memberDiscountRate)
 	// 1-会员折扣率
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
 	// 商品销售价*（1-会员折扣率）

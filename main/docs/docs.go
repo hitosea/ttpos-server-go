@@ -2019,48 +2019,6 @@ const docTemplate = `{
             }
         },
         "/cashier/member/confirm_recharge_order": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取会员优惠",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.会员"
-                ],
-                "summary": "获取会员优惠",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "销售订单uuid",
-                        "name": "sale_order_uuid",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "会员Uuid",
-                        "name": "member_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -2197,6 +2155,57 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member/order_discount": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员优惠",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "获取会员优惠",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "会员Uuid",
+                        "name": "member_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -7308,15 +7317,15 @@ const docTemplate = `{
         "resp.OrderAmount": {
             "type": "object",
             "properties": {
-                "discount_amount": {
-                    "description": "应收金额。",
-                    "type": "number"
-                },
-                "member_discount": {
+                "finally_amount": {
                     "description": "最终应收。 最终应收=应收金额+支付手续费。支付的手续费=各个支付订单的手续费之和+当前支付方式的手续费 = 各个支付订单的手续费之和+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
                     "type": "number"
                 },
                 "sale_order_amount": {
+                    "description": "应收金额。",
+                    "type": "number"
+                },
+                "sale_order_origin_amount": {
                     "description": "订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）",
                     "type": "number"
                 },
