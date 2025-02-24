@@ -51,7 +51,7 @@ func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
 
 func (r *StaffRepo) GetStaffs(opts ...DBOption) []model.Staff {
 	var staffs []model.Staff
-	db := r.db.Model(&model.Setting{}).Scopes(NotDeleted)
+	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

@@ -80,7 +80,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.LoginReq"
+                            "$ref": "#/definitions/req.BindCashierReq"
                         }
                     }
                 ],
@@ -3281,6 +3281,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/kitchen/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "厨显端信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.认证鉴权"
+                ],
+                "summary": "厨显端信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.KitchenBase"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/kitchen/call/handle": {
             "post": {
                 "consumes": [
@@ -3335,6 +3375,7 @@ const docTemplate = `{
         },
         "/kitchen/login": {
             "post": {
+                "description": "厨显端登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -3342,17 +3383,55 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "厨显端.登录"
+                    "厨显端.认证鉴权"
                 ],
-                "summary": "用户登录",
+                "summary": "厨显端登录",
                 "parameters": [
                     {
-                        "description": "登陆参数",
+                        "type": "string",
+                        "description": "验证码sign",
+                        "name": "X-SIGN",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "登录参数",
                         "name": "data",
                         "in": "body",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.LoginReq"
+                        }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "厨显端退出登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.认证鉴权"
+                ],
+                "summary": "厨显端退出登录",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3958,6 +4037,155 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/tablet/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "平板端信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.认证鉴权"
+                ],
+                "summary": "平板端信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TabletBase"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tablet/desk/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取桌台列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.认证鉴权"
+                ],
+                "summary": "获取桌台列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TabletDeskList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tablet/login": {
+            "post": {
+                "description": "平板端登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.认证鉴权"
+                ],
+                "summary": "平板端登录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "验证码sign",
+                        "name": "X-SIGN",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "登录参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.LoginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tablet/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "平板端退出登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.认证鉴权"
+                ],
+                "summary": "平板端退出登录",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -4382,6 +4610,22 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.SoldOutItem"
                     }
+                }
+            }
+        },
+        "req.BindCashierReq": {
+            "type": "object",
+            "required": [
+                "device_id"
+            ],
+            "properties": {
+                "cashier_uuid": {
+                    "description": "收银员Uuid",
+                    "type": "integer"
+                },
+                "device_id": {
+                    "description": "收银机设备ID",
+                    "type": "string"
                 }
             }
         },
@@ -7039,6 +7283,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.KitchenBase": {
+            "type": "object",
+            "properties": {
+                "kitchen_uuid": {
+                    "description": "厨显端员工UUID",
+                    "type": "integer"
+                },
+                "username": {
+                    "description": "登录账号",
+                    "type": "string"
+                }
+            }
+        },
         "resp.Language": {
             "type": "object",
             "properties": {
@@ -8144,6 +8401,43 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.TabletBase": {
+            "type": "object",
+            "properties": {
+                "tablet_uuid": {
+                    "description": "平板端员工UUID",
+                    "type": "integer"
+                },
+                "username": {
+                    "description": "登录账号",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.TabletDeskItem": {
+            "type": "object",
+            "properties": {
+                "desk_no": {
+                    "description": "桌台编号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "桌台uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TabletDeskList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TabletDeskItem"
+                    }
                 }
             }
         },

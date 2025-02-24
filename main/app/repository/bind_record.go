@@ -11,7 +11,7 @@ type IBindRecordRepo interface {
 	GetBindCountBySource(source string) uint                            // 根据来源获取绑定数量
 	GetBySourceAndDeviceId(source string, deviceId string) model.Device // 根据来源和设备ID获取绑定记录
 	Update(uuid uint64, vars map[string]interface{}) error              // 更新绑定记录
-	Create(bindRecord model.Device) error                               // 创建绑定记录
+	CreateBindRecord(bindRecord model.Device) (model.Device, error)     // 创建绑定记录
 }
 
 type bindRecordRepo struct {
@@ -50,6 +50,7 @@ func (r *bindRecordRepo) Update(uuid uint64, vars map[string]interface{}) error 
 	return r.db.Model(&model.Device{}).Where("uuid = ?", uuid).Updates(vars).Error
 }
 
-func (r *bindRecordRepo) Create(bindRecord model.Device) error {
-	return r.db.Model(&model.Device{}).Create(&bindRecord).Error
+func (r *bindRecordRepo) CreateBindRecord(bindRecord model.Device) (model.Device, error) {
+	err := r.db.Model(&model.Device{}).Create(&bindRecord).Error
+	return bindRecord, err
 }

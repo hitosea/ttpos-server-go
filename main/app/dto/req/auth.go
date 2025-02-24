@@ -25,12 +25,16 @@ type Assistant struct {
 }
 
 type Authenticate struct {
-	Source      string
-	DeviceId    string
+	Source   string
+	DeviceId string
+
 	CompanyUuid uint64
 	StaffUuid   uint64
 	UrlPath     string
 	Assistant   Assistant
 
 	TokenIssuedAt int64
+
+	DeviceUuid uint64
+	TableUuid  uint64
 }

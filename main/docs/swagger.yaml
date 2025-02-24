@@ -276,6 +276,17 @@ definitions:
     required:
     - sold_out_data
     type: object
+  req.BindCashierReq:
+    properties:
+      cashier_uuid:
+        description: 收银员Uuid
+        type: integer
+      device_id:
+        description: 收银机设备ID
+        type: string
+    required:
+    - device_id
+    type: object
   req.BuffetCustomerType:
     properties:
       customer_type_id:
@@ -2103,6 +2114,15 @@ definitions:
           $ref: '#/definitions/resp.SaleOrder'
         type: array
     type: object
+  resp.KitchenBase:
+    properties:
+      kitchen_uuid:
+        description: 厨显端员工UUID
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
   resp.Language:
     properties:
       i:
@@ -2872,6 +2892,31 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.TabletBase:
+    properties:
+      tablet_uuid:
+        description: 平板端员工UUID
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
+  resp.TabletDeskItem:
+    properties:
+      desk_no:
+        description: 桌台编号
+        type: string
+      uuid:
+        description: 桌台uuid
+        type: integer
+    type: object
+  resp.TabletDeskList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.TabletDeskItem'
+        type: array
+    type: object
   resp.UnprocessedCallItem:
     properties:
       call_type:
@@ -3212,7 +3257,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.LoginReq'
+          $ref: '#/definitions/req.BindCashierReq'
       produces:
       - application/json
       responses:
@@ -5124,6 +5169,28 @@ paths:
       summary: 获取商品分类
       tags:
       - 扫码点餐
+  /kitchen/base:
+    get:
+      consumes:
+      - application/json
+      description: 厨显端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.KitchenBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 厨显端信息
+      tags:
+      - 厨显端.认证鉴权
   /kitchen/call/handle:
     post:
       consumes:
@@ -5161,11 +5228,19 @@ paths:
     post:
       consumes:
       - application/json
+      description: 厨显端登录
       parameters:
-      - description: 登陆参数
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
         in: body
         name: data
         required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
       produces:
       - application/json
       responses:
@@ -5173,9 +5248,26 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 用户登录
+      summary: 厨显端登录
       tags:
-      - 厨显端.登录
+      - 厨显端.认证鉴权
+  /kitchen/logout:
+    post:
+      consumes:
+      - application/json
+      description: 厨显端退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 厨显端退出登录
+      tags:
+      - 厨显端.认证鉴权
   /kitchen/production/finished_product/history:
     get:
       consumes:
@@ -5559,6 +5651,94 @@ paths:
       summary: 获取订单列表
       tags:
       - 商家端.订单
+  /tablet/base:
+    get:
+      consumes:
+      - application/json
+      description: 平板端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TabletBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 平板端信息
+      tags:
+      - 平板端.认证鉴权
+  /tablet/desk/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TabletDeskList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取桌台列表
+      tags:
+      - 平板端.认证鉴权
+  /tablet/login:
+    post:
+      consumes:
+      - application/json
+      description: 平板端登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 平板端登录
+      tags:
+      - 平板端.认证鉴权
+  /tablet/logout:
+    post:
+      consumes:
+      - application/json
+      description: 平板端退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 平板端退出登录
+      tags:
+      - 平板端.认证鉴权
 securityDefinitions:
   JwtToken:
     in: header

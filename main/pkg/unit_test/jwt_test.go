@@ -24,6 +24,7 @@ func TestGenerateToken(t *testing.T) {
 		"123456789",
 		9490596162048000,
 		127800257351680,
+		127800257351680,
 		"egfgregerkmljr",
 		36000, auth.Assistant{})
 	if err != nil {

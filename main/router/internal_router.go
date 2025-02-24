@@ -13,9 +13,6 @@ func SetupInternal(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
-	r.GET("test", func(c *gin.Context) {
-		A(10, 0)
-	})
 	apiV1 := r.Group("/internal/api/v1")
 	{
 		// 通用接口

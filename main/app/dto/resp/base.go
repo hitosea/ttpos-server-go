@@ -22,6 +22,24 @@ type AssistantBase struct {
 	Username      string `json:"username"`       // 登录账号
 	AssistantUuid uint64 `json:"assistant_uuid"` // 点餐助手员工UUID
 }
+type TabletBase struct {
+	Username   string `json:"username"`    // 登录账号
+	TabletUuid uint64 `json:"tablet_uuid"` // 平板端员工UUID
+}
+
+type TabletDeskItem struct {
+	Uuid   uint64 `json:"uuid"`    // 桌台uuid
+	DeskNo string `json:"desk_no"` // 桌台编号
+}
+
+type TabletDeskList struct {
+	List []TabletDeskItem `json:"list"`
+}
+
+type KitchenBase struct {
+	Username    string `json:"username"`     // 登录账号
+	KitchenUuid uint64 `json:"kitchen_uuid"` // 厨显端员工UUID
+}
 
 type Company struct {
 	Uuid     uint64 `json:"uuid"`      // 商家UUID

@@ -64,8 +64,8 @@ type orderSrv struct {
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, cache setting.ISrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, cache)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现

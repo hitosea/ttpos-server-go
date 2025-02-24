@@ -1,4 +1,4 @@
-package assistant
+package tablet
 
 import (
 	"ttpos-server-go/app/api/helper"
@@ -16,18 +16,19 @@ import (
 // AuthHandler 认证鉴权
 type AuthHandler struct {
 	authSrv service.IAuthSrv
+	deskSrv service.IDeskSrv
 }
 
-// Login 点餐助手登录
-// @Summary 点餐助手登录
-// @Description 点餐助手登录
-// @Tags 点餐助手端.认证鉴权
+// Login 平板端登录
+// @Summary 平板端登录
+// @Description 平板端登录
+// @Tags 平板端.认证鉴权
 // @Accept json
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
 // @Success 200 {object} dto.Response
-// @Router /assistant/login [post]
+// @Router /tablet/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var loginReq req.LoginReq
@@ -35,7 +36,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
 		return
 	}
-	loginReq.Source = constant.SourceAssistant
+	loginReq.Source = constant.SourceTablet
 	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
@@ -44,15 +45,15 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	helper.Success(c, gin.H{"token": loginResp.Token})
 }
 
-// Logout 点餐助手退出登录
-// @Summary 点餐助手退出登录
-// @Description 点餐助手退出登录
-// @Tags 点餐助手端.认证鉴权
+// Logout 平板端退出登录
+// @Summary 平板端退出登录
+// @Description 平板端退出登录
+// @Tags 平板端.认证鉴权
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response
-// @Router /assistant/logout [post]
+// @Router /tablet/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.authSrv.Logout(ctx)
@@ -63,61 +64,42 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	helper.Success(c, gin.H{}, "退出成功")
 }
 
-// BindCashier 点餐助手绑定收银机
-// @Summary 点餐助手绑定收银机
-// @Description 点餐助手绑定收银机
-// @Tags 点餐助手端.认证鉴权
+// GetBase 平板端信息
+// @Summary 平板端信息
+// @Description 平板端信息
+// @Tags 平板端.认证鉴权
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.BindCashierReq true "绑定收银机参数"
-// @Success 200 {object} dto.Response
-// @Router /assistant/bind_cashier [post]
-func (h *AuthHandler) BindCashier(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.TabletBase}
+// @Router /tablet/base [get]
+func (h *AuthHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var bindReq req.BindCashierReq
-	if err := c.ShouldBindJSON(&bindReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	token, err := h.authSrv.BindCashier(ctx, bindReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
-		return
-	}
-	helper.Success(c, gin.H{"token": token})
-}
-
-// GetOnlineCashiers 获取在线收银机
-// @Summary 获取在线收银机
-// @Description 获取在线收银机
-// @Tags 点餐助手端.认证鉴权
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.OnlineCashierList}
-// @Router /assistant/online_cashiers [get]
-func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
-	helper.Success(c, h.authSrv.GetOnlineCashiers(helper.GetCompanyUuid(c)))
-}
-
-// GetAssistantBase 点餐助手端信息
-// @Summary 点餐助手端信息
-// @Description 点餐助手端信息
-// @Tags 点餐助手端.认证鉴权
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.AssistantBase}
-// @Router /assistant/base [get]
-func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	info, err := h.authSrv.AssistantBase(ctx)
+	info, err := h.authSrv.TabletBase(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
 	helper.Success(c, info)
+}
+
+// GetDeskList 获取桌台列表
+// @Summary 获取桌台列表
+// @Description 获取桌台列表
+// @Tags 平板端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.TabletDeskList}
+// @Router /tablet/desk/list [get]
+func (h *AuthHandler) GetDeskList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	list, err := h.deskSrv.GetTabletDeskList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		return
+	}
+	helper.Success(c, list)
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -129,8 +111,14 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
+	localeSrv := service.NewLocaleSrv()
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
+
+	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv)
+
 	wrapper := &AuthHandler{
 		authSrv: authSrv,
+		deskSrv: deskSrv,
 	}
 
 	publicApi := router.Group("")
@@ -141,9 +129,8 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers) // 获取在线的收银机
-		privateApi.POST("/bind_cashier", wrapper.BindCashier)         // 绑定收银机
-		privateApi.GET("/base", wrapper.GetAssistantBase)             // 获取基本信息
-		privateApi.POST("/logout", wrapper.Logout)                    // 退出登录
+		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取可绑定的桌台
+		privateApi.GET("/base", wrapper.GetBase)          // 获取基本信息
+		privateApi.POST("/logout", wrapper.Logout)        // 退出登录
 	}
 }

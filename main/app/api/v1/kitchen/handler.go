@@ -34,18 +34,6 @@ func (h *Handler) GetCallList(c *gin.Context) {
 	helper.Fail(c, constant.CodeBadRequest, "验证码签名8860不能为空")
 }
 
-// PostLogin 用户登录
-// @Summary 用户登录
-// @Tags 厨显端.登录
-// @Accept json
-// @Produce json
-// @param data body nil true "登陆参数"
-// @Success 200 {object} dto.Response
-// @Router /kitchen/login [post]
-func (h *Handler) PostLogin(c *gin.Context) {
-	// 用户登录的逻辑
-}
-
 // GetProductionFinishedProductHistory 获取上菜历史
 // @Summary 获取上菜历史
 // @Tags 厨显端.生产
@@ -150,9 +138,7 @@ func (h *Handler) PostSettingVerifyAdvancedPassword(c *gin.Context) {
 // RegisterHandlers 创建与 OpenAPI 规范匹配的 http.Handler。
 func RegisterHandlers(router gin.IRouter) {
 	wrapper := Handler{}
-
-	router.POST("/login", wrapper.PostLogin) // 用户登录
-
+ 
 	router.POST("/call/handle", wrapper.PostCallHandle)                                             // 处理呼叫
 	router.GET("/call/list", wrapper.GetCallList)                                                   // 获取呼叫列表
 	router.GET("/production/finished_product/history", wrapper.GetProductionFinishedProductHistory) // 获取上菜历史
