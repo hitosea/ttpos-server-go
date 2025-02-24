@@ -18,6 +18,8 @@ use app\common\model\product\ProductFeedMaterial;
 use app\common\model\erp\ErpMonthlyProductStatistics;
 use app\common\model\product\Product as ProductModel;
 use \app\common\model\buffet\BuffetProduct as BuffetProductModel;
+use GuzzleHttp\Handler\Proxy;
+use think\facade\Log;
 
 /**
  * 商品模型
@@ -83,16 +85,16 @@ class Product extends ProductModel
                 }
                 $firstError[$errorMsg2][] = $barcodeError2;
 
-                // todo 兼容 条码唯一性验证
-                // $errorMsg3 = '商品条码已存在';
-                // $barcodeError3 = true;
-                // if (!isset($firstError[$errorMsg3])) {
-                //     $firstError[$errorMsg3] = [];
-                // }
-                // if ($info['barcode'] && CheckService::checkNameExist('product_barcode', $info['barcode'], 0)) {
-                //     $barcodeError3 = false;
-                // }
-                // $firstError[$errorMsg3][] = $barcodeError3;
+                // 条码唯一性验证
+                $errorMsg3 = '商品条码已存在';
+                $barcodeError3 = true;
+                if (!isset($firstError[$errorMsg3])) {
+                    $firstError[$errorMsg3] = [];
+                }
+                if ($info['barcode'] && CheckService::checkNameExist('product_bom_barcode', $info['barcode'], 0)) {
+                    $barcodeError3 = false;
+                }
+                $firstError[$errorMsg3][] = $barcodeError3;
 
                 // 处理数据超过最大值时，返回提示信息
                 if ($text = $this->alertProductData($info)) {
@@ -168,8 +170,6 @@ class Product extends ProductModel
             $this->error = '商品图片不存在';
             return false;
         }
-        // dump($data);
-        // die;
         //
         if (!empty($data['productTaxes'])) {
             $taxMap = [
@@ -211,16 +211,14 @@ class Product extends ProductModel
             $this->addProductBom($data);
 
             // todo 兼容
-            // // 商品图片
-            // $this->addProductImages($data['image']);
+            // 商品图片
+            $this->addProductImages($data['image']);
             // // 更新属性
-            // (new Attribute)->updateAttr($this['product_id'], $data['product_attr'], $data['shop_supplier_id']);
+            (new Attribute)->updateAttr($this['product_id'], $data['product_attr'], 0);
             // // 更新加料
             // (new ProductFeed)->updateFeed($data['product_feed'], $this);
-            // // 更新单位
-            // (new Unit)->updateUnit($data['product_unit'], $data['shop_supplier_id']);
             // erp商品月初库存记录
-            // (new ErpMonthlyProductStatistics)->newProductRecord($this['product_id']);
+            (new ErpMonthlyProductStatistics)->newProductRecord($this['product_id']);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -231,24 +229,38 @@ class Product extends ProductModel
     }
 
     /**
-     * 添加商品规格
+     * 添加商品Bom
      */
     public function addProductBom($data)
     {
-        if ($data['sku']) {
-            foreach ($data['sku'] as $item) {
-                $productBom = new ProductBom();
-                $productBom->product_package_uuid = $this['product_id'];
-                $productBom->product_flavor_uuid = $item['spec_id'];
-                $productBom->name = $item['spec_name'];
-                $productBom->price = $item['product_price'];
-                $productBom->stock_num = $item['stock_num'];
-                $productBom->barcode_value = $item['barcode'];
-                $productBom->save();
-                // todo 添加商品规格关联材料
-            }
+        // 规格
+        $skus = $data['sku'] ?? [];
+        foreach ($skus as $sku) {
+            ProductBom::create([
+                'price' => $sku['product_price'],
+                'name' => $sku['spec_name'],
+                'product_flavor_uuid' => $sku['spec_id'],
+                'product_package_uuid' => $this['product_id'],
+                'stock_num' => $sku['stock_num'],
+                'barcode_value' => $sku['barcode'],
+                'status' => $this['status'],
+            ]);
+            // todo 添加商品规格关联材料
         }
-        return true;
+        // 加料
+        $feeds = $data['product_feed'] ?? [];
+        foreach ($feeds as $feed) {
+            ProductBom::create([
+                'price' => $feed['price'],
+                'name' => $feed['feed_name'],
+                'product_sauce_uuid' => $feed['feed_id'],
+                'product_package_uuid' => $this['product_id'],
+                'stock_num' => $feed['stock_num'],
+                'status' => $this['status'],
+                'is_default_select' => $feed['default_select'],
+            ]);
+            // todo 添加商品规格关联材料
+        }
     }
 
     /**
@@ -305,14 +317,11 @@ class Product extends ProductModel
     private function addProductImages($images)
     {
         foreach ($this->image()->select() as $image) {
+            if ($image->uuid == $images[0]['file_id']) {
+                continue;
+            }
             $image->delete();
         }
-        $data = array_map(function ($images) {
-            return [
-                'image_id' => isset($images['file_id']) ? $images['file_id'] : $images['image_id'],
-            ];
-        }, $images);
-        return $this->image()->saveAll($data);
     }
 
     /**

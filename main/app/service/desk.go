@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -14,6 +13,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 // IDeskSrv 定义收银服务接口
@@ -105,16 +106,11 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 	deskResp := make([]resp.Desk, len(desks))
 	for i, desk := range desks {
 		ctx.Log().Debug("查询桌台列表", zap.Any("desk uuid", desk.Uuid))
-		// 桌台状态	0:空闲 1:非自助餐 2:自助餐 3:待清台 4:锁单
-		var deskStatus uint
 		var elapsedTime uint
-
 		if desk.SaleBill != nil && desk.SaleBill.ID == 0 {
 			if desk.Status == 1 {
-				deskStatus = constant.DeskStatusWait
 				extra.OccupyWaitNum++
 			} else {
-				deskStatus = constant.DeskStatusAvailable
 				extra.AvailableNum++
 			}
 			elapsedTime = constant.DeskStatusAvailable
@@ -122,12 +118,7 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 			extra.OccupyWaitNum++
 			//
 			if desk.SaleBill != nil && desk.SaleBill.IsLock == 1 {
-				deskStatus = constant.DeskStatusLock
 				extra.LockNum++
-			} else if desk.SaleBill != nil && desk.SaleBill.IsBuffet == 1 {
-				deskStatus = constant.DeskStatusBuffet
-			} else {
-				deskStatus = constant.DeskStatusNotBuffet
 			}
 			//
 			if desk.SaleBill != nil && desk.SaleBill.IsBuffet == 1 {
@@ -159,10 +150,11 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 				DeskNo:        desk.DeskNo,
 				TypeUuid:      desk.TypeUuid,
 				RegionUuid:    desk.RegionUuid,
-				Status:        deskStatus,
 				CustomerCount: desk.SaleBill.MealNum,
+				Status:        desk.Status,
 				IsLock:        desk.SaleBill.IsLock == 1,
 				IsBuffet:      desk.SaleBill.IsBuffet == 1,
+				IsWait:        desk.SaleBill.ID == 0 && desk.Status == 1,
 				Remark:        desk.SaleBill.Remark,
 				Time:          elapsedTime,
 				Price:         desk.SaleBill.PaymentAmount,
@@ -172,17 +164,18 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 			ctx.Log().Debug("查询桌台列表", zap.Any("desk jsonString", jsonString))
 		} else {
 			deskRes := resp.Desk{
-				Uuid:       desk.Uuid,
-				DeskNo:     desk.DeskNo,
-				TypeUuid:   desk.TypeUuid,
-				RegionUuid: desk.RegionUuid,
-				Status:     deskStatus,
-				//CustomerCount: desk.SaleBill.MealNum,
-				//IsLock:        desk.SaleBill.IsLock == 1,
-				//IsBuffet:      desk.SaleBill.IsBuffet == 1,
-				//Remark:        desk.SaleBill.Remark,
-				Time: elapsedTime,
-				//Price:         desk.SaleBill.PaymentAmount,
+				Uuid:          desk.Uuid,
+				DeskNo:        desk.DeskNo,
+				TypeUuid:      desk.TypeUuid,
+				RegionUuid:    desk.RegionUuid,
+				Status:        desk.Status,
+				CustomerCount: 0,
+				IsLock:        false,
+				IsBuffet:      false,
+				IsWait:        false,
+				Remark:        "",
+				Time:          elapsedTime,
+				Price:         0,
 			}
 			deskResp[i] = deskRes
 			jsonString := utils.ToJsonString(deskRes)

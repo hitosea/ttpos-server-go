@@ -172,4 +172,23 @@ class ProductBom extends BaseModel
         // }
         // return $list;
     }
+
+    /**
+     * 检查产品条码唯一性
+     */
+    public function checkProductBarcodeExist($name, $uuid = null)
+    {
+        $filter = [
+            'bom.barcode_value' => $name,
+            'p.delete_time' => 0,
+        ];
+        if (!is_null($uuid) && $uuid != 0) {
+            $filter[] = ['bom.product_package_uuid', '<>', $uuid];
+        }
+        return static::alias('bom')
+            ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
+            ->where($filter)
+            ->where('bom.barcode_value', '<>', '') // 兼容导入条码可为空
+            ->value('bom.uuid') ? true : false;
+    }
 }

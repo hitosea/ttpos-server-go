@@ -130,7 +130,6 @@ class ErpMonthlyProductStatistics extends BaseModel
         $saveArr['year'] = $year;
         $saveArr['month'] = $month;
         $saveArr['scene'] = self::MONTH_START;
-        $saveArr['material_uuid'] = $product_id;
         $saveArr['stock'] = 0;
         $this->save($saveArr);
     }

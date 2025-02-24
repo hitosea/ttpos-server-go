@@ -183,6 +183,8 @@ if [ $# -gt 0 ]; then
         #
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
+        # 
+        sleep 2
         run_exec php "php think migrate:run"
         #
         run_exec php "chown -R www-data:www-data ./app"

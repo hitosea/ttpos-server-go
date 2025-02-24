@@ -90,8 +90,7 @@ class Feed extends BaseModel
      */
     public function material()
     {
-        // todo 兼容
-        // return $this->hasMany('app\\common\\model\\product\\ProductFeedMaterial', 'feed_id')->where('product_feed_id', '=', 0)->with(['materialProduct']);
+        return $this->belongsToMany(Material::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
     }
 
     /**
