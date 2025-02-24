@@ -26,8 +26,8 @@ type ProductHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param pageNo query int true "页码"
-// @Param pageSize query int true "每页条数"
+// @Param page_no query int true "页码"
+// @Param page_size query int true "每页条数"
 // @Success 200 {object} cashier_resp.ProductListWithPaginationResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /cashier/product/list [get]
