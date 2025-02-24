@@ -639,7 +639,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_flavor` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_attribute_group` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性组ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT DEFAULT NULL COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -650,7 +650,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_attribute_group` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_attribute` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT DEFAULT NULL COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '属性组ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -732,6 +732,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM ID',
+    `purchase_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `name` TEXT DEFAULT NULL COMMENT '商品名称或小料名称(不用于业务显示)',
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',

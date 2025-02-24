@@ -23,22 +23,70 @@ class ProductBom extends BaseModel
     /**
      * 追加字段
      */
-    protected $append = ['product_sku_id', 'product_id', 'spec_name_text'];
+    protected $append = ['product_sku_id', 'product_id', 'spec_name_text', 'spec_name', 'spec_sku_id', 'barcodeUniqueness', 'barcode', 'product_price'];
 
     /**
-     * 兼容字段
+     * 规格SKU ID
      */
     public function getProductSkuIdAttr($value, $data = [])
     {
         return $this->uuid ?: 0;
     }
+
+    /**
+     * 产品ID
+     */
     public function getProductIdAttr($value, $data = [])
     {
         return $this->product_package_uuid ?: 0;
     }
+
+    /**
+     * 规格名称
+     */
     public static function getSpecNameTextAttr($value, $data)
     {
         return extractLanguage($data['name']);
+    }
+
+    /**
+     * 规格名称, JSON字符串
+     */
+    public static function getSpecNameAttr($value, $data)
+    {
+        return $data['name'] ?? '';
+    }
+
+    /**
+     * 规格SKU ID
+     */
+    public static function getSpecSkuIdAttr($value, $data)
+    {
+        return $data['product_flavor_uuid'] ?? 0;
+    }
+
+    /**
+     * 条形码唯一性
+     */
+    public static function getBarcodeUniquenessAttr($value, $data)
+    {
+        return $data['barcode_value'] ? true : false;
+    }
+
+    /**
+     * 条形码
+     */
+    public static function getBarcodeAttr($value, $data)
+    {
+        return $data['barcode_value'] ?? '';
+    }
+
+    /**
+     * 产品价格
+     */
+    public static function getProductPriceAttr($value, $data)
+    {
+        return $data['price'] ?? 0;
     }
 
     /**
@@ -86,7 +134,7 @@ class ProductBom extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\Material', 'product_sku_id')->with(['materialProduct']);
+        return $this->belongsToMany(Material::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
     }
 
     /**
