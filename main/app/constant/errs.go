@@ -20,7 +20,8 @@ const (
 	CodeUnbindError = -201 // 设备已解绑，请重新绑定
 	CodeTableError  = -5   // 桌台用餐已关闭, 对应业务被关闭，需要自行处理
 
-	TokenError = -2 // TOKEN异常
+	CodeTokenError = -2 // TOKEN异常
+	CCodeLoseError = -3 // 桌台已关闭，请重新开台，返回桌台页
 
 	TokenErrorNotLogin = -202 // token异常，不需要重新登录，定格当前页面
 )

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/jinzhu/copier"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -25,6 +26,7 @@ type IDeskSrv interface {
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
+	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
 }
 
 // deskSrv 收银服务结构体
@@ -345,7 +347,7 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 	return s.orderSrv.CreateDeskOrder(ctx, req)
 }
 
-// 判断桌台是否可关闭
+// IsCellCloseDesk 判断桌台是否可关闭
 func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error) {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
@@ -365,7 +367,7 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	return desk, nil
 }
 
-// 关闭桌台
+// CloseDesk 关闭桌台
 func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 	//dbId := ctx.GetDbId()
 	//db := s.dbm.GetDB(dbId)
@@ -386,4 +388,23 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 	//}
 	//
 	return nil
+}
+
+// GetTabletDeskList 平板获取桌台列表
+func (s *deskSrv) GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error) {
+	deskRepo := repository.NewDeskRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	desks, err := deskRepo.GetDesks(deskRepo.WhereIsNotDisable(), deskRepo.WhereIsBind())
+
+	if err != nil {
+		return resp.TabletDeskList{}, errors.New("获取桌台列表失败")
+	}
+	list := make([]resp.TabletDeskItem, 0, len(desks))
+	for _, desk := range desks {
+		var item resp.TabletDeskItem
+		copier.Copy(&item, desk)
+		list = append(list, item)
+	}
+	return resp.TabletDeskList{
+		List: list,
+	}, nil
 }

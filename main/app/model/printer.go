@@ -40,8 +40,8 @@ type PrinterLog struct {
 	PrinterTime     int64  `gorm:"column:printer_time;type:int(11);default:0;comment:打印时间;NOT NULL" json:"printer_time"`
 	FirstExecution  int    `gorm:"column:first_execution;type:tinyint(2);default:0;comment:是否首次执行打印 1-是 0-否;NOT NULL" json:"first_execution"`
 
-	Printer  *Printer  `gorm:"foreignKey:PrinterUuid;references:Uuid"`  // 关联 printer
-	SaleBill *SaleBill `gorm:"foreignKey:SaleBillUuid;references:Uuid"` // 关联 sale_order
+	Printer  *Printer  `gorm:"foreignKey:PrinterUuid;references:Uuid"` // 关联 printer
+	SaleBill *SaleBill `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 关联 sale_order
 }
 
 // PrinterReadLog 打印读取日志表 ttpos_printer_read_log

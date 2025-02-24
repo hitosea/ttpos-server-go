@@ -16,16 +16,18 @@ type Claims struct {
 	Source      string    `json:"source"`       // 终端
 	CompanyUuid uint64    `json:"company_uuid"` // 集团ID
 	StaffUuid   uint64    `json:"staff_uuid"`   // 员工ID
+	DeviceUuid  uint64    `json:"device_uuid"`  // 设备Uuid
 	DeviceId    string    `json:"device_id"`    // 设备ID
 	Assistant   Assistant `json:"assistant"`    // 点餐助手绑定的收银机信息
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(source, deviceId string, companyUuid, staffUuid uint64, secret string, expire int, assistant Assistant) (string, error) {
+func GenerateToken(source, deviceId string, companyUuid, staffUuid, deviceUuid uint64, secret string, expire int, assistant Assistant) (string, error) {
 	claims := Claims{
 		Source:      source,
 		CompanyUuid: companyUuid,
 		StaffUuid:   staffUuid,
+		DeviceUuid:  deviceUuid,
 		DeviceId:    deviceId,
 		Assistant:   assistant,
 		RegisteredClaims: jwt.RegisteredClaims{

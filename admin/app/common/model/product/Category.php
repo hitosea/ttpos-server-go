@@ -10,7 +10,6 @@ use app\common\model\BaseModel;
 use app\common\model\order\Order;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
-use app\common\model\order\OrderProduct;
 use app\common\model\supplier\Supplier as SupplierModel;
 
 /**
@@ -112,9 +111,9 @@ class Category extends BaseModel
         $isPaginate = ($request->is_paginate !== false && $page != null && $list_rows != null);
         $order_conditions = $is_sort ? ['c.sort' => 'asc', 'c.create_time' => 'desc'] : ['c.create_time' => 'desc'];
         $child_order_conditions = $is_sort ? ['sort' => 'asc', 'create_time' => 'desc'] : ['create_time' => 'desc'];
-        //
+
         $model = new static;
-        $cacheKey = 'category_' . '_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
+        $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
         if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
             $prefix = Env::get('DB_PREFIX');
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
@@ -127,7 +126,7 @@ class Category extends BaseModel
                 ->when($name != '', function ($q) use ($prefix, $name) {
                     $q->jsonLike('c.name', $name);
                     $key = '1';
-                    $lang = checkDetect();
+                    $lang = checkDetect();                                                                                                                                                                          
                     foreach (getSettingLanguages() as $language) {
                         if (($language['name'] ?? '') == $lang) {
                             $key = $language['key'];
@@ -141,7 +140,7 @@ class Category extends BaseModel
             $all = !empty($data) ? $data->toArray() : [];
             $result = $all;
             if ($name == '' && !$isPaginate) {
-                Cache::tag('category' . $is_special . $type)->set($cacheKey, $all);
+                Cache::tag('category' . $model::$app_id . (!$is_special ? 1 : 0) . $type)->set($cacheKey, $all);
             }
         }
         return $result;

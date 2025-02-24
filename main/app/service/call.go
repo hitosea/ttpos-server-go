@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/jinzhu/copier"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -12,6 +13,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 )
 
 // ICallSrv 定义呼叫服务接口
@@ -104,22 +106,27 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 // GetUnprocessed 获取未处理消息数量
 func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error) {
 	var (
-		res                    resp.UnprocessedResp
-		unprocessedCallCount   int64
-		unacceptedH5OrderCount int64
-		err                    error
+		res                  resp.UnprocessedResp
+		unprocessedCallCount int64
+		abnormalPrintCount   int64
+		err                  error
 	)
 	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
 	unprocessedCallCount, err = callRepo.GetUnprocessedCallCount(callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
 		return res, errors.New("获取未处理呼叫数量失败")
 	}
-	h5OrderRepo := repository.NewQrcodeOrderRepo(s.dbm.GetDB(companyUuid))
-	unacceptedH5OrderCount, err = h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus(constant.H5OrderStatusOrder))
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
+	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
-		return res, errors.New("获取未处理接单数量失败")
+		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
+		return res, errors.New("获取异常打印数量失败")
 	}
-	return resp.UnprocessedResp{Count: unprocessedCallCount + unacceptedH5OrderCount}, nil
+	return resp.UnprocessedResp{
+		UnprocessedCallCount: unprocessedCallCount,
+		AbnormalPrintCount:   abnormalPrintCount,
+	}, nil
 }
 
 // Processed 消息已处理

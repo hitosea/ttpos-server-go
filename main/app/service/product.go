@@ -86,7 +86,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 			for _, bom := range product.ProductBoms {
 				if bom.ProductFlavor.Uuid > 0 {
 					flavors = append(flavors, cashier_resp.ProductFlavor{
-						Uuid:       bom.ProductFlavor.Uuid,
+						Uuid:       bom.Uuid,
 						LocaleName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
 						Price:      bom.Price,
 						StockNum:   int(bom.StockNum),

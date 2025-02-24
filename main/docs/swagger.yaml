@@ -276,6 +276,17 @@ definitions:
     required:
     - sold_out_data
     type: object
+  req.BindCashierReq:
+    properties:
+      cashier_uuid:
+        description: 收银员Uuid
+        type: integer
+      device_id:
+        description: 收银机设备ID
+        type: string
+    required:
+    - device_id
+    type: object
   req.BuffetCustomerType:
     properties:
       customer_type_id:
@@ -2124,6 +2135,15 @@ definitions:
           $ref: '#/definitions/resp.SaleOrder'
         type: array
     type: object
+  resp.KitchenBase:
+    properties:
+      kitchen_uuid:
+        description: 厨显端员工UUID
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
   resp.Language:
     properties:
       i:
@@ -2971,6 +2991,31 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.TabletBase:
+    properties:
+      tablet_uuid:
+        description: 平板端员工UUID
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
+  resp.TabletDeskItem:
+    properties:
+      desk_no:
+        description: 桌台编号
+        type: string
+      uuid:
+        description: 桌台uuid
+        type: integer
+    type: object
+  resp.TabletDeskList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.TabletDeskItem'
+        type: array
+    type: object
   resp.UnprocessedCallItem:
     properties:
       call_type:
@@ -3001,8 +3046,11 @@ definitions:
     type: object
   resp.UnprocessedResp:
     properties:
-      count:
-        description: 角标数量
+      abnormal_print_count:
+        description: 异常打印数量
+        type: integer
+      unprocessed_call_count:
+        description: 未处理呼叫数量
         type: integer
     type: object
   setting.AddClockItem:
@@ -3303,12 +3351,12 @@ paths:
       - application/json
       description: 点餐助手绑定收银机
       parameters:
-      - description: 登录参数
+      - description: 绑定收银机参数
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.LoginReq'
+          $ref: '#/definitions/req.BindCashierReq'
       produces:
       - application/json
       responses:
@@ -3374,13 +3422,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -3787,13 +3835,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -4800,11 +4848,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -4828,11 +4876,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -4852,46 +4900,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -4960,12 +5008,12 @@ paths:
       parameters:
       - description: 页码
         in: query
-        name: pageNo
+        name: page_no
         required: true
         type: integer
       - description: 每页条数
         in: query
-        name: pageSize
+        name: page_size
         required: true
         type: integer
       produces:
@@ -5268,6 +5316,28 @@ paths:
       summary: 获取商品分类
       tags:
       - 扫码点餐
+  /kitchen/base:
+    get:
+      consumes:
+      - application/json
+      description: 厨显端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.KitchenBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 厨显端信息
+      tags:
+      - 厨显端.认证鉴权
   /kitchen/call/handle:
     post:
       consumes:
@@ -5305,11 +5375,19 @@ paths:
     post:
       consumes:
       - application/json
+      description: 厨显端登录
       parameters:
-      - description: 登陆参数
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
         in: body
         name: data
         required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
       produces:
       - application/json
       responses:
@@ -5317,9 +5395,26 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 用户登录
+      summary: 厨显端登录
       tags:
-      - 厨显端.登录
+      - 厨显端.认证鉴权
+  /kitchen/logout:
+    post:
+      consumes:
+      - application/json
+      description: 厨显端退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 厨显端退出登录
+      tags:
+      - 厨显端.认证鉴权
   /kitchen/production/finished_product/history:
     get:
       consumes:
@@ -5592,11 +5687,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -5620,11 +5715,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -5644,46 +5739,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -5703,6 +5798,94 @@ paths:
       summary: 获取订单列表
       tags:
       - 商家端.订单
+  /tablet/base:
+    get:
+      consumes:
+      - application/json
+      description: 平板端信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TabletBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 平板端信息
+      tags:
+      - 平板端.认证鉴权
+  /tablet/desk/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TabletDeskList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取桌台列表
+      tags:
+      - 平板端.认证鉴权
+  /tablet/login:
+    post:
+      consumes:
+      - application/json
+      description: 平板端登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 平板端登录
+      tags:
+      - 平板端.认证鉴权
+  /tablet/logout:
+    post:
+      consumes:
+      - application/json
+      description: 平板端退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 平板端退出登录
+      tags:
+      - 平板端.认证鉴权
 securityDefinitions:
   JwtToken:
     in: header

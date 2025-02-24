@@ -14,11 +14,17 @@ type IDeskRepo interface {
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (*model.Desk, error) // 获取桌台
+	GetDesks(opts ...DBOption) ([]model.Desk, error)
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
 	CloseDesk(deskUuid uint64, reason string) error
+
+	WhereUuid(uuid uint64) DBOption
+	WhereDeviceUuid(uuid uint64) DBOption
+	WhereIsBind() DBOption
+	WhereIsNotDisable() DBOption
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -85,6 +91,16 @@ func (r *DeskRepoImpl) GetDesk(opts ...DBOption) (*model.Desk, error) {
 	return &desk, nil
 }
 
+func (r *DeskRepoImpl) GetDesks(opts ...DBOption) ([]model.Desk, error) {
+	var desks []model.Desk
+	db := r.db.Model(&model.Desk{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Order("sort desc").Find(&desks).Error
+	return desks, err
+}
+
 // GetDeskInfo 获取桌台信息
 func (r *DeskRepoImpl) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) {
 	var desk model.Desk
@@ -132,6 +148,34 @@ func (r *DeskRepoImpl) CloseDesk(deskUuid uint64, reason string) error {
 		return err
 	}
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("status", 1).Error
+}
+
+// WhereUuid 桌台uuid条件
+func (r *DeskRepoImpl) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereDeviceUuid 桌台绑定的设备uuid条件
+func (r *DeskRepoImpl) WhereDeviceUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_uuid = ?", uuid)
+	}
+}
+
+// WhereIsBind 桌台绑定条件
+func (r *DeskRepoImpl) WhereIsBind() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_uuid = 0")
+	}
+}
+
+// WhereIsNotDisable 开关开启，桌台未被禁用
+func (r *DeskRepoImpl) WhereIsNotDisable() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_disable = 0")
+	}
 }
 
 func (r *DeskRepoImpl) GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) {

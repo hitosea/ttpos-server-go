@@ -18,7 +18,7 @@ import (
 )
 
 type IBindRecordSrv interface {
-	Add(ctx context.Context, addReq req.AddBindRecordReq) error                        // 添加绑定记录
+	AddBindRecord(ctx context.Context, addReq req.AddBindRecordReq) (uint64, error)    // 添加绑定记录
 	Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error // 解绑
 	GetRemark(companyUuid uint64, source string, deviceId string) string               // 获取设备绑定备注
 	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool              // 设备是否绑定
@@ -40,10 +40,10 @@ func NewBindRecordSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) IBin
 	}
 }
 
-func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) error {
+func (s *bindRecordSrv) AddBindRecord(ctx context.Context, addReq req.AddBindRecordReq) (uint64, error) {
 	if !slices.Contains([]string{constant.SourceCashier, constant.SourceTablet, constant.SourceKitchen, constant.SourceAssistant}, addReq.Source) ||
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
-		return errors.New("来源设备错误")
+		return 0, errors.New("来源设备错误")
 	}
 
 	platform := utils.GetPlatform(addReq.UserAgent)
@@ -76,9 +76,9 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 			"finally_login_time": finallyLoginTime,
 		})
 		if err != nil {
-			return errors.New("更新绑定信息失败")
+			return 0, errors.New("更新绑定信息失败")
 		}
-		return nil
+		return existsBindRecord.Uuid, nil
 	}
 
 	// 判断设备绑定上限
@@ -99,7 +99,7 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 		}
 		bindCount := bindRecordRepo.GetBindCountBySource(sourceName)
 		if bindCount >= source.Limit { // 超过绑定上限
-			return apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
+			return 0, apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 
@@ -107,7 +107,7 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
 		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if printerSetting.CashierOpen == "1" {
 			var added bool
@@ -124,12 +124,12 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 			}
 			// 设置默认打印机
 			if err = s.settingSrv.Updates(addReq.CompanyUuid, constant.SettingPrinter, printerSetting); err != nil {
-				return errors.New("设置默认打印机失败")
+				return 0, errors.New("设置默认打印机失败")
 			}
 		}
 	}
 
-	return bindRecordRepo.Create(model.Device{
+	device, err := bindRecordRepo.CreateBindRecord(model.Device{
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
 		Source:           addReq.Source,
@@ -142,6 +142,10 @@ func (s *bindRecordSrv) Add(ctx context.Context, addReq req.AddBindRecordReq) er
 		Platform:         platform,
 		UserAgent:        addReq.UserAgent,
 	})
+	if err != nil {
+		return 0, err
+	}
+	return device.Uuid, nil
 }
 
 func (s *bindRecordSrv) Unbind(companyUuid uint64, source string, deviceId string, staffUuid uint64) error {

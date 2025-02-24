@@ -593,7 +593,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品类别ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 1-开启 0-关闭',
+    `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态, 1-开启 0-关闭',
     `parent_uuid` BIGINT UNSIGNED DEFAULT NULL COMMENT '父级ID',
     `is_special` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '特殊分类, 1-是 0-否',
     `category_key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关键字',

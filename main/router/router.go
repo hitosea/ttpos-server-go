@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
+	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -15,17 +16,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func A(a, b int) {
-	_ = a / b
-}
-
 func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	// 判活接口
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
-	})
-	r.GET("test", func(c *gin.Context) {
-		A(10, 0)
 	})
 	apiV1 := r.Group("api/v1")
 	{
@@ -69,6 +63,12 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		kitchenGroup := apiV1.Group("/kitchen")
 		{
 			kitchen.RegisterHandlers(kitchenGroup)
+			kitchen.RegisterAuthHandlers(kitchenGroup, dbm, cache)
+		}
+		// 厨房端
+		tabletGroup := apiV1.Group("/tablet")
+		{
+			tablet.RegisterAuthHandlers(tabletGroup, dbm, cache)
 		}
 	}
 }

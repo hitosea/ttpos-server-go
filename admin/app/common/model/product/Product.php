@@ -784,9 +784,15 @@ class Product extends BaseModel
         // 执行查询
         $list = $this->alias('product')
             ->with(['category', 'image', 'sku'])
-            ->field(['product.*, name as product_name, actual_sale_num as product_sales'])
+            ->field(['product.*, name as product_name, actual_sale_num as sales_actual'])
             ->order(['sort', 'id' => 'desc'])
             ->paginate($params);
+
+        foreach ($list->items() as $item) {
+            // 库存: 规格库存之和
+            $skus = $item->sku->toArray();
+            $item->product_stock = array_sum(array_column($skus ?? [], 'stock_num'));
+        }
 
         return $list;
 

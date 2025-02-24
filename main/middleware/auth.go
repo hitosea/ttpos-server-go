@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -68,11 +69,20 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 		return
 	}
 
-	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant}, claims.Source) {
+	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant, constant.SourceKitchen, constant.SourceTablet}, claims.Source) {
 		helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
 		c.Abort()
 		return
 	}
+
+	if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(c.Request.URL.Path)) {
+		helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
+		c.Abort()
+		return
+	}
+
+	// 桌台Uuid
+	tableUuid, _ := strconv.ParseUint(c.GetHeader("TABLE-UUID"), 10, 64)
 
 	// 用户鉴权
 	ctx := context.NewContext(context.WithSource(claims.Source), context.WithCompanyUuid(claims.CompanyUuid))
@@ -87,6 +97,9 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 			StaffUuid: claims.Assistant.StaffUuid,
 		},
 		TokenIssuedAt: claims.IssuedAt.Unix(),
+
+		DeviceUuid: claims.DeviceUuid, // 用于判断是否绑定桌台
+		TableUuid:  tableUuid,         // 用于判断是否绑定桌台
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
@@ -106,6 +119,8 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 
 	c.Set(jwt.AssistantStaffUuid, claims.Assistant.StaffUuid) // 点餐助手员工Uuid
 	c.Set(jwt.AssistantDeviceId, claims.Assistant.DeviceId)   // 点餐助手设备ID
+
+	c.Set(jwt.DeviceUuid, claims.DeviceUuid) // 桌台绑定的设备uuid
 }
 
 func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv) {

@@ -27,6 +27,8 @@ type IAuthSrv interface {
 	Logout(ctx context.Context) error                                                                             // 退出登录
 	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                    // 收银端基本信息
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                // 点餐助手端基本信息
+	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                      // 平板端基本信息
+	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                    // 厨显端基本信息
 	Auth(ctx context.Context, authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
 	AuthDesk(ctx context.Context, qrcodeToken string) error                                                       // 鉴权桌台
 	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                               // 点餐助手绑定收银机
@@ -54,6 +56,7 @@ type authSrv struct {
 
 	cashierOpenStatusActions []string
 	assistantRoutes          []string
+	tabletRoutes             []string
 }
 
 func NewAuthSrvImpl(
@@ -85,11 +88,34 @@ func NewAuthSrvImpl(
 			//"/index/getAllProductImg",
 		},
 		assistantRoutes: []string{ // 已登录点餐助手，但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
+			"/api/v1/assistant/online_cashiers",
+			"/api/v1/assistant/bind_cashier",
 			//            '/index/getOnlineCashierList',
 			//            '/call/call/unprocessed',
 			//            '/store/table/table',
 			//            '/index/tablePing',
 			//            '/index/getAllProductImg'
+		},
+		tabletRoutes: []string{
+			"/api/v1/tablet/desk/list",
+			//'/passport/login',
+			//'/passport/captcha',
+			//'/passport/logout',
+			//'/base/base/bind',
+			//'/base/base/getNewVersion',
+			//'/base/base/getAllProductImg',
+			//'/base/base/getInfo',
+			//'/table/table/openPing',
+			//'/table/table/bind',
+			//'/table/table/index',
+			//'/table/table/getInfo',
+			//'/table/table/unbind',
+			//'/order/order/tableBuy',
+			//'/base/base/verifyPassword',
+			//'/call/call/call',
+			//'/order/order/buffetList',
+			//'/product/category/index', // 分类基础列表-缓存完完全外
+			//'/product/product/getBaseList', // 商品基础列表-缓存完完全外
 		},
 	}
 }
@@ -184,12 +210,26 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if companySetting.IsOpenAssistant != 1 {
 			return loginResp, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceKitchen: // 厨显端
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
+		if err != nil {
+			return loginResp, err
+		}
+		if kitchenSetting.IsOpen == "0" || companySetting.IsOpenKitchenKds == 0 {
+			return loginResp, errors.New("当前尚未开启厨显功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceTablet: // 平板端
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if companySetting.IsOpenTablet == 0 {
+			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+		}
 	default:
 		return loginResp, errors.New("登录来源错误")
 	}
 
 	// 添加绑定记录
-	err := s.bindRecordSrv.Add(ctx, req.AddBindRecordReq{
+	deviceUuid, err := s.bindRecordSrv.AddBindRecord(ctx, req.AddBindRecordReq{
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
 		Source:           loginReq.Source,
@@ -202,7 +242,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	}
 
 	// 生成 JWT token
-	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{})
+	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, deviceUuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{})
 	if err != nil {
 		return loginResp, errors.New("生成token失败")
 	}
@@ -295,6 +335,36 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	}, nil
 }
 
+// TabletBase 平板端基本信息
+func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
+	company := helper.GetCompany(ctx.GetGinContext())
+	staff := helper.GetStaff(ctx.GetGinContext())
+	var (
+		source   = helper.GetSource(ctx.GetGinContext())
+		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
+	)
+	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	return resp.TabletBase{
+		Username:   staff.Username,
+		TabletUuid: staff.Uuid,
+	}, nil
+}
+
+// KitchenBase 获取收银端基本信息
+func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
+	company := helper.GetCompany(ctx.GetGinContext())
+	staff := helper.GetStaff(ctx.GetGinContext())
+	var (
+		source   = helper.GetSource(ctx.GetGinContext())
+		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
+	)
+	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	return resp.KitchenBase{
+		Username:    staff.Username,
+		KitchenUuid: staff.Uuid,
+	}, nil
+}
+
 // Auth 鉴权
 func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
 	var (
@@ -360,7 +430,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
 				cashierBindRecord := repository.NewBindRecordRepo(s.dbm.GetDB(auth.CompanyUuid)).GetBySourceAndDeviceId(constant.SourceCashier, auth.DeviceId)
 				if cashierBindRecord.Uuid == 0 {
-					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenError, "收银员设备已解绑，请重新绑定")
+					return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenError, "收银员设备已解绑，请重新绑定")
 				}
 				if cashierBindRecord.FinallyLoginUuid == 0 {
 					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenErrorNotLogin, "收银员登录信息错误，请重新登录")
@@ -370,6 +440,17 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if !s.isTableOpen(ctx) {
 				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "桌台用餐已关闭，请选择其他用餐方式")
 			}
+		}
+	case constant.SourceTablet: // 平板端
+		if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
+			deskRepo := repository.NewDeskRepo(s.dbm.GetDB(auth.CompanyUuid))
+			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeviceUuid), deskRepo.WhereUuid(auth.TableUuid), deskRepo.WhereIsBind())
+			if err != nil {
+				return company, companySetting, staff, apperrors.NewWithCode(constant.CCodeLoseError, "桌台未绑定")
+			}
+		}
+		if companySetting.IsOpenTablet != 1 {
+			return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenError, "当前未开启平板点餐功能，请联系销售代表")
 		}
 	}
 
@@ -453,7 +534,7 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 		return newToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 	}
 	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
-	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{
+	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, ctx.GetDeviceUuid(), config.JWT.Secret, config.JWT.Expire, auth.Assistant{
 		DeviceId:  ctx.GetGinContext().GetString(jwt.DeviceId),
 		StaffUuid: ctx.GetGinContext().GetUint64(jwt.StaffUuid),
 	})
@@ -468,7 +549,7 @@ func (s *authSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staffs := staffRepo.GetStaffs(staffRepo.WhereCashierOnline(), staffRepo.WithDevice(constant.SettingCashier))
 
-	var cashiers []resp.OnlineCashier
+	cashiers := make([]resp.OnlineCashier, 0, len(staffs))
 	for _, staff := range staffs {
 		var remark string
 		if staff.Device != nil {
