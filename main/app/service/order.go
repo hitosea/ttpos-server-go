@@ -457,21 +457,23 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			}
 		} else {
 			// 没有拆单
-			order := bill.SaleOrders[0]
-			if order.ConsumerUuid > 0 {
-				consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
-			}
-			//
-			for _, payment := range order.PaymentOrders {
-				totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
-			}
-			// 不等于免单 && 未退款 && 完成
-			if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
-				billListsExtra.IsCellRefund = true
-			}
-			// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-			if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
-				billListsExtra.IsCellReverseSettle = true
+			if len(bill.SaleOrders) > 0 {
+				order := bill.SaleOrders[0]
+				if order.ConsumerUuid > 0 {
+					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+				}
+				//
+				for _, payment := range order.PaymentOrders {
+					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+				}
+				// 不等于免单 && 未退款 && 完成
+				if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+					billListsExtra.IsCellRefund = true
+				}
+				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
+				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+					billListsExtra.IsCellReverseSettle = true
+				}
 			}
 		}
 		//
