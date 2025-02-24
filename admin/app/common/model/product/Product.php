@@ -351,6 +351,15 @@ class Product extends BaseModel
     }
 
     /**
+     * 关联产品套餐属性组
+     */
+    public function productAttributeGroup()
+    {
+        return $this->hasMany(ProductAttributeGroup::class, 'product_package_uuid', 'uuid');
+    }
+
+
+    /**
      * 获取商品缓存基础列表 attribute_name
      * @param $params
      * @param $product_ids  // 查询指定商品
@@ -943,6 +952,10 @@ class Product extends BaseModel
             if ($product['type'] == self::TYPE_MATERIAL) {
                 $product['is_material_used'] = $this->checkMaterialUsed($product['product_id']) ? 1 : 0;
             }
+            // 商品属性
+            $product['product_attr'] = self::getProductAttr($product);
+            // 商品加料
+            $product['feed'] = self::getProductFeed($product);
             // 回调函数
             is_callable($callback) && call_user_func($callback, $product);
         }
@@ -1040,19 +1053,25 @@ class Product extends BaseModel
             'category',
             'image',
             'sku',
-
+            'sku.material',
+            'productAttributeGroup' => [
+                'attribute', 
+                'productAttribute' => [
+                    'attribute'
+                ]
+            ],
             // todo 兼容
-            // 'feed',
+            'feed',
             // 'supplier',
             // 'productTaxes',
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;
         }
-        return $model;
 
-        // todo 整理商品数据并返回
-        // return $model->setProductListData($model, false);
+
+        // 整理商品数据并返回
+        return $model->setProductListData($model, false);
     }
 
     /**
@@ -1084,6 +1103,63 @@ class Product extends BaseModel
         }
 
         return $result;
+    }
+
+    /**
+     * 获取商品属性
+     */
+    public static function getProductAttr($product)
+    {
+        $productAttr = [];
+        foreach ($product->productAttributeGroup as $group) {
+            $attributeValue = [];
+            $defaultSelect = [];
+            $attributeIds = [];
+            $attributeValueText = [];
+            foreach ($group->productAttribute as $attribute) {
+                $attributeValue[] = $attribute->attribute->attribute_name;
+                $defaultSelect[] = $attribute->is_default_selected;
+                $attributeIds[] = $attribute->attribute_uuid;
+                $attributeValueText[] = $attribute->attribute->attribute_name_text;
+            }
+            $attr = [
+                'parent_id' => $group['uuid'],
+                'parent_name' => $group->attribute->attribute_name_text,
+                'attribute_name' => $group->attribute->attribute_name,
+                'attribute_value' => $attributeValue,
+                'default_select' => $defaultSelect,
+                'attribute_ids' => $attributeIds,
+                'attribute_max_select' => $group->max_selection,
+                'attribute_open_max_select' => $group->max_selection > 0 ? 1 : 0,
+                'attribute_required' => $group->is_must,
+                'attribute_name_text' => $group->attribute->attribute_name_text,
+                'attribute_value_text' => $attributeValueText,
+            ];
+            $productAttr[] = $attr;
+        }
+
+        return $productAttr;
+    }
+
+    /**
+     * 获取商品加料
+     */
+    public static function getProductFeed($product)
+    {
+        $productFeed = [];
+        foreach ($product->feed as $feed) {
+            $productFeed[] = [
+                'feed_name_text' => $feed->spec_name_text,
+                'feed_id' => $feed->product_sauce_uuid,
+                'feed_name' => $feed->spec_name,
+                'price' => $feed->product_price,
+                'stock_num' => $feed->stock_num,
+                'default_select' => $feed->is_default_select,
+                'material' => [],
+            ];
+        }
+
+        return $productFeed;
     }
 
     /**

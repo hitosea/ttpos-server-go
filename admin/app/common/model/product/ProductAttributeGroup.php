@@ -33,4 +33,12 @@ class ProductAttributeGroup extends BaseModel
     {
         return $this->belongsTo('app\common\model\product\AttributeGroup', 'product_attribute_group_uuid', 'uuid');
     }
+
+    /**
+     * 关联产品套餐属性组
+     */
+    public function productAttribute()
+    {
+        return $this->hasMany('app\common\model\product\ProductAttribute', 'product_package_attribute_group_uuid', 'uuid');
+    }
 }

@@ -210,13 +210,10 @@ class Product extends ProductModel
             // 商品规格
             $this->addProductBom($data);
 
-            // todo 兼容
             // 商品图片
             $this->addProductImages($data['image']);
             // // 更新属性
             (new Attribute)->updateAttr($this['product_id'], $data['product_attr'], 0);
-            // // 更新加料
-            // (new ProductFeed)->updateFeed($data['product_feed'], $this);
             // erp商品月初库存记录
             (new ErpMonthlyProductStatistics)->newProductRecord($this['product_id']);
             $this->commit();
@@ -237,6 +234,7 @@ class Product extends ProductModel
         $skus = $data['sku'] ?? [];
         foreach ($skus as $sku) {
             ProductBom::create([
+                'purchase_price' => $sku['purchase_price'],
                 'price' => $sku['product_price'],
                 'name' => $sku['spec_name'],
                 'product_flavor_uuid' => $sku['spec_id'],
