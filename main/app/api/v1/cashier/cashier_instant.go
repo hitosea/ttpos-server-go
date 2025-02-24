@@ -333,6 +333,39 @@ func (h *InstantHandler) OrderMustPlan(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentInfo 获取结账页面信息
+// @Summary 获取结账页面信息
+// @Description 获取结账页面信息
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query string true "销售账单UUID"
+// @param sale_order_uuid query string true "销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/payment/info [get]
+func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面结账页面信息接口请求")
+
+	params := &req.InstantOrderPaymentInfoReq{}
+	if err := params.Parse(c); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		return
+	}
+	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
+	// 获取销售订单的付款信息
+	res, err := h.orderService.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("获取结账页面信息成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -364,5 +397,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)  // 修改购物车商品数量
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)  // 送厨购物车商品
 		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                // 获取点餐必点方案
+		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)          // 获取结账页面信息
 	}
 }

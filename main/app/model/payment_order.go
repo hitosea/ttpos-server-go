@@ -1,6 +1,8 @@
 package model
 
 import (
+	"slices"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/i18n"
 )
 
@@ -22,6 +24,13 @@ type PaymentMethod struct {
 
 	QrcodeFile *File `gorm:"foreignKey:QrcodeFileUuid;references:Uuid"` // 关联文件
 	LogoFile   *File `gorm:"foreignKey:LogoFileUuid;references:Uuid"`   // 关联文件
+}
+
+// 判断是否不允许取消支付
+func (model *PaymentMethod) IsDisabledCancel() bool {
+	return slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
+		constant.PaymentMethodCodeLianLianAliPay,
+		constant.PaymentMethodCodeLianLianQRPromptPay}, model.Code)
 }
 
 // GetSourceText 获取来源文本

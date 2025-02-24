@@ -905,6 +905,12 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.CardInfo:
+    properties:
+      name:
+        description: 卡名称
+        type: string
+    type: object
   resp.CashierBase:
     properties:
       buffet:
@@ -2055,6 +2061,21 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品单位
     type: object
+  resp.InstantOrderPaymentInfoResp:
+    properties:
+      member_info:
+        allOf:
+        - $ref: '#/definitions/resp.MemberInfo'
+        description: 会员信息。如果订单选择了会员，则返回会员信息
+      payment_method_amounts:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodAmountList'
+        description: 支付方式列表及订单金额信息
+      payment_orders:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentInfoList'
+        description: 支付订单列表
+    type: object
   resp.InstantProductMustPlan:
     properties:
       can_change_num:
@@ -2134,6 +2155,35 @@ definitions:
           type: string
         type: array
     type: object
+  resp.LevelInfo:
+    properties:
+      name:
+        description: 会员等级名称
+        type: string
+    type: object
+  resp.MemberInfo:
+    properties:
+      balance:
+        description: 会员余额
+        type: number
+      card:
+        allOf:
+        - $ref: '#/definitions/resp.CardInfo'
+        description: 会员卡信息
+      level:
+        allOf:
+        - $ref: '#/definitions/resp.LevelInfo'
+        description: 会员等级
+      name:
+        description: 会员名称
+        type: string
+      points:
+        description: 会员积分
+        type: number
+      uuid:
+        description: 会员UUID
+        type: integer
+    type: object
   resp.MemberLevel:
     properties:
       create_time:
@@ -2177,6 +2227,29 @@ definitions:
         items:
           $ref: '#/definitions/resp.OnlineCashier'
         type: array
+    type: object
+  resp.OrderAmount:
+    properties:
+      discount_amount:
+        description: 应收金额。
+        type: number
+      member_discount:
+        description: 最终应收。 最终应收=应收金额+支付手续费。支付的手续费=各个支付订单的手续费之和+当前支付方式的手续费 = 各个支付订单的手续费之和+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
+        type: number
+      sale_order_amount:
+        description: 订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）
+        type: number
+      unpaid_amount:
+        description: |-
+          PayOrderAmount        float64 `json:"pay_order_amount"`  // 实付金额。 指顾客实际为这个订单支付的金额，不含支付产生的手续费。应收金额-实付金额=未收金额。实付金额为各个支付订单为这个销售订单支付的金额之和，不含手续费
+          PayAmount             float64 `json:"pay_amount"`        // 实收金额。 指顾客实际支付的金额，包含支付产生的手续费。应付金额+手续费=实收金额。手续费为各个支付订单的手续费之和
+        type: number
+      zero_amount:
+        description: |-
+          找零金额，由前端自己计算后显示。 找零金额=金额输入框的值 - 未收金额
+          手续费金额，由前端自己计算后显示。手续费金额= 金额输入框的值 * 支付方式的手续费费率
+          实际应付金额，由前端自己计算后显示，实际应付金额=金额输入框的值*（1+手续费率）=金额输入框的值 + 手续费金额
+        type: number
     type: object
   resp.OrderInfo:
     properties:
@@ -2454,6 +2527,32 @@ definitions:
       uuid:
         description: 销售订单商品ID
         type: integer
+    type: object
+  resp.PaymentInfoList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PaymentOrder'
+        type: array
+    type: object
+  resp.PaymentMethodAmount:
+    properties:
+      order_amount:
+        allOf:
+        - $ref: '#/definitions/resp.OrderAmount'
+        description: 订单金额
+      payment_method_item:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodItem'
+        description: 支付方式
+    type: object
+  resp.PaymentMethodAmountList:
+    properties:
+      list:
+        description: 支付方式列表及订单金额信息
+        items:
+          $ref: '#/definitions/resp.PaymentMethodAmount'
+        type: array
     type: object
   resp.PaymentMethodItem:
     properties:
@@ -3847,6 +3946,13 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
         "404":
           description: 未找到
       security:
@@ -4088,6 +4194,41 @@ paths:
                   $ref: '#/definitions/resp.InstantProductMustPlanResp'
               type: object
       summary: 获取点餐必点方案
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/payment/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取结账页面信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: string
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取结账页面信息
       tags:
       - 收银端.点餐
   /cashier/instant/order/population:

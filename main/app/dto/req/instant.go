@@ -1,5 +1,12 @@
 package req
 
+import (
+	"errors"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+)
+
 // InstantOrderGetInfoReq 获取点餐订单详情请求
 type InstantOrderGetInfoReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
@@ -25,4 +32,33 @@ type InstantOrderAddProductReq struct {
 	SaleBillUuid  uint64     `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64     `json:"sale_order_uuid"` // 销售订单UUID, 必填
 	Product       AddProduct `json:"product"`         // 商品, 必填
+}
+
+// InstantOrderPaymentInfoReq 结账页面信息请求
+type InstantOrderPaymentInfoReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+}
+
+func (r *InstantOrderPaymentInfoReq) Parse(c *gin.Context) error {
+	saleBillUuidStr := c.Query("sale_bill_uuid")
+	saleOrderUuidStr := c.Query("sale_order_uuid")
+	if saleBillUuidStr == "" || saleOrderUuidStr == "" {
+		return errors.New("销售账单UUID和销售订单UUID不能为空")
+	}
+
+	saleBillUuid, err := strconv.ParseUint(saleBillUuidStr, 10, 64)
+	if err != nil {
+		return errors.New("销售账单UUID格式错误")
+	}
+
+	saleOrderUuid, err := strconv.ParseUint(saleOrderUuidStr, 10, 64)
+	if err != nil {
+		return errors.New("销售订单UUID格式错误")
+	}
+
+	r.SaleBillUuid = saleBillUuid
+	r.SaleOrderUuid = saleOrderUuid
+
+	return nil
 }

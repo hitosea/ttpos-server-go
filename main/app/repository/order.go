@@ -796,10 +796,13 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{
-				Query: "SaleOrders.PaymentOrders",
+				Query: "SaleOrders.PaymentOrders.PaymentMethod",
 			},
 			WithPreload{
-				Query: "SaleOrders.Member",
+				Query: "SaleOrders.Member.MemberLevel",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberCard.MemberCardType",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",

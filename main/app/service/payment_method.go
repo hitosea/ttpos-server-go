@@ -93,10 +93,10 @@ func (s *paymentMethodSrv) GetList(ctx context.Context) resp.PaymentMethodList {
 	for _, method := range paymentMethods {
 		var logo, qrcode string
 		if method.QrcodeFile != nil {
-			logo = method.LogoFile.FileUrl
+			logo = method.LogoFile.GetUrl()
 		}
 		if method.QrcodeFile != nil {
-			qrcode = method.QrcodeFile.FileUrl
+			qrcode = method.QrcodeFile.GetUrl()
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGinContext()), constant.SourceTextMap[method.Source]),

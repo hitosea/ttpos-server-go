@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
@@ -18,6 +20,7 @@ type IPaymentMethodRepo interface {
 
 	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
 	GetPaymentMethods(opts ...DBOption) []model.PaymentMethod
+	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
 }
 
 // paymentMethodRepo 仓库
@@ -49,6 +52,17 @@ func (r *paymentMethodRepo) GetPaymentMethod(opts ...DBOption) model.PaymentMeth
 // GetPaymentMethods  获取支付方式
 func (r *paymentMethodRepo) GetPaymentMethods(opts ...DBOption) []model.PaymentMethod {
 	var paymentMethods []model.PaymentMethod
+	db := r.db.Model(&model.PaymentMethod{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Debug().Find(&paymentMethods)
+	return paymentMethods
+}
+
+// GetPaymentMethods  获取支付方式
+func (r *paymentMethodRepo) GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod {
+	var paymentMethods []*model.PaymentMethod
 	db := r.db.Model(&model.PaymentMethod{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
@@ -91,4 +105,18 @@ func (r *paymentMethodRepo) WithQrcodeFile() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("QrcodeFile")
 	}
+}
+
+func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod {
+	opts := []DBOption{
+		r.WhereStatus(constant.PaymentMethodStatusEnable),
+	}
+	if ctx.GetSource() == constant.SourceCashier {
+		opts = append(opts, r.WhereCashier())
+	} else if ctx.GetSource() == constant.SourceAssistant {
+		opts = append(opts, r.WhereAssistant())
+	}
+	opts = append(opts, r.WithLogoFile(), r.WithQrcodeFile())
+	paymentMethods := r.GetPaymentMethodList(opts...)
+	return paymentMethods
 }

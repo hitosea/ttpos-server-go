@@ -1133,7 +1133,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "404": {
                         "description": "未找到"
@@ -1540,6 +1555,65 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/payment/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取结账页面信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "获取结账页面信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -5284,6 +5358,15 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CardInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "卡名称",
+                    "type": "string"
+                }
+            }
+        },
         "resp.CashierBase": {
             "type": "object",
             "properties": {
@@ -6966,6 +7049,35 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.InstantOrderPaymentInfoResp": {
+            "type": "object",
+            "properties": {
+                "member_info": {
+                    "description": "会员信息。如果订单选择了会员，则返回会员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberInfo"
+                        }
+                    ]
+                },
+                "payment_method_amounts": {
+                    "description": "支付方式列表及订单金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodAmountList"
+                        }
+                    ]
+                },
+                "payment_orders": {
+                    "description": "支付订单列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentInfoList"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.InstantProductMustPlan": {
             "type": "object",
             "properties": {
@@ -7083,6 +7195,52 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.LevelInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "会员等级名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.MemberInfo": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "会员余额",
+                    "type": "number"
+                },
+                "card": {
+                    "description": "会员卡信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CardInfo"
+                        }
+                    ]
+                },
+                "level": {
+                    "description": "会员等级",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.LevelInfo"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "points": {
+                    "description": "会员积分",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "会员UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.MemberLevel": {
             "type": "object",
             "properties": {
@@ -7144,6 +7302,31 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.OnlineCashier"
                     }
+                }
+            }
+        },
+        "resp.OrderAmount": {
+            "type": "object",
+            "properties": {
+                "discount_amount": {
+                    "description": "应收金额。",
+                    "type": "number"
+                },
+                "member_discount": {
+                    "description": "最终应收。 最终应收=应收金额+支付手续费。支付的手续费=各个支付订单的手续费之和+当前支付方式的手续费 = 各个支付订单的手续费之和+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
+                    "type": "number"
+                },
+                "sale_order_amount": {
+                    "description": "订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）",
+                    "type": "number"
+                },
+                "unpaid_amount": {
+                    "description": "PayOrderAmount        float64 ` + "`" + `json:\"pay_order_amount\"` + "`" + `  // 实付金额。 指顾客实际为这个订单支付的金额，不含支付产生的手续费。应收金额-实付金额=未收金额。实付金额为各个支付订单为这个销售订单支付的金额之和，不含手续费\nPayAmount             float64 ` + "`" + `json:\"pay_amount\"` + "`" + `        // 实收金额。 指顾客实际支付的金额，包含支付产生的手续费。应付金额+手续费=实收金额。手续费为各个支付订单的手续费之和",
+                    "type": "number"
+                },
+                "zero_amount": {
+                    "description": "找零金额，由前端自己计算后显示。 找零金额=金额输入框的值 - 未收金额\n手续费金额，由前端自己计算后显示。手续费金额= 金额输入框的值 * 支付方式的手续费费率\n实际应付金额，由前端自己计算后显示，实际应付金额=金额输入框的值*（1+手续费率）=金额输入框的值 + 手续费金额",
+                    "type": "number"
                 }
             }
         },
@@ -7532,6 +7715,50 @@ const docTemplate = `{
                 "uuid": {
                     "description": "销售订单商品ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.PaymentInfoList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentOrder"
+                    }
+                }
+            }
+        },
+        "resp.PaymentMethodAmount": {
+            "type": "object",
+            "properties": {
+                "order_amount": {
+                    "description": "订单金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderAmount"
+                        }
+                    ]
+                },
+                "payment_method_item": {
+                    "description": "支付方式",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodItem"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.PaymentMethodAmountList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表及订单金额信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodAmount"
+                    }
                 }
             }
         },

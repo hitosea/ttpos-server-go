@@ -50,9 +50,10 @@ type IOrderSrv interface {
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                          // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                      // 向购物车添加商品
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
-	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)
-	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)
-	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)
+	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                      // 修改购物车商品数量
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)                              // 送厨购物车商品
+	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)                                                          // 获取点餐必点方案
+	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)           // 获取结账页面信息
 }
 
 // orderSrv 订单服务结构
@@ -1947,4 +1948,103 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 		// 如果有未挂单的点餐销售账单。未有这个需求，暂时不做
 	}
 	return shopCartInfo, nil
+}
+
+// InstantOrderPaymentInfo 获取结账页面信息
+func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
+	// 加锁
+	s.lock.LockUuid(saleBillUuid)
+	defer s.lock.UnlockUuid(saleBillUuid)
+	// 获取销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	var saleOrder *model.SaleOrder
+	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	var paymentMethods []*model.PaymentMethod
+	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
+	if len(paymentMethods) <= 0 {
+		return nil, errors.New("系统没有支付方式")
+	}
+
+	memberInfo := resp.MemberInfo{}
+	if saleOrder != nil && saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
+		memberInfo = resp.MemberInfo{
+			Uuid:    saleOrder.Member.Uuid,
+			Name:    saleOrder.Member.Nickname,
+			Card:    resp.CardInfo{Name: saleOrder.Member.MemberCard.MemberCardType.Name},
+			Level:   resp.LevelInfo{Name: saleOrder.Member.MemberLevel.Name},
+			Balance: saleOrder.Member.Balance,
+			Points:  saleOrder.Member.Point,
+		}
+	}
+
+	paymentOrders := make([]resp.PaymentOrder, 0)
+	for _, paymentOrder := range saleOrder.PaymentOrders {
+		order := resp.PaymentOrder{
+			Uuid:                 paymentOrder.Uuid,
+			PaymentMethodUuid:    paymentOrder.PaymentMethodUuid,
+			PaymentMethodName:    paymentOrder.PaymentMethodName,
+			PaymentMethodCode:    paymentOrder.PaymentMethod.Code,
+			PaymentAmount:        paymentOrder.PaymentAmount,
+			PaymentCommissionFee: paymentOrder.PaymentCommissionFee,
+			Amount:               paymentOrder.Amount,
+			DisabledCancel:       paymentOrder.PaymentMethod.IsDisabledCancel(),
+		}
+		paymentOrders = append(paymentOrders, order)
+	}
+
+	paymentMethodAmounts := make([]resp.PaymentMethodAmount, 0)
+
+	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	for _, paymentMethod := range paymentMethods {
+		var logoUrl string
+		var qrcodeUrl string
+		if paymentMethod.LogoFile != nil {
+			logoUrl = paymentMethod.LogoFile.GetUrl()
+		}
+		if paymentMethod.QrcodeFile != nil {
+			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl()
+		}
+		methodItem := resp.PaymentMethodItem{
+			Source:      paymentMethod.Source,
+			SourceText:  paymentMethod.GetSourceText(ctx.GetLanguage()),
+			Uuid:        paymentMethod.Uuid,
+			PaymentName: paymentMethod.PaymentName,
+			FeePercent:  paymentMethod.FeePercent,
+			Logo:        logoUrl,
+			Qrcode:      qrcodeUrl,
+			Code:        paymentMethod.Code,
+		}
+		amount := resp.OrderAmount{
+			SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
+			SaleOrderAmount:       saleOrder.Amount,
+			FinallyAmount:         saleOrder.CalcFinallyAmount(serviceFeeRate, serviceFeeValue, taxFeeType), // 应收金额+已付款的付款单的手续费之和+
+			//PayOrderAmount:        saleOrder.CalcPayOrderAmount(),
+			//PayAmount:             0,
+			UnpaidAmount: saleOrder.CalcUnPayAmount(),
+			ZeroAmount:   saleOrder.CalcZeroAmount(methodItem.Code), // 只有现金结账时才会抹零
+		}
+		paymentMethodAmount := resp.PaymentMethodAmount{
+			OrderAmount:       amount,
+			PaymentMethodItem: methodItem,
+		}
+		paymentMethodAmounts = append(paymentMethodAmounts, paymentMethodAmount)
+	}
+	infoResp := &resp.InstantOrderPaymentInfoResp{
+		MemberInfo:           memberInfo,
+		PaymentOrders:        resp.PaymentInfoList{List: paymentOrders},
+		PaymentMethodAmounts: resp.PaymentMethodAmountList{List: paymentMethodAmounts},
+	}
+
+	return infoResp, nil
 }
