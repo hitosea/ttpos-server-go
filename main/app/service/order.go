@@ -55,6 +55,7 @@ type IOrderSrv interface {
 	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)                                                          // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)           // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)              // 给销售订单创建一个支付单
+	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                             // 给销售订单创建一个销售订单
 }
 
 // orderSrv 订单服务结构
@@ -134,17 +135,9 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建销售订单
-		var serviceFee float64
-		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
-			serviceFee = saleBillSetting.ServiceFeeValue
-		}
-		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
-			SaleBillUuid: saleBill.Uuid,
-			OrderNo:      saleBill.OrderNo,
-			ServiceFee:   serviceFee,
-		})
-		if err != nil {
-			return err
+		saleOrder, errCreateSaleOrder := createSaleOrder(tx, &saleBillSetting, saleBill.Uuid, orderNo)
+		if errCreateSaleOrder != nil {
+			return errCreateSaleOrder
 		}
 
 		billUuid = saleBill.Uuid
@@ -160,6 +153,23 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		SaleBillUuid:  billUuid,
 		SaleOrderUuid: orderUuid,
 	}, nil
+}
+
+func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
+	// 创建销售订单
+	var serviceFee float64
+	if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+		serviceFee = saleBillSetting.ServiceFeeValue
+	}
+	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(model.SaleOrder{
+		SaleBillUuid: saleBillUuid,
+		OrderNo:      saleBillOrderNo,
+		ServiceFee:   serviceFee,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &saleOrder, nil
 }
 
 // CreateSaleBillSetting 创建销售账单设置
@@ -2056,4 +2066,32 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	//db := s.dbm.GetDB(ctx.GetDbId())
 	return nil, nil
+}
+
+// InstantOrderSaleOrderCreate 给销售订单创建一个销售订单
+func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 加锁
+	saleBillUuid := req.SaleBillUuid
+	s.lock.LockUuid(saleBillUuid)
+	defer s.lock.UnlockUuid(saleBillUuid)
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	// 创建销售订单
+	_, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo)
+	if errCreateSaleOrder != nil {
+		ctx.Log().Error("新建拆单失败", zap.Any("errCreateSaleOrder", errCreateSaleOrder))
+		return nil, errors.New("新建拆单失败")
+	}
+
+	cartInfo, errCartInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if errCartInfo != nil {
+		ctx.Log().Error("查询购物车信息失败", zap.Any("errCartInfo", errCartInfo))
+		return nil, errors.New("查询购物车信息失败")
+	}
+	return cartInfo, nil
 }

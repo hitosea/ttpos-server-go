@@ -70,3 +70,7 @@ type InstantOrderPaymentCreateReq struct {
 	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
 	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
 }
+
+type InstantOrderSaleOrderCreateReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+}

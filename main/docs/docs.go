@@ -1559,6 +1559,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/payment/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建一个支付单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "创建一个支付单",
+                "parameters": [
+                    {
+                        "description": "创建一个支付单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrder"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/payment/info": {
             "get": {
                 "security": [
@@ -1815,6 +1866,57 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/sale_order/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建一个销售订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "创建一个销售订单",
+                "parameters": [
+                    {
+                        "description": "创建一个销售订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderSaleOrderCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrder"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -4825,6 +4927,36 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注: 最小空字符串,最大50字符",
                     "type": "string"
+                }
+            }
+        },
+        "req.InstantOrderPaymentCreateReq": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额, 必填",
+                    "type": "number"
+                },
+                "payment_method_uuid": {
+                    "description": "支付方式UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.InstantOrderSaleOrderCreateReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
                 }
             }
         },

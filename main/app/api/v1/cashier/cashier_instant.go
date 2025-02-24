@@ -366,14 +366,14 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// AddPaymentMethod 充值订单添加支付方式
-// @Summary 充值订单添加支付方式
-// @Description 充值订单添加支付方式
-// @Tags 收银端.会员
+// OrderPaymentCreat 创建一个支付单
+// @Summary 创建一个支付单
+// @Description 创建一个支付单
+// @Tags 收银端.点餐
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.InstantOrderPaymentCreateReq true "充值订单添加支付方式参数"
+// @param data body req.InstantOrderPaymentCreateReq true "创建一个支付单参数"
 // @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/instant/order/payment/create [post]
 func (h *InstantHandler) OrderPaymentCreat(c *gin.Context) {
@@ -393,6 +393,37 @@ func (h *InstantHandler) OrderPaymentCreat(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("创建一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderSaleOrderCreate 创建一个销售订单
+// @Summary 创建一个销售订单
+// @Description 创建一个销售订单
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderSaleOrderCreateReq true "创建一个销售订单参数"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
+// @Router /cashier/instant/order/sale_order/create [post]
+func (h *InstantHandler) OrderSaleOrderCreate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面创建一个销售订单接口请求")
+
+	params := req.InstantOrderSaleOrderCreateReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		return
+	}
+	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
+	// 创建一个销售订单
+	res, err := h.orderService.InstantOrderSaleOrderCreate(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("创建一个销售订单成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -417,18 +448,19 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)             // 创建点餐订单。 废弃，点餐点餐由系统自动创建
-		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                    // 取消点餐订单
-		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)   // 删除点餐订单商品
-		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice) // 点餐订单商品改价
-		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)      // 点餐订单修改人数
-		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)     // 点餐订单商品备注
-		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                // 查询点餐购物车信息
-		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)  // 向购物车添加商品
-		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)  // 修改购物车商品数量
-		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)  // 送厨购物车商品
-		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                // 获取点餐必点方案
-		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)          // 获取结账页面信息
-		privateApi.GET("/instant/order/payment/create", wrapper.OrderPaymentCreat)       // 创建一个支付单
+		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)              // 创建点餐订单。 废弃，点餐点餐由系统自动创建
+		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                     // 取消点餐订单
+		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)    // 删除点餐订单商品
+		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)  // 点餐订单商品改价
+		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)       // 点餐订单修改人数
+		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)      // 点餐订单商品备注
+		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                 // 查询点餐购物车信息
+		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)   // 向购物车添加商品
+		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)   // 修改购物车商品数量
+		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)   // 送厨购物车商品
+		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                 // 获取点餐必点方案
+		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)           // 获取结账页面信息
+		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreat)       // 创建一个支付单
+		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate) // 创建一个销售订单
 	}
 }
