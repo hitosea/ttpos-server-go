@@ -62,3 +62,11 @@ func (r *InstantOrderPaymentInfoReq) Parse(c *gin.Context) error {
 
 	return nil
 }
+
+// InstantOrderPaymentCreateReq 创建一个支付单请求
+type InstantOrderPaymentCreateReq struct {
+	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID, 必填
+	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID, 必填
+	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+}

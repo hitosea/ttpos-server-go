@@ -54,6 +54,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)                              // 送厨购物车商品
 	InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error)                                                          // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)           // 获取结账页面信息
+	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)              // 给销售订单创建一个支付单
 }
 
 // orderSrv 订单服务结构
@@ -2049,4 +2050,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	}
 
 	return infoResp, nil
+}
+
+// InstantOrderPaymentCreate 给销售订单创建一个支付单
+func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
+	//db := s.dbm.GetDB(ctx.GetDbId())
+	return nil, nil
 }

@@ -366,6 +366,37 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// AddPaymentMethod 充值订单添加支付方式
+// @Summary 充值订单添加支付方式
+// @Description 充值订单添加支付方式
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentCreateReq true "充值订单添加支付方式参数"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
+// @Router /cashier/instant/order/payment/create [post]
+func (h *InstantHandler) OrderPaymentCreat(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面结账页面信息接口请求")
+
+	params := req.InstantOrderPaymentCreateReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		return
+	}
+	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
+	// 创建一个支付单
+	res, err := h.orderService.InstantOrderPaymentCreate(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("创建一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -398,5 +429,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)  // 送厨购物车商品
 		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                // 获取点餐必点方案
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)          // 获取结账页面信息
+		privateApi.GET("/instant/order/payment/create", wrapper.OrderPaymentCreat)       // 创建一个支付单
 	}
 }
