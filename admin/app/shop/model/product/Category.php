@@ -39,7 +39,7 @@ class Category extends CategoryModel
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($name);
         $this->save($data);
         $category_id = $this->getLastInsID();
-        $this->deleteCache($data['type'] ?? 0, $data['is_special'] ?? 0, $data['shop_supplier_id'] ?? 0);
+        $this->deleteCache(1, $data['is_special'] ?? 0, self::$app_id);
         return array_merge($data, ['category_id' => $category_id, 'name_text' => extractLanguage($name ?? '')]);
     }
 
@@ -75,7 +75,7 @@ class Category extends CategoryModel
         $data['parent_uuid'] = $parentId;
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($name, $this['multi_language_name_uuid']);
         $res = $this->save($data) !== false;
-        $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
+        $this->deleteCache(1, $this['is_special'], self::$app_id);
         return $res;
     }
 
@@ -103,7 +103,7 @@ class Category extends CategoryModel
         $this->multiLanguageName->delete();
         $res = $this->delete();
         // 兼容
-        $res && $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
+        $res && $this->deleteCache(1, $this['is_special'], self::$app_id);
         //
         if ($res && $this->uuid) {
             foreach (Product::where($where)->select() as $product) {
@@ -129,7 +129,7 @@ class Category extends CategoryModel
             return false;
         }
         $res = $this->save($data) !== false;
-        $this->deleteCache($this['type'], $this['is_special'], $this['shop_supplier_id']);
+        $this->deleteCache(1, $this['is_special'], self::$app_id);
         return $res;
     }
 
@@ -137,8 +137,7 @@ class Category extends CategoryModel
      * 删除缓存
      */
     public function deleteCache($type, $is_special, $shop_supplier_id)
-    {
-        Cache::tag('category' . $shop_supplier_id . $is_special . $type)->clear();
+    {   
         Cache::tag('category' . $shop_supplier_id . (!$is_special ? 1 : 0) . $type)->clear();
         return true;
     }
