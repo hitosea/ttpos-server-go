@@ -349,14 +349,14 @@ func (model *SaleOrder) CalcPayOrderAmount() float64 {
 // 计算销售订单的最终应收金额。
 // 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）
 func (model *SaleOrder) CalcFinallyAmount(serviceFeeRate float64, serviceFeeValue float64, taxFeeType int) float64 {
-	orderOriginAmount := decimal.NewFromFloat(model.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType))
+	amount := decimal.NewFromFloat(model.Amount)
 	commissionFee := decimal.NewFromFloat(0)
 	for _, paymentOrder := range model.PaymentOrders {
 		commissionFee = commissionFee.Add(decimal.NewFromFloat(paymentOrder.PaymentCommissionFee))
 	}
 	// 未支付的金额的手续费 = 未支付的金额 * 支付手续费费率
 	// 最终应收 = 应收金额+已支付的手续费
-	finallyAmount := orderOriginAmount.Add(commissionFee)
+	finallyAmount := amount.Add(commissionFee)
 	return finallyAmount.InexactFloat64()
 }
 
@@ -963,10 +963,24 @@ func (model *SaleOrderProduct) CalcSalePrice() float64 {
 
 // 计算商品的折扣率。 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 func (model *SaleOrderProduct) CalcDiscountRate() float64 {
-	discountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(
-		decimal.NewFromFloat(model.MemberCardDiscountRate)).Mul(
-		decimal.NewFromFloat(model.CustomDiscountRate))
-	return discountRate.InexactFloat64()
+	rate := decimal.NewFromFloat(1)
+	memberDiscountRate := model.MemberDiscountRate
+	memberCardDiscountRate := model.MemberCardDiscountRate
+	customDiscountRate := model.CustomDiscountRate
+
+	if memberDiscountRate != 0 {
+		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+		rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
+	}
+	if memberCardDiscountRate != 0 {
+		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+		rate = rate.Mul(decimal.NewFromFloat(memberCardDiscountRate))
+	}
+	if customDiscountRate != 0 {
+		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+		rate = rate.Mul(decimal.NewFromFloat(customDiscountRate))
+	}
+	return rate.InexactFloat64()
 }
 
 // 计算商品折后价。最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率

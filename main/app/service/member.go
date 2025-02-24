@@ -709,30 +709,8 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 		return nil, errors.New("销售订单不存在")
 	}
 
-	var cardDiscountRate float64
-	if member.MemberCard != nil {
-		cardDiscountRate = member.MemberCard.Discount
-	}
-	var levelDiscountRate float64
-	if member.MemberLevel != nil {
-		levelDiscountRate = member.MemberLevel.Discount
-	}
-	saleOrder.MemberCardDiscountRate = cardDiscountRate
-	saleOrder.MemberDiscountRate = levelDiscountRate
-
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	for i, _ := range saleOrder.SaleOrderProducts {
-		saleOrderProduct := saleOrder.SaleOrderProducts[i]
-		saleOrderProduct.MemberCardDiscountRate = cardDiscountRate
-		saleOrderProduct.MemberDiscountRate = levelDiscountRate
-		calc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeValue, taxFeeType, serviceFeeType)
-		ctx.Log().Debug("商品会员优惠金额", zap.Any("discount", calc.MemberDiscountFee))
-	}
-	ctx.Log().Debug("获取会员优惠金额", zap.Any("levelDiscountRate", levelDiscountRate), zap.Any("cardDiscountRate", cardDiscountRate))
-	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
-	memberDiscountFee := calc.MemberDiscountFee
+	// 计算销售订单的金额
+	memberDiscountFee := calcOrderAmount(ctx, member, saleBill, saleOrder)
 
 	var cardName string
 	var levelName string
@@ -758,18 +736,97 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 	}, nil
 }
 
+func calcOrderAmount(ctx context.Context, member *model.Member, saleBill *model.SaleBill, saleOrder *model.SaleOrder) float64 {
+	var cardDiscountRate float64
+	if member.MemberCard != nil {
+		cardDiscountRate = member.MemberCard.Discount
+	}
+	var levelDiscountRate float64
+	if member.MemberLevel != nil {
+		levelDiscountRate = member.MemberLevel.Discount
+	}
+	saleOrder.ConsumerUuid = member.Uuid
+	saleOrder.MemberCardDiscountRate = cardDiscountRate
+	saleOrder.MemberDiscountRate = levelDiscountRate
+
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	for i, _ := range saleOrder.SaleOrderProducts {
+		saleOrderProduct := saleOrder.SaleOrderProducts[i]
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
+			continue
+		}
+		saleOrderProduct.MemberCardDiscountRate = cardDiscountRate
+		saleOrderProduct.MemberDiscountRate = levelDiscountRate
+		calc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeValue, taxFeeType, serviceFeeType)
+		ctx.Log().Debug("商品会员优惠金额", zap.Any("discount", calc.MemberDiscountFee))
+	}
+	ctx.Log().Debug("获取会员优惠金额", zap.Any("levelDiscountRate", levelDiscountRate), zap.Any("cardDiscountRate", cardDiscountRate))
+	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	memberDiscountFee := calc.MemberDiscountFee
+	return memberDiscountFee
+}
+
 func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error {
-	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	member := memberRepo.GetMember(memberRepo.WhereUuid(discountReq.MemberUuid))
-	if member.Uuid == 0 {
-		return errors.New("会员不存在")
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取会员信息
+	member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, discountReq.MemberUuid)
+	if errMember != nil {
+		return errMember
 	}
-	if member.Password == "" {
-		return errors.New("密码错误")
+
+	// 如果会员有密码的话，验证会员密码
+	if member.HasPassword() {
+		md5Password := cryptor.Md5String(discountReq.Password)
+		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
+		if member.Password != md5Password {
+			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
+			return errors.New("密码错误")
+		}
 	}
-	if member.Password != cryptor.Md5String(discountReq.Password) {
-		return errors.New("密码错误")
+
+	// 获取账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
+	if errSaleBill != nil {
+		ctx.Log().Error("查询销售账单失败", zap.Error(errSaleBill))
+		return errors.New("查询销售账单失败")
 	}
+
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(discountReq.SaleOrderUuid)
+	if saleOrder == nil {
+		return errors.New("销售订单不存在")
+	}
+
+	// 重新计算销售订单的金额
+	memberDiscountFee := calcOrderAmount(ctx, member, saleBill, saleOrder)
+	ctx.Log().Debug("选定会员,优惠金额", zap.Any("memberDiscountFee", memberDiscountFee), zap.Any("saleOrder.MemberDiscountFee", saleOrder.MemberDiscountFee))
+
+	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+
+		for index, _ := range saleOrder.SaleOrderProducts {
+			saleOrderProduct := saleOrder.SaleOrderProducts[index]
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
+				continue
+			}
+			if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+				return errUpdate
+			}
+			ctx.Log().Debug("更新销售订单商品成功")
+		}
+
+		// 更新完整个销售订单
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+			return errUpdate
+		}
+		return nil
+	})
+	if errUpdate != nil {
+		ctx.Log().Error("更新销售订单失败", zap.Error(errUpdate))
+		return errors.New("更新销售订单失败")
+	}
+
 	return nil
 }
 

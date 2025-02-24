@@ -70,8 +70,10 @@ type GetMemberDiscountReq struct {
 
 // CheckMemberPasswordReq 使用会员优惠验证密码
 type CheckMemberPasswordReq struct {
-	Password   string `json:"password" binding:"omitempty,number,min=4,max=16"` // 会员密码
-	MemberUuid uint64 `json:"member_uuid" binding:"required"`                   // 会员 Uuid
+	Password      string `json:"password" binding:"omitempty,number,min=4,max=16"` // 会员密码
+	MemberUuid    uint64 `json:"member_uuid" binding:"required"`                   // 会员 Uuid
+	SaleOrderUuid uint64 `json:"sale_order_uuid"`                                  // 销售订单 Uuid
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`                                   // 销售账单 Uuid
 }
 
 // CheckMemberPasswordMessage 使用会员优惠验证密码错误提示
