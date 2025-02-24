@@ -10,7 +10,7 @@ use app\common\model\tax\TaxCategory;
  */
 class ProductTax extends BaseModel
 {
-    protected $name = 'product_tax';
+    protected $name = 'tax';
     protected $pk = 'id';
 
     /**

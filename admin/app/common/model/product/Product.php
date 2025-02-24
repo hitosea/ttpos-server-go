@@ -343,11 +343,19 @@ class Product extends BaseModel
     }
 
     /**
-     * 关联产品税类
+     * 关联堂食税类
      */
-    public function productTaxes()
+    public function dineTax()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductTax', 'product_id', 'product_id');
+        return $this->belongsTo('app\\common\\model\\product\\ProductTax', 'dine_tax_uuid', 'uuid');
+    }
+
+    /**
+     * 关联外卖税类
+     */
+    public function takeoutTax()
+    {
+        return $this->belongsTo('app\\common\\model\\product\\ProductTax', 'takeout_tax_uuid', 'uuid');
     }
 
     /**
@@ -956,6 +964,9 @@ class Product extends BaseModel
             $product['product_attr'] = self::getProductAttr($product);
             // 商品加料
             $product['feed'] = self::getProductFeed($product);
+            // todo 税类, 先返回空数组, 后续根据设置返回税类
+            $product['productTaxes'] = self::getProductTaxes($product);
+
             // 回调函数
             is_callable($callback) && call_user_func($callback, $product);
         }
@@ -1063,7 +1074,8 @@ class Product extends BaseModel
             // todo 兼容
             'feed',
             // 'supplier',
-            // 'productTaxes',
+            'dineTax',
+            'takeoutTax',
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;
@@ -1160,6 +1172,22 @@ class Product extends BaseModel
         }
 
         return $productFeed;
+    }
+
+    /**
+     * 获取商品税类
+     */
+    public static function getProductTaxes($product)
+    {
+        $productTaxes = [];
+        if ($product->dineTax) {
+            $productTaxes[] = $product->dineTax;
+        }
+        if ($product->takeoutTax) {
+            $productTaxes[] = $product->takeoutTax;
+        }
+
+        return $productTaxes;
     }
 
     /**
