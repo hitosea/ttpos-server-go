@@ -111,26 +111,26 @@ func HandleValidationError(c *gin.Context, err error, obj any, messages map[stri
 	ok := errors.As(err, &ves)
 	if !ok {
 		if config.Server.Mode == constant.ServerModeDebug {
-			Fail(c, constant.CodeBadRequest, err.Error())
+			Fail(c, constant.CodeParamError, err.Error())
 		} else {
-			Fail(c, constant.CodeBadRequest, "参数错误")
+			Fail(c, constant.CodeParamError, "参数错误")
 		}
 		return
 	}
 	if config.Server.Mode == constant.ServerModeDebug {
 		// 获取环境配置
-		Fail(c, constant.CodeBadRequest, err.Error())
+		Fail(c, constant.CodeParamError, err.Error())
 		return
 	}
 	for _, ve := range ves {
 		if jsonTag, jsonTagExists := structFieldJsonTagMaps[ve.StructField()]; jsonTagExists {
 			if message, messageExists := messages[jsonTag+"."+ve.Tag()]; messageExists {
-				Fail(c, constant.CodeBadRequest, message)
+				Fail(c, constant.CodeParamError, message)
 				return
 			}
 		}
 	}
-	Fail(c, constant.CodeBadRequest, "参数错误")
+	Fail(c, constant.CodeParamError, "参数错误")
 }
 
 // GetCompanyUuid 获取公司ID

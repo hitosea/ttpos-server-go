@@ -38,7 +38,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	loginReq.Source = constant.SourceKitchen
 	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
 		return
 	}
 	helper.Success(c, gin.H{"token": loginResp.Token})
@@ -57,7 +57,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.authSrv.Logout(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{}, "退出成功")
@@ -76,7 +76,7 @@ func (h *AuthHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.KitchenBase(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, info)

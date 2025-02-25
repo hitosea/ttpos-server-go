@@ -264,7 +264,10 @@ func (s *authSrv) Logout(ctx context.Context) error {
 		staffUuid = assistantUuid
 	}
 	staff := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid))
-	return s.bindRecordSrv.Unbind(companyUuid, source, staff.BindKey, staff.Uuid)
+	if err := s.bindRecordSrv.Unbind(companyUuid, source, staff.BindKey, staff.Uuid); err != nil {
+		return apperrors.ErrInternal
+	}
+	return nil
 }
 
 // CashierBase 获取收银端基本信息
@@ -327,13 +330,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 
 // AssistantBase 获取收银端基本信息
 func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
-	company := helper.GetCompany(ctx.GetGinContext())
 	staff := helper.GetStaff(ctx.GetGinContext())
-	var (
-		source   = helper.GetSource(ctx.GetGinContext())
-		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
-	)
-	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
 	return resp.AssistantBase{
 		Username:      staff.Username,
 		AssistantUuid: staff.Uuid,
@@ -410,7 +407,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		deviceId = auth.Assistant.DeviceId
 	}
 	if auth.Source != constant.SourceShop && !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
-		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnbindError, "设备已解绑，请重新绑定")
+		return company, companySetting, staff, errors.New("设备已解绑，请重新绑定")
 	}
 
 	switch auth.Source {
@@ -418,16 +415,16 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		{
 			// 检查收银是否开启
 			if !s.isCashierOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "收银用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, errors.New("收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
 			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
 			if err != nil {
-				return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// ToDo 记得开放
 			//if !slices.Contains(permissions, urlPath) {
-			//	return company, companySetting, staff, errors.New("当前无权限，请联系管理员")
+			//	return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			//}
 		}
 	case constant.SourceAssistant: // 点餐助手端
@@ -435,15 +432,15 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
 				cashierBindRecord := repository.NewBindRecordRepo(s.dbm.GetDB(auth.CompanyUuid)).GetBySourceAndDeviceId(constant.SourceCashier, auth.DeviceId)
 				if cashierBindRecord.Uuid == 0 {
-					return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenError, "收银员设备已解绑，请重新绑定")
+					return company, companySetting, staff, errors.New("收银员设备已解绑，请重新绑定")
 				}
 				if cashierBindRecord.FinallyLoginUuid == 0 {
-					return company, companySetting, staff, apperrors.NewWithCode(constant.TokenErrorNotLogin, "收银员登录信息错误，请重新登录")
+					return company, companySetting, staff, errors.New("收银员登录信息错误，请重新登录")
 				}
 			}
 			// 检查桌台功能是否开启
 			if !s.isTableOpen(ctx) {
-				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTableError, "桌台用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, errors.New("桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
@@ -451,11 +448,11 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			deskRepo := repository.NewDeskRepo(s.dbm.GetDB(auth.CompanyUuid))
 			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeviceUuid), deskRepo.WhereUuid(auth.TableUuid), deskRepo.WhereIsBind())
 			if err != nil {
-				return company, companySetting, staff, apperrors.NewWithCode(constant.CCodeLoseError, "桌台未绑定")
+				return company, companySetting, staff, errors.New("桌台未绑定")
 			}
 		}
 		if companySetting.IsOpenTablet != 1 {
-			return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenError, "当前未开启平板点餐功能，请联系销售代表")
+			return company, companySetting, staff, errors.New("当前未开启平板点餐功能，请联系销售代表")
 		}
 	}
 

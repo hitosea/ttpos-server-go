@@ -61,7 +61,7 @@ func (h *MemberHandler) SearchMember(c *gin.Context) {
 func (h *MemberHandler) RechargeMember(c *gin.Context) {
 	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
 	if err != nil {
-		helper.Fail(c, constant.CodeBadRequest, "参数错误")
+		helper.Fail(c, constant.CodeParamError, "参数错误")
 	}
 	info := h.memberSrv.GetRechargeMember(helper.GetCompanyUuid(c), uuid)
 	if err != nil {

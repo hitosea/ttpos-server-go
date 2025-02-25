@@ -38,7 +38,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	loginReq.Source = constant.SourceAssistant
 	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
 		return
 	}
 	helper.Success(c, gin.H{"token": loginResp.Token})
@@ -57,7 +57,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.authSrv.Logout(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{}, "退出成功")
@@ -77,12 +77,12 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var bindReq req.BindCashierReq
 	if err := c.ShouldBindJSON(&bindReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.HandleValidationError(c, err, bindReq, nil)
 		return
 	}
 	token, err := h.authSrv.BindCashier(ctx, bindReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{"token": token})
@@ -114,7 +114,7 @@ func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.AssistantBase(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, info)

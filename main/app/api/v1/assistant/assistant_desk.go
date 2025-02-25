@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -57,7 +58,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	deskListReq := req.DeskListReq{}
+	var deskListReq req.DeskListReq
 	if err := c.ShouldBindQuery(&deskListReq); err != nil {
 		helper.HandleValidationError(c, err, deskListReq, dto.PageReqMessage)
 		return
@@ -66,7 +67,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	res, err := h.Service.GetDeskList(ctx, companyId, deskListReq)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
 		return
 	}
 	// 返回结果
@@ -87,16 +88,16 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	deskInfoReq := req.DeskInfoReq{}
+	var deskInfoReq req.DeskInfoReq
 	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.HandleValidationError(c, err, deskInfoReq, nil)
 		return
 	}
 	// 获取收银产品列表
 	res, err := h.Service.GetDeskInfo(companyId, deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
 		return
 	}
 	// 返回结果

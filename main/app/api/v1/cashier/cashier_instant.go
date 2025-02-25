@@ -198,7 +198,7 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 	deviceSn := ctx.GetDeviceSn()
 	ctx.Log().Debug("查询点餐销售账单", zap.Any("deviceSn", deviceSn))
 	if deviceSn == "" {
-		helper.ResponseFail(c, constant.CodeBadRequest, errors.ErrNoDeviceSn)
+		helper.ResponseFail(c, constant.CodeFail, errors.ErrNoDeviceSn)
 		return
 	}
 	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
@@ -351,7 +351,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 
 	params := &req.InstantOrderPaymentInfoReq{}
 	if err := params.Parse(c); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
@@ -382,7 +382,7 @@ func (h *InstantHandler) OrderPaymentCreat(c *gin.Context) {
 
 	params := req.InstantOrderPaymentCreateReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
@@ -413,7 +413,7 @@ func (h *InstantHandler) OrderSaleOrderCreate(c *gin.Context) {
 
 	params := req.InstantOrderSaleOrderCreateReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
@@ -443,7 +443,7 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 
 	params := req.InstantOrderSaleOrderMoveProductReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
