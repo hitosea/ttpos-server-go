@@ -10,8 +10,10 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
+	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
@@ -45,6 +47,7 @@ type ISrv interface {
 	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                // 获取扫码H5设置
 	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                                     // 获取门店业务设置
 	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)                                    // 获取自助餐设置
+	GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error)                                        // 获取平板端设置
 	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                                                     // 获取货币单位设置
 	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                                                  // 获取公司设置
 	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)                                  // 获取门店-支付方式设置
@@ -53,9 +56,12 @@ type ISrv interface {
 	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                                              // 获取服务费设置
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
 	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool                                      // 收银机验证密码
-	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
+	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
 	VerifyAdvancedPassword(ctx context.Context, password string) error                                                                    // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
+	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
+	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
+	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -619,7 +625,6 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 
 // GetBusinessSetting 门店业务设置
 func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) {
-
 	st := s.getSettingByKey(ctx, constant.SettingBusiness)
 	var business setting.Business
 	err := json.Unmarshal([]byte(st.Values), &business)
@@ -658,6 +663,43 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 		return buffet, errors.New("解析自助餐-自助餐设置失败")
 	}
 	return defaultBuffet, nil
+}
+
+// GetTabletSetting 平板端设置
+func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error) {
+	st := s.getSettingByKey(ctx, constant.SettingTablet)
+	ginContext := ctx.GetGinContext()
+	var (
+		tablet setting.Tablet
+		err    error
+	)
+	if languageList == nil {
+		languageList, err = s.GetStoreLanguageList(ctx)
+		if err != nil {
+			return tablet, err
+		}
+	}
+	err = json.Unmarshal([]byte(st.Values), &tablet)
+	if err != nil {
+		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("解析各端-平板端设置失败")
+	}
+	// 滚动图/视频处理
+	if len(tablet.Carousel) > 0 && ginContext != nil {
+		for i, item := range tablet.Carousel {
+			tablet.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
+	defaultTablet := s.getDefaultTablet(languageList)
+	// 语言 不需要合并
+	defaultTablet.Language = nil
+	err = copier.CopyWithOption(&defaultTablet, tablet, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		ctx.Log().Error("合并各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("合并各端-平板端设置失败")
+	}
+
+	return defaultTablet, nil
 }
 
 // GetPaymentSetting 门店-支付方式
@@ -790,7 +832,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 // GetKitchenSetting 获取厨显端设置
 func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.CompanySetting, languageList []dto.LanguageItem) (setting.Kitchen, error) {
 	var kitchen setting.Kitchen
-	st := s.getSettingByKey(ctx, constant.SettingAssistant)
+	st := s.getSettingByKey(ctx, constant.SettingKitchen)
 
 	err := json.Unmarshal([]byte(st.Values), &kitchen)
 	if err != nil {
@@ -978,13 +1020,105 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 	}, nil
 }
 
-// Updates 更新设置
-func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
+// EditAcceptOrderSetting 修改自动接单参数
+func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error { // 修改自动接单设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	cashierSetting.IsAutoOrder = orderSetting.IsAutoOrder
+	cashierSetting.AutoOrderLimit = orderSetting.AutoOrderLimit
+	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
+}
+
+// EditSystemSetting 修改系统设置
+func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error { // // 修改系统设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	cashierSetting.IsShowAssistantSoldOut = *systemSetting.IsShowAssistantSoldOut
+	cashierSetting.IsShowScanSoldOut = *systemSetting.IsShowScanSoldOut
+	cashierSetting.MenuShowSoldOut = systemSetting.MenuShowSoldOut
+	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
+		return err
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return err
+	}
+	businessSetting.DishCardStyle = systemSetting.DishCardStyle
+	if err := s.UpdateSetting(ctx, constant.SettingBusiness, businessSetting); err != nil {
+		return err
+	}
+	tabletSetting, err := s.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	tabletSetting.IsShowSoldOut = *systemSetting.IsShowSoldOut
+	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetCashierBaseSetting 获取收银端设置
+func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error) {
+	var settingResp resp.CashierBaseSetting
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return settingResp, err
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return settingResp, err
+	}
+	tabletSetting, err := s.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return settingResp, err
+	}
+
+	clientVersion := ctx.GetGinContext().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
+
+	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+
+	device, err := deviceRepo.GetDeviceBySn(ctx, ctx.GetDeviceSn())
+	if err != nil {
+		return settingResp, errors2.ErrInternal
+	}
+	return resp.CashierBaseSetting{
+		AcceptOrder: resp.AcceptOrder{
+			IsAutoOrder:    cashierSetting.IsAutoOrder,
+			AutoOrderLimit: cashierSetting.AutoOrderLimit,
+			IsAutoVoice:    cashierSetting.IsAutoVoice,
+		},
+		System: resp.System{
+			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
+			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
+			MenuShowSoldOut:        cashierSetting.MenuShowSoldOut,
+			DishCardStyle:          businessSetting.DishCardStyle,
+			IsShowSoldOut:          tabletSetting.IsShowSoldOut,
+			DefaultLanguage:        cashierSetting.DefaultLanguage,
+			SecondLanguage:         cashierSetting.DefaultLanguage,
+			DeviceId:               ctx.GetDeviceSn(),
+			DeviceRemark:           device.Remark,
+			ClientVersion:          clientVersion,
+			ServerVersion:          utils.GetVersion("version.json"),
+		},
+	}, nil
+
+}
+
+// UpdateSetting 更新设置
+func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) error {
 	value, err := json.Marshal(values)
 	if err != nil {
 		return errors.New("更新设置失败")
 	}
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err = settingRepo.Create(model.Setting{
@@ -1001,6 +1135,6 @@ func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
 	}
 
 	// 删除缓存
-	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+	s.cache.Del(fmt.Sprintf(s.cacheKey, ctx.GetCompanyUuid()))
 	return nil
 }

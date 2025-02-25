@@ -123,7 +123,7 @@ func (s *bindRecordSrv) AddBindRecord(ctx context.Context, addReq req.AddBindRec
 				})
 			}
 			// 设置默认打印机
-			if err = s.settingSrv.Updates(addReq.CompanyUuid, constant.SettingPrinter, printerSetting); err != nil {
+			if err = s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting); err != nil {
 				return 0, errors.New("设置默认打印机失败")
 			}
 		}

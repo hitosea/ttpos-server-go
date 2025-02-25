@@ -16,6 +16,7 @@ type CashierBase struct {
 	Currency     setting.Currency `json:"currency"`      // 货币单位
 	Permissions  []*Permission    `json:"permissions"`   // 页面权限
 	Company      Company          `json:"company"`       // 商家信息
+	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
 }
 
 type AssistantBase struct {
@@ -95,4 +96,29 @@ type LoginResp struct {
 type CashierLoginResp struct {
 	Token        string `json:"token"`           // token
 	IsFirstLogin bool   `json:" is_first_login"` // 是否首次登录
+}
+
+type AcceptOrder struct {
+	IsAutoOrder    string `json:"is_auto_order"`    // 是否自动接单：0-否；1-是
+	AutoOrderLimit string `json:"auto_order_limit"` // 自动接单金额上限，0.01-100000000
+	IsAutoVoice    string `json:"is_auto_voice"`    // 是否开启自动接单语音播报 0-否；1-是
+}
+
+type System struct {
+	IsShowScanSoldOut      int    `json:"is_show_scan_sold_out"`      // 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	IsShowAssistantSoldOut int    `json:"is_show_assistant_sold_out"` // 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
+	MenuShowSoldOut        string `json:"menu_show_sold_out"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	DishCardStyle          string `json:"dish_card_style"`            // 菜品卡片样式 0-无图模式 1-图片模式
+	IsShowSoldOut          int    `json:"is_show_sold_out"`           // 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	DefaultLanguage        string `json:"default_language"`           // 默认语言
+	SecondLanguage         string `json:"second_language"`            // 副屏语言
+	DeviceId               string `json:"device_id"`                  // 当前机器ID
+	DeviceRemark           string `json:"device_remark"`              // 机器备注
+	ClientVersion          string `json:"client_version"`             // 客户端版本
+	ServerVersion          string `json:"server_version"`             // 服务端版本
+}
+
+type CashierBaseSetting struct {
+	AcceptOrder AcceptOrder `json:"accept_order"` // 接单设置
+	System      System      `json:"system"`       // 系统设置
 }

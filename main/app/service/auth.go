@@ -302,6 +302,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, err
 	}
+	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return cashierBase, err
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -317,6 +321,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
+		Tablet: tabletSetting,
 	}, nil
 }
 

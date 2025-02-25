@@ -246,13 +246,13 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.PrinterLogData}
 // @Router /cashier/member/print_recharge_order [post]
 func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
-	var confirmRechargeOrder req.ConfirmRechargeOrder
-	if err := c.ShouldBindJSON(&confirmRechargeOrder); err != nil {
-		helper.HandleValidationError(c, err, confirmRechargeOrder, nil)
+	var printRechargeOrderReq req.PrintRechargeOrderReq
+	if err := c.ShouldBindJSON(&printRechargeOrderReq); err != nil {
+		helper.HandleValidationError(c, err, printRechargeOrderReq, nil)
 		return
 	}
 	ctx := helper.GetContext(c)
-	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
+	order, err := h.memberSrv.PrintRechargeOrder(ctx, printRechargeOrderReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

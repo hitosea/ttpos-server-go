@@ -21,15 +21,22 @@ type SearchMemberList struct {
 	List []SearchMember `json:"list"`
 }
 
+type Card struct {
+	Name string `json:"name"` // 会员卡名称
+}
+type Level struct {
+	Name string `json:"name"` // 会员等级名称
+}
+
 // RechargeMember 充值会员信息
 type RechargeMember struct {
-	Uuid      uint64  `json:"uuid"`       // 会员Uuid
-	Nickname  string  `json:"nickname"`   // 会员昵称
-	CardName  string  `json:"card_name"`  // 会员卡名称
-	LevelName string  `json:"level_name"` // 会员等级
-	Balance   float64 `json:"balance"`    // 会员余额
-	Points    float64 `json:"points"`     // 会员积分
-	Phone     string  `json:"phone"`      // 手机号
+	Uuid     uint64  `json:"uuid"`     // 会员Uuid
+	Nickname string  `json:"nickname"` // 会员昵称
+	Card     Card    `json:"card"`     // 会员卡
+	Level    Level   `json:"level"`    // 会员等级名称
+	Balance  float64 `json:"balance"`  // 会员余额
+	Points   float64 `json:"points"`   // 会员积分
+	Phone    string  `json:"phone"`    // 手机号
 }
 
 // RechargeOrder 进行中的充值订单

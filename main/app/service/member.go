@@ -140,13 +140,13 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		level = member.MemberLevel.Name
 	}
 	return resp.RechargeMember{
-		Uuid:      member.Uuid,
-		Nickname:  member.Nickname,
-		CardName:  cardName,
-		LevelName: level,
-		Balance:   member.Balance + member.GiftBalance,
-		Points:    member.Point,
-		Phone:     member.Phone,
+		Uuid:     member.Uuid,
+		Nickname: member.Nickname,
+		Card:     resp.Card{Name: cardName},
+		Level:    resp.Level{Name: level},
+		Balance:  member.Balance + member.GiftBalance,
+		Points:   member.Point,
+		Phone:    member.Phone,
 	}
 }
 
@@ -611,7 +611,16 @@ func (s *memberSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.Con
 	if updateMemberPoints {
 		go s.handleMemberUpgrade(companyUuid, member.Uuid)
 	}
-	// ToDO 打印充值单
+
+	// 打印充值单
+	go func() {
+		_, err = s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
+			RechargeOrder: rechargeOrder,
+			IsQueue:       false,
+			DeviceId:      ctx.GetDeviceSn(),
+			PrintLang:     ctx.GetLanguage(),
+		})
+	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, rechargeOrder.Uuid), nil
 }
@@ -723,13 +732,13 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 
 	return &resp.MemberDiscountResp{
 		Member: resp.RechargeMember{
-			Uuid:      member.Uuid,
-			Nickname:  member.Nickname,
-			CardName:  cardName,
-			LevelName: levelName,
-			Balance:   member.Balance,
-			Points:    member.Point,
-			Phone:     member.Phone,
+			Uuid:     member.Uuid,
+			Nickname: member.Nickname,
+			Card:     resp.Card{Name: cardName},
+			Level:    resp.Level{Name: levelName},
+			Balance:  member.Balance,
+			Points:   member.Point,
+			Phone:    member.Phone,
 		},
 		HasPassword:     member.HasPassword(),
 		DiscountedPrice: memberDiscountFee,
@@ -837,11 +846,15 @@ func (s *memberSrv) PrintRechargeOrder(ctx context.Context, discountReq req.Prin
 	if rechargeOrder.Uuid == 0 {
 		return res, errors.New("充值订单不存在")
 	}
+	printLang := discountReq.PrintLang
+	if printLang == "" {
+		printLang = ctx.GetLanguage()
+	}
 	printerData, err := s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
 		RechargeOrder: rechargeOrder,
 		IsQueue:       false,
 		DeviceId:      ctx.GetDeviceSn(),
-		PrintLang:     ctx.GetLanguage(),
+		PrintLang:     printLang,
 	})
 	if err != nil {
 		return res, err

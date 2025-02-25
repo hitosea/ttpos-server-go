@@ -2,11 +2,17 @@ package utils
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strings"
 )
+
+type VersionInfo struct {
+	Version string `json:"version"`
+}
 
 // GetLocalIP 获取本机IP地址（排除127.0.0.1）
 func GetLocalIP() (string, error) {
@@ -131,4 +137,21 @@ func AddImageDomain(imageURL, baseURL string, addDomain bool) string {
 	}
 
 	return newURL.String()
+}
+
+// GetVersion 从指定路径读取version.json文件并返回版本号
+func GetVersion(filePath string) string {
+	// 读取version.json文件
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+
+	// 解析JSON
+	var versionInfo VersionInfo
+	if err := json.Unmarshal(data, &versionInfo); err != nil {
+		return ""
+	}
+
+	return versionInfo.Version
 }
