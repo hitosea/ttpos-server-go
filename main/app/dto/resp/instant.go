@@ -50,6 +50,7 @@ type ProductPackageList struct {
 	List []*InstantMustPlanProduct `json:"list"`
 }
 type InstantMustPlanProduct struct {
+	Uuid            uint64             `json:"uuid"`
 	LocaleName      dto.LocaleResponse `json:"locale_name"`      // 商品名称
 	Image           string             `json:"image"`            // 商品图片url
 	Unit            dto.LocaleResponse `json:"unit"`             // 商品单位
@@ -140,30 +141,29 @@ type Attribute struct {
 
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
-	MemberInfo           MemberInfo              `json:"member_info"`            // 会员信息。如果订单选择了会员，则返回会员信息
-	PaymentOrders        PaymentInfoList         `json:"payment_orders"`         // 支付订单列表
-	PaymentMethodAmounts PaymentMethodAmountList `json:"payment_method_amounts"` // 支付方式列表及订单金额信息
+	MemberInfo     MemberInfo              `json:"member_info"`     // 会员信息。如果订单选择了会员，则返回会员信息
+	PaymentOrders  PaymentInfoList         `json:"payment_orders"`  // 支付订单列表
+	PaymentMethods PaymentMethodList       `json:"payment_methods"` // 支付方式列表
+	Amounts        PaymentMethodAmountList `json:"amounts"`         // 支付方式列表及订单金额信息
 }
 
 type PaymentMethodAmountList struct {
-	List []PaymentMethodAmount `json:"list"` // 支付方式列表及订单金额信息
+	List []PaymentMethodAmount `json:"list"`
 }
 type PaymentMethodAmount struct {
-	OrderAmount       OrderAmount       `json:"order_amount"`        // 订单金额
-	PaymentMethodItem PaymentMethodItem `json:"payment_method_item"` // 支付方式
-}
-type OrderAmount struct {
 	SaleOrderOriginAmount float64 `json:"sale_order_origin_amount"` // 订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）
 	SaleOrderAmount       float64 `json:"sale_order_amount"`        // 应收金额。
-	FinallyAmount         float64 `json:"finally_amount"`           // 最终应收。 最终应收=应收金额+支付手续费。支付的手续费=各个支付订单的手续费之和+当前支付方式的手续费 = 各个支付订单的手续费之和+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
-	//PayOrderAmount        float64 `json:"pay_order_amount"`  // 实付金额。 指顾客实际为这个订单支付的金额，不含支付产生的手续费。应收金额-实付金额=未收金额。实付金额为各个支付订单为这个销售订单支付的金额之和，不含手续费
-	//PayAmount             float64 `json:"pay_amount"`        // 实收金额。 指顾客实际支付的金额，包含支付产生的手续费。应付金额+手续费=实收金额。手续费为各个支付订单的手续费之和
-	UnpaidAmount float64 `json:"unpaid_amount"` // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额
-	// 找零金额，由前端自己计算后显示。 找零金额=金额输入框的值 - 未收金额
-	// 手续费金额，由前端自己计算后显示。手续费金额= 金额输入框的值 * 支付方式的手续费费率
-	// 实际应付金额，由前端自己计算后显示，实际应付金额=金额输入框的值*（1+手续费率）=金额输入框的值 + 手续费金额
-	ZeroAmount float64 `json:"zero_amount"` // 抹零金额。当支付方式为现金时，才会有结账抹零金额。其他支付方式抹零金额都是0
+	UnpaidAmount          float64 `json:"unpaid_amount"`            // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额
+	ZeroAmount            float64 `json:"zero_amount"`              // 抹零金额。当支付方式为有手续费时，结账抹零金额为0。
+	ZeroRule              uint8   `json:"zero_rule"`                // 结账抹零规格。0-实款实收 1-抹分 2-抹角 3-抹元. 当支付方式为有手续费时，值为0 实款实收
+	PaymentMethodUuid     uint64  `json:"payment_method_uuid"`      // 支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的
+	CommissionFee         float64 `json:"commission_fee"`           // 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
 }
+
+// 找零金额，由前端自己计算后显示。 找零金额=金额输入框的值 - 未收金额
+// 手续费金额，由前端自己计算后显示。手续费金额= 金额输入框的值 * 支付方式的手续费费率
+// 实际应付金额，由前端自己计算后显示，实际应付金额=金额输入框的值*（1+手续费率）=金额输入框的值 + 手续费金额
+
 type PaymentInfoList struct {
 	List []PaymentOrder `json:"list"`
 }

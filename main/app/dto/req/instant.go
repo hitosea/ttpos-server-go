@@ -74,3 +74,17 @@ type InstantOrderPaymentCreateReq struct {
 type InstantOrderSaleOrderCreateReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
 }
+
+// InstantOrderSaleOrderMoveProductReq 从一个销售订单移动商品到另一个销售订单请求
+type InstantOrderSaleOrderMoveProductReq struct {
+	SaleBillUuid uint64        `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+	From         uint64        `json:"from"`           // 来源销售订单UUID, 必填
+	To           uint64        `json:"to"`             // 目标销售订单UUID, 必填
+	Products     []MoveProduct `json:"products"`       // 移动商品, 必填
+}
+
+// MoveProduct 移动商品
+type MoveProduct struct {
+	Uuid uint64 `json:"uuid"` // 销售订单商品UUID, 必填
+	Num  uint   `json:"num"`  // 移动数量, 必填
+}

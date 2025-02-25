@@ -56,6 +56,7 @@ type IOrderSrv interface {
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)           // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)              // 给销售订单创建一个支付单
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                             // 给销售订单创建一个销售订单
+	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq) (*resp.ShopCart, error)                   // 从一个销售订单移动商品到另一个销售订单
 }
 
 // orderSrv 订单服务结构
@@ -600,11 +601,11 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				TaxRate:        product.TaxRate,
 				Status:         product.Status,
 				Remark:         product.Remark,
-				IsGift:         product.IsGift == 1,
+				IsGift:         product.IsGiftProduct(),
 				GiftReason:     product.GiftReason,
 				ImageUrl:       product.ImageFile.GetUrl(),
 				Attributes:     product.GetAttributeNames(),
-				RefundReason:   product.RefundReason,
+				CancelReason:   product.CancelReason,
 				// todo 待完善
 				RefundAmount: 0,
 			}
@@ -1838,6 +1839,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProdu
 				}
 			}
 			productPackage := &resp.InstantMustPlanProduct{
+				Uuid:       planItem.ProductPackage.Uuid,
 				LocaleName: planItem.ProductPackage.MultiLanguageName.GetNames(),
 				Image:      planItem.ProductPackage.ImageFile.GetUrl(),
 				Unit:       planItem.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
@@ -2014,7 +2016,8 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		paymentOrders = append(paymentOrders, order)
 	}
 
-	paymentMethodAmounts := make([]resp.PaymentMethodAmount, 0)
+	methodItems := make([]resp.PaymentMethodItem, 0)
+	amounts := make([]resp.PaymentMethodAmount, 0)
 
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
@@ -2038,25 +2041,42 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Qrcode:      qrcodeUrl,
 			Code:        paymentMethod.Code,
 		}
-		amount := resp.OrderAmount{
-			SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
-			SaleOrderAmount:       saleOrder.Amount,
-			FinallyAmount:         saleOrder.CalcFinallyAmount(serviceFeeRate, serviceFeeValue, taxFeeType), // 应收金额+已付款的付款单的手续费之和+
-			//PayOrderAmount:        saleOrder.CalcPayOrderAmount(),
-			//PayAmount:             0,
-			UnpaidAmount: saleOrder.CalcUnPayAmount(),
-			ZeroAmount:   saleOrder.CalcZeroAmount(methodItem.Code), // 只有现金结账时才会抹零
+		methodItems = append(methodItems, methodItem)
+
+		commissionFee := saleOrder.CalcCommissionFee()
+
+		if commissionFee > 0 {
+			// 如果有手续费
+			amount := resp.PaymentMethodAmount{
+				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
+				SaleOrderAmount:       saleOrder.Amount,
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
+				ZeroAmount:            0, // 只有没有手续费时才会抹零
+				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
+				PaymentMethodUuid:     methodItem.Uuid,
+				CommissionFee:         commissionFee,
+			}
+			amounts = append(amounts, amount)
+		} else {
+			// 如果没有手续费
+			amount := resp.PaymentMethodAmount{
+				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
+				SaleOrderAmount:       saleOrder.Amount,
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(false),
+				ZeroAmount:            saleOrder.CalcCheckOutZeroFee(), // 只有没有手续费时才会抹零
+				ZeroRule:              saleOrder.ZeroCheckoutRule,
+				PaymentMethodUuid:     methodItem.Uuid,
+				CommissionFee:         commissionFee,
+			}
+			amounts = append(amounts, amount)
 		}
-		paymentMethodAmount := resp.PaymentMethodAmount{
-			OrderAmount:       amount,
-			PaymentMethodItem: methodItem,
-		}
-		paymentMethodAmounts = append(paymentMethodAmounts, paymentMethodAmount)
 	}
+
 	infoResp := &resp.InstantOrderPaymentInfoResp{
-		MemberInfo:           memberInfo,
-		PaymentOrders:        resp.PaymentInfoList{List: paymentOrders},
-		PaymentMethodAmounts: resp.PaymentMethodAmountList{List: paymentMethodAmounts},
+		MemberInfo:     memberInfo,
+		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
+		PaymentMethods: resp.PaymentMethodList{List: methodItems},
+		Amounts:        resp.PaymentMethodAmountList{List: amounts},
 	}
 
 	return infoResp, nil
@@ -2094,4 +2114,122 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errors.New("查询购物车信息失败")
 	}
 	return cartInfo, nil
+}
+
+// InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
+func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 加锁
+	saleBillUuid := req.SaleBillUuid
+	s.lock.LockUuid(saleBillUuid)
+	defer s.lock.UnlockUuid(saleBillUuid)
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	// 获取销售订单信息
+	saleOrderFrom := saleBill.GetSaleOrder(req.From)
+	saleOrderTo := saleBill.GetSaleOrder(req.To)
+
+	// 构建移动到订单商品的map结构
+	moveProductMap := make(map[uint64]uint)
+	for _, moveProduct := range req.Products {
+		moveProductMap[moveProduct.Uuid] = moveProduct.Num
+	}
+
+	// 构建原销售订单中的商品map
+	fromProductMap := make(map[uint64]*model.SaleOrderProduct)
+	for index, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
+		fromProductMap[saleOrderProduct.Uuid] = saleOrderFrom.SaleOrderProducts[index]
+	}
+
+	// 构建目标销售订单中的商品签名map
+	toSaleOrderProductSignMap := make(map[string]*model.SaleOrderProduct)
+	for i, saleOrderProduct := range saleOrderTo.SaleOrderProducts {
+		toSaleOrderProductSignMap[saleOrderProduct.Sign] = saleOrderTo.SaleOrderProducts[i]
+	}
+
+	// 检查购物车商品是否有变动
+	// 选择移动的商品中有商品已经不在原销售订单中
+	for _, moveProduct := range req.Products {
+		if _, ok := fromProductMap[moveProduct.Uuid]; !ok {
+			return nil, errors.New("购物车商品变化，从重新操作")
+		}
+	}
+
+	// 遍历要移动的订单商品，移动到目标订单中
+	for _, moveProduct := range req.Products {
+		if saleOrderProduct, ok := fromProductMap[moveProduct.Uuid]; ok {
+			// 如果原销售订单商品数量还有剩余，则在目标销售订单中新建一个销售订单商品
+			if saleOrderProduct.Num > moveProduct.Num {
+				// 复制一个销售订单商品
+				var newSaleOrderProduct model.SaleOrderProduct
+				newSaleOrderProduct = *saleOrderProduct
+				uuid, _ := utils.GetID()
+				newSaleOrderProduct.Uuid = uuid
+				newSaleOrderProduct.SaleOrderUuid = req.To
+				newSaleOrderProduct.Num = moveProduct.Num
+				sign := newSaleOrderProduct.GenerateProductSign()
+				newSaleOrderProduct.Sign = sign
+				ctx.Log().Debug("生产销售订单商品签名", zap.Any("saleOrderProduct uuid", newSaleOrderProduct.Uuid), zap.Any("sign", sign))
+				// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
+				if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
+					// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
+					orderProduct.Num += moveProduct.Num
+					// 单价不变，不用重新计算。
+				} else {
+					// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
+					// 修改订单商品的折扣优惠，并重新计算金额
+					discountInfo := saleOrderTo.GetDiscountInfo()
+					newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+					// 计算商品数据。折扣、税费、服务
+					serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+					taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+					serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+					newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+					// 在目标销售账单中新建一个销售订单商品
+					saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, &newSaleOrderProduct)
+				}
+			} else {
+				// 如果原销售订单商品的数量没有剩余，则修改该销售订单商品的销售订单uuid为目标销售订单的uuid
+				saleOrderProduct.SaleOrderUuid = req.To
+				sign := saleOrderProduct.GenerateProductSign()
+				// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
+				if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
+					// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
+					orderProduct.Num += saleOrderProduct.Num
+					// 单价没有改变，不需要重新计算
+				} else {
+					// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
+					// saleOrderProduct更新这个记录即可
+					discountInfo := saleOrderTo.GetDiscountInfo()
+					saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+					// 计算商品数据。折扣、税费、服务
+					serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+					taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+					serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+					saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+				}
+			}
+		}
+	}
+
+	// 计算订单金额
+	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
+	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderTo calc", saleOrderTo.BeforeCalc()))
+	afterSaleOrderCalc := saleOrderTo.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderTo calc", afterSaleOrderCalc))
+
+	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderFrom calc", saleOrderFrom.BeforeCalc()))
+	afterSaleOrderFromCalc := saleOrderFrom.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderFrom calc", afterSaleOrderFromCalc))
+	//saleOrderTo.CalcSaleOrder()
+
+	//repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	//	//
+	//})
+	return nil, nil
 }

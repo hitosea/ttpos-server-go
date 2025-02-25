@@ -89,7 +89,7 @@ type OrderProduct struct {
 	GiftReason     string             `json:"gift_reason"`      // 赠品原因
 	Attributes     string             `json:"attributes"`       // 规格属性加料
 	ImageUrl       string             `json:"image_url"`        // 图片地址
-	RefundReason   string             `json:"refund_reason"`    // 退菜原因
+	CancelReason   string             `json:"refund_reason"`    // 退菜原因
 }
 
 // OrderInfo 订单信息响应

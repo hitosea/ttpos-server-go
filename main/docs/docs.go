@@ -1911,6 +1911,52 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/sale_order/move_product": {
+            "post": {
+                "description": "从一个销售订单移动商品到另一个销售订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "从一个销售订单移动商品到另一个销售订单",
+                "parameters": [
+                    {
+                        "description": "从一个销售订单移动商品到另一个销售订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderSaleOrderMoveProductReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
                                             "$ref": "#/definitions/resp.RechargeOrder"
                                         }
                                     }
@@ -4960,6 +5006,30 @@ const docTemplate = `{
                 }
             }
         },
+        "req.InstantOrderSaleOrderMoveProductReq": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "description": "来源销售订单UUID, 必填",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "移动商品, 必填",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MoveProduct"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "to": {
+                    "description": "目标销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.LoginReq": {
             "type": "object",
             "required": [
@@ -4988,6 +5058,19 @@ const docTemplate = `{
                 "username": {
                     "description": "用户名",
                     "type": "string"
+                }
+            }
+        },
+        "req.MoveProduct": {
+            "type": "object",
+            "properties": {
+                "num": {
+                    "description": "移动数量, 必填",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "销售订单商品UUID, 必填",
+                    "type": "integer"
                 }
             }
         },
@@ -7439,12 +7522,23 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
         "resp.InstantOrderPaymentInfoResp": {
             "type": "object",
             "properties": {
+                "amounts": {
+                    "description": "支付方式列表及订单金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodAmountList"
+                        }
+                    ]
+                },
                 "member_info": {
                     "description": "会员信息。如果订单选择了会员，则返回会员信息",
                     "allOf": [
@@ -7453,11 +7547,11 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "payment_method_amounts": {
-                    "description": "支付方式列表及订单金额信息",
+                "payment_methods": {
+                    "description": "支付方式列表",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.PaymentMethodAmountList"
+                            "$ref": "#/definitions/resp.PaymentMethodList"
                         }
                     ]
                 },
@@ -7708,31 +7802,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.OnlineCashier"
                     }
-                }
-            }
-        },
-        "resp.OrderAmount": {
-            "type": "object",
-            "properties": {
-                "finally_amount": {
-                    "description": "最终应收。 最终应收=应收金额+支付手续费。支付的手续费=各个支付订单的手续费之和+当前支付方式的手续费 = 各个支付订单的手续费之和+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
-                    "type": "number"
-                },
-                "sale_order_amount": {
-                    "description": "应收金额。",
-                    "type": "number"
-                },
-                "sale_order_origin_amount": {
-                    "description": "订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）",
-                    "type": "number"
-                },
-                "unpaid_amount": {
-                    "description": "PayOrderAmount        float64 ` + "`" + `json:\"pay_order_amount\"` + "`" + `  // 实付金额。 指顾客实际为这个订单支付的金额，不含支付产生的手续费。应收金额-实付金额=未收金额。实付金额为各个支付订单为这个销售订单支付的金额之和，不含手续费\nPayAmount             float64 ` + "`" + `json:\"pay_amount\"` + "`" + `        // 实收金额。 指顾客实际支付的金额，包含支付产生的手续费。应付金额+手续费=实收金额。手续费为各个支付订单的手续费之和",
-                    "type": "number"
-                },
-                "zero_amount": {
-                    "description": "找零金额，由前端自己计算后显示。 找零金额=金额输入框的值 - 未收金额\n手续费金额，由前端自己计算后显示。手续费金额= 金额输入框的值 * 支付方式的手续费费率\n实际应付金额，由前端自己计算后显示，实际应付金额=金额输入框的值*（1+手续费率）=金额输入框的值 + 手续费金额",
-                    "type": "number"
                 }
             }
         },
@@ -8138,21 +8207,33 @@ const docTemplate = `{
         "resp.PaymentMethodAmount": {
             "type": "object",
             "properties": {
-                "order_amount": {
-                    "description": "订单金额",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.OrderAmount"
-                        }
-                    ]
+                "commission_fee": {
+                    "description": "已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
+                    "type": "number"
                 },
-                "payment_method_item": {
-                    "description": "支付方式",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.PaymentMethodItem"
-                        }
-                    ]
+                "payment_method_uuid": {
+                    "description": "支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的",
+                    "type": "integer"
+                },
+                "sale_order_amount": {
+                    "description": "应收金额。",
+                    "type": "number"
+                },
+                "sale_order_origin_amount": {
+                    "description": "订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）",
+                    "type": "number"
+                },
+                "unpaid_amount": {
+                    "description": "未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额",
+                    "type": "number"
+                },
+                "zero_amount": {
+                    "description": "抹零金额。当支付方式为有手续费时，结账抹零金额为0。",
+                    "type": "number"
+                },
+                "zero_rule": {
+                    "description": "结账抹零规格。0-实款实收 1-抹分 2-抹角 3-抹元. 当支付方式为有手续费时，值为0 实款实收",
+                    "type": "integer"
                 }
             }
         },
@@ -8160,7 +8241,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "list": {
-                    "description": "支付方式列表及订单金额信息",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.PaymentMethodAmount"

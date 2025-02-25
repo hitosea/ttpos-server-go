@@ -242,6 +242,20 @@ type SaleOrder struct {
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
+type DiscountInfo struct {
+	MemberDiscountRate     float64 `json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `json:"custom_discount_rate"`
+}
+
+func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
+	return DiscountInfo{
+		MemberDiscountRate:     model.MemberDiscountRate,
+		MemberCardDiscountRate: model.MemberCardDiscountRate,
+		CustomDiscountRate:     model.CustomDiscountRate,
+	}
+}
+
 // 计算销售订单原服务费金额。销售订单原服务费金额= 销售订单商品的原服务费之和。
 // 不受服务费、按固定服务费费收时，销售订单商品的原服务费=0 或 销售订单商品的原服务费=固定费用
 // 按比例收服务费时，商品未含税时，销售订单商品的原服务费=销售订单商品的SalePrice * 服务费费率
@@ -346,9 +360,19 @@ func (model *SaleOrder) CalcPayOrderAmount() float64 {
 	return payAmount.InexactFloat64()
 }
 
+// 计算销售订单已经支付的付款单手续费
+func (model *SaleOrder) CalcCommissionFee() float64 {
+	commissionFee := decimal.NewFromFloat(0)
+	for _, paymentOrder := range model.PaymentOrders {
+		commissionFee = commissionFee.Add(decimal.NewFromFloat(paymentOrder.PaymentCommissionFee))
+	}
+	return commissionFee.InexactFloat64()
+}
+
 // 计算销售订单的最终应收金额。
 // 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）
-func (model *SaleOrder) CalcFinallyAmount(serviceFeeRate float64, serviceFeeValue float64, taxFeeType int) float64 {
+func (model *SaleOrder) CalcFinallyAmount() (float64, bool) {
+	hasCommission := false
 	amount := decimal.NewFromFloat(model.Amount)
 	commissionFee := decimal.NewFromFloat(0)
 	for _, paymentOrder := range model.PaymentOrders {
@@ -357,16 +381,35 @@ func (model *SaleOrder) CalcFinallyAmount(serviceFeeRate float64, serviceFeeValu
 	// 未支付的金额的手续费 = 未支付的金额 * 支付手续费费率
 	// 最终应收 = 应收金额+已支付的手续费
 	finallyAmount := amount.Add(commissionFee)
-	return finallyAmount.InexactFloat64()
+
+	if commissionFee.InexactFloat64() > 0 {
+		hasCommission = true
+	}
+	return finallyAmount.InexactFloat64(), hasCommission
 }
 
-// 计算销售订单未付款的金额。销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
-func (model *SaleOrder) CalcUnPayAmount() float64 {
+// 计算销售订单未付款的金额。
+// 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
+// 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
+func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
+	if hasCommission {
+		// 销售订单各个支付单的支付金额之和
+		payOrderAmount := model.CalcPayOrderAmount()
+		// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
+		unPayAmount := decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(payOrderAmount))
+		return unPayAmount.InexactFloat64()
+	}
+	// 没有手续费时
+	// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 	// 销售订单各个支付单的支付金额之和
 	payOrderAmount := model.CalcPayOrderAmount()
-	// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
-	unPayAmount := decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(payOrderAmount))
+	zeroFee := model.CalcCheckOutZeroFee()
+	// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
+	unPayAmount := decimal.NewFromFloat(model.Amount).Sub(
+		decimal.NewFromFloat(payOrderAmount)).Sub(
+		decimal.NewFromFloat(zeroFee))
 	return unPayAmount.InexactFloat64()
+
 }
 
 // 计算订单商品SalePrice之和。等于所有已接单商品SalePrice之和
@@ -542,6 +585,7 @@ func (model *SaleOrder) CalcAmount(taxFeeType int) float64 {
 
 // 计算销售订单的订单优惠折扣抹零金额。根据订单设置的优惠折扣抹零规则金额计算
 func (model *SaleOrder) CalcZeroFee() float64 {
+	amount := model.Amount
 	switch model.ZeroRule {
 	// 实款实收
 	case constant.SaleBillSettingDiscountZeroingMethodNone:
@@ -549,28 +593,28 @@ func (model *SaleOrder) CalcZeroFee() float64 {
 	// 抹分
 	case constant.SaleBillSettingDiscountZeroingMethodPercent:
 		// 抹分后的订单金额
-		discountAmount := decimal.NewFromFloat(model.Amount).Truncate(1)
+		discountAmount := decimal.NewFromFloat(amount).Truncate(1)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	// 抹角
 	case constant.SaleBillSettingDiscountZeroingMethodFixed:
 		// 抹角后的订单金额
-		discountAmount := decimal.NewFromFloat(model.Amount).Truncate(0)
+		discountAmount := decimal.NewFromFloat(amount).Truncate(0)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	// 四舍五入保留一位小数
 	case constant.SaleBillSettingDiscountZeroingMethodRound:
-		discountAmount := decimal.NewFromFloat(model.Amount).Round(1)
+		discountAmount := decimal.NewFromFloat(amount).Round(1)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	// 四舍五入保留整数
 	case constant.SaleBillSettingDiscountZeroingMethodInteger:
-		discountAmount := decimal.NewFromFloat(model.Amount).Round(0)
+		discountAmount := decimal.NewFromFloat(amount).Round(0)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	default:
 		return 0
@@ -579,6 +623,7 @@ func (model *SaleOrder) CalcZeroFee() float64 {
 
 // 计算销售订单的结账抹零金额。根据订单设置的结账抹零规则金额计算
 func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
+	amount := model.Amount
 	switch model.ZeroCheckoutRule {
 	// 实款实收
 	case constant.SaleBillSettingCheckoutZeroingMethodNone:
@@ -586,36 +631,28 @@ func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
 	// 抹分
 	case constant.SaleBillSettingCheckoutZeroingMethodPercent:
 		// 抹分后的订单金额
-		discountAmount := decimal.NewFromFloat(model.Amount).Truncate(1)
+		discountAmount := decimal.NewFromFloat(amount).Truncate(1)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	// 抹角
 	case constant.SaleBillSettingCheckoutZeroingMethodFixed:
 		// 抹角后的订单金额
-		discountAmount := decimal.NewFromFloat(model.Amount).Truncate(0)
+		discountAmount := decimal.NewFromFloat(amount).Truncate(0)
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	// 抹元
 	case constant.SaleBillSettingCheckoutZeroingMethodYuan:
 		// 原订单金额/10 后抹去小数，再✖乘10，以此来实现抹元
-		truncate := decimal.NewFromFloat(model.Amount).Div(decimal.NewFromFloat(10)).Truncate(0)
+		truncate := decimal.NewFromFloat(amount).Div(decimal.NewFromFloat(10)).Truncate(0)
 		discountAmount := truncate.Mul(decimal.NewFromFloat(10))
 		// 抹零金额 = 原订单金额-抹零后的订单金额
-		zeroFee := decimal.NewFromFloat(model.Amount).Sub(discountAmount)
+		zeroFee := decimal.NewFromFloat(amount).Sub(discountAmount)
 		return zeroFee.InexactFloat64()
 	default:
 		return 0
 	}
-}
-
-// 计算结账页面的结账抹零金额，只有当是现金支付时才进行抹零
-func (model *SaleOrder) CalcZeroAmount(paymentMethodCode int) float64 {
-	if paymentMethodCode == constant.PaymentMethodCodeCash {
-		return model.CalcCheckOutZeroFee()
-	}
-	return 0
 }
 
 // 计算订单服务费。
@@ -692,7 +729,7 @@ func (model *SaleOrder) CalcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.MemberDiscountFee = calc.MemberDiscountFee
 	calc.Amount = model.CalcAmount(taxFeeType)
 	model.Amount = calc.Amount
-	calc.ZeroFee = model.CalcZeroFee()
+	calc.ZeroFee = model.CalcCheckOutZeroFee()
 	model.ZeroFee = calc.ZeroFee
 	return &calc
 }
@@ -756,7 +793,7 @@ type SaleOrderProduct struct {
 	TotalPrice   float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)=最终单价+服务费+总税费'" json:"total_price"`
 
 	// 折扣相关字段
-	IsCustomPrice          uint    `gorm:"column:is_custom_price;type:tinyint(1);not null;default:0;comment:'是否自定义价格（单商品）, 0-否 1-是'" json:"is_custom_price"`
+	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
 	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"` // 快照设置相关，不受后台改变，结账时检查
 	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`
 	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`
@@ -778,10 +815,10 @@ type SaleOrderProduct struct {
 	DeductStockTime int64 `gorm:"column:deduct_stock_time;type:int(10);not null;default:0;comment:'减库存的时间(时间戳），0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存'" json:"deduct_stock_time"`
 
 	// 赠品相关字段
-	IsGift       uint   `gorm:"column:is_gift;type:tinyint(1);not null;default:0;comment:'是否赠菜, 0-否 1-是'" json:"is_gift"`
-	IsCancel     uint   `gorm:"column:is_cancel;type:tinyint(1);not null;default:0;comment:'是否退菜, 0-否 1-是'" json:"is_cancel"`
+	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
+	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳),用于判断不同时间退菜的商品不合并'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
-	RefundReason string `gorm:"column:refund_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
+	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
 
 	// 关联ID字段
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;not null;default:0;comment:'多语言名称UUID'" json:"multi_language_name_uuid"`
@@ -804,6 +841,13 @@ type SaleOrderProduct struct {
 	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
+// 更新销售订单商品的折扣信息
+func (model *SaleOrderProduct) SetDiscountInfo(memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) {
+	model.MemberDiscountRate = memberDiscountRate
+	model.MemberCardDiscountRate = memberCardDiscountRate
+	model.CustomDiscountRate = customDiscountRate
+}
+
 // 标记该订单商品相关的资源为删除
 func (model *SaleOrderProduct) DeleteProduct() {
 	deleteTime := time.Now().Unix()
@@ -823,10 +867,10 @@ func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
 }
 
 func (model *SaleOrderProduct) IsGiftBool() bool {
-	return model.IsGift == constant.ProductGiftOn
+	return model.GiftTime > 0
 }
 func (model *SaleOrderProduct) IsCancelBool() bool {
-	return model.IsCancel == constant.ProductCancelOn
+	return model.CancelTime > 0
 }
 
 type Sauce struct {
@@ -941,7 +985,7 @@ func (model *SaleOrderProduct) CalcSaucePrice() float64 {
 // 当商品没有改价时,ProductPrice= 某个规格商品价+小料价
 // 当商品改价时，ProductPrice= ProductPrice 。 改价后不会修改这个字段的值，只会修改salePrice的值
 func (model *SaleOrderProduct) CalcProductPrice() float64 {
-	//if model.IsCustomPrice == constant.CustomPriceOn {
+	//if model.ChangePriceTime == constant.CustomPriceOn {
 	//	return model.ProductPrice
 	//}
 	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.CalcSaucePrice()))
@@ -950,7 +994,7 @@ func (model *SaleOrderProduct) CalcProductPrice() float64 {
 
 // 判断商品有没有改价
 func (model *SaleOrderProduct) IsCustomPriceBool() bool {
-	return model.IsCustomPrice == constant.CustomPriceOn
+	return model.ChangePriceTime > 0
 }
 
 // 计算商品销售价。如果商品改价，则直接修改SalePrice。如果没有改价，销售价=ProductPrice
@@ -1233,7 +1277,7 @@ func (model *SaleOrderProduct) CalcTotalPrice(serviceFeeRate float64, taxFeeType
 }
 
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
-	model.IsCustomPrice = 1
+	model.ChangePriceTime = time.Now().Unix()
 	model.SalePrice = price
 }
 
@@ -1316,11 +1360,11 @@ func (model *SaleOrderProduct) IsMustProduct() bool {
 }
 
 func (model *SaleOrderProduct) IsGiftProduct() bool {
-	return model.IsGift == 1
+	return model.GiftTime > 0
 }
 
 func (model *SaleOrderProduct) IsCancelProduct() bool {
-	return model.IsCancel == 1
+	return model.CancelTime > 0
 }
 
 // 判断商品是否有打折
@@ -1623,7 +1667,14 @@ type SaleOrderDiscountStrategy struct {
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 }
 
-// GenerateProductSign 生成商品包签名. 商品包签名,规格、属性、加料、备注、`改价`相同的商品签名相同,用于取消拆单时合并商品。改价销售订单商品价格后要重新生成签名
+// GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜时间
+// 更新签名的场景：
+// 1 改价销售订单商品价格后要重新生成签名
+// 2 修改备注
+// 3 送厨
+// 4 赠菜
+// 5 退菜
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1643,8 +1694,15 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-改价
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜时间
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
-	return fmt.Sprintf("%s-%s-%s-%.2f", bomIdListStr, attributeIdListStr, model.Remark, model.SalePrice)
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d",
+		bomIdListStr,
+		attributeIdListStr,
+		model.Remark,
+		model.ProductionOrderUuid,
+		model.ChangePriceTime,
+		model.GiftTime,
+		model.CancelTime)
 }
