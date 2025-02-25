@@ -207,6 +207,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `must_plan_uuid`  BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '必点方案ID,产品要求用这种方式标注各个必点',
     -- 扫码订单相关
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品',
     `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品',

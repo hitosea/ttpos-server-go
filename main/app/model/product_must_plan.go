@@ -1,6 +1,10 @@
 package model
 
-import "ttpos-server-go/app/constant"
+import (
+	"strings"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
+)
 
 // 商品必选商品计划表 `ttpos_product_must_plan`
 type ProductMustPlan struct {
@@ -55,7 +59,7 @@ func (model *ProductMustPlan) IsCustomerCanChange() bool {
 }
 
 func (model *ProductMustPlan) IsDeskMustPlan() bool {
-	return model.UseChannel == constant.ProductMustPlanUseChannelDesk
+	return strings.Contains(model.UseChannel, constant.ProductMustPlanUseChannelDesk)
 }
 
 // 商品必选商品计划区域表 `ttpos_product_must_plan_region`
@@ -75,4 +79,84 @@ type ProductMustPlanItem struct {
 
 	ProductMustPlan ProductMustPlan `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
 	ProductPackage  ProductPackage  `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
+}
+
+func (model *ProductMustPlanItem) GetProductInfo() *resp.InstantMustPlanProduct {
+	if model.IsDelete() {
+		return nil
+	}
+
+	flavorList := make([]resp.ProductFlavor, 0)                        // 商品的规格列表
+	sauceList := make([]resp.ProductSauce, 0)                          // 商品的小料列表
+	productAttributeGroupList := make([]resp.ProductAttributeGroup, 0) // 商品的属性组列表
+
+	// 组建商品的规格列表和商品的小料列表
+	for _, productBom := range model.ProductPackage.ProductBoms {
+		if productBom.IsDelete() {
+			continue
+		}
+		if productBom.IsFlavorProduct() {
+			flavor := resp.ProductFlavor{
+				Uuid:       productBom.Uuid,
+				LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      productBom.Price,
+				StockNum:   int(productBom.StockNum),
+			}
+			flavorList = append(flavorList, flavor)
+		}
+		if !productBom.IsFlavorProduct() {
+			sauce := resp.ProductSauce{
+				Uuid:              productBom.Uuid,
+				LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
+				Price:             productBom.Price,
+				IsDefaultSelected: productBom.IsDefaultSelectBool(),
+				StockNum:          int(productBom.StockNum),
+			}
+			sauceList = append(sauceList, sauce)
+		}
+	}
+
+	// 组建商品的属性组列表
+	for _, group := range model.ProductPackage.ProductPackageAttributeGroups {
+		if group.IsDelete() {
+			continue
+		}
+		productAttributeList := make([]resp.Attribute, 0)
+		for _, attribute := range group.ProductPackageAttributes {
+			if attribute.IsDelete() {
+				continue
+			}
+			productAttribute := resp.Attribute{
+				Uuid:              attribute.Uuid,
+				LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
+				IsDefaultSelected: attribute.IsDefaultSelectedBool(),
+			}
+			productAttributeList = append(productAttributeList, productAttribute)
+		}
+		productAttributeGroup := resp.ProductAttributeGroup{
+			LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
+			Attributes: resp.Attributes{List: productAttributeList},
+			IsMust:     group.IsMustBool(),
+			MaxSelect:  group.MaxSelection,
+		}
+		productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
+	}
+
+	productPackage := resp.InstantMustPlanProduct{
+		Uuid:       model.ProductPackage.Uuid,
+		LocaleName: model.ProductPackage.MultiLanguageName.GetNames(),
+		Image:      model.ProductPackage.ImageFile.GetUrl(),
+		Unit:       model.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
+		LimitNum:   model.ProductPackage.LimitNum,
+		Price:      model.ProductPackage.GetMinPrice(),
+		Flavors:    resp.Flavors{List: flavorList},
+		Sauces: resp.ProductSauces{
+			List:      sauceList,
+			IsMust:    model.ProductPackage.GetSauceRequired(),
+			MaxSelect: int(model.ProductPackage.SauceMaxSelection),
+		},
+		AttributeGroups: resp.AttributeGroups{List: productAttributeGroupList},
+	}
+
+	return &productPackage
 }

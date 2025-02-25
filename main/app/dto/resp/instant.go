@@ -44,13 +44,23 @@ type InstantProductMustPlan struct {
 	MustRule     int                `json:"must_rule"`      // 必点规则.1-固定商品 2-可选商品
 	IsAutoCart   bool               `json:"is_auto_cart"`   // 自动加入购物车
 	CanChangeNum bool               `json:"can_change_num"` // 顾客可修改必点数量
+	SelectedNum  uint               `json:"selected_num"`   // 已选数量。各个商品的selected_num之和
+	NeedNum      uint               `json:"need_num"`       // 这个商品还需要点的数量。各个商品的need_num之和
 	Products     ProductPackageList `json:"products"`       // 商品列表
 }
 type ProductPackageList struct {
-	List []*InstantMustPlanProduct `json:"list"`
+	List []InstantMustPlanProductStat `json:"list"`
+}
+
+type InstantMustPlanProductStat struct {
+	Product     InstantMustPlanProduct `json:"product"`
+	IsAutoAdd   bool                   `json:"is_auto_add"`  // 是否是自动加购的商品。是则自动加入购物车，并且不显示在“必选方案”的弹框中
+	SelectedNum uint                   `json:"selected_num"` // 已选数量
+	MustNum     uint                   `json:"must_num"`     // 这个商品必选点的数量。还需点数量=must_num-selected_num
+	NeedNum     uint                   `json:"need_num"`     // 这个商品还需要点的数量。还需点数量=must_num-selected_num
 }
 type InstantMustPlanProduct struct {
-	Uuid            uint64             `json:"uuid"`
+	Uuid            uint64             `json:"uuid"`             // 商品product_package的uuid
 	LocaleName      dto.LocaleResponse `json:"locale_name"`      // 商品名称
 	Image           string             `json:"image"`            // 商品图片url
 	Unit            dto.LocaleResponse `json:"unit"`             // 商品单位

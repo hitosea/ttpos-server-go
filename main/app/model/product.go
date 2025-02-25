@@ -151,6 +151,37 @@ func (model *ProductPackage) IsUp() bool {
 	return false
 }
 
+// 是否是无选择的商品。即可以直接加购不需要弹出弹框再选择的商品
+// 这类商品只有一个商品规格、没有商品属性、没有商品加料
+func (model *ProductPackage) IsNoSelectProduct() bool {
+	// 只有一个商品规格、没有加料
+	if len(model.ProductBoms) > 1 {
+		return false
+	}
+	// 没有商品属性
+	if len(model.ProductPackageAttributeGroups) > 0 {
+		return false
+	}
+	return true
+}
+
+func (model *ProductPackage) GetMinPrice() float64 {
+	minPrice := float64(0)
+	for _, productBom := range model.ProductBoms {
+		if !productBom.IsFlavorProduct() {
+			continue
+		}
+		if minPrice == 0 {
+			minPrice = productBom.Price
+			continue
+		}
+		if productBom.Price < minPrice {
+			minPrice = productBom.Price
+		}
+	}
+	return minPrice
+}
+
 // ProductBom 产品BOM表,定义产品BOM的相关信息 `ttpos_product_bom`
 type ProductBom struct {
 	BaseModel

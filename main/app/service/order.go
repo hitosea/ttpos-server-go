@@ -1752,6 +1752,37 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 	return &productionOrder
 }
 
+func getXX(mustPlan *model.ProductMustPlan) {
+	// 自动加购的商品列表
+	productListAutoAddToCart := make([]resp.InstantMustPlanProductStat, 0)
+	// 显示中必选弹框中的商品列表
+	productListSelect := make([]resp.InstantMustPlanProductStat, 0)
+	// 如果是固定商品
+	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
+
+		for _, planItem := range mustPlan.ProductMustPlanItems {
+			productPackage := planItem.GetProductInfo()
+			if productPackage == nil {
+				continue
+			}
+			productStat := resp.InstantMustPlanProductStat{
+				Product:     *productPackage,
+				IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
+				SelectedNum: 0,
+				MustNum:     1,
+				NeedNum:     1,
+			}
+
+			// 如果是无选项的商品，则加入到自动加购的列表中
+			if planItem.ProductPackage.IsNoSelectProduct() {
+				productListAutoAddToCart = append(productListAutoAddToCart, productStat)
+			} else {
+				productListSelect = append(productListSelect, productStat)
+			}
+		}
+	}
+}
+
 // InstantOrderMustPlan 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProductMustPlanResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1773,91 +1804,23 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context) (*resp.InstantProdu
 		if plan.IsDelete() {
 			continue
 		}
-		productPackageList := make([]*resp.InstantMustPlanProduct, 0)
+		productPackageList := make([]resp.InstantMustPlanProductStat, 0)
 		for _, planItem := range plan.ProductMustPlanItems {
-
-			if planItem.IsDelete() {
+			productInfo := planItem.GetProductInfo()
+			if productInfo == nil {
 				continue
 			}
-			flavorList := make([]resp.ProductFlavor, 0)
-			sauceList := make([]resp.ProductSauce, 0)
-			productAttributeGroupList := make([]resp.ProductAttributeGroup, 0)
-			for _, productBom := range planItem.ProductPackage.ProductBoms {
-				if productBom.IsDelete() {
-					continue
-				}
-				if productBom.IsFlavorProduct() {
-					flavor := resp.ProductFlavor{
-						Uuid:       productBom.Uuid,
-						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
-						Price:      productBom.Price,
-						StockNum:   int(productBom.StockNum),
-					}
-					flavorList = append(flavorList, flavor)
-				} else {
-					sauce := resp.ProductSauce{
-						Uuid:              productBom.Uuid,
-						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
-						Price:             productBom.Price,
-						IsDefaultSelected: productBom.IsDefaultSelectBool(),
-						StockNum:          int(productBom.StockNum),
-					}
-					sauceList = append(sauceList, sauce)
-				}
-			}
-			for _, group := range planItem.ProductPackage.ProductPackageAttributeGroups {
-				if group.IsDelete() {
-					continue
-				}
-				productAttributeList := make([]resp.Attribute, 0)
-				for _, attribute := range group.ProductPackageAttributes {
-					if attribute.IsDelete() {
-						continue
-					}
-					productAttribute := resp.Attribute{
-						Uuid:              attribute.Uuid,
-						LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
-						IsDefaultSelected: attribute.IsDefaultSelectedBool(),
-					}
-					productAttributeList = append(productAttributeList, productAttribute)
-				}
-				productAttributeGroup := resp.ProductAttributeGroup{
-					LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
-					Attributes: resp.Attributes{List: productAttributeList},
-					IsMust:     group.IsMustBool(),
-					MaxSelect:  group.MaxSelection,
-				}
-				productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
-			}
-			minPrice := float64(0)
-			for index, flavor := range flavorList {
-				if index == 0 {
-					minPrice = flavor.Price
-				}
-				if flavor.Price < minPrice {
-					minPrice = flavor.Price
-				}
-			}
-			productPackage := &resp.InstantMustPlanProduct{
-				Uuid:       planItem.ProductPackage.Uuid,
-				LocaleName: planItem.ProductPackage.MultiLanguageName.GetNames(),
-				Image:      planItem.ProductPackage.ImageFile.GetUrl(),
-				Unit:       planItem.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
-				LimitNum:   planItem.ProductPackage.LimitNum,
-				Price:      minPrice,
-				Flavors:    resp.Flavors{List: flavorList},
-				Sauces: resp.ProductSauces{
-					List:      sauceList,
-					IsMust:    planItem.ProductPackage.GetSauceRequired(),
-					MaxSelect: int(planItem.ProductPackage.SauceMaxSelection),
-				},
-				AttributeGroups: resp.AttributeGroups{List: productAttributeGroupList},
+			productStat := resp.InstantMustPlanProductStat{
+				Product:     *productInfo,
+				SelectedNum: 0,
+				MustNum:     0,
+				NeedNum:     0,
 			}
 			// 该必点计划开启自动加购功能且有商品能满足自动加购条件时，将这些商品加入待加购列表中。
-			if plan.IsAutoCart() && productPackage.CanAutoJoinCart() {
-				autoFlavorProduct[flavorList[0].Uuid] = productPackage
-			}
-			productPackageList = append(productPackageList, productPackage)
+			//if plan.IsAutoCart() && productPackage.CanAutoJoinCart() {
+			//	autoFlavorProduct[flavorList[0].Uuid] = productPackage
+			//}
+			productPackageList = append(productPackageList, productStat)
 		}
 		mustPlan := resp.InstantProductMustPlan{
 			Name:         plan.Name,
@@ -2118,6 +2081,9 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 
 // InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
 func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq) (*resp.ShopCart, error) {
+	// 需要更新的销售订单商品
+	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 加锁
 	saleBillUuid := req.SaleBillUuid
@@ -2160,57 +2126,71 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 
 	// 遍历要移动的订单商品，移动到目标订单中
 	for _, moveProduct := range req.Products {
-		if saleOrderProduct, ok := fromProductMap[moveProduct.Uuid]; ok {
-			// 如果原销售订单商品数量还有剩余，则在目标销售订单中新建一个销售订单商品
-			if saleOrderProduct.Num > moveProduct.Num {
-				// 复制一个销售订单商品
-				var newSaleOrderProduct model.SaleOrderProduct
-				newSaleOrderProduct = *saleOrderProduct
-				uuid, _ := utils.GetID()
-				newSaleOrderProduct.Uuid = uuid
-				newSaleOrderProduct.SaleOrderUuid = req.To
-				newSaleOrderProduct.Num = moveProduct.Num
-				sign := newSaleOrderProduct.GenerateProductSign()
-				newSaleOrderProduct.Sign = sign
-				ctx.Log().Debug("生产销售订单商品签名", zap.Any("saleOrderProduct uuid", newSaleOrderProduct.Uuid), zap.Any("sign", sign))
-				// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
-				if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
-					// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
-					orderProduct.Num += moveProduct.Num
-					// 单价不变，不用重新计算。
-				} else {
-					// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
-					// 修改订单商品的折扣优惠，并重新计算金额
-					discountInfo := saleOrderTo.GetDiscountInfo()
-					newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-					// 计算商品数据。折扣、税费、服务
-					serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-					taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-					serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-					newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-					// 在目标销售账单中新建一个销售订单商品
-					saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, &newSaleOrderProduct)
-				}
+		saleOrderProduct := fromProductMap[moveProduct.Uuid]
+		// 记录到待更新列表中
+		waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+		// 如果原销售订单商品数量还有剩余，则在目标销售订单中新建一个销售订单商品
+		if saleOrderProduct.Num > moveProduct.Num {
+			// 复制一个销售订单商品
+			var newSaleOrderProduct model.SaleOrderProduct
+			newSaleOrderProduct = *saleOrderProduct
+			uuid, _ := utils.GetID()
+			newSaleOrderProduct.BaseModel = model.BaseModel{}
+			newSaleOrderProduct.Uuid = uuid
+			newSaleOrderProduct.SaleOrderUuid = req.To
+			newSaleOrderProduct.Num = moveProduct.Num
+			sign := newSaleOrderProduct.GenerateProductSign()
+			newSaleOrderProduct.Sign = sign
+			ctx.Log().Debug("生产销售订单商品签名", zap.Any("saleOrderProduct uuid", newSaleOrderProduct.Uuid), zap.Any("sign", sign))
+			// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
+			if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
+				// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
+				orderProduct.Num += moveProduct.Num
+				// 单价不变，不用重新计算。
+
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[orderProduct.Uuid] = orderProduct
 			} else {
-				// 如果原销售订单商品的数量没有剩余，则修改该销售订单商品的销售订单uuid为目标销售订单的uuid
-				saleOrderProduct.SaleOrderUuid = req.To
-				sign := saleOrderProduct.GenerateProductSign()
-				// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
-				if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
-					// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
-					orderProduct.Num += saleOrderProduct.Num
-					// 单价没有改变，不需要重新计算
-				} else {
-					// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
-					// saleOrderProduct更新这个记录即可
-					discountInfo := saleOrderTo.GetDiscountInfo()
-					saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-					// 计算商品数据。折扣、税费、服务
-					serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-					taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-					serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-					saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-				}
+				// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
+				// 修改订单商品的折扣优惠，并重新计算金额
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				// 计算商品数据。折扣、税费、服务
+				serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+				taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+				newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+				// 在目标销售账单中新建一个销售订单商品
+				//saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, &newSaleOrderProduct)
+
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[newSaleOrderProduct.Uuid] = &newSaleOrderProduct
+			}
+		} else {
+			// 如果原销售订单商品的数量没有剩余，则修改该销售订单商品的销售订单uuid为目标销售订单的uuid
+			saleOrderProduct.SaleOrderUuid = req.To
+			sign := saleOrderProduct.GenerateProductSign()
+			// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
+			if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
+				// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
+				orderProduct.Num += saleOrderProduct.Num
+				// 单价没有改变，不需要重新计算
+
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[orderProduct.Uuid] = orderProduct
+			} else {
+				// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
+				// saleOrderProduct更新这个记录即可
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				// 计算商品数据。折扣、税费、服务
+				serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+				taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+				saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 			}
 		}
 	}
@@ -2226,10 +2206,31 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderFrom calc", saleOrderFrom.BeforeCalc()))
 	afterSaleOrderFromCalc := saleOrderFrom.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderFrom calc", afterSaleOrderFromCalc))
-	//saleOrderTo.CalcSaleOrder()
 
-	//repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-	//	//
-	//})
-	return nil, nil
+	var cartInfo *resp.ShopCart
+	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		for _, saleOrderProduct := range waitUpdateSaleOrderProductMap {
+			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); err != nil {
+				return err
+			}
+		}
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrder(saleOrderFrom); err != nil {
+			return err
+		}
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrder(saleOrderTo); err != nil {
+			return err
+		}
+
+		info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+		if err != nil {
+			return err
+		}
+		cartInfo = info
+		return nil
+	})
+	if errUpdateDB != nil {
+		return nil, errors.New("更新数据失败")
+	}
+
+	return cartInfo, nil
 }
