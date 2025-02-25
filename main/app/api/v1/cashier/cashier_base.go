@@ -236,6 +236,25 @@ func (h *BaseHandler) EditSystemSetting(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetSetting 获取设置
+// @Summary 获取设置
+// @Description 获取设置
+// @Tags 收银端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CashierBaseSetting}
+// @Router /cashier/setting [get]
+func (h *BaseHandler) GetSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	respSetting, err := h.settingSrv.GetCashierBaseSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, respSetting)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -269,6 +288,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 		// 保存接单设置
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置
-		privateApi.POST("/setting/edit_system", wrapper.EditAcceptOrderSetting)       // 修改系统设置
+		privateApi.POST("/setting/edit_system", wrapper.EditSystemSetting)            // 修改系统设置
+		privateApi.GET("/setting", wrapper.GetSetting)                                // 获取设置
 	}
 }

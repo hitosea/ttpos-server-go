@@ -761,6 +761,18 @@ definitions:
         description: 是否是加钟
         type: boolean
     type: object
+  resp.AcceptOrder:
+    properties:
+      auto_order_limit:
+        description: 自动接单金额上限，0.01-100000000
+        type: string
+      is_auto_order:
+        description: 是否自动接单：0-否；1-是
+        type: string
+      is_auto_voice:
+        description: 是否开启自动接单语音播报 0-否；1-是
+        type: string
+    type: object
   resp.Ads:
     properties:
       list:
@@ -1051,6 +1063,17 @@ definitions:
       username:
         description: 登录账号
         type: string
+    type: object
+  resp.CashierBaseSetting:
+    properties:
+      accept_order:
+        allOf:
+        - $ref: '#/definitions/resp.AcceptOrder'
+        description: 接单设置
+      system:
+        allOf:
+        - $ref: '#/definitions/resp.System'
+        description: 系统设置
     type: object
   resp.CashierLoginResp:
     properties:
@@ -3088,6 +3111,42 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.System:
+    properties:
+      client_version:
+        description: 客户端版本
+        type: string
+      default_language:
+        description: 默认语言
+        type: string
+      device_id:
+        description: 当前机器ID
+        type: string
+      device_remark:
+        description: 机器备注
+        type: string
+      dish_card_style:
+        description: 菜品卡片样式 0-无图模式 1-图片模式
+        type: string
+      is_show_assistant_sold_out:
+        description: 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
+        type: integer
+      is_show_scan_sold_out:
+        description: 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: integer
+      is_show_sold_out:
+        description: 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: integer
+      menu_show_sold_out:
+        description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: string
+      second_language:
+        description: 副屏语言
+        type: string
+      server_version:
+        description: 服务端版本
+        type: string
     type: object
   resp.TabletBase:
     properties:
@@ -5270,6 +5329,28 @@ paths:
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
+  /cashier/setting:
+    get:
+      consumes:
+      - application/json
+      description: 获取设置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CashierBaseSetting'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取设置
+      tags:
+      - 收银端.设置
   /cashier/setting/edit_accept_order:
     post:
       consumes:

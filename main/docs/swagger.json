@@ -2979,6 +2979,46 @@
                 }
             }
         },
+        "/cashier/setting": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.设置"
+                ],
+                "summary": "获取设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CashierBaseSetting"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/setting/edit_accept_order": {
             "post": {
                 "security": [
@@ -5550,6 +5590,23 @@
                 }
             }
         },
+        "resp.AcceptOrder": {
+            "type": "object",
+            "properties": {
+                "auto_order_limit": {
+                    "description": "自动接单金额上限，0.01-100000000",
+                    "type": "string"
+                },
+                "is_auto_order": {
+                    "description": "是否自动接单：0-否；1-是",
+                    "type": "string"
+                },
+                "is_auto_voice": {
+                    "description": "是否开启自动接单语音播报 0-否；1-是",
+                    "type": "string"
+                }
+            }
+        },
         "resp.Ads": {
             "type": "object",
             "properties": {
@@ -5986,6 +6043,27 @@
                 "username": {
                     "description": "登录账号",
                     "type": "string"
+                }
+            }
+        },
+        "resp.CashierBaseSetting": {
+            "type": "object",
+            "properties": {
+                "accept_order": {
+                    "description": "接单设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AcceptOrder"
+                        }
+                    ]
+                },
+                "system": {
+                    "description": "系统设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.System"
+                        }
+                    ]
                 }
             }
         },
@@ -8955,6 +9033,55 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.System": {
+            "type": "object",
+            "properties": {
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "device_id": {
+                    "description": "当前机器ID",
+                    "type": "string"
+                },
+                "device_remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                },
+                "dish_card_style": {
+                    "description": "菜品卡片样式 0-无图模式 1-图片模式",
+                    "type": "string"
+                },
+                "is_show_assistant_sold_out": {
+                    "description": "助手端点餐助手是否显示售罄商品 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "is_show_scan_sold_out": {
+                    "description": "扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer"
+                },
+                "is_show_sold_out": {
+                    "description": "平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer"
+                },
+                "menu_show_sold_out": {
+                    "description": "电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "string"
+                },
+                "second_language": {
+                    "description": "副屏语言",
+                    "type": "string"
+                },
+                "server_version": {
+                    "description": "服务端版本",
+                    "type": "string"
                 }
             }
         },

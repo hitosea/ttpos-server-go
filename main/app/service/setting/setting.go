@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
+	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
@@ -60,6 +61,7 @@ type ISrv interface {
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
+	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1058,6 +1060,56 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 		return err
 	}
 	return nil
+}
+
+// GetCashierBaseSetting 获取收银端设置
+func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error) {
+	var settingResp resp.CashierBaseSetting
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return settingResp, err
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return settingResp, err
+	}
+	tabletSetting, err := s.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return settingResp, err
+	}
+
+	clientVersion := ctx.GetGinContext().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
+
+	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+
+	device, err := deviceRepo.GetDeviceBySn(ctx, ctx.GetDeviceSn())
+	if err != nil {
+		return settingResp, errors2.ErrInternal
+	}
+	return resp.CashierBaseSetting{
+		AcceptOrder: resp.AcceptOrder{
+			IsAutoOrder:    cashierSetting.IsAutoOrder,
+			AutoOrderLimit: cashierSetting.AutoOrderLimit,
+			IsAutoVoice:    cashierSetting.IsAutoVoice,
+		},
+		System: resp.System{
+			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
+			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
+			MenuShowSoldOut:        cashierSetting.MenuShowSoldOut,
+			DishCardStyle:          businessSetting.DishCardStyle,
+			IsShowSoldOut:          tabletSetting.IsShowSoldOut,
+			DefaultLanguage:        cashierSetting.DefaultLanguage,
+			SecondLanguage:         cashierSetting.DefaultLanguage,
+			DeviceId:               ctx.GetDeviceSn(),
+			DeviceRemark:           device.Remark,
+			ClientVersion:          clientVersion,
+			ServerVersion:          utils.GetVersion("version.json"),
+		},
+	}, nil
+
 }
 
 // UpdateSetting 更新设置
