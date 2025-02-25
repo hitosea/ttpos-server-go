@@ -72,8 +72,8 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 			Price:               price,
 			IsLimitTime:         buffet.IsLimitTime == 1,
 			CanCombined:         buffet.CanCombined == 1,
-			NonOrderingTime:     buffet.NonOrderingTime,
-			ReminderOrderTime:   buffet.ReminderOrderTime,
+			NonOrderingTime:     buffet.NonOrderingTime * 60,   // 分转为秒
+			ReminderOrderTime:   buffet.ReminderOrderTime * 60, // 分转为秒
 			LocaleName:          s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
 			BuffetCustomerTypes: resp.BuffetCustomerTypeList{List: buffetCustomerTypes},
 		}
