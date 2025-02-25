@@ -120,61 +120,6 @@ class Attribute extends BaseModel
     }
 
     /**
-     * 更新属性库
-     *
-     */
-    public function updateAttr($product_id, $attributes, $shop_supplier_id)
-    {
-        $savedGroupUuids = [];
-        $savedAttributeUuids = [];
-        foreach ($attributes as $item) {
-            // 属性组
-            $group = ProductAttributeGroup::where('product_attribute_group_uuid', $item['parent_id'])->where('product_package_uuid', $product_id)->find();
-            if ($group) {
-                $group->save([
-                    'is_must' => $item['attribute_required'] ?? 0,
-                    'max_selection' => $item['attribute_max_select'] ?? 0,
-                ]);
-            } else {
-                $group = ProductAttributeGroup::create([
-                    'is_must' => $item['attribute_required'] ?? 0,
-                    'max_selection' => $item['attribute_max_select'] ?? 0,
-                    'product_package_uuid' => $product_id,
-                    'product_attribute_group_uuid' => $item['parent_id']
-                ]);
-            }
-            $savedGroupUuids[] = $group['uuid'];
-            $savedAttributeUuids[$group['uuid']] = [];
-            // 属性值
-            foreach ($item['attribute_ids'] as $key => $attributeId) {
-                $attribute = ProductAttribute::where('product_package_attribute_group_uuid', $group['uuid'])->where('attribute_uuid', $attributeId)->find();
-                if ($attribute) {
-                    $attribute->save([
-                        'is_default_selected' => $item['default_select'][$key] ?? 0,
-                    ]);
-                } else {
-                    $attribute = ProductAttribute::create([
-                        'product_package_attribute_group_uuid' => $group['uuid'],
-                        'attribute_uuid' => $attributeId,
-                        'is_default_selected' => $item['default_select'][$key] ?? 0,
-                    ]);
-                }
-                $savedAttributeUuids[$group['uuid']][] = $attribute['uuid'];
-            }
-        }
-        // 查询需要删除的属性组, 并删除属性组和属性值
-        $deleteGroupUuids = ProductAttributeGroup::whereNotIn('uuid', $savedGroupUuids)->where('product_package_uuid', $product_id)->column('uuid');
-        foreach ($deleteGroupUuids as $groupUuid) {
-            ProductAttribute::where('product_package_attribute_group_uuid', $groupUuid)->delete();
-            ProductAttributeGroup::where('uuid', $groupUuid)->delete();
-        }
-        // 删除属性值
-        foreach ($savedAttributeUuids as $groupUuid => $attributeUuids) {
-            ProductAttribute::where('product_package_attribute_group_uuid', $groupUuid)->whereNotIn('uuid', $attributeUuids)->delete();
-        }
-    }
-
-    /**
      * 获取列表数据
      */
     public function getAllList($shop_supplier_id)

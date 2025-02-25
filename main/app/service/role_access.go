@@ -87,8 +87,8 @@ func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 	for _, dbPermission := range dbPermissions {
 		var permission resp.Permission
 		copier.Copy(&permission, dbPermission)
-		permission.CreateTime = time.Unix(int64(dbPermission.CreateTime), 0).Format(time.DateTime)
-		permission.UpdateTime = time.Unix(int64(dbPermission.UpdateTime), 0).Format(time.DateTime)
+		permission.CreateTime = time.Unix(dbPermission.CreateTime, 0).Format(time.DateTime)
+		permission.UpdateTime = time.Unix(dbPermission.UpdateTime, 0).Format(time.DateTime)
 		permission.Children = []*resp.Permission{}
 		permissions = append(permissions, permission)
 	}

@@ -23,7 +23,7 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
-			helper.Fail(c, constant.CodeBadRequest, "token 为空")
+			helper.Fail(c, constant.CodeTokenInvalid, "token 为空")
 			c.Abort()
 			return
 		}
@@ -56,7 +56,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 
 	parts := strings.SplitN(authHeader, " ", 2)
 	if !(len(parts) == 2 && parts[0] == "Bearer") {
-		helper.Fail(c, constant.CodeBadRequest, "token 格式错误")
+		helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
 		c.Abort()
 		return
 	}
@@ -64,19 +64,19 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 	// 验证token
 	claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
 	if err != nil {
-		helper.Fail(c, constant.CodeBadRequest, "无效的token")
+		helper.Fail(c, constant.CodeTokenInvalid, "无效的token")
 		c.Abort()
 		return
 	}
 
 	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant, constant.SourceKitchen, constant.SourceTablet}, claims.Source) {
-		helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
+		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return
 	}
 
 	if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(c.Request.URL.Path)) {
-		helper.Fail(c, constant.CodeBadRequest, "用户信息错误")
+		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return
 	}
@@ -102,7 +102,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 		TableUuid:  tableUuid,         // 用于判断是否绑定桌台
 	})
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeBadRequest, err)
+		helper.ErrorWithDetail(c, constant.CodeAccessDenied, err)
 		c.Abort()
 		return
 	}
@@ -126,7 +126,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv) {
 	deskUuid, err := strconv.Atoi(token.DeskUuid)
 	if err != nil {
-		helper.H5Fail(c, constant.CodeBadRequest, "二维码已失效，请联系商家")
+		helper.H5Fail(c, constant.CodeParamError, "二维码已失效，请联系商家")
 		c.Abort()
 		return
 	}
@@ -135,7 +135,7 @@ func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuth
 	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
 	err = authSrv.AuthDesk(ctx, token.DeskTokenValue)
 	if err != nil {
-		helper.H5Fail(c, constant.CodeBadRequest, "二维码已失效，请联系商家")
+		helper.H5Fail(c, constant.CodeParamError, "二维码已失效，请联系商家")
 		c.Abort()
 		return
 	}

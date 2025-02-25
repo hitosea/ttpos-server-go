@@ -70,7 +70,7 @@ func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 	// 绑定请求参数
 	req := req.OrderInfoReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
 	// 获取收银产品列表
@@ -100,7 +100,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	// 绑定请求参数
 	req := req.OrderCancelReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
 	//
@@ -129,7 +129,7 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	// 绑定请求参数
 	req := req.OrderDeleteReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
 	//

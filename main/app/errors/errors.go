@@ -38,8 +38,6 @@ func NewWithCodeAndData(code int, data interface{}, message string) *AppError {
 }
 
 var (
-	ErrUserNotFound       = &AppError{Code: constant.CodeFail, Message: "user not found"}
-	ErrInvalidCredentials = &AppError{Code: constant.CodeUnauthorized, Message: "invalid credentials"}
-	ErrInternal           = &AppError{Code: constant.CodeFail, Message: "系统内部错误"}
-	ErrNoDeviceSn         = &AppError{Code: constant.CodeBadRequest, Message: "无法解析到设备SN"}
+	ErrInternal   = &AppError{Code: constant.CodeSystemError, Message: "系统内部错误"}
+	ErrNoDeviceSn = &AppError{Code: constant.CodeParamError, Message: "无法解析到设备SN"}
 )

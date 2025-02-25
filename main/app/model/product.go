@@ -185,16 +185,19 @@ func (model *ProductPackage) GetMinPrice() float64 {
 // ProductBom 产品BOM表,定义产品BOM的相关信息 `ttpos_product_bom`
 type ProductBom struct {
 	BaseModel
-	Price           float64 `gorm:"column:price;not null;default:0;comment:'价格'"`
-	IsDefaultSelect uint    `gorm:"column:is_default_select;not null;default:0;comment:'是否默认选择, 0-否 1-是'"`
-	StockNum        float64 `gorm:"column:stock_num;not null;default:0;comment:'库存数量'"`
-	IsSoldOut       uint    `gorm:"column:is_sold_out;not null;default:0;comment:'是否售罄：0-否 1-是'"`
-	Status          uint    `gorm:"column:status;not null;default:0;comment:'状态, 0-下架 1-上架'"`
+	PurchasePrice   float64 `gorm:"column:purchase_price;type:decimal(12,2);default:0;comment:采购单价;NOT NULL" json:"purchase_price"`
+	Price           float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:价格;NOT NULL" json:"price"`
+	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
+	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
+	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
+	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
+	Status          int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-下架 1-上架. 同步商品包的状态;NOT NULL" json:"status"`
+	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
 
 	// 关联ID
-	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;not null;default:0;comment:'商品规格UUID（仅商品使用）'"`
-	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;not null;default:0;comment:'商品小料UUID（仅小料使用）'"`
-	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;not null;default:0;comment:'产品包UUID'"`
+	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`
+	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:商品小料ID(仅小料使用);NOT NULL" json:"product_sauce_uuid"`
+	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 
 	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格

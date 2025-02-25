@@ -300,7 +300,7 @@ func (r *productRepo) UpdateProductBomSoldOut(opts []DBOption, vars map[string]a
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	return r.db.Updates(vars).Error
+	return db.Updates(vars).Error
 }
 
 // WhereBomUuid 根据bom UUID查询

@@ -224,9 +224,9 @@ class Product extends Controller
             $model = ProductModel::detail($product_id);
             return $this->renderSuccess('', array_merge(ProductService::getEditData(1, $this->store), compact('model')));
         }
+        $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
         /** @var ProductModel $model */
         $model = ($data['type'] ?? 10) == 10 ? ProductModel::detail($product_id) : MaterialModel::detail($product_id);
-        $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
         if ($model->edit($data)) {
             return $this->renderSuccess('更新成功');
         }

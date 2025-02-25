@@ -1184,7 +1184,7 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	}
 	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
-		return nil, errors.NewWithCode(constant.CodeBadRequest, "设备不存在")
+		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
 	}
 	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单
@@ -1348,6 +1348,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
+		IsLock:        shopCart.SaleBill.IsLock == 1,
 		Desk:          nil,
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
@@ -1879,7 +1880,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	}
 	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
-		return nil, errors.NewWithCode(constant.CodeBadRequest, "设备不存在")
+		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
 	}
 	ctx.Log().Debug("通过设备ID查询未挂单的销售账单2222", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单

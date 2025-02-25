@@ -59,13 +59,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	req := req.DeskListReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+	var listReq req.DeskListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetDeskList(ctx, companyUuid, req)
+	res, err := h.service.GetDeskList(ctx, companyUuid, listReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -89,13 +89,13 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 绑定请求参数
-	req := req.DeskInfoReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
+	var infoReq req.DeskInfoReq
+	if err := c.ShouldBindQuery(&infoReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetDeskInfo(companyUuid, req.Uuid)
+	res, err := h.service.GetDeskInfo(companyUuid, infoReq.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -179,13 +179,13 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	req := req.OrderCancelReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var cancelReq req.OrderCancelReq
+	if err := c.ShouldBindJSON(&cancelReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(ctx, req)
+	err := h.orderService.CancelOrder(ctx, cancelReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

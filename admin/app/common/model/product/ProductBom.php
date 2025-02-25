@@ -223,6 +223,9 @@ class ProductBom extends BaseModel
 
     /**
      * 检查产品条码唯一性
+     * @param string $name 条码
+     * @param int $uuid product_package唯一标识uuid
+     * @return bool
      */
     public function checkProductBarcodeExist($name, $uuid = null)
     {

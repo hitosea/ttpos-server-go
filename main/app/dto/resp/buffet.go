@@ -7,8 +7,8 @@ type Buffet struct {
 	Price               float64                `json:"price"`                // 价格
 	IsLimitTime         bool                   `json:"is_limit_time"`        // 是否限时
 	CanCombined         bool                   `json:"can_combined"`         // 是否可组合
-	NonOrderingTime     uint                   `json:"non_ordering_time"`    // 不可下单时间（分钟）
-	ReminderOrderTime   uint                   `json:"reminder_order_time"`  // 提醒下单时间（分钟）
+	NonOrderingTime     uint                   `json:"non_ordering_time"`    // 不可下单时间（秒）
+	ReminderOrderTime   uint                   `json:"reminder_order_time"`  // 提醒下单时间（秒）
 	LocaleName          dto.LocaleResponse     `json:"locale_name"`          // 自助餐名称
 	BuffetCustomerTypes BuffetCustomerTypeList `json:"buffet_customer_type"` // 自助餐客户类型
 }
