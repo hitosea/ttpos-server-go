@@ -8,7 +8,6 @@ use think\facade\Cache;
 use app\common\library\helper;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
-use app\common\model\product\ProductBom;
 use app\common\model\product\ProductTax;
 use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
@@ -207,13 +206,14 @@ class Product extends ProductModel
         try {
             // 添加商品
             $this->save($data);
-            // 商品规格
-            $this->addProductBom($data);
-
             // 商品图片
             $this->addProductImages($data['image']);
-            // // 更新属性
-            (new Attribute)->updateAttr($this['product_id'], $data['product_attr'], 0);
+            // 商品规格
+            ProductBom::addFlavor($data, $this);
+            // 商品加料
+            ProductBom::addFeed($data, $this);
+            // 商品属性
+            ProductAttribute::addAttribute($data, $this);
             // erp商品月初库存记录
             (new ErpMonthlyProductStatistics)->newProductRecord($this['product_id']);
             $this->commit();
@@ -222,42 +222,6 @@ class Product extends ProductModel
             $this->error = $e->getMessage();
             $this->rollback();
             return false;
-        }
-    }
-
-    /**
-     * 添加商品Bom
-     */
-    public function addProductBom($data)
-    {
-        // 规格
-        $skus = $data['sku'] ?? [];
-        foreach ($skus as $sku) {
-            ProductBom::create([
-                'purchase_price' => $sku['purchase_price'],
-                'price' => $sku['product_price'],
-                'name' => $sku['spec_name'],
-                'product_flavor_uuid' => $sku['spec_id'],
-                'product_package_uuid' => $this['product_id'],
-                'stock_num' => $sku['stock_num'],
-                'barcode_value' => $sku['barcode'],
-                'status' => $this['status'],
-            ]);
-            // todo 添加商品规格关联材料
-        }
-        // 加料
-        $feeds = $data['product_feed'] ?? [];
-        foreach ($feeds as $feed) {
-            ProductBom::create([
-                'price' => $feed['price'],
-                'name' => $feed['feed_name'],
-                'product_sauce_uuid' => $feed['feed_id'],
-                'product_package_uuid' => $this['product_id'],
-                'stock_num' => $feed['stock_num'],
-                'status' => $this['status'],
-                'is_default_select' => $feed['default_select'],
-            ]);
-            // todo 添加商品规格关联材料
         }
     }
 
@@ -389,7 +353,7 @@ class Product extends ProductModel
                 if (!isset($firstError[$errorMsg3])) {
                     $firstError[$errorMsg3] = [];
                 }
-                if ($info['barcode'] && CheckService::checkNameExist('product_barcode', $info['barcode'], 0, $info['product_sku_id'] ?? 0)) {
+                if ($info['barcode'] && CheckService::checkNameExist('product_bom_barcode', $info['barcode'], 0, $info['product_id'] ?? 0)) {
                     $barcodeError3 = false;
                 }
                 $firstError[$errorMsg3][] = $barcodeError3;
@@ -466,7 +430,7 @@ class Product extends ProductModel
         $imageIds = array_map(function ($image) {
             return isset($image['file_id']) ? $image['file_id'] : $image['image_id'];
         }, $images);
-        $existingImageIds = UploadFile::whereIn('file_id', $imageIds)->column('file_id');
+        $existingImageIds = UploadFile::whereIn('uuid', $imageIds)->column('uuid');
         $missingImageIds = array_diff($imageIds, $existingImageIds);
         if ($missingImageIds) {
             $this->error = '商品图片不存在';
@@ -476,22 +440,64 @@ class Product extends ProductModel
         return $this->transaction(function () use ($data, $productSkuIdList) {
             $data['product_attr'] = isset($data['product_attr']) ? $data['product_attr'] : '';
             $data['product_feed'] = isset($data['product_feed']) ? $data['product_feed'] : '';
-            $this->save($data);
-            // 更新产品关联税类
-            $this->updateProductTaxes($this['product_id'], $data['productTaxes'] ?? []);
-            // 商品规格
-            $this->addProductSpec($data, $productSkuIdList);
-            // 商品图片
+            Log::debug('saveData:' . json_encode($data));
+            Log::debug('productSkuIdList:' . json_encode($productSkuIdList));
+            // 更新产品包
+            $this->updateProductPackage($data);
+            // 产品图片
             $this->addProductImages($data['image']);
-            // 更新属性
-            (new Attribute)->updateAttr($this['product_id'], $data['product_attr'], $this['shop_supplier_id']);
+            // 更新产品规格
+            ProductBom::updateFlavor($data, $this);
+            // 更新产品加料
+            ProductBom::updateFeed($data, $this);
+            // 更新产品属性
+            ProductAttribute::updateAttr($data, $this);
+            // 更新产品关联税类
+            // $this->updateProductTaxes($this['product_id'], $data['productTaxes'] ?? []);
+            // 商品规格
+            // $this->addProductSpec($data, $productSkuIdList);
             // 更新加料
-            (new ProductFeed)->updateFeed($data['product_feed'], $this);
-            // 更新单位
-            (new Unit)->updateUnit($data['product_unit'], $this['shop_supplier_id']);
+            // (new ProductFeed)->updateFeed($data['product_feed'], $this);
             //
             return true;
         });
+    }
+
+    /**
+     * 更新产品包
+     */
+    public function updateProductPackage($data)
+    {
+        // 处理商品图片
+        $fileId = 0;
+        if (!empty($data['image'])) {
+            $fileId = $data['image'][0]['file_id'];
+        }
+        // 更新产品包
+        $this->save([
+            'name' => $data['product_name'], // 产品包名称
+            'image_name' => $data['img_name'] ?? '', // 产品包图片名称
+            'image_file_uuid' => $fileId, // 产品包图片文件id
+            'deduct_stock_type' => $data['deduct_stock_type'] == 10 ? 1 : 0, // 扣库存类型: 10-下单减库存, 20-付款减库存
+            'unit_uuid' => $data['unit_id'], // 单位uuid
+            'category_uuid' => $data['category_id'], // 分类uuid
+            'status' => $data['product_status'] == 10 ? 1 : 0, // 状态: 10-上架, 20-下架
+            'is_show_cashier' => $data['is_show_cashier'], // 是否显示收银台: 10-显示, 20-隐藏
+            'is_show_tablet' => $data['is_show_tablet'], // 是否显示平板: 10-显示, 20-隐藏,
+            'is_show_kitchen' => $data['is_show_kitchen'], // 是否显示厨房: 10-显示, 20-隐藏
+            'is_show_assistant' => $data['is_show_assistant'], // 是否显示助手: 10-显示, 20-隐藏,
+            'is_show_h5' => $data['is_show_h5'], // 是否显示h5: 10-显示, 20-隐藏
+            'sort' => $data['product_sort'], // 排序
+            'limit_num' => $data['limit_num'], // 限购数量,
+            'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
+            'sauce_max_selection' => $data['feed_max_select'], // 加料最多可选数量
+            'special_category_uuid' => $data['special_id'], // 热门分类uuid
+            'describe' => $data['selling_point'], // 卖点
+            'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
+        ]);
+        // 更新产品包多语言
+        $multiLanguageName = new MultiLanguageName();
+        $multiLanguageName->saveNames($data['product_name'], $this['multi_language_name_uuid']);
     }
 
     /**
