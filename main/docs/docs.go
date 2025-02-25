@@ -5901,6 +5901,15 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Card": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "会员卡名称",
+                    "type": "string"
+                }
+            }
+        },
         "resp.CardInfo": {
             "type": "object",
             "properties": {
@@ -7759,6 +7768,15 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Level": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "会员等级名称",
+                    "type": "string"
+                }
+            }
+        },
         "resp.LevelInfo": {
             "type": "object",
             "properties": {
@@ -8711,13 +8729,21 @@ const docTemplate = `{
                     "description": "会员余额",
                     "type": "number"
                 },
-                "card_name": {
-                    "description": "会员卡名称",
-                    "type": "string"
+                "card": {
+                    "description": "会员卡",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Card"
+                        }
+                    ]
                 },
-                "level_name": {
-                    "description": "会员等级",
-                    "type": "string"
+                "level": {
+                    "description": "会员等级名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Level"
+                        }
+                    ]
                 },
                 "nickname": {
                     "description": "会员昵称",

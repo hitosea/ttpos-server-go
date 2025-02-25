@@ -996,6 +996,12 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.Card:
+    properties:
+      name:
+        description: 会员卡名称
+        type: string
+    type: object
   resp.CardInfo:
     properties:
       name:
@@ -2259,6 +2265,12 @@ definitions:
           type: string
         type: array
     type: object
+  resp.Level:
+    properties:
+      name:
+        description: 会员等级名称
+        type: string
+    type: object
   resp.LevelInfo:
     properties:
       name:
@@ -2924,12 +2936,14 @@ definitions:
       balance:
         description: 会员余额
         type: number
-      card_name:
-        description: 会员卡名称
-        type: string
-      level_name:
-        description: 会员等级
-        type: string
+      card:
+        allOf:
+        - $ref: '#/definitions/resp.Card'
+        description: 会员卡
+      level:
+        allOf:
+        - $ref: '#/definitions/resp.Level'
+        description: 会员等级名称
       nickname:
         description: 会员昵称
         type: string

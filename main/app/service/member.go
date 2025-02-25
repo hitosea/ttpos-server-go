@@ -140,13 +140,13 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		level = member.MemberLevel.Name
 	}
 	return resp.RechargeMember{
-		Uuid:      member.Uuid,
-		Nickname:  member.Nickname,
-		CardName:  cardName,
-		LevelName: level,
-		Balance:   member.Balance + member.GiftBalance,
-		Points:    member.Point,
-		Phone:     member.Phone,
+		Uuid:     member.Uuid,
+		Nickname: member.Nickname,
+		Card:     resp.Card{Name: cardName},
+		Level:    resp.Level{Name: level},
+		Balance:  member.Balance + member.GiftBalance,
+		Points:   member.Point,
+		Phone:    member.Phone,
 	}
 }
 
@@ -732,13 +732,13 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 
 	return &resp.MemberDiscountResp{
 		Member: resp.RechargeMember{
-			Uuid:      member.Uuid,
-			Nickname:  member.Nickname,
-			CardName:  cardName,
-			LevelName: levelName,
-			Balance:   member.Balance,
-			Points:    member.Point,
-			Phone:     member.Phone,
+			Uuid:     member.Uuid,
+			Nickname: member.Nickname,
+			Card:     resp.Card{Name: cardName},
+			Level:    resp.Level{Name: levelName},
+			Balance:  member.Balance,
+			Points:   member.Point,
+			Phone:    member.Phone,
 		},
 		HasPassword:     member.HasPassword(),
 		DiscountedPrice: memberDiscountFee,
