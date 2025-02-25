@@ -657,6 +657,59 @@ definitions:
     - is_sold_out
     - product_bom_uuid
     type: object
+  req.UpdateAcceptOrderSetting:
+    properties:
+      auto_order_limit:
+        description: 自动接单金额上限，0.01-100000000
+        type: string
+      is_auto_order:
+        description: 是否自动接单：0-否；1-是
+        enum:
+        - "0"
+        - "1"
+        type: string
+    required:
+    - is_auto_order
+    type: object
+  req.UpdateSystemSetting:
+    properties:
+      dish_card_style:
+        description: 菜品卡片样式 0-无图模式 1-图片模式
+        enum:
+        - "0"
+        - "1"
+        type: string
+      is_show_assistant_sold_out:
+        description: 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
+        enum:
+        - 0
+        - 1
+        type: integer
+      is_show_scan_sold_out:
+        description: 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        enum:
+        - 0
+        - 1
+        type: integer
+      is_show_sold_out:
+        description: 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        enum:
+        - 0
+        - 1
+        type: integer
+      menu_show_sold_out:
+        description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        enum:
+        - "0"
+        - "1"
+        type: string
+    required:
+    - dish_card_style
+    - is_show_assistant_sold_out
+    - is_show_scan_sold_out
+    - is_show_sold_out
+    - menu_show_sold_out
+    type: object
   req.VerifyPasswordReq:
     properties:
       password:
@@ -5203,6 +5256,54 @@ paths:
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
+  /cashier/setting/edit_accept_order:
+    post:
+      consumes:
+      - application/json
+      description: 修改接单设置
+      parameters:
+      - description: 修改接单设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateAcceptOrderSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改接单设置
+      tags:
+      - 收银端.设置
+  /cashier/setting/edit_system:
+    post:
+      consumes:
+      - application/json
+      description: 修改系统设置
+      parameters:
+      - description: 修改系统设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateSystemSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改系统设置
+      tags:
+      - 收银端.设置
   /cashier/sold_out/add:
     post:
       consumes:

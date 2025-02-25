@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,8 @@ var rootCommand = &cobra.Command{
 		}
 		// 初始化国际化
 		i18n.Init()
+		// 自定义验证规则
+		validator.Init()
 
 		// 初始化全局缓存引擎
 		var cacheConfig cache.Config

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
@@ -54,9 +55,11 @@ type ISrv interface {
 	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                                              // 获取服务费设置
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
 	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool                                      // 收银机验证密码
-	Updates(companyUuid uint64, settingKey string, values any) error                                                                      // 更新设置
+	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
 	VerifyAdvancedPassword(ctx context.Context, password string) error                                                                    // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
+	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
+	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1015,13 +1018,55 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 	}, nil
 }
 
-// Updates 更新设置
-func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
+// EditAcceptOrderSetting 修改自动接单参数
+func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error { // 修改自动接单设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	cashierSetting.IsAutoOrder = orderSetting.IsAutoOrder
+	cashierSetting.AutoOrderLimit = orderSetting.AutoOrderLimit
+	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
+}
+
+// EditSystemSetting 修改系统设置
+func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error { // // 修改系统设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	cashierSetting.IsShowAssistantSoldOut = *systemSetting.IsShowAssistantSoldOut
+	cashierSetting.IsShowScanSoldOut = *systemSetting.IsShowScanSoldOut
+	cashierSetting.MenuShowSoldOut = systemSetting.MenuShowSoldOut
+	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
+		return err
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return err
+	}
+	businessSetting.DishCardStyle = systemSetting.DishCardStyle
+	if err := s.UpdateSetting(ctx, constant.SettingBusiness, businessSetting); err != nil {
+		return err
+	}
+	tabletSetting, err := s.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return err
+	}
+	tabletSetting.IsShowSoldOut = *systemSetting.IsShowSoldOut
+	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateSetting 更新设置
+func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) error {
 	value, err := json.Marshal(values)
 	if err != nil {
 		return errors.New("更新设置失败")
 	}
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err = settingRepo.Create(model.Setting{
@@ -1038,6 +1083,6 @@ func (s *Srv) Updates(companyUuid uint64, settingKey string, values any) error {
 	}
 
 	// 删除缓存
-	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+	s.cache.Del(fmt.Sprintf(s.cacheKey, ctx.GetCompanyUuid()))
 	return nil
 }

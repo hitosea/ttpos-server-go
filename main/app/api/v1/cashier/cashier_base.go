@@ -153,7 +153,7 @@ func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
 	}
 }
 
-// checkUpdate 检查更新
+// CheckUpdate 检查更新
 // @Summary 检查更新
 // @Description 检查更新
 // @Tags 收银端.基础信息
@@ -163,7 +163,7 @@ func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
 // @param brand query string true "品牌参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/check_update [get]
-func (h *BaseHandler) checkUpdate(c *gin.Context) {
+func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	updateInfo, err := h.settingSrv.CheckUpdate(ctx, constant.AppTypeCashier, c.Query("brand"), i18n.GetAcceptLanguage(c))
 	if err != nil {
@@ -184,6 +184,56 @@ func (h *BaseHandler) checkUpdate(c *gin.Context) {
 // @Router /cashier/payment_method/list [get]
 func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {
 	helper.Success(c, h.paymentMethodSrv.GetList(helper.GetContext(c)))
+}
+
+// EditAcceptOrderSetting 修改接单设置
+// @Summary 修改接单设置
+// @Description 修改接单设置
+// @Tags 收银端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.UpdateAcceptOrderSetting true "修改接单设置参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/setting/edit_accept_order [post]
+func (h *BaseHandler) EditAcceptOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var acceptOrderSetting req.UpdateAcceptOrderSetting
+	if err := c.ShouldBindJSON(&acceptOrderSetting); err != nil {
+		helper.HandleValidationError(c, err, acceptOrderSetting, req.UpdateAcceptOrderSettingMessage)
+		return
+	}
+	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// EditSystemSetting 修改系统设置
+// @Summary 修改系统设置
+// @Description 修改系统设置
+// @Tags 收银端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.UpdateSystemSetting true "修改系统设置参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/setting/edit_system [post]
+func (h *BaseHandler) EditSystemSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var acceptOrderSetting req.UpdateAcceptOrderSetting
+	if err := c.ShouldBindJSON(&acceptOrderSetting); err != nil {
+		helper.HandleValidationError(c, err, acceptOrderSetting, req.UpdateAcceptOrderSettingMessage)
+		return
+	}
+	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
 }
 
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -212,9 +262,13 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/verify_cash_box_password", wrapper.VerifyCashBoxPassword)  // 验证钱箱密码
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
-		privateApi.GET("/check_update", wrapper.checkUpdate)                         // 检查更新
+		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
 		privateApi.GET("/print_data", nil)                                           // todo 获取打印数据
 
 		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList) // 获取支付方式列表
+
+		// 保存接单设置
+		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置
+		privateApi.POST("/setting/edit_system", wrapper.EditAcceptOrderSetting)       // 修改系统设置
 	}
 }
