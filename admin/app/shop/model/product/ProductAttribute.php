@@ -38,15 +38,18 @@ class ProductAttribute
     /**
      * 更新属性库
      */
-    public static function updateAttr($data, Product $product)
+    public static function updateAttribute($data, Product $product)
     {
         $groupUuidList = [];
         $attributeUuidList = [];
         $attributeList = $data['product_attr'];
+        if (empty($attributeList)) {
+            self::deleteAttribute($product);
+            return;
+        }
         foreach ($attributeList as $item) {
             // 属性组
-            $group = ProductAttributeGroupModel::
-                where('uuid', $item['parent_id'])
+            $group = ProductAttributeGroupModel::where('product_attribute_group_uuid', $item['parent_id'])
                 ->where('product_package_uuid', $product['uuid'])
                 ->find();
             if (!$group) {
@@ -66,8 +69,7 @@ class ProductAttribute
             $attributeUuidList[$group['uuid']] = [];
             // 属性值
             foreach ($item['attribute_ids'] as $key => $attributeId) {
-                $attribute = ProductAttributeModel::
-                    where('product_package_attribute_group_uuid', $group['uuid'])
+                $attribute = ProductAttributeModel::where('product_package_attribute_group_uuid', $group['uuid'])
                     ->where('attribute_uuid', $attributeId)
                     ->find();
                 if (!$attribute) {
@@ -81,23 +83,41 @@ class ProductAttribute
                         'is_default_selected' => $item['default_select'][$key] ?? 0,
                     ]);
                 }
-                $savedAttributeUuids[$group['uuid']][] = $attribute['uuid'];
+                $attributeUuidList[$group['uuid']][] = $attribute['uuid'];
             }
         }
         // 查询需要删除的属性组, 并删除属性组和属性值
-        $deleteGroupUuids = ProductAttributeGroupModel::
-            whereNotIn('uuid', $groupUuidList)
+        $groupList = ProductAttributeGroupModel::whereNotIn('uuid', $groupUuidList)
+            ->with(['productAttribute'])
             ->where('product_package_uuid', $product['uuid'])
-            ->column('uuid');
-        foreach ($deleteGroupUuids as $groupUuid) {
-            ProductAttributeModel::where('product_package_attribute_group_uuid', $groupUuid)->delete();
-            ProductAttributeGroupModel::where('uuid', $groupUuid)->delete();
+            ->select();
+        foreach ($groupList as $group) {
+            foreach ($group->productAttribute as $attribute) {
+                $attribute->delete();
+            }
+            $group->delete();
         }
         // 删除属性值
-        foreach ($savedAttributeUuids as $groupUuid => $attributeUuids) {
-            ProductAttributeModel::where('product_package_attribute_group_uuid', $groupUuid)
+        foreach ($attributeUuidList as $groupUuid => $attributeUuids) {
+            $attributeList = ProductAttributeModel::where('product_package_attribute_group_uuid', $groupUuid)
                 ->whereNotIn('uuid', $attributeUuids)
-                ->delete();
+                ->select();
+            foreach ($attributeList as $attribute) {
+                $attribute->delete();
+            }
+        }
+    }
+
+    /**
+     * 删除产品属性
+     */
+    public static function deleteAttribute(Product $product)
+    {
+        foreach ($product->productAttributeGroup as $group) {
+            foreach ($group->productAttribute as $attribute) {
+                $attribute->delete();
+            }
+            $group->delete();
         }
     }
 }

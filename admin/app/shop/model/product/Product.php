@@ -440,8 +440,6 @@ class Product extends ProductModel
         return $this->transaction(function () use ($data, $productSkuIdList) {
             $data['product_attr'] = isset($data['product_attr']) ? $data['product_attr'] : '';
             $data['product_feed'] = isset($data['product_feed']) ? $data['product_feed'] : '';
-            Log::debug('saveData:' . json_encode($data));
-            Log::debug('productSkuIdList:' . json_encode($productSkuIdList));
             // 更新产品包
             $this->updateProductPackage($data);
             // 产品图片
@@ -451,7 +449,7 @@ class Product extends ProductModel
             // 更新产品加料
             ProductBom::updateFeed($data, $this);
             // 更新产品属性
-            ProductAttribute::updateAttr($data, $this);
+            ProductAttribute::updateAttribute($data, $this);
             // 更新产品关联税类
             // $this->updateProductTaxes($this['product_id'], $data['productTaxes'] ?? []);
             // 商品规格
@@ -491,7 +489,7 @@ class Product extends ProductModel
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
             'sauce_max_selection' => $data['feed_max_select'], // 加料最多可选数量
-            'special_category_uuid' => $data['special_id'], // 热门分类uuid
+            'special_category_uuid' => $data['special_id'], // 热门分类
             'describe' => $data['selling_point'], // 卖点
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
         ]);
@@ -742,10 +740,35 @@ class Product extends ProductModel
     {
         $product_ids = explode(',', $product_ids);
         if (empty($product_ids)) return false;
-        $products = $this->where('uuid', 'in', $product_ids)->field(['uuid'])->select();
+        $products = $this->with([
+            'sku',
+            'feed',
+            'productAttributeGroup' => [
+                'productAttribute',
+            ],
+        ])->whereIn('uuid', $product_ids)->select();
         // 开启事务
         $this->startTrans();
         try {
+            foreach ($products as $product) {
+                // 删除规格
+                foreach ($product->sku as $sku) {
+                    $sku->delete();
+                }
+                // 删除加料
+                foreach ($product->feed as $feed) {
+                    $feed->delete();
+                }
+                // 删除产品属性
+                foreach ($product->productAttributeGroup as $productAttributeGroup) {
+                    foreach ($productAttributeGroup->productAttribute as $productAttribute) {
+                        $productAttribute->delete();
+                    }   
+                    $productAttributeGroup->delete();
+                }
+                // 删除产品
+                $product->delete();
+            }
             // todo 兼容
             // foreach ($products as $product) {
             //     $product_id = $product['product_id'] ?? 0;

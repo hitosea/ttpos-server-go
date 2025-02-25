@@ -1135,7 +1135,7 @@ class Product extends BaseModel
                 $attributeValueText[] = $attribute->attribute->attribute_name_text;
             }
             $attr = [
-                'parent_id' => $group['uuid'],
+                'parent_id' => $group['product_attribute_group_uuid'],
                 'parent_name' => $group->attribute->attribute_name_text,
                 'attribute_name' => $group->attribute->attribute_name,
                 'attribute_value' => $attributeValue,

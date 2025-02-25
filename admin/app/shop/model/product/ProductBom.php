@@ -59,7 +59,10 @@ class ProductBom extends ProductBomModel
         }
         // 删除规格
         if (!empty($flavorUuidList)) {
-            self::whereNotIn('uuid', $flavorUuidList)->delete();
+            $flavorList = self::whereNotIn('uuid', $flavorUuidList)->select();
+            foreach ($flavorList as $flavor) {
+                $flavor->delete();
+            }
         }
     }
 
@@ -92,6 +95,10 @@ class ProductBom extends ProductBomModel
         $feedUuidList = [];
         // 新增或编辑加料
         $feedList = $data['product_feed'];
+        if (empty($feedList)) {
+            self::deleteFeed($product);
+            return;
+        }
         foreach ($feedList as $item) {
             $feedUuidList[] = $item['feed_id'];
             $feedData = [
@@ -112,9 +119,25 @@ class ProductBom extends ProductBomModel
         }
         // 删除加料
         if (!empty($feedUuidList)) {
-            self::where('product_package_uuid', $product['uuid'])
+            $feedList = self::where('product_package_uuid', $product['uuid'])
                 ->whereNotIn('product_sauce_uuid', $feedUuidList)
-                ->delete();
+                ->select();
+            foreach ($feedList as $feed) {
+                $feed->delete();
+            }
+        }
+    }
+
+    /**
+     * 删除加料
+     */
+    public static function deleteFeed(Product $product)
+    {
+        $feedList = self::where('product_package_uuid', $product['uuid'])
+            ->where('product_sauce_uuid', '>', 0)
+            ->select();
+        foreach ($feedList as $feed) {
+            $feed->delete();
         }
     }
 }
