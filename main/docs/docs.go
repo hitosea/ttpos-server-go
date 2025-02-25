@@ -5969,7 +5969,7 @@ const docTemplate = `{
                     ]
                 },
                 "non_ordering_time": {
-                    "description": "不可下单时间（分钟）",
+                    "description": "不可下单时间（秒）",
                     "type": "integer"
                 },
                 "price": {
@@ -5977,7 +5977,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "reminder_order_time": {
-                    "description": "提醒下单时间（分钟）",
+                    "description": "提醒下单时间（秒）",
                     "type": "integer"
                 },
                 "uuid": {
@@ -9068,6 +9068,10 @@ const docTemplate = `{
                 },
                 "is_desk_order": {
                     "description": "购物车类型 true:桌台购物车 false:点餐购物车",
+                    "type": "boolean"
+                },
+                "is_lock": {
+                    "description": "购物车是否锁定 true:锁定 false:未锁定",
                     "type": "boolean"
                 },
                 "sale_bill_uuid": {
