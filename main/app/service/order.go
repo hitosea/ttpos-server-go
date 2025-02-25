@@ -1348,6 +1348,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
+		IsLock:        shopCart.SaleBill.IsLock == 1,
 		Desk:          nil,
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
