@@ -16,6 +16,7 @@ type CashierBase struct {
 	Currency     setting.Currency `json:"currency"`      // 货币单位
 	Permissions  []*Permission    `json:"permissions"`   // 页面权限
 	Company      Company          `json:"company"`       // 商家信息
+	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
 }
 
 type AssistantBase struct {

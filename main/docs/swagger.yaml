@@ -985,6 +985,10 @@ definitions:
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
+      tablet:
+        allOf:
+        - $ref: '#/definitions/setting.Tablet'
+        description: 平板端设置
       username:
         description: 登录账号
         type: string
@@ -3130,6 +3134,21 @@ definitions:
         description: 平板结束时间提醒（分）
         type: string
     type: object
+  setting.BuffetOrderLimit:
+    properties:
+      is_limit_num:
+        description: 是否开启数量限制 0-关闭 1-开启
+        type: string
+      is_limit_time:
+        description: 是否开启时间限制 0-关闭 1-开启
+        type: string
+      limit_num:
+        description: 数量限制
+        type: string
+      limit_time:
+        description: 时间限制（分钟）
+        type: string
+    type: object
   setting.Business:
     properties:
       checkout_zeroing_method:
@@ -3318,6 +3337,21 @@ definitions:
       name:
         type: string
     type: object
+  setting.OrderLimit:
+    properties:
+      is_limit_num:
+        description: 是否开启数量限制 0-关闭 1-开启
+        type: string
+      is_limit_time:
+        description: 是否开启时间限制 0-关闭 1-开启
+        type: string
+      limit_num:
+        description: 数量限制
+        type: string
+      limit_time:
+        description: 时间限制（分钟）
+        type: string
+    type: object
   setting.OrderMethodItem:
     properties:
       is_cashier_order:
@@ -3335,6 +3369,60 @@ definitions:
       port:
         description: 端口号
         type: string
+    type: object
+  setting.Tablet:
+    properties:
+      advanced_password:
+        description: 高级设置密码
+        type: string
+      buffet_order_limit:
+        allOf:
+        - $ref: '#/definitions/setting.BuffetOrderLimit'
+        description: 自助餐下单限制
+      carousel:
+        description: 上传后的轮播内容url（图片 + 视频）
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
+      default_language:
+        description: 默认语言
+        type: string
+      is_buffet_order_limit:
+        description: 是否开启自助餐下单限制 0-关闭 1-开启
+        type: string
+      is_call_service:
+        description: 是否开启呼叫服务员 0-关闭 1-开启
+        type: string
+      is_customer_order:
+        description: 是否开启顾客自助下单 0-关闭 1-开启
+        type: string
+      is_order_limit:
+        description: 是否开启非自助餐下单限制 0-关闭 1-开启
+        type: string
+      is_show_sold_out:
+        description: 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: integer
+      is_voice_remind:
+        description: 是否开启声音提醒 0-关闭 1-开启
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      order_limit:
+        allOf:
+        - $ref: '#/definitions/setting.OrderLimit'
+        description: 非自助餐下单限制
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 平板服务器连接
     type: object
   setting.ZeroingMethodItem:
     properties:
@@ -3449,13 +3537,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -3862,13 +3950,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -4933,11 +5021,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -4961,11 +5049,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -4985,46 +5073,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -5772,11 +5860,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -5800,11 +5888,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -5824,46 +5912,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query

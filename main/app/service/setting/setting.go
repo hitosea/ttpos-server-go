@@ -45,6 +45,7 @@ type ISrv interface {
 	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                // 获取扫码H5设置
 	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                                     // 获取门店业务设置
 	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)                                    // 获取自助餐设置
+	GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error)                                        // 获取平板端设置
 	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                                                     // 获取货币单位设置
 	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                                                  // 获取公司设置
 	GetPaymentSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Payment, error)                                  // 获取门店-支付方式设置
@@ -619,7 +620,6 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 
 // GetBusinessSetting 门店业务设置
 func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) {
-
 	st := s.getSettingByKey(ctx, constant.SettingBusiness)
 	var business setting.Business
 	err := json.Unmarshal([]byte(st.Values), &business)
@@ -658,6 +658,43 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 		return buffet, errors.New("解析自助餐-自助餐设置失败")
 	}
 	return defaultBuffet, nil
+}
+
+// GetTabletSetting 平板端设置
+func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error) {
+	st := s.getSettingByKey(ctx, constant.SettingTablet)
+	ginContext := ctx.GetGinContext()
+	var (
+		tablet setting.Tablet
+		err    error
+	)
+	if languageList == nil {
+		languageList, err = s.GetStoreLanguageList(ctx)
+		if err != nil {
+			return tablet, err
+		}
+	}
+	err = json.Unmarshal([]byte(st.Values), &tablet)
+	if err != nil {
+		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("解析各端-平板端设置失败")
+	}
+	// 滚动图/视频处理
+	if len(tablet.Carousel) > 0 && ginContext != nil {
+		for i, item := range tablet.Carousel {
+			tablet.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
+	defaultTablet := s.getDefaultTablet(languageList)
+	// 语言 不需要合并
+	defaultTablet.Language = nil
+	err = copier.CopyWithOption(&defaultTablet, tablet, copier.Option{IgnoreEmpty: true})
+	if err != nil {
+		ctx.Log().Error("合并各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("合并各端-平板端设置失败")
+	}
+
+	return defaultTablet, nil
 }
 
 // GetPaymentSetting 门店-支付方式
@@ -790,7 +827,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 // GetKitchenSetting 获取厨显端设置
 func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.CompanySetting, languageList []dto.LanguageItem) (setting.Kitchen, error) {
 	var kitchen setting.Kitchen
-	st := s.getSettingByKey(ctx, constant.SettingAssistant)
+	st := s.getSettingByKey(ctx, constant.SettingKitchen)
 
 	err := json.Unmarshal([]byte(st.Values), &kitchen)
 	if err != nil {
