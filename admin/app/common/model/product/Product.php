@@ -16,6 +16,7 @@ use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
+use app\common\model\store\MultiLanguageName;
 use app\shop\model\product\Category as CategoryModel;
 
 /**
@@ -364,6 +365,14 @@ class Product extends BaseModel
     public function productAttributeGroup()
     {
         return $this->hasMany(ProductAttributeGroup::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联产品语言
+     */
+    public function MultiLanguageName()
+    {
+        return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
     }
 
 

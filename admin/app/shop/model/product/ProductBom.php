@@ -17,7 +17,7 @@ class ProductBom extends ProductBomModel
         $flavors = $data['sku'];
         foreach ($flavors as $flavor) {
             self::create([
-                'purchase_price' => $flavor['purchase_price'], // 采购单价
+                'purchase_price' => $flavor['purchase_price'] ?? 0, // 采购单价
                 'price' => $flavor['product_price'], // 销售单价
                 'name' => $flavor['spec_name'], // 规格名称
                 'product_flavor_uuid' => $flavor['spec_id'], // 规格uuid
@@ -41,7 +41,7 @@ class ProductBom extends ProductBomModel
         foreach ($flavorList as $item) {
             $flavorUuidList[] = $item['product_sku_id'];
             $flavorData = [
-                'purchase_price' => $item['purchase_price'], // 采购单价
+                'purchase_price' => $item['purchase_price'] ?? 0, // 采购单价
                 'price' => $item['price'], // 销售单价
                 'name' => $item['name'], // 规格名称,
                 'product_flavor_uuid' => $item['spec_sku_id'], // 规格uuid

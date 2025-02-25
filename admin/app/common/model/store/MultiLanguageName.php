@@ -108,7 +108,7 @@ class MultiLanguageName extends BaseModel
      *
      * @param int $uuid UUID
      */
-    protected function clearCache(int $uuid): void
+    public function clearCache(int $uuid): void
     {
         Cache::delete(self::CACHE_PREFIX . $uuid);
     }

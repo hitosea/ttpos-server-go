@@ -750,6 +750,7 @@ class Product extends ProductModel
         // 开启事务
         $this->startTrans();
         try {
+            $multiLanguageName = new MultiLanguageName();
             foreach ($products as $product) {
                 // 删除规格
                 foreach ($product->sku as $sku) {
@@ -766,6 +767,9 @@ class Product extends ProductModel
                     }   
                     $productAttributeGroup->delete();
                 }
+                // 删除产品语言
+                $multiLanguageName->clearCache($product->multi_language_name_uuid);
+                $product->multiLanguageName->delete();
                 // 删除产品
                 $product->delete();
             }
