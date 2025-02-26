@@ -1210,13 +1210,12 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	// 通过deviceSn获取saleBillUuid
 	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
 	if errUuid != nil {
-		ctx.Log().Info("无法找到销售账单", zap.Error(errUuid))
-		return nil, errors.New("无法找到销售账单")
+		return nil, nil
 	}
 	// 查询购物车信息
 	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if errInfo != nil {
-		return nil, errInfo
+		return nil, nil
 	}
 	return cartInfo, nil
 }
