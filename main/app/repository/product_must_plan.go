@@ -15,6 +15,7 @@ type IProductMustPlanRepo interface {
 	// 通过uuid列表获取产品必点方案列表
 	GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error)
 	GetProductMustPlanByRegionUuid(regionUuid uint64) ([]model.ProductMustPlan, error)
+	GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
 }
 
 func NewProductMustPlanRepo(db *gorm.DB) IProductMustPlanRepo {
@@ -97,6 +98,45 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Con
 			},
 			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return productMustPlans, nil
+}
+
+// 获取搜索必点商品方案列表的数据信息
+func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error) {
+	productMustPlans, err := r.GetProductMustPlanList(ctx,
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.MultiLanguageName",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ProductUnit.MultiLanguageName",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ImageFile",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductFlavor.MultiLanguageName",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductSauce.MultiLanguageName",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+			//},
+			//WithPreload{
+			//	Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+			//},
+
+			WithPreload{
+				Query: "ProductMustPlanRegions.DeskRegion.Desks",
 			},
 		),
 	)

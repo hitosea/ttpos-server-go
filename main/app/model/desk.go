@@ -5,6 +5,8 @@ type DeskRegion struct {
 	BaseModel
 	Name string `gorm:"default:'';column:name;comment:'餐桌区域名称'"`
 	Sort uint   `gorm:"default:0;column:sort;comment:'排序序号'"`
+
+	Desks []Desk `gorm:"foreignKey:RegionUuid;references:Uuid"`
 }
 
 // DeskType 餐桌类型表,定义餐桌的类型信息 ttpos_desk_type

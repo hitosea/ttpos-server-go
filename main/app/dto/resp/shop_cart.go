@@ -4,13 +4,14 @@ import "ttpos-server-go/app/dto"
 
 // 桌台购物车
 type ShopCart struct {
-	SaleBillUuid  uint64      `json:"sale_bill_uuid"`   // 销售账单ID
-	IsDeskOrder   bool        `json:"is_desk_order"`    // 购物车类型 true:桌台购物车 false:点餐购物车
-	IsLock        bool        `json:"is_lock"`          // 购物车是否锁定 true:锁定 false:未锁定
-	Desk          *DeskInfo   `json:"desk,omitempty"`   // 桌台信息
-	Buffet        *BuffetInfo `json:"buffet,omitempty"` // 自助餐信息
-	DiningMethod  uint        `json:"dining_method"`    // 用餐方式 0:堂食 1:打包
-	SaleOrderList []SaleOrder `json:"sale_order_list"`  // 销售订单列表
+	SaleBillUuid  uint64               `json:"sale_bill_uuid"`       // 销售账单ID
+	IsDeskOrder   bool                 `json:"is_desk_order"`        // 购物车类型 true:桌台购物车 false:点餐购物车
+	IsLock        bool                 `json:"is_lock"`              // 购物车是否锁定 true:锁定 false:未锁定
+	Desk          *DeskInfo            `json:"desk,omitempty"`       // 桌台信息
+	Buffet        *BuffetInfo          `json:"buffet,omitempty"`     // 自助餐信息
+	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"` // 必点方案列表信息
+	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包
+	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 }
 
 type InstantShopCart struct {

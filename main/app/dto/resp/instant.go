@@ -37,6 +37,10 @@ type InstantProductMustPlanResp struct {
 	ShopCartInfo *InstantShopCart         `json:"shop_cart_info,omitempty"` // 购物车信息。当必点方案中有自动加购商品时，返回购物车信息。后台会自动加购商品到购物车中，前端用这个购物车信息更新界面
 }
 
+type ProductMustPlanList struct {
+	List []InstantProductMustPlan `json:"list"` // 必点方案列表
+}
+
 // InstantProductMustPlan 必点方案
 type InstantProductMustPlan struct {
 	Name         string             `json:"name"`           // 方案名称

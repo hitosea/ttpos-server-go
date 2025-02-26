@@ -188,7 +188,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
-	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv)
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv, mustPlanSrv)
 
 	// 初始化处理器
 	wrapper := OrderHandler{

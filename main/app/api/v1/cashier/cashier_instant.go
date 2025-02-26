@@ -474,7 +474,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
 
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{

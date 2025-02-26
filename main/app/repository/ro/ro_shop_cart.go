@@ -34,6 +34,7 @@ func (ro *ShopCartRepo) GetMustPlanProductInfo() map[uint64]map[uint64]uint {
 				// 累加必点商品数量
 				dataMap[mustPlanUuid][productPackageUuid] = num + saleOrderProduct.Num
 			} else {
+				dataMap[mustPlanUuid] = make(map[uint64]uint)
 				dataMap[mustPlanUuid][productPackageUuid] = saleOrderProduct.Num
 			}
 		}

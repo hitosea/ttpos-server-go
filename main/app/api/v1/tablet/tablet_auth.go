@@ -112,7 +112,8 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
 
 	localeSrv := service.NewLocaleSrv()
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv)
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
 
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv)
 

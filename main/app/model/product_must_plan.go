@@ -19,7 +19,8 @@ type ProductMustPlan struct {
 	AutoCheck    uint   `gorm:"column:auto_check;default:1;comment:'下单时检查必点商品 1-是 0-否'"`
 	AutoCheckout uint   `gorm:"column:auto_checkout;default:1;comment:'结账时检查必点商品 1-是 0-否'"`
 
-	ProductMustPlanItems []ProductMustPlanItem `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
+	ProductMustPlanItems   []ProductMustPlanItem   `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
+	ProductMustPlanRegions []ProductMustPlanRegion `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
 }
 
 func (model *ProductMustPlan) GetMustType() int {
@@ -98,6 +99,7 @@ type ProductMustPlanRegion struct {
 	DeskRegionUuid      uint64 `gorm:"column:desk_region_uuid;type:bigint unsigned;not null;default:0;comment:'桌台区域ID'"`
 
 	ProductMustPlan ProductMustPlan `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
+	DeskRegion      DeskRegion      `gorm:"foreignKey:DeskRegionUuid;references:Uuid"`
 }
 
 // 商品必点计划商品表 `ttpos_product_must_plan_item`

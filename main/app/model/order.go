@@ -854,11 +854,17 @@ type SaleOrderProduct struct {
 	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
-// 更新销售订单商品的折扣信息
+// 设置销售订单商品的折扣信息
 func (model *SaleOrderProduct) SetDiscountInfo(memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) {
 	model.MemberDiscountRate = memberDiscountRate
 	model.MemberCardDiscountRate = memberCardDiscountRate
 	model.CustomDiscountRate = customDiscountRate
+}
+
+// 设置销售订单商品的必点信息，标记该商品是必点商品，标记该商品是某个必点方案的必点商品
+func (model *SaleOrderProduct) SetMustPlanInfo(mustPlanUuid uint64) {
+	model.IsRequire = constant.IsMustProductYes
+	model.MustPlanUuid = mustPlanUuid
 }
 
 // 标记该订单商品相关的资源为删除
@@ -904,7 +910,6 @@ type Attribute struct {
 // 点餐时录入的原始数据
 type DefaultSaleOrderProduct struct {
 	Name                   string
-	IsRequire              uint
 	OpenMemberDiscount     uint
 	TaxRate                float64
 	DeductStockType        uint
@@ -963,7 +968,6 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		Num:                        1,
 		Status:                     constant.OrderProductStatusUnSending,
 		IsAcceptOrder:              1,
-		IsRequire:                  def.IsRequire,
 		FlavorPrice:                def.Flavor.Price,
 		OpenMemberDiscount:         def.OpenMemberDiscount,
 		MemberDiscountRate:         def.MemberDiscountRate,

@@ -100,3 +100,9 @@ const (
 	AutoAddMustProductYes = 1 // 是, 自动加购必点商品
 	AutoAddMustProductNo  = 0 // 否, 不自动加购必点商品
 )
+
+// 是否是必点的销售订单商品
+const (
+	IsMustProductYes = 1 // 是, 必点的销售订单商品。用于标记is_required=1的商品
+	IsMustProductNo  = 0 // 否, 不是必点的销售订单商品。用于标记is_required=0的商品
+)
