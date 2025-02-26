@@ -1613,36 +1613,49 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 }
 
 // OrderCartProductNum 修改购物车商品数量
-func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error) {
-	s.lock.LockUuid(req.SaleBillUuid)
-	defer s.lock.UnlockUuid(req.SaleBillUuid)
+func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
+	s.lock.LockUuid(request.SaleBillUuid)
+	defer s.lock.UnlockUuid(request.SaleBillUuid)
 	db := s.dbm.GetDB(ctx.GetDbId())
+
+	if request.Num == 0 {
+		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+			SaleBillUuid:     request.SaleBillUuid,
+			SaleOrderUuid:    request.SaleOrderUuid,
+			OrderProductUuid: request.SaleOrderProductUuid,
+		})
+		if err != nil {
+			ctx.Log().Debug("删除商品失败", zap.Error(err))
+			return nil, errors.New("删除商品失败")
+		}
+		return res, nil
+	}
 
 	// 检查商品销售库存是否充足
 	// todo
 	ctx.Log().Debug("获取账单信息")
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
 	ctx.Log().Debug("获取到账单信息成功")
 
-	saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
+	saleOrder, errSaleOrder := getSaleOrder(request.SaleOrderUuid, saleBill)
 	if errSaleOrder != nil {
 		return nil, errSaleOrder
 	}
 	ctx.Log().Debug("获取到订单信息成功")
 
 	// 获取销售订单商品信息
-	saleOrderProduct, index, errSaleOrderProduct := getSaleOrderProduct(req.SaleOrderProductUuid, saleOrder)
+	saleOrderProduct, index, errSaleOrderProduct := getSaleOrderProduct(request.SaleOrderProductUuid, saleOrder)
 	if errSaleOrderProduct != nil {
 		return nil, errSaleOrderProduct
 	}
 	ctx.Log().Debug("获取到订单商品信息成功")
 
 	// 修改销售订单商品数量
-	saleOrderProduct.Num = uint(req.Num)
+	saleOrderProduct.Num = uint(request.Num)
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 	// 计算商品数据。折扣、税费、服务
@@ -1675,7 +1688,7 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, req req.Order
 	// ctx.Log().Debug("更加数据")
 
 	// 获取新的桌台数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -2133,14 +2146,19 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	// 检查购物车商品是否有变动
 	// 选择移动的商品中有商品已经不在原销售订单中
 	for _, moveProduct := range req.Products {
-		if _, ok := fromProductMap[moveProduct.Uuid]; !ok {
+		if product, ok := fromProductMap[moveProduct.Uuid]; !ok {
 			return nil, errors.New("购物车商品变化，从重新操作")
+		} else {
+			if product.Num < moveProduct.Num {
+				return nil, errors.New("移动数量大于商品数量")
+			}
 		}
 	}
 
 	// 遍历要移动的订单商品，移动到目标订单中
 	for _, moveProduct := range req.Products {
 		saleOrderProduct := fromProductMap[moveProduct.Uuid]
+		ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 		// 记录到待更新列表中
 		waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 		// 如果原销售订单商品数量还有剩余，则在目标销售订单中新建一个销售订单商品
@@ -2182,10 +2200,13 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			}
 		} else {
 			// 如果原销售订单商品的数量没有剩余，则修改该销售订单商品的销售订单uuid为目标销售订单的uuid
+			ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 			saleOrderProduct.SaleOrderUuid = req.To
 			sign := saleOrderProduct.GenerateProductSign()
+			ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余,生成签名", zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("sign", sign))
 			// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
 			if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
+				ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余,目标销售账单中有商品签名一样的商品", zap.Any("目标销售订单商品orderProduct", orderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 				// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
 				orderProduct.Num += saleOrderProduct.Num
 				// 单价没有改变，不需要重新计算
@@ -2193,16 +2214,18 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 				// 记录到待更新列表中
 				waitUpdateSaleOrderProductMap[orderProduct.Uuid] = orderProduct
 			} else {
-				// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
+				// 目标销售订单中没有商品签名一样的商品，则将源销售订单中的商品记录修改订单id
+				ctx.Log().Debug("移动商品,目标销售订单中没有商品签名一样的商品，则将源销售订单中的商品记录修改订单id")
 				// saleOrderProduct更新这个记录即可
 				discountInfo := saleOrderTo.GetDiscountInfo()
+				saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
 				saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
 				// 计算商品数据。折扣、税费、服务
 				serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 				taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 				saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-
+				ctx.Log().Debug("移动商品,目标销售订单中移入一个销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 				// 记录到待更新列表中
 				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 			}
@@ -2223,8 +2246,10 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 
 	var cartInfo *resp.ShopCart
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		ctx.Log().Debug("更新销售订单商品", zap.Any("waitUpdateSaleOrderProductMap len", len(waitUpdateSaleOrderProductMap)))
 		for _, saleOrderProduct := range waitUpdateSaleOrderProductMap {
-			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); err != nil {
+			ctx.Log().Debug("更新销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductOnly(saleOrderProduct); err != nil {
 				return err
 			}
 		}

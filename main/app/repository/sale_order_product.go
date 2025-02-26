@@ -11,6 +11,7 @@ type ISaleOrderProductRepo interface {
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
+	UpdateSaleOrderProductOnly(model *model.SaleOrderProduct) error
 }
 
 type saleOrderProductRepo struct {
@@ -54,4 +55,9 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 		return nil, err
 	}
 	return &model, nil
+}
+
+func (r *saleOrderProductRepo) UpdateSaleOrderProductOnly(model *model.SaleOrderProduct) error {
+	db := r.db
+	return db.Model(model).Omit("SaleOrderProductBoms", "SaleOrderProductAttributes", "ReturnOrderProducts", "ProductPackage").Updates(model).Error
 }
