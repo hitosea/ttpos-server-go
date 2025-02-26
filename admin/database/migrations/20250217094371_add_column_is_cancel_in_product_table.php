@@ -31,7 +31,7 @@ class AddColumnIsCancelInProductTable extends Migrator
         // 销售订单表
         $table = $this->table('sale_order_product');
         if (!$table->hasColumn('is_cancel')) {
-            $table->addColumn('is_cancel', 'tinyinteger', ['default' => 0, 'comment' => '是否退菜, 0-否 1-是', 'after' => 'is_gift'])
+            $table->addColumn('is_cancel', 'tinyinteger', ['limit' => 1,'null' => false, 'default' => 0, 'comment' => '是否退菜, 0-否 1-是', 'after' => 'remark'])
                   ->update();
         }
         $table->update();

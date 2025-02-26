@@ -35,8 +35,5 @@ class DeleteColumnSaleOrderProductIsCancel extends Migrator
         if ($table->hasColumn('is_gift')) {
             $table->removeColumn('is_gift')->update();
         }
-        if ($table->hasColumn('refund_reason')) {
-            $table->renameColumn('refund_reason', 'cancel_reason')->update();
-        }
     }
 }
