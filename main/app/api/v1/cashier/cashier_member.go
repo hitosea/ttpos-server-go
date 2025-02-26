@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// MemberHandler 结构体
+// MemberHandler 会员相关控制器
 type MemberHandler struct {
 	memberSrv service.IMemberSrv
 }

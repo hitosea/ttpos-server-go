@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler 认证鉴权
+// AuthHandler 认证鉴权控制器
 type AuthHandler struct {
 	authSrv service.IAuthSrv
 }

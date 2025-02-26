@@ -124,6 +124,6 @@ const (
 const (
 	H5OrderStatusChooseProduct = 0 // 未下单
 	H5OrderStatusOrder         = 1 // 未接单
-	H5OrderStatusAccept        = 2 // 已接单
-	H5OrderStatusReject        = 3 // 已拒单
+	H5OrderStatusAccepted      = 2 // 已接单
+	H5OrderStatusRejected      = 3 // 已拒单
 )

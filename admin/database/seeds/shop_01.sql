@@ -258,6 +258,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order_product` (
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注。接单和拒单后从sale_order_product表获取，不再改变',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品uuid',
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单uuid',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

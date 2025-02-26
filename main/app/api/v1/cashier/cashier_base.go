@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// BaseHandler 结构体
+// BaseHandler 基础相关控制器
 type BaseHandler struct {
 	authSrv          service.IAuthSrv
 	settingSrv       setting.ISrv

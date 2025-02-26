@@ -31,6 +31,7 @@ type Desk struct {
 	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单;NOT NULL" json:"sale_bill_uuid"`
 	DeviceUuid   uint64 `gorm:"column:device_uuid;type:bigint(20) unsigned;default:0;comment:平板设备uuid, 0-未绑定;NOT NULL" json:"device_uuid"`
 
-	SaleBill *SaleBill `gorm:"foreignKey:SaleBillUuid;references:uuid"` // 销售账单
-	Device   *Device   `gorm:"foreignKey:DeviceUuid;references:uuid"`   // 关联绑定设备
+	SaleBill *SaleBill   `gorm:"foreignKey:SaleBillUuid;references:uuid"` // 销售账单
+	Device   *Device     `gorm:"foreignKey:DeviceUuid;references:uuid"`   // 关联绑定设备
+	Region   *DeskRegion `gorm:"foreignKey:RegionUuid;references:uuid"`   // 关联区域
 }

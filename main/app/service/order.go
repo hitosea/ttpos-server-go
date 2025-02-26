@@ -753,7 +753,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	orderRepo := repository.NewOrderRepo(db)
 	productRepo := repository.NewOrderProductRepo(db)
 	deskRepo := repository.NewDeskRepo(db)
-	qrcodeOrderRepo := repository.NewQrcodeOrderRepo(db)
+	qrcodeOrderRepo := repository.NewH5OrderRepo(db)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
