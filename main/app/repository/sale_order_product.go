@@ -38,6 +38,14 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProd
 	return nil
 }
 
+func (r *saleOrderProductRepo) UpdateSaleOrderProductOnly(obj *model.SaleOrderProduct) error {
+	db := r.db
+	if err := db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error {
 	db := r.db
 	for _, m := range models {
@@ -55,9 +63,4 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 		return nil, err
 	}
 	return &model, nil
-}
-
-func (r *saleOrderProductRepo) UpdateSaleOrderProductOnly(model *model.SaleOrderProduct) error {
-	db := r.db
-	return db.Model(model).Omit("SaleOrderProductBoms", "SaleOrderProductAttributes", "ReturnOrderProducts", "ProductPackage").Updates(model).Error
 }

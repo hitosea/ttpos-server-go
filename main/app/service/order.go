@@ -1018,11 +1018,11 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	ctx.Log().Debug("改价后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
 
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdateProduct != nil {
+		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductOnly(saleOrderProduct); errUpdateProduct != nil {
 			return errUpdateProduct
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		return nil
