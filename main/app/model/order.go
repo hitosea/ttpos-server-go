@@ -73,12 +73,13 @@ type SaleBill struct {
 	AutoAddMustProduct uint `gorm:"column:auto_add_must_product;type:tinyint(1);default:1;comment:是否自动加购必点商品, 0-不自动加购 1-自动加购" json:"auto_add_must_product"`
 
 	// 关联模型
-	SaleOrders      []*SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	SaleBillSetting *SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	Cashier         Staff            `gorm:"foreignKey:CashierUuid;references:uuid"`
-	Desk            *Desk            `gorm:"foreignKey:DeskUuid;references:uuid"`
-	BuffetPackage1  BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
-	BuffetPackage2  BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	H5OrderProducts []*H5OrderProduct `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	SaleBillSetting *SaleBillSetting  `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	Cashier         Staff             `gorm:"foreignKey:CashierUuid;references:uuid"`
+	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
+	BuffetPackage1  BuffetPackage     `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
+	BuffetPackage2  BuffetPackage     `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
 func (model *SaleBill) IsShowMustPlan() bool {
@@ -813,7 +814,7 @@ type SaleOrderProduct struct {
 
 	// 折扣金额字段
 	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);not null;default:0.00;comment:'打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额'" json:"discount_fee"`
-	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0.00;comment:'会员折扣金额（单商品）=销售价*会员折扣率*会员卡折扣率'" json:"member_discount_fee"`
+	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣金额（单商品）=销售价*（1-会员折扣率*会员卡折扣率）;NOT NULL" json:"member_discount_fee"`
 	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣金额（单商品）=销售价-最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)'" json:"custom_discount_fee"`
 
 	// 税费和服务费字段
@@ -845,6 +846,10 @@ type SaleOrderProduct struct {
 	Sign             string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
 	IsH5OrderProduct uint   `gorm:"column:is_h5_order_product;type:tinyint(1);not null;default:0;comment:'是否为扫码订单商品, 0-否 1-是'" json:"is_qrcode_order_product"`
 
+	// 扫码订单相关
+	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
+	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
+
 	// 关联对象
 	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
@@ -852,6 +857,7 @@ type SaleOrderProduct struct {
 	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
+	SaleBill                   *SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
 // 设置销售订单商品的折扣信息

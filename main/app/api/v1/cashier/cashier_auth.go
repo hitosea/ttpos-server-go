@@ -13,7 +13,7 @@ import (
 	"ttpos-server-go/pkg/database"
 )
 
-// AuthHandler 结构体
+// AuthHandler 认证鉴权控制器
 type AuthHandler struct {
 	authSrv service.IAuthSrv
 }

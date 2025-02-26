@@ -98,13 +98,13 @@ type CashierLoginResp struct {
 	IsFirstLogin bool   `json:" is_first_login"` // 是否首次登录
 }
 
-type AcceptOrder struct {
+type AcceptOrderSetting struct {
 	IsAutoOrder    string `json:"is_auto_order"`    // 是否自动接单：0-否；1-是
 	AutoOrderLimit string `json:"auto_order_limit"` // 自动接单金额上限，0.01-100000000
 	IsAutoVoice    string `json:"is_auto_voice"`    // 是否开启自动接单语音播报 0-否；1-是
 }
 
-type System struct {
+type SystemSetting struct {
 	IsShowScanSoldOut      int    `json:"is_show_scan_sold_out"`      // 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	IsShowAssistantSoldOut int    `json:"is_show_assistant_sold_out"` // 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
 	MenuShowSoldOut        string `json:"menu_show_sold_out"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
@@ -119,6 +119,6 @@ type System struct {
 }
 
 type CashierBaseSetting struct {
-	AcceptOrder AcceptOrder `json:"accept_order"` // 接单设置
-	System      System      `json:"system"`       // 系统设置
+	AcceptOrder AcceptOrderSetting `json:"accept_order"` // 接单设置
+	System      SystemSetting      `json:"system"`       // 系统设置
 }

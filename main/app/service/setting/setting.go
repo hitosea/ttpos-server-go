@@ -1090,12 +1090,12 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 		return settingResp, errors2.ErrInternal
 	}
 	return resp.CashierBaseSetting{
-		AcceptOrder: resp.AcceptOrder{
+		AcceptOrder: resp.AcceptOrderSetting{
 			IsAutoOrder:    cashierSetting.IsAutoOrder,
 			AutoOrderLimit: cashierSetting.AutoOrderLimit,
 			IsAutoVoice:    cashierSetting.IsAutoVoice,
 		},
-		System: resp.System{
+		System: resp.SystemSetting{
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
 			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
 			MenuShowSoldOut:        cashierSetting.MenuShowSoldOut,

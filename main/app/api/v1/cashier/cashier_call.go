@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CallHandler 自助餐处理程序
+// CallHandler 呼叫相关控制器
 type CallHandler struct {
 	callSrv service.ICallSrv
 }
@@ -157,7 +157,6 @@ func (h *CallHandler) Reprint(c *gin.Context) {
 	helper.Success(c, res, "成功")
 }
 
-// RegisterCallHandlers 注册呼叫路由
 func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

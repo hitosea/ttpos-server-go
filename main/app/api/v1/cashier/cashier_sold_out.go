@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SoldOutHandler 自助餐处理程序
+// SoldOutHandler 沽清相关控制器
 type SoldOutHandler struct {
 	soldOutSrv service.ISoldOutSrv
 }
@@ -125,7 +125,6 @@ func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 	helper.Success(c, gin.H{}, "取消成功")
 }
 
-// RegisterSoldOutHandlers 注册沽清路由
 func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
