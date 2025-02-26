@@ -807,18 +807,117 @@ class Product extends BaseModel
             'special_id' => 0,        //特殊分类id
         ], $param);
 
-        // 执行查询
-        $list = $this->alias('product')
-            ->with(['category', 'image', 'sku'])
-            ->field(['product.*, name as product_name, actual_sale_num as sales_actual'])
-            ->order(['sort', 'id' => 'desc'])
-            ->paginate($params);
+        $offset = ($params['page'] - 1) * $params['list_rows'];
+        $limit = $params['list_rows'];
 
-        foreach ($list->items() as $item) {
-            // 库存: 规格库存之和
-            $skus = $item->sku->toArray();
-            $item->product_stock = array_sum(array_column($skus ?? [], 'stock_num'));
+        // 成品
+        $productSql = self::alias('p')
+            ->field(implode(',', [
+                'p.uuid as product_id', 
+                'p.name as product_name', 
+                '10 as type', 
+                'c1.name as category_name', 
+                'c2.name as category_parent_name', 
+                'p.create_time',
+                'min(bom.price) as product_price',
+                'p.actual_sale_num as sales_actual',
+                'sum(bom.stock_num) as product_stock',
+                'p.status',
+                'p.sort as product_sort'
+            ]))
+            ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
+            ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+            ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
+            ->where('bom.product_flavor_uuid', '>', 0)
+            ->buildSql();
+
+        // 材料
+        $materialSql = Material::alias('m')
+            ->field(implode(',', [
+                'm.uuid as product_id', 
+                'm.name as product_name', 
+                '20 as type', 
+                'c1.name as category_name', 
+                'c2.name as category_parent_name', 
+                'm.create_time',
+                '0 as product_price',
+                'm.actual_sale_num as sales_actual',
+                'm.stock_num as product_stock',
+                'm.status',
+                '0 as product_sort'
+            ]))
+            ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
+            ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+            ->buildSql();
+
+        // 执行查询
+        $rows = Db::connect('shop' . self::$app_id)->query("SELECT " . implode(',', [
+            'product_id', 
+            'product_name', 
+            'type', 
+            'category_name', 
+            'category_parent_name', 
+            'create_time',
+            'product_price',
+            'sales_actual',
+            'product_stock',
+            'status',
+            'product_sort'
+        ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product ORDER BY create_time DESC LIMIT {$offset}, {$limit}");
+
+
+        $list = [];
+        foreach ($rows as $row) {
+            $pathNameText = extractLanguage($row['category_name']);
+            if ($row['category_parent_name']) {
+                $pathNameText = extractLanguage($row['category_parent_name']) . '-' . $pathNameText;
+            }
+            $productStock = 0;
+            $productMaterialStock = 0;
+            if ($row['type'] == 10) {
+                $productStock = $row['product_stock'];
+            } else {
+                $productMaterialStock = $row['product_stock'];
+            }
+            $list[] = [
+                'product_id' => $row['product_id'],
+                'product_name' => $row['product_name'],
+                'product_name_text' => extractLanguage($row['product_name']),
+                'type' => $row['type'],
+                'category' => [ 'path_name_text' => $pathNameText ],
+                'image' => [],
+                'product_price' => $row['product_price'],
+                'sales_actual' => floatval($row['sales_actual']),
+                'product_stock' => floatval($productStock),
+                'product_material_stock' => floatval($productMaterialStock),
+                'product_status' => [
+                    'text' => $row['status'] === 1 ? __('上架') : __('下架'),
+                    'value' => $row['status'] === 1 ? 10 : 20,
+                ],
+                'create_time' => date('Y-m-d H:i:s', $row['create_time']),
+                'product_sort' => $row['product_sort'],
+            ];
         }
+
+        return [
+            'current_page' => $params['page'],
+            'data' => $list,
+            'per_page' => $params['list_rows'],
+            'total' => count($list),
+            'last_page' => ceil(count($list) / $params['list_rows']),
+        ];
+        // 执行查询
+        // $list = $this->alias('product')
+        //     ->with(['category', 'image', 'sku'])
+        //     ->field(['product.*, name as product_name, actual_sale_num as sales_actual'])
+        //     ->order(['sort', 'id' => 'desc'])
+        //     ->paginate($params);
+
+        // foreach ($list->items() as $item) {
+        //     // 库存: 规格库存之和
+        //     $skus = $item->sku->toArray();
+        //     $item->product_stock = array_sum(array_column($skus ?? [], 'stock_num'));
+        // }
 
         return $list;
 

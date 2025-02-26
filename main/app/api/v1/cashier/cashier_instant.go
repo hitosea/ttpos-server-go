@@ -85,13 +85,13 @@ func (h *InstantHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	shopCart, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // OrderProductChangePrice 处理删除点餐订单商品改价
