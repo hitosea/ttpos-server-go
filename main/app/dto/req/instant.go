@@ -88,3 +88,7 @@ type MoveProduct struct {
 	Uuid uint64 `json:"uuid"` // 销售订单商品UUID, 必填
 	Num  uint   `json:"num"`  // 移动数量, 必填
 }
+
+type InstantOrderMustPlanConfirmReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+}

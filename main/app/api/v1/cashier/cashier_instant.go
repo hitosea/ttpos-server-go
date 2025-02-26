@@ -456,6 +456,36 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderMustPlanConfirm 确认必点商品
+// @Summary 确认必点商品
+// @Description 确认必点商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
+// @Success 200 {object} dto.Response{}
+// @Router /cashier/instant/order/must_plan/confirm [post]
+func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面确认必点商品接口请求")
+
+	params := req.InstantOrderMustPlanConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 确认必点商品
+	res, err := h.orderService.InstantOrderMustPlanConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -488,6 +518,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)              // 修改购物车商品数量
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)              // 送厨购物车商品
 		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                            // 获取点餐必点方案。废弃
+		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)            // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                      // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreat)                  // 创建一个支付单
 		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)            // 创建一个销售订单

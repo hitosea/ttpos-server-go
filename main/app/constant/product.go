@@ -91,8 +91,8 @@ const (
 
 // 是否显示必点方案
 const (
-	ShowMustPlanYes = 1 // 是, 显示必点方案
-	ShowMustPlanNo  = 0 // 否, 不显示必点方案
+	SaleBillShowMustPlanYes = 1 // 是, 显示必点方案
+	SaleBillShowMustPlanNo  = 0 // 否, 不显示必点方案
 )
 
 // 是否自动加购必点商品

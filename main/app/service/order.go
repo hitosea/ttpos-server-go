@@ -57,6 +57,7 @@ type IOrderSrv interface {
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)              // 给销售订单创建一个支付单
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                             // 给销售订单创建一个销售订单
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq) (*resp.ShopCart, error)                   // 从一个销售订单移动商品到另一个销售订单
+	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                       // 确认必点商品
 }
 
 // orderSrv 订单服务结构
@@ -1802,298 +1803,6 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 	return &productionOrder
 }
 
-// 获取点餐的必点方案的商品列表
-// 只获取要在“必点”弹框中显示的必点方案
-//func getInstantMustPlanProductList(mustPlan *model.ProductMustPlan) []resp.InstantMustPlanProductStat {
-//	// 不是点餐的必单方案
-//	if !mustPlan.IsInstantMustPlan() {
-//		return []resp.InstantMustPlanProductStat{}
-//	}
-//	// 不是自动加购的必点方案都不显示中“必点”弹框中
-//	if !mustPlan.IsAutoCart() {
-//		return []resp.InstantMustPlanProductStat{}
-//	}
-//	productList := make([]resp.InstantMustPlanProductStat, 0)
-//	// 点餐的必点方案都是“每单必点”，没有“每人必点”类型的
-//	// 如果是固定商品
-//	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
-//		for _, planItem := range mustPlan.ProductMustPlanItems {
-//			productPackage := planItem.GetProductInfo()
-//			if productPackage == nil {
-//				continue
-//			}
-//			productStat := resp.InstantMustPlanProductStat{
-//				Product:     *productPackage,
-//				IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
-//				SelectedNum: 0,                                                                    // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-//				MustNum:     1,                                                                    // 该商品要求必点数量
-//				NeedNum:     1,                                                                    // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
-//			}
-//			productList = append(productList, productStat)
-//		}
-//	}
-//	// 如果是可选商品
-//	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
-//		for _, planItem := range mustPlan.ProductMustPlanItems {
-//			productPackage := planItem.GetProductInfo()
-//			if productPackage == nil {
-//				continue
-//			}
-//			productStat := resp.InstantMustPlanProductStat{
-//				Product:     *productPackage,
-//				IsAutoAdd:   false, // 可选商品的必点方案都不自动加购
-//				SelectedNum: 0,     // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-//				MustNum:     0,
-//				NeedNum:     0,
-//			}
-//			productList = append(productList, productStat)
-//		}
-//	}
-//	return productList
-//}
-//
-//// 获取点餐的必点方案的商品列表。用于加购商品时判断该商品是不是这些点餐列表里的商品
-//func getInstantMustPlanProductList2(mustPlan *model.ProductMustPlan) []resp.InstantMustPlanProductStat {
-//	// 不是点餐的必单方案
-//	if !mustPlan.IsInstantMustPlan() {
-//		return []resp.InstantMustPlanProductStat{}
-//	}
-//	// 不是自动加购的必点方案都不显示中“必点”弹框中
-//	if !mustPlan.IsAutoCart() {
-//		return []resp.InstantMustPlanProductStat{}
-//	}
-//	productList := make([]resp.InstantMustPlanProductStat, 0)
-//	// 点餐的必点方案都是“每单必点”，没有“每人必点”类型的
-//	// 如果是固定商品
-//	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
-//		for _, planItem := range mustPlan.ProductMustPlanItems {
-//			productPackage := planItem.GetProductInfo()
-//			if productPackage == nil {
-//				continue
-//			}
-//			productStat := resp.InstantMustPlanProductStat{
-//				Product:     *productPackage,
-//				IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
-//				SelectedNum: 0,                                                                    // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-//				MustNum:     1,                                                                    // 该商品要求必点数量
-//				NeedNum:     1,                                                                    // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
-//			}
-//			productList = append(productList, productStat)
-//		}
-//	}
-//	// 如果是可选商品
-//	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
-//		for _, planItem := range mustPlan.ProductMustPlanItems {
-//			productPackage := planItem.GetProductInfo()
-//			if productPackage == nil {
-//				continue
-//			}
-//			productStat := resp.InstantMustPlanProductStat{
-//				Product:     *productPackage,
-//				IsAutoAdd:   false, // 可选商品的必点方案都不自动加购
-//				SelectedNum: 0,     // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-//				MustNum:     0,
-//				NeedNum:     0,
-//			}
-//			productList = append(productList, productStat)
-//		}
-//	}
-//	return productList
-//}
-
-// 获取点餐的必点方案列表，用于自动加购和显示在“必点”弹框中
-//func (s *orderSrv) getInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) (*[]resp.InstantProductMustPlan, error) {
-//	mustPlanList := make([]resp.InstantProductMustPlan, 0)
-//
-//	shopCartMustProductInfo := shopCart.GetMustPlanProductInfo()
-//
-//	// 获取必选方案信息
-//	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListAllInfos(ctx)
-//	if err != nil {
-//		return nil, errors.New(err.Error())
-//	}
-//
-//	// 构建必点方案响应列表
-//	for _, plan := range productMustPlans {
-//		// 不自动加购的必点方案不用显示必选弹框，所以跳过
-//		if !plan.IsAutoCart() {
-//			continue
-//		}
-//		if plan.IsDeskMustPlan() {
-//			// 忽略桌台必点方案
-//			continue
-//		}
-//		if plan.IsDelete() {
-//			continue
-//		}
-//		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
-//		productPackageList := getInstantMustPlanProductList(plan)
-//		// 如果列表为空，跳过不显示
-//		if len(productPackageList) == 0 {
-//			continue
-//		}
-//		autoAddProductNum := 0 // 自动加购商品包的数量
-//		for _, product := range productPackageList {
-//			if product.IsAutoAdd {
-//				autoAddProductNum++
-//			}
-//		}
-//
-//		// 获取购物车中已经点了多个这个必点方案的商品
-//		selectedNum := uint(0)
-//		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
-//		if ok {
-//			for _, productPackage := range productPackageList {
-//				// 不统计自动加购的商品
-//				if productPackage.IsAutoAdd {
-//					continue
-//				}
-//				productPackageUuid := productPackage.Product.Uuid
-//				num := productPackageMap[productPackageUuid]
-//				selectedNum += num
-//			}
-//		}
-//		// 获取购物车中各个必点商品已经点了多少个，还差多少个
-//		mustMap := make(map[uint64]uint) // product_package_uuid => num 每个必点商品还差多少个
-//		if ok {
-//			for _, productPackage := range productPackageList {
-//				// 不统计自动加购的商品
-//				if productPackage.IsAutoAdd {
-//					continue
-//				}
-//				productPackageUuid := productPackage.Product.Uuid
-//				num := productPackageMap[productPackageUuid] // 该商品已点xx个
-//				mustNum := productPackage.MustNum            // 该商品要求点的数量
-//				result := mustNum - num
-//				if result > 0 {
-//					mustMap[productPackageUuid] = result
-//				}
-//			}
-//		}
-//
-//		// 如果必点方案是可选商品，NeedNum的取值要么是1 要么是0
-//		// 当selectedNum>0时，NeedNum为0
-//		needNum := uint(0)
-//		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
-//			if selectedNum > 0 {
-//				needNum = 0
-//			} else {
-//				needNum = 1
-//			}
-//		}
-//		// 如果必点方案是固定商品时，NeedNum的取值为“必选弹框”列表中商品还差数量之和
-//		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
-//			for _, num := range mustMap {
-//				needNum += num
-//			}
-//		}
-//
-//		mustPlan := resp.InstantProductMustPlan{
-//			Name:     plan.Name,
-//			MustType: plan.GetMustType(),
-//			MustRule: plan.GetMustRule(),
-//			//IsAutoCart:   plan.IsAutoCart(),
-//			CanChangeNum: plan.IsCustomerCanChange(),
-//			SelectedNum:  selectedNum, // 已选择xx份
-//			NeedNum:      needNum,     // 还差xx份。不应该算上自动加购商品的数量
-//			Products:     resp.ProductPackageList{List: productPackageList},
-//		}
-//		mustPlanList = append(mustPlanList, mustPlan)
-//	}
-//
-//	return &mustPlanList, nil
-//}
-
-// 获取点餐的获取点餐的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-//func (s *orderSrv) getDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) (*[]resp.InstantProductMustPlan, error) {
-//	mustPlanList := make([]resp.InstantProductMustPlan, 0)
-//
-//	shopCartMustProductInfo := shopCart.GetMustPlanProductInfo()
-//
-//	// 获取必选方案信息
-//	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListAllInfos(ctx)
-//	if err != nil {
-//		return nil, errors.New(err.Error())
-//	}
-//
-//	// 构建必点方案响应列表
-//	for _, plan := range productMustPlans {
-//		if plan.IsDeskMustPlan() {
-//			// 忽略桌台必点方案
-//			continue
-//		}
-//		if plan.IsDelete() {
-//			continue
-//		}
-//		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
-//		productPackageList := getInstantMustPlanProductList(plan)
-//		// 如果列表为空，跳过不显示
-//		if len(productPackageList) == 0 {
-//			continue
-//		}
-//
-//		// 获取购物车中已经点了多个这个必点方案的商品
-//		selectedNum := uint(0)
-//		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
-//		if ok {
-//			for _, productPackage := range productPackageList {
-//				// 不统计自动加购的商品
-//				if productPackage.IsAutoAdd {
-//					continue
-//				}
-//				productPackageUuid := productPackage.Product.Uuid
-//				num := productPackageMap[productPackageUuid]
-//				selectedNum += num
-//			}
-//		}
-//		// 获取购物车中各个必点商品已经点了多少个，还差多少个
-//		mustMap := make(map[uint64]uint) // product_package_uuid => num 每个必点商品还差多少个
-//		if ok {
-//			for _, productPackage := range productPackageList {
-//				productPackageUuid := productPackage.Product.Uuid
-//				num := productPackageMap[productPackageUuid] // 该商品已点xx个
-//				mustNum := productPackage.MustNum            // 该商品要求点的数量
-//				result := mustNum - num
-//				if result > 0 {
-//					mustMap[productPackageUuid] = result
-//				} else {
-//					mustMap[productPackageUuid] = 0
-//				}
-//			}
-//		}
-//
-//		// 如果必点方案是可选商品，NeedNum的取值要么是1 要么是0
-//		// 当selectedNum>0时，NeedNum为0
-//		needNum := uint(0)
-//		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
-//			if selectedNum > 0 {
-//				needNum = 0
-//			} else {
-//				needNum = 1
-//			}
-//		}
-//		// 如果必点方案是固定商品时，NeedNum的取值为“必选弹框”列表中商品还差数量之和
-//		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
-//			for _, num := range mustMap {
-//				needNum += num
-//			}
-//		}
-//
-//		mustPlan := resp.InstantProductMustPlan{
-//			Name:         plan.Name,
-//			MustType:     plan.GetMustType(),
-//			MustRule:     plan.GetMustRule(),
-//			CanChangeNum: plan.IsCustomerCanChange(),
-//			SelectedNum:  selectedNum, // 已选择xx份
-//			NeedNum:      needNum,     // 还差xx份。不应该算上自动加购商品的数量
-//			Products:     resp.ProductPackageList{List: productPackageList},
-//		}
-//		mustPlanList = append(mustPlanList, mustPlan)
-//	}
-//
-//	return &mustPlanList, nil
-//}
-
 // InstantOrderMustPlan 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -2111,16 +1820,12 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 
 	// 查询到购物车信息
-	shopCart2, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 	if err != nil {
 		return nil, err
 	}
 
-	if !shopCart2.SaleBill.IsShowMustPlan() {
-
-	}
-
-	planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCart2)
+	planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo)
 	if errMustPlan != nil {
 		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
 		return nil, errors.New("获取必点列表失败")
@@ -2141,7 +1846,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 
 	var shopCart *resp.ShopCart
 	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
-	if len(autoFlavorProduct) > 0 && shopCart2.SaleBill.IsAutoAddMustProduct() {
+	if len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
@@ -2167,7 +1872,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	}
 
 	list := make([]resp.InstantProductMustPlan, 0)
-	if shopCart2.SaleBill.IsShowMustPlan() {
+	if shopCartInfo.SaleBill.IsShowMustPlan() {
 		list = mustPlanList
 	}
 	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, nil
@@ -2542,4 +2247,57 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	}
 
 	return cartInfo, nil
+}
+
+// InstantOrderMustPlanConfirm 确认必点商品
+func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
+		return false, errors.New("获取销售账单信息失败")
+	}
+
+	// 查询到购物车信息
+	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
+	if err != nil {
+		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+		return false, errors.New("获取购物车信息失败")
+	}
+
+	var mustPlanList []resp.InstantProductMustPlan
+	if saleBill.IsDeskSaleBill() {
+		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, saleBill.DeskUuid)
+		if errMustPlan != nil {
+			return false, errMustPlan
+		}
+		mustPlanList = *mustPlan
+	} else {
+		mustPlan, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo)
+		if errMustPlan != nil {
+			return false, errMustPlan
+		}
+		mustPlanList = *mustPlan
+	}
+
+	if mustPlanList != nil && len(mustPlanList) > 0 {
+		for _, plan := range mustPlanList {
+			if plan.NeedNum > 0 {
+				ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
+				return false, nil
+			}
+		}
+	}
+
+	// 修改sale_bill表的show_must_plan
+	saleBill.ShowMustPlan = constant.SaleBillShowMustPlanNo
+	ctx.Log().Debug("修改sale_bill表的show_must_plan", zap.Any("saleBill.ShowMustPlan", saleBill.ShowMustPlan))
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(req.SaleBillUuid); err != nil {
+		ctx.Log().Error("修改sale_bill表的show_must_plan失败", zap.Error(err))
+		return false, errors.New("确认必点商品失败")
+	}
+
+	return true, nil
 }

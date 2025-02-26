@@ -83,7 +83,7 @@ type SaleBill struct {
 }
 
 func (model *SaleBill) IsShowMustPlan() bool {
-	return model.ShowMustPlan == constant.ShowMustPlanYes
+	return model.ShowMustPlan == constant.SaleBillShowMustPlanYes
 }
 
 func (model *SaleBill) IsAutoAddMustProduct() bool {

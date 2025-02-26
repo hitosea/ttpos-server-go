@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ type ISaleBillRepo interface {
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	UpdateSaleBill(saleBill *model.SaleBill) error
+	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
 }
 
 type saleBillRepo struct {
@@ -60,4 +62,8 @@ func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBi
 
 func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(saleBill).Error
+}
+
+func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
 }
