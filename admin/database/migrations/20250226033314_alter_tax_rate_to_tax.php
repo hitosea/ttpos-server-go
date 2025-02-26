@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class DeleteColumnSaleOrderProductIsCancel extends Migrator
+class AlterTaxRateToTax extends Migrator
 {
     /**
      * Change Method.
@@ -28,12 +28,9 @@ class DeleteColumnSaleOrderProductIsCancel extends Migrator
      */
     public function change()
     {
-        $table = $this->table('sale_order_product');
-        if ($table->hasColumn('is_cancel')) {
-            $table->removeColumn('is_cancel')->update();
-        }
-        if ($table->hasColumn('is_gift')) {
-            $table->removeColumn('is_gift')->update();
+        $table = $this->table('tax');
+        if ($table->hasColumn('tax_rate')) {
+            $table->changeColumn('tax_rate', 'decimal', ['precision' => 10, 'scale' => 4, 'null' => false, 'default' => 0, 'comment' => '税率', 'after' => 'name'])->update();
         }
     }
 }

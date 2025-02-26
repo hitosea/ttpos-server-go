@@ -2,7 +2,6 @@
 
 namespace app\common\model\product;
 
-use help\ClientHelp;
 use think\facade\Db;
 use think\facade\Env;
 use app\common\library\helper;
@@ -16,6 +15,8 @@ use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
+use app\common\model\product\Material;
+use app\common\model\store\MultiLanguageName;
 use app\shop\model\product\Category as CategoryModel;
 
 /**
@@ -364,6 +365,14 @@ class Product extends BaseModel
     public function productAttributeGroup()
     {
         return $this->hasMany(ProductAttributeGroup::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联产品语言
+     */
+    public function MultiLanguageName()
+    {
+        return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
     }
 
 
@@ -1135,7 +1144,7 @@ class Product extends BaseModel
                 $attributeValueText[] = $attribute->attribute->attribute_name_text;
             }
             $attr = [
-                'parent_id' => $group['uuid'],
+                'parent_id' => $group['product_attribute_group_uuid'],
                 'parent_name' => $group->attribute->attribute_name_text,
                 'attribute_name' => $group->attribute->attribute_name,
                 'attribute_value' => $attributeValue,
@@ -1179,15 +1188,20 @@ class Product extends BaseModel
      */
     public static function getProductTaxes($product)
     {
-        $productTaxes = [];
-        if ($product->dineTax) {
-            $productTaxes[] = $product->dineTax;
-        }
-        if ($product->takeoutTax) {
-            $productTaxes[] = $product->takeoutTax;
-        }
-
-        return $productTaxes;
+        return [
+            [
+                'product_tax_type' => 1,
+                'tax_category_id' => $product->dine_tax_uuid,
+                'tax_rate' => $product->dine_tax_rate ?? 0,
+                'product_id' => $product->uuid,
+            ],
+            [
+                'product_tax_type' => 2,
+                'tax_category_id' => $product->takeout_tax_uuid,
+                'tax_rate' => $product->takeout_tax_rate ?? 0,
+                'product_id' => $product->uuid,
+            ],
+        ];
     }
 
     /**
@@ -1761,33 +1775,41 @@ class Product extends BaseModel
     /**
      * 检查名称唯一性
      */
-    public function checkNameExist($name, $shop_supplier_id, $id = null, $lang = 'zh')
+    public function checkNameExist($name, $id = null, $lang = 'zh')
     {
         $filter = [
             [Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$lang'))"), '=', $name],
+            'delete_time' => 0,
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['uuid', '<>', $id];
         }
-        return false;
-        // todo 兼容
-        // return static::where($filter)->value('uuid') ? true : false;
+        $productPackageSql = self::where($filter)->field('name')->buildSql();
+        $materialSql = Material::where($filter)->field('name')->buildSql();
+        $dbName = 'shop' . self::$app_id;
+        $results = Db::connect($dbName)->query("SELECT COUNT(*) FROM ($productPackageSql UNION ALL $materialSql) AS combined_names");
+        $count = array_column($results, 'COUNT(*)')[0] ?? 0;
+        return $count > 0 ? true : false;
     }
 
     /**
      * 检查产品图片名称唯一性
      */
-    public function checkProductImgExist($name, $shop_supplier_id, $id = null)
+    public function checkProductImgExist($name, $id = null)
     {
         $filter = [
             'image_name' => $name,
+            'delete_time' => 0,
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['uuid', '<>', $id];
         }
-        return false;
-        // todo 兼容
-        // return static::where($filter)->where('image_name', '<>', '')->value('uuid') ? true : false;
+        $productPackageSql = self::where($filter)->field('image_name')->buildSql();
+        $materialSql = Material::where($filter)->field('image_name')->buildSql();
+        $dbName = 'shop' . self::$app_id;
+        $results = Db::connect($dbName)->query("SELECT COUNT(*) FROM ($productPackageSql UNION ALL $materialSql) AS combined_names");
+        $count = array_column($results, 'COUNT(*)')[0] ?? 0;
+        return $count > 0 ? true : false;
     }
 
     /**

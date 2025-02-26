@@ -37,13 +37,18 @@ class TaxCategory extends BaseModel
         return extractLanguage($value ?: $data['name']);
     }
 
+    public function setTaxRateAttr($value)
+    {
+        return helper::bcdiv($value, 100, 4);
+    }
+
     /**
      * 获取税率
      */
     public function getTaxRateAttr($value, $data = [])
     {
         $taxRate = $value ?: $data['tax_rate'];
-        return helper::number2($taxRate);
+        return helper::number2(helper::bcmul($taxRate, 100, 2));
     }
 
     /**

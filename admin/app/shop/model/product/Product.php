@@ -170,15 +170,14 @@ class Product extends ProductModel
             return false;
         }
         //
+        $dineTaxUuid = 0; // 堂食税类id
+        $takeoutTaxUuid = 0; // 外带税类id
         if (!empty($data['productTaxes'])) {
-            $taxMap = [
-                1 => 'dine_tax_uuid',    // 堂食税类UUID
-                2 => 'takeout_tax_uuid'  // 外带税类UUID
-            ];
             foreach ($data['productTaxes'] as $tax) {
-                $type = $tax['product_tax_type'] ?? 0;
-                if (isset($taxMap[$type])) {
-                    $data[$taxMap[$type]] = $tax['tax_category_id'] ?? 0;
+                if ($tax['product_tax_type'] == 1) {
+                    $dineTaxUuid = $tax['tax_category_id'] ?? 0;
+                } else if ($tax['product_tax_type'] == 2) {
+                    $takeoutTaxUuid = $tax['tax_category_id'] ?? 0;
                 }
             }
         }
@@ -190,6 +189,8 @@ class Product extends ProductModel
         $data['image_file_uuid'] = $imageIds[0] ?? 0; // 图片文件UUID
         $data['image_name'] = $data['img_name'] ?? 0; // 图片名称
         $data['unit_uuid'] = $data['unit_id'] ?? 0; // 单位UUID
+        $data['dine_tax_uuid'] = $dineTaxUuid; // 堂食税类UUID
+        $data['takeout_tax_uuid'] = $takeoutTaxUuid; // 外带税类UUID
         $data['printer_tag_uuid'] = $data['label_id'] ?? 0; // 打印机标签UUID
         $data['deduct_stock_type'] = $data['deduct_stock_type'] == 10 ? 1 : 0; // 库存计算方法, 0-付款减库存 1-下单减库存 （deduct_stock_type 库存计算方式(10下单减库存 20付款减库存)）
         $data['sauce_required'] = $data['feed_required'] ?? 0; // 是否必选小料, 0-否 1-是
@@ -440,8 +441,6 @@ class Product extends ProductModel
         return $this->transaction(function () use ($data, $productSkuIdList) {
             $data['product_attr'] = isset($data['product_attr']) ? $data['product_attr'] : '';
             $data['product_feed'] = isset($data['product_feed']) ? $data['product_feed'] : '';
-            Log::debug('saveData:' . json_encode($data));
-            Log::debug('productSkuIdList:' . json_encode($productSkuIdList));
             // 更新产品包
             $this->updateProductPackage($data);
             // 产品图片
@@ -451,9 +450,7 @@ class Product extends ProductModel
             // 更新产品加料
             ProductBom::updateFeed($data, $this);
             // 更新产品属性
-            ProductAttribute::updateAttr($data, $this);
-            // 更新产品关联税类
-            // $this->updateProductTaxes($this['product_id'], $data['productTaxes'] ?? []);
+            ProductAttribute::updateAttribute($data, $this);
             // 商品规格
             // $this->addProductSpec($data, $productSkuIdList);
             // 更新加料
@@ -473,6 +470,17 @@ class Product extends ProductModel
         if (!empty($data['image'])) {
             $fileId = $data['image'][0]['file_id'];
         }
+        // 处理税率
+        $dineTaxUuid = 0; // 堂食税类id
+        $takeoutTaxUuid = 0; // 外带税类id
+        $taxList = $data['productTaxes'] ?? [];
+        foreach ($taxList as $item) {
+            if ($item['product_tax_type'] == 1) {
+                $dineTaxUuid = $item['tax_category_id'];
+            } else if ($item['product_tax_type'] == 2) {
+                $takeoutTaxUuid = $item['tax_category_id'];
+            }
+        }
         // 更新产品包
         $this->save([
             'name' => $data['product_name'], // 产品包名称
@@ -480,6 +488,8 @@ class Product extends ProductModel
             'image_file_uuid' => $fileId, // 产品包图片文件id
             'deduct_stock_type' => $data['deduct_stock_type'] == 10 ? 1 : 0, // 扣库存类型: 10-下单减库存, 20-付款减库存
             'unit_uuid' => $data['unit_id'], // 单位uuid
+            'dine_tax_uuid' => $dineTaxUuid, // 堂食税类id
+            'takeout_tax_uuid' => $takeoutTaxUuid, // 外带税类id
             'category_uuid' => $data['category_id'], // 分类uuid
             'status' => $data['product_status'] == 10 ? 1 : 0, // 状态: 10-上架, 20-下架
             'is_show_cashier' => $data['is_show_cashier'], // 是否显示收银台: 10-显示, 20-隐藏
@@ -491,34 +501,13 @@ class Product extends ProductModel
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
             'sauce_max_selection' => $data['feed_max_select'], // 加料最多可选数量
-            'special_category_uuid' => $data['special_id'], // 热门分类uuid
+            'special_category_uuid' => $data['special_id'], // 热门分类
             'describe' => $data['selling_point'], // 卖点
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
         ]);
         // 更新产品包多语言
         $multiLanguageName = new MultiLanguageName();
         $multiLanguageName->saveNames($data['product_name'], $this['multi_language_name_uuid']);
-    }
-
-    /**
-     * 更新产品关联税类
-     */
-    private function updateProductTaxes($productId, $productTax)
-    {
-        if (empty($productTax)) {
-            return;
-        }
-        $model = new ProductTax;
-        $model->destroy(['product_id' => $productId]);
-        $data = [];
-        foreach ($productTax as $item) {
-            $data[] = [
-                'product_id' => $productId,
-                'product_tax_type' => $item['product_tax_type'] ?? 0,
-                'tax_category_id' => $item['tax_category_id'] ?? 0,
-            ];
-        }
-        $model->saveAll($data);
     }
 
     /**
@@ -742,10 +731,39 @@ class Product extends ProductModel
     {
         $product_ids = explode(',', $product_ids);
         if (empty($product_ids)) return false;
-        $products = $this->where('uuid', 'in', $product_ids)->field(['uuid'])->select();
+        $products = $this->with([
+            'sku',
+            'feed',
+            'productAttributeGroup' => [
+                'productAttribute',
+            ],
+        ])->whereIn('uuid', $product_ids)->select();
         // 开启事务
         $this->startTrans();
         try {
+            $multiLanguageName = new MultiLanguageName();
+            foreach ($products as $product) {
+                // 删除规格
+                foreach ($product->sku as $sku) {
+                    $sku->delete();
+                }
+                // 删除加料
+                foreach ($product->feed as $feed) {
+                    $feed->delete();
+                }
+                // 删除产品属性
+                foreach ($product->productAttributeGroup as $productAttributeGroup) {
+                    foreach ($productAttributeGroup->productAttribute as $productAttribute) {
+                        $productAttribute->delete();
+                    }   
+                    $productAttributeGroup->delete();
+                }
+                // 删除产品语言
+                $multiLanguageName->clearCache($product->multi_language_name_uuid);
+                $product->multiLanguageName->delete();
+                // 删除产品
+                $product->delete();
+            }
             // todo 兼容
             // foreach ($products as $product) {
             //     $product_id = $product['product_id'] ?? 0;

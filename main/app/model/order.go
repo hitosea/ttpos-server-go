@@ -1650,14 +1650,6 @@ func (model *SaleOrderBuffetDelayProduct) GetPrice(num uint) float64 {
 	return price
 }
 
-// SaleOrderProductMaterial 销售订单产品原料
-type SaleOrderProductMaterial struct {
-	BaseModel
-	// 关联ID字段
-	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20);default:0;comment:销售订单产品ID" json:"sale_order_product_uuid"`
-	BomUuid              uint64 `gorm:"column:bom_uuid;type:bigint(20);default:0;comment:BOM ID" json:"bom_uuid"`
-}
-
 // SaleBillOperationRecord 桌台账单操作记录
 type SaleBillOperationRecord struct {
 	BaseModel

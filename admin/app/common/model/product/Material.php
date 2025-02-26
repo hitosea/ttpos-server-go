@@ -6,8 +6,8 @@ use help\ValidateHelp;
 use app\common\model\BaseModel;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
-use app\common\model\product\Product;
 use app\common\model\store\MultiLanguageName;
+use think\facade\Log;
 
 /**
  * 原料信息表
@@ -122,6 +122,8 @@ class Material extends BaseModel
             $this->error = '商品名称已存在';
             return false;
         }
+        Log::debug('product_name:' . $product_name);
+        return false;
         // 判断图片id是否存在
         $images = isset($data['image']) ? $data['image'] : [];
         $imageIds = array_map(function ($image) {
