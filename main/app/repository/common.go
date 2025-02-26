@@ -104,7 +104,7 @@ func (r *commonRepo) WhereByDeskUuid(uuid uint64) DBOption {
 // WhereBySaleBillUuid 根据销售单UUID查询
 func (r *commonRepo) WhereBySaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("uuid = ?", uuid)
+		return db.Where("sale_bill_uuid = ?", uuid)
 	}
 }
 

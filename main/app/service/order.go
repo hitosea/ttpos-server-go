@@ -1544,10 +1544,39 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-	// 创建销售订单商品
-	_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(*saleOrderProduct)
-	if errCreate != nil {
-		return nil, errCreate
+
+	sign := saleOrderProduct.GenerateProductSign()
+	saleOrderProduct.Sign = sign
+	ctx.Log().Debug("生成商品签名", zap.Any("sign", sign))
+
+	// 查询是否存在该商品
+	ctx.Log().Debug("查询是否存在该商品", zap.Any("sign", sign), zap.Any("saleBillUuid", req.SaleBillUuid), zap.Any("saleOrderUuid", req.SaleOrderUuid))
+	orderProduct, err := repository.NewOrderProductRepo(db).GetProductInfo(
+		repository.CommonRepo.WhereBySign(sign),
+		repository.CommonRepo.WhereBySaleBillUuid(req.SaleBillUuid),
+		repository.CommonRepo.WhereBySaleOrderUuid(req.SaleOrderUuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		ctx.Log().Debug("查询数据失败", zap.Error(err))
+		return nil, errors.New("查询数据失败")
+	}
+
+	if orderProduct.Uuid != 0 {
+		ctx.Log().Debug("查询到数据，更新数据")
+		orderProduct.Num += saleOrderProduct.Num
+		orderProduct.SalePrice = saleOrderProduct.SalePrice
+		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
+			ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
+			return nil, errors.New("添加商品失败")
+		}
+	} else {
+		ctx.Log().Debug("没查询到数据，新建销售订单商品数据")
+		// 创建销售订单商品
+		_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(*saleOrderProduct)
+		if errCreate != nil {
+			return nil, errCreate
+		}
 	}
 
 	newSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)

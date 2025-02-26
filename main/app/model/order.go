@@ -1703,13 +1703,14 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜时间
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案-送厨批次-改价时间-赠菜时间-退菜时间
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
+		model.MustPlanUuid,
 		model.ProductionOrderUuid,
 		model.ChangePriceTime,
 		model.GiftTime,
