@@ -281,6 +281,9 @@ func (model *SaleOrder) CalcOrderOriginServiceFee(serviceFeeRate float64, servic
 	} else {
 		// 如果按比例收取
 		for _, saleOrderProduct := range model.SaleOrderProducts {
+			if saleOrderProduct.SaleOrderUuid != model.Uuid {
+				continue
+			}
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue
 			}
@@ -306,6 +309,9 @@ func (model *SaleOrder) CalcOrderOriginServiceTaxFee(serviceFeeRate float64, tax
 	} else {
 		// 如果按比例收取
 		for _, saleOrderProduct := range model.SaleOrderProducts {
+			if saleOrderProduct.SaleOrderUuid != model.Uuid {
+				continue
+			}
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue
 			}
@@ -429,6 +435,10 @@ func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
 func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 	sumSalePrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		// 销售订单商品已接单且未删除商品
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？要累计上
@@ -450,6 +460,10 @@ func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 	sumPrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		// 销售订单商品已接单且未删除商品
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
@@ -479,6 +493,10 @@ func (model *SaleOrder) CalcProductAmount() float64 {
 func (model *SaleOrder) CalcTaxFee() float64 {
 	taxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
 			// 退菜？退了不计入
@@ -497,6 +515,10 @@ func (model *SaleOrder) CalcTaxFee() float64 {
 func (model *SaleOrder) CalcOriginProductTaxFee(taxFeeType int) float64 {
 	taxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
 			// 退菜？退了不计入
@@ -515,6 +537,10 @@ func (model *SaleOrder) CalcOriginProductTaxFee(taxFeeType int) float64 {
 func (model *SaleOrder) CalcCustomDiscountFee() float64 {
 	customDiscountFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
 			// 退菜？退了不计入
@@ -533,6 +559,10 @@ func (model *SaleOrder) CalcCustomDiscountFee() float64 {
 func (model *SaleOrder) CalcMemberDiscountFee() float64 {
 	memberDiscountFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
 			// 退菜？退了不计入
@@ -550,6 +580,10 @@ func (model *SaleOrder) CalcMemberDiscountFee() float64 {
 func (model *SaleOrder) CalcServiceTaxFee() float64 {
 	serviceTaxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
 		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 			// 赠菜？免费了不计入
 			// 退菜？退了不计入
@@ -685,6 +719,10 @@ func (model *SaleOrder) CalcServiceFee(serviceFeeType int, serviceFeeValue float
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercent || serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
 		serviceFee := decimal.NewFromFloat(0)
 		for _, orderProduct := range model.SaleOrderProducts {
+			// 已经移动到其他订单的商品不计
+			if orderProduct.SaleOrderUuid != model.Uuid {
+				continue
+			}
 			// 销售商品已接单且为删除
 			if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
 				// 不计入赠菜、不计入退菜

@@ -2230,6 +2230,8 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 				saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
 				ctx.Log().Debug("移动商品,目标销售订单中移入一个销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 要将saleOrderProduct这个商品加入到目标订单的数组中，否则目标订单的金额计算会少这个商品的金额
+				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
 				// 记录到待更新列表中
 				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 			}
@@ -2253,27 +2255,79 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		ctx.Log().Debug("更新销售订单商品", zap.Any("waitUpdateSaleOrderProductMap len", len(waitUpdateSaleOrderProductMap)))
 		for _, saleOrderProduct := range waitUpdateSaleOrderProductMap {
 			ctx.Log().Debug("更新销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+
 			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductOnly(saleOrderProduct); err != nil {
 				return err
 			}
 		}
-		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrder(saleOrderFrom); err != nil {
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("222222222222222")
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderFrom); err != nil {
 			return err
 		}
-		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrder(saleOrderTo); err != nil {
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderTo); err != nil {
 			return err
 		}
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
+		fmt.Println("-------------------")
 
-		info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-		if err != nil {
-			return err
-		}
-		cartInfo = info
 		return nil
 	})
 	if errUpdateDB != nil {
 		return nil, errors.New("更新数据失败")
 	}
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+	cartInfo = info
 
 	return cartInfo, nil
 }
