@@ -8,6 +8,7 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Category;
 use app\common\model\erp\ErpPurchaseDetail;
 use app\common\model\erp\ErpDamagedProductRecord;
+use think\facade\Db;
 
 /**
  * 商品BOM模型
@@ -15,10 +16,12 @@ use app\common\model\erp\ErpDamagedProductRecord;
 class ProductBom extends BaseModel
 {
     use SoftDelete;
+
     protected $name = 'product_bom';
     protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段
@@ -229,17 +232,21 @@ class ProductBom extends BaseModel
      */
     public function checkProductBarcodeExist($name, $uuid = null)
     {
-        $filter = [
-            'bom.barcode_value' => $name,
-            'p.delete_time' => 0,
+        $productBomFilter = [
+            ['barcode_value', '=', $name],
+            ['barcode_value', '<>', ''],
+            ['delete_time', '=', 0],
         ];
+        $materialFilter = $productBomFilter;
         if (!is_null($uuid) && $uuid != 0) {
-            $filter[] = ['bom.product_package_uuid', '<>', $uuid];
+            $productBomFilter[] = ['product_package_uuid', '<>', $uuid];
+            $materialFilter[] = ['uuid', '<>', $uuid];
         }
-        return static::alias('bom')
-            ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
-            ->where($filter)
-            ->where('bom.barcode_value', '<>', '') // 兼容导入条码可为空
-            ->value('bom.uuid') ? true : false;
+        $productBomSql = self::where($productBomFilter)->field('uuid')->buildSql();
+        $materialSql = Material::where($materialFilter)->field('uuid')->buildSql();
+        $dbName = 'shop' . self::$app_id;
+        $results = Db::connect($dbName)->query("SELECT COUNT(*) FROM ($productBomSql UNION ALL $materialSql) AS combined_names");
+        $count = array_column($results, 'COUNT(*)')[0] ?? 0;
+        return $count > 0 ? true : false;
     }
 }

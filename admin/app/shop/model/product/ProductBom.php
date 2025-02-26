@@ -59,7 +59,9 @@ class ProductBom extends ProductBomModel
         }
         // 删除规格
         if (!empty($flavorUuidList)) {
-            $flavorList = self::whereNotIn('uuid', $flavorUuidList)->select();
+            $flavorList = self::whereNotIn('uuid', $flavorUuidList)
+                ->where('product_flavor_uuid', '>', 0)
+                ->select();
             foreach ($flavorList as $flavor) {
                 $flavor->delete();
             }
@@ -121,6 +123,7 @@ class ProductBom extends ProductBomModel
         if (!empty($feedUuidList)) {
             $feedList = self::where('product_package_uuid', $product['uuid'])
                 ->whereNotIn('product_sauce_uuid', $feedUuidList)
+                ->where('product_sauce_uuid', '>', 0)
                 ->select();
             foreach ($feedList as $feed) {
                 $feed->delete();

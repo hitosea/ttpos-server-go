@@ -30,10 +30,10 @@ class CheckService
                     $unique = (new \app\common\model\product\ProductBom)->checkProductBarcodeExist($name, $id);
                     break;
                 case 'product_img':
-                    $unique = (new \app\common\model\product\Product)->checkProductImgExist($name, $shop_supplier_id, $id);
+                    $unique = (new \app\common\model\product\Product)->checkProductImgExist($name, $id);
                     break;
                 case 'product':
-                    $unique = (new \app\common\model\product\Product)->checkNameExist($name, $shop_supplier_id, $id, $lang);
+                    $unique = (new \app\common\model\product\Product)->checkNameExist($name, $id, $lang);
                     break;
                 case 'category':
                     $unique = (new \app\common\model\product\Category)->checkNameExist($name, $shop_supplier_id, $id, $lang);
