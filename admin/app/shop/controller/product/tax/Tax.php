@@ -25,6 +25,9 @@ class Tax extends Controller
         $data = $this->request->param();
         $model = new TaxCategory();
         $list = $model->getList($data);
+        foreach ($list as $item) {
+            $item['id'] = $item['uuid'];
+        }
         return $this->renderSuccess('', compact('list'));
     }
 }

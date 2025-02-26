@@ -8,6 +8,8 @@ use app\common\model\tax\TaxCategory;
 use app\common\model\buffet\BuffetTax;
 use app\common\model\product\ProductTax;
 use app\common\enum\settings\SettingEnum;
+use app\common\library\helper;
+use app\common\model\product\Product;
 use app\shop\model\settings\Setting as SettingModel;
 
 /**
@@ -124,7 +126,7 @@ class Supplier extends Controller
                 }
                 // 税类名称不能重复
                 $exist = $taxCategoryModel->where('name', '=', $name)->find();
-                if ($exist && in_array($item['action'], ['add', 'edit']) && $exist['id'] != $item['id']) {
+                if ($exist && in_array($item['action'], ['add', 'edit']) && $exist['uuid'] != $item['id']) {
                     return $this->renderError('税类名称已存在');
                 }
                 $taxRate = round($taxRate, 2);
@@ -143,13 +145,19 @@ class Supplier extends Controller
                 // 如果是删除 - 保留数据，只是修改状态
                 if (isset($item['action']) && $item['action'] == 'delete') {
                     if (isset($item['id'])) {
+                        $productUse = Product::where('dine_tax_uuid', $item['id'])
+                            ->whereOr('takeout_tax_uuid', $item['id'])
+                            ->count();
+                        if ($productUse > 0) {
+                            return $this->renderError('税类正在使用，不能删除');
+                        }
                         // todo 兼容 - 如果在使用，则不能删除
                         // $productUse = (new ProductTax)->isUseTax($item['id']);
                         // $buffetUse = (new BuffetTax)->isUseTax($item['id']);
                         // if ($productUse || $buffetUse) {
                         //     return $this->renderError('税类正在使用，不能删除');
                         // }
-                        $taxCategoryModel->destroy(['id' => $item['id']]);
+                        $taxCategoryModel->destroy(['uuid' => $item['id']]);
                     }
                     continue;
                 }
@@ -265,6 +273,9 @@ class Supplier extends Controller
         if ($key == SettingEnum::TAX_RATE) {
             // 获取税类列表
             $taxCategoryList = (new TaxCategory)->getList();
+            foreach ($taxCategoryList as $item) {
+                $item['id'] = $item['uuid'];
+            }
             $ret['add_tax_category'] = $taxCategoryList;
         }
         $vars['values'] = $ret;

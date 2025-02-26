@@ -1188,15 +1188,20 @@ class Product extends BaseModel
      */
     public static function getProductTaxes($product)
     {
-        $productTaxes = [];
-        if ($product->dineTax) {
-            $productTaxes[] = $product->dineTax;
-        }
-        if ($product->takeoutTax) {
-            $productTaxes[] = $product->takeoutTax;
-        }
-
-        return $productTaxes;
+        return [
+            [
+                'product_tax_type' => 1,
+                'tax_category_id' => $product->dine_tax_uuid,
+                'tax_rate' => $product->dine_tax_rate ?? 0,
+                'product_id' => $product->uuid,
+            ],
+            [
+                'product_tax_type' => 2,
+                'tax_category_id' => $product->takeout_tax_uuid,
+                'tax_rate' => $product->takeout_tax_rate ?? 0,
+                'product_id' => $product->uuid,
+            ],
+        ];
     }
 
     /**
