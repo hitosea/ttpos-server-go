@@ -13,8 +13,8 @@ const (
 	ProductMustPlanMustRuleAll = 0 // 全选，固定商品
 	ProductMustPlanMustRuleAny = 1 // 任选，可选商品
 
-	ProductMustPlanMustTypeEachPerson = 1 // 每人必选
-	ProductMustPlanMustTypeEachOrder  = 0 // 每单必选
+	ProductMustPlanMustTypeEachPerson = 1 // 每人必选，每人必选1份
+	ProductMustPlanMustTypeEachOrder  = 0 // 每单必选,每单必选1份
 )
 
 const (
@@ -87,4 +87,16 @@ const (
 const (
 	ProductMustPlanUseChannelDining = "10" // 点餐方式
 	ProductMustPlanUseChannelDesk   = "20" // 桌台方式
+)
+
+// 是否显示必点方案
+const (
+	ShowMustPlanYes = 1 // 是, 显示必点方案
+	ShowMustPlanNo  = 0 // 否, 不显示必点方案
+)
+
+// 是否自动加购必点商品
+const (
+	AutoAddMustProductYes = 1 // 是, 自动加购必点商品
+	AutoAddMustProductNo  = 0 // 否, 不自动加购必点商品
 )

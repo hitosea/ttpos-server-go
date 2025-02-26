@@ -68,6 +68,10 @@ type SaleBill struct {
 	BuffetPackage2Uuid uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
 	DeviceUuid         uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
 
+	// 必点方案相关字段
+	ShowMustPlan       uint `gorm:"column:show_must_plan;type:tinyint(1);default:1;comment:是否显示必点方案, 0-不显示 1-显示" json:"show_must_plan"`
+	AutoAddMustProduct uint `gorm:"column:auto_add_must_product;type:tinyint(1);default:1;comment:是否自动加购必点商品, 0-不自动加购 1-自动加购" json:"auto_add_must_product"`
+
 	// 关联模型
 	SaleOrders      []*SaleOrder     `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	SaleBillSetting *SaleBillSetting `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -75,6 +79,14 @@ type SaleBill struct {
 	Desk            *Desk            `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+}
+
+func (model *SaleBill) IsShowMustPlan() bool {
+	return model.ShowMustPlan == constant.ShowMustPlanYes
+}
+
+func (model *SaleBill) IsAutoAddMustProduct() bool {
+	return model.AutoAddMustProduct == constant.AutoAddMustProductYes
 }
 
 // 返回新的销售账单
@@ -827,6 +839,7 @@ type SaleOrderProduct struct {
 	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20);not null;default:0;comment:'商品包ID'" json:"product_package_uuid"`
 	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);not null;default:0;comment:'销售账单ID'" json:"sale_bill_uuid"`
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:'销售订单ID'" json:"sale_order_uuid"`
+	MustPlanUuid          uint64 `gorm:"column:must_plan_uuid;type:bigint(20);not null;default:0;comment:'必点方案ID,产品要求用这种方式标注各个必点'" json:"must_plan_uuid"`
 
 	// 其他字段
 	Sign             string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`

@@ -321,9 +321,15 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 func (h *InstantHandler) OrderMustPlan(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到点餐页面必点方案接口请求")
+	deviceSn := ctx.GetDeviceSn()
+	ctx.Log().Debug("点餐页面必点方案接口", zap.Any("deviceSn", deviceSn))
+	if deviceSn == "" {
+		helper.ResponseFail(c, constant.CodeFail, errors.ErrNoDeviceSn)
+		return
+	}
 
 	// 获取必点方案信息
-	res, err := h.orderService.InstantOrderMustPlan(ctx)
+	res, err := h.orderService.InstantOrderMustPlan(ctx, deviceSn)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

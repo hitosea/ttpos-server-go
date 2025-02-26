@@ -62,6 +62,35 @@ func (model *ProductMustPlan) IsDeskMustPlan() bool {
 	return strings.Contains(model.UseChannel, constant.ProductMustPlanUseChannelDesk)
 }
 
+func (model *ProductMustPlan) IsInstantMustPlan() bool {
+	return strings.Contains(model.UseChannel, constant.ProductMustPlanUseChannelDining)
+}
+
+// 获取点餐必点方案的还需选择商品的数量
+func (model *ProductMustPlan) GetInstantProductNeedNum() uint {
+	if model.GetMustType() == constant.ProductMustPlanMustTypeEachOrder {
+		// 固定商品。每单必点1份，则需要点多少份由商品列表的length决定
+		if model.GetMustRule() == constant.ProductMustPlanMustRuleAll {
+			return uint(len(model.ProductMustPlanItems))
+		}
+		// 可选商品。每单必点1份，则只需要点1份商品
+		if model.GetMustRule() == constant.ProductMustPlanMustRuleAny {
+			return 1
+		}
+	}
+	if model.GetMustType() == constant.ProductMustPlanMustTypeEachPerson {
+		// 固定商品。每人必选一份，则需要点多少份由商品列表的length 和 桌台人数决定。 length*人数
+		if model.GetMustRule() == constant.ProductMustPlanMustRuleAll {
+			return uint(len(model.ProductMustPlanItems)) // * 人数
+		}
+		// 可选商品。每人必选一份，则只需要点1份商品 * 人数
+		if model.GetMustRule() == constant.ProductMustPlanMustRuleAny {
+			return 1 // * 人数
+		}
+	}
+	return 1
+}
+
 // 商品必选商品计划区域表 `ttpos_product_must_plan_region`
 type ProductMustPlanRegion struct {
 	BaseModel

@@ -325,7 +325,7 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 	return info, nil
 }
 
-// GetOrderCartInfo 获取点餐购物车信息
+// GetOrderCartInfo 获取购物车信息
 func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, error) {
 
 	repo := NewSaleBillRepo(r.db)

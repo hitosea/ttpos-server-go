@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
     `device_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询',
 
+    -- 必点方案相关
+    `show_must_plan` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否显示必点方案, 0-不显示 1-显示.点击确认必点商品按钮后改值为0',
+    `auto_add_must_product` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否自动加购必点商品, 0-不自动加购 1-自动加购.自动将商品加入购物车后改值为0',
+
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
