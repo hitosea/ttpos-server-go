@@ -31,6 +31,7 @@ type IOrderRepo interface {
 	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                           // 判断是否存在部分支付
+	HideOrder(saleBillUuid uint64) error                                                                                      // 隐藏订单
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                          // 删除订单产品
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
 	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
@@ -332,6 +333,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 	saleBill, err := repo.GetSaleBill(
 		CommonRepo.WhereByUuid(saleBillUuid),
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByIsHide(false),
 	)
 	if err != nil {
 		return nil, err
@@ -744,6 +746,20 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 		}
 	}
 
+	return tx.Commit().Error
+}
+
+// HideOrder 隐藏订单
+func (r *orderRepo) HideOrder(saleBillUuid uint64) error {
+	now := uint(time.Now().Unix())
+	tx := r.db.Begin()
+	// 删除销售订单
+	if err := tx.Model(&model.SaleBill{}).
+		Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusPending).
+		Update("hide_bill_time", now).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 	return tx.Commit().Error
 }
 
