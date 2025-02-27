@@ -3205,6 +3205,9 @@ definitions:
       product_num:
         description: 商品数量
         type: integer
+      status:
+        description: 订单状态, 0-未结账 1-已结账
+        type: integer
       uuid:
         type: integer
     type: object
@@ -4701,6 +4704,29 @@ paths:
         "404":
           description: 未找到
       summary: 修改购物车某个商品的数量
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/hide:
+    post:
+      consumes:
+      - application/json
+      description: 隐藏（挂单）
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 隐藏点餐订单成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 隐藏（挂单）
       tags:
       - 收银端.点餐
   /cashier/instant/order/must_plan/confirm:

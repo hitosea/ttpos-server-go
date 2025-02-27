@@ -40,6 +40,7 @@ type IOrderSrv interface {
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                    // 删除订单
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                          // 判断桌台是否可取消
+	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                  // 挂单
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                     // 修改订单商品价格
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                         // 修改订单人数
@@ -872,6 +873,43 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 	return nil
 }
 
+// HideOrder 隐藏订单（挂单）
+func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+
+	// 获取信息源
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, constant.OptionalUuid)
+	if err != nil {
+		return nil, err
+	}
+	if billInfo.ID == 0 {
+		return nil, errors.New("找不到订单")
+	}
+	if billInfo.Status != constant.SaleBillStatusPending {
+		return nil, errors.New("订单状态不允许挂单")
+	}
+
+	// 隐藏
+	err = orderRepo.HideOrder(saleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		return &resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)}, nil
+	}
+
+	return info, nil
+}
+
 // OrderProductDelete 删除订单商品
 func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -880,7 +918,6 @@ func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUui
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
-	//orderRepo := repository.NewOrderRepo(db)
 
 	// 获取操作的销售账单信息
 	saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
@@ -940,6 +977,7 @@ func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUui
 	return info, nil
 }
 
+// 从DB获取销售订单
 func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrderUuid, saleOrderProductUuid uint64) (*model.SaleBill, *model.SaleOrder, *model.SaleOrderProduct, error) {
 	newSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {

@@ -1640,6 +1640,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/hide": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "隐藏（挂单）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "隐藏（挂单）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "隐藏点餐订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/must_plan/confirm": {
             "post": {
                 "description": "确认必点商品",
@@ -9334,6 +9371,10 @@ const docTemplate = `{
                 },
                 "product_num": {
                     "description": "商品数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "订单状态, 0-未结账 1-已结账",
                     "type": "integer"
                 },
                 "uuid": {

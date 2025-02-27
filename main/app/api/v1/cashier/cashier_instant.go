@@ -62,6 +62,35 @@ func (h *InstantHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// HideOrder 处理隐藏点餐订单（挂单）
+// @Summary 隐藏（挂单）
+// @Description 隐藏（挂单）
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @Success 200 {object} nil "隐藏点餐订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/hide [post]
+func (h *InstantHandler) HideOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderDeleteReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	//
+	shopCart, err := h.orderService.HideOrder(ctx, req.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, shopCart)
+}
+
 // OrderProductDelete 处理删除点餐订单商品
 // @Summary 删除点餐订单商品
 // @Description 删除点餐订单商品
@@ -202,7 +231,6 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 		return
 	}
 	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
-
 	res, err := h.orderService.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -509,6 +537,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)                         // 创建点餐订单。 废弃，点餐点餐由系统自动创建
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                // 取消点餐订单
+		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                    // 隐藏点餐订单（挂单）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)               // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)             // 点餐订单商品改价
 		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)                  // 点餐订单修改人数
