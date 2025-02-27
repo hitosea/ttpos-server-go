@@ -904,6 +904,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/open": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建桌台订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "创建桌台订单",
+                "parameters": [
+                    {
+                        "description": "创建桌台订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskOrderCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建桌台订单成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.CreateDeskOrderResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/cancel": {
             "post": {
                 "security": [
@@ -998,48 +1040,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/desk/order/create": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "创建桌台订单",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "创建桌台订单",
-                "parameters": [
-                    {
-                        "description": "创建桌台订单参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeskOrderCreateReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "创建桌台订单成功",
-                        "schema": {
-                            "$ref": "#/definitions/resp.CreateDeskOrderResp"
                         }
                     },
                     "404": {
@@ -2073,6 +2073,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/sale_order/delete": {
+            "delete": {
+                "description": "删除一个销售订单(删除拆单)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "删除一个销售订单(删除拆单)",
+                "parameters": [
+                    {
+                        "description": "删除一个销售订单(删除拆单)参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderSaleOrderDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/sale_order/move_product": {
             "post": {
                 "description": "从一个销售订单移动商品到另一个销售订单",
@@ -2109,7 +2155,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.RechargeOrder"
+                                            "$ref": "#/definitions/resp.ShopCart"
                                         }
                                     }
                                 }
@@ -5281,6 +5327,19 @@ const docTemplate = `{
             "properties": {
                 "sale_bill_uuid": {
                     "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.InstantOrderSaleOrderDeleteReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
                     "type": "integer"
                 }
             }

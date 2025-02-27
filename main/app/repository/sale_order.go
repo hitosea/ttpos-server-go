@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ type ISaleOrderRepo interface {
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderOnly(obj *model.SaleOrder) error
+	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 }
 
 type saleOrderRepo struct {
@@ -51,4 +53,8 @@ func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
 
 func (r *saleOrderRepo) UpdateSaleOrderOnly(obj *model.SaleOrder) error {
 	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error {
+	return r.db.Model(&model.SaleOrder{}).Select("delete_time").Where("uuid = ?", uuid).Updates(model.SaleOrder{BaseModel: model.BaseModel{DeleteTime: time.Now().Unix()}}).Error
 }
