@@ -115,7 +115,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @param data body req.DeskOrderCreateReq true "创建桌台订单参数"
 // @Success 200 {object} resp.CreateDeskOrderResp "创建桌台订单成功"
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/create [post]
+// @Router /cashier/desk/open [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -371,7 +371,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                             // 获取桌台列表
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                             // 获取桌台详情
 		privateApi.POST("/desk/close", wrapper.CloseDesk)                             // 关闭桌台
-		privateApi.POST("/desk/order/create", wrapper.CreateDeskOrder)                // 创建桌台订单
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                        // 创建桌台订单(开桌)
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)   // 删除桌台订单商品
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice) // 桌台订单商品改价
