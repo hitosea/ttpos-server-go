@@ -916,12 +916,15 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 
 // ShowOrder 显示订单
 func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error) {
-	ctx.Log().Debug("显示一个销售订单(显示拆单)", zap.Any("request", req))
-	db := s.dbm.GetDB(ctx.GetDbId())
-
 	// 加锁
-	s.lock.LockUuid(req.SaleBillUuid)
-	defer s.lock.UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	ctx.Log().Debug("取单", zap.Any("request", req))
+	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 判断是否有未挂单的点餐账单
 	hasShowOrder, err := repository.NewOrderRepo(db).HasShowOrder(ctx.GetDeviceUuid())
@@ -945,12 +948,15 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 
 	// 修改销售账单信息，标记账单取出
 	saleBill.SetShowSaleBill(ctx.GetDeviceUuid())
-
-	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
+	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdate != nil {
 		return nil, errors.New("更新销售账单失败")
 	}
 
-	return s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 // InstantHideOrderList 获取挂单订单列表
@@ -1583,183 +1589,192 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 	return shopCart, nil
 }
 
+func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOrderUuid, dskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取商品包信息
+	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(flavorProductBomUuid)
+	if err != nil {
+		return nil, err
+	}
+	if productBom.IsDelete() {
+		return nil, errors.New("商品规格已经删除")
+	}
+	productPackage := productBom.ProductPackage
+
+	// 获取某商品规格信息
+	flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(flavorProductBomUuid)
+	if errFlavorProductBom != nil {
+		return nil, errFlavorProductBom
+	}
+
+	// 获取加料信息
+	sauceProductBoms := make(map[uint64]*model.ProductBom)
+	if len(sauceProductBomUuidList) > 0 {
+		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(sauceProductBomUuidList)
+		if errSauceProductBomList != nil {
+			return nil, errSauceProductBomList
+		}
+		for i, bom := range sauceProductBomList {
+			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+		}
+	}
+
+	// 获取属性信息
+	var productAttributes map[uint64]*model.ProductPackageAttribute
+	if len(productAttributes) > 0 {
+		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(productPackageAttributeUuidList)
+		if errProductAttributeList != nil {
+			return nil, errProductAttributeList
+		}
+		for i, attribute := range productAttributeList {
+			productAttributes[attribute.Uuid] = productAttributeList[i]
+		}
+	}
+
+	// 构建加料信息
+	sauces := make([]model.Sauce, 0)
+	for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
+		sauce := model.Sauce{
+			Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+			Price:          sauceProductBom.Price,
+			ProductBomUuid: sauceProductBomUuid,
+		}
+		sauces = append(sauces, sauce)
+	}
+
+	// 构建属性信息
+	attributes := make([]model.Attribute, 0)
+	for productAttributeUuid, productAttribute := range productAttributes {
+		attribute := model.Attribute{
+			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+			ProductAttributeUuid: productAttributeUuid,
+		}
+		attributes = append(attributes, attribute)
+	}
+
+	saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
+		Name:                   productPackage.Name,
+		OpenMemberDiscount:     productPackage.OpenDiscount,
+		TaxRate:                productPackage.TaxRate(diningMethod),
+		DeductStockType:        productPackage.DeductStockType,
+		MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
+		ImageFileUuid:          productPackage.ImageFileUuid,
+		ProductPackageUuid:     productPackage.Uuid,
+		SaleBillUuid:           saleBillUuid,
+		SaleOrderUuid:          saleOrderUuid,
+		MemberDiscountRate:     memberDiscountRate,
+		MemberCardDiscountRate: memberCardDiscountRate,
+		CustomDiscountRate:     customDiscountRate,
+		Sauces:                 sauces,
+		Flavor: model.Flavor{
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
+			Price:          flavorProductBom.Price,
+			ProductBomUuid: flavorProductBomUuid,
+		},
+		Attribute: attributes,
+	})
+	// 设置必点信息
+	var mustPlanUuid uint64
+	mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, saleBillUuid, productPackage.Uuid, dskUuid)
+	ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
+	saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
+
+	return saleOrderProduct, nil
+}
+
 // OrderCartProductAdd 向购物车添加商品
 func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error) {
-	s.lock.LockUuid(req.SaleBillUuid)
-	defer s.lock.UnlockUuid(req.SaleBillUuid)
-	var saleOrderProduct *model.SaleOrderProduct
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 当前销售账单数据
-	//var saleBill *model.SaleBill
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	var saleOrder *model.SaleOrder
-	for i, _ := range saleBill.SaleOrders {
-		order := saleBill.SaleOrders[i]
-		if order.Uuid == req.SaleOrderUuid {
-			saleOrder = saleBill.SaleOrders[i]
-			break
-		}
-	}
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
 
 	// 录入订单商品数据
-	{
-		// 获取商品包信息
-		productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(req.FlavorUuid)
-		if err != nil {
-			return nil, err
-		}
-		if productBom.IsDelete() {
-			return nil, errors.New("商品规格已经删除")
-		}
-
-		// 获取某商品规格信息
-		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(req.FlavorUuid)
-		if errFlavorProductBom != nil {
-			return nil, errFlavorProductBom
-		}
-
-		// 获取加料信息
-		sauceProductBoms := make(map[uint64]*model.ProductBom)
-		if len(req.SauceUuidList) > 0 {
-			sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(req.SauceUuidList)
-			if errSauceProductBomList != nil {
-				return nil, errSauceProductBomList
-			}
-			for i, bom := range sauceProductBomList {
-				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-			}
-		}
-
-		// 获取属性信息
-		var productAttributes map[uint64]*model.ProductPackageAttribute
-		if len(productAttributes) > 0 {
-			productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(req.AttributeUuidList)
-			if errProductAttributeList != nil {
-				return nil, errProductAttributeList
-			}
-			for i, attribute := range productAttributeList {
-				productAttributes[attribute.Uuid] = productAttributeList[i]
-			}
-		}
-
-		// 判断销售账单是否存在且未结账
-
-		productPackage := productBom.ProductPackage
-		sauces := make([]model.Sauce, 0)
-		for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
-			sauce := model.Sauce{
-				Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-				Price:          sauceProductBom.Price,
-				ProductBomUuid: sauceProductBomUuid,
-			}
-			sauces = append(sauces, sauce)
-		}
-
-		attributes := make([]model.Attribute, 0)
-		for productAttributeUuid, productAttribute := range productAttributes {
-			attribute := model.Attribute{
-				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-				ProductAttributeUuid: productAttributeUuid,
-			}
-			attributes = append(attributes, attribute)
-		}
-		saleOrderProduct = model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
-			Name:                   productPackage.Name,
-			OpenMemberDiscount:     productPackage.OpenDiscount,
-			TaxRate:                productPackage.TaxRate(saleBill.DiningMethod),
-			DeductStockType:        productPackage.DeductStockType,
-			MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
-			ImageFileUuid:          productPackage.ImageFileUuid,
-			ProductPackageUuid:     productPackage.Uuid,
-			SaleBillUuid:           req.SaleBillUuid,
-			SaleOrderUuid:          req.SaleOrderUuid,
-			MemberDiscountRate:     saleOrder.MemberDiscountRate,
-			MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
-			CustomDiscountRate:     saleOrder.CustomDiscountRate,
-			Sauces:                 sauces,
-			Flavor: model.Flavor{
-				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
-				Price:          flavorProductBom.Price,
-				ProductBomUuid: req.FlavorUuid,
-			},
-			Attribute: attributes,
-		})
-		// 设置必点信息
-		var mustPlanUuid uint64
-		mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, req.SaleBillUuid, productPackage.Uuid, saleBill.DeskUuid)
-		ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
-		saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
+	saleOrderProduct, errNewProduct := s.newSaleOrderProduct(ctx, req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
+	if errNewProduct != nil {
+		ctx.Log().Error("构建商品失败", zap.Error(errNewProduct))
+		return nil, errors.New("构建商品失败")
 	}
+
 	// 计算商品数据。折扣、税费、服务
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
 	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
-	sign := saleOrderProduct.GenerateProductSign()
-	saleOrderProduct.Sign = sign
-	ctx.Log().Debug("生成商品签名", zap.Any("sign", sign))
-
-	// 查询是否存在该商品
-	ctx.Log().Debug("查询是否存在该商品", zap.Any("sign", sign), zap.Any("saleBillUuid", req.SaleBillUuid), zap.Any("saleOrderUuid", req.SaleOrderUuid))
+	// 查询是否存在签名相同的订单商品
 	orderProduct, err := repository.NewOrderProductRepo(db).GetProductInfo(
-		repository.CommonRepo.WhereBySign(sign),
+		repository.CommonRepo.WhereBySign(saleOrderProduct.Sign),
 		repository.CommonRepo.WhereBySaleBillUuid(req.SaleBillUuid),
 		repository.CommonRepo.WhereBySaleOrderUuid(req.SaleOrderUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.WhereByProductIsAccept(),
 	)
 	if err != nil {
-		ctx.Log().Debug("查询数据失败", zap.Error(err))
+		ctx.Log().Debug("查询是否存在签名相同的订单商品", zap.Error(err))
 		return nil, errors.New("查询数据失败")
 	}
 
+	// 订单中存在相同签名的商品
+	hasSameSign := false
 	if orderProduct.Uuid != 0 {
-		ctx.Log().Debug("查询到数据，更新数据")
+		// 加上新增的商品数量
 		orderProduct.Num += saleOrderProduct.Num
-		orderProduct.SalePrice = saleOrderProduct.SalePrice
-		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
-			ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
-			return nil, errors.New("添加商品失败")
-		}
+		hasSameSign = true
 	} else {
-		ctx.Log().Debug("没查询到数据，新建销售订单商品数据")
-		// 创建销售订单商品
-		_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
-		if errCreate != nil {
-			return nil, errCreate
-		}
+		// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
+		saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, saleOrderProduct)
 	}
 
-	newSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errSaleBill
-	}
-	var newSaleOrder *model.SaleOrder
-	for i, _ := range newSaleBill.SaleOrders {
-		order := newSaleBill.SaleOrders[i]
-		if order.Uuid == req.SaleOrderUuid {
-			newSaleOrder = newSaleBill.SaleOrders[i]
-			break
-		}
-	}
-
-	productNum := len(newSaleBill.SaleOrders[0].SaleOrderProducts)
-	ctx.Log().Info("订单产品数量", zap.Any("productNum", productNum))
 	// 计算订单金额
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	newSaleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
-	// 更新订单记录
-	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(newSaleOrder); errUpdate != nil {
-		return nil, errUpdate
+	saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	// 计算账单金额
+	saleBill.CalcSaleBill()
+
+	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if hasSameSign {
+			if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
+				ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
+				return errUpdate
+			}
+		} else {
+			// 创建销售订单商品
+			_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
+			if errCreate != nil {
+				return errCreate
+			}
+		}
+		// 更新订单记录
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
+			return errUpdate
+		}
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errSaleBill != nil {
+			return errUpdateSaleBill
+		}
+		return nil
+	})
+	if errUpdate != nil {
+		ctx.Log().Error("添加商品失败", zap.Error(errUpdate))
+		return nil, errors.New("添加商品失败")
 	}
 
-	// 获取新的桌台数据
+	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
 		return nil, err

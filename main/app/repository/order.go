@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -1012,6 +1013,25 @@ func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBil
 func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
 	var saleBill model.SaleBill
 	if err := r.db.Where("device_uuid = ? AND status = ? AND hide_bill_time = ? AND delete_time = ?", deviceUuid, constant.SaleBillStatusPending, 0, constant.NotDeleted).First(&saleBill).Error; err != nil {
+		fmt.Println("======")
+		fmt.Println("======")
+		fmt.Println("======")
+		fmt.Println("======")
+		fmt.Println("======")
+		fmt.Println("======")
+		fmt.Println("2222222")
+		fmt.Println(err.Error())
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println("======")
+			fmt.Println(err.Error())
+			return false, nil
+		}
 		return false, err
 	}
 	return saleBill.Uuid != 0, nil

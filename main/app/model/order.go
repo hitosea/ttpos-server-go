@@ -83,6 +83,16 @@ type SaleBill struct {
 	BuffetPackage2  BuffetPackage     `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+func (model *SaleBill) SetNil() {
+	model.SaleOrders = nil
+	model.H5OrderProducts = nil
+	model.SaleBillSetting = nil
+	model.Cashier = Staff{}
+	model.Desk = nil
+	model.BuffetPackage1 = BuffetPackage{}
+	model.BuffetPackage2 = BuffetPackage{}
+}
+
 type SaleBillCalc struct {
 	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
 	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
