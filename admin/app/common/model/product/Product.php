@@ -807,71 +807,167 @@ class Product extends BaseModel
             'special_id' => 0,        //特殊分类id
         ], $param);
 
-        $offset = ($params['page'] - 1) * $params['list_rows'];
-        $limit = $params['list_rows'];
-
         // 成品
         $productSql = self::alias('p')
             ->field(implode(',', [
+                'file.file_type',
+                'file.file_url',
+                'file.file_name',
+                'file.storage',
+                'file.save_name',
+                'file.url_param',
+                'p.create_time',
+                'p.status',
                 'p.uuid as product_id', 
                 'p.name as product_name', 
-                '10 as type', 
+                'p.actual_sale_num as sales_actual',
+                'p.sort as product_sort',
                 'c1.name as category_name', 
                 'c2.name as category_parent_name', 
-                'p.create_time',
-                'min(bom.price) as product_price',
-                'p.actual_sale_num as sales_actual',
                 'sum(bom.stock_num) as product_stock',
-                'p.status',
-                'p.sort as product_sort'
+                'min(bom.price) as product_price',
+                '10 as type',
+                'c1.uuid as category_uuid',
+                'c2.uuid as category_parent_uuid',
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
+            ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->where('bom.product_flavor_uuid', '>', 0)
             ->buildSql();
 
         // 材料
         $materialSql = Material::alias('m')
             ->field(implode(',', [
+                'file.file_type',
+                'file.file_url',
+                'file.file_name',
+                'file.storage',
+                'file.save_name',
+                'file.url_param',
+                'm.create_time',
+                'm.status',
                 'm.uuid as product_id', 
                 'm.name as product_name', 
-                '20 as type', 
+                'm.actual_sale_num as sales_actual',
+                '0 as product_sort',
                 'c1.name as category_name', 
                 'c2.name as category_parent_name', 
-                'm.create_time',
-                '0 as product_price',
-                'm.actual_sale_num as sales_actual',
                 'm.stock_num as product_stock',
-                'm.status',
-                '0 as product_sort'
+                '0 as product_price',
+                '20 as type', 
+                'c1.uuid as category_uuid',
+                'c2.uuid as category_parent_uuid',
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+            ->leftJoin('file', 'm.image_uuid = file.uuid')
             ->buildSql();
 
-        // 执行查询
-        $rows = Db::connect('shop' . self::$app_id)->query("SELECT " . implode(',', [
-            'product_id', 
-            'product_name', 
-            'type', 
+        // 分页
+        $offset = ($params['page'] - 1) * $params['list_rows'];
+        $limit = $params['list_rows'];
+
+        // 搜索
+        $bind = [];
+        $whereSql = '';
+
+        // 搜索商品类型
+        $materialType = $params['material_type'] ?? 0;
+        if (in_array($materialType, [self::TYPE_MATERIAL, self::TYPE_PRODUCT])) {
+            $whereSql .= " WHERE (type = :type)";
+            $bind['type'] = $materialType;
+        }
+
+        // 搜索商品分类
+        $categoryId = $params['category_id'] ?? 0;
+        if ($categoryId > 0) {
+            $where = "(category_uuid = :category_uuid OR category_parent_uuid = :category_parent_uuid)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['category_uuid'] = $categoryId;
+            $bind['category_parent_uuid'] = $categoryId;
+        }
+
+        // 搜索商品库存
+        $stock = $params['stock'] ?? 0;
+        if ($stock > 0) {
+            $where = "(product_stock < :stock)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['stock'] = $stock;
+        }
+
+        // 搜索商品状态
+        $status = $params['type'] ?? '';
+        if (in_array($status, ['sell', 'lower'])) {
+            $where = "(status = :status)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['status'] = [
+                'sell' => 1,
+                'lower' => 0,
+            ][$status];
+        }
+
+        // 搜索商品名称
+        $productName = $params['product_name'] ?? '';
+        if ($productName != '') {
+            $where = "(product_name LIKE :product_name)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['product_name'] = "%{$productName}%";
+        }
+
+        $querySql = "SELECT " . implode(',', [
+            'create_time',
             'category_name', 
             'category_parent_name', 
-            'create_time',
+            'file_type',
+            'file_url',
+            'file_name',
+            'product_id', 
+            'product_name', 
+            'product_sort',
             'product_price',
-            'sales_actual',
             'product_stock',
+            'sales_actual',
             'status',
-            'product_sort'
-        ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product ORDER BY create_time DESC LIMIT {$offset}, {$limit}");
+            'storage',
+            'save_name',
+            'type', 
+            'url_param',
+            'category_uuid',
+            'category_parent_uuid',
+        ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
+        $orderSql = ' ORDER BY create_time DESC';
+        $pageSql = " LIMIT {$offset}, {$limit}";
 
+        // 执行查询
+        $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql . $pageSql, $bind);
 
+        $file = new UploadFile();
         $list = [];
         foreach ($rows as $row) {
+            // 分类
             $pathNameText = extractLanguage($row['category_name']);
             if ($row['category_parent_name']) {
                 $pathNameText = extractLanguage($row['category_parent_name']) . '-' . $pathNameText;
             }
+            // 库存
             $productStock = 0;
             $productMaterialStock = 0;
             if ($row['type'] == 10) {
@@ -879,23 +975,39 @@ class Product extends BaseModel
             } else {
                 $productMaterialStock = $row['product_stock'];
             }
+            // 图片
+            $filePath = $file->getFilePathAttr(null, [
+                'file_type' => $row['file_type'],
+                'file_url' => $row['file_url'],
+                'file_name' => $row['file_name'],
+                'storage' => $row['storage'],
+                'save_name' => $row['save_name'],
+                'url_param' => $row['url_param'],
+            ]);
+            
             $list[] = [
+                'category' => [ 'path_name_text' => $pathNameText ],
+                'create_time' => date('Y-m-d H:i:s', $row['create_time']),
+                'image' => [
+                    [
+                        'file_path' => $filePath,
+                        'file_name' => $row['file_name'],
+                        'file_url' => $row['file_url'],
+                    ]
+                ],
                 'product_id' => $row['product_id'],
+                'product_material_stock' => floatval($productMaterialStock),
                 'product_name' => $row['product_name'],
                 'product_name_text' => extractLanguage($row['product_name']),
-                'type' => $row['type'],
-                'category' => [ 'path_name_text' => $pathNameText ],
-                'image' => [],
                 'product_price' => $row['product_price'],
-                'sales_actual' => floatval($row['sales_actual']),
-                'product_stock' => floatval($productStock),
-                'product_material_stock' => floatval($productMaterialStock),
+                'product_sort' => $row['product_sort'],
                 'product_status' => [
                     'text' => $row['status'] === 1 ? __('上架') : __('下架'),
                     'value' => $row['status'] === 1 ? 10 : 20,
                 ],
-                'create_time' => date('Y-m-d H:i:s', $row['create_time']),
-                'product_sort' => $row['product_sort'],
+                'product_stock' => floatval($productStock),
+                'sales_actual' => floatval($row['sales_actual']),
+                'type' => $row['type'],
             ];
         }
 
