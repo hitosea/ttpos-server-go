@@ -3,6 +3,7 @@ package cashier
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -127,12 +128,19 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data query req.HideSaleBillListReq true "列表参数"
 // @Success 200 {object} dto.Response{data=resp.InstantHideOrderListResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/list [get]
 func (h *InstantHandler) OrderList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	resp, err := h.orderService.InstantHideOrderList(ctx)
+	// 绑定请求参数
+	var listReq req.HideSaleBillListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
+		return
+	}
+	resp, err := h.orderService.InstantHideOrderList(ctx, listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

@@ -2,9 +2,9 @@ package req
 
 import (
 	"errors"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
+	"strconv"
+	"ttpos-server-go/app/dto"
 )
 
 // InstantOrderGetInfoReq 获取点餐订单详情请求
@@ -100,4 +100,8 @@ type InstantOrderSaleOrderDeleteReq struct {
 
 type InstantOrderSaleOrderDeleteAllReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+}
+
+type HideSaleBillListReq struct {
+	dto.PageReq // 分页参数
 }

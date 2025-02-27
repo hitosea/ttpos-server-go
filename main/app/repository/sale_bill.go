@@ -13,7 +13,7 @@ type ISaleBillRepo interface {
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
-	GetHideSaleBillList() ([]*model.SaleBill, error) // 获取挂单销售账单列表
+	GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 }
 
 type saleBillRepo struct {
@@ -56,6 +56,27 @@ func (r *saleBillRepo) GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, err
 	return saleBills, nil
 }
 
+func (r *saleBillRepo) GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error) {
+	var saleBills []*model.SaleBill
+	var total int64
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	if err := db.Model(&model.SaleBill{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	result := db.Order("create_time asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&saleBills)
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return saleBills, total, nil
+}
+
 func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(CommonRepo.WhereByUuid(uuid))
 	if err != nil {
@@ -85,9 +106,9 @@ func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
 }
 
-func (r *saleBillRepo) GetHideSaleBillList() ([]*model.SaleBill, error) {
+func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) {
 	var saleBills []*model.SaleBill
-	saleBills, err := r.GetSaleBillList(
+	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize,
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
@@ -110,7 +131,7 @@ func (r *saleBillRepo) GetHideSaleBillList() ([]*model.SaleBill, error) {
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return saleBills, nil
+	return saleBills, total, nil
 }

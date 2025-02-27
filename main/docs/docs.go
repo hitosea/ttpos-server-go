@@ -1695,6 +1695,23 @@ const docTemplate = `{
                     "收银端.点餐"
                 ],
                 "summary": "显示点餐订单列表（取单列表）",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -8236,6 +8253,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.InstantHideSaleBill"
                     }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
                 }
             }
         },

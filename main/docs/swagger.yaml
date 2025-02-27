@@ -2301,6 +2301,10 @@ definitions:
         items:
           $ref: '#/definitions/resp.InstantHideSaleBill'
         type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
     type: object
   resp.InstantHideSaleBill:
     properties:
@@ -4789,6 +4793,18 @@ paths:
       consumes:
       - application/json
       description: 显示点餐订单列表（取单列表）
+      parameters:
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: page_size
+        type: integer
       produces:
       - application/json
       responses:

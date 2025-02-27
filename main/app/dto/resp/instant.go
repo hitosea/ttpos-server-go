@@ -200,6 +200,7 @@ type CardInfo struct {
 
 type InstantHideOrderListResp struct {
 	List []InstantHideSaleBill `json:"list"` // 点餐订单列表
+	Meta dto.PageResponse      `json:"meta"` // 分页信息
 }
 
 type InstantHideSaleBill struct {

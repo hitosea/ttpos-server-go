@@ -42,7 +42,7 @@ type IOrderSrv interface {
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
-	InstantHideOrderList(ctx context.Context) (*resp.InstantHideOrderListResp, error)                                                                    // 获取挂单订单列表
+	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                       // 获取挂单订单列表
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
@@ -954,12 +954,12 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 }
 
 // InstantHideOrderList 获取挂单订单列表
-func (s *orderSrv) InstantHideOrderList(ctx context.Context) (*resp.InstantHideOrderListResp, error) {
+func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBillRepo := repository.NewSaleBillRepo(db)
 
 	// 查询所有已挂单的点餐销售账单
-	saleBills, err := saleBillRepo.GetHideSaleBillList()
+	saleBills, total, err := saleBillRepo.GetHideSaleBillList(req.PageNo, req.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -1008,7 +1008,14 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context) (*resp.InstantHideO
 		hideSaleBills = append(hideSaleBills, hideSaleBill)
 	}
 
-	res := &resp.InstantHideOrderListResp{List: hideSaleBills}
+	res := &resp.InstantHideOrderListResp{
+		List: hideSaleBills,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}
 	return res, nil
 }
 
