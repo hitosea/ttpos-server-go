@@ -1316,11 +1316,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				if saleOrderProduct.IsDelete() {
 					continue
 				}
-				language := ctx.GetLanguage()
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: *saleOrderProduct.AttributeName(language),
+					LocaleAttributeName: *saleOrderProduct.AttributeName(),
 					Num:                 saleOrderProduct.Num,
 					SalePrice:           saleOrderProduct.GetSalePrice(),
 					DiscountPrice:       saleOrderProduct.GetPrice(),
@@ -1577,7 +1576,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	} else {
 		ctx.Log().Debug("没查询到数据，新建销售订单商品数据")
 		// 创建销售订单商品
-		_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(*saleOrderProduct)
+		_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
 		if errCreate != nil {
 			return nil, errCreate
 		}
@@ -1802,7 +1801,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 			FirstCategoryUuid:     unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid(),
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
-			ProductAttributeNames: unCookingSaleOrderProduct.AttributeName(ctx.GetLanguage()).GetLocale(ctx.GetLanguage()),
+			ProductAttributeNames: unCookingSaleOrderProduct.AttributeName().GetLocale(ctx.GetLanguage()),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
 			//HasMaterial:              unCookingSaleOrderProduct, todo
@@ -2109,10 +2108,37 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	return cartInfo, nil
 }
 
+func MoreThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
+	return saleOrderProduct.Num > moveNum
+}
+
+func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
+	return saleOrderProduct.Num < moveNum
+}
+
+func EqualMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
+	return saleOrderProduct.Num == moveNum
+}
+
+func IsSameSignature(saleOrderProduct *model.SaleOrderProduct, toSaleOrderProductSignMap map[string]*model.SaleOrderProduct) bool {
+	return toSaleOrderProductSignMap[saleOrderProduct.Sign] != nil
+}
+
 // InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
+// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+// 第二种移动方式：原销售订单商品数量小于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+// 数据处理：
+// 第一种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
+// 第二种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；新建目标销售订单商品，计算金额，表插入记录，数组增加这条记录，计算订单金额
+// 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
+// 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
 func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq) (*resp.ShopCart, error) {
 	// 需要更新的销售订单商品
 	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
+	// 需要新建的销售订单商品
+	waitCreateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 加锁
@@ -2137,12 +2163,18 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	// 构建原销售订单中的商品map
 	fromProductMap := make(map[uint64]*model.SaleOrderProduct)
 	for index, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.SaleOrderUuid != saleOrderFrom.Uuid {
+			continue
+		}
 		fromProductMap[saleOrderProduct.Uuid] = saleOrderFrom.SaleOrderProducts[index]
 	}
 
 	// 构建目标销售订单中的商品签名map
 	toSaleOrderProductSignMap := make(map[string]*model.SaleOrderProduct)
 	for i, saleOrderProduct := range saleOrderTo.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.SaleOrderUuid != saleOrderTo.Uuid {
+			continue
+		}
 		toSaleOrderProductSignMap[saleOrderProduct.Sign] = saleOrderTo.SaleOrderProducts[i]
 	}
 
@@ -2162,79 +2194,77 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	for _, moveProduct := range req.Products {
 		saleOrderProduct := fromProductMap[moveProduct.Uuid]
 		ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-		// 记录到待更新列表中
-		waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-		// 如果原销售订单商品数量还有剩余，则在目标销售订单中新建一个销售订单商品
-		if saleOrderProduct.Num > moveProduct.Num {
-			// 复制一个销售订单商品
-			var newSaleOrderProduct model.SaleOrderProduct
-			newSaleOrderProduct = *saleOrderProduct
-			uuid, _ := utils.GetID()
-			newSaleOrderProduct.BaseModel = model.BaseModel{}
-			newSaleOrderProduct.Uuid = uuid
-			newSaleOrderProduct.SaleOrderUuid = req.To
-			newSaleOrderProduct.Num = moveProduct.Num
-			sign := newSaleOrderProduct.GenerateProductSign()
-			newSaleOrderProduct.Sign = sign
-			ctx.Log().Debug("生产销售订单商品签名", zap.Any("saleOrderProduct uuid", newSaleOrderProduct.Uuid), zap.Any("sign", sign))
-			// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
-			if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
-				// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
-				orderProduct.Num += moveProduct.Num
-				// 单价不变，不用重新计算。
 
-				// 记录到待更新列表中
-				waitUpdateSaleOrderProductMap[orderProduct.Uuid] = orderProduct
-			} else {
-				// 目标销售账单中没有商品签名一样的商品，则在目标销售账单中新建一个销售订单商品
-				// 修改订单商品的折扣优惠，并重新计算金额
-				discountInfo := saleOrderTo.GetDiscountInfo()
-				newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-				// 计算商品数据。折扣、税费、服务
-				serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-				taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-				newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-				// 在目标销售账单中新建一个销售订单商品
-				//saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, &newSaleOrderProduct)
-
-				// 记录到待更新列表中
-				waitUpdateSaleOrderProductMap[newSaleOrderProduct.Uuid] = &newSaleOrderProduct
-			}
-		} else {
-			// 如果原销售订单商品的数量没有剩余，则修改该销售订单商品的销售订单uuid为目标销售订单的uuid
-			ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			saleOrderProduct.SaleOrderUuid = req.To
-			sign := saleOrderProduct.GenerateProductSign()
-			ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余,生成签名", zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("sign", sign))
-			// 检查to销售账单中是否有与该商品签名一样的销售订单商品，若有则合并他们
-			if orderProduct, exit := toSaleOrderProductSignMap[sign]; exit {
-				ctx.Log().Debug("移动商品,原销售订单商品的数量没有剩余,目标销售账单中有商品签名一样的商品", zap.Any("目标销售订单商品orderProduct", orderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-				// 目标销售账单中有商品签名一样的商品，将数量累加到这个商品上
-				orderProduct.Num += saleOrderProduct.Num
-				// 单价没有改变，不需要重新计算
-
-				// 记录到待更新列表中
-				waitUpdateSaleOrderProductMap[orderProduct.Uuid] = orderProduct
-			} else {
-				// 目标销售订单中没有商品签名一样的商品，则将源销售订单中的商品记录修改订单id
-				ctx.Log().Debug("移动商品,目标销售订单中没有商品签名一样的商品，则将源销售订单中的商品记录修改订单id")
-				// saleOrderProduct更新这个记录即可
-				discountInfo := saleOrderTo.GetDiscountInfo()
-				saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
-				saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-				// 计算商品数据。折扣、税费、服务
-				serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-				taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-				serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-				saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
-				ctx.Log().Debug("移动商品,目标销售订单中移入一个销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-				// 要将saleOrderProduct这个商品加入到目标订单的数组中，否则目标订单的金额计算会少这个商品的金额
-				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
-				// 记录到待更新列表中
-				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			}
+		// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+		if MoreThanMoveNum(saleOrderProduct, moveProduct.Num) && IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+			ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 修改原销售订单商品数量，更新记录，重新计算订单金额
+			saleOrderProduct.Num -= moveProduct.Num
+			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProduct.Num
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
 		}
+
+		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if MoreThanMoveNum(saleOrderProduct, moveProduct.Num) && !IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+			ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
+			// 修改原销售订单商品数量，更新记录，重新计算订单金额
+			saleOrderProduct.Num -= moveProduct.Num
+			// 新建一个销售订单商品，该商品数量为移动数量
+			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
+			newSaleOrderProduct.Num = moveProduct.Num
+			// 计算商品数据。折扣、税费、服务
+			discountInfo := saleOrderTo.GetDiscountInfo()
+			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+			serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+			taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+			serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+			newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+			// 在目标销售订单中新建一个销售订单商品
+			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
+			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
+		}
+
+		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+		if EqualMoveNum(saleOrderProduct, moveProduct.Num) && IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
+			saleOrderProduct.DeleteTime = time.Now().Unix()
+			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProduct.Num
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+		}
+
+		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if EqualMoveNum(saleOrderProduct, moveProduct.Num) && !IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
+			discountInfo := saleOrderTo.GetDiscountInfo()
+			saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
+			saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+			// 计算商品数据。折扣、税费、服务
+			serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
+			taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
+			serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
+			saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
+			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+		}
+	}
+
+	if len(waitUpdateSaleOrderProductMap) == 0 {
+		ctx.Log().Debug("移动商品失败，没有需要更新的销售订单商品")
+		return nil, errors.New("移动商品失败")
 	}
 
 	// 计算订单金额
@@ -2259,63 +2289,20 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 				return err
 			}
 		}
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("222222222222222")
+
+		// 创建销售订单商品及BOM、属性
+		for _, saleOrderProduct := range waitCreateSaleOrderProductMap {
+			ctx.Log().Debug("新建销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			if _, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(saleOrderProduct); err != nil {
+				return err
+			}
+		}
 		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderFrom); err != nil {
 			return err
 		}
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
 		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderTo); err != nil {
 			return err
 		}
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
-		fmt.Println("-------------------")
 
 		return nil
 	})

@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 )
 
@@ -889,13 +890,53 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 关联对象
-	MultiLanguageName          MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-	ImageFile                  File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
-	SaleOrderProductBoms       []SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
-	SaleOrderProductAttributes []SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ReturnOrderProducts        []ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ProductPackage             ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
-	SaleBill                   *SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
+	SaleOrderProductBoms       []*SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	SaleOrderProductAttributes []*SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ReturnOrderProducts        []*ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
+	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+}
+
+func (model *SaleOrderProduct) SetNil() {
+	model.MultiLanguageName = nil
+	model.ImageFile = nil
+	model.SaleOrderProductBoms = nil
+	model.SaleOrderProductAttributes = nil
+	model.ReturnOrderProducts = nil
+	model.ProductPackage = nil
+	model.SaleBill = nil
+}
+
+// 复制销售订单商品
+func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrderProduct {
+	product := SaleOrderProduct{}
+	err := copier.Copy(&product, model)
+	if err != nil {
+		fmt.Println("复制销售订单商品失败", err)
+		return nil
+	}
+	// 重置base_model
+	productUuid, _ := utils.GetID()
+	product.BaseModel = BaseModel{
+		Uuid: productUuid,
+	}
+	// 指定目标销售订单
+	product.SaleOrderUuid = saleOrderUuid
+	// 复制SaleOrderProductBoms
+	product.SaleOrderProductBoms = make([]*SaleOrderProductBom, 0)
+	for _, bom := range model.SaleOrderProductBoms {
+		newBom := bom.CopyBom(saleOrderUuid, productUuid)
+		product.SaleOrderProductBoms = append(product.SaleOrderProductBoms, newBom)
+	}
+	// 复制SaleOrderProductAttributes
+	product.SaleOrderProductAttributes = make([]*SaleOrderProductAttribute, 0)
+	for _, attribute := range model.SaleOrderProductAttributes {
+		newAttribute := attribute.CopyAttribute(model.SaleOrderUuid, productUuid)
+		product.SaleOrderProductAttributes = append(product.SaleOrderProductAttributes, newAttribute)
+	}
+	return &product
 }
 
 // 设置销售订单商品的折扣信息
@@ -972,9 +1013,9 @@ type DefaultSaleOrderProduct struct {
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 	saleOrderProductUuid, _ := utils.GetID()
-	saleOrderProductBoms := make([]SaleOrderProductBom, 0)
+	saleOrderProductBoms := make([]*SaleOrderProductBom, 0)
 	for _, bom := range def.Sauces {
-		saleOrderProductBom := SaleOrderProductBom{
+		saleOrderProductBom := &SaleOrderProductBom{
 			Name:                 bom.Name,
 			Price:                bom.Price,
 			IsFlavorBom:          0,
@@ -984,7 +1025,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		}
 		saleOrderProductBoms = append(saleOrderProductBoms, saleOrderProductBom)
 	}
-	saleOrderProductBoms = append(saleOrderProductBoms, SaleOrderProductBom{
+	saleOrderProductBoms = append(saleOrderProductBoms, &SaleOrderProductBom{
 		Name:                 def.Flavor.Name,
 		Price:                def.Flavor.Price,
 		IsFlavorBom:          1,
@@ -993,9 +1034,9 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		ProductBomUuid:       def.Flavor.ProductBomUuid,
 	})
 
-	saleOrderProductAttributes := []SaleOrderProductAttribute{}
+	saleOrderProductAttributes := []*SaleOrderProductAttribute{}
 	for _, attribute := range def.Attribute {
-		saleOrderProductAttribute := SaleOrderProductAttribute{
+		saleOrderProductAttribute := &SaleOrderProductAttribute{
 			Name:                 attribute.Name,
 			SaleOrderUuid:        def.SaleOrderUuid,
 			SaleOrderProductUuid: saleOrderProductUuid,
@@ -1444,7 +1485,7 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 	return nil // todo
 }
 
-func (model *SaleOrderProduct) AttributeName(language string) *dto.LocaleResponse {
+func (model *SaleOrderProduct) AttributeName() *dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
@@ -1484,7 +1525,7 @@ func (model *SaleOrderProduct) AttributeName(language string) *dto.LocaleRespons
 		attributeResultNames.KO += name.KO
 		attributeResultNames.MY += name.MY
 		attributeResultNames.TR += name.TR
-		if index != len(nameList)-1 {
+		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
 			attributeResultNames.ZH += ";"
 			attributeResultNames.TH += ";"
 			attributeResultNames.EN += ";"
@@ -1510,6 +1551,25 @@ type SaleOrderProductAttribute struct {
 	ProductAttribute ProductAttribute `gorm:"foreignKey:ProductAttributeUuid;references:uuid"`
 }
 
+func (model *SaleOrderProductAttribute) SetNil() {
+	model.ProductAttribute = ProductAttribute{}
+}
+
+func (model *SaleOrderProductAttribute) CopyAttribute(saleOrderUuid uint64, saleOrderProductUuid uint64) *SaleOrderProductAttribute {
+	newAttribute := &SaleOrderProductAttribute{}
+	copier.Copy(newAttribute, model)
+	// 设置销售订单信息
+	newAttribute.SaleOrderUuid = saleOrderUuid
+	newAttribute.SaleOrderProductUuid = saleOrderProductUuid
+	// 设置uuid
+	uuid, _ := utils.GetID()
+	newAttribute.BaseModel = BaseModel{
+		Uuid: uuid,
+	}
+	newAttribute.SetNil()
+	return newAttribute
+}
+
 // GetAttributeNames 获取属性名称字符串
 func (model *SaleOrderProduct) GetAttributeNames() string {
 	attributeNames := []string{}
@@ -1532,15 +1592,35 @@ func (model *SaleOrderProduct) GetAttributeNames() string {
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
-	Name                 string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
-	Price                float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
-	IsFlavorBom          uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
-	SaleOrderUuid        uint64  `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
-	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
-	ProductBomUuid       uint64  `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	Name                 string           `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
+	Price                float64          `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
+	IsFlavorBom          uint             `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
+	SaleOrderUuid        uint64           `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
+	SaleOrderProductUuid uint64           `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductBomUuid       uint64           `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+	ProductBom           ProductBom       `gorm:"foreignKey:product_bom_uuid;references:uuid"`
+	SaleOrderProduct     SaleOrderProduct `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+}
 
-	ProductBom       ProductBom       `gorm:"foreignKey:product_bom_uuid;references:uuid"`
-	SaleOrderProduct SaleOrderProduct `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+func (model *SaleOrderProductBom) SetNil() {
+	model.ProductBom = ProductBom{}
+	model.SaleOrderProduct = SaleOrderProduct{}
+}
+
+func (model *SaleOrderProductBom) CopyBom(saleOrderUuid uint64, saleOrderProductUuid uint64) *SaleOrderProductBom {
+	newBom := &SaleOrderProductBom{}
+	copier.Copy(newBom, model)
+	// 设置销售订单信息
+	newBom.SaleOrderUuid = saleOrderUuid
+	newBom.SaleOrderProductUuid = saleOrderProductUuid
+	// 设置uuid
+	uuid, _ := utils.GetID()
+	newBom.BaseModel = BaseModel{
+		Uuid: uuid,
+	}
+	// 将对象置空，否则这些对象会产生新的insert sql语句
+	newBom.SetNil()
+	return newBom
 }
 
 func (model *SaleOrderProductBom) IsFlavor() bool {

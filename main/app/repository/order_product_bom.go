@@ -8,7 +8,7 @@ import (
 
 // IOrderProductBomRepo 定义销售订单商品BOM仓库接口
 type IOrderProductBomRepo interface {
-	CreateBatch(boms []model.SaleOrderProductBom) error // 批量创建
+	CreateBatch(boms []*model.SaleOrderProductBom) error // 批量创建
 }
 
 // orderProductBomRepo 销售订单商品BOM仓库
@@ -27,6 +27,6 @@ func NewOrderProductBomRepoImpl(db *gorm.DB) IOrderProductBomRepo {
 }
 
 // CreateBatch 批量创建
-func (o *orderProductBomRepo) CreateBatch(boms []model.SaleOrderProductBom) error {
+func (o *orderProductBomRepo) CreateBatch(boms []*model.SaleOrderProductBom) error {
 	return o.db.Create(&boms).Error
 }

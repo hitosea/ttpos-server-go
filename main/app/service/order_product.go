@@ -440,7 +440,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) *mod
 	}
 
 	// 构建销售订单商品BOM
-	var orderProductBoms []model.SaleOrderProductBom
+	var orderProductBoms []*model.SaleOrderProductBom
 	for _, bom := range req.ProductPackage.ProductBoms {
 		var name string
 		var isFlavorBom uint
@@ -451,7 +451,7 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) *mod
 		if bom.ProductSauceUuid > 0 {
 			name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
 		}
-		orderProductBoms = append(orderProductBoms, model.SaleOrderProductBom{
+		orderProductBoms = append(orderProductBoms, &model.SaleOrderProductBom{
 			Name:           name,
 			Price:          bom.Price,
 			IsFlavorBom:    isFlavorBom,
@@ -461,10 +461,10 @@ func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) *mod
 	}
 
 	// 构建销售订单商品属性
-	var orderProductAttributes []model.SaleOrderProductAttribute
+	var orderProductAttributes []*model.SaleOrderProductAttribute
 	for _, productPackageGroup := range req.ProductPackage.ProductPackageAttributeGroups {
 		for _, productPackageAttribute := range productPackageGroup.ProductPackageAttributes {
-			orderProductAttributes = append(orderProductAttributes, model.SaleOrderProductAttribute{
+			orderProductAttributes = append(orderProductAttributes, &model.SaleOrderProductAttribute{
 				Name:                 productPackageAttribute.Attribute.MultiLanguageName.GetNameByLang(req.Lang),
 				SaleOrderUuid:        req.SaleOrder.Uuid,
 				ProductAttributeUuid: productPackageAttribute.AttributeUuid,

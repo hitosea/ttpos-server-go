@@ -8,7 +8,7 @@ import (
 
 // IOrderProductAttributeRepo 销售订单商品属性仓库接口
 type IOrderProductAttributeRepo interface {
-	CreateBatch(attributes []model.SaleOrderProductAttribute) error // 批量创建
+	CreateBatch(attributes []*model.SaleOrderProductAttribute) error // 批量创建
 }
 
 // orderProductAttributeRepo 销售订单商品属性仓库
@@ -27,6 +27,6 @@ func NewOrderProductAttributeRepoImpl(db *gorm.DB) IOrderProductAttributeRepo {
 }
 
 // CreateBatch 批量创建销售订单商品属性
-func (o *orderProductAttributeRepo) CreateBatch(attributes []model.SaleOrderProductAttribute) error {
+func (o *orderProductAttributeRepo) CreateBatch(attributes []*model.SaleOrderProductAttribute) error {
 	return o.db.Create(&attributes).Error
 }

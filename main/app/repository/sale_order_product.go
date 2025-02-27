@@ -7,7 +7,8 @@ import (
 )
 
 type ISaleOrderProductRepo interface {
-	CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error)
+	CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error)
+	CreateSaleOrderProductAndBomAndAttribute(model *model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
@@ -22,7 +23,33 @@ func NewSaleOrderProductRepo(db *gorm.DB) ISaleOrderProductRepo {
 	return &saleOrderProductRepo{db: db}
 }
 
-func (r *saleOrderProductRepo) CreateSaleOrderProduct(model model.SaleOrderProduct) (uint64, error) {
+// 创建销售订单商品及BOM、属性
+func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj *model.SaleOrderProduct) (uint64, error) {
+	db := r.db
+	// 创建销售订单商品
+	saleOrderProduct := *obj
+	saleOrderProduct.SetNil()
+	if err := db.Model(&model.SaleOrderProduct{}).Create(&saleOrderProduct).Error; err != nil {
+		return 0, err
+	}
+	// 创建BOM
+	for _, bom := range obj.SaleOrderProductBoms {
+		bom.SaleOrderProductUuid = obj.Uuid
+		if err := db.Create(&bom).Error; err != nil {
+			return 0, err
+		}
+	}
+	// 创建属性
+	for _, attribute := range obj.SaleOrderProductAttributes {
+		attribute.SaleOrderProductUuid = obj.Uuid
+		if err := db.Create(&attribute).Error; err != nil {
+			return 0, err
+		}
+	}
+	return obj.Uuid, nil
+}
+
+func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	if err := db.Create(&model).Error; err != nil {
 		return 0, err
