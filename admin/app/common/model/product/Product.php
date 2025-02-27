@@ -18,14 +18,24 @@ use app\common\model\product\ProductFeedMaterial;
 use app\common\model\product\Material;
 use app\common\model\store\MultiLanguageName;
 use app\shop\model\product\Category as CategoryModel;
+use think\model\concern\SoftDelete;
 
 /**
  * 商品模型
  */
 class Product extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'product_package';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
+
+    /**
+     * 兼容字段
+     */
     protected $append = [
         'type',
         'product_id',
@@ -835,6 +845,7 @@ class Product extends BaseModel
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->where('bom.product_flavor_uuid', '>', 0)
+            ->group('p.uuid')
             ->buildSql();
 
         // 材料
@@ -1325,7 +1336,7 @@ class Product extends BaseModel
                     $result[] = $sku;
                 }
                 // 显示采购单价为空，如果为0，则为null
-                $sku['purchase_price'] = $sku['purchase_price'] > 0 ? $sku['purchase_price'] : null;
+                $sku['purchase_price'] = $sku['purchase_price'] > 0 ? $sku['purchase_price'] : 0;
             }
         }
 

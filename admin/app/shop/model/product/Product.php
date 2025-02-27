@@ -16,6 +16,7 @@ use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
 use app\common\model\erp\ErpMonthlyProductStatistics;
 use app\common\model\product\Product as ProductModel;
+use app\common\model\product\Material as MaterialModel;
 use \app\common\model\buffet\BuffetProduct as BuffetProductModel;
 use GuzzleHttp\Handler\Proxy;
 use think\facade\Log;
@@ -731,38 +732,46 @@ class Product extends ProductModel
     {
         $product_ids = explode(',', $product_ids);
         if (empty($product_ids)) return false;
-        $products = $this->with([
-            'sku',
-            'feed',
-            'productAttributeGroup' => [
-                'productAttribute',
-            ],
-        ])->whereIn('uuid', $product_ids)->select();
         // 开启事务
         $this->startTrans();
         try {
             $multiLanguageName = new MultiLanguageName();
-            foreach ($products as $product) {
-                // 删除规格
-                foreach ($product->sku as $sku) {
-                    $sku->delete();
+            foreach ($product_ids as $product_id) {
+                $model = self::detail($product_id);
+                if (!$model) {
+                    $model = MaterialModel::detail($product_id);
                 }
-                // 删除加料
-                foreach ($product->feed as $feed) {
-                    $feed->delete();
+                if (!$model) {
+                    continue;
                 }
-                // 删除产品属性
-                foreach ($product->productAttributeGroup as $productAttributeGroup) {
-                    foreach ($productAttributeGroup->productAttribute as $productAttribute) {
-                        $productAttribute->delete();
-                    }   
-                    $productAttributeGroup->delete();
+                if ($model['type'] == ProductModel::TYPE_PRODUCT) {
+                    // 删除规格
+                    foreach ($model['sku'] as $sku) {
+                        $sku->delete();
+                    }
+                    // 删除加料
+                    foreach ($model['feed'] as $feed) {
+                        $feed->delete();
+                    }
+                    // 删除产品属性
+                    foreach ($model['productAttributeGroup'] as $productAttributeGroup) {
+                        foreach ($productAttributeGroup['productAttribute'] as $productAttribute) {
+                            $productAttribute->delete();
+                        }   
+                        $productAttributeGroup->delete();
+                    }
+                    // 删除产品语言
+                    $multiLanguageName->clearCache($model['multi_language_name_uuid']);
+                    $model['multiLanguageName']->delete();
+                    // 删除产品
+                    $model->delete();
+                } else {
+                    // 删除材料语言
+                    $multiLanguageName->clearCache($model['multi_language_name_uuid']);
+                    $model['multiLanguageName']->delete();
+                    // 删除材料
+                    $model->delete();
                 }
-                // 删除产品语言
-                $multiLanguageName->clearCache($product->multi_language_name_uuid);
-                $product->multiLanguageName->delete();
-                // 删除产品
-                $product->delete();
             }
             // todo 兼容
             // foreach ($products as $product) {

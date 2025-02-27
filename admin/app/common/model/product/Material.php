@@ -92,9 +92,20 @@ class Material extends BaseModel
         return $this->belongsToMany(Feed::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
     }
 
+    /**
+     * 关联单位
+     */
     public function unit()
     {
         return $this->belongsTo(Unit::class, 'unit_uuid', 'uuid');
+    }
+
+    /**
+     * 关联产品语言
+     */
+    public function MultiLanguageName()
+    {
+        return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
     }
 
     /**
@@ -105,6 +116,7 @@ class Material extends BaseModel
         $material = (new static())->with([
             'image',
             'unit',
+            'MultiLanguageName',
         ])->where('uuid', '=', $id)->find();
         if ($material) {
             // 材料图片
@@ -119,9 +131,11 @@ class Material extends BaseModel
                     'barcode' => $material->barcode_value,
                     'material_stock' => $material->stock_num,
                     'stock_num' => 0,
+                    'material' => [],
                 ]
             ];
             $material->sku = $material->product_sku;
+            $material->productTaxes = [];
         }
         return $material;
     }
