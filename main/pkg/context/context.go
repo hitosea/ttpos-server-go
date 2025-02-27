@@ -22,6 +22,8 @@ type Context interface {
 	GetDeviceSn() string                     // 获取设备SN
 	GetDeviceUuid() uint64                   // 获取设备uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
+	NoLock() bool                            // 判断上文中是否已经加锁
+	AddLock()                                // 在上下文中标记是否已经加锁
 	Log() *zap.Logger                        // 获取日志实例
 }
 type ContextImpl struct {
@@ -37,6 +39,7 @@ type ContextImpl struct {
 	deskUuid       uint64               // 桌台ID
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
 	deviceUuid     uint64               // 设备uuid
+	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
 }
 
@@ -186,6 +189,14 @@ func (c *ContextImpl) GetDeviceSn() string {
 
 func (c *ContextImpl) GetDeviceUuid() uint64 {
 	return c.deviceUuid
+}
+
+func (c *ContextImpl) NoLock() bool {
+	return c.hasLock == false
+}
+
+func (c *ContextImpl) AddLock() {
+	c.hasLock = true
 }
 
 func (c *ContextImpl) Log() *zap.Logger {

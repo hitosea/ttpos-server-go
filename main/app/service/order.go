@@ -1015,8 +1015,10 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context) (*resp.InstantHideO
 // OrderProductDelete 删除订单商品
 func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	}
 	return s.orderProductDelete(ctx, dbId, staffUuid, source, req)
 }
 
@@ -1763,10 +1765,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
 	s.lock.LockUuid(request.SaleBillUuid)
 	defer s.lock.UnlockUuid(request.SaleBillUuid)
+	ctx.AddLock()
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	if request.Num == 0 {
-		res, err := s.orderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
 			SaleBillUuid:     request.SaleBillUuid,
 			SaleOrderUuid:    request.SaleOrderUuid,
 			OrderProductUuid: request.SaleOrderProductUuid,
@@ -2280,16 +2284,19 @@ func IsSameSignature(saleOrderProduct *model.SaleOrderProduct, toSaleOrderProduc
 // 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
 // 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
 func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) {
+	saleBillUuid := req.SaleBillUuid
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+	}
+
 	// 需要更新的销售订单商品
 	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 	// 需要新建的销售订单商品
 	waitCreateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 
 	db := s.dbm.GetDB(ctx.GetDbId())
-	// 加锁
-	saleBillUuid := req.SaleBillUuid
-	s.lock.LockUuid(saleBillUuid)
-	defer s.lock.UnlockUuid(saleBillUuid)
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
@@ -2595,15 +2602,18 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 
 // InstantOrderSaleOrderDeleteAll 删除所有子销售订单(撤销拆单)
 func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 将除了第一个销售订单的所有商品都移动到第一个销售订单里
 
 	ctx.Log().Debug("删除所有子销售订单(撤销拆单)", zap.Any("request", request))
-
-	// 加锁
-	s.lock.LockUuid(request.SaleBillUuid)
-	defer s.lock.UnlockUuid(request.SaleBillUuid)
 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
