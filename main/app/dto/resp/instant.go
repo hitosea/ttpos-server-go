@@ -203,11 +203,11 @@ type InstantHideOrderListResp struct {
 }
 
 type InstantHideSaleBill struct {
-	SaleBillUuid uint64      `json:"sale_bill_uuid"` // 销售账单UUID
-	SerialNo     string      `json:"serial_no"`      // 订单编号
-	Amount       float64     `json:"amount"`         // 订单总价。订单总价=销售订单的应收金额之和
-	HideBillTime int64       `json:"hide_bill_time"` // 挂单时间
-	Products     ProductList `json:"products"`       // 商品列表
+	SaleBillUuid uint64                     `json:"sale_bill_uuid"` // 销售账单UUID
+	SerialNo     string                     `json:"serial_no"`      // 订单编号
+	Amount       float64                    `json:"amount"`         // 订单总价。订单总价=销售订单的应收金额之和
+	HideBillTime int64                      `json:"hide_bill_time"` // 挂单时间
+	Products     InstantHideSaleProductList `json:"products"`       // 商品列表
 }
 
 type InstantHideSaleProductList struct {

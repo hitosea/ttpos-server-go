@@ -649,7 +649,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                // 取消点餐订单
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                    // 隐藏点餐订单（挂单）
 		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                    // 显示点餐订单（取单）
-		privateApi.POST("/instant/order/list", wrapper.OrderList)                                    // 显示点餐订单列表（取单列表）
+		privateApi.GET("/instant/order/list", wrapper.OrderList)                                     // 显示点餐订单列表（取单列表）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)               // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)             // 点餐订单商品改价
 		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)                  // 点餐订单修改人数

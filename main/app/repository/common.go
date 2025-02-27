@@ -52,6 +52,8 @@ type ICommonRepo interface {
 	Preload(preloads ...WithPreload) DBOption                       // 预加载
 	IncrementNum(num uint) clause.Expr                              // 增加商品数量
 	DecrementNum(num uint) clause.Expr                              // 减少商品数量
+	WhereByProductIsAccept() DBOption                               // 根据商品是否接单查询
+	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                  // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error      // 事务
 }
 
@@ -72,6 +74,11 @@ func NewCommonRepo() ICommonRepo {
 // NewCommonRepoImpl 创建新的公共仓库实现
 func NewCommonRepoImpl() ICommonRepo {
 	return &commonRepo{}
+}
+
+func (r *commonRepo) DBOption(opt DBOption) func(*gorm.DB) *gorm.DB {
+	f := (func(*gorm.DB) *gorm.DB)(opt)
+	return f
 }
 
 // WhereByID 根据ID查询
@@ -192,6 +199,12 @@ func (r *commonRepo) WhereLikeByName(name string) DBOption {
 func (r *commonRepo) WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+func (r *commonRepo) WhereByProductIsAccept() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_accept_order = ?", constant.OrderProductIsAcceptOrderAccepted)
 	}
 }
 

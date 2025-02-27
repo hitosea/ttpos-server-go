@@ -2312,7 +2312,7 @@ definitions:
         type: integer
       products:
         allOf:
-        - $ref: '#/definitions/resp.ProductList'
+        - $ref: '#/definitions/resp.InstantHideSaleProductList'
         description: 商品列表
       sale_bill_uuid:
         description: 销售账单UUID
@@ -2320,6 +2320,13 @@ definitions:
       serial_no:
         description: 订单编号
         type: string
+    type: object
+  resp.InstantHideSaleProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Product'
+        type: array
     type: object
   resp.InstantMustPlanProduct:
     properties:

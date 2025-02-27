@@ -40,6 +40,22 @@ func (r *saleBillRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 	return saleBill, nil
 }
 
+func (r *saleBillRepo) GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, error) {
+	var saleBills []*model.SaleBill
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&saleBills)
+	if result.Error != nil {
+		return saleBills, result.Error
+	}
+
+	return saleBills, nil
+}
+
 func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(CommonRepo.WhereByUuid(uuid))
 	if err != nil {
@@ -71,5 +87,30 @@ func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 
 func (r *saleBillRepo) GetHideSaleBillList() ([]*model.SaleBill, error) {
 	var saleBills []*model.SaleBill
-	return saleBills, r.db.Where("hide_bill_time > 0").Find(&saleBills).Error
+	saleBills, err := r.GetSaleBillList(
+		CommonRepo.WhereByIsHide(true),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereByProductIsAccept()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return saleBills, nil
 }

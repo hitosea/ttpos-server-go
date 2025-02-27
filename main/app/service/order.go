@@ -963,9 +963,53 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context) (*resp.InstantHideO
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(saleBills)
 
-	return nil, nil
+	hideSaleBills := make([]resp.InstantHideSaleBill, 0)
+	for _, saleBill := range saleBills {
+		if saleBill.IsShowSaleBill() || saleBill.IsDeskSaleBill() || saleBill.IsDelete() {
+			continue
+		}
+		listMap := make(map[string]resp.Product) // 商品列表，key为商品sign
+		for _, saleOrder := range saleBill.SaleOrders {
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
+					continue
+				}
+				if product, ok := listMap[saleOrderProduct.Sign]; !ok {
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num))).InexactFloat64()
+					newProduct := resp.Product{
+						LocaleName:    saleOrderProduct.MultiLanguageName.GetNames(),
+						Num:           saleOrderProduct.Num,
+						SalePrice:     productPrice,
+						DiscountPrice: productPrice,
+					}
+					listMap[saleOrderProduct.Sign] = newProduct
+				} else {
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num)))
+					price := productPrice.Add(decimal.NewFromFloat(product.SalePrice)).InexactFloat64()
+					product.Num += saleOrderProduct.Num
+					product.SalePrice = price
+					product.DiscountPrice = price
+				}
+			}
+		}
+		list := make([]resp.Product, 0)
+		for sign, _ := range listMap {
+			list = append(list, listMap[sign])
+		}
+		productList := resp.InstantHideSaleProductList{List: list}
+		hideSaleBill := resp.InstantHideSaleBill{
+			SaleBillUuid: saleBill.Uuid,
+			SerialNo:     saleBill.SerialNo,
+			Amount:       saleBill.Amount,
+			HideBillTime: saleBill.HideBillTime,
+			Products:     productList,
+		}
+		hideSaleBills = append(hideSaleBills, hideSaleBill)
+	}
+
+	res := &resp.InstantHideOrderListResp{List: hideSaleBills}
+	return res, nil
 }
 
 // OrderProductDelete 删除订单商品

@@ -8254,7 +8254,7 @@ const docTemplate = `{
                     "description": "商品列表",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.ProductList"
+                            "$ref": "#/definitions/resp.InstantHideSaleProductList"
                         }
                     ]
                 },
@@ -8265,6 +8265,17 @@ const docTemplate = `{
                 "serial_no": {
                     "description": "订单编号",
                     "type": "string"
+                }
+            }
+        },
+        "resp.InstantHideSaleProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Product"
+                    }
                 }
             }
         },
