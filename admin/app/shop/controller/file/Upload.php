@@ -11,6 +11,9 @@ use hg\apidoc\annotation as Apidoc;
 use app\shop\model\settings\Setting as SettingModel;
 use app\shop\controller\Controller as BaseController;
 use app\common\library\storage\Driver as StorageDriver;
+use app\shop\model\product\Material;
+use app\shop\model\product\Product;
+use think\facade\Log;
 use think\file\UploadedFile;
 
 /**
@@ -144,7 +147,7 @@ class Upload extends BaseController
                 $chunks = array_chunk($img_names, 1000);
                 $existFiles = [];
                 foreach ($chunks as $chunk) {
-                    $result = UploadFile::where('is_delete', 0)->whereIn('index_file_name', $chunk)->select();
+                    $result = UploadFile::where('delete_time', 0)->whereIn('index_file_name', $chunk)->select();
                     $existFiles = array_merge($existFiles, $result->toArray());
                 }
                 // 检查重复项
@@ -223,16 +226,17 @@ class Upload extends BaseController
                         if ($uploadFile) {
                             // 覆盖删除同名数据
                             if ($isOverlay) {
-                                $file_ids = UploadFile::where('index_file_name', $uploadFile->index_file_name)->where('file_id', '<', $uploadFile->id)->column('file_id');
-                                UploadFile::where('index_file_name', $uploadFile->index_file_name)->where('file_id', '<', $uploadFile->id)->delete();
+                                $imageUuidList = UploadFile::where('index_file_name', $uploadFile->index_file_name)->where('id', '<', $uploadFile->id)->column('uuid');
+                                UploadFile::where('index_file_name', $uploadFile->index_file_name)->where('id', '<', $uploadFile->id)->delete();
                                 // 用到该图的商品都图换
-                                ProductImage::whereIn('image_id', $file_ids)->update(['image_id' => $uploadFile->id]);
+                                Product::whereIn('image_file_uuid', $imageUuidList)->update(['image_file_uuid' => $uploadFile->uuid]);
+                                Material::whereIn('image_uuid', $imageUuidList)->update(['image_uuid' => $uploadFile->uuid]);
                             }
                             $insert++;
                             // 插入商品对应的 image_id
                             foreach ($insert_list as $key => &$item_p) {
                                 if ($item_p['img_name'] == $uploadFile->index_file_name) {
-                                    $item_p['image_id'] = $uploadFile->id;
+                                    $item_p['image_id'] = $uploadFile->uuid;
                                     $insert_file_res_arr[] = $item_p;
                                     unset($insert_list[$key]);
                                 }
@@ -244,36 +248,49 @@ class Upload extends BaseController
                      * step3 替换新图片
                      */
                     if (!empty($insert_file_res_arr)) {
-                        $existingRecords = [];
-                        $updateData = [];
-                        $insertData = [];
+                        // 商品
+                        $productExistingRecords = [];
+                        $productData = [];
+                        // 材料
+                        $materialExistingRecords = [];
+                        $materialData = [];
+                        // 
                         $productIds = array_unique(array_column($insert_file_res_arr, 'product_id'));
                         //
                         foreach (array_chunk($productIds, 1000) as $chunk) {
-                            $records = ProductImage::where('product_id', 'in', $chunk)->select()->toArray();
-                            $existingRecords = array_merge($existingRecords, $records);
+                            $productRecords = Product::whereIn('uuid', $chunk)->select()->toArray();
+                            $productExistingRecords = array_merge($productExistingRecords, $productRecords);
+
+                            $materialRecords = Material::whereIn('uuid', $chunk)->select()->toArray();
+                            $materialExistingRecords = array_merge($materialExistingRecords, $materialRecords);
                         }
-                        $existingProductIds = array_column($existingRecords, 'product_id');
-                        //
+
+                        $existingProductIds = array_column($productExistingRecords, 'uuid');
+                        $existingMaterialIds = array_column($materialExistingRecords, 'uuid');
+
                         foreach ($insert_file_res_arr as $item) {
-                            $data = [
-                                'product_id' => $item['product_id'],
-                                'image_id' => $item['image_id']
-                            ];
                             if (in_array($item['product_id'], $existingProductIds)) {
-                                $updateData[] = $data;
-                            } else {
-                                $data['app_id'] = ProductImage::$app_id;
-                                $insertData[] = $data;
+                                $productData = [
+                                    'uuid' => $item['product_id'],
+                                    'image_file_uuid' => $item['image_id']
+                                ];
+                                $productData[] = $productData;
+                            }
+                            if (in_array($item['product_id'], $existingMaterialIds)) {
+                                $materialData = [
+                                    'uuid' => $item['product_id'],
+                                    'image_uuid' => $item['image_id']
+                                ];
+                                $materialData[] = $materialData;
                             }
                         }
+
                         // 批量更新
-                        if (!empty($updateData)) {
-                            (new ProductImage)->saveAll($updateData);
+                        if (!empty($productData)) {
+                            Product::whereIn('uuid', array_column($productData, 'uuid'))->update(['image_file_uuid' => $productData['image_file_uuid']]);
                         }
-                        // 批量插入
-                        if (!empty($insertData)) {
-                            (new ProductImage)->saveAll($insertData);
+                        if (!empty($materialData)) {
+                            Material::whereIn('uuid', array_column($materialData, 'uuid'))->update(['image_uuid' => $materialData['image_uuid']]);
                         }
                     }
 
