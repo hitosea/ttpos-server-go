@@ -13,6 +13,7 @@ type ISaleBillRepo interface {
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
+	GetHideSaleBillList() ([]*model.SaleBill, error) // 获取挂单销售账单列表
 }
 
 type saleBillRepo struct {
@@ -66,4 +67,9 @@ func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 
 func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
+}
+
+func (r *saleBillRepo) GetHideSaleBillList() ([]*model.SaleBill, error) {
+	var saleBills []*model.SaleBill
+	return saleBills, r.db.Where("hide_bill_time > 0").Find(&saleBills).Error
 }

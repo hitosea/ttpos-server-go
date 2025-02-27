@@ -91,6 +91,11 @@ func (model *SaleBill) IsAutoAddMustProduct() bool {
 	return model.AutoAddMustProduct == constant.AutoAddMustProductYes
 }
 
+// 获取销售账单的取单列表item卡片的信息
+func (model *SaleBill) GetHideSaleBillCardInfo() {
+
+}
+
 // 是否已取单的销售账单
 func (model *SaleBill) IsShowSaleBill() bool {
 	return model.HideBillTime == 0

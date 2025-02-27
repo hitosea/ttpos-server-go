@@ -1677,6 +1677,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "显示点餐订单列表（取单列表）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "显示点餐订单列表（取单列表）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantHideOrderListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/must_plan/confirm": {
             "post": {
                 "description": "确认必点商品",
@@ -2119,6 +2162,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/sale_order/delete_all": {
+            "delete": {
+                "description": "删除所有子销售订单(撤销拆单)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "删除所有子销售订单(撤销拆单)",
+                "parameters": [
+                    {
+                        "description": "删除所有子销售订单(撤销拆单)参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderSaleOrderDeleteAllReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/sale_order/move_product": {
             "post": {
                 "description": "从一个销售订单移动商品到另一个销售订单",
@@ -2161,6 +2250,60 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/show": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "显示点餐订单（取单）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "显示点餐订单（取单）",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderShowReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -5331,6 +5474,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.InstantOrderSaleOrderDeleteAllReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.InstantOrderSaleOrderDeleteReq": {
             "type": "object",
             "properties": {
@@ -5622,6 +5774,15 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderShowReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
                     "type": "integer"
                 }
             }
@@ -8063,6 +8224,47 @@ const docTemplate = `{
                 "user_id": {
                     "description": "用户ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.InstantHideOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "点餐订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantHideSaleBill"
+                    }
+                }
+            }
+        },
+        "resp.InstantHideSaleBill": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单总价。订单总价=销售订单的应收金额之和",
+                    "type": "number"
+                },
+                "hide_bill_time": {
+                    "description": "挂单时间",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductList"
+                        }
+                    ]
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "订单编号",
+                    "type": "string"
                 }
             }
         },

@@ -97,3 +97,7 @@ type InstantOrderSaleOrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
 }
+
+type InstantOrderSaleOrderDeleteAllReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+}

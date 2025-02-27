@@ -120,6 +120,27 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 	helper.Success(c, shopCart)
 }
 
+// OrderList 处理显示点餐订单列表（取单列表）
+// @Summary 显示点餐订单列表（取单列表）
+// @Description 显示点餐订单列表（取单列表）
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.InstantHideOrderListResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/list [get]
+func (h *InstantHandler) OrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	resp, err := h.orderService.InstantHideOrderList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, resp)
+}
+
 // OrderProductDelete 处理删除点餐订单商品
 // @Summary 删除点餐订单商品
 // @Description 删除点餐订单商品
@@ -573,6 +594,36 @@ func (h *InstantHandler) OrderSaleOrderDelete(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderSaleOrderDeleteAll 删除所有子销售订单(撤销拆单)
+// @Summary 删除所有子销售订单(撤销拆单)
+// @Description 删除所有子销售订单(撤销拆单)
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderSaleOrderDeleteAllReq true "删除所有子销售订单(撤销拆单)参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/instant/order/sale_order/delete_all [delete]
+func (h *InstantHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面删除所有子销售订单(撤销拆单)接口请求")
+
+	params := req.InstantOrderSaleOrderDeleteAllReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
+	// 删除所有子销售订单(撤销拆单)
+	res, err := h.orderService.InstantOrderSaleOrderDeleteAll(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("删除所有子销售订单(撤销拆单)成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -598,6 +649,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                // 取消点餐订单
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                    // 隐藏点餐订单（挂单）
 		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                    // 显示点餐订单（取单）
+		privateApi.POST("/instant/order/list", wrapper.OrderList)                                    // 显示点餐订单列表（取单列表）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)               // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)             // 点餐订单商品改价
 		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)                  // 点餐订单修改人数
@@ -613,5 +665,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)            // 创建一个销售订单
 		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct) // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)          // 删除一个销售订单(删除拆单)
+		privateApi.DELETE("/instant/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)   // 删除所有子销售订单(撤销拆单)
 	}
 }

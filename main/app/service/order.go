@@ -42,6 +42,7 @@ type IOrderSrv interface {
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
+	InstantHideOrderList(ctx context.Context) (*resp.InstantHideOrderListResp, error)                                                                    // 获取挂单订单列表
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
@@ -61,6 +62,7 @@ type IOrderSrv interface {
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                     // 删除一个销售订单(删除拆单)
+	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
 }
 
 // orderSrv 订单服务结构
@@ -949,6 +951,21 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 	}
 
 	return s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+}
+
+// InstantHideOrderList 获取挂单订单列表
+func (s *orderSrv) InstantHideOrderList(ctx context.Context) (*resp.InstantHideOrderListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBillRepo := repository.NewSaleBillRepo(db)
+
+	// 查询所有已挂单的点餐销售账单
+	saleBills, err := saleBillRepo.GetHideSaleBillList()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(saleBills)
+
+	return nil, nil
 }
 
 // OrderProductDelete 删除订单商品
@@ -2526,4 +2543,76 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 
 	return info, nil
 
+}
+
+// InstantOrderSaleOrderDeleteAll 删除所有子销售订单(撤销拆单)
+func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 将除了第一个销售订单的所有商品都移动到第一个销售订单里
+
+	ctx.Log().Debug("删除所有子销售订单(撤销拆单)", zap.Any("request", request))
+
+	// 加锁
+	s.lock.LockUuid(request.SaleBillUuid)
+	defer s.lock.UnlockUuid(request.SaleBillUuid)
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if errSaleBill != nil {
+		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
+		return nil, errors.New("获取销售账单信息失败")
+	}
+
+	firstSaleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
+
+	saleOrderFromList := make([]*model.SaleOrder, 0)
+	for _, saleOrder := range saleBill.SaleOrders {
+		if saleOrder.Uuid == firstSaleOrder.Uuid {
+			continue
+		}
+		saleOrderFromList = append(saleOrderFromList, saleOrder)
+	}
+
+	for _, saleOrderFrom := range saleOrderFromList {
+		moveProductList := make([]req.MoveProduct, 0)
+		for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
+				continue
+			}
+			moveProductList = append(moveProductList, req.MoveProduct{
+				Uuid: saleOrderProduct.Uuid,
+				Num:  saleOrderProduct.Num,
+			})
+		}
+		moveProductReq := req.InstantOrderSaleOrderMoveProductReq{
+			SaleBillUuid: request.SaleBillUuid,
+			From:         saleOrderFrom.Uuid,
+			To:           firstSaleOrder.Uuid,
+			Products:     moveProductList,
+		}
+
+		if len(moveProductList) > 0 {
+			// todo 优化减少重复查询
+			_, err := s.InstantOrderSaleOrderMoveProduct(ctx, moveProductReq, true)
+			if err != nil {
+				ctx.Log().Error("移动商品失败", zap.Error(err))
+				return nil, err
+			}
+		} else {
+			// 如果销售订单中没有商品，则直接删除订单
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
+				ctx.Log().Error("删除订单失败", zap.Error(err))
+				return nil, errors.New("删除订单失败")
+			}
+		}
+	}
+
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	if err != nil {
+		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+		return nil, errors.New("获取购物车信息失败")
+	}
+
+	return info, nil
 }

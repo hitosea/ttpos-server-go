@@ -396,6 +396,12 @@ definitions:
         description: 销售账单UUID, 必填
         type: integer
     type: object
+  req.InstantOrderSaleOrderDeleteAllReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+    type: object
   req.InstantOrderSaleOrderDeleteReq:
     properties:
       sale_bill_uuid:
@@ -606,6 +612,12 @@ definitions:
     - order_product_uuid
     - sale_bill_uuid
     - sale_order_uuid
+    type: object
+  req.OrderShowReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
     type: object
   req.PrintRechargeOrderReq:
     properties:
@@ -2281,6 +2293,33 @@ definitions:
       user_id:
         description: 用户ID
         type: integer
+    type: object
+  resp.InstantHideOrderListResp:
+    properties:
+      list:
+        description: 点餐订单列表
+        items:
+          $ref: '#/definitions/resp.InstantHideSaleBill'
+        type: array
+    type: object
+  resp.InstantHideSaleBill:
+    properties:
+      amount:
+        description: 订单总价。订单总价=销售订单的应收金额之和
+        type: number
+      hide_bill_time:
+        description: 挂单时间
+        type: integer
+      products:
+        allOf:
+        - $ref: '#/definitions/resp.ProductList'
+        description: 商品列表
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      serial_no:
+        description: 订单编号
+        type: string
     type: object
   resp.InstantMustPlanProduct:
     properties:
@@ -4738,6 +4777,30 @@ paths:
       summary: 隐藏（挂单）
       tags:
       - 收银端.点餐
+  /cashier/instant/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 显示点餐订单列表（取单列表）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantHideOrderListResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 显示点餐订单列表（取单列表）
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/must_plan/confirm:
     post:
       consumes:
@@ -4997,6 +5060,33 @@ paths:
       summary: 删除一个销售订单(删除拆单)
       tags:
       - 收银端.点餐
+  /cashier/instant/order/sale_order/delete_all:
+    delete:
+      consumes:
+      - application/json
+      description: 删除所有子销售订单(撤销拆单)
+      parameters:
+      - description: 删除所有子销售订单(撤销拆单)参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderSaleOrderDeleteAllReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+      summary: 删除所有子销售订单(撤销拆单)
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/sale_order/move_product:
     post:
       consumes:
@@ -5022,6 +5112,37 @@ paths:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
       summary: 从一个销售订单移动商品到另一个销售订单
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/show:
+    post:
+      consumes:
+      - application/json
+      description: 显示点餐订单（取单）
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderShowReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 显示点餐订单（取单）
       tags:
       - 收银端.点餐
   /cashier/language:
