@@ -7,14 +7,20 @@ use app\common\model\BaseModel;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\store\MultiLanguageName;
+use think\model\concern\SoftDelete;
 
 /**
  * 原料信息表
  */
 class Material extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'material';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段
@@ -75,7 +81,7 @@ class Material extends BaseModel
      */
     public function image()
     {
-        return $this->hasMany('app\\common\\model\\file\\UploadFile', 'image_uuid', 'uuid')->order(['id' => 'asc']);
+        return $this->belongsTo('app\\common\\model\\file\\UploadFile', 'image_uuid', 'uuid')->order(['id' => 'asc']);
     }
 
     /**
@@ -86,12 +92,38 @@ class Material extends BaseModel
         return $this->belongsToMany(Feed::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
     }
 
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_uuid', 'uuid');
+    }
+
     /**
      * 详情
      */
     public static function detail($id)
     {
-        return (new static())->where('uuid', '=', $id)->find();
+        $material = (new static())->with([
+            'image',
+            'unit',
+        ])->where('uuid', '=', $id)->find();
+        if ($material) {
+            // 材料图片
+            $image = $material->image ? [ $material->image ] : [];
+            $material->image = $image;
+            // 材料单位
+            $material->product_unit = $material->unit->name;
+            // 材料规格
+            $material->product_sku = [
+                [
+                    'purchase_price' => $material->price,
+                    'barcode' => $material->barcode_value,
+                    'material_stock' => $material->stock_num,
+                    'stock_num' => 0,
+                ]
+            ];
+            $material->sku = $material->product_sku;
+        }
+        return $material;
     }
 
     /**

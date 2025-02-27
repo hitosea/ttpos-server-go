@@ -222,6 +222,9 @@ class Product extends Controller
     {
         if ($this->request->isGet()) {
             $model = ProductModel::detail($product_id);
+            if (!$model) {
+                $model = MaterialModel::detail($product_id);
+            }
             return $this->renderSuccess('', array_merge(ProductService::getEditData(1, $this->store), compact('model')));
         }
         $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
