@@ -45,6 +45,11 @@ type OrderDeleteReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
 }
 
+// OrderShowReq 订单显示 取单
+type OrderShowReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
+}
+
 // OrderIsCellCloseReq 是否可关闭订单
 type OrderIsCellCloseReq struct {
 	DeskUuid     uint64 `form:"desk_uuid"`      // 桌台UUID	   二选一, 销售账单UUID权重最大

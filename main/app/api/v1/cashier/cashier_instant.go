@@ -91,6 +91,35 @@ func (h *InstantHandler) HideOrder(c *gin.Context) {
 	helper.Success(c, shopCart)
 }
 
+// ShowOrder 处理显示点餐订单（取单）
+// @Summary 显示点餐订单（取单）
+// @Description 显示点餐订单（取单）
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderShowReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/show [post]
+func (h *InstantHandler) ShowOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderShowReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	shopCart, err := h.orderService.ShowOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, shopCart)
+}
+
 // OrderProductDelete 处理删除点餐订单商品
 // @Summary 删除点餐订单商品
 // @Description 删除点餐订单商品
@@ -568,6 +597,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)                         // 创建点餐订单。 废弃，点餐点餐由系统自动创建
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                // 取消点餐订单
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                    // 隐藏点餐订单（挂单）
+		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                    // 显示点餐订单（取单）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)               // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)             // 点餐订单商品改价
 		privateApi.POST("/instant/order/population", wrapper.OrderChangePopulation)                  // 点餐订单修改人数

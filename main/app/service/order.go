@@ -41,6 +41,7 @@ type IOrderSrv interface {
 	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                            // 删除订单
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
+	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
@@ -885,7 +886,7 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(saleBillUuid, constant.OptionalUuid)
+	billInfo, err := orderRepo.GetSaleBillRecord(saleBillUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -909,6 +910,45 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 	}
 
 	return info, nil
+}
+
+// ShowOrder 显示订单
+func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error) {
+	ctx.Log().Debug("显示一个销售订单(显示拆单)", zap.Any("request", req))
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 加锁
+	s.lock.LockUuid(req.SaleBillUuid)
+	defer s.lock.UnlockUuid(req.SaleBillUuid)
+
+	// 判断是否有未挂单的点餐账单
+	hasShowOrder, err := repository.NewOrderRepo(db).HasShowOrder(ctx.GetDeviceUuid())
+	if err != nil {
+		ctx.Log().Error("判断是否有未挂单的点餐账单失败", zap.Error(err))
+		return nil, errors.New("判断是否有未挂单的点餐账单失败")
+	}
+	if hasShowOrder {
+		return nil, errors.New("该设备有未挂单的点餐账单，禁止取单")
+	}
+
+	saleBill, errGetSaleBill := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
+	if errGetSaleBill != nil {
+		ctx.Log().Debug("查询销售账单失败", zap.Error(errGetSaleBill))
+		return nil, errors.New("查询销售账单失败")
+	}
+
+	if saleBill.IsShowSaleBill() {
+		return nil, errors.New("该账单已取出")
+	}
+
+	// 修改销售账单信息，标记账单取出
+	saleBill.SetShowSaleBill(ctx.GetDeviceUuid())
+
+	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
+		return nil, errors.New("更新销售账单失败")
+	}
+
+	return s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 }
 
 // OrderProductDelete 删除订单商品
@@ -2425,8 +2465,8 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 加锁
-	s.lock.LockUuid(request.SaleOrderUuid)
-	defer s.lock.UnlockUuid(request.SaleOrderUuid)
+	s.lock.LockUuid(request.SaleBillUuid)
+	defer s.lock.UnlockUuid(request.SaleBillUuid)
 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)

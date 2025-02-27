@@ -91,6 +91,11 @@ func (model *SaleBill) IsAutoAddMustProduct() bool {
 	return model.AutoAddMustProduct == constant.AutoAddMustProductYes
 }
 
+// 是否已取单的销售账单
+func (model *SaleBill) IsShowSaleBill() bool {
+	return model.HideBillTime == 0
+}
+
 // 返回新的销售账单
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for index, saleOrder := range model.SaleOrders {
@@ -179,6 +184,12 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 		}
 	}
 	return nil
+}
+
+// 设置显示销售账单(取单)
+func (model *SaleBill) SetShowSaleBill(deviceUuid uint64) {
+	model.HideBillTime = 0
+	model.DeviceUuid = deviceUuid
 }
 
 // 获取总的退款金额
