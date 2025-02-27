@@ -62,7 +62,7 @@ func (r *DeskRepoImpl) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, in
 	var desks []model.Desk
 	var total int64
 
-	query := r.db.Model(&model.Desk{}).Preload("SaleBill").Where("delete_time = ?", 0).Where("is_disable = ?", 1)
+	query := r.db.Model(&model.Desk{}).Preload("SaleBill").Where("delete_time = ?", 0)
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {

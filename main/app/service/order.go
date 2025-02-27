@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	errors2 "errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -753,15 +752,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
-
-	// 获取信息源
-	db := s.dbm.GetDB(dbId)
-	orderRepo := repository.NewOrderRepo(db)
-	productRepo := repository.NewOrderProductRepo(db)
-	deskRepo := repository.NewDeskRepo(db)
-	qrcodeOrderRepo := repository.NewH5OrderRepo(db)
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-
 	// 获取订单信息
 	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -776,6 +766,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		return err
 	}
 
+	// 获取信息源
+	db := s.dbm.GetDB(dbId)
+
 	// 开始事务
 	tx := db.Begin()
 	defer func() {
@@ -784,21 +777,26 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 	}()
 
-	// 获取订单已送厨产品，退回商品库存
-	products, err := productRepo.GetProductList(
-		repository.CommonRepo.WhereByStatus(1),
-		productRepo.WhereSaleBillUuids([]uint64{req.SaleBillUuid}),
-	)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
+	orderRepo := repository.NewOrderRepo(db)
+	// productRepo := repository.NewOrderProductRepo(db)
+	deskRepo := repository.NewDeskRepo(db)
+	qrcodeOrderRepo := repository.NewH5OrderRepo(db)
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// todo 未完成 - 退回商品库存
-	for _, po := range products {
-		fmt.Println(po)
-		// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
-	}
+	// 获取订单已送厨产品，退回商品库存
+	// products, err := productRepo.GetProductList(
+	// 	repository.CommonRepo.WhereByStatus(1),
+	// 	productRepo.WhereSaleBillUuids([]uint64{req.SaleBillUuid}),
+	// )
+	// if err != nil {
+	// 	tx.Rollback()
+	// 	return err
+	// }
+	// for _, po := range products {
+	// 	fmt.Println(po)
+	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
+	// }
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
