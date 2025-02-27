@@ -505,6 +505,7 @@ class Product extends ProductModel
             'special_category_uuid' => $data['special_id'], // 热门分类
             'describe' => $data['selling_point'], // 卖点
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
+            'printer_tag_uuid' => $data['label_id'] ?? 0, // 打印机标签
         ]);
         // 更新产品包多语言
         $multiLanguageName = new MultiLanguageName();
