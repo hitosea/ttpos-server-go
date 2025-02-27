@@ -1381,6 +1381,8 @@ func (model *SaleOrderProduct) CalcTotalPrice(serviceFeeRate float64, taxFeeType
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 	model.ChangePriceTime = time.Now().Unix()
 	model.SalePrice = price
+	// 重新签名商品
+	model.Sign = model.GenerateProductSign()
 }
 
 type SaleOrderProductCalc struct {

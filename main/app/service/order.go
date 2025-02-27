@@ -1041,6 +1041,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	ctx.Log().Debug("改价前", zap.Any("saleOrderProduct calc", saleOrderProduct.BeforeCalc()))
 	// 改价
 	saleOrderProduct.ChangeProductPrice(req.Price)
+
 	ctx.Log().Debug("改价后", zap.Any("SalePrice", saleOrderProduct.SalePrice))
 
 	// 计算商品数据。折扣、税费、服务
