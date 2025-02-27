@@ -22,6 +22,11 @@ const (
 	SaleOrderProductStatusCooking = 1 // 送厨
 )
 
+const (
+	SaleOrderIsFreeNo  = 0 // 订单是否免单
+	SaleOrderIsFreeYes = 1 // 订单是否免单
+)
+
 // 生产单商品状态, 0-待制作 1-制作中 2-已完成 3-已退菜
 const (
 	ProductionOrderProductStatusWait     = 0 // 待制作

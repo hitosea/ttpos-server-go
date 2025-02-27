@@ -1017,6 +1017,10 @@ func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUui
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	return s.orderProductDelete(ctx, dbId, staffUuid, source, req)
+}
+
+func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
@@ -1762,7 +1766,7 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	if request.Num == 0 {
-		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+		res, err := s.orderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
 			SaleBillUuid:     request.SaleBillUuid,
 			SaleOrderUuid:    request.SaleOrderUuid,
 			OrderProductUuid: request.SaleOrderProductUuid,

@@ -83,6 +83,121 @@ type SaleBill struct {
 	BuffetPackage2  BuffetPackage     `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+type SaleBillCalc struct {
+	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
+	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
+	ServiceFee        float64 `json:"service_fee"`         // 服务费=销售订单的服务费之和
+	TaxFee            float64 `json:"tax_fee"`             // 税费=销售订单的税费之和
+	DiscountFee       float64 `json:"discount_fee"`        // 折扣费用=销售订单的折扣费用之和
+	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣费用=销售订单的会员折扣费用之和
+	GiftAmount        float64 `json:"gift_amount"`         // 赠菜金额=销售订单的赠菜金额之和
+	FreeAmount        float64 `json:"free_amount"`         // 免单金额=销售订单的免单金额之和
+}
+
+// 计算销售账单的总金额。总金额=销售订单的应收金额之和
+func (model *SaleBill) calcAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的商品金额。商品金额=销售订单的商品金额之和
+func (model *SaleBill) calcProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.ProductAmount))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的服务费。服务费=销售订单的服务费之和
+func (model *SaleBill) calcServiceFee() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的税费。税费=销售订单的税费之和
+func (model *SaleBill) calcTaxFee() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.TaxFee))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的折扣费用。折扣费用=销售订单的折扣费用之和
+func (model *SaleBill) calcDiscountFee() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.CustomDiscountFee))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的会员折扣费用。会员折扣费用=销售订单的会员折扣费用之和
+func (model *SaleBill) calcMemberDiscountFee() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.MemberDiscountFee))
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的赠菜金额。赠菜金额=销售订单的赠菜金额之和
+func (model *SaleBill) calcGiftAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product.IsDelete() || product.IsCancelProduct() {
+				continue
+			}
+			if product.IsGiftProduct() {
+				price := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromUint64(uint64(product.Num)))
+				amount = amount.Add(price)
+			}
+		}
+	}
+	return amount.InexactFloat64()
+}
+
+// 计算销售订单的免单金额。免单金额=销售订单的免单金额之和
+func (model *SaleBill) calcFreeAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsFreeSaleOrder() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
+		}
+	}
+	return amount.InexactFloat64()
+}
+
+// 重新计算销售订单的金额
+func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
+	calc := SaleBillCalc{}
+	calc.Amount = model.calcAmount()
+	model.Amount = calc.Amount
+	calc.ProductAmount = model.calcProductAmount()
+	model.ProductAmount = calc.ProductAmount
+	calc.ServiceFee = model.calcServiceFee()
+	model.ServiceFee = calc.ServiceFee
+	calc.TaxFee = model.calcTaxFee()
+	model.TaxFee = calc.TaxFee
+	calc.DiscountFee = model.calcDiscountFee()
+	model.DiscountFee = calc.DiscountFee
+	calc.MemberDiscountFee = model.calcMemberDiscountFee()
+	model.MemberDiscountFee = calc.MemberDiscountFee
+	calc.GiftAmount = model.calcGiftAmount()
+	model.GiftAmount = calc.GiftAmount
+	calc.FreeAmount = model.calcFreeAmount()
+	model.FreeAmount = calc.FreeAmount
+	return &calc
+}
+
 func (model *SaleBill) IsShowMustPlan() bool {
 	return model.ShowMustPlan == constant.SaleBillShowMustPlanYes
 }
@@ -270,6 +385,10 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+func (model *SaleOrder) IsFreeSaleOrder() bool {
+	return model.IsFree == constant.SaleOrderProductStatusNormal
 }
 
 type DiscountInfo struct {
