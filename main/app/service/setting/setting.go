@@ -606,7 +606,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerType = printer.PrinterType.Key
 		} else if printerId != "0" { // 收银机内置的打印机
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			printerType = deviceRepo.GetDeviceBrand(deviceRepo.WhereDeviceId(deviceId))
+			printerType = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceId))
 			cashierBindKey = printerId
 			isCashierPrinter = true
 		}
@@ -1085,7 +1085,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 
 	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 
-	device, err := deviceRepo.GetDeviceBySn(ctx, ctx.GetDeviceSn())
+	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
 	if err != nil {
 		return settingResp, errors2.ErrInternal
 	}

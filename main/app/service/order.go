@@ -100,8 +100,9 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	db := s.dbm.GetDB(dbId)
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 
+		deviceRepo := repository.NewDeviceRepo(db)
 		// 获取设备uuid
-		device, errGetDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, ctx.GetDeviceSn())
+		device, errGetDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
 		if errGetDevice != nil {
 			return errors.New("获取设备uuid失败")
 		}
@@ -1357,7 +1358,8 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 	var saleBillUuid uint64
 	// 通过设备sn查询设备ID
 	db := s.dbm.GetDB(ctx.GetDbId())
-	device, errDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, deviceSn)
+	deviceRepo := repository.NewDeviceRepo(db)
+	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
 	if errDevice != nil {
 		return 0, errors.New(errDevice.Error())
 	}
@@ -2202,7 +2204,8 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 		return nil, errors.New("自动加购必选商品失败，上下文中没有device_sn")
 	}
 
-	device, errDevice := repository.NewDeviceRepo(db).GetDeviceBySn(ctx, deviceSn)
+	deviceRepo := repository.NewDeviceRepo(db)
+	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
 	if errDevice != nil {
 		return nil, errors.New(errDevice.Error())
 	}

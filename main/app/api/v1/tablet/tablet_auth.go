@@ -102,20 +102,44 @@ func (h *AuthHandler) GetDeskList(c *gin.Context) {
 	helper.Success(c, list)
 }
 
+// BindDesk 绑定/换绑桌台
+// @Summary 绑定/换绑桌台
+// @Description 绑定/换绑桌台
+// @Tags 平板端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BindDeskReq true "绑定/换绑桌台请求参数"
+// @Success 200 {object} dto.Response
+// @Router /tablet/bind_desk [get]
+func (h *AuthHandler) BindDesk(c *gin.Context) {
+	var bindDeskReq req.BindDeskReq
+	if err := c.ShouldBindJSON(&bindDeskReq); err != nil {
+		helper.HandleValidationError(c, err, bindDeskReq, req.LoginRequestMessage)
+		return
+	}
+	err := h.deskSrv.BindDesk(helper.GetContext(c), bindDeskReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{}, "绑定桌台成功")
+}
+
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
-	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
 
-	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv)
+	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
 
 	wrapper := &AuthHandler{
 		authSrv: authSrv,
@@ -131,6 +155,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
 		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取可绑定的桌台
+		privateApi.POST("/bind_desk", wrapper.BindDesk)   // 绑定桌台
 		privateApi.GET("/base", wrapper.GetBase)          // 获取基本信息
 		privateApi.POST("/logout", wrapper.Logout)        // 退出登录
 	}

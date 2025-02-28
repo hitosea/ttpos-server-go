@@ -39,18 +39,18 @@ func NewAuthSrv(
 	dbm *database.DBManager,
 	captchaSrv ICaptchaSrv,
 	roleAccessSrv IRoleAccessSrv,
-	bindRecordSrv IBindRecordSrv,
+	deviceSrv IDeviceSrv,
 	staffShiftSrv IStaffShiftSrv,
 	settingSrv setting.ISrv,
 ) IAuthSrv {
-	return NewAuthSrvImpl(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	return NewAuthSrvImpl(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 }
 
 type authSrv struct {
 	dbm           *database.DBManager
 	captchaSrv    ICaptchaSrv
 	roleAccessSrv IRoleAccessSrv
-	bindRecordSrv IBindRecordSrv
+	deviceSrv     IDeviceSrv
 	shiftSrv      IStaffShiftSrv
 	settingSrv    setting.ISrv
 
@@ -63,7 +63,7 @@ func NewAuthSrvImpl(
 	dbm *database.DBManager,
 	captchaSrv ICaptchaSrv,
 	roleAccessSrv IRoleAccessSrv,
-	bindRecordSrv IBindRecordSrv,
+	deviceSrv IDeviceSrv,
 	staffShiftSrv IStaffShiftSrv,
 	settingSrv setting.ISrv,
 ) IAuthSrv {
@@ -71,7 +71,7 @@ func NewAuthSrvImpl(
 		dbm:           dbm,
 		captchaSrv:    captchaSrv,
 		roleAccessSrv: roleAccessSrv,
-		bindRecordSrv: bindRecordSrv,
+		deviceSrv:     deviceSrv,
 		shiftSrv:      staffShiftSrv,
 		settingSrv:    settingSrv,
 
@@ -174,7 +174,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		// ToDo 记得开启
 		//// 检查是否有未交班的收银员
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-		//currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
+		//currentStaff := staffRepo.GetStaff(staffRepo.WhereSn(loginReq.DeviceId), staffRepo.WhereCashierOnline())
 		//if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
 		//	return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 		//}
@@ -229,7 +229,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	}
 
 	// 添加绑定记录
-	deviceUuid, err := s.bindRecordSrv.AddBindRecord(ctx, req.AddBindRecordReq{
+	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
 		DeviceId:         loginReq.DeviceId,
 		Brand:            loginReq.Brand,
 		Source:           loginReq.Source,
@@ -254,17 +254,12 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 
 // Logout 退出登录
 func (s *authSrv) Logout(ctx context.Context) error {
-	companyUuid := ctx.GetCompanyUuid()
-	source := ctx.GetSource()
-	staffUuid := ctx.GetStaffUuid()
-	assistantUuid := ctx.GetGinContext().GetUint64(jwt.AssistantStaffUuid)
-
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	if source == constant.SourceAssistant && assistantUuid != 0 {
-		staffUuid = assistantUuid
-	}
-	staff := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid))
-	if err := s.bindRecordSrv.Unbind(companyUuid, source, staff.BindKey, staff.Uuid); err != nil {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 解绑设备
+	err := repository.NewDeviceRepo(db).UpdateDevice(ctx.GetDeviceUuid(), map[string]any{
+		"finally_login_uuid": 0,
+	})
+	if err != nil {
 		return apperrors.ErrInternal
 	}
 	return nil
@@ -280,7 +275,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		source   = ctx.GetSource()
 		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
-	deviceRemark := s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
@@ -345,7 +340,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		source   = helper.GetSource(ctx.GetGinContext())
 		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
-	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	_ = s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	return resp.TabletBase{
 		Username:   staff.Username,
 		TabletUuid: staff.Uuid,
@@ -360,7 +355,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		source   = helper.GetSource(ctx.GetGinContext())
 		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
 	)
-	_ = s.bindRecordSrv.GetRemark(company.Uuid, source, deviceId)
+	_ = s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	return resp.KitchenBase{
 		Username:    staff.Username,
 		KitchenUuid: staff.Uuid,
@@ -373,9 +368,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		company        model.Company
 		companySetting model.CompanySetting
 		staff          model.Staff
+		db             = s.dbm.GetDB(auth.CompanyUuid)
 	)
 
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(auth.CompanyUuid))
+	staffRepo := repository.NewStaffRepo(db)
 	staff = staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, errors.New("用户不存在")
@@ -406,7 +402,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if auth.Source == constant.SourceAssistant && auth.Assistant.DeviceId != "" { // 登录了点餐助手，且绑定了收银机
 		deviceId = auth.Assistant.DeviceId
 	}
-	if auth.Source != constant.SourceShop && !s.bindRecordSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
+	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
 		return company, companySetting, staff, errors.New("设备已解绑，请重新绑定")
 	}
 
@@ -430,11 +426,12 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	case constant.SourceAssistant: // 点餐助手端
 		{
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
-				cashierBindRecord := repository.NewBindRecordRepo(s.dbm.GetDB(auth.CompanyUuid)).GetBySourceAndDeviceId(constant.SourceCashier, auth.DeviceId)
-				if cashierBindRecord.Uuid == 0 {
+				deviceRepo := repository.NewDeviceRepo(db)
+				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
+				if cashierDevice.Uuid == 0 {
 					return company, companySetting, staff, errors.New("收银员设备已解绑，请重新绑定")
 				}
-				if cashierBindRecord.FinallyLoginUuid == 0 {
+				if cashierDevice.FinallyLoginUuid == 0 {
 					return company, companySetting, staff, errors.New("收银员登录信息错误，请重新登录")
 				}
 			}
@@ -445,7 +442,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		}
 	case constant.SourceTablet: // 平板端
 		if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
-			deskRepo := repository.NewDeskRepo(s.dbm.GetDB(auth.CompanyUuid))
+			deskRepo := repository.NewDeskRepo(db)
 			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeviceUuid), deskRepo.WhereUuid(auth.DeskUuid), deskRepo.WhereIsBind())
 			if err != nil {
 				return company, companySetting, staff, errors.New("桌台未绑定")

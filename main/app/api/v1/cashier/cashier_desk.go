@@ -651,9 +651,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
-	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
@@ -665,6 +665,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 			localeSrv,  // 多语言服务
 			orderSrv,   // 订单服务
 			settingSrv, // 设置服务
+			deviceSrv,  // 设备服务
 		),
 		orderService: orderSrv,
 	}

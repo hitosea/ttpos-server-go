@@ -82,9 +82,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
-	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	// 创建收银产品处理程序
 	wrapper := ProductHandler{

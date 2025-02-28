@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -27,6 +28,7 @@ type IDeskSrv interface {
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
 	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
+	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                            // 平板端绑定桌台
 }
 
 // deskSrv 收银服务结构体
@@ -35,20 +37,22 @@ type deskSrv struct {
 	localeSrv  ILocaleSrv          // 多语言名称服务
 	orderSrv   IOrderSrv           // 订单服务
 	settingSrv setting.ISrv        // 设置服务
+	deviceSrv  IDeviceSrv          // 设备服务
 }
 
 // NewDeskSrv 创建新的收银产品类别服务
-func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
-	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv)
+func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv) IDeskSrv {
+	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
 }
 
 // NewDeskSrvImpl 创建新的收银服务实现
-func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv) IDeskSrv {
+func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv) IDeskSrv {
 	return &deskSrv{
 		dbm:        dbm,
 		localeSrv:  localeSrv,
 		orderSrv:   orderSrv,
 		settingSrv: settingSrv,
+		deviceSrv:  deviceSrv,
 	}
 }
 
@@ -418,4 +422,52 @@ func (s *deskSrv) GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, e
 	return resp.TabletDeskList{
 		List: list,
 	}, nil
+}
+
+// BindDesk 平板获取桌台列表
+func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error {
+	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
+		DeviceId:         bindDeskReq.DeviceId,
+		Brand:            bindDeskReq.Brand,
+		Source:           constant.SourceTablet,
+		FinallyLoginUuid: ctx.GetStaffUuid(),
+		CompanyUuid:      ctx.GetCompanyUuid(),
+		Remark:           bindDeskReq.Remark,
+	})
+	if err != nil {
+		return err
+	}
+
+	if bindDeskReq.DeskUuid != bindDeskReq.OldDeskUuid {
+		db := s.dbm.GetDB(ctx.GetCompanyUuid())
+		deskRepo := repository.NewDeskRepo(db)
+		desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid))
+		if err != nil || desk.Uuid == 0 {
+			return errors.New("桌台不存在")
+		}
+		if desk.Uuid > 0 && desk.DeviceUuid != deviceUuid {
+			return errors.New("桌台已被占用")
+		}
+		err = db.Transaction(func(tx *gorm.DB) error {
+			deskRepo = repository.NewDeskRepo(tx)
+			// 解绑旧的桌台（解绑当前设备绑定了非选定的其他桌台）
+			if err := deskRepo.UnbindDesk(bindDeskReq.DeskUuid, deviceUuid); err != nil {
+				return err
+			}
+			// 绑定新的桌台
+			if err := deskRepo.UpdateDeskByMap(desk.Uuid, map[string]any{"device_uuid": deviceUuid}); err != nil {
+				return err
+			}
+			if bindDeskReq.OldDeskUuid != 0 { // 解绑旧桌台
+				if err := deskRepo.UpdateDeskByMap(bindDeskReq.OldDeskUuid, map[string]any{"device_uuid": 0}); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return errors.New("绑定桌台失败")
+		}
+	}
+	return nil
 }
