@@ -14,7 +14,7 @@ type ISaleOrderProductRepo interface {
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
-	CreateSaleOrderProductCancelReasons(saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error
+	CreateSaleOrderProductCancelReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error
 }
 
 type saleOrderProductRepo struct {
@@ -108,7 +108,7 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 }
 
 // 批量创建销售订单商品取消原因
-func (r *saleOrderProductRepo) CreateSaleOrderProductCancelReasons(saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error {
+func (r *saleOrderProductRepo) CreateSaleOrderProductCancelReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error {
 	if len(returnFoodReasons) == 0 {
 		return nil
 	}
@@ -117,6 +117,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductCancelReasons(saleOrderProd
 	reasons := make([]*model.SaleOrderProductCancelReason, len(returnFoodReasons))
 	for i, reason := range returnFoodReasons {
 		reasons[i] = &model.SaleOrderProductCancelReason{
+			SaleOrderUuid:         saleOrderUuid,
 			SaleOrderProductUuid:  saleOrderProductUuid,
 			ReturnFoodReasonUuid:  reason[0],
 			MultiLanguageNameUuid: reason[1],

@@ -2118,6 +2118,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 添加退菜原因
 		if len(returnFoodReasons) > 0 {
 			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductCancelReasons(
+				saleOrderProduct.SaleOrderUuid,
 				saleOrderProduct.Uuid,
 				returnFoodReasons,
 			); err != nil {
