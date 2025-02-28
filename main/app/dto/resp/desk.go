@@ -55,17 +55,17 @@ type DeskListWithPaginationResp struct {
 
 // DeskInfoResp 桌台详情响应
 type DeskInfoResp struct {
-	Uuid          uint64 `json:"uuid"`                     // 桌台UUID
-	SaleBillUuid  uint64 `json:"sale_bill_uuid"`           // 订单UUID
-	DeskNo        string `json:"desk_no"`                  // 桌台名称
-	TypeUuid      uint64 `json:"type_uuid"`                // 桌台类型ID
-	RegionUuid    uint64 `json:"region_uuid"`              // 桌台区域ID
-	Status        uint   `json:"status"`                   // 桌台状态
-	CustomerCount uint   `json:"customer_count,omitempty"` // 桌台人数
-	IsLock        bool   `json:"is_lock"`                  // 是否锁单
-	IsBuffet      bool   `json:"is_buffet"`                // 是否自助餐
-	Remark        string `json:"remark"`                   // 桌台备注
-	Time          uint   `json:"time"`                     // 桌台用餐时间（秒）
+	Uuid          uint64 `json:"uuid"`           // 桌台UUID
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"` // 订单UUID
+	DeskNo        string `json:"desk_no"`        // 桌台名称
+	TypeUuid      uint64 `json:"type_uuid"`      // 桌台类型ID
+	RegionUuid    uint64 `json:"region_uuid"`    // 桌台区域ID
+	Status        uint   `json:"status"`         // 桌台状态
+	CustomerCount uint   `json:"customer_count"` // 桌台人数
+	IsLock        bool   `json:"is_lock"`        // 是否锁单
+	IsBuffet      bool   `json:"is_buffet"`      // 是否自助餐
+	Remark        string `json:"remark"`         // 桌台备注
+	Time          uint   `json:"time"`           // 桌台用餐时间（秒）
 }
 
 // CreateDeskOrderResp 创建桌台订单响应
