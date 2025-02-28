@@ -11,7 +11,7 @@ type ISaleOrderRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
-	UpdateSaleOrderOnly(obj *model.SaleOrder) error
+	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 }
 
@@ -51,7 +51,8 @@ func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
 	return r.db.Model(model).Save(model).Error
 }
 
-func (r *saleOrderRepo) UpdateSaleOrderOnly(obj *model.SaleOrder) error {
+func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
+	obj.SetNil()
 	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 

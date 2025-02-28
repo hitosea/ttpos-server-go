@@ -946,7 +946,7 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 
 	// 修改销售账单信息，标记账单取出
 	saleBill.SetShowSaleBill(ctx.GetDeviceUuid())
-	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdate != nil {
+	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdate != nil {
 		return nil, errors.New("更新销售账单失败")
 	}
 
@@ -1083,7 +1083,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 			return errUpdate
 		}
 		// 更新销售账单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -1184,14 +1184,14 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	saleBill.CalcSaleBill()
 
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductOnly(saleOrderProduct); errUpdateProduct != nil {
+		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); errUpdateProduct != nil {
 			return errUpdateProduct
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -1770,10 +1770,10 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 			}
 		}
 		// 更新订单记录
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -1865,7 +1865,7 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 			return errUpdate
 		}
 		ctx.Log().Debug("更新销售订单成功")
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -1951,7 +1951,22 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		product.Status = constant.SaleOrderProductStatusCooking
 	}
 
-	// 对商品进行送厨检查
+	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
+	statusMap := make(map[string]*model.SaleOrderProduct)
+	for i, saleOrderProduct := range unCookingSaleOrderProducts {
+		status := saleOrderProduct.CheckProduct()
+		if status != constant.ProductPass {
+			statusMap[status] = unCookingSaleOrderProducts[i]
+		}
+	}
+
+	//if len(statusMap) > 0 {
+	//	resp.OrderCheckServiceRes{
+	//		Code:          0,
+	//		OrderCheckRes: resp.OrderCheckRes{},
+	//	}
+	//	return nil,
+	//}
 
 	// 构建送厨单
 	productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
@@ -2322,6 +2337,39 @@ func IsSameSignature(saleOrderProduct *model.SaleOrderProduct, toSaleOrderProduc
 	return toSaleOrderProductSignMap[saleOrderProduct.Sign] != nil
 }
 
+func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, saleBill *model.SaleBill) error {
+	// 计算订单商品、订单、账单
+	saleBill.CalcAll()
+
+	// 保存到数据库
+	db := s.dbm.GetDB(ctx.GetDbId())
+	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		for _, saleOrder := range saleBill.SaleOrders {
+			// 保存订单
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+				return err
+			}
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				// 保存订单商品
+				if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+					return err
+				}
+			}
+		}
+		// 保存账单
+		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		ctx.Log().Error("更新金额失败", zap.Error(err))
+		return errors.New("更新金额失败")
+	}
+
+	return nil
+}
+
 // InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
 // 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
 // 第二种移动方式：原销售订单商品数量小于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
@@ -2420,10 +2468,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			// 计算商品数据。折扣、税费、服务
 			discountInfo := saleOrderTo.GetDiscountInfo()
 			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-			taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-			serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-			newSaleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+			newSaleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
 			// 在目标销售订单中新建一个销售订单商品
 			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
 			// 记录到待更新列表中
@@ -2488,7 +2533,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		for _, saleOrderProduct := range waitUpdateSaleOrderProductMap {
 			ctx.Log().Debug("更新销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 
-			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductOnly(saleOrderProduct); err != nil {
+			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 				return err
 			}
 		}
@@ -2507,16 +2552,16 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 				return err
 			}
 		} else {
-			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderFrom); err != nil {
+			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrderFrom); err != nil {
 				return err
 			}
 		}
-		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderOnly(saleOrderTo); err != nil {
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrderTo); err != nil {
 			return err
 		}
 
 		// 更新账单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil

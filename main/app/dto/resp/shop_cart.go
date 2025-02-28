@@ -14,6 +14,26 @@ type ShopCart struct {
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 }
 
+// 送厨接口响应：商品 XXX 已下架，请选择其他商品
+// 送厨接口响应：规格 商品名称 已下架，请选择其他规格
+// 送厨接口响应：以下商品库存不足，请删除后再下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
+// 送厨接口响应：已送厨和本次要送厨的商品未选择必点商品，确定要继续送厨吗？· 方案名称1 少点1份 · 方案名称2 少点2份
+// 送厨接口响应：以下商品价格有变动，请核对后再下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
+// 送厨接口响应：以下商品超出限购数量，请在限购数量内下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
+type OrderCheckRes struct {
+	Products            CartProductList     `json:"products"`
+	ProductMustPlanList ProductMustPlanList `json:"product_must_plans"`
+}
+
+type OrderCheckServiceRes struct {
+	Code int `json:"code"`
+	OrderCheckRes
+}
+
+type CartProductList struct {
+	List []Product `json:"list"`
+}
+
 type InstantShopCart struct {
 	SaleBillUuid  uint64      `json:"sale_bill_uuid"`  // 销售账单ID
 	DiningMethod  uint        `json:"dining_method"`   // 用餐方式 0:堂食 1:打包
@@ -58,7 +78,7 @@ type SaleOrder struct {
 // Product 购物车商品
 type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
-	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 自助餐名称
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
 	SalePrice           float64            `json:"price"`                 // 原价

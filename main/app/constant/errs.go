@@ -25,3 +25,13 @@ const (
 	CodeNeedLogin       = -105 // 需要登录
 	CodeLoginFailed     = -106 // 登录失败
 )
+
+// 送厨检查的业务错误码
+const (
+	CodeOrderCheckProductDown          = -200 // 商品已下架
+	CodeOrderCheckProductFlavorDown    = -201 // 商品某规格已下架
+	CodeOrderCheckProductStockShortage = -202 // 商品库存不足
+	CodeOrderCheckProductMust          = -203 // 未选择必点商品
+	CodeOrderCheckProductPriceChanged  = -204 // 商品价格已变动
+	CodeOrderCheckProductLimitOut      = -205 // 商品超出限购
+)
