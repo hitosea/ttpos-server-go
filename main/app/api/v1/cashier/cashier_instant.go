@@ -450,7 +450,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// OrderPaymentCreat 创建一个支付单
+// OrderPaymentCreate 创建一个支付单
 // @Summary 创建一个支付单
 // @Description 创建一个支付单
 // @Tags 收银端.点餐
@@ -460,7 +460,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 // @param data body req.InstantOrderPaymentCreateReq true "创建一个支付单参数"
 // @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/instant/order/payment/create [post]
-func (h *InstantHandler) OrderPaymentCreat(c *gin.Context) {
+func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到点餐页面结账页面信息接口请求")
 
@@ -669,7 +669,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                            // 获取点餐必点方案。废弃
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)            // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                      // 获取结账页面信息
-		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreat)                  // 创建一个支付单
+		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                 // 创建一个支付单
 		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)            // 创建一个销售订单
 		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct) // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)          // 删除一个销售订单(删除拆单)

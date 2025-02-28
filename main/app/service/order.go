@@ -1918,8 +1918,12 @@ func getSaleOrderProductUnCooking(saleOrder *model.SaleOrder) ([]*model.SaleOrde
 
 // InstantOrderCartProductCooking 送厨购物车商品
 func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error) {
-	s.lock.LockUuid(req.SaleBillUuid)
-	defer s.lock.UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取销售账单信息
