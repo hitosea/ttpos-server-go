@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	errors2 "errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -54,6 +56,7 @@ type IOrderSrv interface {
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
 	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                              // 修改购物车商品数量
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)                                      // 送厨购物车商品
+	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
@@ -2014,6 +2017,105 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 		ProductionOrderProducts: productionOrderProducts,
 	}
 	return &productionOrder
+}
+
+// InstantOrderCartProductReturning 退菜购物车商品
+func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	// 验证高级密码
+	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
+		return nil, err
+	}
+	//
+	db := s.dbm.GetDB(ctx.GetDbId())
+	//
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(
+		req.SaleBillUuid,
+		req.SaleOrderUuid,
+		req.SaleOrderProductUuid,
+	)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	//
+	results, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
+	if err != nil {
+		return nil, err
+	}
+	// 检查是否有不存在的UUID
+	if len(notFound) > 0 {
+		// 处理不存在的UUID
+		return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
+	}
+	//
+	for _, result := range results {
+		fmt.Println(result)
+		// reasonUuid := pair[0]    // 原始UUID
+		// multiLangUuid := pair[1] // 多语言名称UUID
+		// 使用这两个UUID进行后续处理
+	}
+	// if err := repository.NewOrderProductCancelReasonRepo(db).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
+	// 	return nil, err
+	// }
+
+	ctx.Log().Debug("获取销售账单信息")
+
+	// IOrderProductCancelReasonRepo
+	// SaleOrderProductCancelReason
+	fmt.Println(utils.ToJsonString(saleBill))
+
+	// // 获取销售订单信息
+	// saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
+	// if errSaleOrder != nil {
+	// 	return nil, errSaleOrder
+	// }
+
+	// ctx.Log().Debug("获取销售订单信息")
+	// // 获取销售订单商品信息
+	// unCookingSaleOrderProducts, errUnCookingSaleOrderProducts := getSaleOrderProductUnCooking(saleOrder)
+	// if errUnCookingSaleOrderProducts != nil {
+	// 	return nil, errUnCookingSaleOrderProducts
+	// }
+
+	// for index, _ := range unCookingSaleOrderProducts {
+	// 	product := unCookingSaleOrderProducts[index]
+	// 	product.Status = constant.SaleOrderProductStatusCooking
+	// }
+
+	// productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
+
+	// ctx.Log().Debug("准备开始更新")
+	// errUpdate := db.Transaction(func(tx *gorm.DB) error {
+	// 	// 修改订单商品状态为已送厨
+	// 	errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
+	// 	if errUpdateSaleProductStatus != nil {
+	// 		ctx.Log().Debug("商品状态更新失败", zap.Error(errUpdateSaleProductStatus))
+	// 		return errors.New(errUpdateSaleProductStatus.Error())
+	// 	}
+	// 	ctx.Log().Debug("商品状态成功")
+	// 	errCreateProduction := repository.NewProductionOrderRepo(tx).CreateProductionOrder(productionOrder)
+	// 	if errCreateProduction != nil {
+	// 		ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
+	// 		return errors.New(errCreateProduction.Error())
+	// 	}
+	// 	return nil
+	// })
+	// if errUpdate != nil {
+	// 	ctx.Log().Debug("更新数据失败", zap.Any("error", errUpdate))
+	// 	return nil, errors.New(errUpdate.Error())
+	// }
+
+	ctx.Log().Debug("获取新的购物车信息")
+	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if errGetCartInfo != nil {
+		return nil, errors.New(errGetCartInfo.Error())
+	}
+	return cartInfo, nil
 }
 
 // InstantOrderMustPlan 获取点餐必点方案

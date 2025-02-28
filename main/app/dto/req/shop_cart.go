@@ -1,5 +1,12 @@
 package req
 
+// OrderCartProduct 购物车商品请求参数
+type OrderCartProduct struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+}
+
 // OrderCartProductAddReq 向购物车添加商品请求参数
 type OrderCartProductAddReq struct {
 	SaleBillUuid      uint64   `json:"sale_bill_uuid"`  // 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
@@ -21,4 +28,15 @@ type OrderCartProductNumReq struct {
 type OrderCartProductCookingReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID
+}
+
+// OrderCartProductReturningReq 退菜购物车商品退菜请求参数
+type OrderCartProductReturningReq struct {
+	SaleBillUuid         uint64   `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64   `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64   `json:"sale_order_product_uuid"` // 销售订单商品ID
+	Num                  int      `json:"num"`                     // 退菜数量
+	Reason               string   `json:"reason"`                  // 退菜原因
+	Password             string   `json:"password"`                // 高级密码 后台开启的时候才传
+	ReturnIds            []uint64 `json:"return_ids"`              // 退菜标签ids
 }
