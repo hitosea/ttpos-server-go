@@ -260,15 +260,15 @@ func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId 
 	}
 
 	saleBillSetting, err := repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
-		SaleBillUuid:    saleBillUuid,
-		ServiceFeeType:  serviceFeeType,
-		ServiceFeeValue: serviceFeeValue,
-		TaxFeeType:      taxFeeType,
-		DiscountType:    discountType,
-		Zero:            zero,
-		ZeroCheckout:    zeroCheckout,
-		IsStatGift:      isStatGift,
-		IsStatFree:      isStatFree,
+		SaleBillUuid:     saleBillUuid,
+		ServiceFeeType:   serviceFeeType,
+		ServiceFeeValue:  serviceFeeValue,
+		TaxFeeType:       taxFeeType,
+		DiscountType:     discountType,
+		ZeroRule:         zero,
+		ZeroCheckoutRule: zeroCheckout,
+		IsStatGift:       isStatGift,
+		IsStatFree:       isStatFree,
 	})
 
 	return saleBillSetting, err
