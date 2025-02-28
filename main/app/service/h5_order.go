@@ -1,13 +1,18 @@
 package service
 
 import (
+	"errors"
+	"gorm.io/gorm"
 	"slices"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -15,6 +20,8 @@ import (
 type IH5OrderSrv interface {
 	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (resp.H5OrderList, error) // 获取h5订单列表
 	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (resp.H5OrderDetailResp, error)              // 获取h5订单详情
+	RejectH5Order(ctx context.Context, orderUuid uint64) error                                          // 拒单
+	AcceptH5Order(ctx context.Context, orderUuid uint64) error                                          // 接单
 }
 
 type h5OrderSrv struct {
@@ -134,24 +141,12 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 		// 获取同一个销售账单，已接单的，h5订单商品
 		if saleBillUuid > 0 {
 			products, err := h5OrderRepo.GetH5OrderProducts(h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
-				h5OrderRepo.WithSaleOrderProduct(), h5OrderRepo.WithSaleOrderProductMultiLanguageName())
-			if err != nil {
-				return resp.H5OrderDetailResp{}, apperrors.ErrInternal
-			}
-			// 所有h5订单uuid
-			var h5OrderUuids []uint64
-			for _, product := range products {
-				if !slices.Contains(h5OrderUuids, product.H5OrderUuid) {
-					h5OrderUuids = append(h5OrderUuids, product.H5OrderUuid)
-				}
-			}
-			// 已接单的h5订单uuid
-			h5OrderUuids, err = h5OrderRepo.GetH5OrderUuids(h5OrderRepo.WhereUuidIn(h5OrderUuids), h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusAccepted}))
+				h5OrderRepo.WithSaleOrderProduct(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithH5Order())
 			if err != nil {
 				return resp.H5OrderDetailResp{}, apperrors.ErrInternal
 			}
 			for _, product := range products {
-				if slices.Contains(h5OrderUuids, product.H5OrderUuid) {
+				if product.H5Order.Status == constant.H5OrderStatusAccepted {
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
 						NameLocale: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        product.Num,
@@ -200,4 +195,102 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 			List: make([]resp.OperationLogItem, 0),
 		},
 	}, nil
+}
+
+func (s *h5OrderSrv) RejectH5Order(ctx context.Context, orderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WithSaleOrderProducts())
+	if err != nil {
+		return apperrors.ErrInternal
+	}
+	// 非待处理状态不可操作
+	if order.Status != constant.H5OrderStatusOrder {
+		return errors.New("当前状态不可操作")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		h5OrderRepo = repository.NewH5OrderRepo(tx)
+		err := h5OrderRepo.UpdateH5Order(orderUuid, map[string]any{
+			"status":      constant.H5OrderStatusRejected, // 标记拒单
+			"staff_uuid":  ctx.GetStaffUuid(),
+			"handle_time": time.Now().Unix(),
+		})
+		if err != nil {
+			return apperrors.ErrInternal
+		}
+		for _, product := range order.SaleOrderProducts {
+			_, err := h5OrderRepo.CreateH5OrderProduct(model.H5OrderProduct{
+				Name:                 product.Name,
+				Price:                product.Price,
+				SalePrice:            product.SalePrice,
+				Num:                  product.Num,
+				AttributeText:        product.GetAttributeNames(),
+				Remark:               product.Remark,
+				SaleOrderProductUuid: product.Uuid,
+				H5OrderUuid:          orderUuid,
+				SaleBillUuid:         product.SaleBillUuid,
+			})
+			if err != nil {
+				return apperrors.ErrInternal
+			}
+		}
+		// ToDo 增加订单操作日志
+		return nil
+	})
+	return err
+}
+
+func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, orderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WithSaleOrderProducts())
+	if err != nil {
+		return apperrors.ErrInternal
+	}
+	// 非待处理状态不可操作
+	if order.Status != constant.H5OrderStatusOrder {
+		return errors.New("当前状态不可操作")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		h5OrderRepo = repository.NewH5OrderRepo(tx)
+		err := h5OrderRepo.UpdateH5Order(orderUuid, map[string]any{
+			"status":      constant.H5OrderStatusAccepted, // 标记接单
+			"staff_uuid":  ctx.GetStaffUuid(),
+			"handle_time": time.Now().Unix(),
+		})
+		if err != nil {
+			return apperrors.ErrInternal
+		}
+		saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
+		for _, product := range order.SaleOrderProducts {
+			// ToDo 检查商品，送厨，这里只是简单的快照了销售订单商品
+			h5OrderProduct, err := h5OrderRepo.CreateH5OrderProduct(model.H5OrderProduct{
+				Name:                 product.Name,
+				Price:                product.Price,
+				SalePrice:            product.SalePrice,
+				Num:                  product.Num,
+				AttributeText:        product.GetAttributeNames(),
+				Remark:               product.Remark,
+				SaleOrderProductUuid: product.Uuid,
+				H5OrderUuid:          orderUuid,
+				SaleBillUuid:         product.SaleBillUuid,
+			})
+			if err != nil {
+				return apperrors.ErrInternal
+			}
+			// 标记销售订单商品已接单、已送厨
+			err = saleOrderProductRepo.UpdateSaleOrderProductByMap(product.Uuid, map[string]any{
+				"status":                constant.SaleOrderProductStatusCooking,
+				"is_accept_order":       1,
+				"h5_order_product_uuid": h5OrderProduct.Uuid,
+			})
+			if err != nil {
+				return apperrors.ErrInternal
+			}
+		}
+		// todo 增加操作日志
+		return nil
+	})
+
+	return err
 }

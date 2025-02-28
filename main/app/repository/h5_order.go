@@ -13,7 +13,8 @@ type IH5OrderRepo interface {
 	GetH5Order(opts ...DBOption) (model.H5Order, error)
 	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
 	GetH5OrderCount(opts ...DBOption) (int64, error)
-	UpdateH5Order(qrcodeOrderUuid uint64, qrcodeOrder model.H5Order) error
+	UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error
+
 	CreateH5Order(qrcodeOrder model.H5Order) (uint64, error)
 	DeleteH5Order(qrcodeOrderUuid uint64) error
 	Reject(DeskUuid uint64) error
@@ -34,10 +35,13 @@ type IH5OrderRepo interface {
 
 	// 扫码订单商品相关
 
-	GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error) // 扫码订单商品
-	WhereSaleBillUuid(uuid uint64) DBOption                              // 扫码订单商品销售账单Uuid条件
+	GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error)                    // 扫码订单商品
+	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (model.H5OrderProduct, error) // 快照销售订单商品
+
+	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
 
 	WithSaleOrderProduct() DBOption // 关联销售订单商品
+	WithH5Order() DBOption          // 关联扫码订单
 }
 
 func NewH5OrderRepo(db *gorm.DB) IH5OrderRepo {
@@ -106,8 +110,8 @@ func (r *H5OrderRepoImpl) GetH5OrderCount(opts ...DBOption) (int64, error) {
 }
 
 // UpdateH5Order 更新接单
-func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, qrcodeOrder model.H5Order) error {
-	if err := r.db.Model(&model.H5Order{}).Where("uuid = ?", qrcodeOrderUuid).Updates(qrcodeOrder).Error; err != nil {
+func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error {
+	if err := r.db.Model(&model.H5Order{}).Where("uuid = ?", qrcodeOrderUuid).Updates(vars).Error; err != nil {
 		return err
 	}
 	return nil
@@ -146,6 +150,11 @@ func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderP
 	}
 	err := db.Find(&products).Error
 	return products, err
+}
+
+func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (model.H5OrderProduct, error) {
+	err := r.db.Model(&model.H5OrderProduct{}).Create(&h5OrderProduct).Error
+	return h5OrderProduct, err
 }
 
 func (r *H5OrderRepoImpl) WhereStatus(status []uint) DBOption {
@@ -187,6 +196,11 @@ func (r *H5OrderRepoImpl) WhereSaleBillUuid(uuid uint64) DBOption {
 func (r *H5OrderRepoImpl) WithSaleOrderProduct() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct")
+	}
+}
+func (r *H5OrderRepoImpl) WithH5Order() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("H5Order")
 	}
 }
 

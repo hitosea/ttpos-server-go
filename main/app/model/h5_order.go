@@ -36,4 +36,5 @@ type H5OrderProduct struct {
 	SaleBillUuid         uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid;NOT NULL" json:"sale_bill_uuid"`
 
 	SaleOrderProduct *SaleOrderProduct `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"` // 关联销售订单商品
+	H5Order          *H5Order          `gorm:"foreignKey:H5OrderUuid;references:uuid"`          // 关联扫码订单
 }

@@ -70,6 +70,53 @@ func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// RejectH5Order 拒单
+// @Summary 拒单
+// @Description 拒单
+// @Tags 收银端.接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param order_uuid query int true "h5订单uuid"
+// @Success 200 {object} dto.Response
+// @Router /cashier/h5_order/reject [post]
+func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
+	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+	}
+
+	err = h.h5OrderSrv.RejectH5Order(helper.GetContext(c), orderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// AcceptH5Order 接单
+// @Summary 接单
+// @Description 接单
+// @Tags 收银端.接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param order_uuid query int true "h5订单uuid"
+// @Success 200 {object} dto.Response
+// @Router /cashier/h5_order/accept [post]
+func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
+	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+	}
+	err = h.h5OrderSrv.AcceptH5Order(helper.GetContext(c), orderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterH5OrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -87,5 +134,7 @@ func RegisterH5OrderHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.GET("/h5_order/list", wrapper.GetH5OrderList)     // 获取h5订单列表
 		privateApi.GET("/h5_order/detail", wrapper.GetH5OrderDetail) // 获取h5订单详情
+		privateApi.POST("/h5_order/reject", wrapper.RejectH5Order)   // 拒单
+		privateApi.POST("/h5_order/accept", wrapper.AcceptH5Order)   // 接单
 	}
 }
