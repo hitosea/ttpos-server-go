@@ -1710,6 +1710,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
+
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
@@ -1828,14 +1834,20 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	}
 	ctx.Log().Debug("获取到账单信息成功")
 
-	saleOrder, errSaleOrder := getSaleOrder(request.SaleOrderUuid, saleBill)
-	if errSaleOrder != nil {
-		return nil, errSaleOrder
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, request.SaleOrderUuid); err != nil {
+		return nil, err
 	}
+
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
 	ctx.Log().Debug("获取到订单信息成功")
 
 	// 获取销售订单商品信息
-	saleOrderProduct, index, errSaleOrderProduct := getSaleOrderProduct(request.SaleOrderProductUuid, saleOrder)
+	saleOrderProduct, index, errSaleOrderProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
 	if errSaleOrderProduct != nil {
 		return nil, errSaleOrderProduct
 	}
@@ -1890,26 +1902,6 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	return info, nil
 }
 
-func getSaleOrder(saleOrderUuid uint64, saleBill *model.SaleBill) (*model.SaleOrder, error) {
-	for i, _ := range saleBill.SaleOrders {
-		order := saleBill.SaleOrders[i]
-		if order.Uuid == saleOrderUuid {
-			return saleBill.SaleOrders[i], nil
-		}
-	}
-	return nil, errors.New("销售订单不存在")
-}
-
-func getSaleOrderProduct(saleOrderProductUuid uint64, saleOrder *model.SaleOrder) (*model.SaleOrderProduct, int, error) {
-	for i, _ := range saleOrder.SaleOrderProducts {
-		orderProduct := saleOrder.SaleOrderProducts[i]
-		if orderProduct.Uuid == saleOrderProductUuid {
-			return saleOrder.SaleOrderProducts[i], i, nil
-		}
-	}
-	return nil, 0, errors.New("销售订单商品不存在")
-}
-
 func getSaleOrderProductUnCooking(saleOrder *model.SaleOrder) ([]*model.SaleOrderProduct, error) {
 	unCookingSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
 	for i, _ := range saleOrder.SaleOrderProducts {
@@ -1938,9 +1930,9 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 	ctx.Log().Debug("获取销售账单信息")
 	// 获取销售订单信息
-	saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
-	if errSaleOrder != nil {
-		return nil, errSaleOrder
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
 	}
 
 	ctx.Log().Debug("获取销售订单信息")
@@ -2044,12 +2036,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		ctx.AddLock()
 	}
 	// 验证高级密码
-	// if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
-	// 	return nil, err
-	// }
-	//
-	db := s.dbm.GetDB(ctx.GetDbId())
+	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
+		return nil, err
+	}
+
 	// 获取验证销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errors.New("销售账单不存在")
@@ -2066,6 +2058,10 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.New("退菜数量不能为0")
 	case req.Num > saleOrderProduct.Num:
 		return nil, errors.New("退菜数量不能大于当前商品数量")
+	}
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
+		return nil, err
 	}
 	//  验证退菜标签
 	returnFoodReasons := [][2]uint64{}
@@ -2137,7 +2133,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.New("更新数据失败")
 	}
 	// 获取新的购物车信息
-	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
 		return nil, errors.New(errGetCartInfo.Error())

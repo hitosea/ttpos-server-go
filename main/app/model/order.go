@@ -262,8 +262,8 @@ func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderPro
 		return nil, nil
 	}
 	// 获取销售订单商品
-	saleOrderProduct := saleOrder.GetSaleOrderProduct(saleOrderProductUuid)
-	if saleOrderProduct == nil {
+	saleOrderProduct, _, err := saleOrder.GetSaleOrderProduct(saleOrderProductUuid)
+	if err != nil {
 		return saleOrder, nil
 	}
 	return saleOrder, saleOrderProduct
@@ -458,13 +458,13 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 }
 
 // 返回新的销售订单商品
-func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) *SaleOrderProduct {
-	for _, saleOrderProduct := range model.SaleOrderProducts {
+func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) (*SaleOrderProduct, int, error) {
+	for i, saleOrderProduct := range model.SaleOrderProducts {
 		if saleOrderProductUuid == saleOrderProduct.Uuid {
-			return saleOrderProduct
+			return saleOrderProduct, i, nil
 		}
 	}
-	return nil
+	return nil, 0, errors.New("销售订单商品不存在")
 }
 
 // 计算销售订单原服务费金额。销售订单原服务费金额= 销售订单商品的原服务费之和。

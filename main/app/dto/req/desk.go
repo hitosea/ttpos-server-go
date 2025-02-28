@@ -1,6 +1,9 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"errors"
+	"ttpos-server-go/app/dto"
+)
 
 var DeskReqMessage = map[string]string{
 	"uuid.required":            "桌台uuid不能为空",
@@ -47,6 +50,32 @@ type DeskOrderCreateReq struct {
 	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
 	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
+}
+
+func (req *DeskOrderCreateReq) ValidateCreateDeskOrderReq() error {
+	if req.DeskUuid == 0 {
+		return errors.New("桌台uuid不能为0")
+	}
+	if req.IsBuffet == nil {
+		return errors.New("是否是自助餐不能为空")
+	}
+	if req.MealNum == nil {
+		return errors.New("就餐人数不能为空")
+	}
+	if !*req.IsBuffet {
+		if *req.MealNum < 1 || *req.MealNum > 999 {
+			return errors.New("就餐人数不能小于1或大于999")
+		}
+	}
+	if *req.IsBuffet {
+		if len(req.BuffetUuids) < 1 || len(req.BuffetUuids) > 2 {
+			return errors.New("自助餐uuid列表不能小于1或大于2")
+		}
+		if len(req.BuffetCustomerTypes) == 0 {
+			return errors.New("自助餐顾客类型列表不能为空")
+		}
+	}
+	return nil
 }
 
 // BindDeskReq 平板绑定/换绑桌台请求参数

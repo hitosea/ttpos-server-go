@@ -2,8 +2,6 @@ package service
 
 import (
 	"errors"
-	"github.com/jinzhu/copier"
-	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -15,6 +13,9 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 
 	"go.uber.org/zap"
 )
@@ -270,7 +271,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	dbId := ctx.GetDbId()
 	// 验证请求参数
-	err := s.validateCreateDeskOrderReq(req)
+	err := req.ValidateCreateDeskOrderReq()
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, err
 	}
@@ -297,34 +298,6 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 
 	// 创建桌台-非自助餐订单
 	return s.orderSrv.CreateDeskOrder(ctx, req)
-}
-
-// validateCreateDeskOrderReq 验证请求参数
-func (s *deskSrv) validateCreateDeskOrderReq(req req.DeskOrderCreateReq) error {
-	if req.DeskUuid == 0 {
-		return errors.New("桌台uuid不能为0")
-	}
-	if req.IsBuffet == nil {
-		return errors.New("是否是自助餐不能为空")
-	}
-	if req.MealNum == nil {
-		return errors.New("就餐人数不能为空")
-	}
-	if !*req.IsBuffet {
-		if *req.MealNum < 1 || *req.MealNum > 999 {
-			return errors.New("就餐人数不能小于1或大于999")
-		}
-	}
-	if *req.IsBuffet {
-		if len(req.BuffetUuids) < 1 || len(req.BuffetUuids) > 2 {
-			return errors.New("自助餐uuid列表不能小于1或大于2")
-		}
-		if len(req.BuffetCustomerTypes) == 0 {
-			return errors.New("自助餐顾客类型列表不能为空")
-		}
-	}
-
-	return nil
 }
 
 // createDeskBuffetOrder 创建桌台自助餐订单
