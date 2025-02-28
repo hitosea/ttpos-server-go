@@ -1966,7 +1966,31 @@ class Product extends BaseModel
             $this->error = '请选择商品分类';
             return false;
         }
-        return $this->where('product_id', 'in', $product_ids)->update(['category_id' => $category_id]);
+
+        $productUuidList = []; // 商品uuid列表
+        $materialUuidList = []; // 材料uuid列表
+        
+        foreach ($product_ids as $product_id) {
+            $product = self::detail($product_id);
+            if ($product) {
+                $productUuidList[] = $product['uuid'];
+                continue;
+            }
+            $material = Material::detail($product_id);
+            if ($material) {
+                $materialUuidList[] = $material['uuid'];
+            }
+        }
+        // 更新商品分类
+        if (!empty($productUuidList)) {
+            $this->where('uuid', 'in', $productUuidList)->update(['category_uuid' => $category_id]);
+        }
+        // 更新材料分类
+        if (!empty($materialUuidList)) {
+            Material::where('uuid', 'in', $materialUuidList)->update(['category_uuid' => $category_id]);
+        }
+
+        return true;
     }
 
     /**
