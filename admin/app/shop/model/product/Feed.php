@@ -5,10 +5,8 @@ namespace app\shop\model\product;
 use think\facade\Env;
 use help\ValidateHelp;
 use app\common\model\product\ProductBom;
-use app\common\model\product\ProductFeed;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Feed as FeedModel;
-use app\common\model\product\ProductFeedMaterial;
 
 /**
  * 加料模型
@@ -18,7 +16,7 @@ class Feed extends FeedModel
     /**
      * 获取列表数据
      */
-    public function getList($data, $shop_supplier_id)
+    public function getList($data)
     {
         $prefix = Env::get('DB_PREFIX');
         $model = $this->alias('feed')
@@ -65,7 +63,7 @@ class Feed extends FeedModel
     /**
      * 添加
      */
-    public function add($data, $shop_supplier_id)
+    public function add($data)
     {
         if (ValidateHelp::hasEmptyValue($data['feed_name'] ?? '')) {
             $this->error = '加料名称不能为空';
@@ -189,13 +187,12 @@ class Feed extends FeedModel
             // 计算需要新增的产品ID
             $add_product_ids = array_diff($product_ids, $current_product_ids) ?: [];
             // todo 兼容 获取材料最小库存
-            // $stock = ProductFeedMaterial::alias('pfm')
-            //     ->join('product p', 'pfm.material_id = p.product_id')
-            //     ->field('pfm.feed_id, LEAST(FLOOR(MIN(p.product_material_stock / pfm.material_num)), 99999999) AS min_stock_num')
-            //     ->where('pfm.feed_id', $feed_id)
-            //     ->find();
-            // $min_stock_num = $stock['min_stock_num'] ?: self::MAX_MATERIAL_NUM;
-            $min_stock_num = self::MAX_MATERIAL_NUM;
+            $stock = RelatedMaterial::alias('r')
+                ->join('material m', 'r.material_uuid = m.uuid')
+                ->field('r.related_uuid, LEAST(FLOOR(MIN(m.stock_num / r.num)), 99999999) AS min_stock_num')
+                ->where('r.related_uuid', $feed_id)
+                ->find();
+            $min_stock_num = $stock['min_stock_num'] ?: self::MAX_MATERIAL_NUM;
             // 删除变动的关系
             if (!empty($delete_product_ids)) {
                 $chunks = array_chunk($delete_product_ids, 1000);

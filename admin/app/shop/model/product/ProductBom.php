@@ -99,7 +99,6 @@ class ProductBom extends ProductBomModel
                 'status' => $product['status'],
                 'is_default_select' => $feed['default_select'],
             ]);
-            // todo 添加商品规格关联材料
         }
     }
 

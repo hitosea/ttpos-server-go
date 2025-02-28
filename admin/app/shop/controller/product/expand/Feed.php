@@ -24,7 +24,7 @@ class Feed extends Controller
     public function index()
     {
         $model = new FeedModel;
-        $list = $model->getList($this->postData(), $this->store['user']['shop_supplier_id']);
+        $list = $model->getList($this->postData());
         return $this->renderSuccess('', compact('list'));
     }
 
@@ -40,7 +40,7 @@ class Feed extends Controller
     public function add()
     {
         $model = new FeedModel();
-        if ($model->add($this->postData(), $this->store['user']['shop_supplier_id'])) {
+        if ($model->add($this->postData())) {
             return $this->renderSuccess('添加成功');
         }
         return $this->renderError($model->getError() ?: '添加失败');
