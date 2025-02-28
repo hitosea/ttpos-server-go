@@ -182,7 +182,7 @@ func (model *ProductPackage) GetMinPrice() float64 {
 	return minPrice
 }
 
-// ProductBom 产品BOM表,定义产品BOM的相关信息 `ttpos_product_bom`
+// ProductBom 产品BOM表,定义产品的规格、小料相关信息 `ttpos_product_bom`
 type ProductBom struct {
 	BaseModel
 	PurchasePrice   float64 `gorm:"column:purchase_price;type:decimal(12,2);default:0;comment:采购单价;NOT NULL" json:"purchase_price"`
@@ -202,6 +202,16 @@ type ProductBom struct {
 	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
 	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
 	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+}
+
+// IsStockShortage 判断库存是否不足
+func (model *ProductBom) IsStockShortage(productNum uint) bool {
+	return model.StockNum < float64(productNum)
+}
+
+// IsPriceChanged 判断商品价格是否变动
+func (model *ProductBom) IsPriceChanged(price float64) bool {
+	return model.Price != price
 }
 
 // IsSoldOutStatus 判断是否标记沽清、或售罄无库存

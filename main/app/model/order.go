@@ -1044,6 +1044,54 @@ type SaleOrderProduct struct {
 	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 }
 
+// 产品是否已经下架
+func (model *SaleOrderProduct) IsProductDown() bool {
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.ProductBom.IsFlavorProduct() {
+			// 商品已经沽清
+			if bom.ProductBom.IsSoldOutStatus() {
+
+			}
+			// 商品已经下架
+			if bom.ProductBom.IsDown() {
+
+			}
+			// 商品已经删除
+			if bom.ProductBom.IsDelete() {
+
+			}
+			// 下单商品数量超过库存数量
+			if bom.ProductBom.IsStockShortage(model.Num) {
+
+			}
+			// 商品规格价格变动
+			if bom.ProductBom.IsPriceChanged(model.FlavorPrice) {
+
+			}
+		}
+		if bom.ProductBom.IsSauce() {
+			// 商品已经沽清
+			if bom.ProductBom.IsSoldOutStatus() {
+
+			}
+			// 商品已经下架
+			if bom.ProductBom.IsDown() {
+
+			}
+			// 商品已经删除
+			if bom.ProductBom.IsDelete() {
+
+			}
+			// 下单商品数量超过库存数量
+			if bom.ProductBom.IsStockShortage(model.Num) {
+
+			}
+		}
+	}
+	return false
+}
+
+// 将model的关联对象置空
 func (model *SaleOrderProduct) SetNil() {
 	model.MultiLanguageName = nil
 	model.ImageFile = nil

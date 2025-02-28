@@ -1939,17 +1939,21 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 
 	ctx.Log().Debug("获取销售订单信息")
-	// 获取销售订单商品信息
+	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts, errUnCookingSaleOrderProducts := getSaleOrderProductUnCooking(saleOrder)
 	if errUnCookingSaleOrderProducts != nil {
 		return nil, errUnCookingSaleOrderProducts
 	}
 
+	// 修改商品状态为已送厨
 	for index, _ := range unCookingSaleOrderProducts {
 		product := unCookingSaleOrderProducts[index]
 		product.Status = constant.SaleOrderProductStatusCooking
 	}
 
+	// 对商品进行送厨检查
+
+	// 构建送厨单
 	productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
 
 	ctx.Log().Debug("准备开始更新")
