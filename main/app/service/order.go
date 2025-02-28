@@ -1059,7 +1059,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		return nil, errors.New("找不到订单商品")
 	}
 	for _, product := range saleBill.SaleOrders[0].SaleOrderProducts {
-		if product.Uuid == req.OrderProductUuid && product.Status == constant.OrderProductStatusSentKitchen {
+		if product.Uuid == req.OrderProductUuid && product.CancelTime == 0 && product.Status == constant.OrderProductStatusSentKitchen {
 			return nil, errors.New("商品已送厨，禁止删除")
 		}
 	}
