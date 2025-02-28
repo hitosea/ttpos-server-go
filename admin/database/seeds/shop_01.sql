@@ -1482,7 +1482,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `source` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
     `device_id` VARCHAR(255) DEFAULT '' COMMENT '唯一设备标识id',
     `is_main` TINYINT(1) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
-    `print_port_uuid` BIGINT DEFAULT 0 COMMENT '打印档口ID',
+    `product_printer_uuid` BIGINT DEFAULT 0 COMMENT '打印档口Uuid',
     `address` VARCHAR(255) DEFAULT '' COMMENT '绑定地址',
     `port` INT(11) DEFAULT 0 COMMENT '绑定端口',
     `device_ip` VARCHAR(50) DEFAULT '' COMMENT '设备ip',

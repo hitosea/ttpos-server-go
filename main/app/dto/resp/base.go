@@ -19,9 +19,31 @@ type CashierBase struct {
 	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
 }
 
+type AssistantStaff struct {
+	Uuid       uint64   `json:"uuid"`       // 点餐助手员工uuid
+	RealName   string   `json:"real_name"`  // 点餐助手员工真实姓名
+	Phone      string   `json:"phone"`      // 点餐助手员工手机号
+	DeviceId   string   `json:"device_id"`  // 点餐助手设备ID
+	Permission []string `json:"permission"` // 点餐助手权限
+}
+
+type CashierStaff struct {
+	RealName     string `json:"real_name"`     // 收银员真实姓名
+	Username     string `json:"username"`      // 收银员账号
+	DeviceId     string `json:"device_id"`     // 收银机设备ID
+	DeviceRemark string `json:"device_remark"` // 收银机备注
+}
+
 type AssistantBase struct {
-	Username      string `json:"username"`       // 登录账号
-	AssistantUuid uint64 `json:"assistant_uuid"` // 点餐助手员工UUID
+	CashierStaff   CashierStaff      `json:"cashier_staff"`   // 收银机员工
+	AssistantStaff AssistantStaff    `json:"assistant_staff"` // 点餐助手员工
+	Company        Company           `json:"company"`         // 商家信息
+	Assistant      setting.Assistant `json:"assistant"`       // 点餐助手设置
+	Buffet         setting.Buffet    `json:"buffet"`          // 自助餐设置
+	Payment        setting.Payment   `json:"payment"`         // 支付设置
+	Business       setting.Business  `json:"business"`        // 门店业务设置
+	Kitchen        setting.Kitchen   `json:"kitchen"`         // 厨显端设置
+	Currency       setting.Currency  `json:"currency"`        // 货币设置
 }
 type TabletBase struct {
 	Username   string `json:"username"`    // 登录账号

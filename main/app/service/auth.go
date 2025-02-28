@@ -98,6 +98,7 @@ func NewAuthSrvImpl(
 		},
 		tabletRoutes: []string{
 			"/api/v1/tablet/desk/list",
+			"/api/v1/tablet/bind_desk",
 			//'/passport/login',
 			//'/passport/captcha',
 			//'/passport/logout',
@@ -325,10 +326,77 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 
 // AssistantBase 获取收银端基本信息
 func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	assistantBase := resp.AssistantBase{}
 	staff := helper.GetStaff(ctx.GetGinContext())
+	staffRepo := repository.NewStaffRepo(db)
+	assistantStaffUuid := ctx.GetGinContext().GetUint64(jwt.AssistantStaffUuid)
+	assistantStaff := staffRepo.GetStaff(staffRepo.WhereUuid(assistantStaffUuid))
+	perms, err := s.roleAccessSrv.GetPermission(constant.AssistantRouteName, assistantStaff.Uuid, assistantStaff.CompanyUuid)
+	if err != nil {
+		return assistantBase, err
+	}
+	permissions := make([]string, len(perms))
+	for _, perm := range perms {
+		permissions = append(permissions, perm.Path)
+	}
+
+	deviceRepo := repository.NewDeviceRepo(db)
+	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
+	if err != nil {
+		return assistantBase, err
+	}
+	company := helper.GetCompany(ctx.GetGinContext())
+	companySetting := helper.GetCompanySetting(ctx.GetGinContext())
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return assistantBase, err
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if err != nil {
+		return assistantBase, err
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return assistantBase, err
+	}
+	assistantSetting, err := s.settingSrv.GetAssistantSetting(ctx, nil)
+	if err != nil {
+		return assistantBase, err
+	}
+	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
+	if err != nil {
+		return assistantBase, err
+	}
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
+	if err != nil {
+		return assistantBase, err
+	}
 	return resp.AssistantBase{
-		Username:      staff.Username,
-		AssistantUuid: staff.Uuid,
+		CashierStaff: resp.CashierStaff{
+			RealName:     staff.RealName,
+			Username:     staff.Username,
+			DeviceId:     staff.BindKey,
+			DeviceRemark: device.Remark,
+		},
+		AssistantStaff: resp.AssistantStaff{
+			Uuid:       assistantStaff.Uuid,
+			RealName:   assistantStaff.RealName,
+			Phone:      assistantStaff.Phone,
+			DeviceId:   assistantStaff.BindKey,
+			Permission: permissions,
+		},
+		Company: resp.Company{
+			Uuid:     company.Uuid,
+			Name:     company.Name,
+			TimeZone: companySetting.Timezone,
+		},
+		Assistant: assistantSetting,
+		Buffet:    buffetSetting,
+		Payment:   paymentSetting,
+		Business:  businessSetting,
+		Kitchen:   kitchenSetting,
+		Currency:  currencySetting,
 	}, nil
 }
 
@@ -431,7 +499,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				if cashierDevice.Uuid == 0 {
 					return company, companySetting, staff, errors.New("收银员设备已解绑，请重新绑定")
 				}
-				if cashierDevice.FinallyLoginUuid == 0 {
+				if cashierDevice.FinallyLoginUuid == 0 || auth.Assistant.StaffUuid == 0 {
 					return company, companySetting, staff, errors.New("收银员登录信息错误，请重新登录")
 				}
 			}

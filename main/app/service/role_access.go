@@ -37,9 +37,10 @@ func NewRoleAccessSrvImpl(dbm *database.DBManager) IRoleAccessSrv {
 
 // 从数据库获取权限
 func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, error) {
-	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyUuid))
+	db := s.dbm.GetDB(companyUuid)
+	accessRepo := repository.NewAccessRepo(db)
 	var companySetting model.CompanySetting
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
+	staffRepo := repository.NewStaffRepo(db)
 	staff := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {

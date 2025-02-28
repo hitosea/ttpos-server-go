@@ -913,12 +913,62 @@ definitions:
     type: object
   resp.AssistantBase:
     properties:
-      assistant_uuid:
-        description: 点餐助手员工UUID
-        type: integer
-      username:
-        description: 登录账号
+      assistant:
+        allOf:
+        - $ref: '#/definitions/setting.Assistant'
+        description: 点餐助手设置
+      assistant_staff:
+        allOf:
+        - $ref: '#/definitions/resp.AssistantStaff'
+        description: 点餐助手员工
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cashier_staff:
+        allOf:
+        - $ref: '#/definitions/resp.CashierStaff'
+        description: 收银机员工
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币设置
+      kitchen:
+        allOf:
+        - $ref: '#/definitions/setting.Kitchen'
+        description: 厨显端设置
+      payment:
+        allOf:
+        - $ref: '#/definitions/setting.Payment'
+        description: 支付设置
+    type: object
+  resp.AssistantStaff:
+    properties:
+      device_id:
+        description: 点餐助手设备ID
         type: string
+      permission:
+        description: 点餐助手权限
+        items:
+          type: string
+        type: array
+      phone:
+        description: 点餐助手员工手机号
+        type: string
+      real_name:
+        description: 点餐助手员工真实姓名
+        type: string
+      uuid:
+        description: 点餐助手员工uuid
+        type: integer
     type: object
   resp.Attribute:
     properties:
@@ -1189,6 +1239,21 @@ definitions:
         type: boolean
       token:
         description: token
+        type: string
+    type: object
+  resp.CashierStaff:
+    properties:
+      device_id:
+        description: 收银机设备ID
+        type: string
+      device_remark:
+        description: 收银机备注
+        type: string
+      real_name:
+        description: 收银员真实姓名
+        type: string
+      username:
+        description: 收银员账号
         type: string
     type: object
   resp.Company:
@@ -3117,7 +3182,7 @@ definitions:
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
-        description: 自助餐名称
+        description: 商品名称。商品名称、自助餐名称、自助餐加钟名称
       num:
         description: 数量
         type: integer
@@ -3519,6 +3584,54 @@ definitions:
         description: 价格
         type: string
     type: object
+  setting.Assistant:
+    properties:
+      advanced_password:
+        description: 高级设置密码
+        type: string
+      auto_lock_screen:
+        description: 自动锁屏（秒），默认5分钟
+        type: string
+      default_language:
+        description: 默认语言
+        type: string
+      default_mode:
+        description: 默认模式 0-服务员模式 1-顾客模式
+        type: string
+      is_auto_lock_screen:
+        description: 是否开启自动锁屏 0-关闭 1-开启
+        type: string
+      is_auto_send:
+        type: string
+      is_remain_color:
+        description: 是否开启剩余时长颜色 0-关闭 1-开启
+        type: string
+      is_show_assistant_sold_out:
+        description: 是否显示售罄
+        type: integer
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      lock_password:
+        description: 锁屏密码
+        type: string
+      remain_color:
+        description: 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+        items:
+          type: string
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 服务器连接
+    type: object
   setting.Buffet:
     properties:
       add_clock:
@@ -3754,6 +3867,46 @@ definitions:
       name:
         type: string
     type: object
+  setting.Kitchen:
+    properties:
+      advanced_password:
+        description: 高级设置密码
+        type: string
+      default_language:
+        description: 默认语言
+        type: string
+      is_call_service:
+        description: 是否开启顾客呼叫提醒 0-关闭 1-开启
+        type: string
+      is_come_dish:
+        description: 是否开启来菜提醒 0-关闭 1-开启
+        type: string
+      is_open:
+        description: 是否开启厨显功能 0关闭 1开启
+        type: string
+      is_wait_color:
+        description: 是否开启等待时长颜色 0-关闭 1-开启
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 厨显服务器连接
+      wait_color:
+        description: 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
+        items:
+          type: string
+        type: array
+    type: object
   setting.OrderLimit:
     properties:
       is_limit_num:
@@ -3776,6 +3929,18 @@ definitions:
         type: string
       is_table_order:
         description: 桌台用餐
+        type: string
+    type: object
+  setting.Payment:
+    properties:
+      is_balance:
+        description: 是否开启余额支付 0-关闭 1-开启
+        type: string
+      is_cash:
+        description: 是否开启现金支付 0-关闭 1-开启
+        type: string
+      is_other:
+        description: 是否开启其他方式支付 0-关闭 1-开启
         type: string
     type: object
   setting.Server:

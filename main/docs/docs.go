@@ -6858,13 +6858,105 @@ const docTemplate = `{
         "resp.AssistantBase": {
             "type": "object",
             "properties": {
-                "assistant_uuid": {
-                    "description": "点餐助手员工UUID",
-                    "type": "integer"
+                "assistant": {
+                    "description": "点餐助手设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Assistant"
+                        }
+                    ]
                 },
-                "username": {
-                    "description": "登录账号",
+                "assistant_staff": {
+                    "description": "点餐助手员工",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AssistantStaff"
+                        }
+                    ]
+                },
+                "buffet": {
+                    "description": "自助餐设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Buffet"
+                        }
+                    ]
+                },
+                "business": {
+                    "description": "门店业务设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Business"
+                        }
+                    ]
+                },
+                "cashier_staff": {
+                    "description": "收银机员工",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CashierStaff"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
+                "currency": {
+                    "description": "货币设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Currency"
+                        }
+                    ]
+                },
+                "kitchen": {
+                    "description": "厨显端设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Kitchen"
+                        }
+                    ]
+                },
+                "payment": {
+                    "description": "支付设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Payment"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.AssistantStaff": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "description": "点餐助手设备ID",
                     "type": "string"
+                },
+                "permission": {
+                    "description": "点餐助手权限",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "phone": {
+                    "description": "点餐助手员工手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "点餐助手员工真实姓名",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "点餐助手员工uuid",
+                    "type": "integer"
                 }
             }
         },
@@ -7280,6 +7372,27 @@ const docTemplate = `{
                 },
                 "token": {
                     "description": "token",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CashierStaff": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "description": "收银机设备ID",
+                    "type": "string"
+                },
+                "device_remark": {
+                    "description": "收银机备注",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "收银员真实姓名",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "收银员账号",
                     "type": "string"
                 }
             }
@@ -10078,7 +10191,7 @@ const docTemplate = `{
                     ]
                 },
                 "locale_name": {
-                    "description": "自助餐名称",
+                    "description": "商品名称。商品名称、自助餐名称、自助餐加钟名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -10687,6 +10800,75 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.Assistant": {
+            "type": "object",
+            "properties": {
+                "advanced_password": {
+                    "description": "高级设置密码",
+                    "type": "string"
+                },
+                "auto_lock_screen": {
+                    "description": "自动锁屏（秒），默认5分钟",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "default_mode": {
+                    "description": "默认模式 0-服务员模式 1-顾客模式",
+                    "type": "string"
+                },
+                "is_auto_lock_screen": {
+                    "description": "是否开启自动锁屏 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_auto_send": {
+                    "type": "string"
+                },
+                "is_remain_color": {
+                    "description": "是否开启剩余时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_show_assistant_sold_out": {
+                    "description": "是否显示售罄",
+                    "type": "integer"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "lock_password": {
+                    "description": "锁屏密码",
+                    "type": "string"
+                },
+                "remain_color": {
+                    "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "server": {
+                    "description": "服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                }
+            }
+        },
         "setting.Buffet": {
             "type": "object",
             "properties": {
@@ -11021,6 +11203,64 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.Kitchen": {
+            "type": "object",
+            "properties": {
+                "advanced_password": {
+                    "description": "高级设置密码",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_call_service": {
+                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_come_dish": {
+                    "description": "是否开启来菜提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_open": {
+                    "description": "是否开启厨显功能 0关闭 1开启",
+                    "type": "string"
+                },
+                "is_wait_color": {
+                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "server": {
+                    "description": "厨显服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                },
+                "wait_color": {
+                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "setting.OrderLimit": {
             "type": "object",
             "properties": {
@@ -11051,6 +11291,23 @@ const docTemplate = `{
                 },
                 "is_table_order": {
                     "description": "桌台用餐",
+                    "type": "string"
+                }
+            }
+        },
+        "setting.Payment": {
+            "type": "object",
+            "properties": {
+                "is_balance": {
+                    "description": "是否开启余额支付 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_cash": {
+                    "description": "是否开启现金支付 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_other": {
+                    "description": "是否开启其他方式支付 0-关闭 1-开启",
                     "type": "string"
                 }
             }
