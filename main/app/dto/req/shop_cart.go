@@ -35,7 +35,7 @@ type OrderCartProductReturningReq struct {
 	SaleBillUuid         uint64   `json:"sale_bill_uuid"`          // 销售账单ID
 	SaleOrderUuid        uint64   `json:"sale_order_uuid"`         // 销售订单ID
 	SaleOrderProductUuid uint64   `json:"sale_order_product_uuid"` // 销售订单商品ID
-	Num                  int      `json:"num"`                     // 退菜数量
+	Num                  uint     `json:"num"`                     // 退菜数量
 	Reason               string   `json:"reason"`                  // 退菜原因
 	Password             string   `json:"password"`                // 高级密码 后台开启的时候才传
 	ReturnIds            []uint64 `json:"return_ids"`              // 退菜标签ids

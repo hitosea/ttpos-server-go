@@ -14,6 +14,7 @@ type ISaleOrderProductRepo interface {
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
+	CreateSaleOrderProductCancelReasons(saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error
 }
 
 type saleOrderProductRepo struct {
@@ -50,6 +51,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj *mod
 	return obj.Uuid, nil
 }
 
+// 创建销售订单商品
 func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	if err := db.Create(&model).Error; err != nil {
@@ -58,6 +60,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProd
 	return model.Uuid, nil
 }
 
+// 更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProduct) error {
 	db := r.db
 	if err := db.Model(&model).Updates(model).Error; err != nil {
@@ -66,6 +69,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProd
 	return nil
 }
 
+// 更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error {
 	db := r.db
 	if err := db.Model(&model.SaleOrderProduct{}).Where("uuid = ?", uuid).Updates(vars).Error; err != nil {
@@ -82,6 +86,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductRecord(obj model.SaleOrderP
 	return nil
 }
 
+// 批量更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error {
 	db := r.db
 	for _, m := range models {
@@ -92,6 +97,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOr
 	return nil
 }
 
+// 根据uuid获取销售订单商品
 func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error) {
 	db := r.db
 	var model model.SaleOrderProduct
@@ -99,4 +105,23 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 		return nil, err
 	}
 	return &model, nil
+}
+
+// 批量创建销售订单商品取消原因
+func (r *saleOrderProductRepo) CreateSaleOrderProductCancelReasons(saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error {
+	if len(returnFoodReasons) == 0 {
+		return nil
+	}
+	db := r.db
+	// 构建批量插入数据
+	reasons := make([]*model.SaleOrderProductCancelReason, len(returnFoodReasons))
+	for i, reason := range returnFoodReasons {
+		reasons[i] = &model.SaleOrderProductCancelReason{
+			SaleOrderProductUuid:  saleOrderProductUuid,
+			ReturnFoodReasonUuid:  reason[0],
+			MultiLanguageNameUuid: reason[1],
+		}
+	}
+	// 批量创建
+	return db.Create(&reasons).Error
 }

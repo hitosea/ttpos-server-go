@@ -2044,89 +2044,99 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		ctx.AddLock()
 	}
 	// 验证高级密码
-	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
-		return nil, err
-	}
-	//
-	db := s.dbm.GetDB(ctx.GetDbId())
-	//
-	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(
-		req.SaleBillUuid,
-		req.SaleOrderUuid,
-		req.SaleOrderProductUuid,
-	)
-	if errSaleBill != nil {
-		return nil, errSaleBill
-	}
-	//
-	results, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
-	if err != nil {
-		return nil, err
-	}
-	// 检查是否有不存在的UUID
-	if len(notFound) > 0 {
-		// 处理不存在的UUID
-		return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
-	}
-	//
-	for _, result := range results {
-		fmt.Println(result)
-		// reasonUuid := pair[0]    // 原始UUID
-		// multiLangUuid := pair[1] // 多语言名称UUID
-		// 使用这两个UUID进行后续处理
-	}
-	// if err := repository.NewOrderProductCancelReasonRepo(db).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
+	// if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
 	// 	return nil, err
 	// }
+	//
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取验证销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.New("销售账单不存在")
+	}
+	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
+	switch {
+	case saleOrder == nil:
+		return nil, errors.New("销售订单不存在")
+	case saleOrderProduct == nil:
+		return nil, errors.New("销售订单商品不存在")
+	case !saleOrderProduct.IsSendKitchen():
+		return nil, errors.New("商品未送厨")
+	case req.Num == 0:
+		return nil, errors.New("退菜数量不能为0")
+	case req.Num > saleOrderProduct.Num:
+		return nil, errors.New("退菜数量不能大于当前商品数量")
+	}
+	//  验证退菜标签
+	returnFoodReasons := [][2]uint64{}
+	if len(req.ReturnIds) > 0 {
+		_returnFoodReasons, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
+		if err != nil {
+			return nil, err
+		}
+		if len(notFound) > 0 {
+			return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
+		}
+		returnFoodReasons = _returnFoodReasons
+	}
 
-	ctx.Log().Debug("获取销售账单信息")
-
-	// IOrderProductCancelReasonRepo
-	// SaleOrderProductCancelReason
-	fmt.Println(utils.ToJsonString(saleBill))
-
-	// // 获取销售订单信息
-	// saleOrder, errSaleOrder := getSaleOrder(req.SaleOrderUuid, saleBill)
-	// if errSaleOrder != nil {
-	// 	return nil, errSaleOrder
-	// }
-
-	// ctx.Log().Debug("获取销售订单信息")
-	// // 获取销售订单商品信息
-	// unCookingSaleOrderProducts, errUnCookingSaleOrderProducts := getSaleOrderProductUnCooking(saleOrder)
-	// if errUnCookingSaleOrderProducts != nil {
-	// 	return nil, errUnCookingSaleOrderProducts
-	// }
-
-	// for index, _ := range unCookingSaleOrderProducts {
-	// 	product := unCookingSaleOrderProducts[index]
-	// 	product.Status = constant.SaleOrderProductStatusCooking
-	// }
-
-	// productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
-
-	// ctx.Log().Debug("准备开始更新")
-	// errUpdate := db.Transaction(func(tx *gorm.DB) error {
-	// 	// 修改订单商品状态为已送厨
-	// 	errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
-	// 	if errUpdateSaleProductStatus != nil {
-	// 		ctx.Log().Debug("商品状态更新失败", zap.Error(errUpdateSaleProductStatus))
-	// 		return errors.New(errUpdateSaleProductStatus.Error())
-	// 	}
-	// 	ctx.Log().Debug("商品状态成功")
-	// 	errCreateProduction := repository.NewProductionOrderRepo(tx).CreateProductionOrder(productionOrder)
-	// 	if errCreateProduction != nil {
-	// 		ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
-	// 		return errors.New(errCreateProduction.Error())
-	// 	}
-	// 	return nil
-	// })
-	// if errUpdate != nil {
-	// 	ctx.Log().Debug("更新数据失败", zap.Any("error", errUpdate))
-	// 	return nil, errors.New(errUpdate.Error())
-	// }
-
+	// 新建一个销售订单商品，该商品数量为移动数量
+	var cartInfo *resp.ShopCart
+	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 如何数量相等 就不需要复制新的商品
+		if saleOrderProduct.Num == req.Num {
+			saleOrderProduct.CancelTime = time.Now().Unix()
+			saleOrderProduct.CancelReason = req.Reason
+		} else {
+			saleOrderProduct.Num = saleOrderProduct.Num - req.Num
+			// 复制新的销售订单商品
+			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(req.SaleOrderUuid)
+			newSaleOrderProduct.CancelTime = time.Now().Unix()
+			newSaleOrderProduct.Num = req.Num
+			newSaleOrderProduct.CancelReason = req.Reason
+			uuid, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(newSaleOrderProduct)
+			if err != nil {
+				return err
+			}
+			// 设置新创建的UUID 追加到saleBill中对应的saleOrder中
+			newSaleOrderProduct.Uuid = uuid
+			for i, order := range saleBill.SaleOrders {
+				if order.Uuid == req.SaleOrderUuid {
+					// 更新原有商品的数量
+					for j, product := range order.SaleOrderProducts {
+						if product.Uuid == saleOrderProduct.Uuid {
+							saleBill.SaleOrders[i].SaleOrderProducts[j].Num = saleOrderProduct.Num
+							break
+						}
+					}
+					// 添加新的退菜商品
+					saleBill.SaleOrders[i].SaleOrderProducts = append(saleBill.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
+					break
+				}
+			}
+		}
+		// 更新销售订单商品
+		if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+			return errUpdate
+		}
+		// 添加退菜原因
+		if len(returnFoodReasons) > 0 {
+			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductCancelReasons(
+				saleOrderProduct.Uuid,
+				returnFoodReasons,
+			); err != nil {
+				return err
+			}
+		}
+		//
+		s.CalcAndSaveSaleBill(ctx, tx, saleBill)
+		//
+		return nil
+	})
+	if errUpdateDB != nil {
+		return nil, errors.New("更新数据失败")
+	}
+	// 获取新的购物车信息
 	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
@@ -2442,12 +2452,13 @@ func IsSameSignature(saleOrderProduct *model.SaleOrderProduct, toSaleOrderProduc
 	return toSaleOrderProductSignMap[saleOrderProduct.Sign] != nil
 }
 
-func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, saleBill *model.SaleBill) error {
+func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error {
 	// 计算订单商品、订单、账单
 	saleBill.CalcAll()
-
 	// 保存到数据库
-	db := s.dbm.GetDB(ctx.GetDbId())
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetDbId())
+	}
 	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		for _, saleOrder := range saleBill.SaleOrders {
 			// 保存订单

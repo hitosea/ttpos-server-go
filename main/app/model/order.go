@@ -186,7 +186,7 @@ func (model *SaleBill) calcFreeAmount() float64 {
 	return amount.InexactFloat64()
 }
 
-// 重新计算销售账单的金额并保存到数据库
+// 重新计算销售账单的金额
 func (model *SaleBill) CalcAll() {
 	setting := model.SaleBillSetting
 	for i, _ := range model.SaleOrders {
@@ -246,12 +246,27 @@ func (model *SaleBill) IsShowSaleBill() bool {
 
 // 返回新的销售账单
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
-	for index, saleOrder := range model.SaleOrders {
+	for _, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
-			return model.SaleOrders[index]
+			return saleOrder
 		}
 	}
 	return nil
+}
+
+// 获取销售账单的销售订单和销售订单商品
+func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderProductUuid uint64) (*SaleOrder, *SaleOrderProduct) {
+	// 获取销售订单
+	saleOrder := model.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return nil, nil
+	}
+	// 获取销售订单商品
+	saleOrderProduct := saleOrder.GetSaleOrderProduct(saleOrderProductUuid)
+	if saleOrderProduct == nil {
+		return saleOrder, nil
+	}
+	return saleOrder, saleOrderProduct
 }
 
 func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
@@ -440,6 +455,16 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 		MemberCardDiscountRate: model.MemberCardDiscountRate,
 		CustomDiscountRate:     model.CustomDiscountRate,
 	}
+}
+
+// 返回新的销售订单商品
+func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) *SaleOrderProduct {
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProductUuid == saleOrderProduct.Uuid {
+			return saleOrderProduct
+		}
+	}
+	return nil
 }
 
 // 计算销售订单原服务费金额。销售订单原服务费金额= 销售订单商品的原服务费之和。
@@ -1714,16 +1739,24 @@ func (model *SaleOrderProduct) GetPrice() float64 {
 	return price
 }
 
+// 是否必须商品
 func (model *SaleOrderProduct) IsMustProduct() bool {
 	return model.IsRequire == 1
 }
 
+// 是否是赠品
 func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
 }
 
+// 是否取消商品
 func (model *SaleOrderProduct) IsCancelProduct() bool {
 	return model.CancelTime > 0
+}
+
+// 是否送到厨房
+func (model *SaleOrderProduct) IsSendKitchen() bool {
+	return model.Status == constant.OrderProductStatusSentKitchen
 }
 
 // 判断商品是否有打折
