@@ -936,9 +936,8 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 		if err != nil {
 			return err
 		}
-		//
 		return tx.Model(&model.SaleOrderProduct{}).
-			Where("status != ?", constant.OrderProductStatusSentKitchen).
+			Where("(status != ? or cancel_time != 0)", constant.OrderProductStatusSentKitchen).
 			Where("delete_time = ?", 0).
 			Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
 			Update("delete_time", uint(time.Now().Unix())).
