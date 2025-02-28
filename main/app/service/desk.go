@@ -205,49 +205,60 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 	if err != nil {
 		return resp.DeskInfoResp{}, err
 	}
-	// 转换为响应对象
-	//var deskStatus uint
-	//var elapsedTime uint
-	//if desk.SaleBill.ID == 0 {
-	//	if desk.Status == 1 {
-	//		deskStatus = constant.DeskStatusWait
-	//	} else {
-	//		deskStatus = constant.DeskStatusAvailable
-	//	}
-	//	elapsedTime = constant.DeskStatusAvailable
-	//} else {
-	//	//
-	//	if desk.SaleBill.IsLock == 1 {
-	//		deskStatus = constant.DeskStatusLock
-	//	} else if desk.SaleBill.IsBuffet == 1 {
-	//		deskStatus = constant.DeskStatusBuffet
-	//	} else {
-	//		deskStatus = constant.DeskStatusNotBuffet
-	//	}
-	//	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-	//	passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
-	//	if desk.SaleBill.IsBuffet == 1 {
-	//		if uint(passedTime) >= desk.SaleBill.BuffetDuration {
-	//			elapsedTime = 0
-	//		} else {
-	//			elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
-	//		}
-	//	} else {
-	//		elapsedTime = uint(passedTime)
-	//	}
-	//}
-	//
+	//转换为响应对象
+	var deskStatus uint
+	var elapsedTime uint
+	var lock bool
+	var buffet bool
+	if desk.SaleBill == nil {
+		if desk.Status == 1 {
+			deskStatus = constant.DeskStatusWait
+		} else {
+			deskStatus = constant.DeskStatusAvailable
+		}
+		elapsedTime = constant.DeskStatusAvailable
+	} else {
+		buffet = desk.SaleBill.IsBuffet == 1
+		lock = desk.SaleBill.IsLock == 1
+		if lock {
+			deskStatus = constant.DeskStatusLock
+		} else if buffet {
+			deskStatus = constant.DeskStatusBuffet
+		} else {
+			deskStatus = constant.DeskStatusNotBuffet
+		}
+		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+		passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
+		if buffet {
+			if uint(passedTime) >= desk.SaleBill.BuffetDuration {
+				elapsedTime = 0
+			} else {
+				elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
+			}
+		} else {
+			elapsedTime = uint(passedTime)
+		}
+	}
+
+	var saleBillUuid uint64
+	if desk.SaleBill != nil {
+		saleBillUuid = desk.SaleBill.Uuid
+	}
+	var remark string
+	if desk.SaleBill != nil {
+		remark = desk.SaleBill.Remark
+	}
 	return resp.DeskInfoResp{
-		Uuid: desk.Uuid,
-		//SaleBillUuid: desk.SaleBill.Uuid,
-		//DeskNo:       desk.DeskNo,
-		//TypeUuid:     desk.TypeUuid,
-		//RegionUuid:   desk.RegionUuid,
-		//Status:       deskStatus,
-		//IsLock:       desk.SaleBill.IsLock == 1,
-		//IsBuffet:     desk.SaleBill.IsBuffet == 1,
-		//Remark:       desk.SaleBill.Remark,
-		//Time:         elapsedTime,
+		Uuid:         desk.Uuid,
+		SaleBillUuid: saleBillUuid,
+		DeskNo:       desk.DeskNo,
+		TypeUuid:     desk.TypeUuid,
+		RegionUuid:   desk.RegionUuid,
+		Status:       deskStatus,
+		IsLock:       lock,
+		IsBuffet:     buffet,
+		Remark:       remark,
+		Time:         elapsedTime,
 	}, nil
 }
 
