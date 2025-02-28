@@ -1985,10 +1985,14 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 	productionOrderUuid, _ := utils.GetID()
 	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
 	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+		var firstCategoryUuid uint64
+		if unCookingSaleOrderProduct.ProductPackage != nil {
+			firstCategoryUuid = unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
+		}
 		productionOrderProduct := model.ProductionOrderProduct{
 			ProductionOrderUuid:   productionOrderUuid,
 			SaleOrderProductUuid:  unCookingSaleOrderProduct.Uuid,
-			FirstCategoryUuid:     unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid(),
+			FirstCategoryUuid:     firstCategoryUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
 			ProductAttributeNames: unCookingSaleOrderProduct.AttributeName().GetLocale(ctx.GetLanguage()),
