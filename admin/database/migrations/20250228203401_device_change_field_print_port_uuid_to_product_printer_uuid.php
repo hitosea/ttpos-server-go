@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 
 
-class CreateSaleOrderProductCancelReasonTable extends Migrator
+class DeviceChangeFieldPrintPortUuidToProductPrinterUuid extends Migrator
 {
     /**
      * Change Method.
