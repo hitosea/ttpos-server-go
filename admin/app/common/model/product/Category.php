@@ -463,8 +463,8 @@ class Category extends BaseModel
 
         $level = $model->where('uuid', $category_id)->value('parent_uuid') != 0;
         if ($level) {
-            $productCount = Product::where('uuid', $category_id)->count();
-            $materialCount = Material::where('uuid', $category_id)->count();
+            $productCount = Product::where('category_uuid', $category_id)->count();
+            $materialCount = Material::where('category_uuid', $category_id)->count();
 
             return $productCount + $materialCount;
         } else {
