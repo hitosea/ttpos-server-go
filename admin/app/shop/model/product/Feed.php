@@ -37,11 +37,26 @@ class Feed extends FeedModel
         if (isset($data['feed_name']) && $data['feed_name'] != '') {
             $model = $model->jsonLike('feed.name', trim($data['feed_name']));
         }
-        // todo 兼容
-        $list = $model->order(['feed.create_time' => 'desc'])->paginate($data);
+        // 关联加料材料
+        $list = $model->with([
+            'relatedMaterial' => [ 'material' ]
+        ])->order(['feed.create_time' => 'desc'])->paginate($data);
 
         foreach ($list as $item) {
-            $item['material'] = [];
+            $materialList = [];
+            foreach ($item['relatedMaterial'] as $relatedMaterial) {
+                $materialList[] = [
+                    'feed_id' => $item['feed_id'],
+                    'material_num' => $relatedMaterial['num'],
+                    'materialProduct' => [
+                        'product_id' => $relatedMaterial['material_uuid'],
+                        'product_material_stock' => $relatedMaterial['material']['stock_num'],
+                        'product_name_text' => $relatedMaterial['material']['product_name_text'],
+                        'product_unit_text' => $relatedMaterial['material']['product_unit_text'],
+                    ],
+                ];
+            }
+            $item['material'] = $materialList;
         }
 
         return $list;
@@ -62,29 +77,29 @@ class Feed extends FeedModel
             return false;
         }
         //
-        $data['name'] = $data['feed_name'] ?? '';
-        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['feed_name']);
-        $this->save($data);
-        // todo 关联加料材料
-        // $feedId = $this->feed_id;
-        // if (isset($data['material']) && !empty($data['material'])) {
-        //     ProductFeedMaterial::destroy(['feed_id' => $feedId]);
-        //     foreach ($data['material'] as $data) {
-        //         // 数量超过处理
-        //         $material_num = $data['material_num'] ?? 0;
-        //         if ($material_num > self::MAX_MATERIAL_NUM) {
-        //             $material_num = self::MAX_MATERIAL_NUM;
-        //         }
-        //         $material = [
-        //             'feed_id'          => $feedId,
-        //             'product_feed_id'  => 0,
-        //             'material_id'      => $data['product_id'],
-        //             'material_num'     => $material_num,
-        //         ];
-        //         (new ProductFeedMaterial)->save($material);
-        //     }
-        // }
-        return true;
+        $this->startTrans();
+        try {
+            $data['name'] = $data['feed_name'] ?? '';
+            $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['feed_name']);
+            // 保存加料
+            $this->save($data);
+            // 关联加料材料
+            $materialList = $data['material'] ?? [];
+            foreach ($materialList as $key => $item) {
+                $num = $item['material_num'] ?? 0;
+                if ($num > self::MAX_MATERIAL_NUM) {
+                    $num = self::MAX_MATERIAL_NUM;
+                }
+                $materialList[$key]['material_num'] = $num;
+            }
+            RelatedMaterial::addRelatedMaterial($materialList, $this['uuid']);
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**
@@ -104,33 +119,24 @@ class Feed extends FeedModel
             return false;
         }
         //
-        $data['name'] = $data['feed_name'] ?? '';
-        (new MultiLanguageName)->saveNames($data['feed_name'], $this['multi_language_name_uuid']);
-        $this->save($data);
-        // todo 兼容 关联加料材料
-        // $feedId = $this['feed_id'];
-        // ProductFeedMaterial::destroy(['feed_id' => $feedId]);
-        // if (isset($data['material']) && !empty($data['material'])) {
-        //     foreach ($data['material'] as $item) {
-        //         // 数量超过处理
-        //         $material_num = $item['material_num'] ?? 0;
-        //         if ($material_num > self::MAX_MATERIAL_NUM) {
-        //             $material_num = self::MAX_MATERIAL_NUM;
-        //         }
-        //         $material = [
-        //             'feed_id'          => $feedId,
-        //             'product_feed_id'  => 0,
-        //             'material_id'      => $item['product_id'],
-        //             'material_num'     => $material_num,
-        //         ];
-        //         (new ProductFeedMaterial)->save($material);
-        //     }
-        // }
-        // // 同步产品加料表名称
-        // ProductFeed::where('feed_id', $feedId)->update(['feed_name' => $data['feed_name']]);
-        // // 同步产品表中的加料数组
-        // $this->maintainProductFeed($this->productFeed($feedId)->column('product_id'));
-        return true;
+        $this->startTrans();
+        try {
+            $data['name'] = $data['feed_name'] ?? '';
+            (new MultiLanguageName)->saveNames($data['feed_name'], $this['multi_language_name_uuid']);
+            // 更新加料
+            $this->save($data);
+
+            // 关联加料材料
+            $materialList = $data['material'] ?? [];
+            RelatedMaterial::updateRelatedMaterial($materialList, $this['uuid']);
+
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**
@@ -151,6 +157,8 @@ class Feed extends FeedModel
                 if ($model['multi_language_name_uuid']) {
                     (new MultiLanguageName)->where('uuid', $model['multi_language_name_uuid'])->find()?->delete();
                 }
+                // 删除关联加料材料
+                RelatedMaterial::deleteRelatedMaterial($model['uuid']);
                 $model->delete();
             }
             $this->commit();
