@@ -8408,9 +8408,8 @@ const docTemplate = `{
         "resp.H5OrderList": {
             "type": "object",
             "properties": {
-                "handled_count": {
-                    "description": "已处理的接单数量",
-                    "type": "integer"
+                "extra": {
+                    "$ref": "#/definitions/resp.H5OrderListExtra"
                 },
                 "list": {
                     "type": "array",
@@ -8420,6 +8419,15 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.H5OrderListExtra": {
+            "type": "object",
+            "properties": {
+                "handled_count": {
+                    "description": "已处理的接单数量",
+                    "type": "integer"
                 },
                 "unhandled_count": {
                     "description": "未处理的接单数量",

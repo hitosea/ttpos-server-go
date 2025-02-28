@@ -2,11 +2,15 @@ package resp
 
 import "ttpos-server-go/app/dto"
 
+type H5OrderListExtra struct {
+	UnhandledCount int64 `json:"unhandled_count"` // 未处理的接单数量
+	HandledCount   int64 `json:"handled_count"`   // 已处理的接单数量
+}
+
 type H5OrderList struct {
-	UnhandledCount int64            `json:"unhandled_count"` // 未处理的接单数量
-	HandledCount   int64            `json:"handled_count"`   // 已处理的接单数量
-	List           []H5OrderItem    `json:"list"`
-	Meta           dto.PageResponse `json:"meta"`
+	Extra H5OrderListExtra `json:"extra"`
+	List  []H5OrderItem    `json:"list"`
+	Meta  dto.PageResponse `json:"meta"`
 }
 
 type H5OrderInfo struct {
