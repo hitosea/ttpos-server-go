@@ -48,6 +48,14 @@ class Feed extends BaseModel
     }
 
     /**
+     * 规格关联材料
+     */
+    public function relatedMaterial()
+    {
+        return $this->hasMany('app\common\model\product\RelatedMaterial', 'related_uuid', 'uuid');
+    }
+
+    /**
      * 关联产品ids
      */
     public function getProductIdsAttr($value, $data = [])
