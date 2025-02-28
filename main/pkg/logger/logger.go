@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -114,4 +115,14 @@ func cleanOldLogs() error {
 
 		return nil
 	})
+}
+
+type GormLog struct {
+	Logger *zap.Logger
+}
+
+func (log *GormLog) Printf(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
+	msg = strings.ReplaceAll(msg, "\n", " ")
+	log.Logger.Info(msg)
 }

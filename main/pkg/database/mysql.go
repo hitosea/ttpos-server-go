@@ -2,8 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +11,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"ttpos-server-go/config"
+	loggers "ttpos-server-go/pkg/logger"
 )
 
 func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, error) {
@@ -29,7 +28,6 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		conf.Port,
 		dbName,
 	)
-	// 初始化会话
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   conf.TablePrefix, // 表名前缀
@@ -38,12 +36,12 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用自动创建外键约束
 		SkipDefaultTransaction:                   true, // 禁用默认事务
 		Logger: logger.New(
-			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer（日志输出的地方）
+			&loggers.GormLog{Logger: loggers.Logger}, // io writer（日志输出的地方）
 			logger.Config{
 				SlowThreshold:             time.Duration(conf.SlowQueryTime) * time.Second, // 慢查询阈值
 				LogLevel:                  logLevel,                                        // 日志级别
 				IgnoreRecordNotFoundError: ignoreRecordNotFoundError,                       // 忽略ErrRecordNotFound（记录未找到）错误
-				Colorful:                  true,                                            // 彩色打印
+				Colorful:                  false,                                           // 彩色打印
 			},
 		),
 	})
