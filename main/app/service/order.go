@@ -1314,8 +1314,6 @@ func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, err
 // OrderProductRemark  修改订单商品备注
 func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
-	_ = ctx.GetStaff().Uuid // 员工ID
-	_ = ctx.GetSource()     // 操作来源
 	// 禁止并发操作
 	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
@@ -1324,7 +1322,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
+	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 	if err != nil {
 		return nil, err
 	}
