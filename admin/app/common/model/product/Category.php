@@ -463,15 +463,18 @@ class Category extends BaseModel
 
         $level = $model->where('uuid', $category_id)->value('parent_uuid') != 0;
         if ($level) {
-            return Product::where('uuid', $category_id)->count();
+            $productCount = Product::where('uuid', $category_id)->count();
+            $materialCount = Material::where('uuid', $category_id)->count();
+
+            return $productCount + $materialCount;
         } else {
-            return $model->alias('a')
+            $productCount = $model->alias('a')
                 ->leftJoin("
                     (
                         SELECT IF(c.parent_uuid, c.parent_uuid, c.uuid) as category_uuid, COUNT(*) AS product_count
                         FROM {$prefix}product_package product
                         LEFT JOIN {$prefix}product_category c ON product.category_uuid = c.uuid OR c.uuid = product.special_category_uuid
-                        WHERE c.uuid > 0
+                        WHERE c.uuid > 0 and product.delete_time = 0
                         GROUP BY IF(c.parent_uuid, c.parent_uuid, c.uuid)
                     ) product
                 ", 'a.uuid = product.category_uuid OR a.parent_uuid = product.category_uuid')
@@ -479,6 +482,22 @@ class Category extends BaseModel
                 ->where('a.parent_uuid', 0)
                 ->where('a.uuid', $category_id)
                 ->value('product_count') ?: 0;
+            $materialCount = $model->alias('a')
+                ->leftJoin("
+                    (
+                        SELECT IF(c.parent_uuid, c.parent_uuid, c.uuid) as category_uuid, COUNT(*) AS product_count
+                        FROM {$prefix}material m
+                        LEFT JOIN {$prefix}product_category c ON m.category_uuid = c.uuid
+                        WHERE c.uuid > 0 and m.delete_time = 0
+                        GROUP BY IF(c.parent_uuid, c.parent_uuid, c.uuid)
+                    ) product
+                ", 'a.uuid = product.category_uuid OR a.parent_uuid = product.category_uuid')
+                ->field('a.uuid, a.is_special, a.name, a.parent_uuid, COALESCE(product.product_count, 0) as product_count')
+                ->where('a.parent_uuid', 0)
+                ->where('a.uuid', $category_id)
+                ->value('product_count') ?: 0;
+
+            return $productCount + $materialCount;
         }
     }
 

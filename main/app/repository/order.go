@@ -709,8 +709,9 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 			Where("uuid = ?", saleBillUuid).
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
-				"status": constant.SaleBillStatusCanceled,
-				"reason": reason,
+				"status":      constant.SaleBillStatusCanceled,
+				"delete_time": timeNow,
+				"reason":      reason,
 			}).Error
 	})
 }
