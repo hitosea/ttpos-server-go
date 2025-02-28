@@ -33,7 +33,11 @@ type ReturnFoodReasonRepoImpl struct {
 // GetReturnFoodReasonList 获取退菜原因列表，排除逻辑删除的退菜原因
 func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonList() ([]model.ReturnFoodReason, error) {
 	var returnFoodReasons []model.ReturnFoodReason
-	err := r.db.Model(&model.ReturnFoodReason{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&returnFoodReasons).Error
+	err := r.db.Model(&model.ReturnFoodReason{}).
+		Preload("MultiLanguageName").
+		Where("delete_time = ?", 0).
+		Order("id ASC").
+		Find(&returnFoodReasons).Error
 	return returnFoodReasons, err
 }
 

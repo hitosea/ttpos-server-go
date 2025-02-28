@@ -19,6 +19,7 @@ type BaseHandler struct {
 	authSrv          service.IAuthSrv
 	settingSrv       setting.ISrv
 	paymentMethodSrv service.IPaymentMethodSrv
+	otherSrv         service.IOtherSrv
 }
 
 // GetCashierBase 收银端基础信息
@@ -255,10 +256,30 @@ func (h *BaseHandler) GetSetting(c *gin.Context) {
 	helper.Success(c, respSetting)
 }
 
+// GetReturnReason 获取退菜原因
+// @Summary 获取退菜原因
+// @Description 获取退菜原因
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResps}
+// @Router /cashier/return_reason [get]
+func (h *BaseHandler) GetReturnReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	respSetting, err := h.otherSrv.GetReturnFoodReasonList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, respSetting)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
+	otherSrv := service.NewOtherSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
@@ -270,6 +291,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		authSrv:          authSrv,
 		settingSrv:       settingSrv,
 		paymentMethodSrv: paymentMethodSrv,
+		otherSrv:         otherSrv,
 	}
 
 	// 需要认证
@@ -285,6 +307,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/print_data", nil)                                           // todo 获取打印数据
 
 		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList) // 获取支付方式列表
+		privateApi.GET("/return_reason", wrapper.GetReturnReason)            // 获取退菜原因
 
 		// 保存接单设置
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置

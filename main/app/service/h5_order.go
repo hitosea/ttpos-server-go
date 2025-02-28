@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"gorm.io/gorm"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -14,6 +13,8 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 // IH5OrderSrv 定义接单服务接口
@@ -132,7 +133,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 		}
 		for _, product := range order.SaleOrderProducts {
 			newProducts = append(newProducts, resp.ProductItem{
-				NameLocale: product.MultiLanguageName.GetNames(),
+				LocaleName: product.MultiLanguageName.GetNames(),
 				Num:        product.Num,
 				TotalPrice: product.Price,
 			})
@@ -148,7 +149,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 			for _, product := range products {
 				if product.H5Order.Status == constant.H5OrderStatusAccepted {
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
-						NameLocale: product.SaleOrderProduct.MultiLanguageName.GetNames(),
+						LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        product.Num,
 						TotalPrice: product.Price,
 					})
@@ -159,7 +160,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 	} else { // 已接单、拒单
 		for _, product := range order.H5OrderProducts {
 			newProducts = append(newProducts, resp.ProductItem{
-				NameLocale: product.SaleOrderProduct.MultiLanguageName.GetNames(),
+				LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 				Num:        product.Num,
 				TotalPrice: product.Price,
 			})
