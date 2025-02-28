@@ -1069,6 +1069,8 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
+	// 计算账单金额
+	saleBill.CalcSaleBill()
 
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 删除订单商品
@@ -1079,6 +1081,10 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		// 更新完整个销售订单
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
 			return errUpdate
+		}
+		// 更新销售账单
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
 		}
 		return nil
 	})
@@ -1174,6 +1180,8 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	ctx.Log().Debug("改价后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
+	// 计算账单金额
+	saleBill.CalcSaleBill()
 
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductOnly(saleOrderProduct); errUpdateProduct != nil {
@@ -1182,6 +1190,9 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		// 更新完整个销售订单
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
 			return errUpdate
+		}
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
 		}
 		return nil
 	})
@@ -1762,7 +1773,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderOnly(saleOrder); errUpdate != nil {
 			return errUpdate
 		}
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -1841,22 +1852,28 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
+	// 计算账单金额
+	saleBill.CalcSaleBill()
 
-	if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
-		return nil, errUpdate
+	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+			return errUpdate
+		}
+		ctx.Log().Debug("更新销售订单商品成功")
+
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+			return errUpdate
+		}
+		ctx.Log().Debug("更新销售订单成功")
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
+		}
+		return nil
+	})
+	if errUpdate != nil {
+		ctx.Log().Error("修改商品数量时，保存数据失败", zap.Error(errUpdate))
+		return nil, errors.New("操作失败")
 	}
-	ctx.Log().Debug("更新销售订单商品成功")
-
-	if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
-		return nil, errUpdate
-	}
-	ctx.Log().Debug("更新销售订单成功")
-
-	// // 更新销售账单
-	// if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); errUpdate != nil {
-	// 	return nil, errUpdate
-	// }
-	// ctx.Log().Debug("更加数据")
 
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
@@ -2450,6 +2467,8 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderFrom calc", saleOrderFrom.BeforeCalc()))
 	afterSaleOrderFromCalc := saleOrderFrom.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
 	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderFrom calc", afterSaleOrderFromCalc))
+	// 计算账单金额
+	saleBill.CalcSaleBill()
 
 	var cartInfo *resp.ShopCart
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -2484,6 +2503,10 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			return err
 		}
 
+		// 更新账单
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
+		}
 		return nil
 	})
 	if errUpdateDB != nil {
