@@ -12,6 +12,8 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
+	"go.uber.org/zap"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -340,6 +342,280 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductAdd 向购物车添加商品
+// @Summary 向购物车添加商品
+// @Description 向购物车添加商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductAddReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/product/add [post]
+func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 添加商品。 若没有点餐账单则新建一个
+	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductNum 修改购物车商品数量
+// @Summary 修改购物车某个商品的数量
+// @Description 修改购物车商品数量
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductNumReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/product/num [post]
+func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面修改购物车商品数量接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductNumReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 修改购物车商品数量
+	res, err := h.orderService.InstantOrderCartProductNum(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("修改商品数量成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductCooking 送厨购物车商品
+// @Summary 送厨购物车商品
+// @Description 送厨购物车商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductCookingReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/cooking [post]
+func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面送厨购物车商品接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductCookingReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
+	// 送厨购物车商品
+	res, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderMustPlanConfirm 确认必点商品
+// @Summary 确认必点商品
+// @Description 确认必点商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
+// @Success 200 {object} dto.Response{}
+// @Router /cashier/desk/order/must_plan/confirm [post]
+func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面确认必点商品接口请求")
+
+	params := req.InstantOrderMustPlanConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 确认必点商品
+	res, err := h.orderService.InstantOrderMustPlanConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderPaymentInfo 获取结账页面信息
+// @Summary 获取结账页面信息
+// @Description 获取结账页面信息
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query string true "销售账单UUID"
+// @param sale_order_uuid query string true "销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/payment/info [get]
+func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面结账页面信息接口请求")
+
+	params := &req.InstantOrderPaymentInfoReq{}
+	if err := params.Parse(c); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
+	// 获取销售订单的付款信息
+	res, err := h.orderService.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("获取结账页面信息成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderSaleOrderCreate 创建一个销售订单
+// @Summary 创建一个销售订单
+// @Description 创建一个销售订单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderSaleOrderCreateReq true "创建一个销售订单参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/sale_order/create [post]
+func (h *DeskHandler) OrderSaleOrderCreate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面创建一个销售订单接口请求")
+
+	params := req.InstantOrderSaleOrderCreateReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
+	// 创建一个销售订单
+	res, err := h.orderService.InstantOrderSaleOrderCreate(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("创建一个销售订单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
+// @Summary 从一个销售订单移动商品到另一个销售订单
+// @Description 从一个销售订单移动商品到另一个销售订单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderSaleOrderMoveProductReq true "从一个销售订单移动商品到另一个销售订单参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/sale_order/move_product [post]
+func (h *DeskHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面从一个销售订单移动商品到另一个销售订单接口请求")
+
+	params := req.InstantOrderSaleOrderMoveProductReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
+	// 从一个销售订单移动商品到另一个销售订单
+	res, err := h.orderService.InstantOrderSaleOrderMoveProduct(ctx, params, false)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("从一个销售订单移动商品到另一个销售订单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderSaleOrderDelete 删除一个销售订单(删除拆单)
+// @Summary 删除一个销售订单(删除拆单)
+// @Description 删除一个销售订单(删除拆单)
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderSaleOrderDeleteReq true "删除一个销售订单(删除拆单)参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/sale_order/delete [delete]
+func (h *DeskHandler) OrderSaleOrderDelete(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面删除一个销售订单(删除拆单)接口请求")
+
+	params := req.InstantOrderSaleOrderDeleteReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("删除一个销售订单(删除拆单)", zap.Any("params", params))
+	// 删除一个销售订单(删除拆单)
+	res, err := h.orderService.InstantOrderSaleOrderDelete(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("删除一个销售订单(删除拆单)成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderSaleOrderDeleteAll 删除所有子销售订单(撤销拆单)
+// @Summary 删除所有子销售订单(撤销拆单)
+// @Description 删除所有子销售订单(撤销拆单)
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderSaleOrderDeleteAllReq true "删除所有子销售订单(撤销拆单)参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/sale_order/delete_all [delete]
+func (h *DeskHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面删除所有子销售订单(撤销拆单)接口请求")
+
+	params := req.InstantOrderSaleOrderDeleteAllReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
+	// 删除所有子销售订单(撤销拆单)
+	res, err := h.orderService.InstantOrderSaleOrderDeleteAll(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("删除所有子销售订单(撤销拆单)成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -367,16 +643,25 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)         // 获取桌台的区域和类型
-		privateApi.GET("/desk/list", wrapper.GetDeskList)                             // 获取桌台列表
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                             // 获取桌台详情
-		privateApi.POST("/desk/close", wrapper.CloseDesk)                             // 关闭桌台
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                        // 创建桌台订单(开桌)
-		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                // 取消桌台订单
-		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)   // 删除桌台订单商品
-		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice) // 桌台订单商品改价
-		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)      // 桌台订单修改人数
-		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)     // 桌台订单商品备注
-		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                // 查询点餐购物车信息
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                     // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                                         // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                         // 获取桌台详情
+		privateApi.POST("/desk/close", wrapper.CloseDesk)                                         // 关闭桌台
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                    // 创建桌台订单(开桌)
+		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                            // 取消桌台订单
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)               // 删除桌台订单商品
+		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)             // 桌台订单商品改价
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                  // 桌台订单修改人数
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                 // 桌台订单商品备注
+		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                            // 查询点餐购物车信息
+		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)              // 向购物车添加商品
+		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)              // 修改购物车商品数量
+		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)              // 送厨购物车商品
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)            // 确认必点商品
+		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                      // 获取结账页面信息
+		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)            // 创建一个销售订单
+		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct) // 从一个销售订单移动商品到另一个销售订单
+		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)          // 删除一个销售订单(删除拆单)
+		privateApi.DELETE("/desk/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)   // 删除所有子销售订单(撤销拆单)
 	}
 }
