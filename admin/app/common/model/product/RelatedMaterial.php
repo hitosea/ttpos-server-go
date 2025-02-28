@@ -2,10 +2,10 @@
 
 namespace app\common\model\product;
 
+use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
-use think\model\Pivot;
 
-class RelatedMaterial extends Pivot
+class RelatedMaterial extends BaseModel
 {
     use SoftDelete;
 
@@ -14,5 +14,13 @@ class RelatedMaterial extends Pivot
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
     protected $autoWriteTimestamp = true;
+
+    /**
+     * 关联材料
+     */
+    public function material()
+    {
+        return $this->belongsTo(Material::class, 'material_uuid', 'uuid');
+    }
     
 }

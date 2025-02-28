@@ -13,6 +13,7 @@ type IReturnFoodReasonRepo interface {
 	UpdateReturnFoodReason(id uint, returnFoodReason model.ReturnFoodReason) error  // 更新退菜原因
 	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error) // 创建退菜原因
 	DeleteReturnFoodReason(id uint) error                                           // 删除退菜原因
+	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                    // 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
 }
 
 // NewReturnFoodReasonRepo 创建新的退菜原因仓库
@@ -85,4 +86,39 @@ func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model
 // DeleteReturnFoodReason 软删除退菜原因
 func (r *ReturnFoodReasonRepoImpl) DeleteReturnFoodReason(id uint) error {
 	return r.db.Model(&model.ReturnFoodReason{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// ExistsByUuids 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+func (r *ReturnFoodReasonRepoImpl) ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error) {
+	if len(uuids) == 0 {
+		return [][2]uint64{}, []uint64{}, nil
+	}
+
+	var reasons []model.ReturnFoodReason
+	err := r.db.Where("uuid IN ? AND delete_time = 0", uuids).Find(&reasons).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 创建存在的UUID集合
+	existMap := make(map[uint64]model.ReturnFoodReason)
+	for _, reason := range reasons {
+		existMap[reason.Uuid] = reason
+	}
+
+	// 找出不存在的UUID
+	notFound := make([]uint64, 0)
+	for _, uuid := range uuids {
+		if _, ok := existMap[uuid]; !ok {
+			notFound = append(notFound, uuid)
+		}
+	}
+
+	// 创建结果数组，每个元素是[uuid, 多语言名称UUID]
+	result := make([][2]uint64, len(reasons))
+	for i, reason := range reasons {
+		result[i] = [2]uint64{reason.Uuid, reason.MultiLanguageNameUuid}
+	}
+
+	return result, notFound, nil
 }

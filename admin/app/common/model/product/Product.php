@@ -839,6 +839,7 @@ class Product extends BaseModel
                 '10 as type',
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
+                '0 as is_material_used'
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -870,10 +871,13 @@ class Product extends BaseModel
                 '20 as type', 
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
+                'count(rm.uuid) as is_material_used'
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('file', 'm.image_uuid = file.uuid')
+            ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid')
+            ->group('m.uuid')
             ->buildSql();
 
         // 分页
@@ -963,12 +967,17 @@ class Product extends BaseModel
             'url_param',
             'category_uuid',
             'category_parent_uuid',
+            'is_material_used',
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
         $orderSql = ' ORDER BY create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
 
         // 执行查询
-        $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql . $pageSql, $bind);
+        if ($page == 1) {
+            $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql, $bind);
+        } else {
+            $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql . $pageSql, $bind);
+        }
 
         $file = new UploadFile();
         $list = [];
@@ -995,6 +1004,13 @@ class Product extends BaseModel
                 'save_name' => $row['save_name'],
                 'url_param' => $row['url_param'],
             ]);
+            // 规格
+            $sku = [];
+            if ($row['type'] == self::TYPE_MATERIAL) {
+                $sku[] = [
+                    'material_stock' => floatval($productMaterialStock),
+                ];
+            }
             
             $list[] = [
                 'category' => [ 'path_name_text' => $pathNameText ],
@@ -1019,6 +1035,8 @@ class Product extends BaseModel
                 'product_stock' => floatval($productStock),
                 'sales_actual' => floatval($row['sales_actual']),
                 'type' => $row['type'],
+                'sku' => $sku,
+                'is_material_used' => $row['is_material_used'] > 0 ? 1 : 0,
             ];
         }
 
@@ -1198,6 +1216,8 @@ class Product extends BaseModel
             // todo 税类, 先返回空数组, 后续根据设置返回税类
             $product['productTaxes'] = self::getProductTaxes($product);
 
+            unset($product['productAttributeGroup']);
+
             // 回调函数
             is_callable($callback) && call_user_func($callback, $product);
         }
@@ -1294,8 +1314,13 @@ class Product extends BaseModel
         ->with([
             'category',
             'image',
-            'sku',
-            'sku.material',
+            'sku' => [
+                'relatedMaterial' => [
+                    'material' => [
+                        'unit'
+                    ]
+                ]
+            ],
             'productAttributeGroup' => [
                 'attribute', 
                 'productAttribute' => [
@@ -1311,7 +1336,6 @@ class Product extends BaseModel
         if (empty($model)) {
             return $model;
         }
-
 
         // 整理商品数据并返回
         return $model->setProductListData($model, false);
@@ -1337,6 +1361,20 @@ class Product extends BaseModel
                 }
                 // 显示采购单价为空，如果为0，则为null
                 $sku['purchase_price'] = $sku['purchase_price'] > 0 ? $sku['purchase_price'] : 0;
+                $material = [];
+                foreach ($sku['relatedMaterial'] as $relatedMaterial) {
+                    $material[] = [
+                        'material_id' => $relatedMaterial['material_uuid'],
+                        'material_num' => $relatedMaterial['num'],
+                        'materialProduct' => [
+                            'product_name_text' => $relatedMaterial['material']['product_name_text'],
+                            'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'],
+                            'product_material_stock' => $relatedMaterial['material']['stock_num'],
+                        ],
+                    ];
+                }
+                $sku['material'] = $material;
+                unset($sku['relatedMaterial']);
             }
         }
 

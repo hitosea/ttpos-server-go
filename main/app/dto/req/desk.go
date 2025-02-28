@@ -48,3 +48,12 @@ type DeskOrderCreateReq struct {
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
 	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
 }
+
+// BindDeskReq 平板绑定/换绑桌台请求参数
+type BindDeskReq struct {
+	DeviceId    string `json:"device_id" binding:"required"`
+	Brand       string `json:"brand"`
+	DeskUuid    uint64 `json:"desk_uuid" binding:"required"`
+	OldDeskUuid uint64 `json:"old_desk_uuid"`
+	Remark      string `json:"remark"`
+}

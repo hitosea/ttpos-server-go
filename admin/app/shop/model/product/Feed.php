@@ -38,7 +38,12 @@ class Feed extends FeedModel
             $model = $model->jsonLike('feed.name', trim($data['feed_name']));
         }
         // todo 兼容
-        $list = $model->with(['material'])->order(['feed.create_time' => 'desc'])->paginate($data);
+        $list = $model->order(['feed.create_time' => 'desc'])->paginate($data);
+
+        foreach ($list as $item) {
+            $item['material'] = [];
+        }
+
         return $list;
     }
 

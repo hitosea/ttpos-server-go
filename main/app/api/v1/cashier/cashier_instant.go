@@ -294,14 +294,11 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	ctx.Log().Debug("GetOrderCartInfoByDeviceSn", zap.Any("res", res))
 	if res == nil {
-		ctx.Log().Debug("没有查询到点餐销售账单")
 		// 没有查询到属于该收银机的未挂单销售账单
 		helper.Success(c, resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)})
 		return
 	}
-	ctx.Log().Debug("查询到点餐销售账单", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -392,6 +389,35 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductReturning 退菜购物车商品
+// @Summary 退菜购物车商品
+// @Description 退菜购物车商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductReturningReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/returning [post]
+func (h *InstantHandler) OrderCartProductReturning(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductReturningReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderService.InstantOrderCartProductReturning(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("退菜购物车商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -638,9 +664,9 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
-	bindRecordSrv := service.NewBindRecordSrv(settingSrv, dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
-	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, bindRecordSrv, staffShiftSrv, settingSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
@@ -666,6 +692,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)              // 向购物车添加商品
 		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)              // 修改购物车商品数量
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)              // 送厨购物车商品
+		privateApi.POST("/instant/order/cart/returning", wrapper.OrderCartProductReturning)          // 退菜购物车商品
 		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                            // 获取点餐必点方案。废弃
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)            // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                      // 获取结账页面信息

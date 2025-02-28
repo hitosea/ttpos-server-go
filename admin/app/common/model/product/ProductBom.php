@@ -133,11 +133,11 @@ class ProductBom extends BaseModel
     }
 
     /**
-     * 产品规格关联材料（一对多）
+     * 关联材料
      */
-    public function material()
+    public function relatedMaterial()
     {
-        return $this->belongsToMany(Material::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
+        return $this->hasMany('app\\common\\model\\product\\RelatedMaterial', 'related_uuid', 'uuid');
     }
 
     /**

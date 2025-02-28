@@ -39,41 +39,56 @@ class Material extends BaseModel
     ];
 
     /**
-     * 兼容字段
+     * 获取类型
      */
     public function getTypeAttr($value, $data = [])
     {
         return 20;
     }
+    
     public function getProductIdAttr($value, $data = [])
     {
         return $this->uuid ?: 0;
     }
+
     public function getProductNameAttr($value, $data = [])
     {
         return $this->getData('name') ?: '';
     }
+
     public function getCategoryIdAttr($value, $data = [])
     {
         return $this->category_uuid ?: 0;
     }
+
     public function getErpSupplierIdAttr($value, $data = [])
     {
         return $this->supplier_uuid ?: 0;
     }
+
     public function getImgNameAttr($value, $data = [])
     {
         return $this->image_name ?: '';
     }
+
     public function getUnitIdAttr($value, $data = [])
     {
         return $this->unit_uuid ?: 0;
     }
+
     public function getProductStatusAttr($value, $data)
     {
         $value = $this->status ? 10 : 20;
         $status = [10 => __('上架'), 20 => __('下架')];
         return ['text' => $status[$value], 'value' => $value];
+    }
+
+    /**
+     * 获取商品名称
+     */
+    public function getProductNameTextAttr($value, $data)
+    {
+        return extractLanguage($value ?: $data['name'] ?? '');
     }
 
     /**

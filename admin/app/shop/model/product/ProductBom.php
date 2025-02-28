@@ -15,18 +15,23 @@ class ProductBom extends ProductBomModel
     public static function addFlavor($data, Product $product)
     {
         $flavors = $data['sku'];
-        foreach ($flavors as $flavor) {
-            self::create([
-                'purchase_price' => $flavor['purchase_price'] ?? 0, // 采购单价
-                'price' => $flavor['product_price'], // 销售单价
-                'name' => $flavor['spec_name'], // 规格名称
-                'product_flavor_uuid' => $flavor['spec_id'], // 规格uuid
+        foreach ($flavors as $item) {
+            $flavor = self::create([
+                'purchase_price' => $item['purchase_price'] ?? 0, // 采购单价
+                'price' => $item['product_price'], // 销售单价
+                'name' => $item['spec_name'], // 规格名称
+                'product_flavor_uuid' => $item['spec_id'], // 规格uuid
                 'product_package_uuid' => $product['uuid'], // 产品包uuid
-                'stock_num' => $flavor['stock_num'], // 库存数量
-                'barcode_value' => $flavor['barcode'], // 条码值
+                'stock_num' => $item['stock_num'], // 库存数量
+                'barcode_value' => $item['barcode'], // 条码值
                 'status' => $product['status'], // 状态
             ]);
-            // todo 添加商品规格关联材料
+            // 判断是否开启授权进销存
+            if ($product->hasInventoryAuth()) {
+                // 添加规格关联材料
+                $materialList = $item['material'] ?? [];
+                RelatedMaterial::addRelatedMaterial($materialList, $flavor['uuid']);
+            }
         }
     }
 
@@ -52,9 +57,17 @@ class ProductBom extends ProductBomModel
             ];
             $flavor = $product->sku()->where('uuid', $item['product_sku_id'])->find();
             if (!$flavor) {
-                self::create($flavorData);
+                $flavor = self::create($flavorData);
             } else {
                 $flavor->save($flavorData);
+            }
+            // 判断是否开启授权进销存
+            if ($product->hasInventoryAuth()) {
+                $materialList = $item['material'] ?? [];
+                // 更新规格关联材料
+                RelatedMaterial::updateRelatedMaterial($materialList, $flavor['uuid']);
+                // 规格出入库记录
+                // $this->productInventoryRecord($productSku, $productSkuOld, $data['sku'], $this['product_id'], $this['type'], $data['stock_remark'] ?? '', $shop_supplier_id, $shopSupplierId);
             }
         }
         // 删除规格
@@ -63,6 +76,8 @@ class ProductBom extends ProductBomModel
                 ->where('product_flavor_uuid', '>', 0)
                 ->select();
             foreach ($flavorList as $flavor) {
+                // 删除规格关联材料
+                RelatedMaterial::deleteRelatedMaterial($flavor['uuid']);
                 $flavor->delete();
             }
         }
