@@ -186,7 +186,7 @@ class Feed extends FeedModel
             $delete_product_ids = array_diff($current_product_ids, $product_ids) ?: [];
             // 计算需要新增的产品ID
             $add_product_ids = array_diff($product_ids, $current_product_ids) ?: [];
-            // todo 兼容 获取材料最小库存
+            // 获取材料最小库存
             $stock = RelatedMaterial::alias('r')
                 ->join('material m', 'r.material_uuid = m.uuid')
                 ->field('r.related_uuid, LEAST(FLOOR(MIN(m.stock_num / r.num)), 99999999) AS min_stock_num')
@@ -199,7 +199,7 @@ class Feed extends FeedModel
                 foreach ($chunks as $chunk) {
                     $list = ProductBom::where('product_sauce_uuid', $feed_id)->whereIn('product_package_uuid', $chunk)->select();
                     foreach ($list as $item) {
-                        $item->force()->delete();
+                        $item->delete();
                     }
                 }
             }
@@ -209,13 +209,13 @@ class Feed extends FeedModel
                 foreach ($add_product_ids as $product_id) {
                     $insert_data[] = [
                         'uuid' => createUuid(),
-                        'product_package_uuid'       => $product_id,
-                        'product_sauce_uuid'          => $feed_id,
-                        'name'        => $this['name'],
-                        'price'            => $this['price'],
-                        'stock_num'        => $min_stock_num,
-                        'create_time'      => time(),
-                        'update_time'      => time(),
+                        'product_package_uuid' => $product_id,
+                        'product_sauce_uuid' => $feed_id,
+                        'name'  => $this['name'],
+                        'price' => $this['price'],
+                        'stock_num' => $min_stock_num,
+                        'create_time' => time(),
+                        'update_time' => time(),
                     ];
                 }
                 ProductBom::insertAll($insert_data);

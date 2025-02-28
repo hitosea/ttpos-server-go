@@ -24,7 +24,7 @@ class Spec extends Controller
     public function index()
     {
         $model = new SpecModel;
-        $list  = $model->getList($this->postData(), $this->store['user']['shop_supplier_id']);
+        $list  = $model->getList($this->postData());
         return $this->renderSuccess('', compact('list'));
     }
 
@@ -39,7 +39,7 @@ class Spec extends Controller
     public function add()
     {
         $model = new SpecModel();
-        if ($data = $model->add($this->postData(), $this->store['user']['shop_supplier_id'])) {
+        if ($data = $model->add($this->postData())) {
             return $this->renderSuccess('添加成功', $data ?: []);
         }
         return $this->renderError($model->getError() ?: '添加失败');

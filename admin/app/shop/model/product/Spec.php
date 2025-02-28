@@ -4,7 +4,6 @@ namespace app\shop\model\product;
 
 use app\common\model\product\ProductBom;
 use help\ValidateHelp;
-use app\common\model\product\ProductSku;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Spec as SpecModel;
 
@@ -16,7 +15,7 @@ class Spec extends SpecModel
     /**
      * 获取列表数据
      */
-    public function getList($data, $shop_supplier_id)
+    public function getList($data)
     {
         $prefix = env('DB_PREFIX');
         $model = $this->alias('sku')
@@ -43,7 +42,7 @@ class Spec extends SpecModel
     /**
      * 新增规格组
      */
-    public function add($data, $shop_supplier_id)
+    public function add($data)
     {
         $name = $data['spec_name'] ?? '';
         if (ValidateHelp::hasEmptyValue($name)) {
@@ -134,11 +133,18 @@ class Spec extends SpecModel
             $delete_product_ids = array_diff($current_product_ids, $product_ids);
             // 计算需要新增的产品ID
             $add_product_ids = array_diff($product_ids, $current_product_ids);
+            // 获取材料最小库存
+            $stock = RelatedMaterial::alias('r')
+                ->join('material m', 'r.material_uuid = m.uuid')
+                ->field('r.related_uuid, LEAST(FLOOR(MIN(m.stock_num / r.num)), 99999999) AS min_stock_num')
+                ->where('r.related_uuid', $spec_id)
+                ->find();
+            $min_stock_num = $stock['min_stock_num'] ?: Feed::MAX_MATERIAL_NUM;
             // 删除变动的关系
             if (!empty($delete_product_ids)) {
                 $list = ProductBom::where('product_flavor_uuid', $spec_id)->whereIn('product_package_uuid', $delete_product_ids)->select();
                 foreach ($list as $item) {
-                    $item->force()->delete(); // 强制删除
+                    $item->delete(); // 强制删除
                 }
             }
             // 添加新关系
@@ -150,7 +156,7 @@ class Spec extends SpecModel
                         'product_package_uuid' => $product_id,
                         'product_flavor_uuid' => $spec_id,
                         'name' => $this['name'],
-                        'stock_num' => 99999999,
+                        'stock_num' => $min_stock_num,
                         'create_time' => time(),
                         'update_time' => time(),
                     ];
@@ -177,7 +183,9 @@ class Spec extends SpecModel
         $this->startTrans();
         try {
             foreach ($data['products'] as $product) {
-                ProductBom::where('product_package_uuid', $product['product_id'])->where('product_flavor_uuid', $this['spec_id'])->update(['price' => $product['product_price']]);
+                ProductBom::where('product_package_uuid', $product['product_id'])
+                    ->where('product_flavor_uuid', $this['spec_id'])
+                    ->update(['price' => $product['product_price']]);
             }
             $this->commit();
             return true;
