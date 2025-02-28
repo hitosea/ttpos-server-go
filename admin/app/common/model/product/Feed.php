@@ -86,14 +86,6 @@ class Feed extends BaseModel
     }
 
     /**
-     * 关联材料加料
-     */
-    public function material()
-    {
-        return $this->belongsToMany(Material::class, RelatedMaterial::class, 'material_uuid', 'related_uuid');
-    }
-
-    /**
      * 获取列表数据
      */
     public function getAllList($shop_supplier_id)
