@@ -97,13 +97,13 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 	if err != nil {
 		return listResp, apperrors.ErrInternal
 	}
-	listResp.UnhandledCount = unhandledCount
+	listResp.Extra.UnhandledCount = unhandledCount
 
 	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption)
 	if err != nil {
 		return listResp, apperrors.ErrInternal
 	}
-	listResp.HandledCount = handledCount
+	listResp.Extra.HandledCount = handledCount
 
 	listResp.List = items
 	listResp.Meta = dto.PageResponse{

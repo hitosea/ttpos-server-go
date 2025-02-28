@@ -82,7 +82,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 	}
 
 	// 桌台Uuid
-	tableUuid, _ := strconv.ParseUint(c.GetHeader("TABLE-UUID"), 10, 64)
+	deskUuid, _ := strconv.ParseUint(c.GetHeader("DESK-UUID"), 10, 64)
 
 	// 用户鉴权
 	ctx := context.NewContext(context.WithSource(claims.Source), context.WithCompanyUuid(claims.CompanyUuid))
@@ -99,7 +99,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 		TokenIssuedAt: claims.IssuedAt.Unix(),
 
 		DeviceUuid: claims.DeviceUuid, // 用于判断是否绑定桌台
-		TableUuid:  tableUuid,         // 用于判断是否绑定桌台
+		DeskUuid:   deskUuid,          // 用于判断是否绑定桌台
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeAccessDenied, err)

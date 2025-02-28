@@ -2044,15 +2044,20 @@ definitions:
     type: object
   resp.H5OrderList:
     properties:
-      handled_count:
-        description: 已处理的接单数量
-        type: integer
+      extra:
+        $ref: '#/definitions/resp.H5OrderListExtra'
       list:
         items:
           $ref: '#/definitions/resp.H5OrderItem'
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.H5OrderListExtra:
+    properties:
+      handled_count:
+        description: 已处理的接单数量
+        type: integer
       unhandled_count:
         description: 未处理的接单数量
         type: integer

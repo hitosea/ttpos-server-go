@@ -36,5 +36,5 @@ type Authenticate struct {
 	TokenIssuedAt int64
 
 	DeviceUuid uint64
-	TableUuid  uint64
+	DeskUuid   uint64
 }
