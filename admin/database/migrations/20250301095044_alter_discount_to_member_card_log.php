@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AlterDiscountToMemberLevel extends Migrator
+class AlterDiscountToMemberCardLog extends Migrator
 {
     /**
      * Change Method.
@@ -28,9 +28,9 @@ class AlterDiscountToMemberLevel extends Migrator
      */
     public function change()
     {
-        $table = $this->table('member_level');
+        $table = $this->table('member_card_log');
         if ($table->hasColumn('discount')) {
-            $table->changeColumn('discount', 'decimal', ['precision' => 10, 'scale' => 4, 'null' => false, 'default' => 0, 'after' => 'upgrade_point']);
+            $table->changeColumn('discount', 'decimal', ['precision' => 10, 'scale' => 4, 'null' => false, 'default' => 0, 'after' => 'price']);
         }
         $table->update();
     }

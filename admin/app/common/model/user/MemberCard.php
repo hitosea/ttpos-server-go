@@ -2,6 +2,7 @@
 
 namespace app\common\model\user;
 
+use app\common\library\helper;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\service\order\OrderService;
@@ -16,6 +17,22 @@ class MemberCard extends BaseModel
     protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+
+    /**
+     * 设置折扣
+     */
+    public function setDiscountAttr($value)
+    {
+        return helper::bcdiv($value ?? 0, 100, 4);
+    }
+
+    /**
+     * 获取折扣
+     */
+    public function getDiscountAttr($value, $data)
+    {
+        return floatval(helper::bcmul($value ?? 0, 100, 2));
+    }
 
     // 新增
     public function add($data)

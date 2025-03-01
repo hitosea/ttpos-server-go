@@ -22,7 +22,7 @@ func NewLoginLogRepoImpl(db *gorm.DB) *LoginLogRepo {
 }
 
 func (r *LoginLogRepo) Save(companyId uint64, username, ip, result string) error {
-	return r.db.Model(&model.StaffLoginLog{}).Debug().Create(&model.StaffLoginLog{
+	return r.db.Model(&model.StaffLoginLog{}).Create(&model.StaffLoginLog{
 		StaffUuid: 0, // todo
 		Username:  "",
 		Ip:        "",

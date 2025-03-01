@@ -105,7 +105,8 @@ type MemberPointLog struct {
 // MemberRechargeOrder 会员充值订单表 `ttpos_member_recharge_order`
 type MemberRechargeOrder struct {
 	BaseModel
-	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期;NOT NULL" json:"status"`
+	OrderNo        string  `gorm:"column:order_no;type:varchar(255);comment:订单编号;NOT NULL" json:"order_no"`
+	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消;NOT NULL" json:"status"`
 	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
 	ChargeDue      float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
 	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0;comment:充值金额;NOT NULL" json:"recharge_amount"`
@@ -113,7 +114,7 @@ type MemberRechargeOrder struct {
 	GiftPoint      float64 `gorm:"column:gift_point;type:decimal(12,2);default:0;comment:赠送积分;NOT NULL" json:"gift_point"`
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`
 	StaffUuid      uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;comment:员工ID;NOT NULL" json:"staff_uuid"`
-	PaymentTime    uint    `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
+	PaymentTime    int64   `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
 
 	PaymentOrders []PaymentOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 一个会员充值订单关联多个支付订单
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`  // 关联会员

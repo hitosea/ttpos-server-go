@@ -7,6 +7,7 @@ use think\model\concern\SoftDelete;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\model\user\PointsLog as PointsLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
+use app\common\library\helper;
 use app\common\model\user\BalanceLog as BalanceLogModel;
 
 /**
@@ -71,6 +72,27 @@ class Card extends BaseModel
     public function getContentAttr($value, $data)
     {
         return $this->describe ?: '';
+    }
+
+    /**
+     * 设置折扣
+     * @param $value
+     * @param $data
+     * @return string
+     */
+    public function setDiscountAttr($value) {
+        return helper::bcdiv($value ?? 0, 100, 4);
+    }
+
+    /**
+     * 获取折扣
+     * @param $value
+     * @param $data
+     * @return string
+     */
+    public function getDiscountAttr($value, $data)
+    {
+        return floatval(helper::bcmul($value ?? 0, 100, 2));
     }
 
     /**

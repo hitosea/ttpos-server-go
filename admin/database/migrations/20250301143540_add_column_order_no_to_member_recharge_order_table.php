@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AlterDiscountToMemberLevel extends Migrator
+class AddColumnOrderNoToMemberRechargeOrderTable extends Migrator
 {
     /**
      * Change Method.
@@ -28,10 +28,10 @@ class AlterDiscountToMemberLevel extends Migrator
      */
     public function change()
     {
-        $table = $this->table('member_level');
-        if ($table->hasColumn('discount')) {
-            $table->changeColumn('discount', 'decimal', ['precision' => 10, 'scale' => 4, 'null' => false, 'default' => 0, 'after' => 'upgrade_point']);
+        $table = $this->table('member_recharge_order');
+        if (!$table->hasColumn('order_no')) {
+            $table->addColumn('order_no', 'string', ['limit' => 255, 'default' => '', 'comment' => '充值订单编号']);
+            $table->update();
         }
-        $table->update();
     }
 }

@@ -182,12 +182,12 @@ type PaymentInfoList struct {
 }
 
 type MemberInfo struct {
-	Uuid    uint64    `json:"uuid"`    // 会员UUID
-	Name    string    `json:"name"`    // 会员名称
-	Card    CardInfo  `json:"card"`    // 会员卡信息
-	Level   LevelInfo `json:"level"`   // 会员等级
-	Balance float64   `json:"balance"` // 会员余额
-	Points  float64   `json:"points"`  // 会员积分
+	Uuid     uint64    `json:"uuid"`     // 会员UUID
+	Nickname string    `json:"nickname"` // 会员名称
+	Card     CardInfo  `json:"card"`     // 会员卡信息
+	Level    LevelInfo `json:"level"`    // 会员等级
+	Balance  float64   `json:"balance"`  // 会员余额
+	Points   float64   `json:"points"`   // 会员积分
 }
 
 type LevelInfo struct {
