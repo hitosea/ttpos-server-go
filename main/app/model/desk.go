@@ -46,7 +46,7 @@ type Desk struct {
 func (d *Desk) getCustomerCount() uint {
 	if d.SaleBill != nil {
 		// 获取销售账单人数
-		return d.SaleBill.CustomerCount
+		return d.SaleBill.MealNum
 	}
 	return 0
 }
