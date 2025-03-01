@@ -1067,11 +1067,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	saleOrderProduct.DeleteProduct()
 
 	// 计算订单金额
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	ctx.Log().Debug("删除商品前,销售订单信息", zap.Any("saleOrder calc", saleOrder.BeforeCalc()))
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	afterSaleOrderCalc := saleOrder.CalcSaleOrderAmount(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
@@ -2077,7 +2073,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	// 新建一个销售订单商品，该商品数量为移动数量
 	var cartInfo *resp.ShopCart
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 如何数量相等 就不需要复制新的商品
+		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
 			saleOrderProduct.CancelTime = time.Now().Unix()
 			saleOrderProduct.CancelReason = req.Reason
@@ -2088,12 +2084,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			newSaleOrderProduct.CancelTime = time.Now().Unix()
 			newSaleOrderProduct.Num = req.Num
 			newSaleOrderProduct.CancelReason = req.Reason
-			uuid, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(newSaleOrderProduct)
-			if err != nil {
-				return err
-			}
+			//uuid, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(*newSaleOrderProduct)
+			//if err != nil {
+			//	return err
+			//}
 			// 设置新创建的UUID 追加到saleBill中对应的saleOrder中
-			newSaleOrderProduct.Uuid = uuid
+			//newSaleOrderProduct.Uuid = uuid
 			for i, order := range saleBill.SaleOrders {
 				if order.Uuid == req.SaleOrderUuid {
 					// 更新原有商品的数量
@@ -2110,9 +2106,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			}
 		}
 		// 更新销售订单商品
-		if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
-			return errUpdate
-		}
+		//if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+		//	return errUpdate
+		//}
 		// 添加退菜原因
 		if len(returnFoodReasons) > 0 {
 			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductCancelReasons(
@@ -2123,9 +2119,10 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				return err
 			}
 		}
-		//
-		s.CalcAndSaveSaleBill(ctx, tx, saleBill)
-		//
+		// 计算订单商品、订单、账单金额并更新或创建
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return err
+		}
 		return nil
 	})
 	if errUpdateDB != nil {
@@ -2456,17 +2453,25 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		for _, saleOrder := range saleBill.SaleOrders {
 			// 保存订单
-			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
-				return err
+			if len(saleBill.SaleOrders) == 1 {
+				// 账单中只有一个订单时，只能更新订单，不能再创建订单。因为业务上默认就是一个账单一个订单，没有有账单而没有订单的情况
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+					return err
+				}
+			} else {
+				// 新增一个拆单时使用
+				if err := repository.NewSaleOrderRepo(db).UpdateOrCreateSaleOrderRecord(*saleOrder); err != nil {
+					return err
+				}
 			}
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				// 保存订单商品
-				if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+				// 保存订单商品。todo 没有数据变化的商品可以不更新。没有变化的商品执行更新会带来不必要的开销
+				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 					return err
 				}
 			}
 		}
-		// 保存账单
+		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
 		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 			return err
 		}
@@ -2651,7 +2656,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		// 创建销售订单商品及BOM、属性
 		for _, saleOrderProduct := range waitCreateSaleOrderProductMap {
 			ctx.Log().Debug("新建销售订单商品", zap.Any("saleOrderProduct saleOrder uuid", saleOrderProduct.SaleOrderUuid), zap.Any("saleOrderProduct uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			if _, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(saleOrderProduct); err != nil {
+			if _, err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductAndBomAndAttribute(*saleOrderProduct); err != nil {
 				return err
 			}
 		}

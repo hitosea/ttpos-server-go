@@ -13,6 +13,7 @@ type ISaleBillRepo interface {
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
+	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
 	GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 }
@@ -106,6 +107,14 @@ func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 // 仅更新sale_bill表
 func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 	saleBill.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	return r.db.Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
+}
+
+func (r *saleBillRepo) UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error {
+	saleBill.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	if saleBill.ID == 0 {
+		return r.db.Model(&model.SaleBill{}).Create(&saleBill).Error
+	}
 	return r.db.Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
 }
 

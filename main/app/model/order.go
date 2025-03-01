@@ -198,8 +198,7 @@ func (model *SaleBill) CalcAll() {
 			}
 			saleOrderProduct.CalcSaleOrderProductAmount(*setting)
 		}
-		saleOrder.calcSaleOrderAmount(*setting)
-		saleOrder.calcFinallyAmount()
+		saleOrder.CalcSaleOrderAmount(*setting)
 	}
 	model.CalcSaleBill()
 }
@@ -961,10 +960,10 @@ func (model *SaleOrder) BeforeCalc() Calc {
 	}
 }
 
-func (model *SaleOrder) calcSaleOrderAmount(setting SaleBillSetting) {
+func (model *SaleOrder) CalcSaleOrderAmount(setting SaleBillSetting) *Calc {
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	model.CalcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType)
+	return model.CalcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType)
 }
 
 // 重新计算销售订单的金额
