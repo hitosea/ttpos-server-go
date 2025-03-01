@@ -1723,63 +1723,36 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		return nil, errors.New("构建商品失败")
 	}
 
-	// 计算商品数据。折扣、税费、服务
-	saleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
+	// 生成签名
 	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
 	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
+	// 计算商品数据。折扣、税费、服务
+	saleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
+
 	// 查询是否存在签名相同的订单商品
-	orderProduct, err := repository.NewOrderProductRepo(db).GetProductInfo(
-		repository.CommonRepo.WhereBySign(saleOrderProduct.Sign),
-		repository.CommonRepo.WhereBySaleBillUuid(req.SaleBillUuid),
-		repository.CommonRepo.WhereBySaleOrderUuid(req.SaleOrderUuid),
-		repository.CommonRepo.WhereBySoftDelete(),
-		repository.CommonRepo.WhereByProductIsAccept(),
-	)
-	if err != nil {
-		ctx.Log().Debug("查询是否存在签名相同的订单商品", zap.Error(err))
-		return nil, errors.New("查询数据失败")
+	orderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
+	if orderProduct == nil {
+		ctx.Log().Debug("不存在相同的sign", zap.Any("sign", saleOrderProduct.Sign))
 	}
 
 	// 订单中存在相同签名的商品
 	//hasSameSign := false
-	if orderProduct.Uuid != 0 {
+	if orderProduct != nil {
+		fmt.Println("you xiang 同的sign")
 		// 加上新增的商品数量
 		orderProduct.Num += saleOrderProduct.Num
+		orderProduct.SetUpdate()
 		//hasSameSign = true
 	} else {
 		// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 		saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, saleOrderProduct)
 	}
 
-	// 计算订单金额
-	//saleOrder.CalcSaleOrderAmount(*saleBill.SaleBillSetting)
-	// 计算账单金额
-	//saleBill.CalcSaleBill()
-
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 			return err
 		}
-		//if hasSameSign {
-		//	if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
-		//		ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
-		//		return errUpdate
-		//	}
-		//} else {
-		//	// 创建销售订单商品
-		//	_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
-		//	if errCreate != nil {
-		//		return errCreate
-		//	}
-		//}
-		// 更新订单记录
-		//if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
-		//	return errUpdate
-		//}
-		//if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
-		//	return errUpdateSaleBill
-		//}
 		return nil
 	})
 	if errUpdate != nil {
@@ -1935,12 +1908,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		return nil, errUnCookingSaleOrderProducts
 	}
 
-	// 修改商品状态为已送厨
-	for index, _ := range unCookingSaleOrderProducts {
-		product := unCookingSaleOrderProducts[index]
-		product.Status = constant.SaleOrderProductStatusCooking
-	}
-
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	statusMap := make(map[string]*model.SaleOrderProduct)
 	for i, saleOrderProduct := range unCookingSaleOrderProducts {
@@ -1960,6 +1927,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 构建送厨单
 	productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
+
+	// 修改商品状态为已送厨
+	for index, _ := range unCookingSaleOrderProducts {
+		product := unCookingSaleOrderProducts[index]
+		product.SetCooking(productionOrder.Uuid)
+	}
 
 	ctx.Log().Debug("准备开始更新")
 	errUpdate := db.Transaction(func(tx *gorm.DB) error {
@@ -2464,9 +2437,11 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 				}
 			}
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				// 保存订单商品。todo 没有数据变化的商品可以不更新。没有变化的商品执行更新会带来不必要的开销
-				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
-					return err
+				// 保存订单商品。
+				if saleOrderProduct.GetUpdate() {
+					if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+						return err
+					}
 				}
 			}
 		}

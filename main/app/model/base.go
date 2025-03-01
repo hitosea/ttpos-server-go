@@ -17,6 +17,14 @@ type BaseModel struct {
 	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:'创建时间(时间戳)'"`
 	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:'更新时间(时间戳)'"`
 	DeleteTime int64  `gorm:"column:delete_time;type:int(10);default:0;comment:'删除时间(时间戳)'"`
+	isUpdate   bool   // 用于判断该model是否需要更新
+}
+
+func (model *BaseModel) SetUpdate() {
+	model.isUpdate = true
+}
+func (model *BaseModel) GetUpdate() bool {
+	return model.isUpdate
 }
 
 // BeforeCreate 创建记录前生成UUID

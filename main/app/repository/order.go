@@ -351,6 +351,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 					CommonRepo.WhereByUuid(saleBillUuid),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleBillSetting",
+						},
+						WithPreload{
 							Query: "Desk",
 						},
 					),
@@ -428,7 +431,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				if errDesk != nil {
 					return nil, errDesk
 				}
-				return &ro.ShopCartRepo{SaleBill: &saleBill}, nil
+
+				bill := &saleBill
+				// 计算一次金额，避免错误
+				bill.CalcAll()
+				return &ro.ShopCartRepo{SaleBill: bill}, nil
 			}
 		} else {
 			// 当销售账单是桌台订单时，额外查询桌台信息
@@ -436,6 +443,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				saleBill, errDesk := repo.GetSaleBill(
 					CommonRepo.WhereByUuid(saleBillUuid),
 					CommonRepo.Preload(
+						WithPreload{
+							Query: "SaleBillSetting",
+						},
 						WithPreload{
 							Query: "Desk",
 						},
@@ -494,7 +504,10 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				if errDesk != nil {
 					return nil, errDesk
 				}
-				return &ro.ShopCartRepo{SaleBill: &saleBill}, nil
+				bill := &saleBill
+				// 计算一次金额，避免错误
+				bill.CalcAll()
+				return &ro.ShopCartRepo{SaleBill: bill}, nil
 			}
 		}
 	} else {
@@ -504,6 +517,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				CommonRepo.WhereByUuid(saleBillUuid),
 				CommonRepo.WhereBySoftDelete(),
 				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleBillSetting",
+					},
 					WithPreload{
 						Query: "Desk",
 						Args: []interface{}{
@@ -567,7 +583,10 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 			if errSaleBill != nil {
 				return nil, errSaleBill
 			}
-			return &ro.ShopCartRepo{SaleBill: &saleBill}, nil
+			bill := &saleBill
+			// 计算一次金额，避免错误
+			bill.CalcAll()
+			return &ro.ShopCartRepo{SaleBill: bill}, nil
 		}
 	}
 }
@@ -833,6 +852,13 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.Member.MemberCard.MemberCardType",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereBySaleBillUuid(saleBillUuid)),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",

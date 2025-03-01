@@ -438,6 +438,15 @@ func (model *SaleOrder) SetNil() {
 	model.SaleOrderBuffetDelayProducts = nil
 }
 
+func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct {
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.Sign == sign {
+			return saleOrderProduct
+		}
+	}
+	return nil
+}
+
 func (model *SaleOrder) IsFreeSaleOrder() bool {
 	return model.IsFree == constant.SaleOrderProductStatusNormal
 }
@@ -644,10 +653,8 @@ func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 				continue
 			}
 			// SalePrice * Num
-			fmt.Println("orderProduct.SalePrice", orderProduct.SalePrice, "orderProduct.uuid", orderProduct.Uuid)
 			saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
 			sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
-			fmt.Println("sumSalePrice:", sumSalePrice.InexactFloat64())
 		}
 	}
 	return sumSalePrice.InexactFloat64()
@@ -1102,6 +1109,14 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductCancelReason `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
+// 设置商品状态为送厨状态
+func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
+	model.Status = constant.SaleOrderProductStatusCooking
+	model.ProductionOrderUuid = productionOrderUuid
+	model.Sign = model.GenerateProductSign() // 更新签名
+	model.SetUpdate()                        // 标记该model需要更新
+}
+
 // 产品是否已经下架
 func (model *SaleOrderProduct) CheckProduct() string {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
@@ -1438,12 +1453,10 @@ func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
 func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.calcMemberDiscountRate()
-	fmt.Println("memberDiscountRate1111111::", memberDiscountRate)
 
 	if memberDiscountRate == 0 {
 		return 0
 	}
-	fmt.Println("memberDiscountRate::", memberDiscountRate)
 	// 1-会员折扣率
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
 	// 商品销售价*（1-会员折扣率）

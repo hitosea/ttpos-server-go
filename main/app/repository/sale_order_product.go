@@ -88,11 +88,11 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductRecord(obj model.SaleOrderP
 }
 
 func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error {
-	obj.SetNil()
 	if obj.ID == 0 {
 		_, err := r.CreateSaleOrderProductAndBomAndAttribute(obj)
 		return err
 	}
+	obj.SetNil()
 	return r.db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
 }
 
