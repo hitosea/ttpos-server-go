@@ -223,7 +223,7 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 		return nil
 	}
 	// 取消订单
-	if err := NewOrderSrv(s.dbm, nil, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
+	if err := NewOrderSrv(s.dbm, s.localeSrv, s.settingSrv, nil).CancelOrder(ctx, req.OrderCancelReq{
 		SaleBillUuid: desk.SaleBill.Uuid,
 		CancelReason: reqs.Reason,
 		Password:     reqs.Password,

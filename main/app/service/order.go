@@ -772,8 +772,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 	}
 
-	fmt.Println("1")
-
 	// 获取订单信息
 	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -782,14 +780,15 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if billInfo.ID == 0 {
 		return errors.New("找不到订单")
 	}
-	fmt.Println("2")
 
 	// 验证高级密码
-	// if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
-	// 	return err
-	// }
+	if s.settingSrv == nil {
+		return errors.New("找不到 settingSrv")
+	}
+	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
+		return err
+	}
 
-	fmt.Println("3")
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 
@@ -801,7 +800,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 	}()
 
-	fmt.Println("asdasdasdsadasdsadasdasdasdasdasdsadsa")
 	orderRepo := repository.NewOrderRepo(tx)
 	deskRepo := repository.NewDeskRepo(tx)
 	qrOrderRepo := repository.NewH5OrderRepo(tx)
