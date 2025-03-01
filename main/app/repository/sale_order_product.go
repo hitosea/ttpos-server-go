@@ -8,12 +8,13 @@ import (
 
 type ISaleOrderProductRepo interface {
 	CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error)
-	CreateSaleOrderProductAndBomAndAttribute(model *model.SaleOrderProduct) (uint64, error)
+	CreateSaleOrderProductAndBomAndAttribute(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
+	UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error
 	CreateSaleOrderProductCancelReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error
 }
 
@@ -26,10 +27,10 @@ func NewSaleOrderProductRepo(db *gorm.DB) ISaleOrderProductRepo {
 }
 
 // 创建销售订单商品及BOM、属性
-func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj *model.SaleOrderProduct) (uint64, error) {
+func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	// 创建销售订单商品
-	saleOrderProduct := *obj
+	saleOrderProduct := obj
 	saleOrderProduct.SetNil()
 	if err := db.Model(&model.SaleOrderProduct{}).Create(&saleOrderProduct).Error; err != nil {
 		return 0, err
@@ -84,6 +85,15 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductRecord(obj model.SaleOrderP
 		return err
 	}
 	return nil
+}
+
+func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error {
+	obj.SetNil()
+	if obj.ID == 0 {
+		_, err := r.CreateSaleOrderProductAndBomAndAttribute(obj)
+		return err
+	}
+	return r.db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
 }
 
 // 批量更新销售订单商品

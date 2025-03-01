@@ -12,6 +12,8 @@ type ISaleOrderRepo interface {
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
+	CreateSaleOrderRecord(obj model.SaleOrder) error
+	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 }
 
@@ -54,6 +56,20 @@ func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
 	obj.SetNil()
 	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
+}
+
+func (r *saleOrderRepo) CreateSaleOrderRecord(obj model.SaleOrder) error {
+	obj.SetNil()
+	return r.db.Model(&model.SaleOrder{}).Create(obj).Error
+}
+
+func (r *saleOrderRepo) UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error {
+	// 如果主键id为0则create，否则update
+	obj.SetNil()
+	if obj.ID == 0 {
+		return r.CreateSaleOrderRecord(obj)
+	}
+	return r.UpdateSaleOrderRecord(obj)
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error {
