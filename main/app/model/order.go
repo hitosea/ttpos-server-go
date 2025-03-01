@@ -417,64 +417,40 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 }
 
 // SetProductFields 动态更新商品多个字段值
-func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct) {
+func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct, specialFields ...map[string]bool) {
 	for i, order := range model.SaleOrders {
 		for j, product := range order.SaleOrderProducts {
 			if product.Uuid == saleOrderProductUuid {
-				// 直接设置字段值
-				// 注意：SaleOrderProducts 是 []*SaleOrderProduct 类型，元素已经是指针
 				product := model.SaleOrders[i].SaleOrderProducts[j]
-				// 使用反射动态更新字段
-				updateVal := reflect.ValueOf(updateProduct)
-				productVal := reflect.ValueOf(product).Elem() // 因为product是指针
-				// 获取结构体类型信息
-				typ := updateVal.Type()
-				// 特殊字段列表，这些字段即使是零值也可能需要设置
-				specialFields := map[string]bool{
-					"CancelTime":   true,
-					"CancelReason": true,
-					"GiftTime":     true,
-					"GiftReason":   true,
+				var fields map[string]bool
+				if len(specialFields) > 0 {
+					fields = specialFields[0]
 				}
-				// 遍历所有字段
-				for i := 0; i < updateVal.NumField(); i++ {
-					field := typ.Field(i)
-					fieldName := field.Name
-					// 跳过BaseModel和关联对象字段
-					if fieldName == "BaseModel" || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
-						continue
-					}
-					updateFieldVal := updateVal.Field(i)
-					productFieldVal := productVal.FieldByName(fieldName)
-					// 检查字段是否可设置
-					if !productFieldVal.IsValid() || !productFieldVal.CanSet() {
-						continue
-					}
-					// 特殊处理某些字段
-					if specialFields[fieldName] {
-						// 对于特殊字段，我们总是设置它们，因为零值也是有效值
-						// 例如 CancelTime=0 表示取消退菜
-						productFieldVal.Set(updateFieldVal)
-						continue
-					}
-					// 对于普通字段，只有当它们不是零值时才设置
-					isZero := false
-					switch updateFieldVal.Kind() {
-					case reflect.String:
-						isZero = updateFieldVal.String() == ""
-					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-						isZero = updateFieldVal.Int() == 0
-					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-						isZero = updateFieldVal.Uint() == 0
-					case reflect.Float32, reflect.Float64:
-						isZero = updateFieldVal.Float() == 0
-					case reflect.Bool:
-						isZero = !updateFieldVal.Bool()
-					}
-					if !isZero {
-						productFieldVal.Set(updateFieldVal)
-					}
+				product.SetFields(updateProduct, fields)
+				product.SetUpdate()
+				break
+			}
+		}
+	}
+}
+
+// CopyOrderProductAndEdit 复制订单商品并编辑
+func (model *SaleBill) CopyOrderProductAndEdit(saleOrderProductUuid uint64, updateProduct SaleOrderProduct, specialFields ...map[string]bool) {
+	for i, order := range model.SaleOrders {
+		for j, product := range order.SaleOrderProducts {
+			if product.Uuid == saleOrderProductUuid {
+				product := model.SaleOrders[i].SaleOrderProducts[j]
+				// 克隆订单商品
+				newSaleOrderProduct := product.CopyOrderProduct(order.Uuid)
+				// 如果传入了 specialFields，使用第一个元素，否则传递 nil
+				var fields map[string]bool
+				if len(specialFields) > 0 {
+					fields = specialFields[0]
 				}
+				newSaleOrderProduct.SetFields(updateProduct, fields)
+				newSaleOrderProduct.SetUpdate()
+				// 更新订单商品
+				model.SaleOrders[i].SaleOrderProducts = append(model.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
 				break
 			}
 		}
@@ -1201,14 +1177,62 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 关联对象
-	MultiLanguageName          *MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-	ImageFile                  *File                           `gorm:"foreignKey:image_file_uuid;references:uuid"`
-	SaleOrderProductBoms       []*SaleOrderProductBom          `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
-	SaleOrderProductAttributes []*SaleOrderProductAttribute    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ReturnOrderProducts        []*ReturnOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ProductPackage             *ProductPackage                 `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
-	SaleBill                   *SaleBill                       `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	CancelReasons              []*SaleOrderProductCancelReason `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
+	SaleOrderProductBoms       []*SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	SaleOrderProductAttributes []*SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ReturnOrderProducts        []*ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
+	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 使用反射动态更新字段
+func (model *SaleOrderProduct) SetFields(updateProduct SaleOrderProduct, specialFields map[string]bool) bool {
+	// 使用反射动态更新字段
+	productVal := reflect.ValueOf(model).Elem() // 因为product是指针
+	// 更新字段
+	updateVal := reflect.ValueOf(updateProduct)
+	// 获取结构体类型信息
+	typ := updateVal.Type()
+	// 遍历所有字段
+	for i := 0; i < updateVal.NumField(); i++ {
+		field := typ.Field(i)
+		fieldName := field.Name
+		// 跳过BaseModel和关联对象字段
+		if fieldName == "BaseModel" || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
+			continue
+		}
+		updateFieldVal := updateVal.Field(i)
+		productFieldVal := productVal.FieldByName(fieldName)
+		// 检查字段是否可设置
+		if !productFieldVal.IsValid() || !productFieldVal.CanSet() {
+			continue
+		}
+		// 特殊处理某些字段
+		if specialFields[fieldName] {
+			productFieldVal.Set(updateFieldVal)
+			continue
+		}
+		// 对于普通字段，只有当它们不是零值时才设置
+		isZero := false
+		switch updateFieldVal.Kind() {
+		case reflect.String:
+			isZero = updateFieldVal.String() == ""
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			isZero = updateFieldVal.Int() == 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			isZero = updateFieldVal.Uint() == 0
+		case reflect.Float32, reflect.Float64:
+			isZero = updateFieldVal.Float() == 0
+		case reflect.Bool:
+			isZero = !updateFieldVal.Bool()
+		}
+		if !isZero {
+			productFieldVal.Set(updateFieldVal)
+		}
+	}
+	return true
 }
 
 // 设置商品状态为送厨状态
@@ -2249,14 +2273,16 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.CancelTime)
 }
 
-// SaleOrderProductCancelReason 销售订单产品取消原因 `ttpos_sale_order_product_cancel_reason`
-type SaleOrderProductCancelReason struct {
+// SaleOrderProductReason 销售订单产品各种原因 `ttpos_sale_order_product_reason`
+type SaleOrderProductReason struct {
 	// 基础字段
 	BaseModel
 	// 关联ID字段
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID" json:"sale_order_product_uuid"`
 	ReturnFoodReasonUuid  uint64 `gorm:"column:return_food_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因ID" json:"return_food_reason_uuid"`
+	FreeReasonUuid        uint64 `gorm:"column:free_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:免单原因ID" json:"free_reason_uuid"`
+	GiftReasonUuid        uint64 `gorm:"column:gift_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:赠菜原因ID" json:"gift_reason_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因-多语言名称ID" json:"multi_language_name_uuid"`
 
 	// 关联对象

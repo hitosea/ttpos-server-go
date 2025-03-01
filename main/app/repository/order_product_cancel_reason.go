@@ -9,7 +9,7 @@ import (
 
 // IOrderProductCancelReasonRepo 定义销售订单商品取消原因仓库接口
 type IOrderProductCancelReasonRepo interface {
-	CreateBatch(boms []*model.SaleOrderProductCancelReason) error // 批量创建
+	CreateBatch(boms []*model.SaleOrderProductReason) error // 批量创建
 }
 
 // orderProductCancelReasonRepo 销售订单商品取消原因仓库
@@ -28,7 +28,7 @@ func NewOrderProductCancelReasonRepoImpl(db *gorm.DB) IOrderProductCancelReasonR
 }
 
 // CreateBatch 批量创建
-func (o *orderProductCancelReasonRepo) CreateBatch(boms []*model.SaleOrderProductCancelReason) error {
+func (o *orderProductCancelReasonRepo) CreateBatch(boms []*model.SaleOrderProductReason) error {
 	return o.db.Create(&boms).Error
 }
 

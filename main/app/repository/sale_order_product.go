@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -15,7 +16,8 @@ type ISaleOrderProductRepo interface {
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
 	UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error
-	CreateSaleOrderProductCancelReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error
+	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
+	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
 }
 
 type saleOrderProductRepo struct {
@@ -121,22 +123,55 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 	return &model, nil
 }
 
-// 批量创建销售订单商品取消原因
-func (r *saleOrderProductRepo) CreateSaleOrderProductCancelReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, returnFoodReasons [][2]uint64) error {
+// 批量创建销售订单商品原因
+func (r *saleOrderProductRepo) CreateSaleOrderProductReasons(
+	saleOrderUuid uint64,
+	saleOrderProductUuid uint64,
+	source string,
+	returnFoodReasons [][2]uint64,
+) error {
 	if len(returnFoodReasons) == 0 {
 		return nil
 	}
 	db := r.db
 	// 构建批量插入数据
-	reasons := make([]*model.SaleOrderProductCancelReason, len(returnFoodReasons))
+	reasons := make([]*model.SaleOrderProductReason, len(returnFoodReasons))
 	for i, reason := range returnFoodReasons {
-		reasons[i] = &model.SaleOrderProductCancelReason{
+		reasons[i] = &model.SaleOrderProductReason{
 			SaleOrderUuid:         saleOrderUuid,
 			SaleOrderProductUuid:  saleOrderProductUuid,
-			ReturnFoodReasonUuid:  reason[0],
 			MultiLanguageNameUuid: reason[1],
+		}
+		if source == constant.ProductReasonTypeReturnFood {
+			reasons[i].ReturnFoodReasonUuid = reason[0]
+		}
+		if source == constant.ProductReasonTypeGift {
+			reasons[i].GiftReasonUuid = reason[0]
+		}
+		if source == constant.ProductReasonTypeFree {
+			reasons[i].FreeReasonUuid = reason[0]
 		}
 	}
 	// 批量创建
 	return db.Create(&reasons).Error
+}
+
+// 批量删除销售订单商品原因
+func (r *saleOrderProductRepo) DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error {
+	switch source {
+	case constant.ProductReasonTypeReturnFood:
+		return r.db.Model(&model.SaleOrderProductReason{}).
+			Where("sale_order_uuid = ? and sale_order_product_uuid = ? and return_food_reason_uuid > 0", saleOrderUuid, saleOrderProductUuid).
+			Delete(&model.SaleOrderProductReason{}).Error
+	case constant.ProductReasonTypeGift:
+		return r.db.Model(&model.SaleOrderProductReason{}).
+			Where("sale_order_uuid = ? and sale_order_product_uuid = ? and gift_reason_uuid > 0", saleOrderUuid, saleOrderProductUuid).
+			Delete(&model.SaleOrderProductReason{}).Error
+	case constant.ProductReasonTypeFree:
+		return r.db.Model(&model.SaleOrderProductReason{}).
+			Where("sale_order_uuid = ? and sale_order_product_uuid = ? and free_reason_uuid > 0", saleOrderUuid, saleOrderProductUuid).
+			Delete(&model.SaleOrderProductReason{}).Error
+	default:
+		return nil
+	}
 }

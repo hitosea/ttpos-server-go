@@ -3,7 +3,6 @@
 namespace app\shop\model\buffet;
 
 use help\ValidateHelp;
-use app\common\model\buffet\BuffetTax;
 use app\common\model\buffet\BuffetCustomer;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\buffet\Buffet as BuffetModel;
@@ -18,7 +17,18 @@ class Buffet extends BuffetModel
      */
     public static function detail($buffet_id)
     {
-        return self::with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])->where('uuid', $buffet_id)->find();
+        return self::with([
+            'buffetProducts', 
+            'buffetLimitProducts', 
+            'buffetCustomerType', 
+            'buffetTaxes',
+            'saleOrderBuffetCustomerType' => [
+                'saleOrder' => [
+                    'saleBill'
+                ]
+            ],
+            'multiLanguageName'
+        ])->where('uuid', $buffet_id)->find();
     }
 
     /**
@@ -36,13 +46,22 @@ class Buffet extends BuffetModel
             $model = $model->where('status', (int)$params['status']);
         }
         // 查询列表数据
-        $list = $model->with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])
+        $list = $model->with([
+                'buffetProducts' => ['product'], 
+                'buffetLimitProducts', 
+                'buffetCustomerType', 
+                'buffetTaxes',
+                'saleOrderBuffetCustomerType' => [
+                    'saleOrder' => [
+                        'saleBill'
+                    ]
+                ]
+            ])
             ->order(['create_time' => 'desc'])
             ->paginate($params);
         foreach ($list as &$item) {
-            // todo 兼容
-            // $item['can_delete'] = $this->getCanDelete($item);
-            $item['can_delete'] = 1;
+            $item['buy_limit_status'] = count($item['buffetLimitProducts']) > 0 ? 1 : 0;
+            $item['can_delete'] = $this->getCanDelete($item);
         }
         return $list;
     }
@@ -406,12 +425,33 @@ class Buffet extends BuffetModel
      */
     public function setDelete()
     {
-        // todo 兼容
-        // if (!$this->getCanDelete($this)) {
-        //     $this->error = '自助餐正在使用中，不可删除';
-        //     return false;
-        // }
-        return $this->destroy(['uuid' => $this['uuid']]);
+        if ($this->getCanDelete($this) == 0) {
+            $this->error = '自助餐正在使用中，不可删除';
+            return false;
+        }
+        $this->startTrans();
+        try {
+            // 删除自助餐商品
+            foreach ($this->buffetProducts as $buffetProduct) {
+                $buffetProduct->delete();
+            }
+            // 删除顾客类型定价
+            foreach ($this->buffetCustomerType as $cutomerType) {
+                $cutomerType->delete();
+            }
+            // 删除对应多语言
+            $this->multiLanguageName->delete();
+            $this->multiLanguageName->clearCache($this->multi_language_name_uuid);
+            // 删除自助餐
+            $this->delete();
+
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
     }
 
     /**

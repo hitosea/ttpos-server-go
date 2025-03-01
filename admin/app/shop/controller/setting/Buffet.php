@@ -212,6 +212,7 @@ class Buffet extends Controller
         $ret['add_clock'] = $delay;
         // 获取顾客类型列表
         $customerType = CustomerTypeModel::getList();
+        $ret['add_buffet_discount'] = [];
         $ret['customer_type'] = $customerType;
         $vars['values'] = $ret;
         return $this->renderSuccess('', compact('vars'));

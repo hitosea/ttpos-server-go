@@ -275,6 +275,25 @@ func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 	helper.Success(c, respSetting)
 }
 
+// GetFreeOrGiftReason 获取免单/赠菜原因
+// @Summary 获取免单/赠菜原因
+// @Description 获取免单/赠菜原因
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResps}
+// @Router /cashier/free_or_gift_reason [get]
+func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	respSetting, err := h.otherSrv.GetGiftOrFreeReasonList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, respSetting)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -308,6 +327,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList) // 获取支付方式列表
 		privateApi.GET("/return_reason", wrapper.GetReturnReason)            // 获取退菜原因
+		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)  // 获取退菜原因
 
 		// 保存接单设置
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置

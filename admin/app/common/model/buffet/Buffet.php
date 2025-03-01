@@ -7,8 +7,11 @@ use app\common\library\helper;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\enum\order\OrderPayStatusEnum;
+use app\common\model\bill\SaleBill;
+use app\common\model\bill\SaleOrderBuffetCustomerType;
 use app\common\model\order\Order as OrderModel;
 use app\common\model\order\OrderBuffet as OrderBuffetModel;
+use app\common\model\store\MultiLanguageName;
 
 /**
  *
@@ -117,21 +120,31 @@ class Buffet extends BaseModel
     }
 
     /**
+     * 关联销售订单-自助餐顾客类型
+     */
+    public function saleOrderBuffetCustomerType()
+    {
+        return $this->hasMany(SaleOrderBuffetCustomerType::class, 'buffet_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联多语言名称
+     */
+    public function multiLanguageName()
+    {
+        return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
+    }
+
+    /**
      * 获取自助餐是否能删除 0-否 1-是
      */
     public function getCanDelete($data = [])
     {
         $isDeletable = 1;
-        $orderBuffetModel = new OrderBuffetModel();
-        $orderModel = new OrderModel();
-        $buffetOrders = $orderBuffetModel->where('buffet_id', '=', $data['id'] ?? 0)->column('order_id');
-        if (!empty($buffetOrders)) {
-            $pendingOrderCount = $orderModel->whereIn('order_id', $buffetOrders)
-                ->where('order_status', '=', OrderPayStatusEnum::PENDING)
-                ->count();
-
-            if ($pendingOrderCount > 0) {
+        foreach ($data['saleOrderBuffetCustomerType'] as $customerType) {
+            if ($customerType['saleOrder']['saleBill']['status'] == SaleBill::SALE_BILL_STATUS_PENNING) {
                 $isDeletable = 0;
+                break;
             }
         }
         return $isDeletable;

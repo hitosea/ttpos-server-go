@@ -14,7 +14,8 @@ import (
 
 type IOtherSrv interface {
 	Generate() (*resp.Captcha, error)
-	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error) // CheckAnswer 检查答案是否正确 string, answer string) bool
+	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error)      // CheckAnswer 检查答案是否正确 string, answer string) bool
+	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error) // CheckAnswer 检查答案是否正确 string, answer string) bool
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache) IOtherSrv {
@@ -63,6 +64,28 @@ func (s *otherSrv) GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoo
 	}
 
 	return &resp.ReturnFoodReasonResps{
+		List: result,
+	}, nil
+}
+
+// GetGiftOrFreeReasonList 获取免单原因列表
+func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := base.NewGiftOrFreeOrderReasonRepo(db)
+	list, err := productRepo.GetGiftOrFreeOrderReasonList()
+	if err != nil {
+		return nil, errors.New("获取免单原因列表失败")
+	}
+
+	result := make([]resp.GiftOrFreeOrderReasonResp, 0, len(list))
+	for _, item := range list {
+		result = append(result, resp.GiftOrFreeOrderReasonResp{
+			Uuid:       item.Uuid,
+			LocaleName: item.MultiLanguageName.GetNames(),
+		})
+	}
+
+	return &resp.GiftOrFreeOrderReasonResps{
 		List: result,
 	}, nil
 }

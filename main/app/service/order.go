@@ -58,7 +58,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)          // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
-	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                 // 取消赠菜购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                        // 取消赠菜购物车商品
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                           // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
@@ -2131,11 +2131,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	}
 
 	// 新建一个销售订单商品，该商品数量为移动数量
-	var cartInfo *resp.ShopCart
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
-			// 调用动态字段更新方法
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 				CancelTime:   time.Now().Unix(),
 				CancelReason: req.Reason,
@@ -2144,23 +2142,18 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 				Num: saleOrderProduct.Num - req.Num,
 			})
-			// 复制新的销售订单商品
-			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(req.SaleOrderUuid)
-			newSaleOrderProduct.CancelTime = time.Now().Unix()
-			newSaleOrderProduct.Num = req.Num
-			newSaleOrderProduct.CancelReason = req.Reason
-			for i, order := range saleBill.SaleOrders {
-				if order.Uuid == req.SaleOrderUuid {
-					saleBill.SaleOrders[i].SaleOrderProducts = append(saleBill.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
-					break
-				}
-			}
+			saleBill.CopyOrderProductAndEdit(saleOrderProduct.Uuid, model.SaleOrderProduct{
+				CancelTime:   time.Now().Unix(),
+				CancelReason: req.Reason,
+				Num:          req.Num,
+			})
 		}
 		// 添加退菜原因
 		if len(returnFoodReasons) > 0 {
-			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductCancelReasons(
+			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
 				saleOrderProduct.SaleOrderUuid,
 				saleOrderProduct.Uuid,
+				constant.ProductReasonTypeReturnFood,
 				returnFoodReasons,
 			); err != nil {
 				return err
@@ -2176,6 +2169,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.New("更新数据失败")
 	}
 	// 获取新的购物车信息
+	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
 		return nil, errors.New(errGetCartInfo.Error())
@@ -2211,14 +2205,31 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		return nil, errors.New("商品未取消")
 	}
 	// 更新销售订单商品
-	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-		Status:       0,
-		CancelTime:   0,
-		CancelReason: "",
+	errUpdate := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
+			saleOrderProduct.SaleOrderUuid,
+			saleOrderProduct.Uuid,
+			constant.ProductReasonTypeGift,
+		); err != nil {
+			return err
+		}
+		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+			Status:       0,
+			CancelTime:   0,
+			CancelReason: "",
+		}, map[string]bool{
+			"Status":       true,
+			"CancelTime":   true,
+			"CancelReason": true,
+		})
+		// 计算订单商品、订单、账单金额并更新或创建
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return errors.New("更新数据失败")
+		}
+		return nil
 	})
-	// 计算订单商品、订单、账单金额并更新或创建
-	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-		return nil, errors.New("更新数据失败")
+	if errUpdate != nil {
+		return nil, errors.New("操作失败")
 	}
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -2230,7 +2241,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 }
 
 // InstantOrderCartProductGiving 赠送购物车商品
-func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error) {
+func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)
 		defer s.lock.UnlockUuid(req.SaleBillUuid)
@@ -2253,21 +2264,47 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		return nil, errors.New("销售订单不存在")
 	case saleOrderProduct == nil:
 		return nil, errors.New("销售订单商品不存在")
-	case !saleOrderProduct.IsCancelProduct():
+	case saleOrderProduct.IsCancelProduct():
 		return nil, errors.New("商品已取消")
 	}
-
-	// 更新销售订单商品
-	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-		CancelTime:   0,
-		CancelReason: "",
-		GiftReason:   "",
+	//  验证赠菜标签
+	reasons := [][2]uint64{}
+	if len(req.GiftIds) > 0 {
+		_reasons, notFound, err := base.NewGiftOrFreeOrderReasonRepo(db).ExistsByUuids(req.GiftIds)
+		if err != nil {
+			return nil, err
+		}
+		if len(notFound) > 0 {
+			return nil, fmt.Errorf("以下赠菜原因不存在: %v", notFound)
+		}
+		reasons = _reasons
+	}
+	// 执行
+	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+			GiftTime:   time.Now().Unix(),
+			GiftReason: req.Reason,
+		})
+		// 添加赠菜原因
+		if len(reasons) > 0 {
+			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
+				saleOrderProduct.SaleOrderUuid,
+				saleOrderProduct.Uuid,
+				constant.ProductReasonTypeGift,
+				reasons,
+			); err != nil {
+				return err
+			}
+		}
+		// 计算订单商品、订单、账单金额并更新或创建
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return err
+		}
+		return nil
 	})
-	// 计算订单商品、订单、账单金额并更新或创建
-	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+	if errUpdateDB != nil {
 		return nil, errors.New("更新数据失败")
 	}
-
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -2306,14 +2343,29 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	}
 
 	// 更新销售订单商品
-	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-		GiftTime:   0,
-		GiftReason: "",
+	errUpdate := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
+			saleOrderProduct.SaleOrderUuid,
+			saleOrderProduct.Uuid,
+			constant.ProductReasonTypeGift,
+		); err != nil {
+			return err
+		}
+		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+			GiftTime:   0,
+			GiftReason: "",
+		}, map[string]bool{
+			"GiftTime":   true,
+			"GiftReason": true,
+		})
+		// 计算订单商品、订单、账单金额并更新或创建
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return errors.New("更新数据失败")
+		}
+		return nil
 	})
-
-	// 计算订单商品、订单、账单金额并更新或创建
-	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-		return nil, errors.New("更新数据失败")
+	if errUpdate != nil {
+		return nil, errors.New("操作失败")
 	}
 
 	// 获取新的购物车信息
