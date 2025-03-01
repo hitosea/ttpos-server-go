@@ -521,7 +521,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 		return nil, nil, err
 	}
 	// 桌台人数
-	//mealNum := desk.SaleBill.MealNum
+	//mealNum := desk.SaleBill.CustomerCount
 
 	regionUuid := desk.RegionUuid
 	// 用regionUuid在product_must_plan_region表中查询得到该桌台关联的必选方案

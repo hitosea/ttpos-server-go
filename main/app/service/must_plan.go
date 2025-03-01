@@ -205,7 +205,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 			continue
 		}
 		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
-		personNum := shopCart.SaleBill.MealNum
+		personNum := shopCart.SaleBill.CustomerCount
 		productPackageList := s.getIDeskMustPlanProductList(plan, personNum)
 		// 如果列表为空，跳过不检查
 		if len(productPackageList) == 0 {

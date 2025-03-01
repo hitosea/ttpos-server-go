@@ -36,9 +36,9 @@ type SaleBill struct {
 	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒）" json:"buffet_duration"`
 
 	// 订单基本信息
-	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
-	Remark  string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
-	Reason  string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
+	CustomerCount uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
+	Remark        string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
+	Reason        string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
 
 	// 金额字段 - 主要金额
 	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`

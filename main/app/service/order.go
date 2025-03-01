@@ -297,12 +297,12 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-			OrderNo:      orderNo,
-			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
-			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			IsBuffet:     utils.BoolToUint(*req.IsBuffet),
-			MealNum:      *req.MealNum,
-			Remark:       req.Remark,
+			OrderNo:       orderNo,
+			BillType:      constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
+			DiningMethod:  constant.SaleBillDiningMethodDineIn,
+			IsBuffet:      utils.BoolToUint(*req.IsBuffet),
+			CustomerCount: *req.MealNum,
+			Remark:        req.Remark,
 		})
 		if err != nil {
 			return err
@@ -1277,7 +1277,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 		SaleOrderUuid: 0,
 		OperatorUuid:  ctx.GetStaffUuid(),
 	}, map[string]interface{}{
-		"old_meal_num": billInfo.MealNum,
+		"old_meal_num": billInfo.CustomerCount,
 		"new_meal_num": req.Population,
 	})
 
@@ -1464,8 +1464,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 						TR:   delayProduct.Name,
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
-					Num:                 shopCart.SaleBill.MealNum, // 等于桌台人数
-					SalePrice:           delayProduct.GetPrice(shopCart.SaleBill.MealNum),
+					Num:                 shopCart.SaleBill.CustomerCount, // 等于桌台人数
+					SalePrice:           delayProduct.GetPrice(shopCart.SaleBill.CustomerCount),
 					DiscountPrice:       0,  // 加钟商品没有优惠价
 					Status:              1,  // 添加后标记送厨状态，不可修改
 					Remark:              "", // 加钟商品没有备注
@@ -1561,7 +1561,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		deskInfo := resp.DeskInfo{
 			Uuid:      shopCart.SaleBill.Desk.Uuid,
 			DeskNo:    shopCart.SaleBill.Desk.DeskNo,
-			MealNum:   shopCart.SaleBill.MealNum,
+			MealNum:   shopCart.SaleBill.CustomerCount,
 			StartTime: shopCart.SaleBill.CreateTime,
 			Duration:  time.Now().Unix() - shopCart.SaleBill.Desk.CreateTime,
 		}
