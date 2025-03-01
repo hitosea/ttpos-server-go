@@ -1724,10 +1724,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	}
 
 	// 计算商品数据。折扣、税费、服务
-	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	saleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
 	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
 	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
@@ -1745,42 +1742,44 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	}
 
 	// 订单中存在相同签名的商品
-	hasSameSign := false
+	//hasSameSign := false
 	if orderProduct.Uuid != 0 {
 		// 加上新增的商品数量
 		orderProduct.Num += saleOrderProduct.Num
-		hasSameSign = true
+		//hasSameSign = true
 	} else {
 		// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 		saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, saleOrderProduct)
 	}
 
 	// 计算订单金额
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	//saleOrder.CalcSaleOrderAmount(*saleBill.SaleBillSetting)
 	// 计算账单金额
-	saleBill.CalcSaleBill()
+	//saleBill.CalcSaleBill()
 
 	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if hasSameSign {
-			if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
-				ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
-				return errUpdate
-			}
-		} else {
-			// 创建销售订单商品
-			_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
-			if errCreate != nil {
-				return errCreate
-			}
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return err
 		}
+		//if hasSameSign {
+		//	if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(orderProduct); errUpdate != nil {
+		//		ctx.Log().Error("添加商品失败，更新数据失败", zap.Error(errUpdate))
+		//		return errUpdate
+		//	}
+		//} else {
+		//	// 创建销售订单商品
+		//	_, errCreate := repository.NewSaleOrderProductRepo(db).CreateSaleOrderProduct(saleOrderProduct)
+		//	if errCreate != nil {
+		//		return errCreate
+		//	}
+		//}
 		// 更新订单记录
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
-			return errUpdate
-		}
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
-			return errUpdateSaleBill
-		}
+		//if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
+		//	return errUpdate
+		//}
+		//if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		//	return errUpdateSaleBill
+		//}
 		return nil
 	})
 	if errUpdate != nil {
