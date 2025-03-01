@@ -2179,7 +2179,7 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		return nil, errors.New("销售订单不存在")
 	case saleOrderProduct == nil:
 		return nil, errors.New("销售订单商品不存在")
-	case !saleOrderProduct.IsCancelProduct():
+	case saleOrderProduct.IsCancelProduct():
 		return nil, errors.New("商品已取消")
 	}
 	//  验证赠菜标签
