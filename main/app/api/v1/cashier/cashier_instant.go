@@ -602,7 +602,7 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 	}
 	ctx.Log().Debug("从一个销售订单移动商品到另一个销售订单成功", zap.Any("res", res))
 	// 返回结果
-	helper.Success(c, res)
+	helper.Success(c, res, "拆单成功")
 }
 
 // OrderMustPlanConfirm 确认必点商品

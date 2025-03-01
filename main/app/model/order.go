@@ -385,64 +385,40 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 }
 
 // SetProductFields 动态更新商品多个字段值
-func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct) {
+func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct, specialFields ...map[string]bool) {
 	for i, order := range model.SaleOrders {
 		for j, product := range order.SaleOrderProducts {
 			if product.Uuid == saleOrderProductUuid {
-				// 直接设置字段值
-				// 注意：SaleOrderProducts 是 []*SaleOrderProduct 类型，元素已经是指针
 				product := model.SaleOrders[i].SaleOrderProducts[j]
-				// 使用反射动态更新字段
-				updateVal := reflect.ValueOf(updateProduct)
-				productVal := reflect.ValueOf(product).Elem() // 因为product是指针
-				// 获取结构体类型信息
-				typ := updateVal.Type()
-				// 特殊字段列表，这些字段即使是零值也可能需要设置
-				specialFields := map[string]bool{
-					"CancelTime":   true,
-					"CancelReason": true,
-					"GiftTime":     true,
-					"GiftReason":   true,
+				var fields map[string]bool
+				if len(specialFields) > 0 {
+					fields = specialFields[0]
 				}
-				// 遍历所有字段
-				for i := 0; i < updateVal.NumField(); i++ {
-					field := typ.Field(i)
-					fieldName := field.Name
-					// 跳过BaseModel和关联对象字段
-					if fieldName == "BaseModel" || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
-						continue
-					}
-					updateFieldVal := updateVal.Field(i)
-					productFieldVal := productVal.FieldByName(fieldName)
-					// 检查字段是否可设置
-					if !productFieldVal.IsValid() || !productFieldVal.CanSet() {
-						continue
-					}
-					// 特殊处理某些字段
-					if specialFields[fieldName] {
-						// 对于特殊字段，我们总是设置它们，因为零值也是有效值
-						// 例如 CancelTime=0 表示取消退菜
-						productFieldVal.Set(updateFieldVal)
-						continue
-					}
-					// 对于普通字段，只有当它们不是零值时才设置
-					isZero := false
-					switch updateFieldVal.Kind() {
-					case reflect.String:
-						isZero = updateFieldVal.String() == ""
-					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-						isZero = updateFieldVal.Int() == 0
-					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-						isZero = updateFieldVal.Uint() == 0
-					case reflect.Float32, reflect.Float64:
-						isZero = updateFieldVal.Float() == 0
-					case reflect.Bool:
-						isZero = !updateFieldVal.Bool()
-					}
-					if !isZero {
-						productFieldVal.Set(updateFieldVal)
-					}
+				product.SetFields(updateProduct, fields)
+				product.SetUpdate()
+				break
+			}
+		}
+	}
+}
+
+// CopyOrderProductAndEdit 复制订单商品并编辑
+func (model *SaleBill) CopyOrderProductAndEdit(saleOrderProductUuid uint64, updateProduct SaleOrderProduct, specialFields ...map[string]bool) {
+	for i, order := range model.SaleOrders {
+		for j, product := range order.SaleOrderProducts {
+			if product.Uuid == saleOrderProductUuid {
+				product := model.SaleOrders[i].SaleOrderProducts[j]
+				// 克隆订单商品
+				newSaleOrderProduct := product.CopyOrderProduct(order.Uuid)
+				// 如果传入了 specialFields，使用第一个元素，否则传递 nil
+				var fields map[string]bool
+				if len(specialFields) > 0 {
+					fields = specialFields[0]
 				}
+				newSaleOrderProduct.SetFields(updateProduct, fields)
+				newSaleOrderProduct.SetUpdate()
+				// 更新订单商品
+				model.SaleOrders[i].SaleOrderProducts = append(model.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
 				break
 			}
 		}
@@ -1177,6 +1153,54 @@ type SaleOrderProduct struct {
 	ProductPackage             *ProductPackage                 `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 	SaleBill                   *SaleBill                       `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	CancelReasons              []*SaleOrderProductCancelReason `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 使用反射动态更新字段
+func (model *SaleOrderProduct) SetFields(updateProduct SaleOrderProduct, specialFields map[string]bool) bool {
+	// 使用反射动态更新字段
+	productVal := reflect.ValueOf(model).Elem() // 因为product是指针
+	// 更新字段
+	updateVal := reflect.ValueOf(updateProduct)
+	// 获取结构体类型信息
+	typ := updateVal.Type()
+	// 遍历所有字段
+	for i := 0; i < updateVal.NumField(); i++ {
+		field := typ.Field(i)
+		fieldName := field.Name
+		// 跳过BaseModel和关联对象字段
+		if fieldName == "BaseModel" || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
+			continue
+		}
+		updateFieldVal := updateVal.Field(i)
+		productFieldVal := productVal.FieldByName(fieldName)
+		// 检查字段是否可设置
+		if !productFieldVal.IsValid() || !productFieldVal.CanSet() {
+			continue
+		}
+		// 特殊处理某些字段
+		if specialFields[fieldName] {
+			productFieldVal.Set(updateFieldVal)
+			continue
+		}
+		// 对于普通字段，只有当它们不是零值时才设置
+		isZero := false
+		switch updateFieldVal.Kind() {
+		case reflect.String:
+			isZero = updateFieldVal.String() == ""
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			isZero = updateFieldVal.Int() == 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			isZero = updateFieldVal.Uint() == 0
+		case reflect.Float32, reflect.Float64:
+			isZero = updateFieldVal.Float() == 0
+		case reflect.Bool:
+			isZero = !updateFieldVal.Bool()
+		}
+		if !isZero {
+			productFieldVal.Set(updateFieldVal)
+		}
+	}
+	return true
 }
 
 // 设置商品状态为送厨状态

@@ -2050,7 +2050,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
-			// 调用动态字段更新方法
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 				CancelTime:   time.Now().Unix(),
 				CancelReason: req.Reason,
@@ -2059,17 +2058,11 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 				Num: saleOrderProduct.Num - req.Num,
 			})
-			// 复制新的销售订单商品
-			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(req.SaleOrderUuid)
-			newSaleOrderProduct.CancelTime = time.Now().Unix()
-			newSaleOrderProduct.Num = req.Num
-			newSaleOrderProduct.CancelReason = req.Reason
-			for i, order := range saleBill.SaleOrders {
-				if order.Uuid == req.SaleOrderUuid {
-					saleBill.SaleOrders[i].SaleOrderProducts = append(saleBill.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
-					break
-				}
-			}
+			saleBill.CopyOrderProductAndEdit(saleOrderProduct.Uuid, model.SaleOrderProduct{
+				CancelTime:   time.Now().Unix(),
+				CancelReason: req.Reason,
+				Num:          req.Num,
+			})
 		}
 		// 添加退菜原因
 		if len(returnFoodReasons) > 0 {
@@ -2130,6 +2123,10 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		Status:       0,
 		CancelTime:   0,
 		CancelReason: "",
+	}, map[string]bool{
+		"Status":       true,
+		"CancelTime":   true,
+		"CancelReason": true,
 	})
 	// 计算订单商品、订单、账单金额并更新或创建
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
@@ -2177,6 +2174,10 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		CancelTime:   0,
 		CancelReason: "",
 		GiftReason:   "",
+	}, map[string]bool{
+		"CancelTime":   true,
+		"CancelReason": true,
+		"GiftReason":   true,
 	})
 	// 计算订单商品、订单、账单金额并更新或创建
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
