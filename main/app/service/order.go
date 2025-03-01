@@ -1575,7 +1575,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			DeskNo:    shopCart.SaleBill.Desk.DeskNo,
 			MealNum:   shopCart.SaleBill.MealNum,
 			StartTime: shopCart.SaleBill.CreateTime,
-			Duration:  time.Now().Unix() - shopCart.SaleBill.Desk.CreateTime,
+			Duration:  time.Now().Unix() - shopCart.SaleBill.CreateTime,
 		}
 		shopCartInfo.Desk = &deskInfo
 		// 如果是自助餐桌台
