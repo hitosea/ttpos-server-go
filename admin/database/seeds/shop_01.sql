@@ -827,7 +827,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `upgrade_money` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计消费额',
     `open_point` TINYINT(3) DEFAULT 0 COMMENT '是否开放累计积分升级，0-否 1-是',
     `upgrade_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计积分',
-    `discount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8 ',
+    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8 ',
     `priority` INT(11) NOT NULL DEFAULT 0 COMMENT '等级权重，越大等级越高',
     `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认, 1-是 0-否',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
