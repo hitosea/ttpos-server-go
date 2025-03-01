@@ -422,9 +422,14 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
 	// 送厨购物车商品
-	res, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	res, errRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if errRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", errRes))
+		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes)
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))

@@ -16,9 +16,9 @@ import (
 
 // IMustPlanSrv 定义必点方案服务接口
 type IMustPlanSrv interface {
-	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) (*[]resp.InstantProductMustPlan, error)               // 获取点餐的必点方案列表
-	GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) (*[]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
-	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)            // 通过商品包获取必点方案uuid
+	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) ([]resp.InstantProductMustPlan, error)               // 获取点餐的必点方案列表
+	GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
+	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)           // 通过商品包获取必点方案uuid
 }
 
 // mustPlanSrv 必点方案服务结构体
@@ -39,7 +39,7 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 }
 
 // 获取点餐的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) (*[]resp.InstantProductMustPlan, error) {
+func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) ([]resp.InstantProductMustPlan, error) {
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 
 	shopCartMustProductInfo := shopCart.GetMustPlanProductInfo()
@@ -125,7 +125,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		mustPlanList = append(mustPlanList, mustPlan)
 	}
 
-	return &mustPlanList, nil
+	return mustPlanList, nil
 }
 
 // 获取点餐的必点方案的商品列表。用于加购商品时判断该商品是不是这些点餐列表里的商品
@@ -177,7 +177,7 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(mustPlan *model.ProductMustP
 }
 
 // 获取桌台的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) (*[]resp.InstantProductMustPlan, error) {
+func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) {
 
 	productMustPlanList, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListDeskInfos(ctx)
 	if err != nil {
@@ -267,7 +267,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 		mustPlanList = append(mustPlanList, mustPlan)
 	}
 
-	return &mustPlanList, nil
+	return mustPlanList, nil
 }
 
 // 获取桌台的必点方案的商品列表。用于加购商品时判断该商品是不是这些商品列表里的商品
@@ -396,14 +396,14 @@ func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleB
 			ctx.Log().Debug("加购商品时判断商品是不是必点商品时，获取桌台必点方案失败", zap.Error(err))
 			return 0, errors.New("获取桌台必点方案失败")
 		}
-		plans = *deskMustPlanList
+		plans = deskMustPlanList
 	} else {
 		instantMustPlanList, err := s.GetInstantMustPlanList(ctx, db, shopCart)
 		if err != nil {
 			ctx.Log().Debug("加购商品时判断商品是不是必点商品时，获取点餐必点方案失败", zap.Error(err))
 			return 0, errors.New("获取点餐必点方案失败")
 		}
-		plans = *instantMustPlanList
+		plans = instantMustPlanList
 	}
 	deskPlanUuidMap := make(map[string]resp.InstantProductMustPlan)
 

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 
@@ -143,11 +144,13 @@ func (model *ProductPackage) TaxRate(dineType uint) float64 {
 // IsUp 判断商品是否是上架状态。排除下架、删除状态
 func (model *ProductPackage) IsUp() bool {
 	if model.Status == constant.ProductStatusOffSale || model.DeleteTime != constant.NotDeleted {
+		fmt.Println("debug: 商品已下架或已删除")
 		return false
 	}
 	if model.Status == constant.ProductStatusOnSale {
 		return true
 	}
+	fmt.Println("debug: 商品未上架")
 	return false
 }
 
@@ -242,6 +245,11 @@ func (model *ProductBom) IsUp() bool {
 
 func (model *ProductBom) IsDown() bool {
 	return !model.IsUp()
+}
+
+// IsProductPackageDown 判断商品包是否下架
+func (model *ProductBom) IsProductPackageDown() bool {
+	return !model.ProductPackage.IsUp()
 }
 
 // IsDown 判断商品包是否下架

@@ -354,9 +354,13 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	ctx.Log().Debug("点餐页面送厨购物车商品接口请求", zap.Any("params", params))
 	// 送厨购物车商品
-	res, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	res, errRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if errRes != nil {
+		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes, constant.ParseCodeOrderCheck(errRes.Code))
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))

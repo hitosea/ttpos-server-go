@@ -873,6 +873,10 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 			},
 			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductPackage",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
 			},
 			WithPreload{

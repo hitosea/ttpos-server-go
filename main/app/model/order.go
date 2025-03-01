@@ -94,6 +94,38 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = BuffetPackage{}
 }
 
+// 获取未送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
+	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+				continue
+			}
+			if orderProduct.Status == constant.SaleOrderProductStatusNormal {
+				unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+			}
+		}
+	}
+	return unCookingSaleOrderProducts
+}
+
+// 获取已送厨和未送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
+	saleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+				continue
+			}
+			saleOrderProducts = append(saleOrderProducts, saleOrder.SaleOrderProducts[i])
+		}
+	}
+	return saleOrderProducts
+}
+
 type SaleBillCalc struct {
 	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
 	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
@@ -1188,58 +1220,62 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 }
 
 // 产品是否已经下架
-func (model *SaleOrderProduct) CheckProduct() string {
+func (model *SaleOrderProduct) CheckProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.ProductBom.IsFlavorProduct() {
 			// 商品已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
-				return constant.ProductStockZero
+				return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
 			}
 			// 商品已经下架
+			if bom.ProductBom.IsProductPackageDown() {
+				return constant.CodeOrderCheckProductDown, "商品已经下架"
+			}
+			// 商品规格已经下架
 			if bom.ProductBom.IsDown() {
-				return constant.ProductDown
+				return constant.CodeOrderCheckProductFlavorDown, "商品规格已经下架"
 			}
 			// 商品已经删除
 			if bom.ProductBom.IsDelete() {
-				return constant.ProductDelete
+				return constant.CodeOrderCheckProductFlavorDown, "商品已经删除"
 			}
 			// 下单商品数量超过库存数量
 			if bom.ProductBom.IsStockShortage(model.Num) {
-				return constant.ProductStockZero
+				return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
 			}
 			// 商品规格价格变动
 			if bom.ProductBom.IsPriceChanged(model.FlavorPrice) {
-				return constant.ProductPriceChange
+				return constant.CodeOrderCheckProductPriceChanged, "商品规格价格变动"
 			}
 		}
 		if bom.ProductBom.IsSauce() {
 			// 商品已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
-				return constant.ProductStockZero
+				return constant.CodeOrderCheckProductStockZero, "小料已经售罄"
 			}
 			// 商品已经下架
 			if bom.ProductBom.IsDown() {
-				return constant.ProductDown
+				return constant.CodeOrderCheckProductFlavorDown, "小料已经下架"
 			}
 			// 商品已经删除
 			if bom.ProductBom.IsDelete() {
-				return constant.ProductDelete
+				return constant.CodeOrderCheckProductFlavorDown, "小料已经删除"
 			}
 			// 下单商品数量超过库存数量
 			// 每个订单商品一个小料只消耗一个小料库存
 			if bom.ProductBom.IsStockShortage(1) {
-				return constant.ProductStockZero
+				return constant.CodeOrderCheckProductStockZero, "下单小料数量超过库存数量"
 			}
 		}
 	}
 
 	// 小料的价格有变动
 	if model.saucePriceChanged(model.SaucePrice) {
-		return constant.ProductPriceChange
+		return constant.CodeOrderCheckProductPriceChanged, "小料价格变动"
 	}
 
-	return constant.ProductPass
+	return constant.CodeSuccess, "商品检查通过"
 }
 
 // 小料的价格是否有变动

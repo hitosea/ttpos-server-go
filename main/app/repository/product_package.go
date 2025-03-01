@@ -9,6 +9,7 @@ import (
 type IProductPackageRepo interface {
 	GetProductPackage(opts ...DBOption) (*model.ProductPackage, error)
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
+	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
 }
 
 type productPackageRepoImpl struct {
@@ -47,4 +48,10 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 		return nil, err
 	}
 	return productBom, nil
+}
+
+func (r *productPackageRepoImpl) GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error) {
+	var productPackages []*model.ProductPackage
+	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Find(&productPackages).Error
+	return productPackages, err
 }
