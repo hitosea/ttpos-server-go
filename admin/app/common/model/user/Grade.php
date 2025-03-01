@@ -78,7 +78,7 @@ class Grade extends BaseModel
      */
     public function setDiscountAttr($value)
     {
-        return helper::bcdiv($value, 100, 4);
+        return helper::bcdiv($value ?? 0, 100, 4);
     }
 
     /**
@@ -86,7 +86,7 @@ class Grade extends BaseModel
      */
     public function getDiscountAttr($value, $data)
     {
-        return floatval(helper::bcmul($value, 100));
+        return floatval(helper::bcmul($value ?? 0, 100));
     }
 
     /**
