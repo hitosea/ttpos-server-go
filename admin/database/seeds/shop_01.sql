@@ -932,7 +932,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
 CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
-    `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期',
+    `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '充值订单编号',
+    `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待支付 1-paid已支付 2-canceled已取消',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '交易金额=充值金额+手续费',
     `charge_due` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零',
     `recharge_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '充值金额',

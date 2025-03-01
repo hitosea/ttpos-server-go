@@ -36,7 +36,6 @@ const (
 	RechargeOrderStatusPending  = 0 // 充值订单待支付
 	RechargeOrderStatusPaid     = 1 // 充值订单已支付
 	RechargeOrderStatusCanceled = 2 // 充值订单已取消
-	RechargeOrderStatusExpired  = 3 // 充值订单已过期
 )
 
 const (

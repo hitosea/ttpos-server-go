@@ -34,7 +34,7 @@ func (r *deviceRepo) GetDevice(opts ...DBOption) (model.Device, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Debug().First(&device).Error
+	err := db.First(&device).Error
 	return device, err
 }
 

@@ -18,7 +18,8 @@ import (
 
 // MemberHandler 会员相关控制器
 type MemberHandler struct {
-	memberSrv service.IMemberSrv
+	memberSrv        service.IMemberSrv
+	rechargeOrderSrv service.IRechargeOrderSrv
 }
 
 // GetMemberLevels 会员等级列表
@@ -104,7 +105,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.RechargeOrder}
 // @Router /cashier/member/recharge_order_in_progress [get]
 func (h *MemberHandler) GetPendingRechargeOrder(c *gin.Context) {
-	order := h.memberSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
+	order := h.rechargeOrderSrv.GetPendingRechargeOrder(helper.GetCompanyUuid(c))
 	if order.Uuid == 0 {
 		helper.Success(c, gin.H{})
 	} else {
@@ -133,7 +134,7 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	if order, err = h.memberSrv.CreateRechargeOrder(ctx, rechargeReq); err != nil {
+	if order, err = h.rechargeOrderSrv.CreateRechargeOrder(ctx, rechargeReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
@@ -167,7 +168,7 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 	}
 
 	addPaymentMethodReq.CompanySetting = helper.GetCompanySetting(c)
-	if order, err = h.memberSrv.AddPaymentMethod(ctx, addPaymentMethodReq); err != nil {
+	if order, err = h.rechargeOrderSrv.AddPaymentMethod(ctx, addPaymentMethodReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
@@ -199,7 +200,7 @@ func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, cancelPaymentMethodReq, nil)
 		return
 	}
-	if order, err = h.memberSrv.CancelPaymentMethod(ctx, cancelPaymentMethodReq); err != nil {
+	if order, err = h.rechargeOrderSrv.CancelPaymentMethod(ctx, cancelPaymentMethodReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
@@ -227,7 +228,7 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	order, err := h.memberSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
+	order, err := h.rechargeOrderSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -252,7 +253,7 @@ func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	order, err := h.memberSrv.PrintRechargeOrder(ctx, printRechargeOrderReq)
+	order, err := h.rechargeOrderSrv.PrintRechargeOrder(ctx, printRechargeOrderReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -325,11 +326,12 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	printerLogSrv := service.NewPrinterLogSrv(dbm, settingSrv)
 	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
-
-	memberSrv := service.NewMemberSrv(dbm, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv)
+	memberSrv := service.NewMemberSrv(dbm)
+	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
 
 	wrapper := &MemberHandler{
-		memberSrv: memberSrv,
+		memberSrv:        memberSrv,
+		rechargeOrderSrv: rechargeOrderSrv,
 	}
 
 	// 需要认证

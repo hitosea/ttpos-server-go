@@ -2542,14 +2542,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	}
 
 	memberInfo := resp.MemberInfo{}
-	if saleOrder != nil && saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
+	if saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
 		memberInfo = resp.MemberInfo{
-			Uuid:    saleOrder.Member.Uuid,
-			Name:    saleOrder.Member.Nickname,
-			Card:    resp.CardInfo{Name: saleOrder.Member.MemberCard.MemberCardType.Name},
-			Level:   resp.LevelInfo{Name: saleOrder.Member.MemberLevel.Name},
-			Balance: saleOrder.Member.Balance,
-			Points:  saleOrder.Member.Point,
+			Uuid:     saleOrder.Member.Uuid,
+			Nickname: saleOrder.Member.Nickname,
+			Card:     resp.CardInfo{Name: saleOrder.Member.MemberCard.MemberCardType.Name},
+			Level:    resp.LevelInfo{Name: saleOrder.Member.MemberLevel.Name},
+			Balance:  saleOrder.Member.Balance,
+			Points:   saleOrder.Member.Point,
 		}
 	}
 

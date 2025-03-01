@@ -79,7 +79,7 @@ func (r *MemberRepo) GetMember(opts ...DBOption) model.Member {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().First(&member)
+	db.First(&member)
 	return member
 }
 
