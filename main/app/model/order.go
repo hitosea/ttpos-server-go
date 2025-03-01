@@ -36,7 +36,7 @@ type SaleBill struct {
 	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒）" json:"buffet_duration"`
 
 	// 订单基本信息
-	CustomerCount uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
+	CustomerCount uint   `gorm:"column:customer_count;type:int(10);default:0;comment:就餐人数" json:"customer_count"`
 	Remark        string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
 	Reason        string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
 
