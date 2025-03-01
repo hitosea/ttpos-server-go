@@ -461,6 +461,35 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductCancelReturning 取消退菜购物车商品
+// @Summary 取消退菜购物车商品
+// @Description 取消退菜购物车商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/cancel_returning [post]
+func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProduct{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderService.InstantOrderCartProductCancelReturning(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderMustPlanConfirm 确认必点商品
 // @Summary 确认必点商品
 // @Description 确认必点商品
@@ -673,26 +702,27 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                     // 获取桌台的区域和类型
-		privateApi.GET("/desk/list", wrapper.GetDeskList)                                         // 获取桌台列表
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                         // 获取桌台详情
-		privateApi.POST("/desk/close", wrapper.CloseDesk)                                         // 关闭桌台
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                    // 创建桌台订单(开桌)
-		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                            // 取消桌台订单
-		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)               // 删除桌台订单商品
-		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)             // 桌台订单商品改价
-		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                  // 桌台订单修改人数
-		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                 // 桌台订单商品备注
-		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                            // 查询点餐购物车信息
-		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)              // 向购物车添加商品
-		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)              // 修改购物车商品数量
-		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)              // 送厨购物车商品
-		privateApi.POST("/desk/order/cart/returning", wrapper.OrderCartProductReturning)          // 退菜购物车商品
-		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)            // 确认必点商品
-		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                      // 获取结账页面信息
-		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)            // 创建一个销售订单
-		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct) // 从一个销售订单移动商品到另一个销售订单
-		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)          // 删除一个销售订单(删除拆单)
-		privateApi.DELETE("/desk/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)   // 删除所有子销售订单(撤销拆单)
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                         // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                                             // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                             // 获取桌台详情
+		privateApi.POST("/desk/close", wrapper.CloseDesk)                                             // 关闭桌台
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                        // 创建桌台订单(开桌)
+		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                // 取消桌台订单
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                   // 删除桌台订单商品
+		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                 // 桌台订单商品改价
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                      // 桌台订单修改人数
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                     // 桌台订单商品备注
+		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                // 查询点餐购物车信息
+		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                  // 向购物车添加商品
+		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)                  // 修改购物车商品数量
+		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)                  // 送厨购物车商品
+		privateApi.POST("/desk/order/cart/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
+		privateApi.POST("/desk/order/cart/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                // 确认必点商品
+		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                          // 获取结账页面信息
+		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)                // 创建一个销售订单
+		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)     // 从一个销售订单移动商品到另一个销售订单
+		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)              // 删除一个销售订单(删除拆单)
+		privateApi.DELETE("/desk/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)       // 删除所有子销售订单(撤销拆单)
 	}
 }

@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
@@ -13,6 +12,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -47,11 +48,13 @@ func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
 
 // Success 返回成功
 func Success(c *gin.Context, data interface{}, message ...string) {
-	msg := "success"
+	msg := "请求成功"
 	if len(message) == 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])
 	} else if len(message) > 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0], message[1:]...)
+	} else {
+		msg = i18n.Translate(i18n.GetAcceptLanguage(c), msg)
 	}
 	c.JSON(http.StatusOK, dto.Response{
 		Code:    constant.CodeSuccess,
