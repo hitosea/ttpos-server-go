@@ -1051,20 +1051,16 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
 		return nil, errors.New("查询销售订单信息失败")
 	}
-
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
-
 	// 判断订单商品状态
-	if len(saleBill.SaleOrders) == 0 || len(saleBill.SaleOrders[0].SaleOrderProducts) == 0 {
+	if saleOrderProduct == nil {
 		return nil, errors.New("找不到订单商品")
 	}
-	for _, product := range saleBill.SaleOrders[0].SaleOrderProducts {
-		if product.Uuid == req.OrderProductUuid && product.CancelTime == 0 && product.Status == constant.OrderProductStatusSentKitchen {
-			return nil, errors.New("商品已送厨，禁止删除")
-		}
+	if saleOrderProduct.CancelTime == 0 && saleOrderProduct.Status == constant.OrderProductStatusSentKitchen {
+		return nil, errors.New("商品已送厨，禁止删除")
 	}
 
 	saleOrderProduct.DeleteProduct()
