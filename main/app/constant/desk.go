@@ -8,3 +8,8 @@ const (
 	DeskStatusWait      = 3 //待清台
 	DeskStatusLock      = 4 //锁单
 )
+
+const (
+	DeskStatusOpen  = 1 //开台
+	DeskStatusClose = 2 //关台
+)

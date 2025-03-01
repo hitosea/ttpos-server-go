@@ -1,5 +1,11 @@
 package model
 
+import (
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
+)
+
 // DeskRegion 餐桌区域表,定义餐桌的区域信息 ttpos_desk_region
 type DeskRegion struct {
 	BaseModel
@@ -34,4 +40,89 @@ type Desk struct {
 	SaleBill *SaleBill   `gorm:"foreignKey:SaleBillUuid;references:uuid"` // 销售账单
 	Device   *Device     `gorm:"foreignKey:DeviceUuid;references:uuid"`   // 关联绑定设备
 	Region   *DeskRegion `gorm:"foreignKey:RegionUuid;references:uuid"`   // 关联区域
+}
+
+// getCustomerCount 获取桌台人数
+func (d *Desk) getCustomerCount() uint {
+	if d.SaleBill != nil {
+		// 获取销售账单人数
+		return d.SaleBill.MealNum
+	}
+	return 0
+}
+
+func (d *Desk) getLockStatus() bool {
+	if d.SaleBill != nil {
+		return d.SaleBill.IsLock == constant.SaleBillIsLockYes
+	}
+	return false
+}
+
+func (d *Desk) getIsBuffet() bool {
+	if d.SaleBill != nil {
+		return d.SaleBill.IsBuffet == constant.SaleBillIsBuffetYes
+	}
+	return false
+}
+
+func (d *Desk) getIsWaitStatus() bool {
+	// 销售账单为空且桌台状态为开台时，表示待清台
+	if d.SaleBill != nil && d.Status == constant.DeskStatusOpen {
+		return true
+	}
+	return false
+}
+
+// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+func (d *Desk) getTime() int64 {
+	// 没有销售账单时返回0
+	if d.SaleBill == nil {
+		return 0
+	}
+	// 从开台到现在经过的时间，单位秒
+	passedTime := time.Now().Unix() - d.SaleBill.CreateTime
+	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
+	if d.getIsBuffet() {
+		// 计算剩余时间, 剩余时间=自助餐可用时长-经过时间
+		seconds := int64(d.SaleBill.BuffetDuration) - passedTime
+		return seconds
+	} else {
+		return passedTime
+	}
+}
+
+// 获取销售账单金额
+func (d *Desk) getSaleBillAmount() float64 {
+	if d.SaleBill != nil {
+		return d.SaleBill.Amount
+	}
+	// 销售账单不存在
+	return 0
+}
+
+func (d *Desk) getSaleBillRemark() string {
+	if d.SaleBill != nil {
+		return d.SaleBill.Remark
+	}
+	// 销售账单不存在
+	return ""
+}
+
+// GetDeskResp 获取桌台信息
+func (d *Desk) GetDeskResp() resp.Desk {
+	return resp.Desk{
+		Uuid:          d.Uuid,
+		DeskNo:        d.DeskNo,
+		CustomerCount: d.getCustomerCount(),
+		Status:        d.Status,
+		IsLock:        d.getLockStatus(),
+		IsBuffet:      d.getIsBuffet(),
+		IsWait:        d.getIsWaitStatus(),
+		Time:          d.getTime(),
+		Price:         d.getSaleBillAmount(),
+		Remark:        d.getSaleBillRemark(),
+		TypeUuid:      d.TypeUuid,
+		RegionUuid:    d.RegionUuid,
+		SaleBillUuid:  d.SaleBillUuid,
+	}
 }

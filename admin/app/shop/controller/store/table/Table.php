@@ -284,8 +284,8 @@ class Table extends Controller
                 $validate->goCheck($mode, $val);
                 //
                 if ($mode == 'get') {
-                    $val['type_id'] = TableTypeModel::where('type_name', $val['type_name'])->value('type_id') ?: 0;
-                    $val['area_id'] = TableAreaModel::where('area_name', $val['area_name'])->value('area_id') ?: 0;
+                    $val['type_id'] = TableTypeModel::where('name', $val['type_name'])->value('uuid') ?: 0;
+                    $val['area_id'] = TableAreaModel::where('name', $val['area_name'])->value('uuid') ?: 0;
                 }
                 //
                 $val['table_no_is_exist'] = CheckService::checkNameExist('table', ['exist'=>$val['table_no']], $shop_supplier_id)['exist'];
@@ -308,11 +308,11 @@ class Table extends Controller
             // 传过来的信息
             $val['shop_supplier_id'] = $shop_supplier_id;
             //
-            $tableType = TableTypeModel::where('type_id',  $val['type_id'])->find();
+            $tableType = TableTypeModel::where('uuid',  $val['type_id'])->find();
             if (!$tableType) {
                 return $this->renderError(__('行').'[' . ($val['row'] ?? 1) .']: ' . __('所属类型不存在'));
             }
-            $tableArea = TableAreaModel::where('area_id',  $val['area_id'])->find();
+            $tableArea = TableAreaModel::where('uuid',  $val['area_id'])->find();
             if (!$tableArea) {
                 return $this->renderError(__('行').'[' . ($val['row'] ?? 1) .']: ' . __('所属区域不存在'));
             }

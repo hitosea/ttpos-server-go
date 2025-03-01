@@ -37,13 +37,13 @@ func (r *accessRepo) GetPermissions(opts ...DBOption) ([]model.Access, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Order("sort asc, create_time asc").Debug().Find(&access).Error
+	err := db.Order("sort asc, create_time asc").Find(&access).Error
 	return access, err
 }
 
 func (r *accessRepo) GetAccessUuids(roleIds []uint64) ([]uint64, error) {
 	var accessUuids []uint64
-	err := r.db.Model(&model.RoleAccess{}).Where("role_uuid in (?)", roleIds).Debug().Pluck("access_uuid", &accessUuids).Error
+	err := r.db.Model(&model.RoleAccess{}).Where("role_uuid in (?)", roleIds).Pluck("access_uuid", &accessUuids).Error
 	return accessUuids, err
 }
 

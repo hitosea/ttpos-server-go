@@ -35,6 +35,6 @@ func (r *companyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff 
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().First(&companyStaff)
+	db.First(&companyStaff)
 	return companyStaff
 }

@@ -127,3 +127,10 @@ const (
 	H5OrderStatusAccepted      = 2 // 已接单
 	H5OrderStatusRejected      = 3 // 已拒单
 )
+
+const (
+	SaleBillIsLockYes   = 1 // 账单锁定
+	SaleBillIsLockNo    = 0 // 账单未锁定
+	SaleBillIsBuffetYes = 1 // 是自助餐账单
+	SaleBillIsBuffetNo  = 0 // 不是自助餐账单
+)

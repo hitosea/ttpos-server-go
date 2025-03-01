@@ -64,13 +64,13 @@ func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.Paymen
 }
 
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
-	err := r.db.Model(&model.PaymentOrder{}).Debug().Create(&order).Error
+	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
 	return order, err
 }
 
 // Update 更新支付订单
 func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
-	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Debug().Updates(vars).Error
+	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Updates(vars).Error
 	return err
 }
 

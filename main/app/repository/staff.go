@@ -45,7 +45,7 @@ func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().First(&staff)
+	db.First(&staff)
 	return staff
 }
 
@@ -55,7 +55,7 @@ func (r *StaffRepo) GetStaffs(opts ...DBOption) []model.Staff {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().Find(&staffs)
+	db.Find(&staffs)
 	return staffs
 }
 

@@ -70,7 +70,7 @@ func (r *H5OrderRepoImpl) PaginateGetH5Order(pageNo, pageSize int, opts ...DBOpt
 		return nil, 0, err
 	}
 	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Find(&qrcodeOrders).Error
+	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&qrcodeOrders).Error
 	return qrcodeOrders, total, err
 }
 
@@ -81,7 +81,7 @@ func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (model.H5Order, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Debug().First(&h5Order).Error
+	err := db.First(&h5Order).Error
 	return h5Order, err
 }
 
@@ -92,7 +92,7 @@ func (r *H5OrderRepoImpl) GetH5OrderUuids(opts ...DBOption) ([]uint64, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Debug().Select("uuid").Scan(&h5OrderUuids).Error
+	err := db.Select("uuid").Scan(&h5OrderUuids).Error
 	return h5OrderUuids, err
 }
 

@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -12,12 +11,9 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
-
-	"go.uber.org/zap"
 )
 
 // IDeskSrv 定义收银服务接口
@@ -100,101 +96,15 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 	}
 
 	// 初始化额外信息
-	var extra = resp.DeskExtra{
-		AvailableNum:       0,
-		LockNum:            0,
-		OccupyBuffetNum:    0,
-		OccupyNotBuffetNum: 0,
-		OccupyWaitNum:      0,
-		TotalNum:           0,
-	}
-
 	// 转换为响应对象
 	deskResp := make([]resp.Desk, len(desks))
 	for i, desk := range desks {
-		ctx.Log().Debug("查询桌台列表", zap.Any("desk uuid", desk.Uuid))
-		var elapsedTime uint
-		if desk.SaleBill != nil && desk.SaleBill.ID == 0 {
-			if desk.Status == 1 {
-				extra.OccupyWaitNum++
-			} else {
-				extra.AvailableNum++
-			}
-			elapsedTime = constant.DeskStatusAvailable
-		} else {
-			extra.OccupyWaitNum++
-			//
-			if desk.SaleBill != nil && desk.SaleBill.IsLock == 1 {
-				extra.LockNum++
-			}
-			//
-			if desk.SaleBill != nil && desk.SaleBill.IsBuffet == 1 {
-				extra.OccupyBuffetNum++
-			} else {
-				extra.OccupyNotBuffetNum++
-			}
-			// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-			passedTime := int64(0)
-			if desk.SaleBill != nil {
-				passedTime = time.Now().Unix() - desk.SaleBill.CreateTime
-			}
-			if desk.SaleBill != nil && desk.SaleBill.IsBuffet == 1 {
-				if uint(passedTime) >= desk.SaleBill.BuffetDuration {
-					elapsedTime = 0
-				} else {
-					elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
-				}
-			} else {
-				elapsedTime = uint(passedTime)
-			}
-		}
-
-		extra.TotalNum++
-		// todo  desk.SaleBill.PaymentAmount 需要等后面业务缓存中取
-		if desk.SaleBill != nil {
-			deskRes := resp.Desk{
-				Uuid:          desk.Uuid,
-				DeskNo:        desk.DeskNo,
-				TypeUuid:      desk.TypeUuid,
-				RegionUuid:    desk.RegionUuid,
-				CustomerCount: desk.SaleBill.MealNum,
-				Status:        desk.Status,
-				IsLock:        desk.SaleBill.IsLock == 1,
-				IsBuffet:      desk.SaleBill.IsBuffet == 1,
-				IsWait:        desk.SaleBill.ID == 0 && desk.Status == 1,
-				Remark:        desk.SaleBill.Remark,
-				Time:          elapsedTime,
-				Price:         desk.SaleBill.PaymentAmount,
-			}
-			deskResp[i] = deskRes
-			jsonString := utils.ToJsonString(deskRes)
-			ctx.Log().Debug("查询桌台列表", zap.Any("desk jsonString", jsonString))
-		} else {
-			deskRes := resp.Desk{
-				Uuid:          desk.Uuid,
-				DeskNo:        desk.DeskNo,
-				TypeUuid:      desk.TypeUuid,
-				RegionUuid:    desk.RegionUuid,
-				Status:        desk.Status,
-				CustomerCount: 0,
-				IsLock:        false,
-				IsBuffet:      false,
-				IsWait:        false,
-				Remark:        "",
-				Time:          elapsedTime,
-				Price:         0,
-			}
-			deskResp[i] = deskRes
-			jsonString := utils.ToJsonString(deskRes)
-			ctx.Log().Debug("查询桌台列表", zap.Any("desk jsonString", jsonString))
-		}
-
+		deskResp[i] = desk.GetDeskResp()
 	}
 
 	// 返回响应对象
 	return resp.DeskListWithPaginationResp{
-		Extra: extra,
-		List:  deskResp,
+		List: deskResp,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -205,53 +115,12 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 
 // GetDeskInfo 获取桌台详情
 func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
-	// 获取列表
+	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetDeskInfo(deskUuid)
 	if err != nil {
 		return resp.Desk{}, err
 	}
-	//转换为响应对象
-	var elapsedTime uint
-	var lock bool
-	var buffet bool
-	if desk.SaleBill == nil {
-		elapsedTime = constant.DeskStatusAvailable
-	} else {
-		buffet = desk.SaleBill.IsBuffet == 1
-		lock = desk.SaleBill.IsLock == 1
-		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
-		passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
-		if buffet {
-			if uint(passedTime) >= desk.SaleBill.BuffetDuration {
-				elapsedTime = 0
-			} else {
-				elapsedTime = desk.SaleBill.BuffetDuration - uint(passedTime)
-			}
-		} else {
-			elapsedTime = uint(passedTime)
-		}
-	}
-
-	var saleBillUuid uint64
-	if desk.SaleBill != nil {
-		saleBillUuid = desk.SaleBill.Uuid
-	}
-	var remark string
-	if desk.SaleBill != nil {
-		remark = desk.SaleBill.Remark
-	}
-	return resp.Desk{
-		Uuid:         desk.Uuid,
-		SaleBillUuid: saleBillUuid,
-		DeskNo:       desk.DeskNo,
-		TypeUuid:     desk.TypeUuid,
-		RegionUuid:   desk.RegionUuid,
-		Status:       desk.Status,
-		IsLock:       lock,
-		IsBuffet:     buffet,
-		Remark:       remark,
-		Time:         elapsedTime,
-	}, nil
+	return desk.GetDeskResp(), nil
 }
 
 // CreateDeskOrder 创建桌台订单

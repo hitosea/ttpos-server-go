@@ -56,7 +56,7 @@ func (r *paymentMethodRepo) GetPaymentMethods(opts ...DBOption) []model.PaymentM
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().Find(&paymentMethods)
+	db.Find(&paymentMethods)
 	return paymentMethods
 }
 
@@ -67,7 +67,7 @@ func (r *paymentMethodRepo) GetPaymentMethodList(opts ...DBOption) []*model.Paym
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Debug().Find(&paymentMethods)
+	db.Find(&paymentMethods)
 	return paymentMethods
 }
 

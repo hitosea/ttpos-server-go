@@ -186,7 +186,7 @@ class Table extends TableModel
      */
     public function setSwitchStatus($switch_status)
     {
-        if ($this['status'] == 30 || $this['is_bind'] == 1) {
+        if ($this['status'] == 1 || $this['device_uuid'] > 0) {
             $this->error = '当前桌位状态不允许该操作';
             return false;
         }

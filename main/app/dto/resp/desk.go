@@ -10,7 +10,7 @@ type Desk struct {
 	IsLock        bool    `json:"is_lock"`        // 是否锁单
 	IsBuffet      bool    `json:"is_buffet"`      // 是否自助餐
 	IsWait        bool    `json:"is_wait"`        // 是否待清台
-	Time          uint    `json:"time"`           // 桌台用餐时间（秒）
+	Time          int64   `json:"time"`           // 桌台用餐时间（秒）
 	Price         float64 `json:"price"`          // 桌台价格
 	Remark        string  `json:"remark"`         // 桌台备注
 	TypeUuid      uint64  `json:"type_uuid"`      // 桌台类型ID
@@ -22,8 +22,8 @@ type DeskExtra struct {
 	AvailableNum       uint `json:"available_num"`         // 桌台可用数量
 	LockNum            uint `json:"lock_num"`              // 桌台锁定数量
 	OccupyBuffetNum    uint `json:"occupy_buffet_num"`     // 桌台自助餐数量
-	OccupyNotBuffetNum uint `json:"occupy_not_buffet_num"` // 桌台不是自助餐数量
-	OccupyWaitNum      uint `json:"occupy_wait_num"`       // 桌台等待数量
+	OccupyNotBuffetNum uint `json:"occupy_not_buffet_num"` // 桌台非自助餐数量
+	OccupyWaitNum      uint `json:"occupy_wait_num"`       // 桌台待清台数量
 	TotalNum           uint `json:"total_num"`             // 桌台总计数量
 }
 
