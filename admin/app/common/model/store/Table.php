@@ -45,7 +45,7 @@ class Table extends BaseModel
      */
     public function underwayOrder()
     {
-        return $this->hasOne('app\\common\\model\\order\\Order', 'table_id', 'table_id')->where('is_merge', 0)->where('order_status', 10)->order('order_id desc');
+        return $this->hasOne('app\\common\\model\\order\\Order', 'desk_uuid', 'uuid')->where('status', 0)->order('id desc');
     }
 
     /**
@@ -54,9 +54,7 @@ class Table extends BaseModel
     public static function detail($where)
     {
         $filter = is_array($where) ? $where : ['uuid' => $where];
-        // todo 兼容
-        // return static::with(['underwayOrder'])->where($filter)->find();
-        return static::where($filter)->find();
+        return static::with(['underwayOrder'])->where($filter)->find();
     }
 
     /**
