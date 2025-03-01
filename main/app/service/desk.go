@@ -24,7 +24,7 @@ import (
 type IDeskSrv interface {
 	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                 // 获取桌台区域和类型列表
-	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error)                                        // 获取桌台详情
+	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                // 获取桌台详情
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
@@ -204,11 +204,11 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 }
 
 // GetDeskInfo 获取桌台详情
-func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, error) {
+func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 	// 获取列表
 	desk, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetDeskInfo(deskUuid)
 	if err != nil {
-		return resp.DeskInfoResp{}, err
+		return resp.Desk{}, err
 	}
 	//转换为响应对象
 	var deskStatus uint
@@ -253,7 +253,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.DeskInfoResp, 
 	if desk.SaleBill != nil {
 		remark = desk.SaleBill.Remark
 	}
-	return resp.DeskInfoResp{
+	return resp.Desk{
 		Uuid:         desk.Uuid,
 		SaleBillUuid: saleBillUuid,
 		DeskNo:       desk.DeskNo,

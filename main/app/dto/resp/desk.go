@@ -15,6 +15,7 @@ type Desk struct {
 	Remark        string  `json:"remark"`         // 桌台备注
 	TypeUuid      uint64  `json:"type_uuid"`      // 桌台类型ID
 	RegionUuid    uint64  `json:"region_uuid"`    // 桌台区域ID
+	SaleBillUuid  uint64  `json:"sale_bill_uuid"` // 订单UUID
 }
 
 type DeskExtra struct {
