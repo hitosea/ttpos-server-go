@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -268,6 +269,7 @@ func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderPro
 	return saleOrder, saleOrderProduct
 }
 
+// 获取自助餐名称
 func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 	name1 := model.BuffetPackage1.MultiLanguageName.GetNames()
 	name2 := model.BuffetPackage2.MultiLanguageName.GetNames()
@@ -301,14 +303,17 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 	return name
 }
 
+// 判断是否为自助餐销售账单
 func (model *SaleBill) IsDeskSaleBill() bool {
 	return model.DeskUuid != 0 // 桌台账单肯定是有桌台ID
 }
 
+// 判断是否为自助餐销售账单
 func (model *SaleBill) IsBuffetSaleBill() bool {
 	return model.IsBuffet == 1 // 桌台账单肯定是有桌台ID
 }
 
+// 获取自助餐结束时间
 func (model *SaleBill) BuffetEndTime() int64 {
 	endTime := model.BaseModel.CreateTime + int64(model.BuffetDuration)
 	return endTime
@@ -377,6 +382,71 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 		}
 	}
 	return strings.Join(buffets, "+")
+}
+
+// SetProductFields 动态更新商品多个字段值
+func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct) {
+	for i, order := range model.SaleOrders {
+		for j, product := range order.SaleOrderProducts {
+			if product.Uuid == saleOrderProductUuid {
+				// 直接设置字段值
+				// 注意：SaleOrderProducts 是 []*SaleOrderProduct 类型，元素已经是指针
+				product := model.SaleOrders[i].SaleOrderProducts[j]
+				// 使用反射动态更新字段
+				updateVal := reflect.ValueOf(updateProduct)
+				productVal := reflect.ValueOf(product).Elem() // 因为product是指针
+				// 获取结构体类型信息
+				typ := updateVal.Type()
+				// 特殊字段列表，这些字段即使是零值也可能需要设置
+				specialFields := map[string]bool{
+					"CancelTime":   true,
+					"CancelReason": true,
+					"GiftTime":     true,
+					"GiftReason":   true,
+				}
+				// 遍历所有字段
+				for i := 0; i < updateVal.NumField(); i++ {
+					field := typ.Field(i)
+					fieldName := field.Name
+					// 跳过BaseModel和关联对象字段
+					if fieldName == "BaseModel" || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
+						continue
+					}
+					updateFieldVal := updateVal.Field(i)
+					productFieldVal := productVal.FieldByName(fieldName)
+					// 检查字段是否可设置
+					if !productFieldVal.IsValid() || !productFieldVal.CanSet() {
+						continue
+					}
+					// 特殊处理某些字段
+					if specialFields[fieldName] {
+						// 对于特殊字段，我们总是设置它们，因为零值也是有效值
+						// 例如 CancelTime=0 表示取消退菜
+						productFieldVal.Set(updateFieldVal)
+						continue
+					}
+					// 对于普通字段，只有当它们不是零值时才设置
+					isZero := false
+					switch updateFieldVal.Kind() {
+					case reflect.String:
+						isZero = updateFieldVal.String() == ""
+					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+						isZero = updateFieldVal.Int() == 0
+					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+						isZero = updateFieldVal.Uint() == 0
+					case reflect.Float32, reflect.Float64:
+						isZero = updateFieldVal.Float() == 0
+					case reflect.Bool:
+						isZero = !updateFieldVal.Bool()
+					}
+					if !isZero {
+						productFieldVal.Set(updateFieldVal)
+					}
+				}
+				break
+			}
+		}
+	}
 }
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -2063,7 +2133,7 @@ type SaleOrderBuffetDelayProduct struct {
 	Name string `gorm:"default:'';column:name;comment:'自助餐加钟商品名称，下单时固定不受后台改变'"`
 	// 废弃，直接使用桌台人数即可
 	//Num   uint    `gorm:"default:0;column:num;comment:'数量'"`
-	Price float64 `gorm:"default:0;column:price;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
+	Price float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
 
 	// 关联ID字段
 	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
