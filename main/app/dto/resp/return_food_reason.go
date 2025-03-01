@@ -2,7 +2,6 @@ package resp
 
 import "ttpos-server-go/app/dto"
 
-// ReturnFoodReasonResp 退菜原因响应
 type ReturnFoodReasonResps struct {
 	List []ReturnFoodReasonResp `json:"list"`
 }

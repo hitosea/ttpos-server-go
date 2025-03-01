@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 
 
-class CreateSaleOrderProductCancelReasonTable extends Migrator
+class CreateSaleOrderProductReasonTable extends Migrator
 {
     /**
      * Change Method.
@@ -28,8 +28,8 @@ class CreateSaleOrderProductCancelReasonTable extends Migrator
      */
     public function change()
     {
-        if (!$this->hasTable('sale_order_product_cancel_reason')) {
-            $table = $this->table('sale_order_product_cancel_reason', [
+        if (!$this->hasTable('sale_order_product_reason')) {
+            $table = $this->table('sale_order_product_reason', [
                 'engine' => 'InnoDB',
                 'collation' => 'utf8mb4_unicode_ci',
                 'comment' => '销售订单商品退菜原因表',
@@ -40,7 +40,9 @@ class CreateSaleOrderProductCancelReasonTable extends Migrator
             $table->addColumn('sale_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '销售订单ID']);
             $table->addColumn('sale_order_product_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '销售订单商品ID']);
             $table->addColumn('return_food_reason_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '退菜原因ID']);
-            $table->addColumn('multi_language_name_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '退菜原因-多语言名称ID']);
+            $table->addColumn('free_reason_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '免单原因ID']);
+            $table->addColumn('gift_reason_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '赠菜原因ID']);
+            $table->addColumn('multi_language_name_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '原因-多语言名称ID']);
             $table->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间(时间戳)']);
             $table->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间(时间戳)']);
             $table->addColumn('delete_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '删除时间(时间戳)']);

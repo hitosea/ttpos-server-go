@@ -550,6 +550,26 @@ definitions:
         description: 销售订单ID
         type: integer
     type: object
+  req.OrderCartProductGivingReq:
+    properties:
+      reason:
+        description: 赠菜原因
+        type: string
+      return_ids:
+        description: 赠菜标签ids
+        items:
+          type: integer
+        type: array
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_product_uuid:
+        description: 销售订单商品ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单ID
+        type: integer
+    type: object
   req.OrderCartProductNumReq:
     properties:
       num:
@@ -1880,6 +1900,20 @@ definitions:
           update_time:
             type: string
         type: object
+    type: object
+  resp.GiftOrFreeOrderReasonResp:
+    properties:
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      uuid:
+        type: integer
+    type: object
+  resp.GiftOrFreeOrderReasonResps:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
+        type: array
     type: object
   resp.H5Buffet:
     properties:
@@ -4135,13 +4169,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -4548,13 +4582,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -4717,6 +4751,93 @@ paths:
       summary: 向购物车添加商品
       tags:
       - 收银端.桌台
+  /cashier/desk/order/cart/product/cancel_giving:
+    post:
+      consumes:
+      - application/json
+      description: 取消赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消赠菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/desk/order/cart/product/cancel_returning:
+    post:
+      consumes:
+      - application/json
+      description: 取消退菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/desk/order/cart/product/giving:
+    post:
+      consumes:
+      - application/json
+      description: 赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductGivingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取赠菜购物车商品
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/cart/product/num:
     post:
       consumes:
@@ -4746,7 +4867,7 @@ paths:
       summary: 修改购物车某个商品的数量
       tags:
       - 收银端.桌台
-  /cashier/desk/order/cart/returning:
+  /cashier/desk/order/cart/product/returning:
     post:
       consumes:
       - application/json
@@ -5085,6 +5206,28 @@ paths:
       summary: 获取桌台的区域和类型
       tags:
       - 收银端.桌台
+  /cashier/free_or_gift_reason:
+    get:
+      consumes:
+      - application/json
+      description: 获取免单/赠菜原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取免单/赠菜原因
+      tags:
+      - 收银端.基础信息
   /cashier/h5_order/accept:
     post:
       consumes:
@@ -5305,6 +5448,93 @@ paths:
       summary: 向购物车添加商品
       tags:
       - 收银端.点餐
+  /cashier/instant/order/cart/product/cancel_giving:
+    post:
+      consumes:
+      - application/json
+      description: 取消赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消赠菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product/cancel_returning:
+    post:
+      consumes:
+      - application/json
+      description: 取消退菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product/giving:
+    post:
+      consumes:
+      - application/json
+      description: 赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductGivingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取赠菜购物车商品
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/cart/product/num:
     post:
       consumes:
@@ -5334,7 +5564,7 @@ paths:
       summary: 修改购物车某个商品的数量
       tags:
       - 收银端.点餐
-  /cashier/instant/order/cart/returning:
+  /cashier/instant/order/cart/product/returning:
     post:
       consumes:
       - application/json
@@ -5395,13 +5625,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -6187,11 +6417,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -6215,11 +6445,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -6239,46 +6469,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -7118,11 +7348,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -7146,11 +7376,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -7170,46 +7400,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: pageNo
+        name: page_no
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: pageSize
+        name: page_size
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query

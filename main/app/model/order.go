@@ -1145,14 +1145,14 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 关联对象
-	MultiLanguageName          *MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
-	ImageFile                  *File                           `gorm:"foreignKey:image_file_uuid;references:uuid"`
-	SaleOrderProductBoms       []*SaleOrderProductBom          `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
-	SaleOrderProductAttributes []*SaleOrderProductAttribute    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ReturnOrderProducts        []*ReturnOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
-	ProductPackage             *ProductPackage                 `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
-	SaleBill                   *SaleBill                       `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	CancelReasons              []*SaleOrderProductCancelReason `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
+	SaleOrderProductBoms       []*SaleOrderProductBom       `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	SaleOrderProductAttributes []*SaleOrderProductAttribute `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ReturnOrderProducts        []*ReturnOrderProduct        `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
+	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
 // 使用反射动态更新字段
@@ -2237,14 +2237,16 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.CancelTime)
 }
 
-// SaleOrderProductCancelReason 销售订单产品取消原因 `ttpos_sale_order_product_cancel_reason`
-type SaleOrderProductCancelReason struct {
+// SaleOrderProductReason 销售订单产品各种原因 `ttpos_sale_order_product_reason`
+type SaleOrderProductReason struct {
 	// 基础字段
 	BaseModel
 	// 关联ID字段
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID" json:"sale_order_product_uuid"`
 	ReturnFoodReasonUuid  uint64 `gorm:"column:return_food_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因ID" json:"return_food_reason_uuid"`
+	FreeReasonUuid        uint64 `gorm:"column:free_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:免单原因ID" json:"free_reason_uuid"`
+	GiftReasonUuid        uint64 `gorm:"column:gift_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:赠菜原因ID" json:"gift_reason_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因-多语言名称ID" json:"multi_language_name_uuid"`
 
 	// 关联对象

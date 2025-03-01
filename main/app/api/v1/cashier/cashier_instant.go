@@ -373,7 +373,7 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 // @param data body req.OrderCartProductReturningReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/cart/returning [post]
+// @Router /cashier/instant/order/cart/product/returning [post]
 func (h *InstantHandler) OrderCartProductReturning(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -402,7 +402,7 @@ func (h *InstantHandler) OrderCartProductReturning(c *gin.Context) {
 // @param data body req.OrderCartProduct true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/cart/cancel_returning [post]
+// @Router /cashier/instant/order/cart/product/cancel_returning [post]
 func (h *InstantHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -428,20 +428,20 @@ func (h *InstantHandler) OrderCartProductCancelReturning(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
-// @param data body req.OrderCartProduct true "商品参数"
+// @param data body req.OrderCartProductGivingReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/cart/product/giving [post]
 func (h *InstantHandler) OrderCartProductGiving(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	params := req.OrderCartProduct{}
+	params := req.OrderCartProductGivingReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductCancelGiving(ctx, params)
+	res, err := h.orderService.InstantOrderCartProductGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -716,26 +716,28 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)                             // 创建点餐订单。 废弃，点餐点餐由系统自动创建
-		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                    // 取消点餐订单
-		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                        // 隐藏点餐订单（挂单）
-		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                        // 显示点餐订单（取单）
-		privateApi.GET("/instant/order/list", wrapper.OrderList)                                         // 显示点餐订单列表（取单列表）
-		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                   // 删除点餐订单商品
-		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)                 // 点餐订单商品改价
-		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                     // 点餐订单商品备注
-		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                // 查询点餐购物车信息
-		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                  // 向购物车添加商品
-		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)                  // 修改购物车商品数量
-		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)                  // 送厨购物车商品
-		privateApi.POST("/instant/order/cart/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
-		privateApi.POST("/instant/order/cart/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
-		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                // 确认必点商品
-		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                          // 获取结账页面信息
-		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                     // 创建一个支付单
-		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)                // 创建一个销售订单
-		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)     // 从一个销售订单移动商品到另一个销售订单
-		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)              // 删除一个销售订单(删除拆单)
-		privateApi.DELETE("/instant/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)       // 删除所有子销售订单(撤销拆单)
+		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)                                     // 创建点餐订单。 废弃，点餐点餐由系统自动创建
+		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                            // 取消点餐订单
+		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                                // 隐藏点餐订单（挂单）
+		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                                // 显示点餐订单（取单）
+		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                 // 显示点餐订单列表（取单列表）
+		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                           // 删除点餐订单商品
+		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)                         // 点餐订单商品改价
+		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
+		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
+		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
+		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)                          // 修改购物车商品数量
+		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
+		privateApi.POST("/instant/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
+		privateApi.POST("/instant/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
+		privateApi.POST("/instant/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
+		privateApi.POST("/instant/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
+		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
+		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
+		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
+		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
+		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
+		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)
+		privateApi.DELETE("/instant/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)               // 删除所有子销售订单(撤销拆单)
 	}
 }
