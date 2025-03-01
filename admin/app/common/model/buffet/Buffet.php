@@ -11,6 +11,7 @@ use app\common\model\bill\SaleBill;
 use app\common\model\bill\SaleOrderBuffetCustomerType;
 use app\common\model\order\Order as OrderModel;
 use app\common\model\order\OrderBuffet as OrderBuffetModel;
+use app\common\model\store\MultiLanguageName;
 
 /**
  *
@@ -124,6 +125,14 @@ class Buffet extends BaseModel
     public function saleOrderBuffetCustomerType()
     {
         return $this->hasMany(SaleOrderBuffetCustomerType::class, 'buffet_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联多语言名称
+     */
+    public function multiLanguageName()
+    {
+        return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
     }
 
     /**
