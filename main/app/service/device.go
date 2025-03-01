@@ -56,7 +56,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	if existsDevice.ID != 0 {
 		productPrinterUuid := addReq.ProductPrinterUuid
 		if productPrinterUuid == 0 {
-			productPrinterUuid = existsDevice.PrintPortUuid
+			productPrinterUuid = existsDevice.ProductPrinterUuid
 		}
 		remark := addReq.Remark
 		if remark == "" {
