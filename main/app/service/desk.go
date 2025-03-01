@@ -211,27 +211,14 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 		return resp.Desk{}, err
 	}
 	//转换为响应对象
-	var deskStatus uint
 	var elapsedTime uint
 	var lock bool
 	var buffet bool
 	if desk.SaleBill == nil {
-		if desk.Status == 1 {
-			deskStatus = constant.DeskStatusWait
-		} else {
-			deskStatus = constant.DeskStatusAvailable
-		}
 		elapsedTime = constant.DeskStatusAvailable
 	} else {
 		buffet = desk.SaleBill.IsBuffet == 1
 		lock = desk.SaleBill.IsLock == 1
-		if lock {
-			deskStatus = constant.DeskStatusLock
-		} else if buffet {
-			deskStatus = constant.DeskStatusBuffet
-		} else {
-			deskStatus = constant.DeskStatusNotBuffet
-		}
 		// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
 		passedTime := time.Now().Unix() - desk.SaleBill.CreateTime
 		if buffet {
@@ -259,7 +246,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 		DeskNo:       desk.DeskNo,
 		TypeUuid:     desk.TypeUuid,
 		RegionUuid:   desk.RegionUuid,
-		Status:       deskStatus,
+		Status:       desk.Status,
 		IsLock:       lock,
 		IsBuffet:     buffet,
 		Remark:       remark,
