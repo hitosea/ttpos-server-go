@@ -422,23 +422,60 @@ func (h *InstantHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-func (h *InstantHandler) OrderMustPlan(c *gin.Context) {
+// OrderCartProductGiving 赠菜购物车商品
+// @Summary 取赠菜购物车商品
+// @Description 赠菜购物车商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/product/giving [post]
+func (h *InstantHandler) OrderCartProductGiving(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到点餐页面必点方案接口请求")
-	deviceSn := ctx.GetDeviceSn()
-	ctx.Log().Debug("点餐页面必点方案接口", zap.Any("deviceSn", deviceSn))
-	if deviceSn == "" {
-		helper.ResponseFail(c, constant.CodeFail, errors.ErrNoDeviceSn)
+	// 绑定请求参数
+	params := req.OrderCartProduct{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-
-	// 获取必点方案信息
-	res, err := h.orderService.InstantOrderMustPlan(ctx, deviceSn)
+	// 退菜购物车商品
+	res, err := h.orderService.InstantOrderCartProductCancelGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	ctx.Log().Debug("获取必点方案信息成功", zap.Any("res", res))
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductCancelGiving 取消赠菜购物车商品
+// @Summary 取消赠菜购物车商品
+// @Description 取消赠菜购物车商品
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/product/cancel_giving [post]
+func (h *InstantHandler) OrderCartProductCancelGiving(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProduct{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderService.InstantOrderCartProductCancelGiving(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -693,7 +730,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)                  // 送厨购物车商品
 		privateApi.POST("/instant/order/cart/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
 		privateApi.POST("/instant/order/cart/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
-		privateApi.GET("/instant/order/must_plan", wrapper.OrderMustPlan)                                // 获取点餐必点方案。废弃
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                          // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                     // 创建一个支付单

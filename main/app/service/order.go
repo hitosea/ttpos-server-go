@@ -58,6 +58,8 @@ type IOrderSrv interface {
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, error)                                      // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                 // 取消赠菜购物车商品
+	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                           // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
@@ -2076,35 +2078,22 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
-			for i, order := range saleBill.SaleOrders {
-				if order.Uuid == req.SaleOrderUuid {
-					for j, product := range order.SaleOrderProducts {
-						if product.Uuid == saleOrderProduct.Uuid {
-							saleBill.SaleOrders[i].SaleOrderProducts[j].CancelTime = time.Now().Unix()
-							saleBill.SaleOrders[i].SaleOrderProducts[j].CancelReason = req.Reason
-							break
-						}
-					}
-				}
-			}
+			// 调用动态字段更新方法
+			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+				CancelTime:   time.Now().Unix(),
+				CancelReason: req.Reason,
+			})
 		} else {
-			saleOrderProduct.Num = saleOrderProduct.Num - req.Num
+			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+				Num: saleOrderProduct.Num - req.Num,
+			})
 			// 复制新的销售订单商品
 			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(req.SaleOrderUuid)
 			newSaleOrderProduct.CancelTime = time.Now().Unix()
 			newSaleOrderProduct.Num = req.Num
 			newSaleOrderProduct.CancelReason = req.Reason
-			// 添加新的退菜商品
 			for i, order := range saleBill.SaleOrders {
 				if order.Uuid == req.SaleOrderUuid {
-					// 更新原有商品的数量
-					for j, product := range order.SaleOrderProducts {
-						if product.Uuid == saleOrderProduct.Uuid {
-							saleBill.SaleOrders[i].SaleOrderProducts[j].Num = saleOrderProduct.Num
-							break
-						}
-					}
-					// 添加新的退菜商品
 					saleBill.SaleOrders[i].SaleOrderProducts = append(saleBill.SaleOrders[i].SaleOrderProducts, newSaleOrderProduct)
 					break
 				}
@@ -2164,26 +2153,114 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	case !saleOrderProduct.IsCancelProduct():
 		return nil, errors.New("商品未取消")
 	}
+	// 更新销售订单商品
+	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+		Status:       0,
+		CancelTime:   0,
+		CancelReason: "",
+	})
+	// 计算订单商品、订单、账单金额并更新或创建
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.New("更新数据失败")
+	}
+	// 获取新的购物车信息
+	var cartInfo *resp.ShopCart
+	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if errGetCartInfo != nil {
+		return nil, errors.New(errGetCartInfo.Error())
+	}
+	return cartInfo, nil
+}
+
+// InstantOrderCartProductGiving 赠送购物车商品
+func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	// 获取验证销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.New("销售账单不存在")
+	}
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+	// 获取销售订单和商品
+	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
+	switch {
+	case saleOrder == nil:
+		return nil, errors.New("销售订单不存在")
+	case saleOrderProduct == nil:
+		return nil, errors.New("销售订单商品不存在")
+	case !saleOrderProduct.IsCancelProduct():
+		return nil, errors.New("商品已取消")
+	}
 
 	// 更新销售订单商品
-	var cartInfo *resp.ShopCart
-	for i, order := range saleBill.SaleOrders {
-		if order.Uuid == req.SaleOrderUuid {
-			for j, product := range order.SaleOrderProducts {
-				if product.Uuid == saleOrderProduct.Uuid {
-					saleBill.SaleOrders[i].SaleOrderProducts[j].Status = 0
-					saleBill.SaleOrders[i].SaleOrderProducts[j].CancelTime = 0
-					break
-				}
-			}
-		}
-	}
+	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+		CancelTime:   0,
+		CancelReason: "",
+		GiftReason:   "",
+	})
 	// 计算订单商品、订单、账单金额并更新或创建
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.New("更新数据失败")
 	}
 
 	// 获取新的购物车信息
+	var cartInfo *resp.ShopCart
+	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if errGetCartInfo != nil {
+		return nil, errors.New(errGetCartInfo.Error())
+	}
+	return cartInfo, nil
+}
+
+// InstantOrderCartProductCancelGiving 取消赠送购物车商品
+func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	// 获取验证销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.New("销售账单不存在")
+	}
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+	// 获取销售订单和商品
+	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
+	switch {
+	case saleOrder == nil:
+		return nil, errors.New("销售订单不存在")
+	case saleOrderProduct == nil:
+		return nil, errors.New("销售订单商品不存在")
+	case !saleOrderProduct.IsGiftProduct():
+		return nil, errors.New("商品未赠送")
+	}
+
+	// 更新销售订单商品
+	saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
+		GiftTime:   0,
+		GiftReason: "",
+	})
+
+	// 计算订单商品、订单、账单金额并更新或创建
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.New("更新数据失败")
+	}
+
+	// 获取新的购物车信息
+	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
 		return nil, errors.New(errGetCartInfo.Error())
