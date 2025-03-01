@@ -357,7 +357,10 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		}
 
 		// 新桌台的状态
-		err = repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, model.Desk{Status: 1})
+		err = repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, model.Desk{
+			Status:       1,
+			SaleBillUuid: saleBill.Uuid,
+		})
 		if err != nil {
 			return err
 		}

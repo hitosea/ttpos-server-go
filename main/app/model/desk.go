@@ -67,7 +67,7 @@ func (d *Desk) getIsBuffet() bool {
 
 func (d *Desk) getIsWaitStatus() bool {
 	// 销售账单为空且桌台状态为开台时，表示待清台
-	if d.SaleBill != nil && d.Status == constant.DeskStatusOpen {
+	if d.SaleBill == nil && d.Status == constant.DeskStatusOpen {
 		return true
 	}
 	return false
