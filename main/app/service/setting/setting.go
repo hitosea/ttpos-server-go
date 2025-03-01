@@ -859,7 +859,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	if companySetting.IsOpenKitchenKds == 0 {
 		kitchen.IsOpen = "0"
 	}
-	return kitchen, nil
+	return defaultKitchen, nil
 }
 
 // GetH5Setting 获取点餐助手设置

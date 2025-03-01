@@ -60,8 +60,8 @@ type TabletDeskList struct {
 }
 
 type KitchenBase struct {
-	Username    string `json:"username"`     // 登录账号
-	KitchenUuid uint64 `json:"kitchen_uuid"` // 厨显端员工UUID
+	Kitchen setting.Kitchen `json:"kitchen"` // 厨显端设置
+	Company Company         `json:"company"` // 商家信息
 }
 
 type Company struct {
