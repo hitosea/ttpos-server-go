@@ -92,8 +92,12 @@ func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.Sa
 		_, err := r.CreateSaleOrderProductAndBomAndAttribute(obj)
 		return err
 	}
-	obj.SetNil()
-	return r.db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
+	// 如果标记商品需要更新才更新该商品
+	if obj.GetUpdate() {
+		obj.SetNil()
+		return r.db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
+	}
+	return nil
 }
 
 // 批量更新销售订单商品

@@ -2569,11 +2569,9 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 				}
 			}
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				// 保存订单商品。
-				if saleOrderProduct.GetUpdate() {
-					if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
-						return err
-					}
+				// 保存订单商品。只有标记更新的商品才会更新
+				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+					return err
 				}
 			}
 		}
