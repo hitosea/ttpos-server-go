@@ -50,6 +50,6 @@ class BuffetProduct extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_package_uuid', 'uuid')->field(['uuid as product_id', 'name as product_name']);
+        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_package_uuid', 'uuid');
     }
 }

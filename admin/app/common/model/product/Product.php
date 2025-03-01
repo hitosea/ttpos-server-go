@@ -946,6 +946,18 @@ class Product extends BaseModel
             }
             $bind['product_name'] = "%{$productName}%";
         }
+        
+        // 搜索商品uuid列表
+        $productIds = $params['product_ids'] ?? '';
+        if ($productIds != '') {
+            $where = "(FIND_IN_SET(product_id, :product_ids))";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['product_ids'] = $productIds;
+        }
 
         $querySql = "SELECT " . implode(',', [
             'create_time',

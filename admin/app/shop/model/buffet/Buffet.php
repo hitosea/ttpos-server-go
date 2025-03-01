@@ -3,7 +3,6 @@
 namespace app\shop\model\buffet;
 
 use help\ValidateHelp;
-use app\common\model\buffet\BuffetTax;
 use app\common\model\buffet\BuffetCustomer;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\buffet\Buffet as BuffetModel;
@@ -36,12 +35,22 @@ class Buffet extends BuffetModel
             $model = $model->where('status', (int)$params['status']);
         }
         // 查询列表数据
-        $list = $model->with(['buffetProducts', 'buffetLimitProducts', 'buffetCustomerType', 'buffetTaxes'])
+        $list = $model->with([
+                'buffetProducts' => ['product'], 
+                'buffetLimitProducts', 
+                'buffetCustomerType', 
+                'buffetTaxes',
+                'saleOrderBuffetCustomerType' => [
+                    'saleOrder' => [
+                        'saleBill'
+                    ]
+                ]
+            ])
             ->order(['create_time' => 'desc'])
             ->paginate($params);
         foreach ($list as &$item) {
-            // todo 兼容
-            // $item['can_delete'] = $this->getCanDelete($item);
+            $item['buy_limit_status'] = count($item['buffetLimitProducts']) > 0 ? 1 : 0;
+            $item['can_delete'] = $this->getCanDelete($item);
             $item['can_delete'] = 1;
         }
         return $list;
