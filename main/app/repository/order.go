@@ -739,7 +739,10 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 // CancelDeskOrder 关闭桌台订单
 func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string) error {
 	var saleBill model.SaleBill
-	if err := r.db.Model(&model.SaleBill{}).Where("status = ?", constant.SaleBillStatusPending).Where("desk_uuid = ?", deskUuid).First(&saleBill).Error; err != nil {
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Where("desk_uuid = ?", deskUuid).
+		First(&saleBill).Error; err != nil {
 		return err
 	}
 	return r.CancelOrder(saleBill.Uuid, reason)

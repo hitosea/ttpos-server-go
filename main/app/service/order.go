@@ -303,6 +303,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 			IsBuffet:     utils.BoolToUint(*req.IsBuffet),
 			MealNum:      *req.MealNum,
 			Remark:       req.Remark,
+			DeskUuid:     req.DeskUuid,
 		})
 		if err != nil {
 			return err
@@ -766,8 +767,13 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	staff := ctx.GetStaff()
 	source := ctx.GetSource()
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	}
+
+	fmt.Println("1")
+
 	// 获取订单信息
 	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -776,12 +782,14 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if billInfo.ID == 0 {
 		return errors.New("找不到订单")
 	}
+	fmt.Println("2")
 
 	// 验证高级密码
-	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
-		return err
-	}
+	// if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
+	// 	return err
+	// }
 
+	fmt.Println("3")
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
 
@@ -793,14 +801,15 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 	}()
 
-	orderRepo := repository.NewOrderRepo(db)
-	// productRepo := repository.NewOrderProductRepo(db)
-	deskRepo := repository.NewDeskRepo(db)
-	qrcodeOrderRepo := repository.NewH5OrderRepo(db)
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
+	fmt.Println("asdasdasdsadasdsadasdasdasdasdasdsadsa")
+	orderRepo := repository.NewOrderRepo(tx)
+	deskRepo := repository.NewDeskRepo(tx)
+	qrOrderRepo := repository.NewH5OrderRepo(tx)
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(tx)
 
 	// todo 未完成 - 退回商品库存
 	// 获取订单已送厨产品，退回商品库存
+	// productRepo := repository.NewOrderProductRepo(db)
 	// products, err := productRepo.GetProductList(
 	// 	repository.CommonRepo.WhereByStatus(1),
 	// 	productRepo.WhereSaleBillUuids([]uint64{req.SaleBillUuid}),
@@ -817,7 +826,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
 		// 拒绝所有待接单 - todo 待对应的服务层实现
-		err := qrcodeOrderRepo.Reject(billInfo.DeskUuid)
+		err := qrOrderRepo.Reject(billInfo.DeskUuid)
 		if err != nil {
 			tx.Rollback()
 			return err

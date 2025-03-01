@@ -10,6 +10,6 @@ const (
 )
 
 const (
+	DeskStatusClose = 0 //关台
 	DeskStatusOpen  = 1 //开台
-	DeskStatusClose = 2 //关台
 )

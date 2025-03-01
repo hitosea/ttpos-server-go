@@ -202,34 +202,34 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	if desk.Status == 0 {
 		return model.Desk{}, errors.New("桌台已关闭")
 	}
-	//if desk.SaleBill.ID == 0 {
-	//	return model.Desk{}, nil
-	//}
-	//if _, err := NewOrderSrv(s.dbm, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
-	//	return model.Desk{}, err
-	//}
+	if desk.SaleBill.ID == 0 {
+		return model.Desk{}, nil
+	}
+	if _, err := NewOrderSrv(s.dbm, nil, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
+		return model.Desk{}, err
+	}
 	return desk, nil
 }
 
 // CloseDesk 关闭桌台
 func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
-	//dbId := ctx.GetDbId()
-	//db := s.dbm.GetDB(dbId)
-	//desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
-	//if err != nil {
-	//	return err
-	//}
-	//if desk.SaleBill.ID == 0 {
-	//	return nil
-	//}
-	//// 取消订单
-	//if err := NewOrderSrv(s.dbm, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
-	//	SaleBillUuid: desk.SaleBill.Uuid,
-	//	CancelReason: reqs.Reason,
-	//	Password:     reqs.Password,
-	//}); err != nil {
-	//	return err
-	//}
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
+	if err != nil {
+		return err
+	}
+	if desk.SaleBill.ID == 0 {
+		return nil
+	}
+	// 取消订单
+	if err := NewOrderSrv(s.dbm, nil, nil, nil).CancelOrder(ctx, req.OrderCancelReq{
+		SaleBillUuid: desk.SaleBill.Uuid,
+		CancelReason: reqs.Reason,
+		Password:     reqs.Password,
+	}); err != nil {
+		return err
+	}
 	//
 	return nil
 }

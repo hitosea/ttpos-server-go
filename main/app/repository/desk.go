@@ -22,7 +22,6 @@ type IDeskRepo interface {
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
 	CloseDesk(deskUuid uint64, reason string) error
-
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
 	WhereIsBind() DBOption
@@ -160,7 +159,10 @@ func (r *deskRepo) CloseDesk(deskUuid uint64, reason string) error {
 	if err != nil {
 		return err
 	}
-	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Update("status", 1).Error
+	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(map[string]any{
+		"status":         constant.DeskStatusClose,
+		"sale_bill_uuid": 0,
+	}).Error
 }
 
 // WhereUuid 桌台uuid条件
