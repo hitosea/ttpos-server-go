@@ -417,16 +417,20 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 
 // KitchenBase 获取收银端基本信息
 func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
+	var kitchenBase resp.KitchenBase
 	company := helper.GetCompany(ctx.GetGinContext())
-	staff := helper.GetStaff(ctx.GetGinContext())
-	var (
-		source   = helper.GetSource(ctx.GetGinContext())
-		deviceId = ctx.GetGinContext().GetString(jwt.DeviceId)
-	)
-	_ = s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
+	companySetting := helper.GetCompanySetting(ctx.GetGinContext())
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
+	if err != nil {
+		return kitchenBase, err
+	}
 	return resp.KitchenBase{
-		Username:    staff.Username,
-		KitchenUuid: staff.Uuid,
+		Kitchen: kitchenSetting,
+		Company: resp.Company{
+			Uuid:     company.Uuid,
+			Name:     company.Name,
+			TimeZone: companySetting.Timezone,
+		},
 	}, nil
 }
 
