@@ -74,6 +74,22 @@ class Grade extends BaseModel
     }
 
     /**
+     * 设置折扣率
+     */
+    public function setDiscountAttr($value)
+    {
+        return helper::bcdiv($value, 100, 4);
+    }
+
+    /**
+     * 获取折扣率
+     */
+    public function getDiscountAttr($value, $data)
+    {
+        return floatval(helper::bcmul($value, 100));
+    }
+
+    /**
      * 获取详情
      */
     public static function detail($grade_id)
