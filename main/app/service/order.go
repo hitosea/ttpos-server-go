@@ -1772,7 +1772,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	})
 	if errUpdate != nil {
 		ctx.Log().Error("添加商品失败", zap.Error(errUpdate))
-		return nil, errors.New("添加商品失败")
+		return nil, errUpdate
 	}
 
 	// 获取新的购物车商品数据
@@ -2732,7 +2732,7 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	})
 	if err != nil {
 		ctx.Log().Error("更新金额失败", zap.Error(err))
-		return errors.New("更新金额失败")
+		return err
 	}
 
 	return nil

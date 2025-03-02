@@ -29,7 +29,7 @@ class ChangeColumnZeroSaleBillSettingTable extends Migrator
     public function change()
     {
         $table = $this->table('sale_bill_setting');
-        if ($table->hasColumn('zero')) {
+        if ($table->hasColumn('zero') && !$table->hasColumn('zero_rule')) {
             $table->renameColumn('zero', 'zero_rule')
                 ->update();
         }
@@ -37,7 +37,7 @@ class ChangeColumnZeroSaleBillSettingTable extends Migrator
             $table->changeColumn('zero_rule', 'tinyinteger', ['default' => 0, 'comment' => '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数'])
                 ->update();
         }
-        if ($table->hasColumn('zero_checkout')) {
+        if ($table->hasColumn('zero_checkout') && !$table->hasColumn('zero_rule')) {
             $table->renameColumn('zero_checkout', 'zero_checkout_rule')
                 ->update();
         }
