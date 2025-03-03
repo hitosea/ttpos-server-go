@@ -23,6 +23,10 @@ const (
 )
 
 const (
+	SaleOrderCustomAmountCancel = -1 // 取消整单改价金额
+)
+
+const (
 	SaleOrderIsFreeNo  = 0 // 订单是否免单
 	SaleOrderIsFreeYes = 1 // 订单是否免单
 )

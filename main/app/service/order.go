@@ -47,6 +47,7 @@ type IOrderSrv interface {
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
+	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                 // 修改订单折扣
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
@@ -1083,7 +1084,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	saleOrderProduct.DeleteProduct()
 
 	// 计算订单金额
-	afterSaleOrderCalc := saleOrder.CalcSaleOrderAmount(*saleBill.SaleBillSetting)
+	afterSaleOrderCalc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
@@ -1185,16 +1186,12 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	ctx.Log().Debug("改价后", zap.Any("SalePrice", saleOrderProduct.SalePrice))
 
 	// 计算商品数据。折扣、税费、服务
-	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	afterCalc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	afterCalc := saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("改价后", zap.Any("saleOrderProduct calc", afterCalc))
 
 	// 计算订单金额
 	ctx.Log().Debug("改价前,销售订单信息", zap.Any("saleOrder calc", saleOrder.BeforeCalc()))
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	afterSaleOrderCalc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	afterSaleOrderCalc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("改价后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
@@ -1260,10 +1257,58 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	}
 
 	// 设置整单改价金额
-	saleOrder.SetAmount(req.Price)
+	saleOrder.SetCustomAmount(req.Price)
 
 	// 更新销售订单
 	if err := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateSaleOrderRecord(*saleOrder); err != nil {
+		return nil, err
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
+// OrderDiscount  修改订单折扣
+func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if !ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 当前销售账单数据
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 设置整单改价金额
+	saleOrder.SetDiscount(req.GetDiscount())
+
+	// 计算并保存销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, err
 	}
 
@@ -1780,7 +1825,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
 	// 计算商品数据。折扣、税费、服务
-	saleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
+	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 
 	// 查询是否存在签名相同的订单商品
 	orderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
@@ -1876,16 +1921,12 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 	// 计算商品数据。折扣、税费、服务
-	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
 	saleOrder.SaleOrderProducts[index] = saleOrderProduct
 
 	// 计算订单金额
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	calc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
@@ -2873,7 +2914,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			// 计算商品数据。折扣、税费、服务
 			discountInfo := saleOrderTo.GetDiscountInfo()
 			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			newSaleOrderProduct.CalcSaleOrderProductAmount(*saleBill.SaleBillSetting)
+			newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 			// 在目标销售订单中新建一个销售订单商品
 			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
 			// 记录到待更新列表中
@@ -2902,10 +2943,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
 			saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
 			// 计算商品数据。折扣、税费、服务
-			serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-			taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-			serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-			saleOrderProduct.CalcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+			saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
 			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
 			// 记录到待更新列表中
@@ -2919,15 +2957,12 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	}
 
 	// 计算订单金额
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderTo calc", saleOrderTo.BeforeCalc()))
-	afterSaleOrderCalc := saleOrderTo.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	afterSaleOrderCalc := saleOrderTo.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderTo calc", afterSaleOrderCalc))
 
 	ctx.Log().Debug("移动商品前,销售订单信息", zap.Any("saleOrderFrom calc", saleOrderFrom.BeforeCalc()))
-	afterSaleOrderFromCalc := saleOrderFrom.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	afterSaleOrderFromCalc := saleOrderFrom.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("移动商品后,销售订单信息", zap.Any("saleOrderFrom calc", afterSaleOrderFromCalc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()

@@ -246,9 +246,6 @@ func (s *memberSrv) calcOrderAmount(ctx context.Context, member *model.Member, s
 	saleOrder.MemberCardDiscountRate = cardDiscountRate
 	saleOrder.MemberDiscountRate = levelDiscountRate
 
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
-	serviceFeeType := saleBill.SaleBillSetting.GetServiceFeeType()
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	for i, _ := range saleOrder.SaleOrderProducts {
 		saleOrderProduct := saleOrder.SaleOrderProducts[i]
 		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
@@ -256,11 +253,11 @@ func (s *memberSrv) calcOrderAmount(ctx context.Context, member *model.Member, s
 		}
 		saleOrderProduct.MemberCardDiscountRate = cardDiscountRate
 		saleOrderProduct.MemberDiscountRate = levelDiscountRate
-		calc := saleOrderProduct.CalcSaleOrderProduct(serviceFeeValue, taxFeeType, serviceFeeType)
+		calc := saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 		ctx.Log().Debug("商品会员优惠金额", zap.Any("discount", calc.MemberDiscountFee))
 	}
 	ctx.Log().Debug("获取会员优惠金额", zap.Any("levelDiscountRate", levelDiscountRate), zap.Any("cardDiscountRate", cardDiscountRate))
-	calc := saleOrder.CalcSaleOrder(serviceFeeType, serviceFeeValue, taxFeeType)
+	calc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	memberDiscountFee := calc.MemberDiscountFee
 	return memberDiscountFee
 }

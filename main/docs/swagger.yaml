@@ -648,6 +648,26 @@ definitions:
         description: 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
         type: integer
     type: object
+  req.OrderDiscountReq:
+    properties:
+      discount:
+        description: 打折。0-100之间
+        type: number
+      discount_type:
+        description: 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    required:
+    - discount
+    - discount_type
+    - sale_bill_uuid
+    - sale_order_uuid
+    type: object
   req.OrderProductChangePriceReq:
     properties:
       order_product_uuid:
@@ -4834,6 +4854,37 @@ paths:
       summary: 创建桌台订单
       tags:
       - 收银端.桌台
+  /cashier/desk/order/amount/change:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单改价
+      parameters:
+      - description: 改价参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderAmountChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单改价
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/cancel:
     post:
       consumes:
@@ -5826,6 +5877,37 @@ paths:
         "404":
           description: 未找到
       summary: 退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/discount:
+    post:
+      consumes:
+      - application/json
+      description: 点餐订单打折
+      parameters:
+      - description: 打折参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDiscountReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 点餐订单打折
       tags:
       - 收银端.点餐
   /cashier/instant/order/hide:

@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费固定服务费时，服务费=固定服务费；按比例收服务费时，服务费=(订单商品.总服务费)之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费。税费=(订单商品.总税费)之和',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
+    `custom_amount` DECIMAL(12, 2) NOT NULL DEFAULT -1 COMMENT '整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额',
     -- 会员打折金额
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
     -- 自定义折扣金额

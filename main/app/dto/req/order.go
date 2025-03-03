@@ -2,7 +2,10 @@ package req
 
 import (
 	"errors"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+
+	"github.com/shopspring/decimal"
 )
 
 var OrderReqMessage = map[string]string{
@@ -90,6 +93,34 @@ func (req OrderAmountChangeReq) Validate() error {
 		return errors.New("销售账单UUID或销售订单UUID不能为空")
 	}
 	return nil
+}
+
+// OrderDiscountReq 订单打折
+type OrderDiscountReq struct {
+	SaleBillUuid  uint64  `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单UUID
+	Discount      float64 `json:"discount"`        // 打折。0-100之间
+	DiscountType  int     `json:"discount_type"`   // 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
+}
+
+// Validate 验证参数
+func (req OrderDiscountReq) Validate() error {
+	if req.Discount < 0 || req.Discount > 100 {
+		return errors.New("折扣错误")
+	}
+	if req.SaleBillUuid == 0 || req.SaleOrderUuid == 0 {
+		return errors.New("销售账单UUID或销售订单UUID不能为空")
+	}
+	if req.DiscountType != constant.DiscountTypePercent && req.DiscountType != constant.DiscountTypeOff {
+		return errors.New("打折类型错误")
+	}
+	return nil
+}
+
+// GetDiscount 获取折扣
+func (req OrderDiscountReq) GetDiscount() float64 {
+	// 前端传的值范围是0-100，所以需要转换为0-1
+	return decimal.NewFromFloat(req.Discount).Div(decimal.NewFromInt(100)).InexactFloat64()
 }
 
 // OrderChangePopulationReq 订单人数

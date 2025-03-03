@@ -44,11 +44,11 @@ const (
 	SaleBillSettingTaxFeeTypePercent    = 1 // 商品未含税
 	SaleBillSettingTaxFeeTypePercentTax = 2 // 商品已含税
 
-	SaleBillSettingDiscountZeroingMethodNone    = 0 // 实款实收
-	SaleBillSettingDiscountZeroingMethodPercent = 1 // 抹分
-	SaleBillSettingDiscountZeroingMethodFixed   = 2 // 抹角
-	SaleBillSettingDiscountZeroingMethodRound   = 3 // 四舍五入保留一位小数
-	SaleBillSettingDiscountZeroingMethodInteger = 4 // 四舍五入保留整数
+	DiscountZeroRuleNone    = 0 // 实款实收
+	DiscountZeroRulePercent = 1 // 抹分
+	DiscountZeroRuleFixed   = 2 // 抹角
+	DiscountZeroRuleRound   = 3 // 四舍五入保留一位小数
+	DiscountZeroRuleInteger = 4 // 四舍五入保留整数
 
 	SaleBillSettingCheckoutZeroingMethodNone    = 0 // 实款实收
 	SaleBillSettingCheckoutZeroingMethodPercent = 1 // 抹分
@@ -133,4 +133,9 @@ const (
 	SaleBillIsLockNo    = 0 // 账单未锁定
 	SaleBillIsBuffetYes = 1 // 是自助餐账单
 	SaleBillIsBuffetNo  = 0 // 不是自助餐账单
+)
+
+const (
+	DiscountTypePercent = 0 // 百分比折扣
+	DiscountTypeOff     = 1 // 百分比减免Off
 )
