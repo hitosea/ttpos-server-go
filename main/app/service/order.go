@@ -1775,6 +1775,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			shopCartInfo.Buffet = &resp.BuffetInfo{
 				RemainingSeconds: shopCart.SaleBill.BuffetRemainingSeconds(),
 				LocaleName:       shopCart.SaleBill.GetBuffetName(),
+				IsTimeLimited:    shopCart.SaleBill.IsTimeLimited(),
 			}
 		}
 	}

@@ -30,7 +30,7 @@ type SaleBill struct {
 	BillType       uint `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
 	DiningMethod   uint `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	IsBuffet       uint `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
-	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时" json:"buffet_duration"`
+	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
 
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
@@ -89,6 +89,16 @@ func (model *SaleBill) SetNil() {
 	model.Desk = nil
 	model.BuffetPackage1 = BuffetPackage{}
 	model.BuffetPackage2 = BuffetPackage{}
+}
+
+// 判断自助餐是否限时
+func (model *SaleBill) IsTimeLimited() bool {
+	// 自助餐时长为0，表示不限时
+	if model.BuffetDuration == 0 {
+		return false
+	}
+	// 自助餐时长大于0，表示限时
+	return model.BuffetDuration > 0
 }
 
 // 获取未送厨的销售订单商品

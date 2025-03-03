@@ -53,6 +53,7 @@ type AmountInfo struct {
 // BuffetInfo 自助餐信息
 type BuffetInfo struct {
 	RemainingSeconds int64              `json:"remaining_seconds"` // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
+	IsTimeLimited    bool               `json:"is_time_limited"`   // 是否限时
 	LocaleName       dto.LocaleResponse `json:"locale_name"`       // 自助餐名称
 }
 
