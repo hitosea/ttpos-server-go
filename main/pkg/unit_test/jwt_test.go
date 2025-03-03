@@ -19,13 +19,27 @@ func TestToken(t *testing.T) {
 }
 
 func TestGenerateToken(t *testing.T) {
+	//token, err := auth.GenerateToken(
+	//	"cashier",
+	//	"123456789",
+	//	9490596162048000,
+	//	127800257351680,
+	//	127800257351680,
+	//	"egfgregerkmljr",
+	//	36000, auth.Assistant{})
+	//if err != nil {
+	//	t.Error(err)
+	//	return
+	//}
 	token, err := auth.GenerateToken(
 		"cashier",
 		"123456789",
-		9490596162048000,
+		7684296282112000,
+		//9490596162048000,
+		7684346613760000,
+		//127800257351680,
 		127800257351680,
-		127800257351680,
-		"egfgregerkmljr",
+		"ttoposerewrwgbngdf",
 		36000, auth.Assistant{})
 	if err != nil {
 		t.Error(err)
