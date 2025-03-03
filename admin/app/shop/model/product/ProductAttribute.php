@@ -15,7 +15,7 @@ class ProductAttribute
      */
     public static function addAttribute($data, Product $product)
     {
-        $attributeList = $data['product_attr'];
+        $attributeList = $data['product_attr'] ?? [];
         foreach ($attributeList as $item) {
             // 新增属性组
             $group = ProductAttributeGroupModel::create([
@@ -42,7 +42,7 @@ class ProductAttribute
     {
         $groupUuidList = [];
         $attributeUuidList = [];
-        $attributeList = $data['product_attr'];
+        $attributeList = $data['product_attr'] ?? [];
         if (empty($attributeList)) {
             self::deleteAttribute($product);
             return;

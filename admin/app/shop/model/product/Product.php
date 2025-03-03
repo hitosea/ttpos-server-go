@@ -4,22 +4,14 @@ namespace app\shop\model\product;
 
 use help\StringHelp;
 use help\ValidateHelp;
-use think\facade\Cache;
 use app\common\library\helper;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
-use app\common\model\product\ProductTax;
-use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\ProductSkuMaterial;
-use app\common\model\product\ProductFeedMaterial;
 use app\common\model\erp\ErpMonthlyProductStatistics;
 use app\common\model\product\Product as ProductModel;
-use app\common\model\product\Material as MaterialModel;
-use \app\common\model\buffet\BuffetProduct as BuffetProductModel;
-use GuzzleHttp\Handler\Proxy;
-use think\facade\Log;
 
 /**
  * 商品模型

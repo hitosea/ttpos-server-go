@@ -119,6 +119,8 @@ type MemberRechargeOrder struct {
 	PaymentOrders []PaymentOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 一个会员充值订单关联多个支付订单
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`  // 关联会员
 	Staff         *Staff         `gorm:"foreignKey:StaffUuid;references:Uuid"`   // 关联操作员工
+
+	RechargeOrderOperationLogs []MemberRechargeOrderOperationLog `gorm:"foreignKey:RechargeOrderUuid;references:Uuid"` // 一个充值订单关联多个操作日志
 }
 
 // MemberRechargeOrderOperationLog 会员充值订单操作记录表 `ttpos_member_recharge_order_operation_log`

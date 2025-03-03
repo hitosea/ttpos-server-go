@@ -13,3 +13,7 @@ type RechargeOrderListReq struct {
 	QueryEndTime      int64  `form:"query_end_time"`       // 查询结束时间戳
 	Status            int    `form:"status,default=-1"`    // 充值订单状态, -1=全都、 0=待付款、1=已完成、2=已取消
 }
+
+type RechargeOrderUuidReq struct {
+	Uuid uint64 `json:"uuid"` // 充值订单uuid
+}

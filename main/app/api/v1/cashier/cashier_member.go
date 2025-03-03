@@ -252,8 +252,7 @@ func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, printRechargeOrderReq, nil)
 		return
 	}
-	ctx := helper.GetContext(c)
-	order, err := h.rechargeOrderSrv.PrintRechargeOrder(ctx, printRechargeOrderReq)
+	order, err := h.rechargeOrderSrv.PrintTicket(helper.GetContext(c), printRechargeOrderReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

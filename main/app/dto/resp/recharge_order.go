@@ -18,10 +18,7 @@ type RechargeOrderItem struct {
 type RechargeOrderItemExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellRefund        bool `json:"is_cell_refund"`         // 是否可退款
 	IsCellCancel        bool `json:"is_cell_cancel"`         // 是否可取消
-	IsCellReverseSettle bool `json:"is_cell_reverse_settle"` // 是否可反结账
-	IsCellPrint         bool `json:"is_cell_print"`          // 是否可打印小票
-	IsCellDelete        bool `json:"is_cell_delete"`         // 是否可删除
-	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
+	IsCellReverseSettle bool `json:"is_cell_reverse_settle"` // 是否可反结账：同一个收银员工、同一个班次、已支付、未退款
 }
 
 // RechargeOrderList 订单列表分页响应
@@ -42,10 +39,10 @@ type RechargeOrderPaymentMethod struct {
 }
 
 type RechargeOrderOperationLogItem struct {
-	Nickname    string `json:"nickname"`    // 会员昵称
-	Phone       string `json:"phone"`       // 会员手机号
-	Source      string `json:"source"`      // 来源
-	CreateTime  string `json:"create_time"` // 创建时间
+	RealName    string `json:"real_name"`   // 操作员工真实姓名
+	Username    string `json:"username"`    // 操作员工账号
+	Client      string `json:"client"`      // 来源
+	CreateTime  int64  `json:"create_time"` // 创建时间
 	Description string `json:"description"` // 描述
 }
 
@@ -77,4 +74,42 @@ type RechargeOrderInfo struct {
 	PaymentMethods []RechargeOrderPaymentMethod `json:"payment_methods"` // 支付方式
 	OperationLog   RechargeOrderOperationLog    `json:"operation_log"`   // 操作日志
 	Extra          RechargeOrderItemExtra       `json:"extra"`           // 通过当前数据控制按钮是否显示
+}
+
+type RefundRechargeOrderMemberInfo struct {
+	Balance     float64 `json:"balance"`      // 主账户
+	GiftBalance float64 `json:"gift_balance"` // 赠送账户
+	Points      float64 `json:"points"`       // 积分
+}
+
+type RefundRechargeOrderPaymentRecord struct {
+	PaymentName      string  `json:"payment_name"`      // 支付方式名称
+	PaymentAmount    float64 `json:"payment_amount"`    // 支付金额
+	RefundableAmount float64 `json:"refundable_amount"` // 剩余可退款金额
+}
+
+type RechargeOrderRefundInfo struct {
+	Uuid               uint64                             `json:"uuid"`                 // 充值订单Uuid
+	RefundableAmount   float64                            `json:"refundable_amount"`    // 可退款金额
+	RechargeAmount     float64                            `json:"recharge_amount"`      // 充值金额
+	GiftAmount         float64                            `json:"gift_amount"`          // 赠送金额
+	GiftPoint          float64                            `json:"gift_point"`           // 赠送积分
+	RechargeMemberInfo RefundRechargeOrderMemberInfo      `json:"recharge_member_info"` // 充值会员信息
+	PaymentRecords     []RefundRechargeOrderPaymentRecord `json:"payment_records"`      // 支付订单信息
+}
+
+type ReverseSettleRechargeOrderMemberInfo struct {
+	Uuid        uint64  `json:"uuid"`         // 会员Uuid
+	Nickname    string  `json:"nickname"`     // 会员昵称
+	Balance     float64 `json:"balance"`      // 主账户
+	GiftBalance float64 `json:"gift_balance"` // 赠送账户
+	Points      float64 `json:"points"`       // 积分
+}
+
+type RechargeOrderReverseSettleInfo struct {
+	RechargeOrderUuid   uint64                               `json:"recharge_order_uuid"`    // 充值订单Uuid
+	ToRechargeOrderUuid uint64                               `json:"to_recharge_order_uuid"` // 进行中的充值订单Uuid
+	MemberInfo          ReverseSettleRechargeOrderMemberInfo `json:"member_info"`            // 会员信息
+	Message             string                               `json:"message"`                // 提示消息
+	IsOccupy            bool                                 `json:"is_occupy"`              // 是否存在进行中订单
 }

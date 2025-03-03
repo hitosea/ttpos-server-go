@@ -90,7 +90,7 @@ class Unit extends BaseModel
      */
     public function getLists($shop_supplier_id)
     {
-        return $this->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
+        return $this->order(['id' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**

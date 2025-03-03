@@ -11,6 +11,7 @@ type IMemberRechargeOrderRepo interface {
 	WithStaff() DBOption                                                                                             // 预加载收银员
 	WithPaymentOrders() DBOption                                                                                     // 预加载支付订单
 	WithPaymentOrderPaymentMethod() DBOption                                                                         // 预加载支付订单.支付方式
+	WithRechargeOrderOperationLogs() DBOption                                                                        // 预加载操作日志
 	WhereUuid(uuid uint64) DBOption                                                                                  // Uuid条件
 	WhereStatus(status int) DBOption                                                                                 // 状态条件
 	WhereOrderNoLike(keyword string) DBOption                                                                        // 订单编号模糊搜索
@@ -79,7 +80,16 @@ func (r *memberRechargeOrderRepo) PaginateGetRechargeOrder(pageNo int, pageSize 
 func (r *memberRechargeOrderRepo) WithPaymentOrders() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("PaymentOrders", func(db *gorm.DB) *gorm.DB {
-			return db.Scopes(NotDeleted)
+			return db.Scopes(NotDeleted).Where("related_type = 1") // 关联支付订单类型为充值订单
+		})
+	}
+}
+
+// WithRefundOrders 预加载退款订单
+func (r *memberRechargeOrderRepo) WithRefundOrders() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("RefundOrders", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted).Where("related_order_type = 1") // 关联退款订单类型为充值订单
 		})
 	}
 }
@@ -170,6 +180,13 @@ func (r *memberRechargeOrderRepo) WhereTimeBetween(params TimeQueryParams) DBOpt
 func (r *memberRechargeOrderRepo) WithPaymentOrderPaymentMethod() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("PaymentOrders.PaymentMethod")
+	}
+}
+
+// WithRechargeOrderOperationLogs 预加载操作日志
+func (r *memberRechargeOrderRepo) WithRechargeOrderOperationLogs() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("RechargeOrderOperationLogs")
 	}
 }
 

@@ -140,7 +140,7 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 	var isShowScanSoldOut, isShowAssistantSoldOut int
 
 	for _, st := range settings {
-		ginContext := ctx.GetGinContext()
+		ginContext := ctx.GetGin()
 		switch st.Key {
 		case constant.SettingPrinter: // 小票打印机设置
 			var printer setting.Printer
@@ -532,7 +532,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		ctx.Log().Error("合并商城设置失败", zap.Error(err))
 		return store, errors.New("合并商城设置失败")
 	}
-	ginContext := ctx.GetGinContext()
+	ginContext := ctx.GetGin()
 	if defaultStore.LogoURL != "" && ginContext != nil {
 		defaultStore.LogoURL = utils.GetBaseURL(ginContext.Request) + defaultStore.LogoURL
 	}
@@ -668,7 +668,7 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 // GetTabletSetting 平板端设置
 func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error) {
 	st := s.getSettingByKey(ctx, constant.SettingTablet)
-	ginContext := ctx.GetGinContext()
+	ginContext := ctx.GetGin()
 	var (
 		tablet setting.Tablet
 		err    error
@@ -763,7 +763,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	}
 
 	// 滚动图/视频处理
-	ginContext := ctx.GetGinContext()
+	ginContext := ctx.GetGin()
 	if len(cashier.Carousel) > 0 && ginContext != nil {
 		for i, item := range cashier.Carousel {
 			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
@@ -1078,7 +1078,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 		return settingResp, err
 	}
 
-	clientVersion := ctx.GetGinContext().GetHeader("Version-Name")
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
 	if clientVersion == "" {
 		clientVersion = "0.0.0"
 	}
