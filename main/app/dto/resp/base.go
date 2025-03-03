@@ -129,7 +129,7 @@ type AcceptOrderSetting struct {
 type SystemSetting struct {
 	IsShowScanSoldOut      int    `json:"is_show_scan_sold_out"`      // 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	IsShowAssistantSoldOut int    `json:"is_show_assistant_sold_out"` // 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
-	MenuShowSoldOut        string `json:"menu_show_sold_out"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	MenuShowSoldOut        int    `json:"menu_show_sold_out"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	DishCardStyle          string `json:"dish_card_style"`            // 菜品卡片样式 0-无图模式 1-图片模式
 	IsShowSoldOut          int    `json:"is_show_sold_out"`           // 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	DefaultLanguage        string `json:"default_language"`           // 默认语言

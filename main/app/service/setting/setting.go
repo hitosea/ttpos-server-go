@@ -1032,14 +1032,14 @@ func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.Updat
 }
 
 // EditSystemSetting 修改系统设置
-func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error { // // 修改系统设置
+func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error {
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
 	if err != nil {
 		return err
 	}
 	cashierSetting.IsShowAssistantSoldOut = *systemSetting.IsShowAssistantSoldOut
 	cashierSetting.IsShowScanSoldOut = *systemSetting.IsShowScanSoldOut
-	cashierSetting.MenuShowSoldOut = systemSetting.MenuShowSoldOut
+	cashierSetting.MenuShowSoldOut = strconv.Itoa(*systemSetting.MenuShowSoldOut)
 	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
 		return err
 	}
@@ -1089,6 +1089,9 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 	if err != nil {
 		return settingResp, errors2.ErrInternal
 	}
+
+	menuShowSoldOut, _ := strconv.Atoi(cashierSetting.MenuShowSoldOut)
+
 	return resp.CashierBaseSetting{
 		AcceptOrder: resp.AcceptOrderSetting{
 			IsAutoOrder:    cashierSetting.IsAutoOrder,
@@ -1098,7 +1101,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 		System: resp.SystemSetting{
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
 			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
-			MenuShowSoldOut:        cashierSetting.MenuShowSoldOut,
+			MenuShowSoldOut:        menuShowSoldOut,
 			DishCardStyle:          businessSetting.DishCardStyle,
 			IsShowSoldOut:          tabletSetting.IsShowSoldOut,
 			DefaultLanguage:        cashierSetting.DefaultLanguage,
