@@ -56,7 +56,7 @@ type PaymentOrder struct {
 	CurrencyUnit         string  `gorm:"column:currency_unit;type:varchar(10);comment:货币单位;NOT NULL" json:"currency_unit"`
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额;NOT NULL" json:"payment_amount"`
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,支付金额*支付手续费百分比;NOT NULL" json:"payment_commission_fee"`
-	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:实收金额;NOT NULL" json:"amount"`
+	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:实收金额,实收金额=支付金额+支付手续费;NOT NULL" json:"amount"`
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
 

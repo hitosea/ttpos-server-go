@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
@@ -2834,8 +2835,45 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 
 // InstantOrderPaymentCreate 给销售订单创建一个支付单
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
-	//db := s.dbm.GetDB(ctx.GetDbId())
-	return nil, nil
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		logger.Logger.Error("添加支付订单-获取货币设置失败", zap.Error(err))
+		return nil, errors.New("添加支付方式失败")
+	}
+
+	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(paymentMethod.FeePercent)).InexactFloat64()
+	amount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
+	paymentOrder := &model.PaymentOrder{
+		PaymentMethodName:    paymentMethod.PaymentName,
+		PaymentMethodUuid:    req.PaymentMethodUuid,
+		PaymentFeePercent:    paymentMethod.FeePercent,
+		RelatedType:          constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:          req.SaleOrderUuid,
+		CurrencyUnit:         currencySetting.Unit,
+		PaymentAmount:        req.PaymentAmount,
+		PaymentCommissionFee: commissionFee,
+		Amount:               amount, // 实收金额
+		TransactionNumber:    "",
+		Status:               constant.PaymentOrderStatusPaid,
+	}
+
+	if _, err = repository.NewPaymentOrderRepo(db).Create(*paymentOrder); err != nil {
+		return nil, err
+	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return infoResp, nil
 }
 
 // InstantOrderSaleOrderCreate 给销售订单创建一个销售订单

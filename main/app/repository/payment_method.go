@@ -19,6 +19,8 @@ type IPaymentMethodRepo interface {
 	WithQrcodeFile() DBOption // 关联二维码文件
 
 	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
+	GetPaymentMethodError(opts ...DBOption) (*model.PaymentMethod, error)
+	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
 	GetPaymentMethods(opts ...DBOption) []model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
 }
@@ -105,6 +107,36 @@ func (r *paymentMethodRepo) WithQrcodeFile() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("QrcodeFile")
 	}
+}
+
+func (r *paymentMethodRepo) GetPaymentMethodError(opts ...DBOption) (*model.PaymentMethod, error) {
+	var paymentMethod model.PaymentMethod
+	db := r.db.Model(&model.PaymentMethod{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&paymentMethod).Error
+	return &paymentMethod, err
+}
+
+func (r *paymentMethodRepo) GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error) {
+	paymentMethod, err := r.GetPaymentMethodError(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "LogoFile",
+			},
+			WithPreload{
+				Query: "QrcodeFile",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return paymentMethod, nil
 }
 
 func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod {
