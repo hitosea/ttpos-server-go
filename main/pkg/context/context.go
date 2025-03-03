@@ -3,6 +3,7 @@ package context
 import (
 	"context"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"ttpos-server-go/app/model"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,7 @@ type Context interface {
 	GetLanguage() string                     // 获取语言
 	GetCompanyUuid() uint64                  // 获取商家ID
 	GetDbId() uint64                         // 获取商家ID
-	GetGinContext() *gin.Context             // 获取gin上下文
+	GetGin() *gin.Context                    // 获取gin上下文
 	GetContext() context.Context             // 获取上下文
 	GetSource() string                       // 获取请求来源
 	GetCompany() model.Company               // 获取商家信息
@@ -25,10 +26,12 @@ type Context interface {
 	NoLock() bool                            // 判断上文中是否已经加锁
 	AddLock()                                // 在上下文中标记是否已经加锁
 	Log() *zap.Logger                        // 获取日志实例
+	SetDB(tx *gorm.DB)                       // 设置gorm.DB
+	GetDB() *gorm.DB                         // 获取gorm.DB
 }
 type ContextImpl struct {
 	context.Context
-	ginC           *gin.Context         // gin context。记录当前请求的上下文
+	cc             *gin.Context         // gin context。记录当前请求的上下文
 	language       string               // 语言。记录当前请求的语言
 	companyUuid    uint64               // 商家uuid。记录当前请求的商家
 	source         string               // 请求来源
@@ -41,6 +44,7 @@ type ContextImpl struct {
 	deviceUuid     uint64               // 设备uuid
 	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
+	db             *gorm.DB
 }
 
 type Option func(*ContextImpl)
@@ -111,9 +115,9 @@ func WithLogger(log *zap.Logger) Option {
 	}
 }
 
-func WithGinContext(ginC *gin.Context) Option {
+func WithGinContext(cc *gin.Context) Option {
 	return func(ctx *ContextImpl) {
-		ctx.ginC = ginC
+		ctx.cc = cc
 	}
 }
 
@@ -159,8 +163,8 @@ func (c *ContextImpl) GetDbId() uint64 {
 	return c.companyUuid
 }
 
-func (c *ContextImpl) GetGinContext() *gin.Context {
-	return c.ginC
+func (c *ContextImpl) GetGin() *gin.Context {
+	return c.cc
 }
 
 func (c *ContextImpl) GetContext() context.Context {
@@ -201,4 +205,13 @@ func (c *ContextImpl) AddLock() {
 
 func (c *ContextImpl) Log() *zap.Logger {
 	return c.log
+}
+
+func (c *ContextImpl) SetDB(tx *gorm.DB) {
+	c.db = tx
+}
+
+// GetDB 获取gorm实例
+func (c *ContextImpl) GetDB() *gorm.DB {
+	return c.db
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RechargeOrderHandler 收银点餐处理程序
+// RechargeOrderHandler 充值订单处理程序
 type RechargeOrderHandler struct {
 	rechargeOrderSrv service.IRechargeOrderSrv
 }
@@ -75,6 +75,124 @@ func (h *RechargeOrderHandler) GetRechargeOrderInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CancelRechargeOrder 取消充值订单
+// @Summary 取消充值订单
+// @Description 取消充值订单
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderUuidReq true "取消充值订单参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/recharge_order/cancel [post]
+func (h *RechargeOrderHandler) CancelRechargeOrder(c *gin.Context) {
+	var rechargeOrderUuidReq req.RechargeOrderUuidReq
+	if err := c.ShouldBindJSON(&rechargeOrderUuidReq); err != nil {
+		helper.HandleValidationError(c, err, rechargeOrderUuidReq, req.LoginRequestMessage)
+		return
+	}
+	err := h.rechargeOrderSrv.CancelRechargeOrder(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{}, "操作成功")
+}
+
+// PrintTicket 充值订单-打印小票
+// @Summary 充值订单-打印小票
+// @Description 充值订单-打印小票
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.PrintRechargeOrderReq true "充值订单打印小票参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterLogData}
+// @Router /cashier/recharge_order/print_ticket [post]
+func (h *RechargeOrderHandler) PrintTicket(c *gin.Context) {
+	var printRechargeOrderReq req.PrintRechargeOrderReq
+	if err := c.ShouldBindJSON(&printRechargeOrderReq); err != nil {
+		helper.HandleValidationError(c, err, printRechargeOrderReq, nil)
+		return
+	}
+	order, err := h.rechargeOrderSrv.PrintTicket(helper.GetContext(c), printRechargeOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, order)
+}
+
+// GetRechargeOrderRefundInfo 获取充值订单退款信息
+// @Summary 获取充值订单退款信息
+// @Description 获取充值订单退款信息
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param uuid query int true "充值订单Uuid"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrderRefundInfo}
+// @Router /cashier/recharge_order/refund [get]
+func (h *RechargeOrderHandler) GetRechargeOrderRefundInfo(c *gin.Context) {
+	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
+	if err != nil {
+		helper.Fail(c, constant.CodeParamError, "参数错误")
+	}
+	res, err := h.rechargeOrderSrv.GetRechargeOrderRefundInfo(helper.GetContext(c), uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
+// CheckRechargeOrderReverseSettle 检查充值订单反结账信息
+// @Summary 检查充值订单反结账信息
+// @Description 检查充值订单反结账信息
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param uuid query int true "充值订单Uuid"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrderReverseSettleInfo}
+// @Router /cashier/recharge_order/check_reverse_settle [get]
+func (h *RechargeOrderHandler) CheckRechargeOrderReverseSettle(c *gin.Context) {
+	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
+	if err != nil {
+		helper.Fail(c, constant.CodeParamError, "参数错误")
+	}
+	res, err := h.rechargeOrderSrv.CheckRechargeOrderReverseSettle(helper.GetContext(c), uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
+// RechargeOrderReverseSettle 反结账充值订单
+// @Summary 反结账充值订单
+// @Description 反结账充值订单，响应结果和或者进行中的充值订单一致，成功后跳转到充值页面
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderUuidReq true "反结账充值订单参数"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
+// @Router /cashier/recharge_order/reverse_settle [get]
+func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
+	var rechargeOrderUuidReq req.RechargeOrderUuidReq
+	if err := c.ShouldBindJSON(&rechargeOrderUuidReq); err != nil {
+		helper.HandleValidationError(c, err, rechargeOrderUuidReq, req.LoginRequestMessage)
+		return
+	}
+	res, err := h.rechargeOrderSrv.RechargeOrderReverseSettle(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterRechargeOrderHandlers 注册收银充值订单路由
 func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -101,5 +219,11 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	{
 		privateApi.GET("/recharge_order/list", wrapper.GetRechargeOrderList)
 		privateApi.GET("/recharge_order/info", wrapper.GetRechargeOrderInfo)
+		privateApi.POST("/recharge_order/cancel", wrapper.CancelRechargeOrder)
+		privateApi.POST("/recharge_order/print_ticket", wrapper.PrintTicket)
+		privateApi.GET("/recharge_order/refund", wrapper.GetRechargeOrderRefundInfo)
+		privateApi.POST("/recharge_order/refund", nil) // todo 退款
+		privateApi.GET("/recharge_order/check_reverse_settle", wrapper.CheckRechargeOrderReverseSettle)
+		privateApi.POST("/recharge_order/reverse-settle", wrapper.RechargeOrderReverseSettle)
 	}
 }

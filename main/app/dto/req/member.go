@@ -86,5 +86,5 @@ var CheckMemberPasswordMessage = map[string]string{
 // PrintRechargeOrderReq 打印充值订单
 type PrintRechargeOrderReq struct {
 	RechargeOrderUuid uint64 `json:"recharge_order_uuid" binding:"required"` // 充值订单Uuid
-	PrintLang         string `json:"print_lang"`                             // 打印语言
+	PrintLang         string `json:"print_lang" binding:"required"`          // 打印语言
 }

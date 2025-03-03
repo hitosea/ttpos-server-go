@@ -46,7 +46,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	}
 
 	// 记录 ua 和 平台
-	userAgent := ctx.GetGinContext().GetHeader("User-Agent")
+	userAgent := ctx.GetGin().GetHeader("User-Agent")
 	platform := utils.GetPlatform(userAgent)
 
 	db := s.dbm.GetDB(addReq.CompanyUuid)

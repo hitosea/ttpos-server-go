@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -27,6 +28,8 @@ type IMemberSrv interface {
 	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error) // 获取会员折扣
 	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                         // 使用会员优惠验证密码
 	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
+	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
+	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
 }
 
 // memberSrv 会员服务结构体
@@ -169,6 +172,93 @@ func (s *memberSrv) HandleMemberUpgrade(companyUuid uint64, memberUuid uint64) {
 		ChangeType: constant.MemberLevelLogTypeAutoUpgrade,
 	}); err != nil {
 		return
+	}
+}
+
+type MemberPointsChangeReq struct {
+	Uuid     uint64  `json:"uuid"`
+	Points   float64 `json:"points"`
+	Scene    int     `json:"scene"`
+	Describe string  `json:"describe"`
+}
+
+// HandleMemberPoints 处理会员积分
+func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error {
+	fn := func(tx *gorm.DB) error {
+		memberRepo := repository.NewMemberRepo(tx)
+		member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
+		if member.Uuid == 0 {
+			return errors.New("会员不存在")
+		}
+		// 处理会员积分
+		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
+			"point": member.Point + changeReq.Points,
+		}); err != nil {
+			return errors.New("处理会员积分失败")
+		}
+		// 添加积分日志
+		if _, err := repository.NewMemberPointLogRepo(tx).Create(model.MemberPointLog{
+			MemberUuid: changeReq.Uuid,
+			Scene:      changeReq.Scene,
+			Value:      changeReq.Points,
+			Describe:   changeReq.Describe,
+		}); err != nil {
+			return errors.New("处理会员积分失败")
+		}
+		return nil
+	}
+
+	tx := ctx.GetDB()
+	if tx == nil {
+		return s.dbm.GetDB(ctx.GetCompanyUuid()).Transaction(func(tx *gorm.DB) error {
+			return fn(tx)
+		})
+	} else {
+		return fn(tx)
+	}
+}
+
+type MemberBalanceChangeReq struct {
+	Uuid           uint64  `json:"uuid"`
+	RechargeAmount float64 `json:"recharge_amount"`
+	GiftAmount     float64 `json:"gift_amount"`
+	Scene          int     `json:"scene"`
+	Describe       string  `json:"describe"`
+}
+
+// HandleMemberBalance 处理会员余额
+func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error {
+	fn := func(tx *gorm.DB) error {
+		memberRepo := repository.NewMemberRepo(tx)
+		member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
+		if member.Uuid == 0 {
+			return errors.New("会员不存在")
+		}
+		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
+			"balance":                     member.Balance + changeReq.RechargeAmount,
+			"gift_balance":                member.GiftBalance + changeReq.GiftAmount,
+			"accumulated_recharge_amount": member.AccumulatedRechargeAmount + changeReq.RechargeAmount + changeReq.GiftAmount,
+		}); err != nil {
+			return errors.New("更新会员余额失败")
+		}
+		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
+			MemberUuid: changeReq.Uuid,
+			Scene:      constant.MemberBalanceLogRecharge,
+			Money:      changeReq.RechargeAmount + changeReq.GiftAmount,
+			GiftMoney:  changeReq.GiftAmount,
+			Describe:   fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
+		}); err != nil {
+			return errors.New("处理会员余额失败")
+		}
+		return nil
+	}
+	tx := ctx.GetDB()
+	if tx == nil {
+		return s.dbm.GetDB(ctx.GetCompanyUuid()).Transaction(func(tx *gorm.DB) error {
+			return fn(tx)
+		})
+	} else {
+		return fn(tx)
 	}
 }
 

@@ -762,6 +762,7 @@ definitions:
         description: 充值订单Uuid
         type: integer
     required:
+    - print_lang
     - recharge_order_uuid
     type: object
   req.PrinterLogReq:
@@ -807,6 +808,12 @@ definitions:
     required:
     - payment_order_uuid
     - recharge_order_uuid
+    type: object
+  req.RechargeOrderUuidReq:
+    properties:
+      uuid:
+        description: 充值订单uuid
+        type: integer
     type: object
   req.RechargeReq:
     properties:
@@ -3546,20 +3553,11 @@ definitions:
       is_cell_cancel:
         description: 是否可取消
         type: boolean
-      is_cell_delete:
-        description: 是否可删除
-        type: boolean
-      is_cell_invoice:
-        description: 是否可打印发票
-        type: boolean
-      is_cell_print:
-        description: 是否可打印小票
-        type: boolean
       is_cell_refund:
         description: 是否可退款
         type: boolean
       is_cell_reverse_settle:
-        description: 是否可反结账
+        description: 是否可反结账：同一个收银员工、同一个班次、已支付、未退款
         type: boolean
     type: object
   resp.RechargeOrderList:
@@ -3613,20 +3611,20 @@ definitions:
     type: object
   resp.RechargeOrderOperationLogItem:
     properties:
+      client:
+        description: 来源
+        type: string
       create_time:
         description: 创建时间
-        type: string
+        type: integer
       description:
         description: 描述
         type: string
-      nickname:
-        description: 会员昵称
+      real_name:
+        description: 操作员工真实姓名
         type: string
-      phone:
-        description: 会员手机号
-        type: string
-      source:
-        description: 来源
+      username:
+        description: 操作员工账号
         type: string
     type: object
   resp.RechargeOrderPaymentMethod:
@@ -3634,6 +3632,76 @@ definitions:
       name:
         type: string
       price:
+        type: number
+    type: object
+  resp.RechargeOrderRefundInfo:
+    properties:
+      gift_amount:
+        description: 赠送金额
+        type: number
+      gift_point:
+        description: 赠送积分
+        type: number
+      payment_records:
+        description: 支付订单信息
+        items:
+          $ref: '#/definitions/resp.RefundRechargeOrderPaymentRecord'
+        type: array
+      recharge_amount:
+        description: 充值金额
+        type: number
+      recharge_member_info:
+        allOf:
+        - $ref: '#/definitions/resp.RefundRechargeOrderMemberInfo'
+        description: 充值会员信息
+      refundable_amount:
+        description: 可退款金额
+        type: number
+      uuid:
+        description: 充值订单Uuid
+        type: integer
+    type: object
+  resp.RechargeOrderReverseSettleInfo:
+    properties:
+      is_occupy:
+        description: 是否存在进行中订单
+        type: boolean
+      member_info:
+        allOf:
+        - $ref: '#/definitions/resp.ReverseSettleRechargeOrderMemberInfo'
+        description: 会员信息
+      message:
+        description: 提示消息
+        type: string
+      recharge_order_uuid:
+        description: 充值订单Uuid
+        type: integer
+      to_recharge_order_uuid:
+        description: 进行中的充值订单Uuid
+        type: integer
+    type: object
+  resp.RefundRechargeOrderMemberInfo:
+    properties:
+      balance:
+        description: 主账户
+        type: number
+      gift_balance:
+        description: 赠送账户
+        type: number
+      points:
+        description: 积分
+        type: number
+    type: object
+  resp.RefundRechargeOrderPaymentRecord:
+    properties:
+      payment_amount:
+        description: 支付金额
+        type: number
+      payment_name:
+        description: 支付方式名称
+        type: string
+      refundable_amount:
+        description: 剩余可退款金额
         type: number
     type: object
   resp.ReprintResp:
@@ -3671,6 +3739,24 @@ definitions:
         items:
           $ref: '#/definitions/resp.ReturnFoodReasonResp'
         type: array
+    type: object
+  resp.ReverseSettleRechargeOrderMemberInfo:
+    properties:
+      balance:
+        description: 主账户
+        type: number
+      gift_balance:
+        description: 赠送账户
+        type: number
+      nickname:
+        description: 会员昵称
+        type: string
+      points:
+        description: 积分
+        type: number
+      uuid:
+        description: 会员Uuid
+        type: integer
     type: object
   resp.SaleOrder:
     properties:
@@ -4417,13 +4503,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -4854,13 +4940,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -6114,13 +6200,13 @@ paths:
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -6937,11 +7023,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -6965,11 +7051,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -6989,46 +7075,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -7119,6 +7205,58 @@ paths:
       summary: 获取收银产品列表
       tags:
       - 收银端.产品
+  /cashier/recharge_order/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消充值订单
+      parameters:
+      - description: 取消充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderUuidReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 取消充值订单
+      tags:
+      - 收银端.充值订单
+  /cashier/recharge_order/check_reverse_settle:
+    get:
+      consumes:
+      - application/json
+      description: 检查充值订单反结账信息
+      parameters:
+      - description: 充值订单Uuid
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrderReverseSettleInfo'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查充值订单反结账信息
+      tags:
+      - 收银端.充值订单
   /cashier/recharge_order/info:
     get:
       consumes:
@@ -7204,6 +7342,92 @@ paths:
       security:
       - JwtToken: []
       summary: 获取充值订单列表
+      tags:
+      - 收银端.充值订单
+  /cashier/recharge_order/print_ticket:
+    post:
+      consumes:
+      - application/json
+      description: 充值订单-打印小票
+      parameters:
+      - description: 充值订单打印小票参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrintRechargeOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterLogData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 充值订单-打印小票
+      tags:
+      - 收银端.充值订单
+  /cashier/recharge_order/refund:
+    get:
+      consumes:
+      - application/json
+      description: 获取充值订单退款信息
+      parameters:
+      - description: 充值订单Uuid
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrderRefundInfo'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取充值订单退款信息
+      tags:
+      - 收银端.充值订单
+  /cashier/recharge_order/reverse_settle:
+    get:
+      consumes:
+      - application/json
+      description: 反结账充值订单，响应结果和或者进行中的充值订单一致，成功后跳转到充值页面
+      parameters:
+      - description: 反结账充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderUuidReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrder'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 反结账充值订单
       tags:
       - 收银端.充值订单
   /cashier/return_reason:
@@ -7955,11 +8179,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -7983,11 +8207,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -8007,46 +8231,46 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
         minimum: 1
-        name: page_no
+        name: pageNo
         type: integer
       - description: 每页大小
         in: query
         maximum: 1000
         minimum: 1
-        name: page_size
+        name: pageSize
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
