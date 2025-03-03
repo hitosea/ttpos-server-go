@@ -21,6 +21,10 @@ type DeskInfoReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 桌台uuid
 }
 
+type DeskJsonUuidReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 桌台uuid
+}
+
 // DeskCloseReq 关闭桌台
 type DeskCloseReq struct {
 	Uuid     uint64 `form:"uuid" binding:"required"` // 桌台uuid
