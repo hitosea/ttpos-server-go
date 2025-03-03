@@ -664,6 +664,36 @@ func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentFinish 完成销售订单的付款结账
+// @Summary 完成销售订单的付款结账
+// @Description 完成销售订单的付款结账
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /cashier/instant/order/payment/finish [post]
+func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面销售订单的付款结账接口请求")
+
+	params := req.InstantOrderPaymentFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("销售订单的付款结账", zap.Any("params", params))
+	// 销售订单的付款结账
+	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("销售订单的付款结账成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderSaleOrderCreate 创建一个销售订单
 // @Summary 创建一个销售订单
 // @Description 创建一个销售订单
@@ -859,6 +889,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
+		privateApi.POST("/instant/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
 		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)

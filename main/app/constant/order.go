@@ -23,6 +23,12 @@ const (
 )
 
 const (
+	// 销售订单状态
+	SaleOrderStatusPending = 0 // 未结账
+	SaleOrderStatusFinish  = 1 // 已结账
+)
+
+const (
 	OrderProductIsAcceptOrderAccepted = 1 // 已接单
 	OrderProductIsAcceptOrderUnAccept = 0 // 未接单
 )

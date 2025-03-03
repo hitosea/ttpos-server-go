@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -55,6 +56,12 @@ func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
 	obj.SetNil()
+	if obj.Uuid == 0 {
+		return errors.New("销售订单UUID不能为0")
+	}
+	if obj.ID == 0 {
+		return errors.New("销售订单ID不能为0")
+	}
 	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 

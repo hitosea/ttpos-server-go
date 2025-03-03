@@ -2,9 +2,10 @@ package req
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"strconv"
 	"ttpos-server-go/app/dto"
+
+	"github.com/gin-gonic/gin"
 )
 
 // InstantOrderGetInfoReq 获取点餐订单详情请求
@@ -69,6 +70,12 @@ type InstantOrderPaymentCreateReq struct {
 	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID, 必填
 	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
 	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+}
+
+// InstantOrderPaymentFinishReq 完成销售订单的付款结账请求
+type InstantOrderPaymentFinishReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
 }
 
 type InstantOrderSaleOrderCreateReq struct {

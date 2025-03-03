@@ -1,6 +1,7 @@
 package model
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 )
@@ -54,6 +55,11 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+func (model *SaleOrder) SetStatus() {
+	model.Status = constant.SaleOrderStatusFinish
+	model.FinishTime = time.Now().Unix()
 }
 
 // IsFreeSaleOrder 判断销售订单是否免单
