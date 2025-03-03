@@ -8,7 +8,6 @@ use app\common\enum\settings\SettingEnum;
 use app\shop\model\delay\Delay as DelayModel;
 use app\shop\model\settings\Setting as SettingModel;
 use app\common\model\buffet\CustomerType as CustomerTypeModel;
-use app\shop\model\buffet\BuffetDiscount as BuffetDiscountModel;
 
 /**
  * 自助餐设置
@@ -141,7 +140,7 @@ class Buffet extends Controller
                 if ($action == 'edit') {
                     if (isset($customer['id'])) {
                         unset($customer['action']);
-                        $customerModel->update($customer, ['id' => $customer['id']]);
+                        $customerModel->update($customer, ['uuid' => $customer['id']]);
                     }
                     continue;
                 }

@@ -36,6 +36,11 @@ class CustomerType extends BaseModel
         return extractLanguage($value ?: $data['name']);
     }
 
+    public function getIdAttr($value, $data = [])
+    {
+        return $data['uuid'];
+    }
+
     /**
      * 列表
      */
@@ -51,7 +56,7 @@ class CustomerType extends BaseModel
     {
         $this->startTrans();
         try {
-            $find = self::where('id', $id)->find();
+            $find = self::where('uuid', $id)->find();
             // 删除自助餐顾客类型关联
             foreach (BuffetCustomer::where('customer_type_uuid', $find['uuid'])->select() as $buffet) {
                 $buffet->delete();
