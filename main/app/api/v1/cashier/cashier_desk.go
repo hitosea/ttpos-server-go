@@ -393,13 +393,13 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderProductRemark(ctx, params)
+	info, err := h.orderService.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // OrderCartInfo 处理查询点餐购物车信息
