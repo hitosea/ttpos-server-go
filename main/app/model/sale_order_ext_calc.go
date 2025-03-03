@@ -299,7 +299,7 @@ func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 			sumPrice = sumPrice.Add(price)
 		}
 	}
-	return sumPrice.InexactFloat64()
+	return sumPrice.Round(2).InexactFloat64()
 }
 
 // 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格CustomerPrice之和 + 自助餐加钟商品价格Price之和
