@@ -123,6 +123,31 @@ func (req OrderDiscountReq) GetDiscount() float64 {
 	return decimal.NewFromFloat(req.Discount).Div(decimal.NewFromInt(100)).InexactFloat64()
 }
 
+// OrderZeroRuleReq 订单抹零规则
+type OrderZeroRuleReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
+	ZeroRule      int    `json:"zero_rule"`       // 抹零规则
+}
+
+// Validate 验证参数
+func (req OrderZeroRuleReq) Validate() error {
+	if req.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
+	}
+	if req.SaleOrderUuid == 0 {
+		return errors.New("销售订单UUID不能为空")
+	}
+	if req.ZeroRule != constant.DiscountZeroRuleNone &&
+		req.ZeroRule != constant.DiscountZeroRulePercent &&
+		req.ZeroRule != constant.DiscountZeroRuleFixed &&
+		req.ZeroRule != constant.DiscountZeroRuleRound &&
+		req.ZeroRule != constant.DiscountZeroRuleInteger {
+		return errors.New("抹零规则错误")
+	}
+	return nil
+}
+
 // OrderChangePopulationReq 订单人数
 type OrderChangePopulationReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID

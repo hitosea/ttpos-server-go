@@ -48,6 +48,7 @@ func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) (*SaleO
 	return nil, 0, errors.New("销售订单商品不存在")
 }
 
+// 获取销售订单应收金额
 func (model *SaleOrder) GetAmount() float64 {
 	// 整单改价金额大于等于0时，返回整单改价金额
 	if model.CustomAmount >= 0 {
@@ -119,6 +120,11 @@ func (model *SaleOrder) SetCustomAmount(amount float64) {
 // 取消整单改价金额
 func (model *SaleOrder) SetCustomAmountCancel() {
 	model.CustomAmount = constant.SaleOrderCustomAmountCancel
+}
+
+// 设置订单抹零规则
+func (model *SaleOrder) SetZeroRule(zeroRule int) {
+	model.ZeroRule = uint8(zeroRule)
 }
 
 // 取消订单抹零

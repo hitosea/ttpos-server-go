@@ -48,6 +48,7 @@ type IOrderSrv interface {
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
 	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                 // 修改订单折扣
+	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                 // 修改订单抹零规则
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
@@ -1333,6 +1334,54 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	return info, nil
 }
 
+// OrderZeroRule  修改订单抹零规则
+func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if !ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 当前销售账单数据
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 设置整单改价金额
+	saleOrder.SetZeroRule(req.ZeroRule)
+
+	// 计算并保存销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, err
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
 // OrderChangePopulation  修改订单人数
 func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error) {
 	if req.Population < 0 || req.Population > 999 {
@@ -1508,6 +1557,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	if err != nil {
 		return nil, err
 	}
+	// 重新计算金额
+	shopCart.SaleBill.CalcAll()
 
 	// 给订单列表添加订单
 	saleOrderList := make([]resp.SaleOrder, 0)
@@ -2802,7 +2853,7 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 					return err
 				}
 			} else {
-				// 新增一个拆单时使用
+				// 有拆单时使用
 				if err := repository.NewSaleOrderRepo(db).UpdateOrCreateSaleOrderRecord(*saleOrder); err != nil {
 					return err
 				}

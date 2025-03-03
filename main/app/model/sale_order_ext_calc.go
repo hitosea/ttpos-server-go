@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/shopspring/decimal"
 	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
 )
 
 // 计算销售订单原价金额。
@@ -160,14 +161,14 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.ServiceFee = calc.ServiceFee
 	calc.TaxFee = model.calcTaxFee()
 	model.TaxFee = calc.TaxFee
-	calc.CustomDiscountFee = model.calcCustomDiscountFee()
-	model.CustomDiscountFee = calc.CustomDiscountFee
 	calc.MemberDiscountFee = model.calcMemberDiscountFee()
 	model.MemberDiscountFee = calc.MemberDiscountFee
 	calc.Amount = model.calcAmount(taxFeeType)
 	model.Amount = calc.Amount
-	calc.ZeroFee = model.CalcCheckOutZeroFee()
+	calc.ZeroFee = model.calcZeroFee()
 	model.ZeroFee = calc.ZeroFee
+	calc.CustomDiscountFee = model.calcCustomDiscountFee()
+	model.CustomDiscountFee = calc.CustomDiscountFee
 	return &calc
 }
 
@@ -369,10 +370,14 @@ func (model *SaleOrder) calcCustomDiscountFee() float64 {
 			if orderProduct.IsGiftBool() || orderProduct.IsCancelBool() {
 				continue
 			}
+			// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额
 			customDiscountFee = customDiscountFee.Add(
 				decimal.NewFromFloat(orderProduct.CustomDiscountFee))
 		}
 	}
+	// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额
+	customDiscountFee = customDiscountFee.Add(
+		decimal.NewFromFloat(model.calcZeroFee()))
 	// todo  + 自助餐顾客自定义优惠金额之和
 	return customDiscountFee.InexactFloat64()
 }
