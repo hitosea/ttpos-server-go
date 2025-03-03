@@ -210,6 +210,35 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderAmountChange 处理点餐订单改价
+// @Summary 点餐订单改价
+// @Description 点餐订单改价
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderAmountChangeReq true "改价参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/amount/change [post]
+func (h *InstantHandler) OrderAmountChange(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderAmountChangeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderService.OrderAmountChange(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderProductRemark 处理点餐订单商品备注
 // @Summary 点餐订单商品备注
 // @Description 点餐订单商品备注
@@ -727,6 +756,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                 // 显示点餐订单列表（取单列表）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                           // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)                         // 点餐订单商品改价
+		privateApi.POST("/instant/order/amount/change", wrapper.OrderAmountChange)                               // 点餐订单改价
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品

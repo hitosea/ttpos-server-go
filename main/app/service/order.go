@@ -46,6 +46,7 @@ type IOrderSrv interface {
 	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                       // 获取挂单订单列表
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
+	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
@@ -1239,6 +1240,42 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	return info, nil
 }
 
+// OrderAmountChange  修改订单金额
+func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if !ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 获取销售订单记录
+	saleOrder, err := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).GetSaleOrderByUuid(req.SaleOrderUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 设置整单改价金额
+	saleOrder.SetAmount(req.Price)
+
+	// 更新销售订单
+	if err := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateSaleOrderRecord(*saleOrder); err != nil {
+		return nil, err
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
 // OrderChangePopulation  修改订单人数
 func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error) {
 	if req.Population < 0 || req.Population > 999 {
@@ -1537,7 +1574,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				TaxAmount:             saleOrder.TaxFee,
 				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroFee)).Round(2).InexactFloat64(),
 				MemberDiscountAmount:  saleOrder.MemberDiscountFee,
-				Amount:                saleOrder.Amount,
+				Amount:                saleOrder.GetAmount(),
 			},
 		}
 		saleOrderList = append(saleOrderList, order)

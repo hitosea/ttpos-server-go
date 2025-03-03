@@ -1,6 +1,9 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"errors"
+	"ttpos-server-go/app/dto"
+)
 
 var OrderReqMessage = map[string]string{
 	"uuid.required":               "桌台uuid不能为空",
@@ -69,6 +72,24 @@ type OrderProductChangePriceReq struct {
 	SaleOrderUuid    uint64  `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
 	OrderProductUuid uint64  `json:"order_product_uuid" binding:"required"` // 订单商品UUID
 	Price            float64 `json:"price" binding:"required"`              // 改价
+}
+
+// OrderAmountChangeReq 订单改价
+type OrderAmountChangeReq struct {
+	SaleBillUuid  uint64  `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64  `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
+	Price         float64 `json:"price" binding:"required"`           // 改价
+}
+
+// Validate 验证参数
+func (req OrderAmountChangeReq) Validate() error {
+	if req.Price < 0 || req.Price > 1000000 {
+		return errors.New("金额错误")
+	}
+	if req.SaleBillUuid == 0 || req.SaleOrderUuid == 0 {
+		return errors.New("销售账单UUID或销售订单UUID不能为空")
+	}
+	return nil
 }
 
 // OrderChangePopulationReq 订单人数
