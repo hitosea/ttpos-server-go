@@ -148,6 +148,12 @@ func (req OrderZeroRuleReq) Validate() error {
 	return nil
 }
 
+// OrderDiscountCancelReq 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+type OrderDiscountCancelReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
+}
+
 // OrderChangePopulationReq 订单人数
 type OrderChangePopulationReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID

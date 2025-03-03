@@ -816,6 +816,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/complete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "清台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "清台",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskInfoReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/info": {
             "get": {
                 "security": [
@@ -1471,6 +1510,60 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.OrderDiscountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/discount/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消桌台订单所有优惠折扣，包括改价、打折、抹零",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "取消桌台订单所有优惠折扣，包括改价、打折、抹零",
+                "parameters": [
+                    {
+                        "description": "取消优惠折扣参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderDiscountCancelReq"
                         }
                     }
                 ],
@@ -2817,6 +2910,60 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.OrderDiscountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/discount/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消点餐订单所有优惠折扣，包括改价、打折、抹零",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "取消点餐订单所有优惠折扣，包括改价、打折、抹零",
+                "parameters": [
+                    {
+                        "description": "取消优惠折扣参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderDiscountCancelReq"
                         }
                     }
                 ],
@@ -6870,6 +7017,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DeskInfoReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "桌台uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.DeskOrderCreateReq": {
             "type": "object",
             "properties": {
@@ -7272,6 +7431,19 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderDiscountCancelReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }

@@ -297,6 +297,35 @@ func (h *InstantHandler) OrderZeroRule(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderDiscountCancel 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+// @Summary 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+// @Description 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderDiscountCancelReq true "取消优惠折扣参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/discount/cancel [post]
+func (h *InstantHandler) OrderDiscountCancel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderDiscountCancelReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderService.OrderDiscountCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderProductRemark 处理点餐订单商品备注
 // @Summary 点餐订单商品备注
 // @Description 点餐订单商品备注
@@ -817,6 +846,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/amount/change", wrapper.OrderAmountChange)                               // 点餐订单改价
 		privateApi.POST("/instant/order/discount", wrapper.OrderDiscount)                                        // 点餐订单打折
 		privateApi.POST("/instant/order/zero_rule", wrapper.OrderZeroRule)                                       // 设置点餐订单订单抹零规则
+		privateApi.POST("/instant/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品

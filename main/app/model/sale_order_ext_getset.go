@@ -132,3 +132,10 @@ func (model *SaleOrder) SetZeroRuleCancel() {
 	// 将订单的抹零规则设置为实款实收
 	model.ZeroRule = constant.DiscountZeroRuleNone
 }
+
+// 取消整单折扣
+func (model *SaleOrder) SetAllDiscountCancel() {
+	model.SetZeroRuleCancel()       // 取消订单抹零
+	model.SetCustomDiscountCancel() // 取消整单折扣
+	model.SetCustomAmountCancel()   // 取消整单改价
+}

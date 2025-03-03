@@ -360,6 +360,14 @@ definitions:
         description: 自助餐顾客类型uuid
         type: integer
     type: object
+  req.DeskInfoReq:
+    properties:
+      uuid:
+        description: 桌台uuid
+        type: integer
+    required:
+    - uuid
+    type: object
   req.DeskOrderCreateReq:
     properties:
       buffet_customer_types:
@@ -646,6 +654,15 @@ definitions:
         type: integer
       sale_order_uuid:
         description: 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
+        type: integer
+    type: object
+  req.OrderDiscountCancelReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
         type: integer
     type: object
   req.OrderDiscountReq:
@@ -4779,6 +4796,30 @@ paths:
       summary: 关闭桌台
       tags:
       - 收银端.桌台
+  /cashier/desk/complete:
+    post:
+      consumes:
+      - application/json
+      description: 清台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 清台
+      tags:
+      - 收银端.桌台
   /cashier/desk/info:
     get:
       consumes:
@@ -5187,6 +5228,37 @@ paths:
       security:
       - JwtToken: []
       summary: 桌台订单打折
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/discount/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+      parameters:
+      - description: 取消优惠折扣参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDiscountCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 取消桌台订单所有优惠折扣，包括改价、打折、抹零
       tags:
       - 收银端.桌台
   /cashier/desk/order/must_plan/confirm:
@@ -5977,6 +6049,37 @@ paths:
       security:
       - JwtToken: []
       summary: 点餐订单打折
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/discount/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+      parameters:
+      - description: 取消优惠折扣参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDiscountCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 取消点餐订单所有优惠折扣，包括改价、打折、抹零
       tags:
       - 收银端.点餐
   /cashier/instant/order/hide:

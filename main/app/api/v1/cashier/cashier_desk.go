@@ -373,6 +373,34 @@ func (h *DeskHandler) OrderZeroRule(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// @Summary 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+// @Description 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderDiscountCancelReq true "取消优惠折扣参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/discount/cancel [post]
+func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderDiscountCancelReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderService.OrderDiscountCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderChangePopulation 处理桌台订单修改人数
 // @Summary 桌台订单修改人数
 // @Description 桌台订单修改人数
@@ -893,6 +921,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/amount/change", wrapper.OrderAmountChange)                               // 桌台订单改价
 		privateApi.POST("/desk/order/discount", wrapper.OrderDiscount)                                        // 桌台订单打折
 		privateApi.POST("/desk/order/zero_rule", wrapper.OrderZeroRule)                                       // 设置桌台订单订单抹零规则
+		privateApi.POST("/desk/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消桌台订单所有优惠折扣，包括改价、打折、抹零
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息

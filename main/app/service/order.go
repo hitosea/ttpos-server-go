@@ -49,6 +49,7 @@ type IOrderSrv interface {
 	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
 	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                 // 修改订单折扣
 	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                 // 修改订单抹零规则
+	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                     // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
@@ -1367,6 +1368,50 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 
 	// 设置整单改价金额
 	saleOrder.SetZeroRule(req.ZeroRule)
+
+	// 计算并保存销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, err
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+}
+
+// OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零
+func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if !ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 当前销售账单数据
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+		return nil, err
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 设置整单改价金额
+	saleOrder.SetAllDiscountCancel()
 
 	// 计算并保存销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
