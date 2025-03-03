@@ -18,6 +18,24 @@ type BuffetPackage struct {
 	BuffetProducts           []BuffetProduct           `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 }
 
+// GetMinPrice 获取最小价格. 如果只有一个价格, 则返回该价格, 否则返回最小价格
+func (b *BuffetPackage) GetMinPrice() float64 {
+	if len(b.BuffetCustomerTypePrices) == 1 {
+		return b.BuffetCustomerTypePrices[0].Price
+	}
+	minPrice := float64(0)
+	for index, buffetCustomerTypePrice := range b.BuffetCustomerTypePrices {
+		if index == 0 {
+			minPrice = buffetCustomerTypePrice.Price
+			continue
+		}
+		if buffetCustomerTypePrice.Price < minPrice {
+			minPrice = buffetCustomerTypePrice.Price
+		}
+	}
+	return minPrice
+}
+
 // BuffetCustomerType 自助餐客户类型信息表 ttpos_buffet_customer_type
 type BuffetCustomerType struct {
 	BaseModel

@@ -34,18 +34,9 @@ func NewBuffetSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv 
 // GetBuffetList 获取列表
 func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) {
 	// 获取列表
-	buffets, total, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetList(
+	buffets, total, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetListInDeskOpen(
 		1,
 		1000,
-		repository.NewCommonRepo().Preload(repository.WithPreload{
-			Query: "MultiLanguageName",
-		}),
-		repository.NewCommonRepo().Preload(repository.WithPreload{
-			Query: "BuffetCustomerTypePrices",
-		}),
-		repository.NewCommonRepo().Preload(repository.WithPreload{
-			Query: "BuffetCustomerTypePrices.BuffetCustomerType",
-		}),
 	)
 	if err != nil {
 		return resp.BuffetListPaginationResp{}, err
@@ -61,15 +52,9 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 				Name: buffetCustomerTypePrice.BuffetCustomerType.Name,
 			})
 		}
-		//
-		price := float64(0)
-		if len(buffet.BuffetCustomerTypePrices) > 0 {
-			price = buffet.BuffetCustomerTypePrices[0].Price
-		}
-		//
 		respBuffet := resp.Buffet{
 			Uuid:                buffet.Uuid,
-			Price:               price,
+			Price:               buffet.GetMinPrice(),
 			IsLimitTime:         buffet.IsLimitTime == 1,
 			CanCombined:         buffet.CanCombined == 1,
 			NonOrderingTime:     buffet.NonOrderingTime * 60,   // 分转为秒
