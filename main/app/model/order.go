@@ -364,7 +364,13 @@ func (model *SaleBill) BuffetEndTime() int64 {
 
 // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
 func (model *SaleBill) BuffetRemainingSeconds() int64 {
+	if model.BuffetDuration == 0 {
+		return -1
+	}
 	remainingTime := model.BuffetEndTime() - time.Now().Unix()
+	if remainingTime < 0 {
+		return 0
+	}
 	return remainingTime
 }
 
