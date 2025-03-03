@@ -416,7 +416,7 @@ class Product extends Controller
                 // 验证是否已经存在
                 $val['product_name_is_exist'] = CheckService::checkNameExist('product', $productName, $shop_supplier_id);
                 $val['img_name_is_exist'] = CheckService::checkNameExist('product_img', ['exist' => $val['img_name']], $shop_supplier_id)['exist'];
-                $val['barcode_is_exist'] = CheckService::checkNameExist('product_barcode', ['exist' => $val['barcode']], $shop_supplier_id)['exist'];
+                $val['barcode_is_exist'] = CheckService::checkNameExist('product_bom_barcode', ['exist' => $val['barcode']], $shop_supplier_id)['exist'];
             } catch (\Throwable $th) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __($th->getMessage()));
             }
@@ -458,7 +458,7 @@ class Product extends Controller
         foreach ($list as $key => &$val) {
             $md5Key = md5($val['product_name']);
             //
-            $spec = SpecModel::where('spec_id',  $val['spec_id'])->find();
+            $spec = SpecModel::where('uuid',  $val['spec_id'])->find();
             if (!$spec) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('规格不存在'));
             }
@@ -506,12 +506,12 @@ class Product extends Controller
             $val['product_type'] = 1;
             $val['image'] = [];
             // 分类
-            $category = CategoryModel::where('category_id',  $val['category_id'])->find();
+            $category = CategoryModel::where('uuid',  $val['category_id'])->find();
             if (!$category) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('分类不存在'));
             }
             // 单位
-            $unit = UnitModel::where('unit_id',  $val['unit_id'])->find();
+            $unit = UnitModel::where('uuid',  $val['unit_id'])->find();
             if (!$unit) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('单位不存在'));
             }

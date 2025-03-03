@@ -120,7 +120,7 @@ class ProductImportsValidate extends  BaseValidate
         $values = explode('/', $value);
         $category_id = '';
         //
-        $res = Category::where('parent_id', 0)->where(function ($q) use ($values) {
+        $res = Category::where('parent_uuid', 0)->where(function ($q) use ($values) {
             foreach (LanguageEnum::data() as $lang) {
                 $key = $lang['name'];
                 $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$key'))"), '=', "{$values[0]}"]]);
@@ -133,10 +133,10 @@ class ProductImportsValidate extends  BaseValidate
             // }
             return $category_id;
         }
-        $category_id = $res->category_id;
+        $category_id = $res->uuid;
         //
         if ($values[1] ?? '') {
-            $res = Category::where('parent_id', $res->category_id)->where(function ($q) use ($values) {
+            $res = Category::where('parent_uuid', $res->uuid)->where(function ($q) use ($values) {
                 foreach (LanguageEnum::data() as $lang) {
                     $key = $lang['name'];
                     $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$key'))"), '=', "{$values[1]}"]]);
@@ -149,7 +149,7 @@ class ProductImportsValidate extends  BaseValidate
                 // }
                 return $category_id;
             }
-            $category_id = $res->category_id;
+            $category_id = $res->uuid;
         }
         //
         if ($rule) {
@@ -167,7 +167,7 @@ class ProductImportsValidate extends  BaseValidate
         $res = Unit::where(function ($q) use ($value) {
             foreach (LanguageEnum::data() as $lang) {
                 $key = $lang['name'];
-                $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(unit_name, '$.$key'))"), '=', "{$value}"]]);
+                $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$key'))"), '=', "{$value}"]]);
             }
         })->find();
         if (!$res) {
@@ -180,7 +180,7 @@ class ProductImportsValidate extends  BaseValidate
         }
         //
         if ($rule) {
-            return $res->unit_id;
+            return $res->uuid;
         }
         //
         return true;
@@ -194,7 +194,7 @@ class ProductImportsValidate extends  BaseValidate
         $res = Spec::where(function ($q) use ($value) {
             foreach (LanguageEnum::data() as $lang) {
                 $key = $lang['name'];
-                $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(spec_name, '$.$key'))"), '=', "{$value}"]]);
+                $q->whereOr([[Db::raw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.$key'))"), '=', "{$value}"]]);
             }
         })->find();
         if (!$res) {
@@ -207,7 +207,7 @@ class ProductImportsValidate extends  BaseValidate
         }
         //
         if ($rule) {
-            return $res->spec_id;
+            return $res->uuid;
         }
         //
         return true;
@@ -229,7 +229,7 @@ class ProductImportsValidate extends  BaseValidate
         }
         //
         if ($rule) {
-            return $res->id;
+            return $res->uuid;
         }
         //
         return true;
