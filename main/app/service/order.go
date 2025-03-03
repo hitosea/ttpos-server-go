@@ -1305,7 +1305,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	}
 
 	// 设置整单改价金额
-	saleOrder.SetDiscount(req.GetDiscount())
+	saleOrder.SetCustomDiscount(req.GetDiscount())
 
 	// 计算并保存销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {

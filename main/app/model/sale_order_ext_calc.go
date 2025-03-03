@@ -123,6 +123,32 @@ func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting) *Calc {
 	return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType)
 }
 
+type Calc struct {
+	ProductOriginalAmount float64 `json:"product_original_amount"`
+	ProductAmount         float64 `json:"product_amount"`
+	ServiceFee            float64 `json:"service_fee"`
+	TaxFee                float64 `json:"tax_fee"`
+	CustomDiscountFee     float64 `json:"custom_discount_fee"`
+	MemberDiscountFee     float64 `json:"member_discount_fee"`
+	Amount                float64 `json:"amount"`
+	ZeroFee               float64 `json:"zero_fee"`
+	//ZeroCheckoutFee       float64
+	//PaymentAmount         float64
+}
+
+func (model *SaleOrder) BeforeCalc() Calc {
+	return Calc{
+		ProductOriginalAmount: model.ProductOriginalAmount,
+		ProductAmount:         model.ProductAmount,
+		ServiceFee:            model.ServiceFee,
+		TaxFee:                model.TaxFee,
+		CustomDiscountFee:     model.CustomDiscountFee,
+		MemberDiscountFee:     model.MemberDiscountFee,
+		Amount:                model.Amount,
+		ZeroFee:               model.ZeroFee,
+	}
+}
+
 // 重新计算销售订单的金额
 func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
 	calc := Calc{}
