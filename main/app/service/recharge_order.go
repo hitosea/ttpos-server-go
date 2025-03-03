@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -180,18 +179,13 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 					"member_uuid":     rechargeReq.MemberUuid,
 					"staff_uuid":      ctx.GetStaffUuid(),
 				})
-				// 会员充值操作日志
-				operationData, _ := json.Marshal(map[string]any{
-					"recharge_money":     rechargeReq.RechargeAmount,
-					"old_recharge_money": oldRechargeAmount,
-				})
 				err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 					OperatorName:      ctx.GetStaff().RealName,
 					OperatorEmail:     ctx.GetStaff().Username,
 					Client:            ctx.GetSource(),
 					Message:           "变更充值金额",
 					Action:            constant.RechargeOrderActionChangeAmount,
-					Data:              string(operationData),
+					Data:              s.getChangeAmountLogData(rechargeReq.RechargeAmount, oldRechargeAmount),
 					RechargeOrderUuid: rechargeOrder.Uuid,
 				})
 				if err != nil {
@@ -482,26 +476,13 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			}
 		}
 
-		rechargeOperation := map[string]any{
-			"order_price":    order.RechargeAmount,             //  订单金额
-			"recharge_money": order.RechargeAmount,             //  充值金额
-			"pay_price":      order.Amount,                     //  订单应付
-			"gift_money":     order.GiftAmount,                 //  赠送金额
-			"gift_point":     order.GiftPoint,                  //  赠送积分
-			"pay_fee":        s.getPayFee(order.PaymentOrders), //  支付手续费
-			"change_due":     order.ChargeDue,                  //  找零
-			"pay_type":       order.PaymentOrders,              //  支付方式
-		}
-
-		operationData, _ := json.Marshal(rechargeOperation)
-
 		if err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 			OperatorName:      ctx.GetStaff().RealName,
 			OperatorEmail:     ctx.GetStaff().Username,
 			Client:            ctx.GetSource(),
 			Message:           "充值",
 			Action:            constant.RechargeOrderActionRecharge,
-			Data:              string(operationData),
+			Data:              s.getRechargeLogData(order),
 			RechargeOrderUuid: order.Uuid,
 		}); err != nil {
 			return err
@@ -717,10 +698,6 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	}, nil
 }
 
-func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOperationLog) string {
-	return ""
-}
-
 func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderInfo, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(uuid),
@@ -743,12 +720,16 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 
 	var logs []resp.RechargeOrderOperationLogItem
 	for _, log := range order.RechargeOrderOperationLogs {
+		desc := s.getActionDescription(log, ctx.GetLanguage())
+		if desc == "" {
+			desc = s.getActionText(log.Action, 0, ctx.GetLanguage())
+		}
 		logs = append(logs, resp.RechargeOrderOperationLogItem{
 			RealName:    log.OperatorName,
 			Username:    log.OperatorEmail,
 			Client:      log.Client,
 			CreateTime:  log.CreateTime,
-			Description: s.getActionDescription(log),
+			Description: desc,
 		})
 	}
 	return resp.RechargeOrderInfo{
@@ -770,7 +751,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		GiftAmount:     order.GiftAmount,
 		GiftPoint:      order.GiftPoint,
 		PaymentMethods: paymentMethods,
-		OperationLog:   resp.RechargeOrderOperationLog{}, // ToDo 处理日志
+		OperationLog:   resp.RechargeOrderOperationLog{List: logs},
 		Extra: resp.RechargeOrderItemExtra{
 			IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid,
 			IsCellCancel:        order.Status == constant.RechargeOrderStatusPending,
@@ -948,21 +929,13 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			}
 		}
 
-		rechargeOperation := map[string]any{
-			"pay_price":  order.Amount,        //  订单应付
-			"change_due": order.ChargeDue,     //  找零
-			"pay_type":   order.PaymentOrders, //  支付方式
-		}
-
-		operationData, _ := json.Marshal(rechargeOperation)
-
 		if err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 			OperatorName:      ctx.GetStaff().RealName,
 			OperatorEmail:     ctx.GetStaff().Username,
 			Client:            ctx.GetSource(),
 			Message:           "反结账",
 			Action:            constant.RechargeOrderActionReverseSettle,
-			Data:              string(operationData),
+			Data:              s.getReverseSettleLogData(order),
 			RechargeOrderUuid: order.Uuid,
 		}); err != nil {
 			return err

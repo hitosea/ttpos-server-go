@@ -186,7 +186,9 @@ func (r *memberRechargeOrderRepo) WithPaymentOrderPaymentMethod() DBOption {
 // WithRechargeOrderOperationLogs 预加载操作日志
 func (r *memberRechargeOrderRepo) WithRechargeOrderOperationLogs() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("RechargeOrderOperationLogs")
+		return db.Preload("RechargeOrderOperationLogs", func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time desc")
+		})
 	}
 }
 

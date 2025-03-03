@@ -178,7 +178,7 @@ func (h *RechargeOrderHandler) CheckRechargeOrderReverseSettle(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.RechargeOrderUuidReq true "反结账充值订单参数"
 // @Success 200 {object} dto.Response{data=resp.RechargeOrder}
-// @Router /cashier/recharge_order/reverse_settle [get]
+// @Router /cashier/recharge_order/reverse_settle [post]
 func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
 	var rechargeOrderUuidReq req.RechargeOrderUuidReq
 	if err := c.ShouldBindJSON(&rechargeOrderUuidReq); err != nil {

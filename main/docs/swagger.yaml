@@ -903,9 +903,9 @@ definitions:
       menu_show_sold_out:
         description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
         enum:
-        - "0"
-        - "1"
-        type: string
+        - 0
+        - 1
+        type: integer
     required:
     - dish_card_style
     - is_show_assistant_sold_out
@@ -3889,7 +3889,7 @@ definitions:
         type: integer
       menu_show_sold_out:
         description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
-        type: string
+        type: integer
       second_language:
         description: 副屏语言
         type: string
@@ -7467,7 +7467,7 @@ paths:
       tags:
       - 收银端.充值订单
   /cashier/recharge_order/reverse_settle:
-    get:
+    post:
       consumes:
       - application/json
       description: 反结账充值订单，响应结果和或者进行中的充值订单一致，成功后跳转到充值页面

@@ -5172,7 +5172,7 @@ const docTemplate = `{
             }
         },
         "/cashier/recharge_order/reverse_settle": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -8121,10 +8121,10 @@ const docTemplate = `{
                 },
                 "menu_show_sold_out": {
                     "description": "电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
-                    "type": "string",
+                    "type": "integer",
                     "enum": [
-                        "0",
-                        "1"
+                        0,
+                        1
                     ]
                 }
             }
@@ -12528,7 +12528,7 @@ const docTemplate = `{
                 },
                 "menu_show_sold_out": {
                     "description": "电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
-                    "type": "string"
+                    "type": "integer"
                 },
                 "second_language": {
                     "description": "副屏语言",
