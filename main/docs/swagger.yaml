@@ -7402,7 +7402,7 @@ paths:
       tags:
       - 收银端.充值订单
   /cashier/recharge_order/reverse_settle:
-    get:
+    post:
       consumes:
       - application/json
       description: 反结账充值订单，响应结果和或者进行中的充值订单一致，成功后跳转到充值页面

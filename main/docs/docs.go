@@ -5075,7 +5075,7 @@ const docTemplate = `{
             }
         },
         "/cashier/recharge_order/reverse_settle": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
