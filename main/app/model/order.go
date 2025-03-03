@@ -227,7 +227,10 @@ func (model *SaleBill) CalcAll() {
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() {
 				continue
 			}
-			saleOrderProduct.CalcSaleOrderProduct(*setting)
+			beforeCalc := saleOrderProduct.BeforeCalc()
+			afterCalc := saleOrderProduct.CalcSaleOrderProduct(*setting)
+			fmt.Println(fmt.Sprintf("beforeCalc %+v", beforeCalc))
+			fmt.Println(fmt.Sprintf("afterCalc %+v", afterCalc))
 		}
 		saleOrder.CalcSaleOrder(*setting)
 	}

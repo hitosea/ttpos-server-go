@@ -1237,7 +1237,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	return info, nil
 }
 
-// OrderAmountChange  修改订单金额
+// OrderAmountChange  修改订单金额，整单改价
 func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if !ctx.NoLock() {
@@ -1250,17 +1250,29 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 		return nil, err
 	}
 
-	// 获取销售订单记录
-	saleOrder, err := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).GetSaleOrderByUuid(req.SaleOrderUuid)
-	if err != nil {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 当前销售账单数据
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, err
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
 	}
 
 	// 设置整单改价金额
 	saleOrder.SetCustomAmount(req.Price)
 
-	// 更新销售订单
-	if err := repository.NewSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateSaleOrderRecord(*saleOrder); err != nil {
+	// 整单改价后，整单折扣会取消，需要重新计算订单商品的金额
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, err
 	}
 

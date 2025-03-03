@@ -1,8 +1,10 @@
 package model
 
 import (
-	"github.com/shopspring/decimal"
+	"fmt"
 	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
 )
 
 func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting) SaleOrderProductCalc {
@@ -76,9 +78,10 @@ func (model *SaleOrderProduct) BeforeCalc() SaleOrderProductCalc {
 // 计算商品折后价。最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率
 func (model *SaleOrderProduct) calcPrice() float64 {
 	discountRate := model.calcDiscountRate()
-	if discountRate == 0 {
+	if discountRate == constant.NoDiscount {
 		return model.SalePrice
 	}
+	fmt.Println(fmt.Sprintf("discountRate %f", discountRate))
 	// 销售价*折扣率
 	price := decimal.NewFromFloat(model.SalePrice).Mul(
 		decimal.NewFromFloat(discountRate))
@@ -89,18 +92,21 @@ func (model *SaleOrderProduct) calcPrice() float64 {
 // 如果商品不参与会员打折的话，会员折扣率=0
 func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
-		return 0
+		return constant.NoDiscount
 	}
-	if model.MemberDiscountRate == 0 && model.MemberCardDiscountRate != 0 {
-		return model.MemberCardDiscountRate
-	} else if model.MemberCardDiscountRate == 0 && model.MemberDiscountRate != 0 {
-		return model.MemberDiscountRate
-	} else if model.MemberCardDiscountRate != 0 && model.MemberDiscountRate != 0 {
-		memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
-		return memberDiscountRate.InexactFloat64()
-	}
-	// 不匹配时默认为0
-	return 0
+	//if model.MemberDiscountRate == 0 && model.MemberCardDiscountRate != 0 {
+	//	return model.MemberCardDiscountRate
+	//} else if model.MemberCardDiscountRate == 0 && model.MemberDiscountRate != 0 {
+	//	return model.MemberDiscountRate
+	//} else if model.MemberCardDiscountRate != 0 && model.MemberDiscountRate != 0 {
+	//	memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
+	//	return memberDiscountRate.InexactFloat64()
+	//}
+	//// 不匹配时默认为0
+	//return 0
+
+	memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
+	return memberDiscountRate.InexactFloat64()
 }
 
 // todo 会员折扣率 要除100才是%为单位。无折扣时，会员折扣率为0。会员折扣率的取值范围0-1，0表示没有折扣，1表示全免、满折扣、无需付钱
@@ -109,7 +115,7 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.calcMemberDiscountRate()
 
-	if memberDiscountRate == 0 {
+	if memberDiscountRate == constant.NoDiscount {
 		return 0
 	}
 	// 1-会员折扣率
@@ -124,7 +130,7 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 // 当没有会员折扣时，会员折扣费为0，则两个情况的算法可以都用 自定义折扣费=会员折扣价*（1-自定义折扣率）
 func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
 	customDiscountRate := model.CustomDiscountRate
-	if customDiscountRate == 0 {
+	if customDiscountRate == constant.NoDiscount {
 		return 0
 	}
 	// 会员折扣价 = 商品销售价-会员折扣费。没有会员时，会员折扣费为0。
@@ -356,18 +362,21 @@ func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	memberDiscountRate := model.MemberDiscountRate
 	memberCardDiscountRate := model.MemberCardDiscountRate
 	customDiscountRate := model.CustomDiscountRate
+	fmt.Println(fmt.Sprintf("memberDiscountRate %f", memberDiscountRate))
+	fmt.Println(fmt.Sprintf("memberCardDiscountRate %f", memberCardDiscountRate))
+	fmt.Println(fmt.Sprintf("customDiscountRate %f", customDiscountRate))
 
-	if memberDiscountRate != 0 {
-		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
-		rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
-	}
-	if memberCardDiscountRate != 0 {
-		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
-		rate = rate.Mul(decimal.NewFromFloat(memberCardDiscountRate))
-	}
-	if customDiscountRate != 0 {
-		// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
-		rate = rate.Mul(decimal.NewFromFloat(customDiscountRate))
-	}
+	//if memberDiscountRate != 0 {
+	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+	rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
+	//}
+	//if memberCardDiscountRate != 0 {
+	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+	rate = rate.Mul(decimal.NewFromFloat(memberCardDiscountRate))
+	//}
+	//if customDiscountRate != 0 {
+	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
+	rate = rate.Mul(decimal.NewFromFloat(customDiscountRate))
+	//}
 	return rate.InexactFloat64()
 }

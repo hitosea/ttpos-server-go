@@ -67,6 +67,7 @@ func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct
 	return nil
 }
 
+// 设置为空。为了更新数据库数据时，不更新关联对象
 func (model *SaleOrder) SetNil() {
 	model.PaymentOrders = nil
 	model.Member = Member{}
@@ -83,22 +84,35 @@ func (model *SaleOrder) SetCustomDiscount(discount float64) {
 
 	model.CustomDiscountRate = discount
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		// 如果订单商品已删除或已取消，则不修改折扣
-		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() {
+		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
+		if saleOrderProduct.IsDelete() {
 			continue
 		}
 		saleOrderProduct.CustomDiscountRate = discount
+		saleOrderProduct.SetUpdate()
 	}
 }
 
+// 取消整单折扣
 func (model *SaleOrder) SetCustomDiscountCancel() {
-	model.CustomDiscountRate = 0
+	model.CustomDiscountRate = constant.NoDiscount
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
+		// 如果订单商品折扣不为100%，则修改折扣。确保如果原本就没有自定义折扣就不用更新数据库
+		if saleOrderProduct.CustomDiscountRate != constant.NoDiscount {
+			saleOrderProduct.CustomDiscountRate = constant.NoDiscount
+			saleOrderProduct.SetUpdate()
+		}
+	}
 }
 
 // 设置整单改价金额
 func (model *SaleOrder) SetCustomAmount(amount float64) {
-	defer model.SetZeroRuleCancel() // 取消订单抹零
-
+	defer model.SetZeroRuleCancel()       // 取消订单抹零
+	defer model.SetCustomDiscountCancel() // 取消整单折扣
 	model.CustomAmount = amount
 }
 

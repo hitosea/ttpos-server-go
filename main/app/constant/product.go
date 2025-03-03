@@ -27,6 +27,10 @@ const (
 )
 
 const (
+	NoDiscount = 1 // 没有折扣. 默认100%
+)
+
+const (
 	SaleOrderIsFreeNo  = 0 // 订单是否免单
 	SaleOrderIsFreeYes = 1 // 订单是否免单
 )

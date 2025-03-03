@@ -80,9 +80,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `free_reason` TEXT COMMENT '免单原因',
     -- 订单设置相关
-    `member_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '会员折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
-    `member_card_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '会员卡折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
-    `custom_discount_rate` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '自定义折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `member_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '会员折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `member_card_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '会员卡折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `custom_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '自定义折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -174,9 +174,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 税率
     `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
-    `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
-    `member_card_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
-    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
+    `member_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
+    `member_card_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
+    `custom_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
     -- 会员折扣后的价格
     `member_discount_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣后的价格（单商品）=销售价*会员折扣率*会员卡折扣率',
     -- 最终单价=销售价*折扣率；总最终单价=最终单价*商品数量
@@ -828,7 +828,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level` (
     `upgrade_money` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计消费额',
     `open_point` TINYINT(3) DEFAULT 0 COMMENT '是否开放累计积分升级，0-否 1-是',
     `upgrade_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '升级条件，累计积分',
-    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8 ',
+    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8 ',
     `priority` INT(11) NOT NULL DEFAULT 0 COMMENT '等级权重，越大等级越高',
     `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认, 1-是 0-否',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
@@ -858,7 +858,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_type` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员卡类型名称',
     `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
-    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '折扣,单位%',
+    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-开启 1-关闭',
     `open_point` tinyint(1) NOT NULL DEFAULT 0 COMMENT '开卡赠送积分,0-否 1-是',
@@ -878,7 +878,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `expire_time` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
-    `discount` decimal(12, 4) NOT NULL DEFAULT 0 COMMENT '折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段',
+    `discount` decimal(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -889,7 +889,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡领取记录ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格,会员卡价格,不随后台改变,记录领取时的价格',
-    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '折扣,单位%,不随后台改变,记录领取时的折扣',
+    `discount` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%,不随后台改变,记录领取时的折扣',
     `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限',
     `member_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
     `member_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',

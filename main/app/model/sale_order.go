@@ -37,9 +37,9 @@ type SaleOrder struct {
 	// 时间相关字段
 	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);default:0;comment:会员折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1	" json:"member_discount_rate"`
-	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:0;comment:会员卡折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"member_card_discount_rate"`
-	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);default:0;comment:自定义折扣率(0-100%)，默认0%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"custom_discount_rate"`
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);default:1;comment:会员折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1	" json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);default:1;comment:会员卡折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);default:1;comment:自定义折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1" json:"custom_discount_rate"`
 
 	// 抹零相关
 	ZeroRule         uint8   `gorm:"column:zero_rule;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero_rule"`
