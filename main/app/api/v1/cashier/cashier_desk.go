@@ -167,6 +167,35 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// CompleteDesk 处理清台
+// @Summary 清台
+// @Description 清台
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeskInfoReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/complete [post]
+func (h *DeskHandler) CompleteDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskJsonUuidReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.service.CompleteDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // CancelDeskOrder 处理取消桌台订单
 // @Summary 取消桌台订单
 // @Description 取消桌台订单
@@ -827,6 +856,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
 		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
+		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                        // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品

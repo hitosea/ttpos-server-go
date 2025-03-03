@@ -42,6 +42,12 @@ type Desk struct {
 	Region   *DeskRegion `gorm:"foreignKey:RegionUuid;references:uuid"`   // 关联区域
 }
 
+func (model *Desk) SetNil() {
+	model.SaleBill = nil
+	model.Device = nil
+	model.Region = nil
+}
+
 // getCustomerCount 获取桌台人数
 func (d *Desk) getCustomerCount() uint {
 	if d.SaleBill != nil {

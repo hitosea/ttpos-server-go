@@ -23,6 +23,7 @@ type IDeskSrv interface {
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                // 获取桌台详情
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
+	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                            // 完成桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
 	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
 	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                            // 平板端绑定桌台
@@ -228,6 +229,25 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 		CancelReason: reqs.Reason,
 		Password:     reqs.Password,
 	}); err != nil {
+		return err
+	}
+	//
+	return nil
+}
+
+// CompleteDesk 完成桌台
+func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) error {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	_, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
+	if err != nil {
+		return err
+	}
+	err = repository.NewDeskRepo(db).UpdateDeskByMap(reqs.Uuid, map[string]any{
+		"sale_bill_uuid": 0,
+		"status":         constant.DeskStatusClose,
+	})
+	if err != nil {
 		return err
 	}
 	//

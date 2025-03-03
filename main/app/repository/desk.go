@@ -116,6 +116,7 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 
 // UpdateDesk 更新桌台
 func (r *deskRepo) UpdateDesk(deskUuid uint64, desk model.Desk) error {
+	desk.SetNil()
 	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(desk).Error; err != nil {
 		return err
 	}
