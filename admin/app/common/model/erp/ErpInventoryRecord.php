@@ -18,6 +18,8 @@ class ErpInventoryRecord extends BaseModel
     protected $name = 'warehouse_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $pk = 'id';
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段

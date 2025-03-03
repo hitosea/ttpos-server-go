@@ -3,38 +3,16 @@
 namespace app\shop\model\product;
 
 use app\common\model\product\RelatedMaterial as RelatedMaterialModel;
+use think\facade\Db;
+use think\facade\Env;
 
 class RelatedMaterial extends RelatedMaterialModel
 {
-
     /**
-     * 添加规格关联材料
-     */
-    public static function addRelatedMaterial($materialList, $relatedUuid)
-    {
-        $saveData = []; 
-        foreach ($materialList as $material) {
-            $saveData[] = [
-                'related_uuid' => $relatedUuid,
-                'material_uuid' => $material['product_id'],
-                'num' => $material['material_num'] ?? 0,
-            ];
-        }
-        if (!empty($saveData)) {
-            (new self())->saveAll($saveData);
-        }
-    }
-
-    /**
-     * 更新规格关联材料
+     * 更新规格/加料关联材料
      */
     public static function updateRelatedMaterial($materialList, $relatedUuid)
     {
-        // 规格关联材料uuid列表
-        if (empty($materialList)) {
-            self::deleteRelatedMaterial($relatedUuid);
-            return;
-        }
         // 规格关联材料uuid列表
         $relatedMaterialUuidList = [];
 
@@ -66,10 +44,12 @@ class RelatedMaterial extends RelatedMaterialModel
                 $relatedMaterial->delete();
             }
         }
+        // 更新规格/加料关联材料库存
+        self::updateStock($relatedMaterialUuidList);
     }
 
     /**
-     * 删除规格关联材料
+     * 删除规格/加料关联材料
      */
     public static function deleteRelatedMaterial($relatedUuid)
     {
@@ -77,5 +57,34 @@ class RelatedMaterial extends RelatedMaterialModel
         foreach ($relatedMaterialList as $relatedMaterial) {
             $relatedMaterial->delete();
         }
+    }
+
+    /**
+     * 更新规格/加料关联材料库存
+     */
+    public static function updateStock($relatedMaterialUuidList)
+    {
+        if (empty($relatedMaterialUuidList)) {
+            return;
+        }
+        // 提取材料uuid列表
+        $relatedMaterialUuidList = implode(',', $relatedMaterialUuidList);
+
+        $db = Db::connect((new self())->getConnection());
+        $db->startTrans();
+        $prefix = Env::get('DB_PREFIX');
+
+        // 更新规格/加料关联材料库存
+        $db->execute("
+            UPDATE {$prefix}related_material AS rm 
+            JOIN (
+                SELECT rms.uuid, LEAST(FLOOR(MIN(m.stock_num / rms.num)), 99999999) AS min_stock_num
+                FROM {$prefix}related_material AS rms
+                JOIN {$prefix}material AS m ON rms.material_uuid = m.uuid
+                GROUP BY rms.uuid
+            ) AS sub ON rm.uuid = sub.uuid
+            SET rm.stock_num = sub.min_stock_num
+            WHERE rm.uuid IN ({$relatedMaterialUuidList});
+        ");
     }
 }

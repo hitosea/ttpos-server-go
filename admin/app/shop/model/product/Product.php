@@ -737,42 +737,57 @@ class Product extends ProductModel
         $this->startTrans();
         try {
             $multiLanguageName = new MultiLanguageName();
-            foreach ($product_ids as $product_id) {
-                $model = self::detail($product_id);
-                if (!$model) {
-                    $model = MaterialModel::detail($product_id);
-                }
-                if (!$model) {
-                    continue;
-                }
-                if ($model['type'] == ProductModel::TYPE_PRODUCT) {
-                    // 删除规格
-                    foreach ($model['sku'] as $sku) {
-                        $sku->delete();
+
+            // 删除商品
+            $productList = self::with([
+                'sku' => [ 'relatedMaterial' ],
+                'feed',
+                'productAttributeGroup' => [ 'productAttribute' ]
+            ])
+            ->whereIn('uuid', $product_ids)
+            ->select();
+
+            foreach ($productList as $product) {
+                // 删除规格
+                foreach ($product->sku as $sku) {
+                    foreach ($sku->relatedMaterial as $relatedMaterial) {
+                        $relatedMaterial->delete();
                     }
-                    // 删除加料
-                    foreach ($model['feed'] as $feed) {
-                        $feed->delete();
-                    }
-                    // 删除产品属性
-                    foreach ($model['productAttributeGroup'] as $productAttributeGroup) {
-                        foreach ($productAttributeGroup['productAttribute'] as $productAttribute) {
-                            $productAttribute->delete();
-                        }   
-                        $productAttributeGroup->delete();
-                    }
-                    // 删除产品语言
-                    $multiLanguageName->clearCache($model['multi_language_name_uuid']);
-                    $model['multiLanguageName']->delete();
-                    // 删除产品
-                    $model->delete();
-                } else {
-                    // 删除材料语言
-                    $multiLanguageName->clearCache($model['multi_language_name_uuid']);
-                    $model['multiLanguageName']->delete();
-                    // 删除材料
-                    $model->delete();
+                    $sku->delete();
                 }
+                // 删除加料
+                foreach ($product->feed as $feed) {
+                    $feed->delete();
+                }
+                // 删除产品属性
+                foreach ($product->productAttributeGroup as $productAttributeGroup) {
+                    foreach ($productAttributeGroup->productAttribute as $productAttribute) {
+                        $productAttribute->delete();
+                    }   
+                    $productAttributeGroup->delete();
+                }
+                // 删除产品语言
+                $multiLanguageName->clearCache($product->multi_language_name_uuid);
+                $product->multiLanguageName->delete();
+                // 删除产品
+                $product->delete();
+            }
+
+            // 删除材料
+            $materialList = Material::with([
+                'multiLanguageName',
+                'relatedMaterial'
+            ])->whereIn('uuid', $product_ids)->select();
+            foreach ($materialList as $material) {
+                // 删除材料语言
+                $multiLanguageName->clearCache($material->multi_language_name_uuid);
+                $material->multiLanguageName->delete();
+                // 删除材料关联表
+                foreach ($material->relatedMaterial as $relatedMaterial) {
+                    $relatedMaterial->delete();
+                }
+                // 删除材料
+                $material->delete();
             }
             // todo 兼容
             // foreach ($products as $product) {

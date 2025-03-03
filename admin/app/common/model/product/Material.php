@@ -6,7 +6,10 @@ use help\ValidateHelp;
 use app\common\model\BaseModel;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
+use app\common\model\product\RelatedMaterial as ProductRelatedMaterial;
 use app\common\model\store\MultiLanguageName;
+use app\shop\model\product\Product;
+use app\shop\model\product\RelatedMaterial;
 use think\model\concern\SoftDelete;
 
 /**
@@ -124,6 +127,14 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联关联材料
+     */
+    public function relatedMaterial()
+    {
+        return $this->hasMany(ProductRelatedMaterial::class, 'related_uuid', 'uuid');
+    }
+
+    /**
      * 详情
      */
     public static function detail($id)
@@ -132,6 +143,7 @@ class Material extends BaseModel
             'image',
             'unit',
             'MultiLanguageName',
+            'relatedMaterial',
         ])->where('uuid', '=', $id)->find();
         if ($material) {
             // 材料图片
@@ -260,6 +272,16 @@ class Material extends BaseModel
         $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
         $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
         $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+
+        $product = new Product();
+        if ($product->hasInventoryAuth()) {
+            $relatedMaterialUuidList = [];
+            foreach ($this->relatedMaterial as $relatedMaterial) {
+                $relatedMaterialUuidList[] = $relatedMaterial->uuid;
+            }
+            RelatedMaterial::updateStock($relatedMaterialUuidList);
+        }
+
         return $this->save($data);
     }
 

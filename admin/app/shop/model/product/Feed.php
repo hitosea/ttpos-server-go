@@ -90,7 +90,7 @@ class Feed extends FeedModel
                 }
                 $materialList[$key]['material_num'] = $num;
             }
-            RelatedMaterial::addRelatedMaterial($materialList, $this['uuid']);
+            RelatedMaterial::updateRelatedMaterial($materialList, $this['uuid']);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -126,7 +126,11 @@ class Feed extends FeedModel
 
             // 关联加料材料
             $materialList = $data['material'] ?? [];
-            RelatedMaterial::updateRelatedMaterial($materialList, $this['uuid']);
+            if (empty($materialList)) {
+                RelatedMaterial::deleteRelatedMaterial($this['uuid']);
+            } else {
+                RelatedMaterial::updateRelatedMaterial($materialList, $this['uuid']);
+            }
 
             $this->commit();
             return true;
