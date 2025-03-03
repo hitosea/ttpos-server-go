@@ -89,6 +89,9 @@ func (d *Desk) getTime() int64 {
 	passedTime := time.Now().Unix() - d.SaleBill.CreateTime
 	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
 	if d.getIsBuffet() {
+		if d.SaleBill.BuffetDuration == 0 {
+			return -1
+		}
 		// 计算剩余时间, 剩余时间=自助餐可用时长-经过时间
 		seconds := int64(d.SaleBill.BuffetDuration) - passedTime
 		return seconds
