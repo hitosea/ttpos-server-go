@@ -169,6 +169,9 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.ZeroFee = calc.ZeroFee
 	calc.CustomDiscountFee = model.calcCustomDiscountFee()
 	model.CustomDiscountFee = calc.CustomDiscountFee
+	// 再重新计算一次应付金额
+	calc.Amount = model.calcAmountZero()
+	model.Amount = calc.Amount
 	return &calc
 }
 
@@ -455,6 +458,13 @@ func (model *SaleOrder) calcAmount(taxFeeType int) float64 {
 
 	inexactFloat64 := result.InexactFloat64()
 	return inexactFloat64
+}
+
+// 计算订单应付金额抹零后的金额。订单应付金额抹零后的金额=订单应付金额-订单抹零金额
+func (model *SaleOrder) calcAmountZero() float64 {
+	amount := decimal.NewFromFloat(model.Amount)
+	amount = amount.Sub(decimal.NewFromFloat(model.ZeroFee))
+	return amount.InexactFloat64()
 }
 
 // 计算销售订单的订单优惠折扣抹零金额。根据订单设置的优惠折扣抹零规则金额计算

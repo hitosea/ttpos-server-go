@@ -1680,7 +1680,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				ProductAmount:         saleOrder.ProductAmount,
 				ServiceAmount:         saleOrder.ServiceFee,
 				TaxAmount:             saleOrder.TaxFee,
-				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroFee)).Round(2).InexactFloat64(),
+				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Round(2).InexactFloat64(),
 				MemberDiscountAmount:  saleOrder.MemberDiscountFee,
 				Amount:                saleOrder.GetAmount(),
 			},
