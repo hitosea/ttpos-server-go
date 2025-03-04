@@ -1703,7 +1703,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 						IsCustomer:       true,
 						IsDelay:          false,
 						CustomerTypeUuid: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
-						CustomerTypeName: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						BuffetUuid:       orderBuffetCustomer.BuffetPackageUuid,
 					},
 				}
 				productList = append(productList, product)

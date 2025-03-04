@@ -95,6 +95,6 @@ type Product struct {
 type AboutBuffet struct {
 	IsCustomer       bool   `json:"is_customer"`        // 是否是自助餐顾客
 	IsDelay          bool   `json:"is_delay"`           // 是否是加钟
-	CustomerTypeName string `json:"customer_type_name"` // 自助餐顾客类型名称
+	BuffetUuid       uint64 `json:"buffet_uuid"`        // 自助餐Id
 	CustomerTypeUuid uint64 `json:"customer_type_uuid"` // 自助餐顾客类型uuid
 }
