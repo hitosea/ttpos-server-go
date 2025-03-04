@@ -276,6 +276,13 @@ func (model *SaleBill) CalcAll() {
 			_ = saleOrderProduct.BeforeCalc()
 			_ = saleOrderProduct.CalcSaleOrderProduct(*setting)
 		}
+		// 计算自助餐顾客价格之和
+		for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
+			if buffetCustomer.IsDelete() {
+				continue
+			}
+			_ = buffetCustomer.CalcSaleOrderBuffetCustomerType(*setting)
+		}
 		saleOrder.CalcSaleOrder(*setting)
 	}
 	model.CalcSaleBill()

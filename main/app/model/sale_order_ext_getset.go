@@ -84,6 +84,7 @@ func (model *SaleOrder) SetCustomDiscount(discount float64) {
 	defer model.SetZeroRuleCancel()     // 取消订单抹零
 
 	model.CustomDiscountRate = discount
+	// 对商品进行打折
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
 		if saleOrderProduct.IsDelete() {
@@ -91,6 +92,14 @@ func (model *SaleOrder) SetCustomDiscount(discount float64) {
 		}
 		saleOrderProduct.CustomDiscountRate = discount
 		saleOrderProduct.SetUpdate()
+	}
+	// 对自助餐顾客进行打折
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		if buffetCustomer.IsDelete() {
+			continue
+		}
+		buffetCustomer.CustomDiscountRate = discount
+		buffetCustomer.SetUpdate()
 	}
 }
 
@@ -106,6 +115,17 @@ func (model *SaleOrder) SetCustomDiscountCancel() {
 		if saleOrderProduct.CustomDiscountRate != constant.NoDiscount {
 			saleOrderProduct.CustomDiscountRate = constant.NoDiscount
 			saleOrderProduct.SetUpdate()
+		}
+	}
+	// 取消自助餐顾客折扣
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		if buffetCustomer.IsDelete() {
+			continue
+		}
+		// 如果自助餐顾客折扣不为100%，则修改折扣。确保如果原本就没有自定义折扣就不用更新数据库
+		if buffetCustomer.CustomDiscountRate != constant.NoDiscount {
+			buffetCustomer.CustomDiscountRate = constant.NoDiscount
+			buffetCustomer.SetUpdate()
 		}
 	}
 }

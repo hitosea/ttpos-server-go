@@ -31,6 +31,12 @@ type SaleOrderBuffetCustomerType struct {
 	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
 }
 
+// 设置为空。为了更新数据库数据时，不更新关联对象
+func (model *SaleOrderBuffetCustomerType) SetNil() {
+	model.BuffetPackage = BuffetPackage{}
+	model.BuffetCustomerTypePrice = BuffetCustomerTypePrice{}
+}
+
 // 获取顾客原价. = 原价*人数
 func (model *SaleOrderBuffetCustomerType) GetOriginPrice() float64 {
 	price := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()

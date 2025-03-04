@@ -50,12 +50,12 @@ type SaleOrder struct {
 	ZeroCheckoutFee  float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
 
 	// 关联对象
-	PaymentOrders                []PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"`
-	Member                       Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
-	SaleOrderProducts            []*SaleOrderProduct           `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	PaymentOrders                []PaymentOrder                 `gorm:"foreignKey:RelatedUuid;references:uuid"`
+	Member                       Member                         `gorm:"foreignKey:ConsumerUuid;references:uuid"`
+	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
