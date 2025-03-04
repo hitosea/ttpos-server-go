@@ -74,7 +74,7 @@ type BuffetProduct struct {
 	IsShowAssistant    uint   `gorm:"default:0;column:is_show_assistant;comment:是否在助手显示, 0-否、1-是"`
 	Limit              uint   `gorm:"default:0;column:limit;comment:限购数量"`
 
-	ProductPackage ProductPackage `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
+	ProductPackage *ProductPackage `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 }
 
 // BuffetDelay 自助餐加钟价格表 `ttpos_buffet_delay`

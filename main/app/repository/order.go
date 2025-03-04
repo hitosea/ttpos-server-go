@@ -829,7 +829,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			// 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
 			WithPreload{
-				Query: "BuffetPackage1.BuffetProducts.ProductBoms",
+				Query: "BuffetPackage1.BuffetProducts.ProductPackage",
 			},
 			// 加载自助餐套餐2多语言名称
 			WithPreload{
@@ -841,7 +841,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			// 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
 			WithPreload{
-				Query: "BuffetPackage2.BuffetProducts.ProductBoms",
+				Query: "BuffetPackage2.BuffetProducts.ProductPackage",
 			},
 			// ==================== 销售账单的账单设置 ====================
 			WithPreload{

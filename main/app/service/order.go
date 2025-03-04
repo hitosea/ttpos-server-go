@@ -2073,31 +2073,32 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		ctx.AddLock()
 	}
 
+	fmt.Println("a111111")
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 当前销售账单数据
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-
+	fmt.Println("a222222")
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
-
+	fmt.Println("a333333")
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
-
+	fmt.Println("a444444")
 	// 录入订单商品数据
 	saleOrderProduct, errNewProduct := s.newSaleOrderProduct(ctx, req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
 	if errNewProduct != nil {
 		ctx.Log().Error("构建商品失败", zap.Error(errNewProduct))
 		return nil, errors.New("构建商品失败")
 	}
-
+	fmt.Println("a555555")
 	// 生成签名
 	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
 	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
