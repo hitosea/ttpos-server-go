@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -52,6 +53,7 @@ type IOrderSrv interface {
 	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                 // 修改订单抹零规则
 	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                     // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
+	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                         // 调整自助餐
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                             // 创建销售账单设置
@@ -428,7 +430,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		defer lock.NewSystemLock().UnlockUuid(req.DeskUuid)
 		ctx.AddLock()
 	}
-	fmt.Println("y1111")
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
@@ -438,7 +439,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 	saleBillUuid, _ := utils.GetID()
 	desk.SetOpenDesk(saleBillUuid)
-	fmt.Println("y2222")
 
 	// 创建订单编号
 	orderNo, errCreate := s.createOrderNo(db, constant.OrderSourceDesk)
@@ -475,28 +475,19 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		}
 		buffetMap[buffet.Uuid] = buffet
 	}
-	fmt.Println("y6666666666")
-
 	// 构建自助餐顾客列表
 	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0)
 	if saleBill.IsBuffetSaleBill() {
-
 		for _, buffetUuid := range req.BuffetUuids {
-
 			buffetPackage := buffetMap[buffetUuid]
 			for _, CustomerType := range req.BuffetCustomerTypes {
-
 				num := *CustomerType.MealNum
 				if num == 0 {
 					continue
 				}
-
 				m := buffetUuidMap[buffetUuid]
-
 				buffetCustomerTypePrice := m[CustomerType.Uuid]
-
 				buffetCustomerTypePriceUuid := buffetCustomerTypePrice.Uuid
-
 				taxRate := buffetPackage.GeTaxRate()
 				saleOrderBuffetCustomerType := model.NewSaleOrderBuffetCustomerType(saleOrder.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, buffetCustomerTypePrice.Price, taxRate, *saleBillSetting)
 				fmt.Println(fmt.Sprintf("saleOrderBuffetCustomerType %+v", saleOrderBuffetCustomerType))
@@ -1608,7 +1599,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderChangePrice, 0); err != nil {
+	if err := billInfo.ValidateOrderStatus(constant.OrderUpdateMealNum, 0); err != nil {
 		return nil, err
 	}
 
@@ -1652,6 +1643,117 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}
 
 	return info, nil
+}
+
+// OrderChangeBuffet 调整自助餐
+func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if !ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 获取信息源
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.New("销售账单不存在")
+	}
+	if !saleBill.IsBuffetSaleBill() {
+		return nil, errors.New("当前订单不是自助餐类型，无法调整自助餐")
+	}
+	if len(saleBill.SaleOrders) > 1 {
+		return nil, errors.New("当前订单已拆单，无法调整自助餐")
+	}
+	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateMealNum); err != nil {
+		return nil, err
+	}
+	// 获取自助餐信息
+	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
+	if err != nil || len(buffetList) != len(req.BuffetUuids) {
+		return nil, errors.New("自助餐不存在")
+	}
+
+	// 销售订单
+	saleOrder := saleBill.SaleOrders[0]
+	// 用餐时长
+	remainingTime := saleBill.BuffetRemainingSeconds()
+	// 当前是否超时
+	isTimeOut := remainingTime == 0
+
+	// 是否新增
+	oldBuffetIds := []uint64{saleBill.BuffetPackage1Uuid, saleBill.BuffetPackage2Uuid}
+	addBuffetIds := slice.Difference(req.BuffetUuids, oldBuffetIds)
+	removeBuffetIds := slice.Difference(oldBuffetIds, req.BuffetUuids)
+
+	// 只修改人数
+	if len(addBuffetIds) == 0 && len(removeBuffetIds) == 0 {
+		// 删除原来的 CustomerType
+		repository.NewOrderRepo(db).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
+		// 创建顾客
+		buffetCustomerTypes := model.GetBuffetUuidMapBuffetCustomerTypes{}
+		copier.Copy(buffetCustomerTypes, req.BuffetCustomerTypes)
+		saleOrderBuffetCustomerTypes := saleOrder.GetBuffetUuidMap(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBill.SaleBillSetting)
+		if len(saleOrderBuffetCustomerTypes) > 0 {
+			for _, customer := range saleOrderBuffetCustomerTypes {
+				if _, err = repository.NewOrderRepo(db).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
+					return nil, err
+				}
+			}
+		}
+		// $this->startTrans();
+		// try {
+		//     // 删除原来的 orderBuffet、orderBuffetCustomer
+		//     // (new OrderBuffet)->where('order_id', $this['order_id'])->delete();
+		//     // (new OrderBuffetCustomer())->where('order_id', $this['order_id'])->delete();
+		//     // // 创建新的 orderBuffet、orderBuffetCustomer
+		//     // [$buffet_time_limit, $meal_num] = self::createOrderBuffet($this['order_id'], $buffet_ids, $buffet_customer_type);
+		//     // $this->updateDelayMealNum($this['order_id'], $meal_num);
+		//     // $orderUpdateArr['meal_num'] = $meal_num;
+		//     // $this->save($orderUpdateArr);
+		//     // $this->commit();
+		//     return true;
+		// } catch (BaseException $e) {
+		//     $this->error = $e->getMessage();
+		//     $this->rollback();
+		//     return false;
+		// }
+	}
+
+	// 做废已过期的加钟时间
+	if isTimeOut {
+		// (new OrderDelay)->where('order_id', $this['order_id'])->where('expired_time', 0)->update(['expired_time' => $this['buffet_expired_time']]);
+	}
+
+	// 添加操作日志
+	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
+	// 	Source:        ctx.GetSource(),
+	// 	Remark:        "修改桌台就餐人数",
+	// 	SaleBillUuid:  req.SaleBillUuid,
+	// 	SaleOrderUuid: 0,
+	// 	OperatorUuid:  ctx.GetStaffUuid(),
+	// }, map[string]interface{}{
+	// 	"old_meal_num": billInfo.MealNum,
+	// 	"new_meal_num": req.Population,
+	// })
+
+	// // 提交事务
+	// if err := tx.Commit().Error; err != nil {
+	// 	return nil, err
+	// }
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
+
 }
 
 // GetSaleBillByDeskId  获取桌台账单信息

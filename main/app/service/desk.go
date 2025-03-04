@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -145,6 +144,14 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 		return resp.CreateDeskOrderResp{}, errors.New("桌台不空闲")
 	}
 
+	// todo 原有逻辑待补充
+	// $settingData = SettingModel::getAll($appId, $shopSupplierId);
+	// $cashier = $settingData[SettingEnum::CASHIER]['values'] ?? [];
+	// if ($cashier['order_method']['is_table_order'] != 1) {
+	// 	$queue->release();
+	// 	return $this->renderError('桌台用餐已关闭，请选择其他用餐方式', [], -5);
+	// }
+
 	// 判断是否自助餐订单
 	if !*req.IsBuffet {
 		if req.MealNum == nil || *req.MealNum == 0 {
@@ -153,7 +160,6 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	} else {
 		return s.createDeskBuffetOrder(ctx, req)
 	}
-	fmt.Println("55555555")
 
 	// 创建桌台-非自助餐订单
 	return s.orderSrv.CreateDeskOrder(ctx, req)

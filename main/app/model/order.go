@@ -424,7 +424,7 @@ func (model *SaleBill) BuffetEndTime() int64 {
 	return endTime
 }
 
-// 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
+// 自助餐还剩余多少秒
 func (model *SaleBill) BuffetRemainingSeconds() int64 {
 	if model.BuffetDuration == 0 {
 		return -1
@@ -448,7 +448,7 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 		return errors.New("订单已结账")
 	}
 	if len(model.SaleOrders) > 0 {
-		// todo: 要判断来源 拆单没有取消权限
+		// todo: 要判断来源 除了收银端一样 拆单没有取消权限
 		// if operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
 		// 	return errors.New("拆单不可操作")
 		// }

@@ -28,6 +28,7 @@ type IOrderRepo interface {
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)          // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
+	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                             // 删除销售订单自助餐顾客类型
 	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
 	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
@@ -37,6 +38,7 @@ type IOrderRepo interface {
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
 	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
 	ChangePopulation(saleBillUuid uint64, population int) error                                                               // 修改订单人数
+	ChangeBuffetCustomerType(saleBillUuid uint64, population int) error                                                       // 调整自助餐
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
 	HasShowOrder(deviceUuid uint64) (bool, error)                                                                             // 判断该设备是否有未挂单的点餐订单
@@ -111,6 +113,15 @@ func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffe
 		return model, err
 	}
 	return model, nil
+}
+
+// DeleteSaleOrderBuffetCustomerType 删除销售订单自助餐顾客类型
+func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error {
+	err := r.db.Where("sale_order_uuid = ?", saleOrderUuid).Delete(&model.SaleOrderBuffetCustomerType{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetOrderListWithPagination 获取订单列表
@@ -998,28 +1009,32 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 		Updates(map[string]interface{}{
 			"meal_num": population,
 		}).Error
-	// return r.db.Transaction(func(tx *gorm.DB) error {
-	// 	// saleOrder := &model.SaleOrder{}
-	// 	// where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
-	// 	// //
-	// 	// err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
-	// 	// 	Where("delete_time = ?", 0).
-	// 	// 	Where(where, saleBillUuid).
-	// 	// 	Updates(map[string]interface{}{
-	// 	// 		"num":    population,
-	// 	// 		"remark": remark,
-	// 	// 	}).Error
-	// 	// if err != nil {
-	// 	// 	return err
-	// 	// }
-	// 	//
-	// 	return tx.Model(&model.SaleBill{}).
-	// 		Where("delete_time = ?", 0).
-	// 		Where("uuid = ?", saleBillUuid).
-	// 		Updates(map[string]interface{}{
-	// 			"meal_num": population,
-	// 		}).Error
-	// })
+}
+
+// ChangeBuffetCustomerType 修改订单人数
+func (r *orderRepo) ChangeBuffetCustomerType(saleBillUuid uint64, population int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// saleOrder := &model.SaleOrder{}
+		// where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
+		// //
+		// err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
+		// 	Where("delete_time = ?", 0).
+		// 	Where(where, saleBillUuid).
+		// 	Updates(map[string]interface{}{
+		// 		"num":    population,
+		// 		"remark": remark,
+		// 	}).Error
+		// if err != nil {
+		// 	return err
+		// }
+		// 	//
+		return tx.Model(&model.SaleBill{}).
+			Where("delete_time = ?", 0).
+			Where("uuid = ?", saleBillUuid).
+			Updates(map[string]interface{}{
+				"meal_num": population,
+			}).Error
+	})
 }
 
 // ChangeProductRemark 修改订单商品备注

@@ -83,9 +83,8 @@ func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCust
 		CustomDiscountRate:          1, // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
 	}
 	// 计算金额
-
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)
-
+	//
 	return saleOrderBuffetCustomerType
 }
 
@@ -127,4 +126,73 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 		return errors.New("订单已结账")
 	}
 	return nil
+}
+
+// GetBuffetUuidMap 获取处理包
+type GetBuffetUuidMapBuffetCustomerTypes []struct {
+	Uuid    uint64
+	MealNum *uint
+}
+
+func (b *SaleOrder) GetBuffetUuidMap(
+	buffetList []*BuffetPackage,
+	BuffetUuids []uint64,
+	BuffetCustomerTypes GetBuffetUuidMapBuffetCustomerTypes,
+	SaleBillSetting *SaleBillSetting,
+) []*SaleOrderBuffetCustomerType {
+	buffetUuidMap := make(map[uint64]map[uint64]*struct {
+		BaseModel
+		BuffetPackageUuid  uint64
+		CustomerTypeUuid   uint64
+		Price              float64
+		BuffetCustomerType struct{}
+	})
+	buffetMap := make(map[uint64]*BuffetPackage)
+	for _, buffet := range buffetList {
+		for index, _ := range buffet.BuffetCustomerTypePrices {
+			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
+			if buffetUuidMap[buffet.Uuid] == nil {
+				buffetUuidMap[buffet.Uuid] = make(map[uint64]*struct {
+					BaseModel
+					BuffetPackageUuid  uint64
+					CustomerTypeUuid   uint64
+					Price              float64
+					BuffetCustomerType struct{}
+				})
+			}
+			// 使用匿名结构体
+			priceStruct := &struct {
+				BaseModel
+				BuffetPackageUuid  uint64
+				CustomerTypeUuid   uint64
+				Price              float64
+				BuffetCustomerType struct{}
+			}{
+				BaseModel:         customerTypePrice.BaseModel,
+				BuffetPackageUuid: customerTypePrice.BuffetPackageUuid,
+				CustomerTypeUuid:  customerTypePrice.CustomerTypeUuid,
+				Price:             customerTypePrice.Price,
+			}
+			buffetUuidMap[buffet.Uuid][customerTypePrice.CustomerTypeUuid] = priceStruct
+		}
+		buffetMap[buffet.Uuid] = buffet
+	}
+	saleOrderBuffetCustomerTypes := make([]*SaleOrderBuffetCustomerType, 0)
+	for _, buffetUuid := range BuffetUuids {
+		buffetPackage := buffetMap[buffetUuid]
+		for _, CustomerType := range BuffetCustomerTypes {
+			num := *CustomerType.MealNum
+			if num == 0 {
+				continue
+			}
+			m := buffetUuidMap[buffetUuid]
+			customerTypePrice := m[CustomerType.Uuid]
+			// 使用匿名结构体的字段
+			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
+			taxRate := buffetPackage.GeTaxRate()
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *SaleBillSetting)
+			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
+		}
+	}
+	return saleOrderBuffetCustomerTypes
 }

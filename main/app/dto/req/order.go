@@ -168,8 +168,22 @@ type OrderProductRemarkReq struct {
 	Remark           string `json:"remark"`                                // remark
 }
 
-// OrderChangeBuffet 订单调整自助餐
-type OrderChangeBuffet struct {
-	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
-	Population   int    `json:"population" binding:"required"`     // 人数
+// OrderChangeBuffetReq 订单调整自助餐
+type OrderChangeBuffetReq struct {
+	SaleBillUuid        uint64                   `json:"sale_bill_uuid"`        // 销售账单UUID
+	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
+	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表
+}
+
+func (req OrderChangeBuffetReq) Validate() error {
+	if req.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
+	}
+	if len(req.BuffetUuids) > 2 || len(req.BuffetUuids) <= 0 {
+		return errors.New("自助餐uuid列表错误")
+	}
+	if len(req.BuffetCustomerTypes) <= 0 {
+		return errors.New("自助餐顾客类型列表错误")
+	}
+	return nil
 }

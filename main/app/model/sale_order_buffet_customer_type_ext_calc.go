@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
@@ -31,8 +30,6 @@ func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(servic
 	model.ServiceFee = calc.ServiceFee
 	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
-	fmt.Println("q444444")
-
 	return calc
 }
 
@@ -165,8 +162,6 @@ func (model *SaleOrderBuffetCustomerType) CalcSaleOrderBuffetCustomerType(settin
 	serviceFeeRate := setting.GetServiceFeeRate()
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	fmt.Println("q3333333")
-
 	return model.calcSaleOrderBuffetCustomerType(serviceFeeRate, taxFeeType, serviceFeeType)
 }
 

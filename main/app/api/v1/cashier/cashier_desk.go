@@ -448,20 +448,20 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderChangePopulationReq true "详情参数"
+// @param data body req.OrderChangeBuffetReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/buffet [post]
 func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	params := req.OrderChangePopulationReq{}
+	params := req.OrderChangeBuffetReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
 	//
-	info, err := h.orderService.OrderChangePopulation(ctx, params)
+	info, err := h.orderService.OrderChangeBuffet(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
