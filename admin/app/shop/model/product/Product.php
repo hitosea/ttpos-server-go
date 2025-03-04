@@ -734,7 +734,8 @@ class Product extends ProductModel
             $productList = self::with([
                 'sku' => [ 'relatedMaterial' ],
                 'feed',
-                'productAttributeGroup' => [ 'productAttribute' ]
+                'productAttributeGroup' => [ 'productAttribute' ],
+                'buffetProduct',
             ])
             ->whereIn('uuid', $product_ids)
             ->select();
@@ -761,6 +762,10 @@ class Product extends ProductModel
                 // 删除产品语言
                 $multiLanguageName->clearCache($product->multi_language_name_uuid);
                 $product->multiLanguageName->delete();
+                // 删除自助餐商品
+                foreach ($product->buffetProduct as $buffetProduct) {
+                    $buffetProduct->delete();
+                }
                 // 删除产品
                 $product->delete();
             }
@@ -771,6 +776,10 @@ class Product extends ProductModel
                 'relatedMaterial'
             ])->whereIn('uuid', $product_ids)->select();
             foreach ($materialList as $material) {
+                if ($material->relatedMaterial()->count() > 0) {
+                    $this->error = '该材料已被使用，无法删除';
+                    return false;
+                }
                 // 删除材料语言
                 $multiLanguageName->clearCache($material->multi_language_name_uuid);
                 $material->multiLanguageName->delete();
