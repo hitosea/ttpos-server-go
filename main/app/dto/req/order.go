@@ -157,7 +157,7 @@ type OrderDiscountCancelReq struct {
 // OrderChangePopulationReq 订单人数
 type OrderChangePopulationReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
-	Population   int    `json:"population" binding:"required"`     // 人数
+	Population   uint   `json:"population" binding:"required"`     // 人数
 }
 
 // OrderProductRemarkReq 订单商品remark

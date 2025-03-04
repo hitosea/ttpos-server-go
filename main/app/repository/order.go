@@ -992,37 +992,34 @@ func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64
 
 // ChangePopulation 修改订单人数
 func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		saleOrder := &model.SaleOrder{}
-		where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
-		//
-		err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
-			Where("delete_time = ?", 0).
-			Where(where, saleBillUuid).
-			Updates(map[string]interface{}{
-				"num": population,
-			}).Error
-		if err != nil {
-			return err
-		}
-		//
-		err = tx.Model(&model.SaleOrderBuffetDelayProduct{}).
-			Where("delete_time = ?", 0).
-			Where(where, saleBillUuid).
-			Updates(map[string]interface{}{
-				"num": population,
-			}).Error
-		if err != nil {
-			return err
-		}
-		//
-		return tx.Model(&model.SaleBill{}).
-			Where("delete_time = ?", 0).
-			Where("uuid = ?", saleBillUuid).
-			Updates(map[string]interface{}{
-				"meal_num": population,
-			}).Error
-	})
+	return r.db.Model(&model.SaleBill{}).
+		Where("delete_time = ?", 0).
+		Where("uuid = ?", saleBillUuid).
+		Updates(map[string]interface{}{
+			"meal_num": population,
+		}).Error
+	// return r.db.Transaction(func(tx *gorm.DB) error {
+	// 	// saleOrder := &model.SaleOrder{}
+	// 	// where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
+	// 	// //
+	// 	// err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
+	// 	// 	Where("delete_time = ?", 0).
+	// 	// 	Where(where, saleBillUuid).
+	// 	// 	Updates(map[string]interface{}{
+	// 	// 		"num":    population,
+	// 	// 		"remark": remark,
+	// 	// 	}).Error
+	// 	// if err != nil {
+	// 	// 	return err
+	// 	// }
+	// 	//
+	// 	return tx.Model(&model.SaleBill{}).
+	// 		Where("delete_time = ?", 0).
+	// 		Where("uuid = ?", saleBillUuid).
+	// 		Updates(map[string]interface{}{
+	// 			"meal_num": population,
+	// 		}).Error
+	// })
 }
 
 // ChangeProductRemark 修改订单商品备注
