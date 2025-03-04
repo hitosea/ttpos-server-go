@@ -515,7 +515,6 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	panic("333333")
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {

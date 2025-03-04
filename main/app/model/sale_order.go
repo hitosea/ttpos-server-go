@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -72,8 +71,6 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 }
 
 func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
-	fmt.Println("a0000")
-
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		SaleOrderUuid:               saleOrderUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
@@ -82,6 +79,7 @@ func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCust
 		SalePrice:                   buffetCustomerTypePricePrice,
 		Price:                       buffetCustomerTypePricePrice,
 		TaxRate:                     buffetPackageTaxRate,
+		CustomDiscountRate:          1, // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
 	}
 	// 计算金额
 

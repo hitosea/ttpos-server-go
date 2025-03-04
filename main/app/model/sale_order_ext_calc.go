@@ -282,6 +282,24 @@ func (model *SaleOrder) calcSumOrderProductSalePrice() float64 {
 	return sumSalePrice.InexactFloat64()
 }
 
+// 计算自助餐顾客价格之和。等于所有自助餐顾客价格之和
+func (model *SaleOrder) calcSumOrderProductCustomerPrice() float64 {
+	sumCustomerPrice := decimal.NewFromFloat(0)
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetCustomer.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 自助餐顾客价格之和
+		customerPrice := decimal.NewFromFloat(orderBuffetCustomer.GetOriginPrice())
+		sumCustomerPrice = sumCustomerPrice.Add(customerPrice)
+	}
+	return sumCustomerPrice.InexactFloat64()
+}
+
 // 计算订单商品Price之和。等于所有已接单商品Price之和
 func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 	sumPrice := decimal.NewFromFloat(0)
@@ -305,14 +323,40 @@ func (model *SaleOrder) calcSumOrderProductPrice() float64 {
 	return sumPrice.Round(2).InexactFloat64()
 }
 
+// 计算自助餐顾客价格之和。等于所有自助餐顾客价格之和
+func (model *SaleOrder) calcSumOrderProductCustomerDiscountPrice() float64 {
+	sumCustomerPrice := decimal.NewFromFloat(0)
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetCustomer.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 自助餐顾客价格之和
+		discountPrice := decimal.NewFromFloat(orderBuffetCustomer.GetDiscountPrice())
+		sumCustomerPrice = sumCustomerPrice.Add(discountPrice)
+	}
+	return sumCustomerPrice.InexactFloat64()
+}
+
 // 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格CustomerPrice之和 + 自助餐加钟商品价格Price之和
 func (model *SaleOrder) calcProductOriginalAmount() float64 {
-	return model.calcSumOrderProductSalePrice() // todo + 自助餐顾客价格之和 + 自助餐加钟商品价格之和
+	sumSaleOrderProduct := model.calcSumOrderProductSalePrice()
+
+	return decimal.NewFromFloat(sumSaleOrderProduct).Add(
+		decimal.NewFromFloat(model.calcSumOrderProductCustomerPrice())).InexactFloat64() // todo  + 自助餐加钟商品价格之和
 }
 
 // 计算订单商品金额（折后价）。订单商品金额（折后价）= 订单商品Price之和 + 自助餐顾客价格Price之和 + 自助餐加钟商品价格Price
 func (model *SaleOrder) calcProductAmount() float64 {
-	return model.calcSumOrderProductPrice() // todo + 自助餐顾客价格之和 + 自助餐加钟商品价格之和
+	// 订单商品Price之和
+	sumOrderProductPrice := model.calcSumOrderProductPrice()
+	// 自助餐顾客价格Price之和
+	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
+	return decimal.NewFromFloat(sumOrderProductPrice).Add(
+		decimal.NewFromFloat(sumCustomerPrice)).InexactFloat64() // todo + 自助餐加钟商品价格之和
 }
 
 // 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和
