@@ -84,6 +84,10 @@ func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
 
 }
 
+func (model *SaleOrder) SetCheckOutZeroFee() {
+	model.ZeroCheckoutFee = model.CalcCheckOutZeroFee()
+}
+
 // 计算销售订单的结账抹零金额。根据订单设置的结账抹零规则金额计算
 func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
 	amount := model.Amount

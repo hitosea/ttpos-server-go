@@ -116,6 +116,24 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = BuffetPackage{}
 }
 
+// 判断销售账单已经是可以完成，即所有销售订单都已经结账
+func (model *SaleBill) CanFinishSaleBill() bool {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsFreeSaleOrder() || saleOrder.IsDelete() {
+			continue
+		}
+		// 只要有一个未完成支付，这个销售账单就不可以点完成
+		if saleOrder.Status != constant.SaleOrderStatusFinish {
+			return false
+		}
+	}
+	return true
+}
+
+func (model *SaleBill) SetFinishSaleBill() {
+	model.Status = constant.SaleBillStatusComplete
+	model.FinishTime = time.Now().Unix()
+}
 func (model *SaleBill) SetBuffetPackage(buffetPackageUuids []uint64) {
 	if len(buffetPackageUuids) == 1 {
 		model.BuffetPackage1Uuid = buffetPackageUuids[0]

@@ -68,7 +68,7 @@ type IOrderSrv interface {
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
-	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.ShopCart, error)                                         // 给销售订单创建一个支付单
+	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                  // 给销售订单创建一个支付单
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                     // 给销售订单创建一个销售订单
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
@@ -3034,7 +3034,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 }
 
 // InstantOrderPaymentFinish 完成销售订单的付款结账
-func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.ShopCart, error) {
+func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)
@@ -3061,26 +3061,77 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, err
 	}
 
-	unpaidAmount := infoResp.Amounts.List[0].UnpaidAmount
+	amount := infoResp.Amounts.List[0]
+	unpaidAmount := amount.UnpaidAmount
 	if unpaidAmount > 0 {
 		return nil, errors.New("销售订单未结清")
 	}
 
-	saleOrder.SetStatus() // 设置销售订单状态为已结清
-	// 更新销售订单
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
-		return nil, err
+	// 最终应收=应收金额+手续费
+	finalAmount := decimal.NewFromFloat(saleOrder.Amount).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
+
+	totalPay := float64(0)
+	for _, paymentOrder := range infoResp.PaymentOrders.List {
+		totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).InexactFloat64()
 	}
+
+	// 计算找零金额。
+	changeAmount := float64(0)
+	if totalPay > finalAmount {
+		changeAmount = decimal.NewFromFloat(totalPay).Sub(decimal.NewFromFloat(finalAmount)).InexactFloat64()
+	}
+
+	// 计算抹零金额. 只有没有手续费时，才能抹零
+	if amount.CommissionFee == 0 {
+		saleOrder.SetCheckOutZeroFee()
+	}
+
+	// 修改订单为支付完成，并记录找零金额
+	saleOrder.SetFinishStatus(changeAmount) // 设置销售订单状态为已结清
 
 	// 更新销售账单
-	// todo: 更新销售账单
+	if !saleBill.CanFinishSaleBill() {
+		return nil, errors.New("还有销售订单未支付")
+	}
+	saleBill.SetFinishSaleBill()
 
-	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-	if err != nil {
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新销售订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+			return err
+		}
+
+		// 更新整单
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	return cartInfo, nil
+	payMethods := make([]resp.PayMethod, 0)
+	for _, paymentOrder := range infoResp.PaymentOrders.List {
+		method := resp.PayMethod{
+			Uuid: paymentOrder.PaymentMethodUuid,
+			Name: paymentOrder.PaymentMethodName,
+		}
+		payMethods = append(payMethods, method)
+	}
+	orderFinishResp := &resp.OrderFinishResp{
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: req.SaleOrderUuid,
+		AmountInfo: resp.PayAmountInfo{
+			OrderAmount:  saleOrder.Amount,
+			PayAmount:    saleOrder.PaymentAmount,
+			ChangeAmount: saleOrder.ChangeAmount,
+		},
+		PayMethodList: resp.PayMethodList{
+			List: payMethods,
+		},
+	}
+
+	return orderFinishResp, nil
 }
 
 // InstantOrderSaleOrderCreate 给销售订单创建一个销售订单

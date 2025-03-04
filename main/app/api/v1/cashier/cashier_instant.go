@@ -671,7 +671,7 @@ func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
-// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
 // @Router /cashier/instant/order/payment/finish [post]
 func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 	ctx := helper.GetContext(c)

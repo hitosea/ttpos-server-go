@@ -20,6 +20,16 @@ type BaseModel struct {
 	isUpdate   bool   // 用于判断该model是否需要更新
 }
 
+func (model *BaseModel) NoPrimaryKey() bool {
+	if model.ID == 0 {
+		return true
+	}
+	if model.Uuid == 0 {
+		return true
+	}
+	return false
+}
+
 func (model *BaseModel) SetUpdate() {
 	model.isUpdate = true
 }

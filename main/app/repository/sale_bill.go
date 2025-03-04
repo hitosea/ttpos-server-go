@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
@@ -108,6 +109,9 @@ func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 // 仅更新sale_bill表
 func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 	saleBill.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	if saleBill.NoPrimaryKey() {
+		return errors.New("SaleBill不能没有ID或UUID")
+	}
 	return r.db.Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
 }
 

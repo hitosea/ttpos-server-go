@@ -98,3 +98,24 @@ type AboutBuffet struct {
 	BuffetUuid       uint64 `json:"buffet_uuid"`        // 自助餐Id
 	CustomerTypeUuid uint64 `json:"customer_type_uuid"` // 自助餐顾客类型uuid
 }
+
+type OrderFinishResp struct {
+	SaleBillUuid  uint64        `json:"sale_bill_uuid"`  // 销售账单uuid
+	SaleOrderUuid uint64        `json:"sale_order_uuid"` // 销售订单uuid
+	AmountInfo    PayAmountInfo `json:"amount_info"`     // 金额信息
+	PayMethodList PayMethodList `json:"pay_methods"`     // 支付方式列表
+}
+
+type PayAmountInfo struct {
+	OrderAmount  float64 `json:"order_amount"`  // 订单应收金额
+	PayAmount    float64 `json:"pay_amount"`    // 订单实收金额
+	ChangeAmount float64 `json:"change_amount"` // 找零金额
+}
+type PayMethodList struct {
+	List []PayMethod `json:"list"`
+}
+
+type PayMethod struct {
+	Uuid uint64 `json:"uuid"` // 支付方式uuid
+	Name string `json:"name"` // 支付方式名称
+}

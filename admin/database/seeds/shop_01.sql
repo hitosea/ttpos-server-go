@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     -- 实收金额。
     `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
+    `change_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
     `unpaid_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '未支付金额。未支付金额=最终应收-已支付金额',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
