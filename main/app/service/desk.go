@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -152,6 +153,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	} else {
 		return s.createDeskBuffetOrder(ctx, req)
 	}
+	fmt.Println("55555555")
 
 	// 创建桌台-非自助餐订单
 	return s.orderSrv.CreateDeskOrder(ctx, req)

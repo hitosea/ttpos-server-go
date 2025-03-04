@@ -1,9 +1,11 @@
 package model
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -55,6 +57,50 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                 `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
+	uuid, _ := utils.GetID()
+	saleOrder := &SaleOrder{
+		BaseModel:    BaseModel{Uuid: uuid},
+		SaleBillUuid: saleBillUuid,
+		OrderNo:      saleBillOrderNo,
+	}
+	// 设置服务费初始值
+	saleOrder.SetInitServiceFee(setting)
+	return saleOrder
+}
+
+func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+	fmt.Println("a0000")
+
+	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
+		SaleOrderUuid:               saleOrderUuid,
+		BuffetPackageUuid:           buffetPackageUuid,
+		BuffetCustomerTypePriceUuid: buffetCustomerTypePriceUuid,
+		Num:                         customerNum,
+		SalePrice:                   buffetCustomerTypePricePrice,
+		Price:                       buffetCustomerTypePricePrice,
+		TaxRate:                     buffetPackageTaxRate,
+	}
+	// 计算金额
+
+	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)
+
+	return saleOrderBuffetCustomerType
+}
+
+// 设置初始时销售订单的服务费。
+// 当关闭服务费费时，订单服务费=0
+// 当开启服务费按固定服务费收费时， 订单服务费=固定金额
+// 当开启服务费按比例收取服务费时，订单服务费=各个订单商品的服务费之和。初始时订单服务费=0，在添加商品后再重建计算
+func (model *SaleOrder) SetInitServiceFee(setting SaleBillSetting) float64 {
+	// 当开启服务费按固定服务费收费时， 订单服务费=固定金额
+	if setting.GetServiceFeeType() == constant.SaleBillSettingServiceFeeTypeFixed {
+		return setting.ServiceFeeValue
+	}
+	// 其他情况，初始化时服务费都是0
+	return 0
 }
 
 func (model *SaleOrder) SetStatus() {

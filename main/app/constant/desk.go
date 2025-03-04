@@ -10,6 +10,10 @@ const (
 )
 
 const (
-	DeskStatusClose = 0 //关台
+	DeskStatusClose = 0 //未开台
 	DeskStatusOpen  = 1 //开台
+
+	// 桌台禁用
+	DeskDisable = 1 //禁用
+	DeskEnable  = 0 //启用
 )

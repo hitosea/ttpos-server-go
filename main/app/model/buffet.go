@@ -16,6 +16,17 @@ type BuffetPackage struct {
 	MultiLanguageName        MultiLanguageName         `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	BuffetCustomerTypePrices []BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 	BuffetProducts           []BuffetProduct           `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
+	Tax                      *Tax                      `gorm:"foreignKey:tax_uuid;references:uuid"`
+}
+
+// 获取自助餐税率。
+func (model *BuffetPackage) GeTaxRate() float64 {
+	if model.Tax == nil {
+		// 当税率不存在时，判断系统是否开启收税，如果开启，则去查询商家第一个创建的税，用这个税作为该自助餐的税率
+
+		return 0
+	}
+	return model.Tax.TaxRate
 }
 
 // GetMinPrice 获取最小价格. 如果只有一个价格, 则返回该价格, 否则返回最小价格

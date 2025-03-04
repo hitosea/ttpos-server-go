@@ -1,0 +1,44 @@
+package model
+
+import "github.com/shopspring/decimal"
+
+// SaleOrderBuffetCustomerType 销售订单自助餐顾客类型 `ttpos_sale_order_buffet_customer_type`
+type SaleOrderBuffetCustomerType struct {
+	// 主键字段
+	BaseModel
+	Name string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'名称'"`
+	// 价格信息
+	Num                uint    `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
+	SalePrice          float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变" json:"sale_price"`
+	CustomDiscountRate float64 `gorm:"column:custom_discount_rate;type:decimal(12,4);not null;default:1;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
+	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(10,2);not null;default:0;comment:税率,单位%.加购时记录税率,结账时再重新核算" json:"tax_rate"`
+
+	// 价格计算相关
+	Price             float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:最终单价（折后价），只进行自定义打折，不进行会员打折" json:"price"`
+	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);not null;default:0;comment:自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*(1-自定义折扣率)" json:"custom_discount_fee"`
+	ServiceTaxFee     float64 `gorm:"column:service_tax_fee;type:decimal(12,2);not null;default:0;comment:服务费税费（单人）,0-不收取税费；收取时，服务费税费=服务费*税率" json:"service_tax_fee"`
+	TaxFee            float64 `gorm:"column:tax_fee;type:decimal(12,2);not null;default:0;comment:自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率" json:"tax_fee"`
+	ServiceFee        float64 `gorm:"column:service_fee;type:decimal(12,2);not null;default:0;comment:服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例" json:"service_fee"`
+	TotalPrice        float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0;comment:应收金额(单人)。商品已含税时，应收金额(单人)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费" json:"total_price"`
+
+	// 关联ID字段
+	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
+	BuffetPackageUuid           uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetCustomerTypePriceUuid uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
+
+	// 关联字段
+	BuffetPackage           BuffetPackage           `gorm:"foreignKey:BuffetPackageUuid;references:uuid"`
+	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
+}
+
+// 获取顾客原价. = 原价*人数
+func (model *SaleOrderBuffetCustomerType) GetOriginPrice() float64 {
+	price := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}
+
+// 获取顾客折后价 = 折扣价*人数
+func (model *SaleOrderBuffetCustomerType) GetDiscountPrice() float64 {
+	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}

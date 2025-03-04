@@ -48,6 +48,12 @@ func (model *Desk) SetNil() {
 	model.Region = nil
 }
 
+// SetOpenDesk 设置开台信息
+func (model *Desk) SetOpenDesk(saleBillUuid uint64) {
+	model.Status = constant.DeskStatusOpen
+	model.SaleBillUuid = saleBillUuid
+}
+
 // getCustomerCount 获取桌台人数
 func (d *Desk) getCustomerCount() uint {
 	if d.SaleBill != nil {

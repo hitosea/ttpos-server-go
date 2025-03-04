@@ -77,9 +77,14 @@ func (r *BuffetRepoImpl) GetBuffetListByUuids(uuids []uint64) ([]*model.BuffetPa
 	return r.GetBuffetListNoPage(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereInUuids(uuids),
-		CommonRepo.Preload(WithPreload{
-			Query: "MultiLanguageName",
-		}),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Tax",
+			},
+		),
 		CommonRepo.Preload(WithPreload{
 			Query: "BuffetCustomerTypePrices",
 			Args: []interface{}{

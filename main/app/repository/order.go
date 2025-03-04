@@ -887,7 +887,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackageMultiLanguageName",
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetDelayProducts",

@@ -16,6 +16,7 @@ type IDeskRepo interface {
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]model.Desk, error)
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
+	GetDeskRecord(deskUuid uint64) (*model.Desk, error) // 通过uuid获取桌台的记录信息
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	UpdateDeskByMap(deskUuid uint64, vars map[string]any) error // 更新桌台
 	UnbindDesk(deskUuid, deviceUuid uint64) error               // 平板端解绑桌台
@@ -112,6 +113,19 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 	}
 
 	return desk, nil
+}
+
+func (r *deskRepo) GetDeskRecord(deskUuid uint64) (*model.Desk, error) {
+	desk, err := r.GetDesk(
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(deskUuid),
+		CommonRepo.WhereByStatus(constant.DeskStatusClose),
+		CommonRepo.WhereByNoDisable(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &desk, nil
 }
 
 // UpdateDesk 更新桌台

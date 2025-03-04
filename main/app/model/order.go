@@ -81,6 +81,31 @@ type SaleBill struct {
 	BuffetPackage2  BuffetPackage     `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64) *SaleBill {
+	isBuffet := len(buffetUuids) > 0
+
+	if saleBillUuid == 0 {
+		saleBillUuid, _ = utils.GetID()
+	}
+
+	saleBill := &SaleBill{
+		BaseModel:    BaseModel{Uuid: saleBillUuid},
+		OrderNo:      orderNo,
+		BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
+		DiningMethod: constant.SaleBillDiningMethodDineIn,
+		IsBuffet:     utils.BoolToUint(isBuffet),
+		MealNum:      mealNum,
+		Remark:       remark,
+		DeskUuid:     deskUuid,
+	}
+
+	// 设置自助餐套餐
+	if isBuffet {
+		saleBill.SetBuffetPackage(buffetUuids)
+	}
+
+	return saleBill
+}
 func (model *SaleBill) SetNil() {
 	model.SaleOrders = nil
 	model.H5OrderProducts = nil
@@ -364,7 +389,10 @@ func (model *SaleBill) IsDeskSaleBill() bool {
 
 // 判断是否为自助餐销售账单
 func (model *SaleBill) IsBuffetSaleBill() bool {
-	return model.IsBuffet == 1 // 桌台账单肯定是有桌台ID
+	if model.BuffetPackage1Uuid != 0 || model.BuffetPackage2Uuid != 0 {
+		return true
+	}
+	return false
 }
 
 // 获取自助餐结束时间
@@ -651,46 +679,6 @@ func (model *SaleBillSetting) GetServiceFeeRate() float64 {
 		return 0
 
 	}
-}
-
-// SaleOrderBuffetCustomerType 销售订单自助餐顾客类型 `ttpos_sale_order_buffet_customer_type`
-type SaleOrderBuffetCustomerType struct {
-	// 主键字段
-	BaseModel
-
-	Name string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'名称'"`
-	// 关联ID字段
-	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
-	BuffetPackageUuid           uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
-	BuffetCustomerTypePriceUuid uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
-
-	// 数值字段
-	Num                uint    `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
-	CustomerPrice      float64 `gorm:"column:customer_price;type:decimal(12,2);not null;default:0;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变" json:"customer_price"`
-	Price              float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:价格（折后价），只进行自定义打折，不进行会员打折" json:"price"`
-	CustomDiscountRate float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:1;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
-	CustomDiscountFee  float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);not null;default:0;comment:自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*(1-自定义折扣率)" json:"custom_discount_fee"`
-	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(10,2);not null;default:0;comment:税率,单位%.加购时记录税率,结账时再重新核算" json:"tax_rate"`
-	ServiceTaxFee      float64 `gorm:"column:service_tax_fee;type:decimal(12,2);not null;default:0;comment:服务费税费（单人）,0-不收取税费；收取时，服务费税费=服务费*税率" json:"service_tax_fee"`
-	TaxFee             float64 `gorm:"column:tax_fee;type:decimal(12,2);not null;default:0;comment:自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率" json:"tax_fee"`
-	ServiceFee         float64 `gorm:"column:service_fee;type:decimal(12,2);not null;default:0;comment:服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例" json:"service_fee"`
-	Amount             float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:应收金额(单人)。自助餐顾客类型已含税时，应收金额(单人)=(自助餐顾客类型原价-自助餐顾客类型税费)+服务费+自助餐顾客类型税费；自助餐顾客类型未含税时，应收金额(单人)=自助餐顾客类型原价+服务费+自助餐顾客类型税费" json:"amount"`
-
-	// 关联字段
-	BuffetPackage           BuffetPackage           `gorm:"foreignKey:BuffetPackageUuid;references:uuid"`
-	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
-}
-
-// 获取顾客原价
-func (model *SaleOrderBuffetCustomerType) GetOriginPrice() float64 {
-	price := decimal.NewFromFloat(model.CustomerPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
-	return price
-}
-
-// 获取顾客折后价
-func (model *SaleOrderBuffetCustomerType) GetDiscountPrice() float64 {
-	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
-	return price
 }
 
 // SaleOrderBuffetDelayProduct 销售订单加钟价格商品表 `ttpos_sale_order_buffet_delay_product`

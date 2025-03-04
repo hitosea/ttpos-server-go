@@ -1667,7 +1667,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.RechargeOrder"
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
                                         }
                                     }
                                 }
@@ -3215,7 +3215,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.RechargeOrder"
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
                                         }
                                     }
                                 }
@@ -8628,6 +8628,10 @@ const docTemplate = `{
         "resp.BuffetInfo": {
             "type": "object",
             "properties": {
+                "is_time_limited": {
+                    "description": "是否限时",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "自助餐名称",
                     "allOf": [
@@ -11188,6 +11192,35 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderListMeta": {
+            "type": "object",
+            "properties": {
+                "cancel_num": {
+                    "description": "已取消数量",
+                    "type": "integer"
+                },
+                "complete_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                },
+                "unpaid_num": {
+                    "description": "待付款数量",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.OrderListPaginationResp": {
             "type": "object",
             "properties": {
@@ -11200,33 +11233,11 @@ const docTemplate = `{
                 },
                 "meta": {
                     "description": "Meta信息",
-                    "type": "object",
-                    "properties": {
-                        "cancel_num": {
-                            "description": "已取消数量",
-                            "type": "integer"
-                        },
-                        "complete_num": {
-                            "description": "已完成数量",
-                            "type": "integer"
-                        },
-                        "page_no": {
-                            "description": "当前页码",
-                            "type": "integer"
-                        },
-                        "page_size": {
-                            "description": "每页大小",
-                            "type": "integer"
-                        },
-                        "total": {
-                            "description": "总数",
-                            "type": "integer"
-                        },
-                        "unpaid_num": {
-                            "description": "待付款数量",
-                            "type": "integer"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderListMeta"
                         }
-                    }
+                    ]
                 }
             }
         },

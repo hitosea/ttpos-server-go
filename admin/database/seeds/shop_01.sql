@@ -521,22 +521,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '顾客类型名称',
+    -- 价格信息
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
-    `customer_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',
-    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格（折后价），只进行自定义打折，不进行会员打折',
-    `custom_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
-    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*(1-自定义折扣率)',
-    `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
+    `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',
+    -- 价格计算相关
+    `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价（折后价），只进行自定义打折，不进行会员打折',
+    `custom_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '自定义折扣率, 值为0-1之间(0-100%)',
+    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*自定义折扣率',
+    `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,值为0-1之间.加购时记录税率,结账时再重新核算',
     `service_tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费税费（单人）,0-不收取税费；收取时，服务费税费=服务费*税率',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例',
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单人)。自助餐顾客类型已含税时，应收金额(单人)=(自助餐顾客类型原价-自助餐顾客类型税费)+服务费+自助餐顾客类型税费；自助餐顾客类型未含税时，应收金额(单人)=自助餐顾客类型原价+服务费+自助餐顾客类型税费',
+    `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单人)。商品已含税时，应收金额(单人)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费',
+
     -- 关联ID
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `buffet_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     `buffet_customer_type_price_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型价格ID',
-    `buffet_package_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐套餐多语言ID',
-    `buffet_customer_type_multi_language_name_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '自助餐客户类型多语言ID',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

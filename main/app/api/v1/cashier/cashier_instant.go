@@ -641,7 +641,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.InstantOrderPaymentCreateReq true "创建一个支付单参数"
-// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
 // @Router /cashier/instant/order/payment/create [post]
 func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 	ctx := helper.GetContext(c)

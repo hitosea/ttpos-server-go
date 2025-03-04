@@ -133,8 +133,8 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建订单编号
-		orderNo := s.createOrderNo(tx, constant.OrderSourceInstant)
-		if orderNo == "" {
+		orderNo, createErr := s.createOrderNo(tx, constant.OrderSourceInstant)
+		if createErr != nil {
 			return errors.New("订单编号生成失败")
 		}
 
@@ -233,6 +233,100 @@ func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBi
 }
 
 // CreateSaleBillSetting 创建销售账单设置
+func (s *orderSrv) newSaleBillSetting(ctx context.Context, saleBillUuid uint64) (*model.SaleBillSetting, error) {
+	// 获取服务费设置
+	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 获取税率设置
+	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var serviceFeeType uint
+	var serviceFeeValue float64
+	var taxFeeType uint
+	var discountType uint
+	var zero uint
+	var zeroCheckout uint
+	var isStatGift uint = constant.SaleBillSettingIsStatGiftYes
+	var isStatFree uint = constant.SaleBillSettingIsStatFreeYes
+
+	// 销售账单服务费
+	if serviceFeeSetting.IsOpen == "1" {
+		if serviceFeeSetting.ChargeType == "1" {
+			serviceFeeType = constant.SaleBillSettingServiceFeeTypeFixed
+		}
+		if serviceFeeSetting.ChargeType == "2" {
+			if serviceFeeSetting.IsOpenTax == "0" {
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercent
+			}
+			if serviceFeeSetting.IsOpenTax == "1" {
+				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
+			}
+		}
+		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 销售账单税率
+	if taxRateSetting.IsOpen == "1" {
+		if taxRateSetting.CalcType == "1" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercentTax
+		}
+		if taxRateSetting.CalcType == "2" {
+			taxFeeType = constant.SaleBillSettingTaxFeeTypePercent
+		}
+	}
+
+	// 销售账单优惠折扣
+	if businessSetting.DiscountMethod == "20" {
+		discountType = constant.SaleBillSettingDiscountTypeOff
+	}
+
+	// 销售账单优惠折扣自动抹零方式
+	zeroingMethod, _ := convertor.ToInt(businessSetting.ZeroingMethod)
+	zero = uint(zeroingMethod)
+
+	// 销售账单结账自动抹零方式
+	checkoutZeroingMethod, _ := convertor.ToInt(businessSetting.CheckoutZeroingMethod)
+	zeroCheckout = uint(checkoutZeroingMethod)
+
+	// 销售账单赠菜计算方式
+	if businessSetting.GiftMethod == "20" {
+		isStatGift = constant.SaleBillSettingIsStatGiftNone
+	}
+
+	// 销售账单免单计算方式
+	if businessSetting.FreeMethod == "20" {
+		isStatFree = constant.SaleBillSettingIsStatFreeNone
+	}
+
+	saleBillSetting := model.SaleBillSetting{
+		SaleBillUuid:     saleBillUuid,
+		ServiceFeeType:   serviceFeeType,
+		ServiceFeeValue:  serviceFeeValue,
+		TaxFeeType:       taxFeeType,
+		DiscountType:     discountType,
+		ZeroRule:         zero,
+		ZeroCheckoutRule: zeroCheckout,
+		IsStatGift:       isStatGift,
+		IsStatFree:       isStatFree,
+	}
+
+	return &saleBillSetting, nil
+}
+
+// CreateSaleBillSetting 创建销售账单设置
 func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
@@ -328,132 +422,140 @@ func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId 
 
 // CreateDeskOrder 创建桌台订单
 func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
-	dbId := ctx.GetDbId()
-	var billUuid uint64
-	var orderUuid uint64
-	var db = s.dbm.GetDB(dbId)
-	err := db.Transaction(func(tx *gorm.DB) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.DeskUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.DeskUuid)
+		ctx.AddLock()
+	}
+	fmt.Println("y1111")
 
-		// 创建订单编号
-		orderNo := s.createOrderNo(tx, constant.OrderSourceDesk)
-		if orderNo == "" {
-			return errors.New("订单编号生成失败")
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	desk, errGetDesk := repository.NewDeskRepo(db).GetDeskRecord(req.DeskUuid)
+	if errGetDesk != nil {
+		return resp.CreateDeskOrderResp{}, errors.New("无法找到空闲桌台")
+	}
+	saleBillUuid, _ := utils.GetID()
+	desk.SetOpenDesk(saleBillUuid)
+	fmt.Println("y2222")
+
+	// 创建订单编号
+	orderNo, errCreate := s.createOrderNo(db, constant.OrderSourceDesk)
+	if errCreate != nil {
+		return resp.CreateDeskOrderResp{}, errors.New("订单编号生成失败")
+	}
+
+	// 构建销售账单
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, *req.MealNum, req.Remark, req.DeskUuid)
+	fmt.Println("y3333")
+
+	// 构建销售账单设置
+	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, err
+	}
+	// 构建销售订单
+	saleOrder := model.NewSaleOrder(saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
+
+	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, nil
+	}
+	// 获取自助餐信息
+	buffetUuidMap := make(map[uint64]map[uint64]*model.BuffetCustomerTypePrice) //buffet_uuid => buffet_customer_type_uuid => buffet_customer_type_price_uuid
+	buffetMap := make(map[uint64]*model.BuffetPackage)
+	for _, buffet := range buffetList {
+		for index, _ := range buffet.BuffetCustomerTypePrices {
+			BuffetCustomerTypePrice := buffet.BuffetCustomerTypePrices[index]
+			if buffetUuidMap[buffet.Uuid] == nil {
+				buffetUuidMap[buffet.Uuid] = make(map[uint64]*model.BuffetCustomerTypePrice)
+			}
+			buffetUuidMap[buffet.Uuid][BuffetCustomerTypePrice.CustomerTypeUuid] = &BuffetCustomerTypePrice
 		}
+		buffetMap[buffet.Uuid] = buffet
+	}
+	fmt.Println("y6666666666")
 
-		isBuffet := len(req.BuffetUuids) > 0
+	// 构建自助餐顾客列表
+	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0)
+	if saleBill.IsBuffetSaleBill() {
+		fmt.Println("z11111")
 
-		saleBill := model.SaleBill{
-			OrderNo:      orderNo,
-			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
-			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			IsBuffet:     utils.BoolToUint(isBuffet),
-			MealNum:      *req.MealNum,
-			Remark:       req.Remark,
-			DeskUuid:     req.DeskUuid,
+		for _, buffetUuid := range req.BuffetUuids {
+			fmt.Println("z2222")
+
+			buffetPackage := buffetMap[buffetUuid]
+			for _, CustomerType := range req.BuffetCustomerTypes {
+				fmt.Println("z3333")
+
+				num := *CustomerType.MealNum
+				if num == 0 {
+					continue
+				}
+				fmt.Println("z44444")
+
+				m := buffetUuidMap[buffetUuid]
+				fmt.Println("z55555")
+
+				buffetCustomerTypePrice := m[CustomerType.Uuid]
+				fmt.Println("z6666")
+
+				buffetCustomerTypePriceUuid := buffetCustomerTypePrice.Uuid
+				fmt.Println("z777")
+
+				taxRate := buffetPackage.GeTaxRate()
+				saleOrderBuffetCustomerType := model.NewSaleOrderBuffetCustomerType(saleOrder.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, buffetCustomerTypePrice.Price, taxRate, *saleBillSetting)
+
+				saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
+			}
 		}
+	}
+	fmt.Println("y7777777")
 
-		// 设置自助餐套餐
-		if isBuffet {
-			saleBill.SetBuffetPackage(req.BuffetUuids)
-		}
-
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 创建销售账单
-		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(saleBill)
-		if err != nil {
-			return err
+		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
+			return errCreateSaleBill
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, dbId, saleBill.Uuid)
-		if err != nil {
-			return err
+		if _, errCreateSaleBillSetting := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
+			return errCreateSaleBillSetting
 		}
 
 		// 创建销售订单
-		var serviceFee float64
-		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
-			serviceFee = saleBillSetting.ServiceFeeValue
-		}
-		saleOrderVar := model.SaleOrder{
-			SaleBillUuid: saleBill.Uuid,
-			OrderNo:      saleBill.OrderNo,
-			ServiceFee:   serviceFee,
-		}
-		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(saleOrderVar)
-		if err != nil {
-			return err
+		if _, errCreateSaleOrder := repository.NewOrderRepo(tx).CreateSaleOrder(*saleOrder); errCreateSaleOrder != nil {
+			return errCreateSaleOrder
 		}
 
-		if isBuffet {
-			buffetRepo := repository.NewBuffetRepo(tx)
-			// 创建销售订单自助餐顾客类型
-			buffetList, err := buffetRepo.GetBuffetListByUuids(req.BuffetUuids)
-			if err != nil {
-				return err
-			}
-			//buffet_uuid => buffet_customer_type_uuid => buffet_customer_type_price_uuid
-			buffetUuidMap := make(map[uint64]map[uint64]*model.BuffetCustomerTypePrice)
-			for _, buffet := range buffetList {
-				for _, BuffetCustomerTypePrice := range buffet.BuffetCustomerTypePrices {
-					if buffetUuidMap[buffet.Uuid] == nil {
-						buffetUuidMap[buffet.Uuid] = make(map[uint64]*model.BuffetCustomerTypePrice)
-					}
-					buffetUuidMap[buffet.Uuid][BuffetCustomerTypePrice.CustomerTypeUuid] = &BuffetCustomerTypePrice
-				}
-			}
-
-			for _, buffetUuid := range req.BuffetUuids {
-				fmt.Println("len(req.BuffetCustomerTypes)::", len(req.BuffetCustomerTypes))
-				for _, CustomerType := range req.BuffetCustomerTypes {
-					num := *CustomerType.MealNum
-					if num == 0 {
-						continue
-					}
-
-					saleOrderBuffetCustomerType := model.SaleOrderBuffetCustomerType{
-						SaleOrderUuid:               saleOrder.Uuid,
-						BuffetPackageUuid:           buffetUuid,
-						BuffetCustomerTypePriceUuid: buffetUuidMap[buffetUuid][CustomerType.Uuid].Uuid,
-						Num:                         num,
-						CustomerPrice:               buffetUuidMap[buffetUuid][CustomerType.Uuid].Price,
-						Price:                       buffetUuidMap[buffetUuid][CustomerType.Uuid].Price,
-						TaxRate:                     0,
-					}
-					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(saleOrderBuffetCustomerType)
-					if err != nil {
-						return err
-					}
+		// 如果是自助餐，有顾客列表的话，创建顾客
+		if len(saleOrderBuffetCustomerTypes) > 0 {
+			for _, customer := range saleOrderBuffetCustomerTypes {
+				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
+					return err
 				}
 			}
 		}
 
 		// 新桌台的状态
-		err = repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, model.Desk{
-			Status:       1,
-			SaleBillUuid: saleBill.Uuid,
-		})
-		if err != nil {
-			return err
+		if errUpdate := repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, *desk); errUpdate != nil {
+			return errUpdate
 		}
 
-		billUuid = saleBill.Uuid
-		orderUuid = saleOrder.Uuid
-
 		return nil
-	})
-
-	if err != nil {
+	}); err != nil {
 		return resp.CreateDeskOrderResp{}, err
 	}
 
 	return resp.CreateDeskOrderResp{
-		SaleBillUuid:  billUuid,
-		SaleOrderUuid: orderUuid,
+		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrder.Uuid,
 	}, nil
 }
 
 // createOrderNo 创建订单编号
-func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
+func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error) {
 	var orderNo string
 
 	// 前八位是年月日
@@ -484,7 +586,10 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) string {
 		}
 	}
 
-	return orderNo
+	if orderNo == "" {
+		return "", errors.New("订单编号生成失败")
+	}
+	return orderNo, nil
 }
 
 // GetCashierOrderList 获取订单列表
@@ -835,6 +940,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
 	}
 
 	// 获取订单信息
