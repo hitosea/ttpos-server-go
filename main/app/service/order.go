@@ -1700,10 +1700,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					IsGift:        false,
 					IsCancel:      false,
 					AboutBuffet: resp.AboutBuffet{
-						IsCustomer:             true,
-						IsDelay:                false,
-						BuffetCustomerTypeUuid: buffet.Uuid,
-						BuffetCustomerTypeName: buffet.Name,
+						IsCustomer:       true,
+						IsDelay:          false,
+						CustomerTypeUuid: orderBuffetCustomer.Uuid,
+						CustomerTypeName: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 				}
 				productList = append(productList, product)
