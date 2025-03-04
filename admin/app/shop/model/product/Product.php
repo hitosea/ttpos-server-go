@@ -11,6 +11,8 @@ use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\erp\ErpMonthlyProductStatistics;
+use app\common\model\erp\ErpWarehouseOutForm;
+use app\common\model\erp\ErpWarehouseOutFormItem;
 use app\common\model\product\Product as ProductModel;
 
 /**
@@ -747,6 +749,12 @@ class Product extends ProductModel
                         $relatedMaterial->delete();
                     }
                     $sku->delete();
+                    // 添加删除商品出库记录
+                    $outForm = new ErpWarehouseOutForm();
+                    $outForm->addOutForm(4, $shop_user_id, [
+                        'material_uuid' => $sku->uuid,
+                        'num' => $sku->stock_num,
+                    ]);
                 }
                 // 删除加料
                 foreach ($product->feed as $feed) {
@@ -789,53 +797,13 @@ class Product extends ProductModel
                 }
                 // 删除材料
                 $material->delete();
+                // 添加删除材料出库记录
+                $outForm = new ErpWarehouseOutForm();
+                $outForm->addOutForm(4, $shop_user_id, [
+                    'material_uuid' => $material->uuid,
+                    'num' => $material->stock_num,
+                ]);
             }
-            // todo 兼容
-            // foreach ($products as $product) {
-            //     $product_id = $product['product_id'] ?? 0;
-            //     $type = $product['type'] ?? 0;
-            //     $shop_supplier_id = $product['shop_supplier_id'] ?? 0;
-            //     //
-            //     if ($type == ProductModel::TYPE_MATERIAL) {
-            //         $is_used = $this->checkMaterialUsed($product['product_id']) ? 1 : 0;
-            //         if ($is_used) {
-            //             $this->error = '该材料已被使用，无法删除';
-            //             return false;
-            //         }
-            //     }
-            //     //
-            //     $this->where('product_id', '=', $product_id)->delete();
-            //     // 删除自助餐关联产品
-            //     (new BuffetProductModel)->where('product_id', '=', $product_id)->delete();
-            //     // 删除的规格材料
-            //     if ($type == ProductModel::TYPE_MATERIAL) {
-            //         $skuMaterials = ProductSkuMaterial::where('material_id', '=', $product_id)->select();
-            //         $productSkuIds = $skuMaterials->column('product_sku_id');
-            //         $newSkuMaterials = ProductSkuMaterial::where('product_sku_id', 'in', $productSkuIds)->select();
-            //         foreach ($skuMaterials as &$skuMaterial) {
-            //             $skuMaterial->delete();
-            //         }
-            //         $feedMaterials = ProductFeedMaterial::where('material_id', '=', $product_id)->select();
-            //         $productFeedIds = $feedMaterials->column('product_feed_id');
-            //         $newFeedMaterials = ProductFeedMaterial::where('product_feed_id', 'in', $productFeedIds)->select();
-            //         foreach ($feedMaterials as &$feedMaterial) {
-            //             $feedMaterial->delete();
-            //         }
-
-            //         // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-            //         $newSkuMaterialIds = $newSkuMaterials->column('material_id');
-            //         $newFeedMaterialIds = $newFeedMaterials->column('material_id');
-            //         $materialIds = array_merge($newSkuMaterialIds, $newFeedMaterialIds);
-            //         $this->reCalProductStock(array_unique($materialIds));
-            //     }
-            //     // 新增规格删除出库记录
-            //     $sku = ProductSku::with(['product'])->where('product_id', '=', $product_id)->select();
-            //     foreach ($sku as $item) {
-            //         $this->deleteInventoryRecord($item, '', $shop_supplier_id, $shop_user_id);
-            //     }
-            //     // 删除产品关联规格
-            //     ProductSku::where('product_id', '=', $product_id)->delete();
-            // }
             $this->commit();
             return true;
         } catch (\Exception $e) {
