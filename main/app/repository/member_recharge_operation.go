@@ -24,5 +24,5 @@ func NewMemberRechargeOperationRepoImpl(db *gorm.DB) *MemberRechargeOperationRep
 
 // AddLog 添加会员充值操作日志
 func (r *MemberRechargeOperationRepo) AddLog(log model.MemberRechargeOrderOperationLog) error {
-	return r.db.Create(&log).Error
+	return r.db.Model(&model.MemberRechargeOrderOperationLog{}).Create(&log).Error
 }

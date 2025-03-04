@@ -9,6 +9,7 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\ProductBom;
 use app\common\model\product\ProductSku;
+use think\facade\Log;
 
 /**
  * 库存记录模型
@@ -19,6 +20,8 @@ class ErpWarehouseOutForm extends BaseModel
     protected $name = 'warehouse_out_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    // protected $pk = 'id';
+    // protected $autoWriteTimestamp = false;
 
     /**
      * 追加字段
@@ -51,13 +54,13 @@ class ErpWarehouseOutForm extends BaseModel
     const STATUS_REVOKED = 30;
 
     //
-    public static function onBeforeInsert($model)
-    {
-        if (!isset($model['id'])) {
-            $model['id'] = StringHelp::uuid();
-        }
-        return $model;
-    }
+    // public static function onBeforeInsert($model)
+    // {
+    //     if (!isset($model['id'])) {
+    //         $model['id'] = StringHelp::uuid();
+    //     }
+    //     return $model;
+    // }
 
     /**
      * 商品规格名称
@@ -414,5 +417,39 @@ class ErpWarehouseOutForm extends BaseModel
         $rand = rand(1000, 9999);
         $code = 'OO' . $date . '0000' . $rand;
         return $code;
+    }
+
+    /**
+     * 添加出库记录
+     */
+    public function addOutForm($scene, $shopUserUuid, $data)
+    {
+        Log::debug('addOutForm:' . json_encode([
+            'form_no' => $this->generateOutCode(),
+            'scene' => $scene,
+            'operator_uuid' => $shopUserUuid,
+            'remark' => $data['remark'] ?? '',
+            'status' => $data['status'] ?? 0,
+            'associated_order_uuid' => $data['associated_order_uuid'] ?? 0,
+        ]));
+        $res = $this->save([
+            'form_no' => $this->generateOutCode(),
+            'scene' => $scene,
+            'operator_uuid' => $shopUserUuid,
+            'remark' => $data['remark'] ?? '',
+            'status' => $data['status'] ?? 0,
+            'associated_order_uuid' => $data['associated_order_uuid'] ?? 0,
+        ]);
+        if (!$res) {
+            return false;
+        }
+        $outFormItem = new ErpWarehouseOutFormItem();
+        return $outFormItem->save([
+            'warehouse_out_form_uuid' => $this->uuid,
+            'product_bom_uuid' => $data['product_bom_uuid'] ?? 0,
+            'material_uuid' => $data['material_uuid'] ?? 0,
+            'num' => $data['num'] ?? 0,
+            'scene' => $scene,
+        ]);
     }
 }

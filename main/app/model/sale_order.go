@@ -54,7 +54,7 @@ type SaleOrder struct {
 	PaymentOrders                []PaymentOrder                 `gorm:"foreignKey:RelatedUuid;references:uuid"`
 	Member                       Member                         `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }

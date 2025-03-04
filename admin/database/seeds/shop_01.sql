@@ -938,8 +938,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '充值订单编号',
+    `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待支付 1-paid已支付 2-canceled已取消',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '交易金额=充值金额+手续费',
+    `refund_money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
     `charge_due` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零',
     `recharge_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '充值金额',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送金额',
@@ -992,9 +994,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-success已入库 1-canceled已撤销',
-    `material_uuid` BIGINT UNSIGNED NOT NULL COMMENT '物料ID',
-    `purchase_order_uuid` BIGINT UNSIGNED NOT NULL COMMENT '采购订单ID',
-    `operator_uuid` BIGINT UNSIGNED NOT NULL COMMENT '操作员ID',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM表uuid',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '材料uuid',
+    `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购订单uuid',
+    `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员uuid',
     `revoke_time` INT(10) NOT NULL DEFAULT 0 COMMENT '撤销时间(时间戳)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1054,13 +1057,13 @@ CREATE TABLE `ttpos_purchase_form_log` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单uuid',
     `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
-    `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库',
+    `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-success已出库 1-canceled已撤销',
-    `operator_uuid` BIGINT UNSIGNED NOT NULL COMMENT '操作员ID',
-    `associated_order_uuid` BIGINT UNSIGNED NOT NULL COMMENT '关联订单ID',
+    `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员uuid',
+    `associated_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单uuid',
     `revoke_time` INT(10) NOT NULL DEFAULT 0 COMMENT '撤销时间(时间戳)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1070,11 +1073,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单明细ID',
-    `warehouse_out_form_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单ID',
-    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单明细uuid',
+    `warehouse_out_form_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单uuid',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM表uuid',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '材料uuid',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
-    `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,0-sales销售 1-adjust调整 2-loss损耗 3-lost丢失',
+    `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,0-sales销售 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1592,9 +1596,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_cashier_duty_detail` (
 CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货单唯一标识符',
-    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
-    `sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售订单号',
-    `return_type` INT(11) NOT NULL DEFAULT 0 COMMENT '退货类型,1-整单退货,2-部分退货',
+    `related_order_type` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
+    `related_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单ID',
+    `related_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单号',
+    `is_reverse_settlement` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否反结账：0-否；1-是',
+    `return_type` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货类型,1-整单退货,2-部分退货',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额,包括税额',
     `refund_tax_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款税额',
     `refund_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因',
@@ -1604,6 +1610,18 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '退货单表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_return_order_amount` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货金额唯一标识符',
+    `return_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联退货单ID',
+    `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联支付方式ID',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '退款金额表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

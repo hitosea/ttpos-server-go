@@ -22,6 +22,6 @@ func NewCashBoxLogRepoImpl(db *gorm.DB) ICashBoxLogRepo {
 }
 
 func (r *cashBoxLogRepo) Create(cashBoxLog model.CashBoxLog) (model.CashBoxLog, error) {
-	err := r.db.Create(&cashBoxLog).Error
+	err := r.db.Model(&model.CashBoxLog{}).Create(&cashBoxLog).Error
 	return cashBoxLog, err
 }

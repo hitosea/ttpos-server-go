@@ -4,12 +4,14 @@ namespace app\common\model\product;
 
 use help\ValidateHelp;
 use app\common\model\BaseModel;
+use app\common\model\erp\ErpWarehouseForm;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\product\RelatedMaterial as ProductRelatedMaterial;
 use app\common\model\store\MultiLanguageName;
 use app\shop\model\product\Product;
 use app\shop\model\product\RelatedMaterial;
+use think\facade\Db;
 use think\model\concern\SoftDelete;
 
 /**
@@ -207,18 +209,36 @@ class Material extends BaseModel
         }
         $data = $this->sanitizeProductData($data);
         //
-        $data['name'] = $product_name;
-        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name);
-        $data['category_uuid'] = $data['category_id'] ?? 0;
-        $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
-        $data['image_uuid'] = $imageIds[0] ?? 0;
-        $data['image_name'] = $data['img_name'] ?? 0;
-        $data['unit_uuid'] = $data['unit_id'] ?? 0;
-        $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
-        $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-        $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
-        $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
-        return $this->save($data);
+        return Db::transaction(function () use($data, $product_name, $imageIds) {
+            $data['name'] = $product_name;
+            $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name);
+            $data['category_uuid'] = $data['category_id'] ?? 0;
+            $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
+            $data['image_uuid'] = $imageIds[0] ?? 0;
+            $data['image_name'] = $data['img_name'] ?? 0;
+            $data['unit_uuid'] = $data['unit_id'] ?? 0;
+            $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
+            $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
+            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
+            $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+            if (!$this->save($data)) {
+                return false;
+            }
+
+            // 添加入库记录
+            if ((new Product())->hasInventoryAuth()) {
+                $formModel = new ErpWarehouseForm();
+                return $formModel->save([
+                    'form_no' => $formModel->generateInCode(),
+                    'scene' => 1,
+                    'num' => $this->stock_num,
+                    'material_uuid' => $this->uuid,
+                    'operator_uuid' => $data['shop_user_id'],
+                ]);
+            }
+
+            return true;
+        });
     }
 
     /**

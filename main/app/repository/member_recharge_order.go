@@ -12,6 +12,8 @@ type IMemberRechargeOrderRepo interface {
 	WithPaymentOrders() DBOption                                                                                     // 预加载支付订单
 	WithPaymentOrderPaymentMethod() DBOption                                                                         // 预加载支付订单.支付方式
 	WithRechargeOrderOperationLogs() DBOption                                                                        // 预加载操作日志
+	WithReturnOrders() DBOption                                                                                      // 关联退货单
+	WithReturnOrderAmount() DBOption                                                                                 // 关联退货单.退款金额
 	WhereUuid(uuid uint64) DBOption                                                                                  // Uuid条件
 	WhereStatus(status int) DBOption                                                                                 // 状态条件
 	WhereOrderNoLike(keyword string) DBOption                                                                        // 订单编号模糊搜索
@@ -188,6 +190,24 @@ func (r *memberRechargeOrderRepo) WithRechargeOrderOperationLogs() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("RechargeOrderOperationLogs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("create_time desc")
+		})
+	}
+}
+
+// WithReturnOrders 预加退货订单
+func (r *memberRechargeOrderRepo) WithReturnOrders() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ReturnOrders", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted).Where("related_order_type = 1").Where("is_reverse_settlement = 0")
+		})
+	}
+}
+
+// WithReturnOrderAmount 预加退货订单.退款金额
+func (r *memberRechargeOrderRepo) WithReturnOrderAmount() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ReturnOrders.ReturnOrderAmounts", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
 		})
 	}
 }
