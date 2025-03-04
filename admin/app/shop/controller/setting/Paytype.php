@@ -28,6 +28,11 @@ class Paytype extends Controller
         $app_id = $this->store['app']['app_id'];
         $shop_supplier_id = $this->store['user']['shop_supplier_id'];
         $list = PayTypeModel::list($shop_supplier_id, $app_id);
+        foreach ($list as $key => $item) {
+            $item['img'] = $item['logoFile'] ? $item['logoFile']['file_path'] : '';
+            $item['qrcode'] = $item['qrcodeFile'] ? $item['qrcodeFile']['file_path'] : '';
+            $list[$key] = $item;
+        }
         // 支付方式
         $payment = SettingModel::getSupplierItem(SettingEnum::PAYMENT, $shop_supplier_id);
         return $this->renderSuccess('', compact('list', 'payment'));
@@ -203,9 +208,11 @@ class Paytype extends Controller
         //
         $param['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
         $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $param['is_show_checkout']) ? 1 : 0;
-        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_recharge']) ? 1 : 0;
-        $param['logo_url'] = ImgHelp::removeImageDomain($param['img'] ?? '');
-        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_recharge'] ?: []) ? 1 : 0;
+        $param['logo_file_uuid'] = $param['img']['file_id'] ?? 0;
+        $param['qrcode_file_uuid'] = $param['qrcode']['file_id'] ?? 0;
+        $param['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path'] ?? '');
+        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode']['file_path'] ?? '');
         $param['payment_name'] = $remark;
         $param['fee_percent'] = $param['fee'];
         $orderPayType->save($param);

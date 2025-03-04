@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `source` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '来源 0-系统 1-手动 2-LianLianPay',
     `logo_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'logo图片ID',
     `qrcode_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '二维码图片ID',
-    `fee_percent` DECIMAL(5, 2) NOT NULL DEFAULT 0 COMMENT '手续费百分比',
+    `fee_percent` DECIMAL(10, 4) NOT NULL DEFAULT 0 COMMENT '手续费百分比',
     `is_show_cashier` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机结账显示',
     `is_show_assistant` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-点餐助手结账显示',
     `is_show_member_recharge` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机会员充值显示',

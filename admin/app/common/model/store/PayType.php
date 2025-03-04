@@ -8,6 +8,7 @@ use app\common\library\helper;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\enum\order\OrderPayTypeEnum;
+use app\common\model\file\UploadFile;
 use app\common\service\payment\PaymentService;
 
 /**
@@ -89,6 +90,23 @@ class PayType extends BaseModel
     }
 
     /**
+     * 获取手续费
+     */
+    public function setFeePercentAttr($value)
+    {
+        return floatval(helper::bcdiv($value, 100, 4));
+    }
+
+    /**
+     * 设置手续费
+     */
+    public function getFeePercentAttr($value, $data)
+    {
+        return floatval(helper::bcmul($value, 100, 2));
+    }
+
+
+    /**
      * 渠道获取
      */
     public function getSourceTextAttr($value, $data)
@@ -140,6 +158,22 @@ class PayType extends BaseModel
     }
 
     /**
+     * 关联logo图片
+     */
+    public function logoFile()
+    {
+        return $this->belongsTo(UploadFile::class, 'logo_file_uuid', 'uuid');
+    }
+
+    /**
+     * 关联二维码图片
+     */
+    public function qrcodeFile()
+    {
+        return $this->belongsTo(UploadFile::class, 'qrcode_file_uuid', 'uuid');
+    }
+
+    /**
      * 计算手续费
      * @param $price
      * @return float
@@ -159,7 +193,9 @@ class PayType extends BaseModel
      */
     public static function listAll($shopSupplierId = 0, $appId = 0)
     {
-        return self::orderRaw('CAST(sort AS UNSIGNED)')
+        return self::with([
+            'logoFile', 'qrcodeFile'
+        ])->orderRaw('CAST(sort AS UNSIGNED)')
             ->field('*, code as value')
             ->order('create_time', 'desc')
             ->select()
@@ -272,8 +308,10 @@ class PayType extends BaseModel
         unset($param['id']);
         $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('code');
         $param['code'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
-        $param['logo_url'] = ImgHelp::removeImageDomain($param['img'] ?? '');
-        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode'] ?? '');
+        $param['logo_file_uuid'] = $param['img']['file_id'] ?? 0;
+        $param['qrcode_file_uuid'] = $param['qrcode']['file_id'] ?? 0;
+        $param['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path'] ?? '');
+        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode']['file_path'] ?? '');
         $param['payment_name'] = $remark;
         $param['fee_percent'] = $param['fee'];
         $param['is_show_cashier'] = in_array(self::CASHIER_SHOW_VALUE, $param['is_show_checkout'] ?: []) ? 1 : 0;

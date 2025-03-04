@@ -309,10 +309,10 @@
         this.form.is_show_checkout = this.editItem.is_show_checkout;
         this.form.is_show_recharge = this.editItem.is_show_recharge;
         if (this.editItem.img) {
-          this.form.img.push({ file_path: this.editItem.img });
+          this.form.img.push({ file_id: this.editItem.logo_file_uuid, file_path: this.editItem.img });
         }
         if (this.editItem.qrcode) {
-          this.form.qrcode.push({ file_path: this.editItem.qrcode });
+          this.form.qrcode.push({ file_id: this.editItem.qrcode_file_uuid, file_path: this.editItem.qrcode });
         }
       }
     },
@@ -445,16 +445,16 @@
         data.add_method = JSON.parse(JSON.stringify(self.form.add_method));
         if (data.add_method == 1) {
           data = JSON.parse(JSON.stringify(self.form));
-          data.img = JSON.parse(JSON.stringify(self.form?.img[0]?.file_path || ''));
-          data.qrcode = JSON.parse(JSON.stringify(self.form?.qrcode[0]?.file_path || ''));
+          data.img = JSON.parse(JSON.stringify(self.form?.img[0] || '{}'));
+          data.qrcode = JSON.parse(JSON.stringify(self.form?.qrcode[0] || '{}'));
           data.is_show_checkout.length == 0 ? (data.is_show_checkout = '') : '';
           data.is_show_recharge.length == 0 ? (data.is_show_recharge = '') : '';
         } else {
           data.params = JSON.parse(JSON.stringify(self.form.params));
           data.params.map((item) => {
             delete item.id;
-            item.img = JSON.parse(JSON.stringify(item?.img[0]?.file_path || ''));
-            item.qrcode = JSON.parse(JSON.stringify(item?.qrcode[0]?.file_path || ''));
+            item.img = JSON.parse(JSON.stringify(item?.img[0] || '{}'));
+            item.qrcode = JSON.parse(JSON.stringify(item?.qrcode[0] || '{}'));
             item.is_show_checkout.length == 0 ? (item.is_show_checkout = '') : '';
             item.is_show_recharge.length == 0 ? (item.is_show_recharge = '') : '';
           });
