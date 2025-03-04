@@ -421,13 +421,13 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		return
 	}
 	//
-	_, err := h.orderService.OrderChangePopulation(ctx, params)
+	info, err := h.orderService.OrderChangePopulation(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // OrderProductRemark 处理桌台订单商品备注
