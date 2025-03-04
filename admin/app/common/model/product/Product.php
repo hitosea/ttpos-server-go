@@ -6,6 +6,7 @@ use think\facade\Db;
 use think\facade\Env;
 use app\common\library\helper;
 use app\common\model\BaseModel;
+use app\common\model\buffet\BuffetProduct;
 use app\common\model\erp\ErpSupplier;
 use app\common\model\file\UploadFile;
 use app\common\model\order\OrderBuffet;
@@ -383,6 +384,14 @@ class Product extends BaseModel
     public function MultiLanguageName()
     {
         return $this->belongsTo(MultiLanguageName::class, 'multi_language_name_uuid', 'uuid');
+    }
+
+    /**
+     * 关联自助餐商品
+     */
+    public function buffetProduct()
+    {
+        return $this->hasMany(BuffetProduct::class, 'product_package_uuid', 'uuid');
     }
 
 

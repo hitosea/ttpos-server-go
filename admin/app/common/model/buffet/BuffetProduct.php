@@ -14,6 +14,8 @@ class BuffetProduct extends BaseModel
     protected $name = 'buffet_product';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $pk = 'id';
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段
