@@ -52,13 +52,15 @@ type BillLists struct {
 
 // OrderListPaginationResp 订单列表分页响应
 type OrderListPaginationResp struct {
-	List []BillLists `json:"list"` // 订单列表
-	Meta struct {
-		dto.PageResponse
-		UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
-		CompleteNum int64 `json:"complete_num"` // 已完成数量
-		CancelNum   int64 `json:"cancel_num"`   // 已取消数量
-	} `json:"meta"` // Meta信息
+	List []BillLists   `json:"list"` // 订单列表
+	Meta OrderListMeta `json:"meta"` // Meta信息
+}
+
+type OrderListMeta struct {
+	dto.PageResponse
+	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
+	CompleteNum int64 `json:"complete_num"` // 已完成数量
+	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
 }
 
 type OrderInfoPayTypes struct {

@@ -9,7 +9,9 @@ import (
 // IBuffetRepo 桌台
 type IBuffetRepo interface {
 	GetBuffetList(pageNo, pageSize int, opts ...DBOption) ([]*model.BuffetPackage, int64, error)
+	GetBuffetListNoPage(opts ...DBOption) ([]*model.BuffetPackage, error)
 	GetBuffetListInDeskOpen(pageNo, pageSize int) ([]*model.BuffetPackage, int64, error) // 获取自助餐列表（桌台开台）
+	GetBuffetListByUuids(uuids []uint64) ([]*model.BuffetPackage, error)                 // 获取自助餐列表通过UUID列表，用于开台写入顾客数据
 	GetBuffetInfo(opts ...DBOption) (model.BuffetPackage, error)                         // 获取自助餐详情
 	GetBuffetCustomerTypeInfo(opts ...DBOption) (model.BuffetCustomerType, error)        // 获取自助餐顾客类型详情
 	GetBuffetCustomerTypePrice(opts ...DBOption) (model.BuffetCustomerTypePrice, error)  // 获取自助餐顾客类型价格
@@ -48,22 +50,45 @@ func (r *BuffetRepoImpl) GetBuffetList(pageNo, pageSize int, opts ...DBOption) (
 	return buffets, total, err
 }
 
+func (r *BuffetRepoImpl) GetBuffetListNoPage(opts ...DBOption) ([]*model.BuffetPackage, error) {
+	list, _, err := r.GetBuffetList(1, 1000000, opts...)
+	return list, err
+}
+
 // GetBuffetListInDeskOpen 获取自助餐列表（桌台开台）
 func (r *BuffetRepoImpl) GetBuffetListInDeskOpen(pageNo, pageSize int) ([]*model.BuffetPackage, int64, error) {
 	return r.GetBuffetList(pageNo, pageSize,
-		NewCommonRepo().Preload(WithPreload{
+		CommonRepo.Preload(WithPreload{
 			Query: "MultiLanguageName",
 		}),
-		NewCommonRepo().Preload(WithPreload{
+		CommonRepo.Preload(WithPreload{
 			Query: "BuffetCustomerTypePrices",
 			Args: []interface{}{
 				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 			},
 		}),
-		NewCommonRepo().Preload(WithPreload{
+		CommonRepo.Preload(WithPreload{
 			Query: "BuffetCustomerTypePrices.BuffetCustomerType",
 		}),
 	)
+}
+
+func (r *BuffetRepoImpl) GetBuffetListByUuids(uuids []uint64) ([]*model.BuffetPackage, error) {
+	return r.GetBuffetListNoPage(
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereInUuids(uuids),
+		CommonRepo.Preload(WithPreload{
+			Query: "MultiLanguageName",
+		}),
+		CommonRepo.Preload(WithPreload{
+			Query: "BuffetCustomerTypePrices",
+			Args: []interface{}{
+				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			},
+		}),
+		CommonRepo.Preload(WithPreload{
+			Query: "BuffetCustomerTypePrices.BuffetCustomerType",
+		}))
 }
 
 // GetBuffetInfo 获取自助餐详情

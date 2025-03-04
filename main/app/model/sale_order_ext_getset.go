@@ -24,7 +24,7 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 func (model *SaleOrder) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)
 	for _, buffet := range model.SaleOrderBuffetCustomerTypes {
-		buffets = append(buffets, buffet.BuffetPackageMultiLanguageName.GetNameByLang(language))
+		buffets = append(buffets, buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language))
 	}
 	return strings.Join(buffets, "+")
 }

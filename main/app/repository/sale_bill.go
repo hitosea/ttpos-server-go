@@ -16,6 +16,7 @@ type ISaleBillRepo interface {
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
 	GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
+	GetInstantSaleBillLatest() (*model.SaleBill, error)                         // 获取最新的一条点餐销售账单
 }
 
 type saleBillRepo struct {
@@ -150,4 +151,15 @@ func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleB
 		return nil, 0, err
 	}
 	return saleBills, total, nil
+}
+
+func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
+		CommonRepo.SortWithCreateTime("desc"),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &saleBill, nil
 }

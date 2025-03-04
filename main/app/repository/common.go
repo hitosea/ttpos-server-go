@@ -47,6 +47,7 @@ type ICommonRepo interface {
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	SortWithID(order string) DBOption                               // 根据ID排序
+	SortWithCreateTime(order string) DBOption                       // 根据创建时间排序
 	SortWithSort(order string) DBOption                             // 根据Order By排序
 	SortWithIsSpecial(order string) DBOption                        // 根据是否特殊排序
 	Preload(preloads ...WithPreload) DBOption                       // 预加载
@@ -212,6 +213,12 @@ func (r *commonRepo) WhereByProductIsAccept() DBOption {
 func (r *commonRepo) SortWithID(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("id " + order)
+	}
+}
+
+func (r *commonRepo) SortWithCreateTime(order string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order("create_time " + order)
 	}
 }
 

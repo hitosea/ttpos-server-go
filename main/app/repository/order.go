@@ -173,9 +173,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			WithPreload{
 				Query: "SaleOrders",
 				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", 0)
-					},
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{
@@ -419,7 +417,10 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 					),
 					CommonRepo.Preload(
 						WithPreload{
-							Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackageMultiLanguageName",
+							Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
 						},
 					),
 					CommonRepo.Preload(

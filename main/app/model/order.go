@@ -91,6 +91,17 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = BuffetPackage{}
 }
 
+func (model *SaleBill) SetBuffetPackage(buffetPackageUuids []uint64) {
+	if len(buffetPackageUuids) == 1 {
+		model.BuffetPackage1Uuid = buffetPackageUuids[0]
+		model.BuffetPackage2Uuid = 0
+	}
+	if len(buffetPackageUuids) == 2 {
+		model.BuffetPackage1Uuid = buffetPackageUuids[0]
+		model.BuffetPackage2Uuid = buffetPackageUuids[1]
+	}
+}
+
 // 判断自助餐是否限时
 func (model *SaleBill) IsTimeLimited() bool {
 	// 自助餐时长为0，表示不限时
@@ -424,7 +435,7 @@ func (model *SaleBill) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)
 	for _, order := range model.SaleOrders {
 		for _, buffet := range order.SaleOrderBuffetCustomerTypes {
-			name := buffet.BuffetPackageMultiLanguageName.GetNameByLang(language)
+			name := buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language)
 			if !slices.Contains(buffets, name) {
 				buffets = append(buffets, name)
 			}
@@ -649,10 +660,9 @@ type SaleOrderBuffetCustomerType struct {
 
 	Name string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'名称'"`
 	// 关联ID字段
-	SaleOrderUuid                      uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
-	BuffetPackageUuid                  uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
-	BuffetPackageMultiLanguageNameUuid uint64 `gorm:"column:buffet_package_multi_language_name_uuid;comment:自助餐套餐多语言ID" json:"buffet_package_multi_language_name_uuid"`
-	BuffetCustomerTypePriceUuid        uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
+	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
+	BuffetPackageUuid           uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetCustomerTypePriceUuid uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
 
 	// 数值字段
 	Num                uint    `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
@@ -667,8 +677,8 @@ type SaleOrderBuffetCustomerType struct {
 	Amount             float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:应收金额(单人)。自助餐顾客类型已含税时，应收金额(单人)=(自助餐顾客类型原价-自助餐顾客类型税费)+服务费+自助餐顾客类型税费；自助餐顾客类型未含税时，应收金额(单人)=自助餐顾客类型原价+服务费+自助餐顾客类型税费" json:"amount"`
 
 	// 关联字段
-	BuffetPackageMultiLanguageName MultiLanguageName       `gorm:"foreignKey:BuffetPackageMultiLanguageNameUuid;references:uuid"`
-	BuffetCustomerTypePrice        BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
+	BuffetPackage           BuffetPackage           `gorm:"foreignKey:BuffetPackageUuid;references:uuid"`
+	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
 }
 
 // 获取顾客原价

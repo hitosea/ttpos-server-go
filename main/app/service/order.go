@@ -138,9 +138,14 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.New("订单编号生成失败")
 		}
 
+		serialNo, err := s.createInstantOrderSerialNo(tx)
+		if err != nil {
+			return errors.New("订单序号生成失败")
+		}
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
 			OrderNo:      orderNo,
+			SerialNo:     serialNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
 			DeviceUuid:   device.Uuid,
@@ -174,6 +179,40 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		SaleBillUuid:  billUuid,
 		SaleOrderUuid: orderUuid,
 	}, nil
+}
+
+func (s *orderSrv) createInstantOrderSerialNo(db *gorm.DB) (string, error) {
+	var serialNo string
+	saleBillRepo := repository.NewSaleBillRepo(db)
+	saleBill, err := saleBillRepo.GetInstantSaleBillLatest()
+	if err != nil {
+		return "", err
+	}
+	createTime := saleBill.CreateTime
+	// 判断账单的创建时间是不是今天
+	if !IsToday(createTime) {
+		serialNo = "0001"
+	} else {
+		oldSerialNo := saleBill.SerialNo
+		if oldSerialNo == "" {
+			// 如果serialNo为空，则设置为0001. 兼容老数据没有serialNo的情况
+			serialNo = "0001"
+		} else {
+			serialNoNum, err := strconv.Atoi(oldSerialNo)
+			if err != nil {
+				return "", err
+			}
+			serialNo = strconv.Itoa(serialNoNum + 1)
+		}
+		if len(serialNo) < 4 {
+			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo
+		}
+	}
+	return serialNo, nil
+}
+
+func IsToday(timestamp int64) bool {
+	return time.Unix(timestamp, 0).Format("20060102") == time.Now().Format("20060102")
 }
 
 func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
@@ -301,16 +340,25 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 			return errors.New("订单编号生成失败")
 		}
 
-		// 创建销售账单
-		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
+		isBuffet := len(req.BuffetUuids) > 0
+
+		saleBill := model.SaleBill{
 			OrderNo:      orderNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			IsBuffet:     utils.BoolToUint(*req.IsBuffet),
+			IsBuffet:     utils.BoolToUint(isBuffet),
 			MealNum:      *req.MealNum,
 			Remark:       req.Remark,
 			DeskUuid:     req.DeskUuid,
-		})
+		}
+
+		// 设置自助餐套餐
+		if isBuffet {
+			saleBill.SetBuffetPackage(req.BuffetUuids)
+		}
+
+		// 创建销售账单
+		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(saleBill)
 		if err != nil {
 			return err
 		}
@@ -326,36 +374,52 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
 			serviceFee = saleBillSetting.ServiceFeeValue
 		}
-		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(model.SaleOrder{
+		saleOrderVar := model.SaleOrder{
 			SaleBillUuid: saleBill.Uuid,
 			OrderNo:      saleBill.OrderNo,
 			ServiceFee:   serviceFee,
-		})
+		}
+		saleOrder, err := repository.NewOrderRepo(tx).CreateSaleOrder(saleOrderVar)
 		if err != nil {
 			return err
 		}
 
-		if *req.IsBuffet {
-			commonRepo := repository.NewCommonRepo()
+		if isBuffet {
 			buffetRepo := repository.NewBuffetRepo(tx)
 			// 创建销售订单自助餐顾客类型
+			buffetList, err := buffetRepo.GetBuffetListByUuids(req.BuffetUuids)
+			if err != nil {
+				return err
+			}
+			//buffet_uuid => buffet_customer_type_uuid => buffet_customer_type_price_uuid
+			buffetUuidMap := make(map[uint64]map[uint64]*model.BuffetCustomerTypePrice)
+			for _, buffet := range buffetList {
+				for _, BuffetCustomerTypePrice := range buffet.BuffetCustomerTypePrices {
+					if buffetUuidMap[buffet.Uuid] == nil {
+						buffetUuidMap[buffet.Uuid] = make(map[uint64]*model.BuffetCustomerTypePrice)
+					}
+					buffetUuidMap[buffet.Uuid][BuffetCustomerTypePrice.CustomerTypeUuid] = &BuffetCustomerTypePrice
+				}
+			}
+
 			for _, buffetUuid := range req.BuffetUuids {
-				for _, buffetCustomerType := range req.BuffetCustomerTypes {
-					// 获取自助餐顾客类型价格
-					_, err = buffetRepo.GetBuffetCustomerTypePrice(
-						commonRepo.WhereByBuffetPackageUuid(buffetUuid),
-						commonRepo.WhereByCustomerTypeUuid(buffetCustomerType.Uuid),
-					)
-					if err != nil {
+				fmt.Println("len(req.BuffetCustomerTypes)::", len(req.BuffetCustomerTypes))
+				for _, CustomerType := range req.BuffetCustomerTypes {
+					num := *CustomerType.MealNum
+					if num == 0 {
 						continue
 					}
 
-					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(model.SaleOrderBuffetCustomerType{
+					saleOrderBuffetCustomerType := model.SaleOrderBuffetCustomerType{
 						SaleOrderUuid:               saleOrder.Uuid,
 						BuffetPackageUuid:           buffetUuid,
-						BuffetCustomerTypePriceUuid: buffetCustomerType.Uuid,
-						Num:                         *buffetCustomerType.MealNum,
-					})
+						BuffetCustomerTypePriceUuid: buffetUuidMap[buffetUuid][CustomerType.Uuid].Uuid,
+						Num:                         num,
+						CustomerPrice:               buffetUuidMap[buffetUuid][CustomerType.Uuid].Price,
+						Price:                       buffetUuidMap[buffetUuid][CustomerType.Uuid].Price,
+						TaxRate:                     0,
+					}
+					_, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(saleOrderBuffetCustomerType)
 					if err != nil {
 						return err
 					}
@@ -547,12 +611,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 	// 返回响应对象
 	return resp.OrderListPaginationResp{
 		List: billList,
-		Meta: struct {
-			dto.PageResponse
-			UnpaidNum   int64 `json:"unpaid_num"`
-			CompleteNum int64 `json:"complete_num"`
-			CancelNum   int64 `json:"cancel_num"`
-		}{
+		Meta: resp.OrderListMeta{
 			PageResponse: dto.PageResponse{
 				PageNo:   req.PageNo,
 				PageSize: req.PageSize,
@@ -1614,27 +1673,27 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
 		{
-			for _, buffet := range saleOrder.SaleOrderBuffetCustomerTypes {
-				if buffet.IsDelete() {
+			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
+				if orderBuffetCustomer.IsDelete() {
 					continue
 				}
 				// 自助餐顾客价格收费列表
 				product := resp.Product{
-					Uuid:       buffet.Uuid,
-					LocaleName: buffet.BuffetPackageMultiLanguageName.GetNames(),
+					Uuid:       orderBuffetCustomer.Uuid,
+					LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
 					LocaleAttributeName: dto.LocaleResponse{
-						ZH:   buffet.Name,
-						TH:   buffet.Name,
-						EN:   buffet.Name,
-						ZHTW: buffet.Name,
-						JA:   buffet.Name,
-						KO:   buffet.Name,
-						MY:   buffet.Name,
-						TR:   buffet.Name,
+						ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
-					Num:           buffet.Num, // 这种类型顾客多少个，如老人这个类型2人
-					SalePrice:     buffet.GetOriginPrice(),
-					DiscountPrice: buffet.GetOriginPrice(),
+					Num:           orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+					SalePrice:     orderBuffetCustomer.GetOriginPrice(),
+					DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
 					Status:        1,
 					Remark:        "",
 					IsMust:        false,
@@ -2916,6 +2975,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
 		return nil, err
 	}
+
+	// 更新销售账单
+	// todo: 更新销售账单
 
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
