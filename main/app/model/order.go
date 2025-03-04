@@ -116,6 +116,12 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+func (model *SaleBill) ChangeDesk(deskUuid uint64) {
+	model.DeskUuid = deskUuid
+	// 设置旧桌台关闭
+	model.Desk.SetCloseDesk()
+}
+
 // 判断销售账单已经是可以完成，即所有销售订单都已经结账
 func (model *SaleBill) CanFinishSaleBill() bool {
 	for _, saleOrder := range model.SaleOrders {
