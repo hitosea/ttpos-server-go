@@ -45,6 +45,26 @@ func TestGetUUID16(t *testing.T) {
 	wg.Wait()
 }
 
+func TestGetUUID16For(t *testing.T) {
+	idMap := sync.Map{}
+	var index uint64 = 0
+	for j := 0; j < 10000000000; j++ {
+		id, err := GetID()
+		if err != nil {
+			log.Printf("生成ID失败: %v", err)
+			continue
+		}
+		if _, exists := idMap.Load(id); exists {
+			t.Errorf("重复的ID: %d", id)
+		} else {
+			idMap.Store(id, true)
+		}
+		index++
+		fmt.Println(" 当前索引: ", index, "uuid16 生成 Uuid: ", id)
+	}
+
+}
+
 func TestGetUUIDFile(t *testing.T) {
 	gen()
 }
