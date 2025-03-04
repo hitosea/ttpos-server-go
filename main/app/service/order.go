@@ -1523,7 +1523,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}()
 
 	// 修改订单商品人数
-	if err := orderRepo.ChangePopulation(req.SaleBillUuid, req.Population); err != nil {
+	if err := orderRepo.ChangePopulation(req.SaleBillUuid, int(req.Population)); err != nil {
 		return nil, err
 	}
 

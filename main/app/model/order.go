@@ -653,7 +653,7 @@ func (model *SaleBillSetting) GetServiceFeeRate() float64 {
 	}
 }
 
-// SaleOrderBuffetCustomerType 销售订单自助餐顾客类型
+// SaleOrderBuffetCustomerType 销售订单自助餐顾客类型 `ttpos_sale_order_buffet_customer_type`
 type SaleOrderBuffetCustomerType struct {
 	// 主键字段
 	BaseModel
