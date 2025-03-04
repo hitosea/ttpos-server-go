@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"runtime/debug"
 	"ttpos-server-go/app/constant"
@@ -17,10 +18,13 @@ func Recovery(logger *zap.Logger, mode string) gin.HandlerFunc {
 					"code":    500,
 					"message": "Internal Server Error",
 				}
+				errMsg := string(debug.Stack())
 				if mode == constant.ServerModeDebug {
 					internalErr["error"] = err
-					internalErr["stack"] = string(debug.Stack())
+					internalErr["stack"] = errMsg
+					fmt.Println(errMsg)
 				}
+				logger.Error("panic", zap.Any("stack", errMsg))
 				c.AbortWithStatusJSON(http.StatusInternalServerError, internalErr)
 			}
 		}()
