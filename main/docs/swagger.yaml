@@ -1331,6 +1331,10 @@ definitions:
       device_remark:
         description: 设备备注
         type: string
+      payment:
+        allOf:
+        - $ref: '#/definitions/setting.Payment'
+        description: 支付设置
       permissions:
         description: 页面权限
         items:
@@ -3937,12 +3941,34 @@ definitions:
     type: object
   resp.TabletBase:
     properties:
-      tablet_uuid:
-        description: 平板端员工UUID
-        type: integer
-      username:
-        description: 登录账号
-        type: string
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      cashier:
+        allOf:
+        - $ref: '#/definitions/setting.Cashier'
+        description: 收银机设置
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      kitchen:
+        allOf:
+        - $ref: '#/definitions/setting.Kitchen'
+        description: 厨显端设置
+      store:
+        allOf:
+        - $ref: '#/definitions/setting.Store'
+        description: 商家设置
+      tablet:
+        allOf:
+        - $ref: '#/definitions/setting.Tablet'
+        description: 平板端设置
     type: object
   resp.TabletDeskItem:
     properties:
@@ -4383,6 +4409,58 @@ definitions:
         description: 端口号
         type: string
     type: object
+  setting.Store:
+    properties:
+      address:
+        description: 地址
+        type: string
+      auth_language:
+        description: 授权语言
+        type: string
+      avatar_url:
+        description: 默认头像
+        type: string
+      chain_number:
+        description: 连锁编号
+        type: string
+      company:
+        description: 公司名称
+        type: string
+      ip_white_list:
+        description: ip白名单
+        type: string
+      language:
+        description: 系统语言
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      logo_url:
+        description: 商城logo
+        type: string
+      name:
+        description: 商城名称
+        type: string
+      no_clear_table:
+        description: 结账后不清台 0-清台 1-不清台
+        type: string
+      phone:
+        description: 联系电话
+        type: string
+      tax_number:
+        description: 税号
+        type: string
+      time_zone:
+        description: 时区
+        type: string
+      time_zone_list:
+        description: 时区列表
+        items:
+          $ref: '#/definitions/setting.TimeZoneItem'
+        type: array
+      zeroing_method:
+        description: '抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元'
+        type: string
+    type: object
   setting.Tablet:
     properties:
       advanced_password:
@@ -4436,6 +4514,15 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Server'
         description: 平板服务器连接
+    type: object
+  setting.TimeZoneItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
     type: object
   setting.ZeroingMethodItem:
     properties:
@@ -8470,7 +8557,7 @@ paths:
       tags:
       - 平板端.认证鉴权
   /tablet/bind_desk:
-    get:
+    post:
       consumes:
       - application/json
       description: 绑定/换绑桌台

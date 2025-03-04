@@ -6744,7 +6744,7 @@
             }
         },
         "/tablet/bind_desk": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -8850,6 +8850,14 @@
                 "device_remark": {
                     "description": "设备备注",
                     "type": "string"
+                },
+                "payment": {
+                    "description": "支付设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Payment"
+                        }
+                    ]
                 },
                 "permissions": {
                     "description": "页面权限",
@@ -12682,13 +12690,61 @@
         "resp.TabletBase": {
             "type": "object",
             "properties": {
-                "tablet_uuid": {
-                    "description": "平板端员工UUID",
-                    "type": "integer"
+                "buffet": {
+                    "description": "自助餐设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Buffet"
+                        }
+                    ]
                 },
-                "username": {
-                    "description": "登录账号",
-                    "type": "string"
+                "cashier": {
+                    "description": "收银机设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Cashier"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
+                "currency": {
+                    "description": "货币单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Currency"
+                        }
+                    ]
+                },
+                "kitchen": {
+                    "description": "厨显端设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Kitchen"
+                        }
+                    ]
+                },
+                "store": {
+                    "description": "商家设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Store"
+                        }
+                    ]
+                },
+                "tablet": {
+                    "description": "平板端设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Tablet"
+                        }
+                    ]
                 }
             }
         },
@@ -13319,6 +13375,77 @@
                 }
             }
         },
+        "setting.Store": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string"
+                },
+                "auth_language": {
+                    "description": "授权语言",
+                    "type": "string"
+                },
+                "avatar_url": {
+                    "description": "默认头像",
+                    "type": "string"
+                },
+                "chain_number": {
+                    "description": "连锁编号",
+                    "type": "string"
+                },
+                "company": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "ip_white_list": {
+                    "description": "ip白名单",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "系统语言",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "logo_url": {
+                    "description": "商城logo",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商城名称",
+                    "type": "string"
+                },
+                "no_clear_table": {
+                    "description": "结账后不清台 0-清台 1-不清台",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "联系电话",
+                    "type": "string"
+                },
+                "tax_number": {
+                    "description": "税号",
+                    "type": "string"
+                },
+                "time_zone": {
+                    "description": "时区",
+                    "type": "string"
+                },
+                "time_zone_list": {
+                    "description": "时区列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.TimeZoneItem"
+                    }
+                },
+                "zeroing_method": {
+                    "description": "抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元",
+                    "type": "string"
+                }
+            }
+        },
         "setting.Tablet": {
             "type": "object",
             "properties": {
@@ -13398,6 +13525,20 @@
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
+                }
+            }
+        },
+        "setting.TimeZoneItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

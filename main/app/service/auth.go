@@ -305,6 +305,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, err
 	}
+	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
+	if err != nil {
+		return cashierBase, err
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -320,7 +324,8 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-		Tablet: tabletSetting,
+		Tablet:  tabletSetting,
+		Payment: paymentSetting,
 	}, nil
 }
 
@@ -403,15 +408,46 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 // TabletBase 平板端基本信息
 func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	company := helper.GetCompany(ctx.GetGin())
-	staff := helper.GetStaff(ctx.GetGin())
-	var (
-		source   = helper.GetSource(ctx.GetGin())
-		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
-	)
-	_ = s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
+	companySetting := helper.GetCompanySetting(ctx.GetGin())
+
+	var tabletBase resp.TabletBase
+	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return tabletBase, err
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if err != nil {
+		return tabletBase, err
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return tabletBase, err
+	}
+	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
+	if err != nil {
+		return tabletBase, err
+	}
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
+	if err != nil {
+		return tabletBase, err
+	}
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return tabletBase, err
+	}
 	return resp.TabletBase{
-		Username:   staff.Username,
-		TabletUuid: staff.Uuid,
+		Company: resp.Company{
+			Uuid:     company.Uuid,
+			Name:     company.Name,
+			TimeZone: companySetting.Timezone,
+		},
+
+		Cashier:  cashierSetting,
+		Buffet:   buffetSetting,
+		Currency: currencySetting,
+		Tablet:   tabletSetting,
+		Kitchen:  kitchenSetting,
+		Store:    storeSetting,
 	}, nil
 }
 

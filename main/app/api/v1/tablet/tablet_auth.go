@@ -111,7 +111,7 @@ func (h *AuthHandler) GetDeskList(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.BindDeskReq true "绑定/换绑桌台请求参数"
 // @Success 200 {object} dto.Response
-// @Router /tablet/bind_desk [get]
+// @Router /tablet/bind_desk [post]
 func (h *AuthHandler) BindDesk(c *gin.Context) {
 	var bindDeskReq req.BindDeskReq
 	if err := c.ShouldBindJSON(&bindDeskReq); err != nil {

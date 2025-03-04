@@ -17,6 +17,7 @@ type CashierBase struct {
 	Permissions  []*Permission    `json:"permissions"`   // 页面权限
 	Company      Company          `json:"company"`       // 商家信息
 	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
+	Payment      setting.Payment  `json:"payment"`       // 支付设置
 }
 
 type AssistantStaff struct {
@@ -46,8 +47,13 @@ type AssistantBase struct {
 	Currency       setting.Currency  `json:"currency"`        // 货币设置
 }
 type TabletBase struct {
-	Username   string `json:"username"`    // 登录账号
-	TabletUuid uint64 `json:"tablet_uuid"` // 平板端员工UUID
+	Company  Company          `json:"company"`  // 商家信息
+	Cashier  setting.Cashier  `json:"cashier"`  // 收银机设置
+	Buffet   setting.Buffet   `json:"buffet"`   // 自助餐设置
+	Currency setting.Currency `json:"currency"` // 货币单位
+	Tablet   setting.Tablet   `json:"tablet"`   // 平板端设置
+	Kitchen  setting.Kitchen  `json:"kitchen"`  // 厨显端设置
+	Store    setting.Store    `json:"store"`    // 商家设置
 }
 
 type TabletDeskItem struct {
