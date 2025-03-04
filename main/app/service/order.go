@@ -1702,7 +1702,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					AboutBuffet: resp.AboutBuffet{
 						IsCustomer:       true,
 						IsDelay:          false,
-						CustomerTypeUuid: orderBuffetCustomer.Uuid,
+						CustomerTypeUuid: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
 						CustomerTypeName: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 				}
