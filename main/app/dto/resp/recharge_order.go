@@ -34,8 +34,10 @@ type RechargeOrderListMeta struct {
 }
 
 type RechargeOrderPaymentMethod struct {
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	Name       string  `json:"name"`        // 支付方式名称
+	Price      float64 `json:"price"`       // 支付金额
+	Code       int     `json:"code"`        // 支付方式代号
+	SourceText string  `json:"source_text"` // 来源
 }
 
 type RechargeOrderOperationLogItem struct {
@@ -83,9 +85,11 @@ type RefundRechargeOrderMemberInfo struct {
 }
 
 type RefundRechargeOrderPaymentRecord struct {
-	PaymentName      string  `json:"payment_name"`      // 支付方式名称
-	PaymentAmount    float64 `json:"payment_amount"`    // 支付金额
-	RefundableAmount float64 `json:"refundable_amount"` // 剩余可退款金额
+	PaymentMethodUuid uint64  `json:"-"`                 // 支付方式Uuid
+	PaymentMethodCode int     `json:"-"`                 // 支付方式代号
+	PaymentName       string  `json:"payment_name"`      // 支付方式名称
+	PaymentAmount     float64 `json:"payment_amount"`    // 支付金额
+	RefundableAmount  float64 `json:"refundable_amount"` // 剩余可退款金额
 }
 
 type RechargeOrderRefundInfo struct {

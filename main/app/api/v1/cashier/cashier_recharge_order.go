@@ -66,6 +66,7 @@ func (h *RechargeOrderHandler) GetRechargeOrderInfo(c *gin.Context) {
 	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
 	if err != nil {
 		helper.Fail(c, constant.CodeParamError, "参数错误")
+		return
 	}
 	res, err := h.rechargeOrderSrv.GetRechargeOrderInfo(helper.GetContext(c), uuid)
 	if err != nil {
@@ -137,6 +138,7 @@ func (h *RechargeOrderHandler) GetRechargeOrderRefundInfo(c *gin.Context) {
 	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
 	if err != nil {
 		helper.Fail(c, constant.CodeParamError, "参数错误")
+		return
 	}
 	res, err := h.rechargeOrderSrv.GetRechargeOrderRefundInfo(helper.GetContext(c), uuid)
 	if err != nil {
@@ -160,6 +162,7 @@ func (h *RechargeOrderHandler) CheckRechargeOrderReverseSettle(c *gin.Context) {
 	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
 	if err != nil {
 		helper.Fail(c, constant.CodeParamError, "参数错误")
+		return
 	}
 	res, err := h.rechargeOrderSrv.CheckRechargeOrderReverseSettle(helper.GetContext(c), uuid)
 	if err != nil {
@@ -193,6 +196,30 @@ func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// RechargeOrderRefund 充值订单退款
+// @Summary 充值订单退款
+// @Description 充值订单退款
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderRefundReq true "退款充值订单参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/recharge_order/refund [post]
+func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
+	var orderRefundReq req.RechargeOrderRefundReq
+	if err := c.ShouldBindJSON(&orderRefundReq); err != nil {
+		helper.HandleValidationError(c, err, orderRefundReq, req.LoginRequestMessage)
+		return
+	}
+	err := h.rechargeOrderSrv.RechargeOrderRefund(helper.GetContext(c), orderRefundReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // RegisterRechargeOrderHandlers 注册收银充值订单路由
 func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -222,8 +249,8 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.POST("/recharge_order/cancel", wrapper.CancelRechargeOrder)
 		privateApi.POST("/recharge_order/print_ticket", wrapper.PrintTicket)
 		privateApi.GET("/recharge_order/refund", wrapper.GetRechargeOrderRefundInfo)
-		privateApi.POST("/recharge_order/refund", nil) // todo 退款
+		privateApi.POST("/recharge_order/refund", wrapper.RechargeOrderRefund)
 		privateApi.GET("/recharge_order/check_reverse_settle", wrapper.CheckRechargeOrderReverseSettle)
-		privateApi.POST("/recharge_order/reverse-settle", wrapper.RechargeOrderReverseSettle)
+		privateApi.POST("/recharge_order/reverse_settle", wrapper.RechargeOrderReverseSettle)
 	}
 }

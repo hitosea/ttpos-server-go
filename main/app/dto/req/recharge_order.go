@@ -17,3 +17,9 @@ type RechargeOrderListReq struct {
 type RechargeOrderUuidReq struct {
 	Uuid uint64 `json:"uuid"` // 充值订单uuid
 }
+
+type RechargeOrderRefundReq struct {
+	Uuid        uint64  `json:"uuid" binding:"required"`                                   // 充值订单uuid
+	RefundType  uint    `json:"refund_type" binding:"required,oneof=1 2"`                  // 退款类型: 1-整单退款, 2-部分退款
+	RefundMoney float64 `json:"refund_money" binding:"omitempty,required_if=RefundType 2"` // 部分退款金额
+}

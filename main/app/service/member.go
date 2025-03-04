@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -219,11 +218,11 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 }
 
 type MemberBalanceChangeReq struct {
-	Uuid           uint64  `json:"uuid"`
-	RechargeAmount float64 `json:"recharge_amount"`
-	GiftAmount     float64 `json:"gift_amount"`
-	Scene          int     `json:"scene"`
-	Describe       string  `json:"describe"`
+	Uuid      uint64  `json:"uuid"`
+	Money     float64 `json:"money"`
+	GiftMoney float64 `json:"gift_money"`
+	Scene     int     `json:"scene"`
+	Describe  string  `json:"describe"`
 }
 
 // HandleMemberBalance 处理会员余额
@@ -235,18 +234,18 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 			return errors.New("会员不存在")
 		}
 		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"balance":                     member.Balance + changeReq.RechargeAmount,
-			"gift_balance":                member.GiftBalance + changeReq.GiftAmount,
-			"accumulated_recharge_amount": member.AccumulatedRechargeAmount + changeReq.RechargeAmount + changeReq.GiftAmount,
+			"balance":                     member.Balance + changeReq.Money,
+			"gift_balance":                member.GiftBalance + changeReq.GiftMoney,
+			"accumulated_recharge_amount": member.AccumulatedRechargeAmount + changeReq.Money + changeReq.GiftMoney,
 		}); err != nil {
 			return errors.New("更新会员余额失败")
 		}
 		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 			MemberUuid: changeReq.Uuid,
-			Scene:      constant.MemberBalanceLogRecharge,
-			Money:      changeReq.RechargeAmount + changeReq.GiftAmount,
-			GiftMoney:  changeReq.GiftAmount,
-			Describe:   fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
+			Scene:      changeReq.Scene,
+			Money:      changeReq.Money + changeReq.GiftMoney,
+			GiftMoney:  changeReq.GiftMoney,
+			Describe:   changeReq.Describe,
 		}); err != nil {
 			return errors.New("处理会员余额失败")
 		}

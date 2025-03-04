@@ -238,7 +238,7 @@ func (s *h5Srv) GetBuffetList(ctx context.Context, deskUuid uint64) (resp.H5Buff
 			NameText:       buffet.LocaleName.GetLocale(ctx.GetLanguage()),
 			Id:             buffet.Uuid,
 			Name:           buffet.LocaleName.GetLocale(ctx.GetLanguage()),
-			Price:          fmt.Sprintf("%d", buffet.Price),
+			Price:          fmt.Sprintf("%.2f", buffet.Price),
 			BuyLimitStatus: 0,
 			IsComb: func() int {
 				if buffet.CanCombined {

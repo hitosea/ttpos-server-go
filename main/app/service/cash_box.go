@@ -12,8 +12,15 @@ import (
 	"ttpos-server-go/pkg/lock"
 )
 
+type UpdateCashBalanceParam struct {
+	CashBoxLogType int
+	Amount         float64
+	Scene          int
+	OrderUuid      uint64
+}
+
 type ICashBoxSrv interface {
-	UpdateBalance(ctx context.Context, cashLogType int, amount float64, orderUuid uint64) error
+	UpdateBalance(ctx context.Context, param UpdateCashBalanceParam) error
 }
 
 func NewCashBoxSrv(dbm *database.DBManager) ICashBoxSrv {
@@ -33,7 +40,8 @@ func NewCashBoxSrvImpl(dbm *database.DBManager) ICashBoxSrv {
 }
 
 // UpdateBalance 更新钱箱余额
-func (s *cashBoxSrv) UpdateBalance(ctx context.Context, cashBoxLogType int, amount float64, orderUuid uint64) error {
+func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceParam) error {
+	cashBoxLogType := param.CashBoxLogType
 	if !slices.Contains([]int{constant.CashBoxLogTypeIn, constant.CashBoxLogTypeOut}, cashBoxLogType) {
 		return errors.New("钱箱操作类型错误")
 	}
@@ -41,6 +49,7 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, cashBoxLogType int, amou
 	s.uuidLock.LockUuid(companyUuid)
 	defer s.uuidLock.UnlockUuid(companyUuid)
 
+	amount := param.Amount
 	fn := func(tx *gorm.DB) error {
 
 		var err error
@@ -61,12 +70,20 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, cashBoxLogType int, amou
 			}
 		}
 
-		_, err = repository.NewCashBoxLogRepo(tx).Create(model.CashBoxLog{
-			Type:            cashBoxLogType,
-			Scene:           constant.CashBoxLogSceneRecharge,
-			Amount:          amount,
-			PaymentBillUuid: orderUuid,
-		})
+		log := model.CashBoxLog{
+			Type:   cashBoxLogType,
+			Scene:  param.Scene,
+			Amount: amount,
+		}
+
+		// TODO 钱箱日志，如果是充值订单付现金，订单如何保存；如果是退款充值订单，又该如何保存
+		switch param.Scene {
+		//case constant.CashBoxLogSceneRecharge:
+		//	log.PaymentBillUuid = param.OrderUuid
+		case constant.CashBoxLogSceneRefund:
+			log.RefundOrderAmountUuid = param.OrderUuid
+		}
+		_, err = repository.NewCashBoxLogRepo(tx).Create(log)
 
 		return err
 	}

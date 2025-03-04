@@ -39,7 +39,7 @@ func (s *rechargeOrderSrv) getRechargeLogData(order model.MemberRechargeOrder) s
 	operationData, _ := json.Marshal(RechargeLog{
 		OrderPrice:    order.RechargeAmount,
 		RechargeMoney: order.RechargeAmount,
-		PayPrice:      order.Amount,
+		PayPrice:      s.getRechargeOrderAmount(order.PaymentOrders),
 		GiftMoney:     order.GiftAmount,
 		GiftPoint:     order.GiftPoint,
 		PayFee:        s.getPayFee(order.PaymentOrders),
@@ -69,6 +69,7 @@ type ReverseSettleLog struct {
 	PayType   []PayType `json:"pay_type"`
 }
 
+// 订单反结账日志data
 func (s *rechargeOrderSrv) getReverseSettleLogData(order model.MemberRechargeOrder) string {
 	var payTypes []PayType
 	for _, paymentOrder := range order.PaymentOrders {
@@ -86,18 +87,36 @@ func (s *rechargeOrderSrv) getReverseSettleLogData(order model.MemberRechargeOrd
 	return string(operationData)
 }
 
+type RefundLog struct {
+	RefundType  uint    `json:"refund_type"`
+	RefundMoney float64 `json:"refund_money"`
+}
+
+// 订单退款日志data
+func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64) string {
+	operationData, _ := json.Marshal(RefundLog{
+		RefundType:  refundType,
+		RefundMoney: refundMoney,
+	})
+	return string(operationData)
+}
+
 func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOperationLog, language string) string {
 	switch log.Action {
 	case constant.RechargeOrderActionChangeAmount:
 		var changeAmount ChangeAmountLog
 		json.Unmarshal([]byte(log.Data), &changeAmount)
-		return fmt.Sprintf("%.2f %s %.2f", changeAmount.RechargeMoney, i18n.Translate(language, "变更为"), changeAmount.OldRechargeMoney)
+		return fmt.Sprintf("%.2f %s %.2f", changeAmount.OldRechargeMoney, i18n.Translate(language, "变更为"), changeAmount.RechargeMoney)
 	case constant.RechargeOrderActionRecharge:
 		var recharge RechargeLog
 		json.Unmarshal([]byte(log.Data), &recharge)
 		var payTypeList []string
 		for _, payType := range recharge.PayType { // ToDo 获取支付方式多语言
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), payType.Price))
+			price := payType.Price
+			if payType.Value == constant.PaymentMethodCodeCash {
+				price = price - recharge.ChangeDue
+			}
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
 		}
 		desc := fmt.Sprintf("%s %s %.2f，%s %s %.2f",
 			i18n.Translate(language, "订单金额"), i18n.Translate(language, "¥"), recharge.RechargeMoney,
@@ -111,11 +130,15 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 		json.Unmarshal([]byte(log.Data), &reverseSettle)
 		var payTypeList []string
 		for _, payType := range reverseSettle.PayType { // ToDo 获取支付方式多语言
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s.2%f", payType.Name, i18n.Translate(language, "¥"), payType.Price))
+			price := payType.Price
+			if payType.Value == constant.PaymentMethodCodeCash {
+				price = price - reverseSettle.ChangeDue
+			}
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
 		}
 		return strings.Join(payTypeList, "、")
 	case constant.RechargeOrderActionRefund:
-		// todo
+
 	}
 	return ""
 }
