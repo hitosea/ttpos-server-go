@@ -167,3 +167,9 @@ type OrderProductRemarkReq struct {
 	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
 	Remark           string `json:"remark"`                                // remark
 }
+
+// OrderChangeBuffet 订单调整自助餐
+type OrderChangeBuffet struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	Population   int    `json:"population" binding:"required"`     // 人数
+}
