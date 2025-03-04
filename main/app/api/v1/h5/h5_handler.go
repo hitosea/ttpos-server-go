@@ -1,7 +1,6 @@
 package h5
 
 import (
-	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -33,10 +32,8 @@ type H5Handler struct {
 // @Success 200 {object} resp.GetBaseInfoResponse{}
 // @Router /h5/index.php/scan/base.base/getInfo [post]
 func (h H5Handler) GetBaseInfo(c *gin.Context) {
-	fmt.Println("22222222222222")
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
-	fmt.Println("33333333")
 	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
 	info, err := h.service.GetCompanyInfo(ctx, deskUuid)
 	if err != nil {
@@ -44,7 +41,6 @@ func (h H5Handler) GetBaseInfo(c *gin.Context) {
 		helper.H5Fail(c, 500, "获取信息失败")
 		return
 	}
-	fmt.Println("4444")
 
 	helper.H5Success(c, info)
 }

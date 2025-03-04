@@ -29,8 +29,8 @@ const (
 )
 
 const (
-	OrderProductIsAcceptOrderAccepted = 1 // 已接单
-	OrderProductIsAcceptOrderUnAccept = 0 // 未接单
+	OrderProductIsAcceptOrderAccepted = Yes // 已接单
+	OrderProductIsAcceptOrderUnAccept = No  // 未接单
 )
 
 const (

@@ -448,7 +448,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 
 	// 构建销售账单
 	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, *req.MealNum, req.Remark, req.DeskUuid)
-	fmt.Println("y3333")
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
@@ -497,20 +496,24 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		fmt.Println("a1111")
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 			return errCreateSaleBill
 		}
+		fmt.Println("a222")
 
 		// 创建销售账单设置
 		if _, errCreateSaleBillSetting := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
 			return errCreateSaleBillSetting
 		}
+		fmt.Println("a333")
 
 		// 创建销售订单
 		if _, errCreateSaleOrder := repository.NewOrderRepo(tx).CreateSaleOrder(*saleOrder); errCreateSaleOrder != nil {
 			return errCreateSaleOrder
 		}
+		fmt.Println("a444")
 
 		// 如果是自助餐，有顾客列表的话，创建顾客
 		if len(saleOrderBuffetCustomerTypes) > 0 {
@@ -520,6 +523,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 				}
 			}
 		}
+		fmt.Println("a5555")
 
 		// 新桌台的状态
 		if errUpdate := repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, *desk); errUpdate != nil {
@@ -2066,7 +2070,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 	return shopCart, nil
 }
 
-func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOrderUuid, dskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOrderUuid, deskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 获取商品包信息
 	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(flavorProductBomUuid)
@@ -2152,9 +2156,26 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 	})
 	// 设置必点信息
 	var mustPlanUuid uint64
-	mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, saleBillUuid, productPackage.Uuid, dskUuid)
+	var isRequire bool
+	mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, saleBillUuid, productPackage.Uuid, deskUuid)
 	ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
-	saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
+	// 判断该必点方案是不是这个sale_biil的
+	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+	mustPlanList, errGetMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
+	if errGetMustPlan != nil {
+		return nil, errors.New(errGetMustPlan.Error())
+	}
+	for _, mustPlan := range mustPlanList {
+		if mustPlan.Uuid == mustPlanUuid {
+			isRequire = true
+		}
+	}
+	if isRequire {
+		saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
+	}
 
 	return saleOrderProduct, nil
 }
@@ -2195,6 +2216,26 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	// 计算商品数据。折扣、税费、服务
 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 
+	// 判断该商品是不是自助餐商品
+	if saleBill.IsBuffetSaleBill() {
+		// 获取自助餐商品包uuid列表
+		productPackageUuidMap := make(map[uint64]bool) // 自助餐商品包uuid
+		if saleBill.BuffetPackage1 != nil {
+			for _, buffetProduct := range saleBill.BuffetPackage1.BuffetProducts {
+				productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
+			}
+		}
+		if saleBill.BuffetPackage2 != nil {
+			for _, buffetProduct := range saleBill.BuffetPackage2.BuffetProducts {
+				productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
+			}
+		}
+		// 判断该商品是不是自助餐商品
+		if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
+			saleOrderProduct.SetIsBuffet()
+		}
+	}
+
 	// 查询是否存在签名相同的订单商品
 	orderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
 	if orderProduct == nil {
@@ -2204,7 +2245,6 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 	// 订单中存在相同签名的商品
 	//hasSameSign := false
 	if orderProduct != nil {
-		fmt.Println("you xiang 同的sign")
 		// 加上新增的商品数量
 		orderProduct.Num += saleOrderProduct.Num
 		orderProduct.SetUpdate()
@@ -2362,10 +2402,8 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 			limitNum := productPackageMap[productPackageUuid].LimitNum
 			// 0表示不限购
 			if limitNum == 0 {
-				fmt.Println("debug: 不限购")
 				continue
 			}
-			fmt.Println("debug: limitNum", limitNum, "num", num)
 			if num > limitNum {
 				statusMap[constant.CodeOrderCheckProductLimitOut] = append(statusMap[constant.CodeOrderCheckProductLimitOut], saleOrderProductMap[productPackageUuid])
 			}
@@ -2454,7 +2492,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 	if len(unCookingSaleOrderProducts) == 0 {
-		fmt.Println("debug: 没有未送厨的商品")
 		return nil, nil, errors.New("没有未送厨的商品")
 	}
 

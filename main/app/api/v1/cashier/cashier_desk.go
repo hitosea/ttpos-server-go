@@ -1,7 +1,7 @@
 package cashier
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -12,8 +12,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-
-	"go.uber.org/zap"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -120,30 +119,24 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/open [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
-	fmt.Println("23223432432423423423423423423423")
 
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
 	if err := c.ShouldBind(&params); err != nil {
-		fmt.Println("1111创建桌台订单失败", err)
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	fmt.Println("222222222222")
 
 	// 创建桌台订单
 	res, err := h.service.CreateDeskOrder(ctx, params)
 	// 处理错误
 	if err != nil {
-		fmt.Println("创建桌台订单失败", err)
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		fmt.Println("4444444")
-
+		defer utils.Panic(err)
 		return
 	}
-	fmt.Println("33333333")
 
 	// 返回结果
 	helper.Success(c, res)
