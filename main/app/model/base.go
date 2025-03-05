@@ -2,11 +2,11 @@ package model
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
-
 	"gorm.io/gorm"
 )
 
@@ -43,7 +43,7 @@ func (model *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 		uuid, err := utils.GetID()
 		if err != nil {
 			logger.Logger.Error("生成雪花ID失败", zap.Error(err))
-			return err
+			return errors.WithMessage(err)
 		}
 		model.Uuid = uuid
 	}

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"ttpos-server-go/app/errors
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 

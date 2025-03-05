@@ -1,13 +1,13 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -520,7 +520,7 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 		for _, so := range model.SaleOrders {
 			if len(saleOrderUuid) == 0 || slices.Contains(saleOrderUuid, so.Uuid) {
 				if err := so.ValidateOrderStatus(); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 			}
 		}
