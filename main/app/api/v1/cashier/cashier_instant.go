@@ -919,7 +919,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
-		privateApi.POST("/instant/order/payment/change", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.POST("/instant/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
 		privateApi.POST("/instant/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
 		privateApi.POST("/instant/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单

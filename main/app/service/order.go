@@ -3016,27 +3016,31 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 // InstantOrderPaymentInfo 获取结账页面信息
 func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
 	// 加锁
-	s.lock.LockUuid(saleBillUuid)
-	defer s.lock.UnlockUuid(saleBillUuid)
+	if ctx.NoLock() {
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
+	fmt.Println("a1111111")
 	// 获取销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-
+	fmt.Println("a2222222")
 	var saleOrder *model.SaleOrder
 	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
-
+	fmt.Println("a3333333")
 	var paymentMethods []*model.PaymentMethod
 	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
 	if len(paymentMethods) <= 0 {
 		return nil, errors.New("系统没有支付方式")
 	}
-
+	fmt.Println("a4444444")
 	memberInfo := resp.MemberInfo{}
 	if saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
 		memberInfo = resp.MemberInfo{
@@ -3048,7 +3052,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Points:   saleOrder.Member.Point,
 		}
 	}
-
+	fmt.Println("a5555555")
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {
 		order := resp.PaymentOrder{
@@ -3063,7 +3067,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		}
 		paymentOrders = append(paymentOrders, order)
 	}
-
+	fmt.Println("a6666666")
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
@@ -3119,7 +3123,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			amounts = append(amounts, amount)
 		}
 	}
-
+	fmt.Println("a7777777")
 	infoResp := &resp.InstantOrderPaymentInfoResp{
 		MemberInfo:     memberInfo,
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
