@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -35,9 +36,8 @@ func (r *deviceRepo) GetDevice(opts ...DBOption) (model.Device, error) {
 		db = opt(db)
 	}
 	err := db.First(&device).Error
-	return device, err
+	return device, errors.WithMessage(err, "db.First failed")
 }
-
 func (r *deviceRepo) GetDeviceBrand(opts ...DBOption) string {
 	var brand string
 	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)

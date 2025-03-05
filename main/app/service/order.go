@@ -1834,7 +1834,7 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 	deviceRepo := repository.NewDeviceRepo(db)
 	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
 	if errDevice != nil {
-		return 0, errors.New(errDevice.Error())
+		return 0, errors.WithMessage(errDevice, "deviceRepo.GetDevice failed")
 	}
 	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
@@ -1862,7 +1862,7 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	// 查询购物车信息
 	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if errInfo != nil {
-		return nil, nil
+		return nil, errInfo
 	}
 	return cartInfo, nil
 }

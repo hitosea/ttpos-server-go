@@ -373,13 +373,14 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 	deviceSn := ctx.GetDeviceSn()
 	ctx.Log().Debug("查询点餐销售账单", zap.Any("deviceSn", deviceSn))
 	if deviceSn == "" {
-		helper.ResponseFail(c, constant.CodeFail, errors.ErrNoDeviceSn)
+		err := errors.NewWithCode(constant.CodeParamError, "DeviceSn should not be an empty string")
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, ""))
 		return
 	}
 	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
 	res, err := h.orderService.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderService.GetOrderCartInfoByDeviceSn failed"))
 		return
 	}
 	if res == nil {

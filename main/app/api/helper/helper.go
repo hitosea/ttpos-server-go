@@ -22,6 +22,12 @@ import (
 
 // ErrorWithDetail 返回错误
 func ErrorWithDetail(c *gin.Context, code int, err error) {
+	if config.Server.Mode == constant.ServerModeRelease {
+		// 只有Release模式才返回原始错误信息。如123123
+		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
+		err = errors.Cause(err)
+	}
+	logger.Logger.Info("ErrorWithDetail", zap.String("error", err.Error()))
 	messages := []string{err.Error()}
 	var appErr apperrors.AppError
 	if errors.As(err, &appErr) {
