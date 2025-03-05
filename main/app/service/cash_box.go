@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
@@ -85,7 +85,7 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 		}
 		_, err = repository.NewCashBoxLogRepo(tx).Create(log)
 
-		return err
+		return errors.WithMessage(err)
 	}
 
 	tx := ctx.GetDB()

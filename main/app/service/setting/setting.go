@@ -2,7 +2,6 @@ package setting
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -13,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -90,7 +90,7 @@ func (s *Srv) fromCache(ctx context.Context) ([]model.Setting, error) {
 	if data, exists := s.cache.Get(cacheKey); exists {
 		if dataValue, isString := data.(string); isString {
 			if err := json.Unmarshal([]byte(dataValue), &settings); err != nil {
-				return settings, err
+				return settings, errors.WithMessage(err)
 			}
 			return settings, nil
 		}
@@ -494,7 +494,7 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error) {
 	set, err := s.GetStoreSetting(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return set.Language, nil
 }
@@ -551,7 +551,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return printer, err
+			return printer, errors.WithMessage(err)
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingPrinter)
@@ -599,7 +599,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerRepo := repository.NewPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 			printer, err = printerRepo.GetPrinter(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())
 			if err != nil {
-				return setting.PrinterInfo{}, err
+				return setting.PrinterInfo{}, errors.WithMessage(err)
 			}
 			copies = printer.Copies
 			printerConfig = printer.ConfigJson
@@ -676,7 +676,7 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return tablet, err
+			return tablet, errors.WithMessage(err)
 		}
 	}
 	err = json.Unmarshal([]byte(st.Values), &tablet)
@@ -752,7 +752,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return cashier, err
+			return cashier, errors.WithMessage(err)
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingCashier)
@@ -793,7 +793,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return assistant, err
+			return assistant, errors.WithMessage(err)
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingAssistant)
@@ -842,7 +842,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return kitchen, err
+			return kitchen, errors.WithMessage(err)
 		}
 	}
 	defaultKitchen := s.getDefaultKitchen(languageList)
@@ -871,7 +871,7 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	if languageList == nil {
 		languageList, err = s.GetStoreLanguageList(ctx)
 		if err != nil {
-			return h5, err
+			return h5, errors.WithMessage(err)
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingH5)
@@ -1052,7 +1052,7 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error { // 修改自动接单设置
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	cashierSetting.IsAutoOrder = orderSetting.IsAutoOrder
 	cashierSetting.AutoOrderLimit = orderSetting.AutoOrderLimit
@@ -1063,29 +1063,29 @@ func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.Updat
 func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error {
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	cashierSetting.IsShowAssistantSoldOut = *systemSetting.IsShowAssistantSoldOut
 	cashierSetting.IsShowScanSoldOut = *systemSetting.IsShowScanSoldOut
 	cashierSetting.MenuShowSoldOut = strconv.Itoa(*systemSetting.MenuShowSoldOut)
 	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	businessSetting, err := s.GetBusinessSetting(ctx)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	businessSetting.DishCardStyle = systemSetting.DishCardStyle
 	if err := s.UpdateSetting(ctx, constant.SettingBusiness, businessSetting); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	tabletSetting, err := s.GetTabletSetting(ctx, nil)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	tabletSetting.IsShowSoldOut = *systemSetting.IsShowSoldOut
 	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -1095,15 +1095,15 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 	var settingResp resp.CashierBaseSetting
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
 	if err != nil {
-		return settingResp, err
+		return settingResp, errors.WithMessage(err)
 	}
 	businessSetting, err := s.GetBusinessSetting(ctx)
 	if err != nil {
-		return settingResp, err
+		return settingResp, errors.WithMessage(err)
 	}
 	tabletSetting, err := s.GetTabletSetting(ctx, nil)
 	if err != nil {
-		return settingResp, err
+		return settingResp, errors.WithMessage(err)
 	}
 
 	clientVersion := ctx.GetGin().GetHeader("Version-Name")

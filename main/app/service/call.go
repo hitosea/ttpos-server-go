@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -10,6 +9,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -160,10 +160,10 @@ func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.Repr
 		err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
 			if err := repository.NewPrinterReadLogRepo(tx).
 				Update(deviceId, map[string]any{"delete_time": time.Now().Unix()}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			if err := repository.NewPrinterLogRepo(tx).Update(printerLogUuid, map[string]any{"status": constant.PrinterLogStatusInProgress}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			return nil
 		})

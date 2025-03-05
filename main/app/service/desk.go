@@ -1,11 +1,11 @@
 package service
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -95,7 +95,7 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 	// 获取列表
 	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)
 	if err != nil {
-		return resp.DeskListWithPaginationResp{}, err
+		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
 	}
 
 	// 初始化额外信息
@@ -121,7 +121,7 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetDeskInfo(deskUuid)
 	if err != nil {
-		return resp.Desk{}, err
+		return resp.Desk{}, errors.WithMessage(err)
 	}
 	return desk.GetDeskResp(), nil
 }
@@ -132,7 +132,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	// 验证请求参数
 	err := req.ValidateCreateDeskOrderReq()
 	if err != nil {
-		return resp.CreateDeskOrderResp{}, err
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
 
 	// 判断桌台是否存在
@@ -150,7 +150,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	if ctx.GetSource() == constant.SourceCashier {
 		cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
 		if err != nil {
-			return resp.CreateDeskOrderResp{}, err
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 		}
 		if cashierSetting.OrderMethod.IsTableOrder != "1" {
 			return resp.CreateDeskOrderResp{}, errors.New("桌台用餐已关闭，请选择其他用餐方式")
@@ -159,7 +159,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	if ctx.GetSource() == constant.SourceTablet {
 		tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
 		if err != nil {
-			return resp.CreateDeskOrderResp{}, err
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 		}
 		if tabletSetting.IsCustomerOrder != "1" {
 			return resp.CreateDeskOrderResp{}, errors.New("未开启顾客开桌")
@@ -168,7 +168,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	if ctx.GetSource() == constant.SourceH5 {
 		tabletSetting, err := s.settingSrv.GetH5Setting(ctx, nil)
 		if err != nil {
-			return resp.CreateDeskOrderResp{}, err
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 		}
 		if tabletSetting.IsCustomerOrder != "1" {
 			return resp.CreateDeskOrderResp{}, errors.New("未开启顾客开桌")
@@ -194,11 +194,11 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 	// 验证自助餐是否开启
 	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
-		return resp.CreateDeskOrderResp{}, err
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
-		return resp.CreateDeskOrderResp{}, err
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
 	if buffetSetting.IsOpen == "0" {
 		return resp.CreateDeskOrderResp{}, errors.New("自助餐未开启")
@@ -238,7 +238,7 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 		return model.Desk{}, nil
 	}
 	if _, err := NewOrderSrv(s.dbm, nil, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
-		return model.Desk{}, err
+		return model.Desk{}, errors.WithMessage(err)
 	}
 	return desk, nil
 }
@@ -249,7 +249,7 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if desk.SaleBill.ID == 0 {
 		return nil
@@ -260,7 +260,7 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 		CancelReason: reqs.Reason,
 		Password:     reqs.Password,
 	}); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	//
 	return nil
@@ -272,14 +272,14 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 	db := s.dbm.GetDB(dbId)
 	_, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	err = repository.NewDeskRepo(db).UpdateDeskByMap(reqs.Uuid, map[string]any{
 		"sale_bill_uuid": 0,
 		"status":         constant.DeskStatusClose,
 	})
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	//
 	return nil
@@ -314,19 +314,19 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 更新新桌台的记录
 		if err := repository.NewDeskRepo(tx).UpdateDeskRecord(*desk); err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		// 更新旧桌台的记录
 		if err := repository.NewDeskRepo(tx).UpdateDeskRecord(*saleBill.Desk); err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		// 更新销售账单的记录
 		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		return nil
 	}); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -361,7 +361,7 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) err
 		Remark:           bindDeskReq.Remark,
 	})
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	if bindDeskReq.DeskUuid != bindDeskReq.OldDeskUuid {
@@ -378,15 +378,15 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) err
 			deskRepo = repository.NewDeskRepo(tx)
 			// 解绑旧的桌台（解绑当前设备绑定了非选定的其他桌台）
 			if err := deskRepo.UnbindDesk(bindDeskReq.DeskUuid, deviceUuid); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			// 绑定新的桌台
 			if err := deskRepo.UpdateDeskByMap(desk.Uuid, map[string]any{"device_uuid": deviceUuid}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			if bindDeskReq.OldDeskUuid != 0 { // 解绑旧桌台
 				if err := deskRepo.UpdateDeskByMap(bindDeskReq.OldDeskUuid, map[string]any{"device_uuid": 0}); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 			}
 			return nil

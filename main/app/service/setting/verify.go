@@ -1,7 +1,7 @@
 package setting
 
 import (
-	"errors"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -9,7 +9,7 @@ import (
 func (s *Srv) VerifyAdvancedPassword(ctx context.Context, password string) error {
 	businessSetting, err := s.GetBusinessSetting(ctx)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if businessSetting.IsNeedPassword == "1" {
 		if password == "" {
@@ -17,7 +17,7 @@ func (s *Srv) VerifyAdvancedPassword(ctx context.Context, password string) error
 		}
 		cashier, err := s.GetCashierSetting(ctx, nil)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		if password != cashier.AdvancedPassword {
 			return errors.New("确认密码错误")

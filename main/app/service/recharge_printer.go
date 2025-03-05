@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"github.com/spf13/viper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -48,7 +48,7 @@ func (s *rechargePrintSrv) PrintTicket(ctx context.Context, printReq PrinterTick
 	// 获取打印设置
 	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
 	if err != nil {
-		return printerLogData, err
+		return printerLogData, errors.WithMessage(err)
 	}
 	settingPrinterInfo, err := s.settingSrv.GetPrinterInfo(ctx, printerSetting, printReq.DeviceId)
 	if err != nil {

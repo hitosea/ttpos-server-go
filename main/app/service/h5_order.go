@@ -1,13 +1,13 @@
 package service
 
 import (
-	"errors"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -238,7 +238,7 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, orderUuid uint64) error 
 		// ToDo 增加订单操作日志
 		return nil
 	})
-	return err
+	return errors.WithMessage(err)
 }
 
 func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, orderUuid uint64) error {
@@ -293,5 +293,5 @@ func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, orderUuid uint64) error 
 		return nil
 	})
 
-	return err
+	return errors.WithMessage(err)
 }

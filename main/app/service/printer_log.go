@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -10,6 +10,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -75,7 +76,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	} else {
 		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
 		if err != nil {
-			return respPrinterLogData, err
+			return respPrinterLogData, errors.WithMessage(err)
 		}
 		// 记录打印方式  = 1 文本打印，2图片打印
 		// 默认文本打印
@@ -93,7 +94,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		if !isQueueService { // 直接打印
 			if printerLogData.PrinterUuid > 0 && printerLogData.Type == constant.PrinterLogTypeDefault && printerLogData.FirstExecution == 1 {
 				// ToDo 打印驱动，打印小票，返回错误
-				if err := errors.New("未知错误"); err != nil {
+				if err := errors.WithMessage(fmt.Errorf("未知错误")); err != nil {
 					printerLogData.Status = constant.PrinterLogStatusEnd
 					printerLogData.Reason = err.Error()
 				} else {
@@ -113,7 +114,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	copier.Copy(&printerLog, printerLogData)
 	printerLog, err = printerLogRepo.Create(printerLog)
 	if err != nil {
-		return respPrinterLogData, err
+		return respPrinterLogData, errors.WithMessage(err)
 	}
 	// 只保留7天的数据
 	err = printerLogRepo.UpdateByWhere(map[string]any{"delete_time": time.Now().Unix()}, printerLogRepo.WhereCreatedBefore(7))

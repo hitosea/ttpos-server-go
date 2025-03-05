@@ -1,9 +1,9 @@
 package service
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
@@ -367,7 +367,7 @@ func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleB
 	productPlanItems, err := repository.NewProductMustPlanItemRepo(db).GetProductMustPlanItemByPackageUuid(productPackageUuid)
 	if err != nil {
 		ctx.Log().Debug("加购商品时判断商品是不是必点商品时，查询必点商品失败", zap.Error(err))
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	// 该商品不是必点商品
 	if len(productPlanItems) == 0 {
@@ -389,7 +389,7 @@ func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleB
 	// 查询到购物车信息
 	shopCart, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 	if err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	if deskUuid != 0 {
 		deskMustPlanList, err := s.GetDeskMustPlanList(ctx, db, shopCart, deskUuid)

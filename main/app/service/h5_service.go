@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -53,27 +54,27 @@ func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetB
 	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(dbId))
 	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	h5Setting, err := s.settingSrv.GetH5Setting(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	companyInfo, err := companyRepo.GetCompanyInfo(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	deskInfo, err := s.deskSrv.GetDeskInfo(dbId, deskUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	shop := resp.Shop{
 		CompanyUuid:       companySetting.CompanyUuid,
@@ -222,7 +223,7 @@ func (s *h5Srv) GetBuffetList(ctx context.Context, deskUuid uint64) (resp.H5Buff
 	h5BuffetList := []resp.H5Buffet{}
 	res, err := s.buffetSrv.GetBuffetList(deskUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	list := res.List
 	for _, buffet := range list {
@@ -286,7 +287,7 @@ func (s *h5Srv) OpenH5Desk(ctx context.Context, deskUuid uint64, request req.Ope
 	}
 	_, err := s.deskSrv.CreateDeskOrder(ctx, param)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	return nil
@@ -315,7 +316,7 @@ func (s *h5Srv) RemarkProduct(ctx context.Context, remark string, saleOrderProdu
 		Remark:           remark,
 	})
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	// 备注成功。如果送厨后还能修改备注的话，需要在这里发起事件通知厨房
 

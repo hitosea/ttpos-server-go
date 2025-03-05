@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"slices"
 	"ttpos-server-go/app/dto"
 	setting2 "ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -108,7 +108,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
 		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
 		if err != nil {
-			return 0, err
+			return 0, errors.WithMessage(err)
 		}
 		if printerSetting.CashierOpen == "1" {
 			var added bool
@@ -141,7 +141,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		UserAgent:        userAgent,
 	})
 	if err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return device.Uuid, nil
 }

@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -78,13 +78,13 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 
 	// 检查订单是否可操作
 	if err = saleBill.ValidateOrderStatus(constant.OrderAddProduct); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	// 检查创建订单商品
 	productPackage, err := s.orderProductSrv.CheckCreateOrderProduct(dbId, req.Product)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	// 生成订单商品

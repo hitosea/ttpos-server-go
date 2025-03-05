@@ -1,11 +1,11 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/utils"
@@ -66,7 +66,7 @@ func (o *orderProductSrv) CheckDeskMustProductRule(ctx context.Context, deskUuid
 	// 获取到桌台的必点商品规则
 	rule, err := o.GetDeskMustProductRule(ctx)
 	if err != nil {
-		return false, nil, err
+		return false, nil, errors.WithMessage(err)
 	}
 	result := rule.CheckResult()
 	if result.IsPassed() {
@@ -199,7 +199,7 @@ func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrder
 	// 查询销售订单商品组合表
 	saleOrderProductBomList, err := repository.NewOrderRepo(srv.dbm.GetDB(companyId)).GetSaleOrderBomList(saleOrderUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	// 得到该销售订单各个ProductBom的需要消耗的库存、各个ProductBom的库存
 	for _, saleOrderProductBom := range saleOrderProductBomList {
@@ -252,7 +252,7 @@ func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrder
 	}
 	orderProducts, err := repository.NewOrderRepo(srv.dbm.GetDB(companyId)).GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	for _, orderProduct := range orderProducts {
 		// 累计该ProductPackage购买的数量
@@ -268,7 +268,7 @@ func (srv *orderProductSrv) GetInvalidProductList(ctx context.Context, saleOrder
 	// 判断必点商品是否满足
 	isPass, resultTips, err := srv.GetMustProductStat(ctx, companyUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	if !isPass {
 		//todo 怎么返回
@@ -284,19 +284,19 @@ func (o *orderProductSrv) CheckCreateOrderProduct(dbId uint64, product req.AddPr
 	// 检查商品
 	productPackage, err := o.CheckProduct(dbId, product.Uuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	// 检查商品规格
 	if err = o.CheckOrderProductFlavor(productPackage, product.FlavorUuid); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	// 检查商品属性
 	if err = o.CheckOrderProductAttribute(productPackage, product.Attributes); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	// 检查商品加料
 	if err = o.CheckOrderProductSauce(productPackage, product.SauceUuids); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	// todo 检查商品规格库存
@@ -338,13 +338,13 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		if orderProduct.Uuid == 0 {
 			// 创建销售订单商品
 			orderProduct, err = repository.NewOrderProductRepo(tx).Create(orderProductData)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			// 创建销售订单商品bom
 			for key, bom := range orderProductData.SaleOrderProductBoms {
@@ -352,7 +352,7 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 				orderProductData.SaleOrderProductBoms[key] = bom
 			}
 			if err := repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			// 创建销售订单商品属性
 			if len(orderProductData.SaleOrderProductAttributes) > 0 {
@@ -361,7 +361,7 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 					orderProductData.SaleOrderProductAttributes[key] = attribute
 				}
 				if err := repository.NewOrderProductAttributeRepo(tx).CreateBatch(orderProductData.SaleOrderProductAttributes); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 			}
 		} else {
@@ -372,7 +372,7 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 				},
 				repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
 			); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 
@@ -383,13 +383,13 @@ func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProduct
 			OrderProduct: orderProduct,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		return nil
 	})
 
-	return err
+	return errors.WithMessage(err)
 }
 
 // GenerateOrderProductReq 生成订单商品请求
@@ -506,7 +506,7 @@ func (o *orderProductSrv) UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderP
 		repository.NewCommonRepo().WhereByUuid(req.OrderProduct.Uuid),
 		repository.NewCommonRepo().WhereBySoftDelete(),
 	); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	return nil
@@ -518,14 +518,14 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 	companyUuid := ctx.GetCompanyUuid()
 	desk, err := repository.NewDeskRepo(o.dbm.GetDB(companyUuid)).GetDeskAndSaleBillByDeskUuid(deskUuid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	regionUuid := desk.RegionUuid
 	// 用regionUuid在product_must_plan_region表中查询得到该桌台关联的必选方案
 	productMustPlanList, err := repository.NewProductMustPlanRepo(o.dbm.GetDB(companyUuid)).GetProductMustPlanByRegionUuid(regionUuid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	rule := utils.Rule{
@@ -579,7 +579,7 @@ func (o *orderProductSrv) GetMustPlanRuleByDeskUuid(ctx context.Context, deskUui
 
 	check, err := o.getMustPlanCheck(prodcutMustPlanProductMap, productMustPlanMap)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	return &rule, check, nil
@@ -623,7 +623,7 @@ func (o *orderProductSrv) getMustPlanCheck(prodcutMustPlanProductMap map[uint64]
 func (o *orderProductSrv) GetMustProductStat(ctx context.Context, deskUuid uint64) (bool, *utils.ProductMustPlanCheckResultTips, error) {
 	rule, check, err := o.GetMustPlanRuleByDeskUuid(ctx, deskUuid)
 	if err != nil {
-		return false, nil, err
+		return false, nil, errors.WithMessage(err)
 	}
 
 	obj := utils.ProductMustPlanCheck{
@@ -634,7 +634,7 @@ func (o *orderProductSrv) GetMustProductStat(ctx context.Context, deskUuid uint6
 
 	resp, err := utils.Tips(o.dbm.GetDB(ctx.GetCompanyUuid()), result)
 	if err != nil {
-		return false, nil, err
+		return false, nil, errors.WithMessage(err)
 	}
 
 	return resp.IsPass(), resp, nil

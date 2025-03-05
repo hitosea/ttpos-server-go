@@ -3,6 +3,7 @@ package service
 import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
@@ -39,7 +40,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 		1000,
 	)
 	if err != nil {
-		return resp.BuffetListPaginationResp{}, err
+		return resp.BuffetListPaginationResp{}, errors.WithMessage(err)
 	}
 
 	// 转换为响应对象

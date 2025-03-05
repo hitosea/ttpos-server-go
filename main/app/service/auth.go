@@ -1,13 +1,13 @@
 package service
 
 import (
-	"errors"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 
@@ -167,7 +167,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		// 判断权限
 		permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 		if err != nil {
-			return loginResp, err
+			return loginResp, errors.WithMessage(err)
 		}
 		if len(permissions) == 0 {
 			return loginResp, errors.New("当前无权限，请联系管理员")
@@ -215,7 +215,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
 		kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
 		if err != nil {
-			return loginResp, err
+			return loginResp, errors.WithMessage(err)
 		}
 		if kitchenSetting.IsOpen == "0" || companySetting.IsOpenKitchenKds == 0 {
 			return loginResp, errors.New("当前尚未开启厨显功能，如有需要，请联系销售代表")
@@ -239,7 +239,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		CompanyUuid:      staff.CompanyUuid,
 	})
 	if err != nil {
-		return loginResp, err
+		return loginResp, errors.WithMessage(err)
 	}
 
 	// 生成 JWT token
@@ -280,34 +280,34 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	// 判断权限
 	permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	if len(permissions) == 0 {
 		return cashierBase, errors.New("当前无权限，请联系管理员")
 	}
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
-		return cashierBase, err
+		return cashierBase, errors.WithMessage(err)
 	}
 	return resp.CashierBase{
 		Username:     staff.Username,
@@ -339,7 +339,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	assistantStaff := staffRepo.GetStaff(staffRepo.WhereUuid(assistantStaffUuid))
 	perms, err := s.roleAccessSrv.GetPermission(constant.AssistantRouteName, assistantStaff.Uuid, assistantStaff.CompanyUuid)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	permissions := make([]string, len(perms))
 	for _, perm := range perms {
@@ -349,33 +349,33 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	deviceRepo := repository.NewDeviceRepo(db)
 	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	company := helper.GetCompany(ctx.GetGin())
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	assistantSetting, err := s.settingSrv.GetAssistantSetting(ctx, nil)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
 	if err != nil {
-		return assistantBase, err
+		return assistantBase, errors.WithMessage(err)
 	}
 	return resp.AssistantBase{
 		CashierStaff: resp.CashierStaff{
@@ -413,27 +413,27 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	var tabletBase resp.TabletBase
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		return tabletBase, err
+		return tabletBase, errors.WithMessage(err)
 	}
 	return resp.TabletBase{
 		Company: resp.Company{
@@ -458,7 +458,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
 	if err != nil {
-		return kitchenBase, err
+		return kitchenBase, errors.WithMessage(err)
 	}
 	return resp.KitchenBase{
 		Kitchen: kitchenSetting,
@@ -570,7 +570,7 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfo(ctx)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if company.IsDelete() {
 		return errors.New("商家已经删除")
@@ -578,7 +578,7 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
 
 	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if deskInfo.IsDelete() {
 		return errors.New("桌台已经删除")

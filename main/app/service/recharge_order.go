@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -193,7 +193,7 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 					RechargeOrderUuid: order.Uuid,
 				})
 				if err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 				return nil
 			}); err != nil {
@@ -224,7 +224,7 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 			StaffUuid:      ctx.GetStaffUuid(),
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		// 会员充值操作日志
 		err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
@@ -236,7 +236,7 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		return nil
 	})
@@ -458,7 +458,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				Scene:    constant.MemberPointLogSceneRechargeGive,
 				Describe: fmt.Sprintf("收银机管理员充值赠送操作 [%s]", ctx.GetStaff().RealName),
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			memberPointsChanged = true
 		}
@@ -472,7 +472,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				Scene:     constant.MemberBalanceLogRecharge,
 				Describe:  fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 
@@ -485,7 +485,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 					Scene:          constant.CashBoxLogSceneRecharge,
 					OrderUuid:      order.Uuid,
 				}); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 			}
 		}
@@ -499,13 +499,13 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			Data:              s.getRechargeLogData(order),
 			RechargeOrderUuid: order.Uuid,
 		}); err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return confirmResp, err
+		return confirmResp, errors.WithMessage(err)
 	}
 
 	if memberPointsChanged {
@@ -560,7 +560,7 @@ func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderRe
 		PrintLang:     printLang,
 	})
 	if err != nil {
-		return res, err
+		return res, errors.WithMessage(err)
 	}
 	return printerData, nil
 }
@@ -811,7 +811,7 @@ func (s *rechargeOrderSrv) CancelRechargeOrder(ctx context.Context, uuid uint64)
 		// 修改状态为已取消
 		err := rechargeOrderRepo.Update(order.Uuid, map[string]any{"status": constant.RechargeOrderStatusCanceled})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		// 会员充值操作日志
 		err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
@@ -823,7 +823,7 @@ func (s *rechargeOrderSrv) CancelRechargeOrder(ctx context.Context, uuid uint64)
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		return nil
 	})
@@ -907,7 +907,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				Scene:    constant.MemberPointLogSceneRechargeReverse,
 				Describe: fmt.Sprintf("充值反结账：%s", order.OrderNo),
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			memberPointsChanged = true
 		}
@@ -920,7 +920,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				Scene:     constant.MemberBalanceLogRechargeReverse,
 				Describe:  fmt.Sprintf("充值反结账：%s", order.OrderNo),
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 
@@ -960,7 +960,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			Data:              s.getReverseSettleLogData(order),
 			RechargeOrderUuid: order.Uuid,
 		}); err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		returnOrder, err := repository.NewReturnOrderRepo(tx).CreateReturnOrder(model.ReturnOrder{
@@ -983,7 +983,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				Scene:          constant.CashBoxLogSceneRefund,
 				OrderUuid:      returnOrder.Uuid,
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 
@@ -1001,7 +1001,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 	})
 
 	if err != nil {
-		return rechargeOrderResp, err
+		return rechargeOrderResp, errors.WithMessage(err)
 	}
 
 	if memberPointsChanged {
@@ -1177,7 +1177,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			Describe: fmt.Sprintf("退款：%s", order.OrderNo),
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		if refundCashMoney > 0 {
 			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
@@ -1186,13 +1186,13 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 				Scene:          constant.CashBoxLogSceneRefund,
 				OrderUuid:      returnOrder.Uuid,
 			}); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

@@ -3,11 +3,11 @@ package service
 import (
 	"log"
 	"time"
-	"ttpos-server-go/pkg/captcha"
-
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/captcha"
 )
 
 type ICaptchaSrv interface {
@@ -40,7 +40,7 @@ func (s *captchaSrv) Generate() (*resp.Captcha, error) {
 	// 生成随机标识
 	sign, b64s, err := s.captcha.Generate()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &resp.Captcha{
 		Sign:   sign,

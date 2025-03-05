@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"ttpos-server-go/app/errors
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -141,7 +142,7 @@ func Tips(db *gorm.DB, result *ProductMustPlanCheckResult) (*ProductMustPlanChec
 	// 使用SQL IN查询获取ProductMustPlan数据
 	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListByUuids(planUuids)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	// 将查询结果存入map中
@@ -161,7 +162,7 @@ func Tips(db *gorm.DB, result *ProductMustPlanCheckResult) (*ProductMustPlanChec
 	// 使用SQL IN查询获取ProductPackage数据
 	productPackages, err := repository.NewProductRepo(db).GetProductPackageListByUuids(productUuids)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	// 将查询结果存入map中

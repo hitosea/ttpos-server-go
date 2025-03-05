@@ -1,12 +1,12 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"sort"
 	"time"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/jinzhu/copier"
@@ -82,7 +82,7 @@ func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 	var permissions []resp.Permission
 	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	for _, dbPermission := range dbPermissions {
@@ -187,7 +187,7 @@ func (s *roleAccessSrv) buildPermissionTree(permissions []resp.Permission, route
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
 	accesses, _, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	var permissions []string
 	for _, access := range accesses {
