@@ -30,7 +30,7 @@ type MemberHandler struct {
 // @Security JwtToken
 // @param uuid query integer true "uuid"
 // @Success 200 {object} dto.Response{data=resp.RechargeMember}
-// @Router /cashier/member/recharge_member [get]
+// @Router /assistant/member/recharge_member [get]
 func (h *MemberHandler) RechargeMember(c *gin.Context) {
 	uuid, err := strconv.ParseUint(c.Query("uuid"), 10, 64)
 	if err != nil {
@@ -52,7 +52,7 @@ func (h *MemberHandler) RechargeMember(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.AddMemberReq true "添加会员参数"
 // @Success 200 {object} dto.Response
-// @Router /cashier/member/add [post]
+// @Router /assistant/member/add [post]
 func (h *MemberHandler) AddMember(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var addMemberReq req.AddMemberReq
@@ -75,7 +75,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.MemberLevelList}
-// @Router /cashier/member/levels [get]
+// @Router /assistant/member/levels [get]
 func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
 	helper.Success(c, h.memberSrv.GetLevels(helper.GetCompanyUuid(c)))
 }
@@ -91,7 +91,7 @@ func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
 // @param sale_bill_uuid query integer true "销售账单uuid"
 // @param member_uuid query integer true "会员Uuid"
 // @Success 200 {object} dto.Response
-// @Router /cashier/member/order_discount [get]
+// @Router /assistant/member/order_discount [get]
 func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 	var discountReq req.GetMemberDiscountReq
 	if err := c.ShouldBindQuery(&discountReq); err != nil {
@@ -117,7 +117,7 @@ func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 // @Security JwtToken
 // @param keyword query string false "关键字搜索：uuid\phone，前端处理前后空格"
 // @Success 200 {object} dto.Response{data=resp.SearchMemberList}
-// @Router /cashier/member/search [get]
+// @Router /assistant/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
 	helper.Success(c, h.memberSrv.SearchMember(helper.GetCompanyUuid(c), c.Query("keyword")))
 }
@@ -131,7 +131,7 @@ func (h *MemberHandler) SearchMember(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.CheckMemberPasswordReq true "使用会员优惠验证密码"
 // @Success 200 {object} dto.Response
-// @Router /cashier/member/check_password [get]
+// @Router /assistant/member/check_password [get]
 func (h *MemberHandler) CheckPassword(c *gin.Context) {
 	var passwordReq req.CheckMemberPasswordReq
 	if err := c.ShouldBindJSON(&passwordReq); err != nil {
