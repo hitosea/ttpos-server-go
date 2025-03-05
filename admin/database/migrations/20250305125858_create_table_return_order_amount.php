@@ -28,12 +28,23 @@ class CreateTableReturnOrderAmount extends Migrator
      */
     public function change()
     {
-        $table = $this->table('return_order_amount');
+        $table = $this->table('return_order_amount', [
+            'id' => false,
+            'primary_key' => 'id',
+            'engine' => 'InnoDB',
+            'collation' => 'utf8mb4_unicode_ci',
+            'comment' => '退款金额表'
+        ]);
+
         $table->addColumn('id', 'integer', ['signed' => false, 'identity' => true, 'comment' => '自增ID'])
-            ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '退货金额唯一标识符'])
-            ->addColumn('return_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '关联退货单ID'])
-            ->addColumn('payment_method_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '关联支付方式ID'])
-            ->addColumn('amount', 'decimal', ['precision' => 12, 'scale' => 2, 'default' => '0.00', 'comment' => '退款金额'])
+            ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '会员充值订单操作日志ID'])
+            ->addColumn('operator_name', 'string', ['limit' => 50, 'default' => '', 'comment' => '操作员姓名'])
+            ->addColumn('operator_email', 'string', ['limit' => 50, 'default' => '', 'comment' => '操作员电子邮件'])
+            ->addColumn('client', 'string', ['limit' => 50, 'default' => '', 'comment' => '客户端信息'])
+            ->addColumn('message', 'string', ['limit' => 255, 'default' => '', 'comment' => '消息内容'])
+            ->addColumn('action', 'string', ['limit' => 255, 'default' => '', 'comment' => '操作'])
+            ->addColumn('data', 'string', ['limit' => 255, 'default' => '', 'comment' => '数据'])
+            ->addColumn('recharge_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '充值订单ID'])
             ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间(时间戳)'])
             ->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间(时间戳)'])
             ->addColumn('delete_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '删除时间(时间戳)'])
