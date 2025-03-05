@@ -1857,7 +1857,7 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	// 通过deviceSn获取saleBillUuid
 	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
 	if errUuid != nil {
-		return nil, nil
+		return nil, errUuid
 	}
 	// 查询购物车信息
 	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
