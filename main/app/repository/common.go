@@ -36,6 +36,7 @@ type ICommonRepo interface {
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
+	WhereByCooking() DBOption                                       // 根据账单已经送厨房查询
 	WhereByRelatedUuid(relatedUuid uint64) DBOption                 // 根据关联UUID查询
 	WhereByRelatedType(relatedType uint) DBOption                   // 根据关联类型查询
 	WhereByOrderNo(orderNo string) DBOption                         // 根据订单编号查询
@@ -138,6 +139,13 @@ func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	}
+}
+
+func (r *commonRepo) WhereByCooking() DBOption {
+	//首次送厨时间大于0，表示该销售账单已经送厨
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("production_time > 0")
 	}
 }
 

@@ -57,8 +57,9 @@ type SaleBill struct {
 	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额,关联销售订单的免单金额之和" json:"free_amount"`
 
 	// 时间相关字段
-	FinishTime   int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
-	HideBillTime int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
+	FinishTime     int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
+	HideBillTime   int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
+	ProductionTime int64 `gorm:"column:production_time;type:int(10);default:0;comment:首次送厨时间（时间戳）" json:"production_time"`
 
 	// 关联ID字段
 	ConsumerUuid       uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -123,7 +124,7 @@ func (model *SaleBill) SetCookingStatus() {
 	if model.IsCookingStatus() {
 		return
 	}
-	model.Status = constant.SaleBillStatusPending
+	model.ProductionTime = time.Now().Unix()
 }
 
 func (model *SaleBill) calcPaymentCommissionFee() float64 {
@@ -152,7 +153,8 @@ func (model *SaleBill) calcProductOriginalAmount() float64 {
 
 // 判断账单是否为已送厨状态
 func (model *SaleBill) IsCookingStatus() bool {
-	return model.Status != constant.SaleBillStatusNoCooking
+	// 如果账单已经送出过一次，就记录第一次送厨的时间
+	return model.ProductionTime > 0
 }
 
 // 转台
