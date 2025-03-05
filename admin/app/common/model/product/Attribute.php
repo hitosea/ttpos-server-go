@@ -10,7 +10,6 @@ use app\common\model\product\AttributeGroup;
 use app\common\model\product\ProductAttribute;
 use app\common\model\product\ProductAttributeGroup;
 use app\common\model\product\Attribute as AttributeModel;
-use think\facade\Log;
 
 /**
  * 属性模型
@@ -156,27 +155,11 @@ class Attribute extends BaseModel
     }
 
     /**
-     * 检查是否关联属性值
-     */
-    public function isUseWithAttributeValue($attribute_id)
-    {
-        return Attribute::where('parent_id', 'in', $attribute_id)->count() > 0;
-    }
-
-    /**
      * 检查是否被关联
      */
     public function isUseWithProduct($attribute_id)
     {
-        // 兼容旧数据，先删除产品已删除的关联数据
-        ProductAttribute::where('product_id', 'in', function ($query) {
-            $query->name('product')->field('product_id');
-        })->delete();
-        // 兼容旧数据，先删除产品已删除的关联属性组
-        ProductAttributeGroup::where('product_id', 'in', function ($query) {
-            $query->name('product')->field('product_id');
-        })->delete();
-        return ProductAttribute::where('attribute_id', 'in', $attribute_id)->count() > 0;
+        return ProductAttribute::where('attribute_uuid', 'in', $attribute_id)->count() > 0;
     }
 
     /**
