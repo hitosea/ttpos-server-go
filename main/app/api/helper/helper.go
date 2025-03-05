@@ -27,7 +27,7 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
 		err = errors.Cause(err)
 	}
-	logger.Logger.Info("ErrorWithDetail", zap.String("error", err.Error()))
+	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 	messages := []string{err.Error()}
 	var appErr apperrors.AppError
 	if errors.As(err, &appErr) {
