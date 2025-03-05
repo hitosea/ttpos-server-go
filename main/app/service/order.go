@@ -497,24 +497,20 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		fmt.Println("a1111")
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 			return errCreateSaleBill
 		}
-		fmt.Println("a222")
 
 		// 创建销售账单设置
 		if _, errCreateSaleBillSetting := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
 			return errCreateSaleBillSetting
 		}
-		fmt.Println("a333")
 
 		// 创建销售订单
 		if _, errCreateSaleOrder := repository.NewOrderRepo(tx).CreateSaleOrder(*saleOrder); errCreateSaleOrder != nil {
 			return errCreateSaleOrder
 		}
-		fmt.Println("a444")
 
 		// 如果是自助餐，有顾客列表的话，创建顾客
 		if len(saleOrderBuffetCustomerTypes) > 0 {
@@ -524,7 +520,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 				}
 			}
 		}
-		fmt.Println("a5555")
 
 		// 新桌台的状态
 		if errUpdate := repository.NewDeskRepo(tx).UpdateDesk(req.DeskUuid, *desk); errUpdate != nil {
@@ -3021,26 +3016,22 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		defer s.lock.UnlockUuid(saleBillUuid)
 		ctx.AddLock()
 	}
-	fmt.Println("a1111111")
 	// 获取销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	fmt.Println("a2222222")
 	var saleOrder *model.SaleOrder
 	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
-	fmt.Println("a3333333")
 	var paymentMethods []*model.PaymentMethod
 	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
 	if len(paymentMethods) <= 0 {
 		return nil, errors.New("系统没有支付方式")
 	}
-	fmt.Println("a4444444")
 	memberInfo := resp.MemberInfo{}
 	if saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
 		memberInfo = resp.MemberInfo{
@@ -3052,7 +3043,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Points:   saleOrder.Member.Point,
 		}
 	}
-	fmt.Println("a5555555")
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {
 		order := resp.PaymentOrder{
@@ -3067,7 +3057,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		}
 		paymentOrders = append(paymentOrders, order)
 	}
-	fmt.Println("a6666666")
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
@@ -3123,7 +3112,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			amounts = append(amounts, amount)
 		}
 	}
-	fmt.Println("a7777777")
 	infoResp := &resp.InstantOrderPaymentInfoResp{
 		MemberInfo:     memberInfo,
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
@@ -3187,7 +3175,6 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	}
 	// 撤销支付单
 	paymentOrder.Cancel()
-
 	// 更新支付单
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
@@ -3197,12 +3184,10 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	}); err != nil {
 		return nil, err
 	}
-
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, paymentOrder.RelatedUuid, paymentOrder.RelatedUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, err
 	}
-
 	return infoResp, nil
 }
 

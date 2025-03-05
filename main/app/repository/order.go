@@ -812,7 +812,6 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 
 // GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
-	fmt.Println("b11111111")
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -859,6 +858,13 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleBillSetting",
 			},
 			// ==================== 销售账单的订单信息 ====================
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
+				},
+			},
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders.PaymentMethod",
 			},
@@ -914,12 +920,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
-	fmt.Println("b2222222")
 	if err != nil {
-		fmt.Println("b3333333")
 		return nil, err
 	}
-	fmt.Println("b4444444")
 	return &info, nil
 }
 
