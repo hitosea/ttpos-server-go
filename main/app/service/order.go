@@ -1859,6 +1859,10 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	if errUuid != nil {
 		return nil, errUuid
 	}
+	// 没有找到销售账单
+	if saleBillUuid == 0 {
+		return nil, nil
+	}
 	// 查询购物车信息
 	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if errInfo != nil {
@@ -1876,7 +1880,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
 	// 重新计算金额
 	shopCart.SaleBill.CalcAll()

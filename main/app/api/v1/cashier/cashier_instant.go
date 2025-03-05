@@ -380,7 +380,7 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
 	res, err := h.orderService.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderService.GetOrderCartInfoByDeviceSn failed"))
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderService.GetOrderCartInfoByDeviceSn failed", "deviceSn:", deviceSn))
 		return
 	}
 	if res == nil {
