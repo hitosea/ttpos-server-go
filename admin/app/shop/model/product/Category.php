@@ -38,9 +38,8 @@ class Category extends CategoryModel
         $data['parent_uuid'] = $parentId;
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($name);
         $this->save($data);
-        $category_id = $this->getLastInsID();
         $this->deleteCache(1, $data['is_special'] ?? 0, self::$app_id);
-        return array_merge($data, ['category_id' => $category_id, 'name_text' => extractLanguage($name ?? '')]);
+        return array_merge($data, ['category_id' => $this->uuid, 'name_text' => extractLanguage($name ?? '')]);
     }
 
     /**
