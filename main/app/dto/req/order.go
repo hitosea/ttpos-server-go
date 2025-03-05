@@ -185,5 +185,13 @@ func (req OrderChangeBuffetReq) Validate() error {
 	if len(req.BuffetCustomerTypes) <= 0 {
 		return errors.New("自助餐顾客类型列表错误")
 	}
+	for _, customerType := range req.BuffetCustomerTypes {
+		if customerType.Uuid == 0 {
+			return errors.New("自助餐顾客类型uuid不能为空")
+		}
+		if customerType.MealNum == nil {
+			return errors.New("自助餐顾客就餐人数不能为空")
+		}
+	}
 	return nil
 }

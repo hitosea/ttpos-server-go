@@ -27,10 +27,11 @@ type SaleBill struct {
 	IsLock uint `gorm:"column:is_lock;type:tinyint(1);default:0;comment:是否锁单, 0-否 1-是" json:"is_lock"`
 
 	// 订单类型字段
-	BillType       uint `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
-	DiningMethod   uint `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
-	IsBuffet       uint `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
-	BuffetDuration uint `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
+	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
+	DiningMethod    uint  `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
+	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
+	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
+	BuffetStartTime int64 `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
 
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
@@ -102,6 +103,7 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 	// 设置自助餐套餐
 	if isBuffet {
 		saleBill.SetBuffetPackage(buffetUuids)
+		saleBill.BuffetStartTime = time.Now().Unix()
 	}
 
 	return saleBill
@@ -447,8 +449,13 @@ func (model *SaleBill) IsBuffetSaleBill() bool {
 
 // 获取自助餐结束时间
 func (model *SaleBill) BuffetEndTime() int64 {
-	endTime := model.BaseModel.CreateTime + int64(model.BuffetDuration)
+	endTime := model.BuffetStartTime + int64(model.BuffetDuration)
 	return endTime
+}
+
+// 获取自助餐已用时长
+func (model *SaleBill) BuffetUsedTime() int64 {
+	return time.Now().Unix() - model.BuffetStartTime
 }
 
 // 自助餐还剩余多少秒
