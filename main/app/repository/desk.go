@@ -3,6 +3,7 @@ package repository
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -18,6 +19,7 @@ type IDeskRepo interface {
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
 	GetDeskRecord(deskUuid uint64) (*model.Desk, error) // 通过uuid获取桌台的记录信息
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
+	UpdateDeskRecord(desk model.Desk) error
 	UpdateDeskByMap(deskUuid uint64, vars map[string]any) error // 更新桌台
 	UnbindDesk(deskUuid, deviceUuid uint64) error               // 平板端解绑桌台
 	CreateDesk(desk model.Desk) (uint64, error)
@@ -135,6 +137,15 @@ func (r *deskRepo) UpdateDesk(deskUuid uint64, desk model.Desk) error {
 		return err
 	}
 	return nil
+}
+
+// UpdateDeskRecord 更新桌台记录
+func (r *deskRepo) UpdateDeskRecord(desk model.Desk) error {
+	desk.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	if desk.NoPrimaryKey() {
+		return errors.New("Desk不能没有ID或UUID")
+	}
+	return r.db.Model(&model.Desk{}).Select("*").Where("uuid = ?", desk.Uuid).Updates(&desk).Error
 }
 
 // UpdateDeskByMap 更新桌台

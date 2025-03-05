@@ -90,3 +90,10 @@ type BindDeskReq struct {
 	OldDeskUuid uint64 `json:"old_desk_uuid"`
 	Remark      string `json:"remark"`
 }
+
+// ChangeDeskReq 切换桌台请求参数
+type ChangeDeskReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
+	DeskUuid      uint64 `json:"desk_uuid" binding:"required"`       // 新桌台UUID
+}

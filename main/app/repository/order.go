@@ -352,7 +352,6 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 	}
 
 	if saleBill.IsDeskSaleBill() {
-		fmt.Println("debug: 查询桌台购物车信息")
 		if saleBill.IsBuffetSaleBill() {
 			// 当销售账单是自助餐账单时，额外查询自助餐信息
 			{
@@ -1064,23 +1063,7 @@ func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBil
 func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
 	var saleBill model.SaleBill
 	if err := r.db.Where("device_uuid = ? AND status = ? AND hide_bill_time = ? AND delete_time = ?", deviceUuid, constant.SaleBillStatusPending, 0, constant.NotDeleted).First(&saleBill).Error; err != nil {
-		fmt.Println("======")
-		fmt.Println("======")
-		fmt.Println("======")
-		fmt.Println("======")
-		fmt.Println("======")
-		fmt.Println("======")
-		fmt.Println("2222222")
-		fmt.Println(err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println("======")
-			fmt.Println(err.Error())
 			return false, nil
 		}
 		return false, err

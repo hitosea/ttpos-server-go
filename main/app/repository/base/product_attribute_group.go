@@ -1,7 +1,6 @@
 package base
 
 import (
-	"fmt"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -74,9 +73,6 @@ func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttri
 		return 0, err
 	}
 
-	fmt.Println(fmt.Sprintf("productAttributeGroup.MultiLanguageName.Uuid:%v", productAttributeGroup.MultiLanguageName.Uuid))
-
-	fmt.Println(fmt.Sprintf("productAttributeGroup:%+v", productAttributeGroup))
 	// 创建产品属性组
 	if err := tx.Create(&productAttributeGroup).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务

@@ -122,7 +122,6 @@ func TestProductMustPlanCheck_CheckResult(t *testing.T) {
 				Check: tt.check,
 			}
 			result := checker.CheckResult()
-			fmt.Println("result::::::::::::", *result)
 
 			db := NewGormDB()
 			tips, err := Tips(db, result)

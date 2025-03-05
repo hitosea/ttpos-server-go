@@ -1,7 +1,6 @@
 package cashier
 
 import (
-	"fmt"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -12,6 +11,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 
@@ -120,30 +120,24 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/open [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
-	fmt.Println("23223432432423423423423423423423")
 
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
 	if err := c.ShouldBind(&params); err != nil {
-		fmt.Println("1111创建桌台订单失败", err)
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	fmt.Println("222222222222")
 
 	// 创建桌台订单
 	res, err := h.service.CreateDeskOrder(ctx, params)
 	// 处理错误
 	if err != nil {
-		fmt.Println("创建桌台订单失败", err)
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		fmt.Println("4444444")
-
+		defer utils.Panic(err)
 		return
 	}
-	fmt.Println("33333333")
 
 	// 返回结果
 	helper.Success(c, res)
@@ -199,6 +193,35 @@ func (h *DeskHandler) CompleteDesk(c *gin.Context) {
 	}
 	//
 	err := h.service.CompleteDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// ChangeDesk 处理切换桌台
+// @Summary 切换桌台
+// @Description 切换桌台
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeDeskReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/change [post]
+func (h *DeskHandler) ChangeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeDeskReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.service.ChangeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -985,6 +1008,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
 		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
+		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                        // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品

@@ -22,9 +22,10 @@ func Recovery(logger *zap.Logger, mode string) gin.HandlerFunc {
 				if mode == constant.ServerModeDebug {
 					internalErr["error"] = err
 					internalErr["stack"] = errMsg
+					fmt.Println("panic error", err)
 					fmt.Println(errMsg)
 				}
-				logger.Error("panic", zap.Any("stack", errMsg))
+				logger.Error("panic", zap.Any("error", err), zap.Any("stack", errMsg))
 				c.AbortWithStatusJSON(http.StatusInternalServerError, internalErr)
 			}
 		}()

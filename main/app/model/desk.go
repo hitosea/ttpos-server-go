@@ -54,6 +54,12 @@ func (model *Desk) SetOpenDesk(saleBillUuid uint64) {
 	model.SaleBillUuid = saleBillUuid
 }
 
+// SetCloseDesk 设置关闭台信息
+func (model *Desk) SetCloseDesk() {
+	model.Status = constant.DeskStatusClose
+	model.SaleBillUuid = 0
+}
+
 // getCustomerCount 获取桌台人数
 func (d *Desk) getCustomerCount() uint {
 	if d.SaleBill != nil {

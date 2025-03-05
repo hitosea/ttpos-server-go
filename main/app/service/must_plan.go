@@ -114,6 +114,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		}
 
 		mustPlan := resp.InstantProductMustPlan{
+			Uuid:         plan.Uuid,
 			Name:         plan.Name,
 			MustType:     plan.GetMustType(),
 			MustRule:     plan.GetMustRule(),

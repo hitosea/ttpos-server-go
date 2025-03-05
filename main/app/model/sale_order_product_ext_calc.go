@@ -348,10 +348,20 @@ func (model *SaleOrderProduct) calcProductPrice() float64 {
 	return productPrice.InexactFloat64()
 }
 
-// 计算商品销售价。如果商品改价，则直接修改SalePrice。如果没有改价，销售价=ProductPrice
+func (model *SaleOrderProduct) IsBuffetProduct() bool {
+	return model.IsBuffet == constant.SaleOrderProductIsBuffetYes
+}
+
+// 计算商品销售价。
+// 如果商品改价，则直接修改SalePrice。
+// 如果没有改价，销售价=ProductPrice
+// 如果商品是自助餐商品，则销售价=0
 func (model *SaleOrderProduct) calcSalePrice() float64 {
 	if model.IsCustomPriceBool() {
 		return model.SalePrice
+	}
+	if model.IsBuffetProduct() {
+		return 0
 	}
 	return model.ProductPrice
 }
@@ -362,21 +372,11 @@ func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	memberDiscountRate := model.MemberDiscountRate
 	memberCardDiscountRate := model.MemberCardDiscountRate
 	customDiscountRate := model.CustomDiscountRate
-	fmt.Println(fmt.Sprintf("memberDiscountRate %f", memberDiscountRate))
-	fmt.Println(fmt.Sprintf("memberCardDiscountRate %f", memberCardDiscountRate))
-	fmt.Println(fmt.Sprintf("customDiscountRate %f", customDiscountRate))
-
-	//if memberDiscountRate != 0 {
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
-	//}
-	//if memberCardDiscountRate != 0 {
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(memberCardDiscountRate))
-	//}
-	//if customDiscountRate != 0 {
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(customDiscountRate))
-	//}
 	return rate.InexactFloat64()
 }

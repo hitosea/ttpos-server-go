@@ -77,8 +77,8 @@ type SaleBill struct {
 	SaleBillSetting *SaleBillSetting  `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	Cashier         Staff             `gorm:"foreignKey:CashierUuid;references:uuid"`
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
-	BuffetPackage1  BuffetPackage     `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
-	BuffetPackage2  BuffetPackage     `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
+	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
 func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64) *SaleBill {
@@ -112,8 +112,14 @@ func (model *SaleBill) SetNil() {
 	model.SaleBillSetting = nil
 	model.Cashier = Staff{}
 	model.Desk = nil
-	model.BuffetPackage1 = BuffetPackage{}
-	model.BuffetPackage2 = BuffetPackage{}
+	model.BuffetPackage1 = nil
+	model.BuffetPackage2 = nil
+}
+
+func (model *SaleBill) ChangeDesk(deskUuid uint64) {
+	model.DeskUuid = deskUuid
+	// 设置旧桌台关闭
+	model.Desk.SetCloseDesk()
 }
 
 // 判断销售账单已经是可以完成，即所有销售订单都已经结账
@@ -373,9 +379,15 @@ func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderPro
 
 // 获取自助餐名称
 func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
-	name1 := model.BuffetPackage1.MultiLanguageName.GetNames()
-	name2 := model.BuffetPackage2.MultiLanguageName.GetNames()
-	if model.BuffetPackage1.Uuid != 0 && model.BuffetPackage2.Uuid != 0 {
+	name1 := dto.LocaleResponse{}
+	name2 := dto.LocaleResponse{}
+	if model.BuffetPackage1 != nil {
+		name1 = model.BuffetPackage1.MultiLanguageName.GetNames()
+	}
+	if model.BuffetPackage2 != nil {
+		name2 = model.BuffetPackage2.MultiLanguageName.GetNames()
+	}
+	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
 		name = dto.LocaleResponse{
 			ZH:   fmt.Sprintf("%s+%s", name1.ZH, name2.ZH),
 			TH:   fmt.Sprintf("%s+%s", name1.TH, name2.TH),
@@ -389,7 +401,7 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 		return
 	}
 	// 只有一个自助餐时都是只填在BuffetPackage1
-	if model.BuffetPackage1.Uuid != 0 {
+	if model.BuffetPackage1 != nil {
 		name = dto.LocaleResponse{
 			ZH:   fmt.Sprintf("%s", name1.ZH),
 			TH:   fmt.Sprintf("%s", name1.TH),

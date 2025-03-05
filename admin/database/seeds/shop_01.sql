@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `sauce_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '小料价（单商品）,所有小料的价格之和',
     `product_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单商品）,规格原价+小料价',
     `change_price_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并',
+    `is_buffet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0',
     -- 总销售价=销售价*数量
     `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
     -- 税率

@@ -2,8 +2,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/jinzhu/copier"
-	"github.com/shopspring/decimal"
 	"reflect"
 	"sort"
 	"strconv"
@@ -12,6 +10,9 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 )
 
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
@@ -24,7 +25,7 @@ type SaleOrderProduct struct {
 	FlavorName string `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
 	Num        uint   `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
 	Remark     string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
-
+	IsBuffet   uint   `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
 	// 状态相关字段
 	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨 2-退菜'" json:"status"`
 	IsRequire     uint `gorm:"column:is_require;type:tinyint(1);not null;default:0;comment:'是否必点商品 0-否 1-是。用于在前端显示必点图标'" json:"is_require"`
@@ -92,6 +93,11 @@ type SaleOrderProduct struct {
 	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 设置该商品为自助餐商品
+func (model *SaleOrderProduct) SetIsBuffet() {
+	model.IsBuffet = constant.SaleOrderProductIsBuffetYes
 }
 
 // 使用反射动态更新字段
@@ -237,7 +243,6 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 	product := SaleOrderProduct{}
 	err := copier.Copy(&product, model)
 	if err != nil {
-		fmt.Println("复制销售订单商品失败", err)
 		return nil
 	}
 	// 重置base_model

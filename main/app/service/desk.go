@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -24,6 +25,7 @@ type IDeskSrv interface {
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
 	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                            // 完成桌台
+	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) error                                                // 切换桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
 	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
 	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                            // 平板端绑定桌台
@@ -259,6 +261,52 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 		return err
 	}
 	//
+	return nil
+}
+
+// ChangeDesk 切换桌台
+func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(reqs.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(reqs.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(reqs.SaleBillUuid)
+	if errSaleBill != nil {
+		return errSaleBill
+	}
+	// 获取桌台信息
+	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
+	if errDesk != nil {
+		return errDesk
+	}
+
+	// 设置新桌台的开台信息
+	desk.SetOpenDesk(reqs.SaleBillUuid)
+	// 更新销售账单的桌台uuid,修改旧桌台的状态
+	saleBill.ChangeDesk(reqs.DeskUuid)
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新新桌台的记录
+		if err := repository.NewDeskRepo(tx).UpdateDeskRecord(*desk); err != nil {
+			return err
+		}
+		// 更新旧桌台的记录
+		if err := repository.NewDeskRepo(tx).UpdateDeskRecord(*saleBill.Desk); err != nil {
+			return err
+		}
+		// 更新销售账单的记录
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
