@@ -76,6 +76,20 @@ type PaymentOrder struct {
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`
 }
 
+func (model *PaymentOrder) GetSource() int {
+	if model.PaymentMethod == nil {
+		return 0
+	}
+	return model.PaymentMethod.Source
+}
+
+func (model *PaymentOrder) GetSourceText(language string) string {
+	if model.PaymentMethod == nil {
+		return ""
+	}
+	return model.PaymentMethod.GetSourceText(language)
+}
+
 // SetBaseModel 设置基础模型,当同一个支付方式已经存在付款单时，更新付款单
 func (model *PaymentOrder) SetBaseModel(baseModel BaseModel) {
 	defer model.SetUpdate()

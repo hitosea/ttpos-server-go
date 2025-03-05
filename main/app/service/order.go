@@ -738,8 +738,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					CurrencyUnit:    payment.CurrencyUnit,
 					PaymentAmount:   payment.PaymentAmount,
 					Status:          uint(payment.Status),
-					Source:          uint(payment.PaymentMethod.Source),
-					SourceText:      payment.PaymentMethod.GetSourceText(ctx.GetLanguage()),
+					Source:          uint(payment.GetSource()),
+					SourceText:      payment.GetSourceText(ctx.GetLanguage()),
 				})
 				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 			}
@@ -753,6 +753,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 		//
 		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
 		for j, product := range order.SaleOrderProducts {
+			url := ""
+			if product.ImageFile != nil {
+				url = product.ImageFile.GetUrl()
+			}
 			products[j] = resp.OrderProduct{
 				Uuid:           product.Uuid,
 				LocaleName:     product.MultiLanguageName.GetNames(),
@@ -767,7 +771,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				Remark:         product.Remark,
 				IsGift:         product.IsGiftProduct(),
 				GiftReason:     product.GiftReason,
-				ImageUrl:       product.ImageFile.GetUrl(),
+				ImageUrl:       url,
 				Attributes:     product.GetAttributeNames(),
 				CancelReason:   product.CancelReason,
 				// todo 待完善
