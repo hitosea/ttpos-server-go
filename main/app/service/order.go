@@ -3291,10 +3291,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
 
 	// 更新销售账单
-	if !saleBill.CanFinishSaleBill() {
-		return nil, errors.New("还有销售订单未支付")
+	updateSaleBill := false
+	if saleBill.CanFinishSaleBill() {
+		saleBill.SetFinishSaleBill()
+		updateSaleBill = true
+		saleBill.CalcAll()
 	}
-	saleBill.SetFinishSaleBill()
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新销售订单
@@ -3302,9 +3304,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			return err
 		}
 
-		// 更新整单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
-			return errUpdateSaleBill
+		// 更新账单
+		if updateSaleBill {
+			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+				return errUpdateSaleBill
+			}
 		}
 		return nil
 	}); err != nil {

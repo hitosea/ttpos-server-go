@@ -38,8 +38,9 @@ type SaleBill struct {
 	Reason  string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
 
 	// 金额字段 - 主要金额
-	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
-	ProductAmount float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额,关联销售订单的商品金额之和" json:"product_amount"`
+	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
+	ProductAmount         float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额,关联销售订单的商品金额之和" json:"product_amount"`
+	ProductOriginalAmount float64 `gorm:"column:product_original_amount;type:decimal(12,2);default:0;comment:原始商品金额。 商品原始金额=(订单.原始商品金额)之和。" json:"product_original_amount"`
 
 	// 金额字段 - 支付相关
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
@@ -125,6 +126,30 @@ func (model *SaleBill) SetCookingStatus() {
 	model.Status = constant.SaleBillStatusPending
 }
 
+func (model *SaleBill) calcPaymentCommissionFee() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.PaymentCommissionFee))
+	}
+	return amount.InexactFloat64()
+}
+
+func (model *SaleBill) calcPaymentAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.PaymentAmount))
+	}
+	return amount.InexactFloat64()
+}
+
+func (model *SaleBill) calcProductOriginalAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.ProductOriginalAmount))
+	}
+	return amount.InexactFloat64()
+}
+
 // 判断账单是否为已送厨状态
 func (model *SaleBill) IsCookingStatus() bool {
 	return model.Status != constant.SaleBillStatusNoCooking
@@ -208,17 +233,6 @@ func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 	return saleOrderProducts
 }
 
-type SaleBillCalc struct {
-	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
-	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
-	ServiceFee        float64 `json:"service_fee"`         // 服务费=销售订单的服务费之和
-	TaxFee            float64 `json:"tax_fee"`             // 税费=销售订单的税费之和
-	DiscountFee       float64 `json:"discount_fee"`        // 折扣费用=销售订单的折扣费用之和
-	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣费用=销售订单的会员折扣费用之和
-	GiftAmount        float64 `json:"gift_amount"`         // 赠菜金额=销售订单的赠菜金额之和
-	FreeAmount        float64 `json:"free_amount"`         // 免单金额=销售订单的免单金额之和
-}
-
 // 计算销售账单的总金额。总金额=销售订单的应收金额之和
 func (model *SaleBill) calcAmount() float64 {
 	amount := decimal.NewFromFloat(0)
@@ -277,15 +291,8 @@ func (model *SaleBill) calcMemberDiscountFee() float64 {
 func (model *SaleBill) calcGiftAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		for _, product := range saleOrder.SaleOrderProducts {
-			if product.IsDelete() || product.IsCancelProduct() {
-				continue
-			}
-			if product.IsGiftProduct() {
-				price := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromUint64(uint64(product.Num)))
-				amount = amount.Add(price)
-			}
-		}
+		// 赠菜金额=销售订单的赠菜金额之和 累加
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.GiftAmount))
 	}
 	return amount.InexactFloat64()
 }
@@ -327,6 +334,21 @@ func (model *SaleBill) CalcAll() {
 	model.CalcSaleBill()
 }
 
+type SaleBillCalc struct {
+	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
+	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
+	ServiceFee        float64 `json:"service_fee"`         // 服务费=销售订单的服务费之和
+	TaxFee            float64 `json:"tax_fee"`             // 税费=销售订单的税费之和
+	DiscountFee       float64 `json:"discount_fee"`        // 折扣费用=销售订单的折扣费用之和
+	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣费用=销售订单的会员折扣费用之和
+	GiftAmount        float64 `json:"gift_amount"`         // 赠菜金额=销售订单的赠菜金额之和
+	FreeAmount        float64 `json:"free_amount"`         // 免单金额=销售订单的免单金额之和
+
+	ProductOriginalAmount float64 `json:"product_original_amount"` //
+	PaymentAmount         float64
+	PaymentCommissionFee  float64
+}
+
 // 重新计算销售订单的金额
 func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
 	calc := SaleBillCalc{}
@@ -346,6 +368,12 @@ func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
 	model.GiftAmount = calc.GiftAmount
 	calc.FreeAmount = model.calcFreeAmount()
 	model.FreeAmount = calc.FreeAmount
+	calc.ProductOriginalAmount = model.calcProductOriginalAmount()
+	model.ProductOriginalAmount = calc.ProductOriginalAmount
+	calc.PaymentAmount = model.calcPaymentAmount()
+	model.PaymentAmount = calc.PaymentAmount
+	calc.PaymentCommissionFee = model.calcPaymentCommissionFee()
+	model.PaymentCommissionFee = calc.PaymentCommissionFee
 	return &calc
 }
 
