@@ -348,6 +348,6 @@ class PayType extends BaseModel
             $this->error = '状态值不合法';
             return false;
         }
-        return $this->where('value', $value)->update(['status' => $status]);;
+        return $this->where('code', $value)->update(['status' => $status]);;
     }
 }
