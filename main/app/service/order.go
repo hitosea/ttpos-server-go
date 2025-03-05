@@ -1906,6 +1906,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					IsMust:        false,
 					IsGift:        false,
 					IsCancel:      false,
+					IsBuffet:      false,
 					AboutBuffet: resp.AboutBuffet{
 						IsCustomer:       true,
 						IsDelay:          false,
@@ -1944,6 +1945,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					IsMust:              false,
 					IsGift:              false,
 					IsCancel:            false,
+					IsBuffet:            false,
 					AboutBuffet: resp.AboutBuffet{
 						IsCustomer: false,
 						IsDelay:    true, // 标记该商品是加钟商品
@@ -1970,6 +1972,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 					Remark:              saleOrderProduct.Remark,
 					IsMust:              saleOrderProduct.IsMustProduct(),
 					IsGift:              saleOrderProduct.IsGiftProduct(),
+					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					IsCancel:            saleOrderProduct.IsCancelProduct(),
 				}
 				productList = append(productList, product)
