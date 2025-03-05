@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `duty_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号,用于标记该账单属于哪个当班',
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `bill_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单',
-    `dining_method` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食 1-打包',
+    `dining_method` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
     `is_buffet` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',

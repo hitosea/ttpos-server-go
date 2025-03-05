@@ -545,6 +545,14 @@ func (model *SaleBill) GetTotalRefundAmount() float64 {
 	return refundAmount
 }
 
+// GetAmount 获取账单的付款金额。订单金额=amount-退款金额
+func (model *SaleBill) GetPaymentAmount() float64 {
+	// 退款金额
+	refundAmount := model.GetTotalRefundAmount()
+	//订单金额=amount-退款金额
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
+}
+
 // 获取所有自助餐名称
 func (model *SaleBill) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)

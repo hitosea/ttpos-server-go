@@ -270,7 +270,7 @@ func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 // @param sale_order_uuid query integer true "销售订单uuid"
 // @param sale_bill_uuid query integer true "销售账单uuid"
 // @param member_uuid query integer true "会员Uuid"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.MemberDiscountResp}
 // @Router /cashier/member/order_discount [get]
 func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 	var discountReq req.GetMemberDiscountReq
@@ -296,7 +296,7 @@ func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.CheckMemberPasswordReq true "使用会员优惠验证密码"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.PrinterLogData}
 // @Router /cashier/member/check_password [get]
 func (h *MemberHandler) CheckPassword(c *gin.Context) {
 	var passwordReq req.CheckMemberPasswordReq

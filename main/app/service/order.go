@@ -705,19 +705,19 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	info, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
+	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return resp.OrderInfosResp{}, err
 	}
-	isMain := req.SaleOrderUuid > 0     // 是否查询主单
-	isSplit := len(info.SaleOrders) > 1 // 是否拆单
+	isMain := req.SaleOrderUuid > 0         // 是否查询主单
+	isSplit := len(saleBill.SaleOrders) > 1 // 是否拆单
 
 	// 组合信息
 	totalMemberNames := []string{}
 	totalMemberUuids := []string{}
 	payTypes := make([]resp.OrderInfoPayTypes, 0)
-	orderList := make([]resp.OrderInfo, len(info.SaleOrders))
-	for i, order := range info.SaleOrders {
+	orderList := make([]resp.OrderInfo, len(saleBill.SaleOrders))
+	for i, order := range saleBill.SaleOrders {
 		payTypeNames := []string{}
 		if order.IsFree == 1 {
 			payTypes = append(payTypes, resp.OrderInfoPayTypes{
@@ -781,9 +781,9 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 		// todo - SerialNo 取值不对
 		orderList[i] = resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
-			BillType:      info.BillType,
-			DiningMethod:  info.DiningMethod,
-			SerialNo:      info.SerialNo + "-" + strconv.Itoa(i+1),
+			BillType:      saleBill.BillType,
+			DiningMethod:  saleBill.DiningMethod,
+			SerialNo:      saleBill.SerialNo + "-" + strconv.Itoa(i+1),
 			OrderNo:       order.OrderNo,
 			Status:        order.Status,
 			IsFree:        order.IsFree == 1,
@@ -799,44 +799,45 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	}
 
 	// 处理额外信息
-	order := info.SaleOrders[0]
+	order := saleBill.SaleOrders[0]
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund: false,
 		IsCellPrint:  (!isSplit || !isMain) && order.Status != constant.SaleBillStatusPending,
 		IsCellDelete: order.Status == constant.SaleBillStatusCanceled,
 	}
-	if (!isSplit || !isMain) && order.IsFree == 0 && info.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+	if (!isSplit || !isMain) && order.IsFree == 0 && saleBill.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 		orderExtra.IsCellRefund = true
 	}
 
 	// 返回响应对象
 	return resp.OrderInfosResp{
 		Detail: resp.OrderInfos{
-			SaleBillUuid: info.Uuid,
+			SaleBillUuid: saleBill.Uuid,
 			IsSplit:      isSplit,
-			BillType:     info.BillType,
-			SerialNo:     info.SerialNo,
+			BillType:     saleBill.BillType,
+			DiningMethod: saleBill.DiningMethod,
+			SerialNo:     saleBill.SerialNo,
 			OrderNo: func() string {
 				if isMain {
-					return info.OrderNo
+					return saleBill.OrderNo
 				}
 				return order.OrderNo
 			}(),
-			Status:        info.Status,
-			CreateTime:    info.CreateTime,
-			FinishTime:    info.FinishTime,
-			OrderAmount:   info.Amount,
-			PaymentAmount: info.PaymentAmount - info.GetTotalRefundAmount(),
-			RefundAmount:  info.GetTotalRefundAmount(),
+			Status:        saleBill.Status,
+			CreateTime:    saleBill.CreateTime,
+			FinishTime:    saleBill.FinishTime,
+			OrderAmount:   saleBill.Amount,
+			PaymentAmount: saleBill.GetPaymentAmount(),
+			RefundAmount:  saleBill.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
-			CashierName:   info.Cashier.RealName,
-			IsBuffet:      info.IsBuffet == 1,
-			BuffetNames:   info.GetBuffetNames(ctx.GetLanguage()),
-			CancelReason:  info.Reason,
+			CashierName:   saleBill.Cashier.RealName,
+			IsBuffet:      saleBill.IsBuffet == 1,
+			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
+			CancelReason:  saleBill.Reason,
 			PayTypes:      payTypes,
 			SaleOrders:    orderList,
-			Remark:        info.Remark,
+			Remark:        saleBill.Remark,
 		},
 		OperationLog: struct {
 			List []resp.OrderOperationLog `json:"list"`
