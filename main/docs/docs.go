@@ -1426,7 +1426,7 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/info": {
             "get": {
-                "description": "查询点餐购物车信息",
+                "description": "查询桌台购物车信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -1436,7 +1436,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.桌台"
                 ],
-                "summary": "查询点餐购物车信息",
+                "summary": "查询桌台购物车信息",
                 "parameters": [
                     {
                         "type": "string",
@@ -4439,7 +4439,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterLogData"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -12353,6 +12365,10 @@ const docTemplate = `{
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
                     "type": "number"
+                },
+                "is_buffet": {
+                    "description": "是否是自助餐",
+                    "type": "boolean"
                 },
                 "is_cancel": {
                     "description": "是否退菜",

@@ -3430,6 +3430,9 @@ definitions:
       discount_price:
         description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
         type: number
+      is_buffet:
+        description: 是否是自助餐
+        type: boolean
       is_cancel:
         description: 是否退菜
         type: boolean
@@ -5501,7 +5504,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 查询点餐购物车信息
+      description: 查询桌台购物车信息
       parameters:
       - description: 账单ID
         in: path
@@ -5527,7 +5530,7 @@ paths:
               type: object
         "404":
           description: 未找到
-      summary: 查询点餐购物车信息
+      summary: 查询桌台购物车信息
       tags:
       - 收银端.桌台
   /cashier/desk/order/cart/product/add:
@@ -7267,7 +7270,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterLogData'
+              type: object
       security:
       - JwtToken: []
       summary: 使用会员优惠验证密码
