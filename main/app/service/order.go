@@ -2514,6 +2514,11 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		product.SetCooking(productionOrder.Uuid)
 	}
 
+	// 修改账单状态为已送厨
+	if !saleBill.IsCookingStatus() {
+		saleBill.SetCookingStatus()
+	}
+
 	ctx.Log().Debug("准备开始更新")
 	errUpdate := db.Transaction(func(tx *gorm.DB) error {
 		// 修改订单商品状态为已送厨
@@ -2527,6 +2532,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		if errCreateProduction != nil {
 			ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
 			return errors.New(errCreateProduction.Error())
+		}
+
+		// 如果账单有更新，则更新账单
+		if saleBill.GetUpdate() {
+			if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
+				ctx.Log().Debug("更新账单失败", zap.Error(err))
+				return errors.New(err.Error())
+			}
 		}
 		return nil
 	})

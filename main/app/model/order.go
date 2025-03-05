@@ -23,7 +23,7 @@ type SaleBill struct {
 	SerialNo string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
 
 	// 状态相关字段
-	Status uint `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-待付款、1-已完成、2-已取消" json:"status"`
+	Status uint `gorm:"column:status;type:tinyint(1);default:3;comment:订单状态, 0-待付款、1-已完成、2-已取消、3-开单未送厨，这个账单的初始状态。订单列表中只显示0 1 2状态的订单" json:"status"`
 	IsLock uint `gorm:"column:is_lock;type:tinyint(1);default:0;comment:是否锁单, 0-否 1-是" json:"is_lock"`
 
 	// 订单类型字段
@@ -116,6 +116,21 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 设置账单为已送厨状态。如果状态已经是送厨，则不修改
+func (model *SaleBill) SetCookingStatus() {
+	defer model.SetUpdate()
+	if model.IsCookingStatus() {
+		return
+	}
+	model.Status = constant.SaleBillStatusPending
+}
+
+// 判断账单是否为已送厨状态
+func (model *SaleBill) IsCookingStatus() bool {
+	return model.Status != constant.SaleBillStatusNoCooking
+}
+
+// 转台
 func (model *SaleBill) ChangeDesk(deskUuid uint64) {
 	model.DeskUuid = deskUuid
 	// 设置旧桌台关闭

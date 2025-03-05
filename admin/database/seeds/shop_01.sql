@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
-    `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消',
+    `status` TINYINT(2) NOT NULL DEFAULT 3 COMMENT '订单状态, 3-开单未送厨 0-待付款、1-已完成、2-已取消。订单列表中只显示0 1 2状态的订单',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额,关联销售订单的总金额之和',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费,关联销售订单的服务费之和',

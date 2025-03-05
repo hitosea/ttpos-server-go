@@ -195,6 +195,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByNotStatus(constant.SaleBillStatusNoCooking),
 		CommonRepo.SortWithID("DESC"),
 		// 额外条件
 		func() DBOption {

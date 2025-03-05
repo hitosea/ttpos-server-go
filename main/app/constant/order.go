@@ -17,9 +17,10 @@ const (
 )
 
 const (
-	SaleBillStatusPending  = 0 // 待付款
-	SaleBillStatusComplete = 1 // 已完成
-	SaleBillStatusCanceled = 2 // 已取消
+	SaleBillStatusPending   = 0 // 待付款
+	SaleBillStatusComplete  = 1 // 已完成
+	SaleBillStatusCanceled  = 2 // 已取消
+	SaleBillStatusNoCooking = 3 // 开单未送厨
 )
 
 const (

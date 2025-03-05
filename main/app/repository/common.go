@@ -38,6 +38,7 @@ type ICommonRepo interface {
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
 	WhereByOrderNo(orderNo string) DBOption                         // 根据订单编号查询
 	WhereByBillType(billType uint) DBOption                         // 根据账单类型查询
+	WhereByNotStatus(status uint) DBOption                          // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
 	WhereByNoDisable() DBOption                                     // 根据没禁用查询
 	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption     // 根据自助餐套餐UUID查询
@@ -149,6 +150,12 @@ func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
 func (r *commonRepo) WhereByBillType(billType uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("bill_type = ?", billType)
+	}
+}
+
+func (r *commonRepo) WhereByNotStatus(status uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status <> ?", status)
 	}
 }
 
