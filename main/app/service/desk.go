@@ -146,13 +146,17 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 		return resp.CreateDeskOrderResp{}, errors.New("桌台不空闲")
 	}
 
-	// todo 原有逻辑待补充
-	// $settingData = SettingModel::getAll($appId, $shopSupplierId);
-	// $cashier = $settingData[SettingEnum::CASHIER]['values'] ?? [];
-	// if ($cashier['order_method']['is_table_order'] != 1) {
-	// 	$queue->release();
-	// 	return $this->renderError('桌台用餐已关闭，请选择其他用餐方式', [], -5);
-	// }
+	// 判断收银机设置
+	if ctx.GetSource() == constant.SourceCashier {
+		cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, err
+		}
+		if cashierSetting.OrderMethod.IsTableOrder != "1" {
+			return resp.CreateDeskOrderResp{}, errors.New("桌台用餐已关闭，请选择其他用餐方式")
+		}
+	}
+	// todo -- h5和平板没有判断是否可以开桌
 
 	// 判断是否自助餐订单
 	if !*req.IsBuffet {
