@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"errors"
 	"time"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -102,7 +102,7 @@ func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (*model.SaleOrderPro
 
 	err := db.First(&product).Error
 
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil && !utils.IsNotFoundRecord(err) {
 		return &product, err
 	}
 

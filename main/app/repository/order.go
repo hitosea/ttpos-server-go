@@ -1,12 +1,12 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -1109,7 +1109,7 @@ func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBil
 func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
 	var saleBill model.SaleBill
 	if err := r.db.Where("device_uuid = ? AND status = ? AND hide_bill_time = ? AND delete_time = ?", deviceUuid, constant.SaleBillStatusPending, 0, constant.NotDeleted).First(&saleBill).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if utils.IsNotFoundRecord(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("HasShowOrder: %v", err)

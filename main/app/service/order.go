@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	errors2 "errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -129,8 +128,8 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			commonRepo.WhereByIsHide(false),
 			commonRepo.WhereBySoftDelete(),
 		)
-		if err != nil && !errors2.Is(err, gorm.ErrRecordNotFound) {
-			return err
+		if err != nil && !strings.Contains(err.Error(), "record not found") {
+			return fmt.Errorf("11 GetSaleBill: %s", err)
 		}
 		if order.Uuid > 0 && device.Uuid == order.DeviceUuid {
 			return errors.New("有待支付、未挂单的订单")
@@ -139,6 +138,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		// 创建订单编号
 		orderNo, createErr := s.createOrderNo(tx, constant.OrderSourceInstant)
 		if createErr != nil {
+			ctx.Log().Error("订单编号生成失败", zap.Error(createErr))
 			return errors.New("订单编号生成失败")
 		}
 
@@ -532,7 +532,6 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 	datePart := time.Now().Format("20060102")
 	// 第九位是订单来源
 	orderSourceType := constant.OrderSourceMapToOrderNoType[orderSource]
-
 	// 如果订单编号存在, 则重新生成, 重试10次, 否则退出
 	for i := 0; i < 10; i++ {
 		// 后九位是随机生成
@@ -540,7 +539,6 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 
 		// 订单编号
 		orderNo = datePart + orderSourceType + n
-
 		// 检查订单编号是否存在
 		saleBill, err := repository.NewOrderRepo(db).GetSaleBill(repository.NewCommonRepo().WhereByOrderNo(orderNo))
 		if err == nil && saleBill.Uuid > 0 {
@@ -548,14 +546,13 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 			continue
 		}
 
-		if !errors2.Is(err, gorm.ErrRecordNotFound) {
+		if !utils.IsNotFoundRecord(err) {
 			orderNo = ""
 			break
 		} else {
 			break
 		}
 	}
-
 	if orderNo == "" {
 		return "", errors.New("订单编号生成失败")
 	}
@@ -1846,7 +1843,7 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单
 	if saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); errGetSaleBill != nil {
-		if errors2.Is(errGetSaleBill, gorm.ErrRecordNotFound) {
+		if utils.IsNotFoundRecord(errGetSaleBill) {
 			return 0, nil // 没有点餐账单
 		}
 		return 0, errors.New(errGetSaleBill.Error())
@@ -2995,11 +2992,11 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	if device.IsDelete() {
 		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
 	}
-	ctx.Log().Debug("通过设备ID查询未挂单的销售账单2222", zap.Any("device_uuid", device.Uuid))
+	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单
 	saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid)
 	if errGetSaleBill != nil {
-		if !errors2.Is(errGetSaleBill, gorm.ErrRecordNotFound) {
+		if !utils.IsNotFoundRecord(errGetSaleBill) {
 			return nil, errors.New(errGetSaleBill.Error())
 		}
 	}

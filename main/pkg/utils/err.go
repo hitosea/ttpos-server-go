@@ -7,3 +7,7 @@ func Panic(err error) {
 		panic(err.Error())
 	}
 }
+
+func IsNotFoundRecord(err error) bool {
+	return strings.Contains(err.Error(), "record not found")
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -164,7 +165,7 @@ func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 		CommonRepo.SortWithCreateTime("desc"),
 	)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if utils.IsNotFoundRecord(err) {
 			return nil, nil
 		}
 		return nil, err
