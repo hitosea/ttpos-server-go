@@ -854,6 +854,36 @@ func (h *DeskHandler) OrderPaymentCreate(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentCancel 撤销一个支付单
+// @Summary 撤销一个支付单
+// @Description 撤销一个支付单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentCancelReq true "撤销一个支付单参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /cashier/desk/order/payment/cancel [post]
+func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面撤销一个支付单接口请求")
+
+	params := req.InstantOrderPaymentCancelReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
+	// 撤销一个支付单
+	res, err := h.orderService.InstantOrderPaymentCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("撤销一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderSaleOrderCreate 创建一个销售订单
 // @Summary 创建一个销售订单
 // @Description 创建一个销售订单
@@ -1031,6 +1061,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
+		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
 		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)
