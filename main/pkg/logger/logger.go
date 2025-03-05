@@ -16,6 +16,7 @@ import (
 )
 
 var Logger *zap.Logger
+var SqlLogger *zap.Logger
 
 // Init 初始化日志
 func Init() error {
@@ -24,19 +25,17 @@ func Init() error {
 		return fmt.Errorf("can't create log directory: %v", err)
 	}
 
-	// 获取当前日期作为日志文件名
-	now := time.Now()
-	logfile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s.log", now.Format(time.DateOnly)))
+	// 创建Logger
+	Logger = newLogger("")
+	SqlLogger = newLogger(".sql")
+	// 定时每天清理一次日志
+	startCron()
+	return nil
+}
 
-	// 配置 lumberjack
-	hook := &lumberjack.Logger{
-		Filename:   logfile,              // 日志文件路径
-		MaxSize:    config.Log.MaxSize,   // 每个日志文件保存的最大尺寸 单位：M
-		MaxBackups: config.Log.MaxBackup, // 保留最近14天的日志文件
-		MaxAge:     config.Log.MaxBackup, // 保留最近14天的日志文件
-		Compress:   true,                 // 是否压缩
-		LocalTime:  true,                 // 使用本地时间
-	}
+func newLogger(name string) *zap.Logger {
+	now := time.Now()
+	logfile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s%s.log", now.Format(time.DateOnly), name))
 
 	// 编码器配置
 	encoderConfig := zapcore.EncoderConfig{
@@ -54,6 +53,16 @@ func Init() error {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
+	// 配置 lumberjack
+	hook := &lumberjack.Logger{
+		Filename:   logfile,              // 日志文件路径
+		MaxSize:    config.Log.MaxSize,   // 每个日志文件保存的最大尺寸 单位：M
+		MaxBackups: config.Log.MaxBackup, // 保留最近14天的日志文件
+		MaxAge:     config.Log.MaxBackup, // 保留最近14天的日志文件
+		Compress:   true,                 // 是否压缩
+		LocalTime:  true,                 // 使用本地时间
+	}
+
 	levelMap := map[string]zapcore.Level{
 		"debug": zap.DebugLevel,
 		"info":  zap.InfoLevel,
@@ -61,7 +70,6 @@ func Init() error {
 		"error": zap.ErrorLevel,
 	}
 
-	// 设置日志级别
 	atomicLevel := zap.NewAtomicLevel()
 	atomicLevel.SetLevel(levelMap[config.Log.Level])
 
@@ -71,15 +79,10 @@ func Init() error {
 		atomicLevel,                           // 日志级别
 	)
 
-	// 创建Logger
-	Logger = zap.New(core,
+	return zap.New(core,
 		zap.AddCaller(),                   // 调用文件和行号
 		zap.AddStacktrace(zap.ErrorLevel), // Error级别日志才会显示堆栈信息
 	)
-
-	// 定时每天清理一次日志
-	startCron()
-	return nil
 }
 
 func startCron() {

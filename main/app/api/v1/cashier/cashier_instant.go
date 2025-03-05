@@ -1,6 +1,7 @@
 package cashier
 
 import (
+	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -716,7 +717,7 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 	// 销售订单的付款结账
 	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s %s", ctx.GetRequestUuid(), err))
 		return
 	}
 	ctx.Log().Debug("销售订单的付款结账成功", zap.Any("res", res))

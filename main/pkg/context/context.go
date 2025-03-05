@@ -2,9 +2,10 @@ package context
 
 import (
 	"context"
+	"ttpos-server-go/app/model"
+
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"ttpos-server-go/app/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,7 @@ type Context interface {
 	Log() *zap.Logger                        // 获取日志实例
 	SetDB(tx *gorm.DB)                       // 设置gorm.DB
 	GetDB() *gorm.DB                         // 获取gorm.DB
+	GetRequestUuid() string                  // 获取请求ID
 }
 type ContextImpl struct {
 	context.Context
@@ -42,6 +44,7 @@ type ContextImpl struct {
 	deskUuid       uint64               // 桌台ID
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
 	deviceUuid     uint64               // 设备uuid
+	requestUuid    string               // 请求uuid
 	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
 	db             *gorm.DB
@@ -70,6 +73,12 @@ func WithDeviceSn(deviceSn string) Option {
 func WithDeviceUuid(deviceUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.deviceUuid = deviceUuid
+	}
+}
+
+func WithRequestUuid(requestUuid string) Option {
+	return func(ctx *ContextImpl) {
+		ctx.requestUuid = requestUuid
 	}
 }
 
@@ -214,4 +223,9 @@ func (c *ContextImpl) SetDB(tx *gorm.DB) {
 // GetDB 获取gorm实例
 func (c *ContextImpl) GetDB() *gorm.DB {
 	return c.db
+}
+
+// GetRequestUuid 获取请求uuid
+func (c *ContextImpl) GetRequestUuid() string {
+	return c.requestUuid
 }
