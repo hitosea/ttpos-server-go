@@ -30,7 +30,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "点餐助手端.认证鉴权"
+                    "点餐助手端.基础信息"
                 ],
                 "summary": "点餐助手端信息",
                 "responses": {
@@ -121,6 +121,43 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.基础信息"
+                ],
+                "summary": "检查更新",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "品牌参数",
+                        "name": "brand",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -247,6 +284,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/language": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "收银端语言",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.基础信息"
+                ],
+                "summary": "收银端语言",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LanguageResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/login": {
             "post": {
                 "description": "点餐助手登录",
@@ -331,7 +408,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "点餐助手端.认证鉴权"
+                    "点餐助手端.基础信息"
                 ],
                 "summary": "获取在线收银机",
                 "responses": {
@@ -351,6 +428,124 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/payment_method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.支付方式"
+                ],
+                "summary": "获取支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PaymentMethodList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/verify_advanced_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.基础信息"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/verify_lock_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证锁屏密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.基础信息"
+                ],
+                "summary": "验证锁屏密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }

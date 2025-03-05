@@ -55,7 +55,7 @@ type ISrv interface {
 	GetCashierAd(ctx context.Context) (resp.Ads, error)                                                                                   // 获取收银机副屏广告
 	GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error)                                                              // 获取服务费设置
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
-	CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool                                      // 收银机验证密码
+	VerifyPassword(ctx context.Context, source string, typ string, password string) bool                                                  // 收银机验证密码
 	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
 	VerifyAdvancedPassword(ctx context.Context, password string) error                                                                    // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
@@ -971,22 +971,50 @@ func (s *Srv) GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error) {
 	return defaultTaxRate, nil
 }
 
-// CashierVerifyPassword 收银机验证密码
-func (s *Srv) CashierVerifyPassword(ctx context.Context, typ string, password string, companyUuid uint64) bool {
-	cashierSetting, err := s.GetCashierSetting(ctx, nil)
-	if err != nil {
-		return false
+// VerifyPassword 验证密码
+func (s *Srv) VerifyPassword(ctx context.Context, source string, typ string, password string) bool {
+	passwordMap := make(map[string]string)
+	switch source {
+	case constant.SourceCashier:
+		cashierSetting, err := s.GetCashierSetting(ctx, nil)
+		if err != nil {
+			return false
+		}
+		passwordMap = map[string]string{
+			constant.PasswordTypeCashBox:  cashierSetting.CashierPassword,
+			constant.PasswordTypeAdvanced: cashierSetting.AdvancedPassword,
+			constant.PasswordTypeLock:     cashierSetting.LockPassword,
+		}
+	case constant.SourceAssistant:
+		assistantSetting, err := s.GetAssistantSetting(ctx, nil)
+		if err != nil {
+			return false
+		}
+		passwordMap = map[string]string{
+			constant.PasswordTypeAdvanced: assistantSetting.AdvancedPassword,
+			constant.PasswordTypeLock:     assistantSetting.LockPassword,
+		}
+	case constant.SourceTablet:
+		tabletSetting, err := s.GetTabletSetting(ctx, nil)
+		if err != nil {
+			return false
+		}
+		passwordMap = map[string]string{
+			constant.PasswordTypeAdvanced: tabletSetting.AdvancedPassword,
+		}
+	case constant.SourceKitchen:
+		kitchenSetting, err := s.GetKitchenSetting(ctx, ctx.GetCompanySetting(), nil)
+		if err != nil {
+			return false
+		}
+		passwordMap = map[string]string{
+			constant.PasswordTypeAdvanced: kitchenSetting.AdvancedPassword,
+		}
 	}
-	switch typ {
-	case constant.PasswordTypeCashBox:
-		return cashierSetting.CashierPassword == password
-	case constant.PasswordTypeAdvanced:
-		return cashierSetting.AdvancedPassword == password
-	case constant.PasswordTypeLock:
-		return cashierSetting.LockPassword == password
-	default:
-		return false
+	if truePassword, exits := passwordMap[typ]; exits {
+		return password == truePassword
 	}
+	return false
 }
 
 // CheckUpdate 检查更新

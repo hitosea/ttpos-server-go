@@ -4660,7 +4660,7 @@ paths:
       - JwtToken: []
       summary: 点餐助手端信息
       tags:
-      - 点餐助手端.认证鉴权
+      - 点餐助手端.基础信息
   /assistant/bind_cashier:
     post:
       consumes:
@@ -4704,6 +4704,29 @@ paths:
       summary: 获取自助餐列表
       tags:
       - 点餐助手端.自助餐
+  /assistant/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查更新
+      tags:
+      - 点餐助手端.基础信息
   /assistant/desk/info:
     get:
       consumes:
@@ -4781,6 +4804,28 @@ paths:
       summary: 获取桌台的区域和类型
       tags:
       - 点餐助手端.桌台
+  /assistant/language:
+    get:
+      consumes:
+      - application/json
+      description: 收银端语言
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LanguageResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 收银端语言
+      tags:
+      - 点餐助手端.基础信息
   /assistant/login:
     post:
       consumes:
@@ -4846,7 +4891,77 @@ paths:
       - JwtToken: []
       summary: 获取在线收银机
       tags:
-      - 点餐助手端.认证鉴权
+      - 点餐助手端.基础信息
+  /assistant/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PaymentMethodList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式列表
+      tags:
+      - 点餐助手端.支付方式
+  /assistant/verify_advanced_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证高级密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证高级密码
+      tags:
+      - 点餐助手端.基础信息
+  /assistant/verify_lock_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证锁屏密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证锁屏密码
+      tags:
+      - 点餐助手端.基础信息
   /cashier/ad:
     get:
       consumes:
