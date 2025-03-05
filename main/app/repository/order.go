@@ -64,7 +64,7 @@ func NewOrderRepoImpl(db *gorm.DB) IOrderRepo {
 func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return model, err
+		return model, fmt.Errorf("CreateSaleBill: %v", err)
 	}
 
 	return model, nil
@@ -74,7 +74,7 @@ func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error)
 func (r *orderRepo) CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return model, err
+		return model, fmt.Errorf("CreateSaleBillSetting: %v", err)
 	}
 
 	return model, nil
@@ -91,7 +91,7 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 
 	result := db.First(&saleBill)
 	if result.Error != nil {
-		return saleBill, result.Error
+		return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
 	}
 
 	return saleBill, nil
@@ -101,7 +101,7 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return model, err
+		return model, fmt.Errorf("CreateSaleOrder: %v", err)
 	}
 	return model, nil
 }
@@ -110,7 +110,7 @@ func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, err
 func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) {
 	err := r.db.Create(&model).Error
 	if err != nil {
-		return model, err
+		return model, fmt.Errorf("CreateSaleOrderBuffetCustomerType: %v", err)
 	}
 	return model, nil
 }
@@ -119,7 +119,7 @@ func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffe
 func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error {
 	err := r.db.Where("sale_order_uuid = ?", saleOrderUuid).Delete(&model.SaleOrderBuffetCustomerType{}).Error
 	if err != nil {
-		return err
+		return fmt.Errorf("DeleteSaleOrderBuffetCustomerType: %v", err)
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 	// 获取总数
 	err := db.Count(&total).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("GetOrderListWithPagination: %v", err)
 	}
 
 	// 获取列表
@@ -157,7 +157,11 @@ func (r *orderRepo) GetOrderNum(opts ...DBOption) (int64, error) {
 	}
 
 	result := db.Count(&count)
-	return count, result.Error
+	err := result.Error
+	if err != nil {
+		return 0, fmt.Errorf("GetOrderNum: %v", err)
+	}
+	return count, nil
 }
 
 // GetCashierOrderListWithPaginationType 获取收银台订单列表-参数
@@ -277,8 +281,10 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			}
 		}(),
 	)
-	//
-	return lists, total, err
+	if err != nil {
+		return nil, 0, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
+	}
+	return lists, total, nil
 }
 
 // GetSaleBillInfo 获取销售账单详细信息
@@ -305,7 +311,7 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
-		return model.SaleBill{}, err
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfo: %v", err)
 	}
 	return info, nil
 }
@@ -334,7 +340,7 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 		CommonRepo.WhereByDeskUuid(deskUuid),
 	)
 	if err != nil {
-		return model.SaleBill{}, err
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfoByDesk: %v", err)
 	}
 	return info, nil
 }
@@ -349,7 +355,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 		CommonRepo.WhereByIsHide(false),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetOrderCartInfo: %v", err)
 	}
 
 	if saleBill.IsDeskSaleBill() {
@@ -593,7 +599,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				),
 			)
 			if errSaleBill != nil {
-				return nil, errSaleBill
+				return nil, fmt.Errorf("GetOrderCartInfo errSaleBill: %v", errSaleBill)
 			}
 			bill := &saleBill
 			// 计算一次金额，避免错误
@@ -639,7 +645,7 @@ func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
-		return model.SaleBill{}, err
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfoAndProduct: %v", err)
 	}
 	return info, nil
 }
@@ -649,7 +655,7 @@ func (r *orderRepo) GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProd
 	products := make([]model.SaleOrderProduct, 0)
 	err := r.db.Model(&model.SaleOrderProduct{}).Where("uuid in ?", saleOrderProductUuids).Find(&products).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetSaleOrderProductListBySaleOrderProductUuids: %v", err)
 	}
 	return products, nil
 }
@@ -699,7 +705,7 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
-		return model.SaleBill{}, err
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillDetails: %v", err)
 	}
 	return info, nil
 }
@@ -710,7 +716,7 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 	saleOrder := &model.SaleOrder{}
 	where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
 	//
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
 		if err != nil {
 			return err
@@ -749,6 +755,10 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 				"reason":      reason,
 			}).Error
 	})
+	if err != nil {
+		return fmt.Errorf("CancelOrder: %v", err)
+	}
+	return nil
 }
 
 // CancelDeskOrder 关闭桌台订单
@@ -758,7 +768,7 @@ func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string) error {
 		Where("status = ?", constant.SaleBillStatusPending).
 		Where("desk_uuid = ?", deskUuid).
 		First(&saleBill).Error; err != nil {
-		return err
+		return fmt.Errorf("CancelDeskOrder: %v", err)
 	}
 	return r.CancelOrder(saleBill.Uuid, reason)
 }
@@ -788,7 +798,11 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 		}
 	}
 
-	return tx.Commit().Error
+	err := tx.Commit().Error
+	if err != nil {
+		return fmt.Errorf("DeleteOrder: %v", err)
+	}
+	return nil
 }
 
 // HideOrder 隐藏订单
@@ -800,16 +814,20 @@ func (r *orderRepo) HideOrder(saleBillUuid uint64) error {
 		Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusPending).
 		Update("hide_bill_time", now).Error; err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("HideOrder: %v", err)
 	}
-	return tx.Commit().Error
+	err := tx.Commit().Error
+	if err != nil {
+		return fmt.Errorf("HideOrder: %v", err)
+	}
+	return nil
 }
 
 // GetSaleBillRecord 获取销售账单记录
 func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error) {
 	var saleBill model.SaleBill
 	if err := r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).First(&saleBill).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetSaleBillRecord: %v", err)
 	}
 	return &saleBill, nil
 }
@@ -925,7 +943,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("GetSaleBillAllInfo: %v", err))
+		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
 	return &info, nil
 }
@@ -969,7 +987,7 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error) {
 	var saleOrderProductBoms []model.SaleOrderProductBom
 	if err := r.db.Preload("ProductBom.ProductPackage").Preload("SaleOrderProduct").Model(&model.SaleOrderProductBom{}).Where("sale_order_uuid = ? AND delete_time = ?", saleOrderUuid, constant.NotDeleted).Find(&saleOrderProductBoms).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetSaleOrderBomList: %v", err)
 	}
 	return saleOrderProductBoms, nil
 }
@@ -978,7 +996,7 @@ func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrder
 func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error {
 	timeNow := uint(time.Now().Unix())
 	// 删除关联关系
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrderProductBom{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
 		if err != nil {
 			return err
@@ -998,32 +1016,41 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 			Update("delete_time", uint(time.Now().Unix())).
 			Error
 	})
+	if err != nil {
+		return fmt.Errorf("DeleteOrderProduct: %v", err)
+	}
+	return nil
 }
 
 // ChangeProductPrice 修改订单商品价格
 func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error {
-	return r.db.Model(&model.SaleOrderProduct{}).
+	err := r.db.Model(&model.SaleOrderProduct{}).
 		Where("delete_time = ?", 0).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
 		Updates(map[string]interface{}{
 			"is_custom_price": 1,
 			"product_price":   price,
 		}).Error
+	return err
 }
 
 // ChangePopulation 修改订单人数
 func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error {
-	return r.db.Model(&model.SaleBill{}).
+	err := r.db.Model(&model.SaleBill{}).
 		Where("delete_time = ?", 0).
 		Where("uuid = ?", saleBillUuid).
 		Updates(map[string]interface{}{
 			"meal_num": population,
 		}).Error
+	if err != nil {
+		return fmt.Errorf("ChangePopulation: %v", err)
+	}
+	return nil
 }
 
 // ChangeBuffetCustomerType 修改订单人数
 func (r *orderRepo) ChangeBuffetCustomerType(saleBillUuid uint64, population int) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// saleOrder := &model.SaleOrder{}
 		// where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
 		// //
@@ -1045,16 +1072,24 @@ func (r *orderRepo) ChangeBuffetCustomerType(saleBillUuid uint64, population int
 				"meal_num": population,
 			}).Error
 	})
+	if err != nil {
+		return fmt.Errorf("ChangeBuffetCustomerType: %v", err)
+	}
+	return nil
 }
 
 // ChangeProductRemark 修改订单商品备注
 func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error {
-	return r.db.Model(&model.SaleOrderProduct{}).
+	err := r.db.Model(&model.SaleOrderProduct{}).
 		Where("delete_time = ?", constant.NotDeleted).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
 		Updates(map[string]interface{}{
 			"remark": remark,
 		}).Error
+	if err != nil {
+		return fmt.Errorf("ChangeProductRemark: %v", err)
+	}
+	return nil
 }
 
 // GetSaleBillProductInfoByDesk 获取桌台的账单商品信息
@@ -1065,7 +1100,7 @@ func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBil
 	}).Preload("SaleOrders.SaleOrderProducts", func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
 	}).Preload("SaleOrders.SaleOrderProducts.MultiLanguageName").Preload("SaleOrders.SaleOrderProducts.SaleOrderProductAttributes").Model(&model.SaleBill{}).Where("desk_uuid = ?", deskUuid).Find(&saleBill).Error; err != nil {
-		return model.SaleBill{}, err
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillProductInfoByDesk: %v", err)
 	}
 	return saleBill, nil
 }
@@ -1077,7 +1112,7 @@ func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("HasShowOrder: %v", err)
 	}
 	return saleBill.Uuid != 0, nil
 }
