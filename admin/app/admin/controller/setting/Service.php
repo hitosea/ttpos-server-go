@@ -80,15 +80,14 @@ class Service extends Controller
      */
     public function info(Request $request)
     {
-        // todo: 获取系统设置
-        // $values = SettingModel::getSysConfig(SettingEnum::SYS_ADMIN_CONFIG);
+        $values = SettingModel::getSysConfig(SettingEnum::SYS_ADMIN_CONFIG);
         $base = [
-            // 'brand_name' => $values['brand_name'] ?? '',                                        //  品牌名称
-            // 'brand_logo' => ImgHelp::addImageDomain($values['brand_logo'] ?? ''),               //  正方形品牌logo
-            // 'brand_logo_long' => ImgHelp::addImageDomain($values['brand_logo_long'] ?? ''),     //  长方形品牌logo
-            // 'browser_logo' => ImgHelp::addImageDomain($values['browser_logo'] ?? ''),           //  浏览器LOGO
-            // 'browser_title' => $values['browser_title'] ?? '',                                  //  浏览器标题
-            // 'expiration_reminder' => $values['expiration_reminder'] ?? 0,                       //  剩余多少天到期提示
+            'brand_name' => $values['brand_name'] ?? '',                                        //  品牌名称
+            'brand_logo' => ImgHelp::addImageDomain($values['brand_logo'] ?? ''),               //  正方形品牌logo
+            'brand_logo_long' => ImgHelp::addImageDomain($values['brand_logo_long'] ?? ''),     //  长方形品牌logo
+            'browser_logo' => ImgHelp::addImageDomain($values['browser_logo'] ?? ''),           //  浏览器LOGO
+            'browser_title' => $values['browser_title'] ?? '',                                  //  浏览器标题
+            'expiration_reminder' => $values['expiration_reminder'] ?? 0,                       //  剩余多少天到期提示
         ];
         //
         return $this->renderSuccess('',  compact('base'));
