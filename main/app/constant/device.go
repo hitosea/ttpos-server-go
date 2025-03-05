@@ -6,6 +6,7 @@ const (
 	SourceTablet    = "tablet"    // 平板端
 	SourceKitchen   = "kitchen"   // 厨显端
 	SourceAssistant = "assistant" // 点餐助手
+	SourceH5        = "H5"        // H5
 )
 
 const (
