@@ -260,10 +260,10 @@ class App extends AppModel
             }
             (new ShopStaffModel([], $companyUuid))->setAppId($companyUuid)->where('uuid', $shop_user->uuid)->find()?->save($staff);
 
-            // todo 会员设置 - 支付方式关联
-            // if (isset($data['is_open_member'])) {
-            //     (new PayType([], $companyUuid))->setAppId($companyUuid)->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
-            // }
+            // 会员设置 - 支付方式关联
+            if (isset($data['is_open_member'])) {
+                (new PayType([], $companyUuid))->setAppId($companyUuid)->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
+            }
 
             //
             $this->commit();
