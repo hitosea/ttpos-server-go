@@ -3113,16 +3113,18 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			}
 			amounts = append(amounts, amount)
 		} else {
+			hasCommission := false
 			// 如果没有手续费
 			zeroFee := saleOrder.CalcCheckOutZeroFee()
 			if methodItem.FeePercent != 0 {
 				// 如果支付方式有手续费，则不能抹零，抹零金额为0
 				zeroFee = 0
+				hasCommission = true
 			}
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
 				SaleOrderAmount:       saleOrder.Amount,
-				UnpaidAmount:          saleOrder.CalcUnPayAmount(false),
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
 				PaymentMethodUuid:     methodItem.Uuid,
