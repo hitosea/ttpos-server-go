@@ -36,7 +36,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用自动创建外键约束
 		SkipDefaultTransaction:                   true, // 禁用默认事务
 		Logger: logger.New(
-			&loggers.GormLog{Logger: loggers.Logger}, // io writer（日志输出的地方）
+			&loggers.GormLog{Logger: loggers.SqlLogger}, // io writer（日志输出的地方）
 			logger.Config{
 				SlowThreshold:             time.Duration(conf.SlowQueryTime) * time.Second, // 慢查询阈值
 				LogLevel:                  logLevel,                                        // 日志级别
