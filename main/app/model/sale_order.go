@@ -88,6 +88,10 @@ func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCust
 	return saleOrderBuffetCustomerType
 }
 
+func (model *SaleOrder) SetCheckoutZeroingMethod(zeroRule int) {
+	model.ZeroCheckoutRule = uint8(zeroRule)
+}
+
 // 设置初始时销售订单的服务费。
 // 当关闭服务费费时，订单服务费=0
 // 当开启服务费按固定服务费收费时， 订单服务费=固定金额

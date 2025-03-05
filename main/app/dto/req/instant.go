@@ -3,6 +3,7 @@ package req
 import (
 	"errors"
 	"strconv"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 
 	"github.com/gin-gonic/gin"
@@ -83,6 +84,26 @@ type InstantOrderPaymentCancelReq struct {
 type InstantOrderPaymentFinishReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+}
+
+// InstantOrderPaymentZeroRuleReq 设置结账抹零规则请求
+type InstantOrderPaymentZeroRuleReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+	ZeroRule      int    `json:"zero_rule"`       // 结账抹零规则, 必填
+}
+
+func (r *InstantOrderPaymentZeroRuleReq) Validate() error {
+	if r.SaleBillUuid == 0 || r.SaleOrderUuid == 0 {
+		return errors.New("SaleBillUuid或SaleOrderUuid不能为0")
+	}
+	if r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodNone ||
+		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodPercent ||
+		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodFixed ||
+		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodYuan {
+		return nil
+	}
+	return errors.New("结账抹零规则错误")
 }
 
 type InstantOrderSaleOrderCreateReq struct {

@@ -884,6 +884,40 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentZeroRule 设置结账抹零规则
+// @Summary 设置结账抹零规则
+// @Description 设置结账抹零规则
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentZeroRuleReq true "设置结账抹零规则参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /cashier/desk/order/payment/zero_rule [post]
+func (h *DeskHandler) OrderPaymentZeroRule(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面设置结账抹零规则接口请求")
+
+	params := req.InstantOrderPaymentZeroRuleReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	if err := params.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
+	// 设置结账抹零规则
+	res, err := h.orderService.InstantOrderPaymentZeroRule(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx.Log().Debug("设置结账抹零规则成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderSaleOrderCreate 创建一个销售订单
 // @Summary 创建一个销售订单
 // @Description 创建一个销售订单
@@ -1062,6 +1096,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)
