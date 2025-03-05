@@ -468,10 +468,25 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
-	saleOrderBuffetCustomerTypes, _, _, _ := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
+	saleOrderBuffetCustomerTypes, _, mealNum, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
 
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 如果是自助餐，有顾客列表的话，创建顾客
+		if len(saleOrderBuffetCustomerTypes) > 0 {
+			for _, customer := range saleOrderBuffetCustomerTypes {
+				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
+					return err
+				}
+			}
+			saleBill.MealNum = mealNum
+			if maxTimeLimit == -1 {
+				saleBill.BuffetDuration = 0
+			} else {
+				saleBill.BuffetDuration = uint(maxTimeLimit)
+			}
+		}
+
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 			return errCreateSaleBill
@@ -485,15 +500,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		// 创建销售订单
 		if _, errCreateSaleOrder := repository.NewOrderRepo(tx).CreateSaleOrder(*saleOrder); errCreateSaleOrder != nil {
 			return errCreateSaleOrder
-		}
-
-		// 如果是自助餐，有顾客列表的话，创建顾客
-		if len(saleOrderBuffetCustomerTypes) > 0 {
-			for _, customer := range saleOrderBuffetCustomerTypes {
-				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
-					return err
-				}
-			}
 		}
 
 		// 新桌台的状态
