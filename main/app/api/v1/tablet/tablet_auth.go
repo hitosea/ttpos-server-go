@@ -104,7 +104,7 @@ func (h *AuthHandler) GetDeskList(c *gin.Context) {
 
 // BindDesk 绑定/换绑桌台
 // @Summary 绑定/换绑桌台
-// @Description 绑定/换绑桌台
+// @Description 绑定/换绑桌台，调用此接口之后的所有接口，都需要传递x-desk-uuid请求头
 // @Tags 平板端.认证鉴权
 // @Accept json
 // @Produce json

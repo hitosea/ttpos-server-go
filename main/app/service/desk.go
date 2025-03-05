@@ -313,7 +313,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error 
 // GetTabletDeskList 平板获取桌台列表
 func (s *deskSrv) GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error) {
 	deskRepo := repository.NewDeskRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	desks, err := deskRepo.GetDesks(deskRepo.WhereIsNotDisable(), deskRepo.WhereIsBind())
+	desks, err := deskRepo.GetDesks(deskRepo.WhereIsNotDisable(), deskRepo.WhereUnBind())
 
 	if err != nil {
 		return resp.TabletDeskList{}, errors.New("获取桌台列表失败")
@@ -350,7 +350,7 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) err
 		if err != nil || desk.Uuid == 0 {
 			return errors.New("桌台不存在")
 		}
-		if desk.Uuid > 0 && desk.DeviceUuid != deviceUuid {
+		if desk.DeviceUuid > 0 && desk.DeviceUuid != deviceUuid {
 			return errors.New("桌台已被占用")
 		}
 		err = db.Transaction(func(tx *gorm.DB) error {
