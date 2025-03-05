@@ -108,15 +108,15 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// CreateDeskOrder 处理创建桌台订单
-// @Summary 创建桌台订单
-// @Description 创建桌台订单
+// CreateDeskOrder 处理创建开台
+// @Summary 开台
+// @Description 开台
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.DeskOrderCreateReq true "创建桌台订单参数"
-// @Success 200 {object} resp.CreateDeskOrderResp "创建桌台订单成功"
+// @param data body req.DeskOrderCreateReq true "开台参数"
+// @Success 200 {object} resp.CreateDeskOrderResp "开台成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/open [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {

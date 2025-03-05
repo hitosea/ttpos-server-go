@@ -55,6 +55,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			assistant.RegisterDeskHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterBuffetHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterAuthHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterBaseHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterMemberHandlers(assistantGroup, dbm, cache)
 		}
 		// H5扫码端
 		h5Group := apiV1.Group("/h5")

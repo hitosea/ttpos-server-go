@@ -459,45 +459,34 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	// 构建销售订单
 	saleOrder := model.NewSaleOrder(saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
 
+	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, nil
 	}
-	// 获取自助餐信息
-	buffetUuidMap := make(map[uint64]map[uint64]*model.BuffetCustomerTypePrice) //buffet_uuid => buffet_customer_type_uuid => buffet_customer_type_price_uuid
-	buffetMap := make(map[uint64]*model.BuffetPackage)
-	for _, buffet := range buffetList {
-		for index, _ := range buffet.BuffetCustomerTypePrices {
-			BuffetCustomerTypePrice := buffet.BuffetCustomerTypePrices[index]
-			if buffetUuidMap[buffet.Uuid] == nil {
-				buffetUuidMap[buffet.Uuid] = make(map[uint64]*model.BuffetCustomerTypePrice)
-			}
-			buffetUuidMap[buffet.Uuid][BuffetCustomerTypePrice.CustomerTypeUuid] = &BuffetCustomerTypePrice
-		}
-		buffetMap[buffet.Uuid] = buffet
-	}
-	// 构建自助餐顾客列表
-	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0)
-	if saleBill.IsBuffetSaleBill() {
-		for _, buffetUuid := range req.BuffetUuids {
-			buffetPackage := buffetMap[buffetUuid]
-			for _, CustomerType := range req.BuffetCustomerTypes {
-				num := *CustomerType.MealNum
-				if num == 0 {
-					continue
-				}
-				m := buffetUuidMap[buffetUuid]
-				buffetCustomerTypePrice := m[CustomerType.Uuid]
-				buffetCustomerTypePriceUuid := buffetCustomerTypePrice.Uuid
-				taxRate := buffetPackage.GeTaxRate()
-				saleOrderBuffetCustomerType := model.NewSaleOrderBuffetCustomerType(saleOrder.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, buffetCustomerTypePrice.Price, taxRate, *saleBillSetting)
-				fmt.Println(fmt.Sprintf("saleOrderBuffetCustomerType %+v", saleOrderBuffetCustomerType))
-				saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
-			}
-		}
-	}
 
+	// 构建自助餐顾客列表
+	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
+	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
+	saleOrderBuffetCustomerTypes, _, mealNum, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
+
+	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 如果是自助餐，有顾客列表的话，创建顾客
+		if len(saleOrderBuffetCustomerTypes) > 0 {
+			for _, customer := range saleOrderBuffetCustomerTypes {
+				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
+					return err
+				}
+			}
+			saleBill.MealNum = mealNum
+			if maxTimeLimit == -1 {
+				saleBill.BuffetDuration = 0
+			} else {
+				saleBill.BuffetDuration = uint(maxTimeLimit)
+			}
+		}
+
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 			return errCreateSaleBill
@@ -511,15 +500,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		// 创建销售订单
 		if _, errCreateSaleOrder := repository.NewOrderRepo(tx).CreateSaleOrder(*saleOrder); errCreateSaleOrder != nil {
 			return errCreateSaleOrder
-		}
-
-		// 如果是自助餐，有顾客列表的话，创建顾客
-		if len(saleOrderBuffetCustomerTypes) > 0 {
-			for _, customer := range saleOrderBuffetCustomerTypes {
-				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
-					return err
-				}
-			}
 		}
 
 		// 新桌台的状态
@@ -1617,9 +1597,6 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 		return nil, err
 	}
 
-	// todo - 重算价格 - 等王总的逻辑
-	// (new OrderModel)->reloadPrice($order_id);
-
 	// 添加操作日志
 	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
 		Source:        ctx.GetSource(),
@@ -1660,7 +1637,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(req.SaleBillUuid, 0, 0)
 	if errSaleBill != nil {
 		return nil, errors.New("销售账单不存在")
 	}
@@ -1673,12 +1650,14 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateMealNum); err != nil {
 		return nil, err
 	}
+
+	// 获取当前的所有商品
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
 	if err != nil || len(buffetList) != len(req.BuffetUuids) {
 		return nil, errors.New("自助餐不存在")
 	}
-
 	// 销售订单
 	saleOrder := saleBill.SaleOrders[0]
 	// 用餐时长
@@ -1691,61 +1670,89 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	addBuffetIds := slice.Difference(req.BuffetUuids, oldBuffetIds)
 	removeBuffetIds := slice.Difference(oldBuffetIds, req.BuffetUuids)
 
-	// 只修改人数
-	if len(addBuffetIds) == 0 && len(removeBuffetIds) == 0 {
+	// 获取自助餐顾客
+	customerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
+	copier.Copy(&customerTypes, req.BuffetCustomerTypes)
+	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, customerTypes, saleBill.SaleBillSetting)
+
+	// 修改
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 删除原来的 CustomerType
-		repository.NewOrderRepo(db).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
-		// 创建顾客
-		buffetCustomerTypes := model.GetBuffetUuidMapBuffetCustomerTypes{}
-		copier.Copy(buffetCustomerTypes, req.BuffetCustomerTypes)
-		saleOrderBuffetCustomerTypes := saleOrder.GetBuffetUuidMap(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBill.SaleBillSetting)
-		if len(saleOrderBuffetCustomerTypes) > 0 {
-			for _, customer := range saleOrderBuffetCustomerTypes {
-				if _, err = repository.NewOrderRepo(db).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
-					return nil, err
+		repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
+
+		// 创建新的顾客
+		if len(saleOrderCustomerTypes) > 0 {
+			for _, customer := range saleOrderCustomerTypes {
+				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
+					return err
 				}
 			}
 		}
-		// $this->startTrans();
-		// try {
-		//     // 删除原来的 orderBuffet、orderBuffetCustomer
-		//     // (new OrderBuffet)->where('order_id', $this['order_id'])->delete();
-		//     // (new OrderBuffetCustomer())->where('order_id', $this['order_id'])->delete();
-		//     // // 创建新的 orderBuffet、orderBuffetCustomer
-		//     // [$buffet_time_limit, $meal_num] = self::createOrderBuffet($this['order_id'], $buffet_ids, $buffet_customer_type);
-		//     // $this->updateDelayMealNum($this['order_id'], $meal_num);
-		//     // $orderUpdateArr['meal_num'] = $meal_num;
-		//     // $this->save($orderUpdateArr);
-		//     // $this->commit();
-		//     return true;
-		// } catch (BaseException $e) {
-		//     $this->error = $e->getMessage();
-		//     $this->rollback();
-		//     return false;
-		// }
-	}
 
-	// 做废已过期的加钟时间
-	if isTimeOut {
-		// (new OrderDelay)->where('order_id', $this['order_id'])->where('expired_time', 0)->update(['expired_time' => $this['buffet_expired_time']]);
+		// 如果改了套餐信息，需要处理时间 和调整商品是否自助餐
+		if len(addBuffetIds) != 0 || len(removeBuffetIds) != 0 {
+			if maxTimeLimit == -1 {
+				saleBill.BuffetDuration = 0
+				saleBill.BuffetStartTime = time.Now().Unix()
+			} else {
+				// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
+				if isTimeOut {
+					saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
+				}
+				// 永远等于最大时间限制 + 总加钟时间
+				saleBill.BuffetDuration = uint(int64(maxTimeLimit)) // + 总加钟时间
+			}
+			// 更新商品为自助餐商品
+			buffetProductUuids := []uint64{}
+			for _, buffet := range buffetList {
+				for _, buffetProduct := range buffet.BuffetProducts {
+					buffetProductUuids = append(buffetProductUuids, buffetProduct.ProductPackageUuid)
+				}
+			}
+			for _, product := range saleOrderProductAll {
+				if product.IsBuffetProduct() {
+					return errors.New("请先清除自助餐套餐内商品")
+				}
+				if slices.Contains(buffetProductUuids, product.Uuid) {
+					product.IsBuffet = 1
+					if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(product); err != nil {
+						return err
+					}
+				}
+			}
+		}
+
+		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
+		saleBill.MealNum = num
+		saleBill.SetBuffetPackage(buffetUuids)
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(saleBill); err != nil {
+			return err
+		}
+
+		// 重新计算和保存
+		saleBill, errSaleBill := repository.NewOrderRepo(tx).GetSaleBillAllInfo(req.SaleBillUuid)
+		if errSaleBill != nil {
+			return errSaleBill
+		}
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// 添加操作日志
 	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
-	// 	Source:        ctx.GetSource(),
-	// 	Remark:        "修改桌台就餐人数",
-	// 	SaleBillUuid:  req.SaleBillUuid,
-	// 	SaleOrderUuid: 0,
-	// 	OperatorUuid:  ctx.GetStaffUuid(),
+	// 	    Source:        ctx.GetSource(),
+	// 	    Remark:        "修改桌台就餐人数",
+	// 	    SaleBillUuid:  req.SaleBillUuid,
+	// 	    SaleOrderUuid: 0,
+	// 	    OperatorUuid:  ctx.GetStaffUuid(),
 	// }, map[string]interface{}{
-	// 	"old_meal_num": billInfo.MealNum,
-	// 	"new_meal_num": req.Population,
+	// 	    "old_meal_num": billInfo.MealNum,
+	// 	    "new_meal_num": req.Population,
 	// })
-
-	// // 提交事务
-	// if err := tx.Commit().Error; err != nil {
-	// 	return nil, err
-	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1754,7 +1761,6 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	}
 
 	return info, nil
-
 }
 
 // GetSaleBillByDeskId  获取桌台账单信息

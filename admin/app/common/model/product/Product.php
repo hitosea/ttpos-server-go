@@ -18,7 +18,6 @@ use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
 use app\common\model\product\Material;
 use app\common\model\store\MultiLanguageName;
-use app\shop\model\product\Category as CategoryModel;
 use think\model\concern\SoftDelete;
 
 /**
@@ -994,9 +993,13 @@ class Product extends BaseModel
         $pageSql = " LIMIT {$offset}, {$limit}";
 
         // 执行查询
+        $total = 0;
         if ($page == 1) {
             $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql, $bind);
         } else {
+            $countSql = "SELECT COUNT(*) AS total_count". " FROM ($productSql UNION ALL $materialSql) AS all_product";
+            $count = Db::connect('shop' . self::$app_id)->query($countSql . $whereSql, $bind);
+            $total = $count[0]['total_count'];
             $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql . $pageSql, $bind);
         }
 
@@ -1061,123 +1064,17 @@ class Product extends BaseModel
             ];
         }
 
-        return [
-            'current_page' => $params['page'],
-            'data' => $list,
-            'per_page' => $params['list_rows'],
-            'total' => count($list),
-            'last_page' => ceil(count($list) / $params['list_rows']),
-        ];
-        // 执行查询
-        // $list = $this->alias('product')
-        //     ->with(['category', 'image', 'sku'])
-        //     ->field(['product.*, name as product_name, actual_sale_num as sales_actual'])
-        //     ->order(['sort', 'id' => 'desc'])
-        //     ->paginate($params);
-
-        // foreach ($list->items() as $item) {
-        //     // 库存: 规格库存之和
-        //     $skus = $item->sku->toArray();
-        //     $item->product_stock = array_sum(array_column($skus ?? [], 'stock_num'));
-        // }
-
-        return $list;
-
-        // todo 兼容
-        // $model = $this;
-        // if (isset($params['material_type']) && in_array($params['material_type'], [self::TYPE_MATERIAL, self::TYPE_PRODUCT])) {
-        //     $model = $model->where('product.type', '=', $params['material_type']);
-        // }
-        // if (isset($params['product_type'])) {
-        //     $model = $model->where('product.product_type', '=', $params['product_type']);
-        // }
-        // if (($params['product_ids'] ?? '') != '') {
-        //     $model = $model->whereIn('product.product_id', explode(',', $params['product_ids']));
-        // }
-        // if ($params['category_id'] > 0) {
-        //     $categoryIds = (new CategoryModel)
-        //         ->where(function ($query) use ($params): void {
-        //             $query->where('category_id', $params['category_id']);
-        //             $query->whereOr('parent_id', $params['category_id']);
-        //         })
-        //         ->column('category_id');
-        //     $model = $model->whereIn('category_id', $categoryIds);
-        // }
-        // if ($params['special_id'] > 0) {
-        //     $model = $model->where('product.special_id', '=', $params['special_id']);
-        // }
-        // if (isset($params['product_name']) && $params['product_name'] != '') {
-        //     $model = $model->jsonLike('product_name', $params['product_name']);
-        // }
-        // if (!empty($params['search'])) {
-        //     $model = $model->where('product_name', $params['search']);
-        // }
-        // // 排序规则
-        // $sort = [];
-        // if ($params['sortType'] === 'all') {
-        //     $sort = ['product_sort', 'product_id' => 'desc'];
-        // }
-        // if (isset($params['type'])) {
-        //     //出售中
-        //     if ($params['type'] == 'sell') {
-        //         $model = $model->where('product_status', '=', 10);
-        //     }
-        //     //下架
-        //     if ($params['type'] == 'lower') {
-        //         $model = $model->where('product_status', '=', 20);
-        //     }
-        //     //库存紧张
-        //     if ($params['type'] == 'stock') {
-        //         $model = $model->whereBetween('product_stock', [1, 20]);
-        //         $model = $model->where('product_status', '=', 10);
-        //     }
-        //     //已售罄
-        //     if ($params['type'] == 'over') {
-        //         $model = $model->where('product_stock', '=', 0);
-        //         $model = $model->where('product_status', '=', 10);
-        //     }
-        // }
-        // // 产品需求，如果sku规格库中数量少于传输的库存数量，就要显示
-        // if (isset($params['stock']) && $params['stock'] > 0) {
-        //     $stock = (int) $params['stock'];
-        //     $model = $model->leftJoin('product_sku sku', 'sku.product_id = product.product_id');
-        //     // stock_num-成品库存，material_stock-材料库存
-        //     if (isset($params['material_type']) && $params['material_type'] > 0) {
-        //         $field = ($params['material_type'] == self::TYPE_MATERIAL) ? 'sku.material_stock' : 'sku.stock_num';
-        //         $model = $model->where($field, '<', $stock);
-        //     } else {
-        //         $model = $model->whereRaw("
-        //             CASE
-        //                 WHEN product.type = 20 THEN sku.material_stock < {$stock}
-        //                 WHEN product.type = 10 THEN sku.stock_num < {$stock}
-        //                 ELSE FALSE
-        //             END
-        //         ");
-        //     }
-        //     $model = $model->group('product.product_id');
-        // }
-        // //
-        // if (isset($params['shop_supplier_id']) && $params['shop_supplier_id']) {
-        //     $model = $model->where('product.shop_supplier_id', '=', $params['shop_supplier_id']);
-        // }
-        // if (isset($params['product_id']) && $params['product_id']) {
-        //     $model = $model->whereNotIn('product_id', $params['product_id']);
-        // }
-        // // 执行查询
-        // $model = $model->alias('product')
-        //     ->field(['product.*', '(sales_initial + sales_actual) as product_sales'])
-        //     ->with(['category', 'image.file', 'sku', 'supplier'])
-        //     ->where('product.is_delete', '=', 0)
-        //     ->where($filter)
-        //     ->order($sort);
-
-        // if ($page == 1) {
-        //     $list = $model->select();
-        // } else {
-        //     $list = $model->paginate($params);
-        // }
-        // // 整理列表数据并返回
-        // return $this->setProductListData($list, true);
+        if ($page == 1) {
+            return $list;
+        } else {
+            return [
+                'current_page' => $params['page'],
+                'data' => $list,
+                'per_page' => $params['list_rows'],
+                'total' => $total,
+                'last_page' => ceil($total / $params['list_rows']),
+            ];
+        }
     }
 
     /**

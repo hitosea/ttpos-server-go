@@ -2,9 +2,11 @@
 
 namespace app\common\model\product;
 
+use app\common\library\helper;
 use help\ValidateHelp;
 use app\common\model\BaseModel;
 use app\common\model\erp\ErpWarehouseForm;
+use app\common\model\erp\ErpWarehouseOutForm;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\product\RelatedMaterial as ProductRelatedMaterial;
@@ -221,23 +223,14 @@ class Material extends BaseModel
             $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
             $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
             $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+
+            // 保存材料
             if (!$this->save($data)) {
                 return false;
             }
 
-            // 添加入库记录
-            if ((new Product())->hasInventoryAuth()) {
-                $formModel = new ErpWarehouseForm();
-                return $formModel->save([
-                    'form_no' => $formModel->generateInCode(),
-                    'scene' => 1,
-                    'num' => $this->stock_num,
-                    'material_uuid' => $this->uuid,
-                    'operator_uuid' => $data['shop_user_id'],
-                ]);
-            }
-
-            return true;
+            // 创建"添加入库"记录
+            return self::addWarehouseInForm($this, 1, $data['shop_user_id'], $this['stock_num']);
         });
     }
 
@@ -281,28 +274,46 @@ class Material extends BaseModel
         }
         $data = $this->sanitizeProductData($data);
         //
-        $data['name'] = $product_name;
-        $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name, $this['multi_language_name_uuid']);
-        $data['category_uuid'] = $data['category_id'] ?? 0;
-        $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
-        $data['image_uuid'] = $imageIds[0] ?? 0;
-        $data['image_name'] = $data['img_name'] ?? 0;
-        $data['unit_uuid'] = $data['unit_id'] ?? 0;
-        $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
-        $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-        $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
-        $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
 
-        $product = new Product();
-        if ($product->hasInventoryAuth()) {
-            $relatedMaterialUuidList = [];
-            foreach ($this->relatedMaterial as $relatedMaterial) {
-                $relatedMaterialUuidList[] = $relatedMaterial->uuid;
+        return Db::transaction(function () use ($data, $product_name, $imageIds) {
+            $data['name'] = $product_name;
+            $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name, $this['multi_language_name_uuid']);
+            $data['category_uuid'] = $data['category_id'] ?? 0;
+            $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
+            $data['image_uuid'] = $imageIds[0] ?? 0;
+            $data['image_name'] = $data['img_name'] ?? 0;
+            $data['unit_uuid'] = $data['unit_id'] ?? 0;
+            $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
+            $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
+            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
+            $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+
+            $product = new Product();
+            if ($product->hasInventoryAuth()) {
+                $relatedMaterialUuidList = [];
+                foreach ($this->relatedMaterial as $relatedMaterial) {
+                    $relatedMaterialUuidList[] = $relatedMaterial->uuid;
+                }
+
+                // 更新规格/加料关联材料库存
+                RelatedMaterial::updateStock($relatedMaterialUuidList);
+
+                // 出/入库记录
+                $oldStockNum = floatval($this->stock_num);
+                $newStockNum = floatval($data['stock_num']);
+                $diffStockNum = abs(floatval(helper::bcsub($newStockNum, $oldStockNum, 4)));
+                // 创建"调整入库"记录
+                if ($newStockNum > $oldStockNum) {
+                    self::addWarehouseInForm($this, 2, $data['shop_user_id'], $diffStockNum, $data['stock_remark']);
+                }
+                // 创建"调整出库"记录
+                if ($newStockNum < $oldStockNum) {
+                    self::addWarehouseOutForm($this, 1, $data['shop_user_id'], $diffStockNum, $data['stock_remark']);
+                }
             }
-            RelatedMaterial::updateStock($relatedMaterialUuidList);
-        }
 
-        return $this->save($data);
+            return $this->save($data);
+        });
     }
 
     /**
@@ -323,5 +334,54 @@ class Material extends BaseModel
             }
         }
         return $data;
+    }
+
+    /**
+     * 添加材料入库记录
+     * 
+     * @param $material 材料
+     * @param $scene 入库场景: 0-purchase采购入库 1-add添加入库 2-adjust调整入库
+     * @param $operatorUuid 入库操作人uuid
+     * @param $num 入库数量
+     * @param $remark 入库备注
+     */
+    public static function addWarehouseInForm($material, $scene, $operatorUuid, $num, $remark = '')
+    {
+        if ((new Product())->hasInventoryAuth()) {
+            $formModel = new ErpWarehouseForm();
+            return $formModel->save([
+                'form_no' => $formModel->generateInCode(),
+                'scene' => $scene,
+                'num' => $num,
+                'material_uuid' => $material['uuid'],
+                'operator_uuid' => $operatorUuid,
+                'remark' => $remark,
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
+     * 添加材料出库记录
+     * 
+     * @param $material 材料
+     * @param $scene 出库场景: 0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库
+     * @param $operatorUuid 出库操作人uuid
+     * @param $num 出库数量
+     * @param $remark 出库备注
+     */
+    public static function addWarehouseOutForm($material, $scene, $operatorUuid, $num, $remark = '')
+    {
+        if ((new Product())->hasInventoryAuth()) {
+            $outFormModel = new ErpWarehouseOutForm();
+            return $outFormModel->addOutForm($scene, $operatorUuid, [
+                'material_uuid' => $material['uuid'],
+                'num' => $num,
+                'remark' => $remark,
+            ]);
+        }
+
+        return true;
     }
 }

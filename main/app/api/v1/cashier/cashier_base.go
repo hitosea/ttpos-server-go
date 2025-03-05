@@ -96,7 +96,7 @@ func (h *BaseHandler) VerifyCashBoxPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeCashBox, passwordReq.Password, helper.GetCompanyUuid(c))
+	verified := h.settingSrv.VerifyPassword(ctx, constant.SourceCashier, constant.PasswordTypeCashBox, passwordReq.Password)
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -121,7 +121,7 @@ func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeAdvanced, passwordReq.Password, helper.GetCompanyUuid(c))
+	verified := h.settingSrv.VerifyPassword(ctx, constant.SourceCashier, constant.PasswordTypeAdvanced, passwordReq.Password)
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {
@@ -146,7 +146,7 @@ func (h *BaseHandler) VerifyLockPassword(c *gin.Context) {
 		helper.HandleValidationError(c, err, passwordReq, nil)
 		return
 	}
-	verified := h.settingSrv.CashierVerifyPassword(ctx, constant.PasswordTypeLock, passwordReq.Password, helper.GetCompanyUuid(c))
+	verified := h.settingSrv.VerifyPassword(ctx, constant.SourceCashier, constant.PasswordTypeLock, passwordReq.Password)
 	if verified {
 		helper.Success(c, gin.H{}, "验证成功")
 	} else {

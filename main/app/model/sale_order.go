@@ -172,17 +172,17 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 }
 
 // GetBuffetUuidMap 获取处理包
-type GetBuffetUuidMapBuffetCustomerTypes []struct {
+type BuffetUuidMapBuffetCustomerTypes struct {
 	Uuid    uint64
 	MealNum *uint
 }
 
-func (b *SaleOrder) GetBuffetUuidMap(
+func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	buffetList []*BuffetPackage,
-	BuffetUuids []uint64,
-	BuffetCustomerTypes GetBuffetUuidMapBuffetCustomerTypes,
-	SaleBillSetting *SaleBillSetting,
-) []*SaleOrderBuffetCustomerType {
+	buffetUuids []uint64,
+	buffetCustomerTypes []BuffetUuidMapBuffetCustomerTypes,
+	saleBillSetting *SaleBillSetting,
+) ([]*SaleOrderBuffetCustomerType, []uint64, uint, int) {
 	buffetUuidMap := make(map[uint64]map[uint64]*struct {
 		BaseModel
 		BuffetPackageUuid  uint64
@@ -191,6 +191,7 @@ func (b *SaleOrder) GetBuffetUuidMap(
 		BuffetCustomerType struct{}
 	})
 	buffetMap := make(map[uint64]*BuffetPackage)
+	//
 	for _, buffet := range buffetList {
 		for index, _ := range buffet.BuffetCustomerTypePrices {
 			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
@@ -220,22 +221,48 @@ func (b *SaleOrder) GetBuffetUuidMap(
 		}
 		buffetMap[buffet.Uuid] = buffet
 	}
+	// 使用map来跟踪已经添加的buffetUuid，实现去重
+	newBuffetUuidMap2 := make(map[uint64]bool)
+	newBuffetUuids := make([]uint64, 0)
+	mealNum := uint(0)
+	maxTimeLimit := int(0)
 	saleOrderBuffetCustomerTypes := make([]*SaleOrderBuffetCustomerType, 0)
-	for _, buffetUuid := range BuffetUuids {
+	//
+	for _, buffetUuid := range buffetUuids {
 		buffetPackage := buffetMap[buffetUuid]
-		for _, CustomerType := range BuffetCustomerTypes {
+		for _, CustomerType := range buffetCustomerTypes {
 			num := *CustomerType.MealNum
 			if num == 0 {
 				continue
 			}
 			m := buffetUuidMap[buffetUuid]
+			if m[CustomerType.Uuid] == nil {
+				continue
+			}
+
 			customerTypePrice := m[CustomerType.Uuid]
 			// 使用匿名结构体的字段
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
-			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *SaleBillSetting)
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
+			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
+			if !newBuffetUuidMap2[buffetUuid] {
+				newBuffetUuids = append(newBuffetUuids, buffetUuid)
+				newBuffetUuidMap2[buffetUuid] = true
+				// 取得最大的可用餐时长
+				if maxTimeLimit != -1 {
+					if buffetPackage.IsLimitTime == 0 {
+						maxTimeLimit = -1
+					} else {
+						maxTimeLimit = max(maxTimeLimit, int(buffetPackage.LimitTime)*60)
+					}
+				}
+			}
+			//
+			mealNum += num
 		}
 	}
-	return saleOrderBuffetCustomerTypes
+	//
+	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit
 }

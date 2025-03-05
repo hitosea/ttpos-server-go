@@ -71,20 +71,29 @@ class RelatedMaterial extends RelatedMaterialModel
         $relatedMaterialUuidList = implode(',', $relatedMaterialUuidList);
 
         $db = Db::connect((new self())->getConnection());
-        $db->startTrans();
         $prefix = Env::get('DB_PREFIX');
 
         // 更新规格/加料关联材料库存
-        $db->execute("
-            UPDATE {$prefix}related_material AS rm 
-            JOIN (
-                SELECT rms.uuid, LEAST(FLOOR(MIN(m.stock_num / rms.num)), 99999999) AS min_stock_num
-                FROM {$prefix}related_material AS rms
-                JOIN {$prefix}material AS m ON rms.material_uuid = m.uuid
-                GROUP BY rms.uuid
-            ) AS sub ON rm.uuid = sub.uuid
-            SET rm.stock_num = sub.min_stock_num
-            WHERE rm.uuid IN ({$relatedMaterialUuidList});
-        ");
+        $db->startTrans();
+        try {
+            $db->execute("
+                UPDATE {$prefix}related_material AS rm 
+                JOIN (
+                    SELECT rms.uuid, LEAST(FLOOR(MIN(m.stock_num / rms.num)), 99999999) AS min_stock_num
+                    FROM {$prefix}related_material AS rms
+                    JOIN {$prefix}material AS m ON rms.material_uuid = m.uuid
+                    GROUP BY rms.uuid
+                ) AS sub ON rm.uuid = sub.uuid
+                SET rm.num = sub.min_stock_num
+                WHERE rm.uuid IN ({$relatedMaterialUuidList});
+            ");
+            $db->commit();
+        } catch (\Exception $e) {
+            // 出现异常时，回滚事务
+            $db->rollback();
+            // 记录或处理异常
+            trace('Error: ' . $e->getMessage());
+        }
+        
     }
 }

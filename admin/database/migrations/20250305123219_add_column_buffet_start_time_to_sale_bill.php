@@ -1,8 +1,9 @@
 <?php
 
 use think\migration\Migrator;
+use think\migration\db\Column;
 
-class UpdateTypeToWarehouseFormTable extends Migrator
+class AddColumnBuffetStartTimeToSaleBill extends Migrator
 {
     /**
      * Change Method.
@@ -27,10 +28,11 @@ class UpdateTypeToWarehouseFormTable extends Migrator
      */
     public function change()
     {
-        $table = $this->table('warehouse_form');
-        if ($table->hasColumn('type')) {
-            $table->renameColumn('type', 'scene');
+        $table = $this->table('sale_bill');
+        if (!$table->hasColumn('buffet_start_time')) {
+            $table->addColumn('buffet_start_time', 'integer', ['default' => 0, 'comment' => '自助餐开始时间', 'after' => 'buffet_duration'])
+            ->update();
         }
-        $table->update();
     }
 }
+	

@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AlterCategoryKeyToMaterial extends Migrator
+class ModifyMemberRechargeOrderOperationLogData extends Migrator
 {
     /**
      * Change Method.
@@ -28,10 +28,9 @@ class AlterCategoryKeyToMaterial extends Migrator
      */
     public function change()
     {
-        $table = $this->table('material');
-        if ($table->hasColumn('category_key')) {
-            $table->removeColumn('category_key');
+        $table = $this->table('member_recharge_order_operation_log');
+        if ($table->hasColumn('data')) {
+            $table->changeColumn('data', 'text', ['null' => true, 'limit' => MysqlAdapter::TEXT_LONG, 'comment' => '数据'])->update();
         }
-        $table->update();
     }
 }

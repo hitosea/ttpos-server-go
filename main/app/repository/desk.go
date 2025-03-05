@@ -16,8 +16,8 @@ type IDeskRepo interface {
 	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]model.Desk, error)
-	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)
-	GetDeskRecord(deskUuid uint64) (*model.Desk, error) // 通过uuid获取桌台的记录信息
+	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) //
+	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                // 通过uuid获取桌台的记录信息
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	UpdateDeskRecord(desk model.Desk) error
 	UpdateDeskByMap(deskUuid uint64, vars map[string]any) error // 更新桌台

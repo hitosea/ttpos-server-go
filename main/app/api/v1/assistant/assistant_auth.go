@@ -88,38 +88,6 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 	helper.Success(c, gin.H{"token": token})
 }
 
-// GetOnlineCashiers 获取在线收银机
-// @Summary 获取在线收银机
-// @Description 获取在线收银机
-// @Tags 点餐助手端.认证鉴权
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.OnlineCashierList}
-// @Router /assistant/online_cashiers [get]
-func (h *AuthHandler) GetOnlineCashiers(c *gin.Context) {
-	helper.Success(c, h.authSrv.GetOnlineCashiers(helper.GetCompanyUuid(c)))
-}
-
-// GetAssistantBase 点餐助手端信息
-// @Summary 点餐助手端信息
-// @Description 点餐助手端信息
-// @Tags 点餐助手端.认证鉴权
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.AssistantBase}
-// @Router /assistant/base [get]
-func (h *AuthHandler) GetAssistantBase(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	info, err := h.authSrv.AssistantBase(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	helper.Success(c, info)
-}
-
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -141,9 +109,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers) // 获取在线的收银机
-		privateApi.POST("/bind_cashier", wrapper.BindCashier)         // 绑定收银机
-		privateApi.GET("/base", wrapper.GetAssistantBase)             // 获取基本信息
-		privateApi.POST("/logout", wrapper.Logout)                    // 退出登录
+		privateApi.POST("/bind_cashier", wrapper.BindCashier) // 绑定收银机
+		privateApi.POST("/logout", wrapper.Logout)            // 退出登录
 	}
 }

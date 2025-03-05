@@ -2,8 +2,10 @@
 
 namespace app\shop\model\product;
 
+use app\common\library\helper;
+use app\common\model\erp\ErpWarehouseForm;
+use app\common\model\erp\ErpWarehouseOutForm;
 use app\common\model\product\ProductBom as ProductBomModel;
-use app\shop\model\erp\ErpInventoryRecord;
 
 /**
  * 商家-商品BOM模型
@@ -32,15 +34,9 @@ class ProductBom extends ProductBomModel
                 // 添加规格关联材料
                 $materialList = $item['material'] ?? [];
                 RelatedMaterial::updateRelatedMaterial($materialList, $flavor['uuid']);
-                // 增加库存, 添加规格入库记录
-                // $inventoryRecordData['num'] = $newStockNum - $oldStockNum;
-                // $inventoryRecordData['type'] = !in_array($item['product_sku_id'] ?? 0, $addIds) ? ErpInventoryRecord::TYPE_ADJUST_IN : ErpInventoryRecord::TYPE_ADJUST_IN_ADD; // 调整入库和添加入库
-                // $inventoryRecordData['status'] = ErpInventoryRecord::STATUS_IN;
-                // (new ErpInventoryRecord)->addNew(ErpInventoryRecord::INVENTORY_TYPE_IN, $inventoryRecordData);
-                // $record = [
-                //     'num' => $item['stock_num'],
-                //     'type' => ErpInventoryRecord::TYPE_ADJUST_IN,
-                // ];
+
+                // 创建"添加入库"记录
+                self::addWarehouseInForm($flavor, 1, $data['shop_user_id'], $flavor['stock_num']);
             }
         }
     }
@@ -54,6 +50,7 @@ class ProductBom extends ProductBomModel
         // 新增或编辑规格
         $flavorList = $data['sku'];
         foreach ($flavorList as $item) {
+            $isAdd = true;
             $flavorData = [
                 'purchase_price' => $item['purchase_price'] ?? 0, // 采购单价
                 'price' => $item['product_price'], // 销售单价
@@ -66,13 +63,17 @@ class ProductBom extends ProductBomModel
             ];
             $flavorUuid = $item['product_sku_id'] ?? 0;
             if ($flavorUuid == 0) {
+                /** @var ProductBom $flavor */
                 $flavor = self::create($flavorData);
             } else {
                 $flavor = $product->sku()->where('uuid', $flavorUuid)->find();
                 if (!$flavor) {
+                    /** @var ProductBom $flavor */
                     $flavor = self::create($flavorData);
                 } else {
+                    /** @var ProductBom $flavor */
                     $flavor->save($flavorData);
+                    $isAdd = false;
                 }
             }
             //
@@ -86,18 +87,37 @@ class ProductBom extends ProductBomModel
                     // 更新规格关联材料
                     RelatedMaterial::updateRelatedMaterial($materialList, $flavor['uuid']);
                 }
-                // 规格出入库记录
-                // $this->productInventoryRecord($productSku, $productSkuOld, $data['sku'], $this['product_id'], $this['type'], $data['stock_remark'] ?? '', $shop_supplier_id, $shopSupplierId);
+
+                // 如果新增规格，则创建"添加入库"记录, 否则创建"调整入库"记录
+                if ($isAdd) {
+                    self::addWarehouseInForm($flavor, 1, $data['shop_user_id'], $flavor->stock_num, $data['stock_remark']);
+                } else {
+                    $oldStockNum = $flavor['stock_num'];
+                    $newStockNum = $flavorData['stock_num'];
+                    $diffStockNum = abs(floatval(helper::bcsub($newStockNum, $oldStockNum, 4)));
+                    // 创建"调整入库"记录
+                    if ($newStockNum > $oldStockNum) {
+                        self::addWarehouseInForm($flavor, 2, $data['shop_user_id'], $diffStockNum, $data['stock_remark']);
+                    }
+                    // 创建"调整出库"记录
+                    if ($newStockNum < $oldStockNum) {
+                        self::addWarehouseOutForm($flavor, 1, $data['shop_user_id'], $diffStockNum, $data['stock_remark']);
+                    }
+                }
             }
         }
         // 删除规格
         if (!empty($flavorUuidList)) {
             $flavorList = self::whereNotIn('uuid', $flavorUuidList)
+                ->where('product_package_uuid', $product['uuid'])
                 ->where('product_flavor_uuid', '>', 0)
                 ->select();
+            /** @var ProductBom $flavor */
             foreach ($flavorList as $flavor) {
                 // 删除规格关联材料
                 RelatedMaterial::deleteRelatedMaterial($flavor['uuid']);
+                // 创建"删除出库"记录
+                self::addWarehouseOutForm($flavor, 4, $data['shop_user_id'], $flavor['stock_num'], $data['stock_remark']);
                 $flavor->delete();
             }
         }
@@ -177,5 +197,54 @@ class ProductBom extends ProductBomModel
         foreach ($feedList as $feed) {
             $feed->delete();
         }
+    }
+
+    /**
+     * 添加规格入库记录
+     * 
+     * @param $flavor 规格
+     * @param $scene 入库场景: 0-purchase采购入库 1-add添加入库 2-adjust调整入库
+     * @param $operatorUuid 入库操作人
+     * @param $num 入库数量
+     * @param $remark 入库备注
+     */
+    public static function addWarehouseInForm($flavor, $scene, $operatorUuid, $num, $remark = '')
+    {
+        if ((new Product())->hasInventoryAuth()) {
+            $formModel = new ErpWarehouseForm();
+            return $formModel->save([
+                'form_no' => $formModel->generateInCode(),
+                'scene' => $scene,
+                'num' => $num,
+                'product_bom_uuid' => $flavor['uuid'],
+                'operator_uuid' => $operatorUuid,
+                'remark' => $remark,
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
+     * 添加规格出库记录
+     * 
+     * @param $flavor 规格
+     * @param $scene 出库场景: 0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库
+     * @param $operatorUuid 操作人uuid
+     * @param $num 出库数量
+     * @param $remark $num 出库备注
+     */
+    public static function addWarehouseOutForm($flavor, $scene, $operatorUuid, $num, $remark = '')
+    {
+        if ((new Product())->hasInventoryAuth()) {
+            $outFormModel = new ErpWarehouseOutForm();
+            return $outFormModel->addOutForm($scene, $operatorUuid, [
+                'product_bom_uuid' => $flavor['uuid'],
+                'num' => $num,
+                'remark' => $remark,
+            ]);
+        }
+
+        return true;
     }
 }

@@ -709,9 +709,9 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 				PageSize: listReq.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   getOrderNum(0),
-			CompleteNum: getOrderNum(1),
-			CancelNum:   getOrderNum(2),
+			UnpaidNum:   getOrderNum(constant.RechargeOrderStatusPending),
+			CancelNum:   getOrderNum(constant.RechargeOrderStatusCanceled),
+			CompleteNum: getOrderNum(constant.RechargeOrderStatusPaid),
 		},
 	}, nil
 }
@@ -743,7 +743,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		})
 	}
 
-	var logs []resp.RechargeOrderOperationLogItem
+	logs := make([]resp.RechargeOrderOperationLogItem, 0, len(order.RechargeOrderOperationLogs))
 	for _, log := range order.RechargeOrderOperationLogs {
 		actionDesc := s.getActionDescription(log, ctx.GetLanguage())
 		actionText := s.getActionText(log.Action, 0, ctx.GetLanguage())
