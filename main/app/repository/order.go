@@ -925,7 +925,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("GetSaleBillAllInfo: %v", err))
 	}
 	return &info, nil
 }

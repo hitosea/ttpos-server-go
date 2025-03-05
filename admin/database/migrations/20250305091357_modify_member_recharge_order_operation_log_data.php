@@ -30,7 +30,7 @@ class ModifyMemberRechargeOrderOperationLogData extends Migrator
     {
         $table = $this->table('member_recharge_order_operation_log');
         if ($table->hasColumn('data')) {
-            $table->changeColumn('data', 'text', ['null' => true, 'limit' => MysqlAdapter::TEXT_LONG, 'comment' => '数据'])->update();
+            $table->changeColumn('data', 'text', ['null' => true,  'comment' => '数据'])->update();
         }
     }
 }

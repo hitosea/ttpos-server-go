@@ -144,6 +144,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 
 		serialNo, err := s.createInstantOrderSerialNo(tx)
 		if err != nil {
+			ctx.Log().Error("订单序号生成失败", zap.Error(err))
 			return errors.New("订单序号生成失败")
 		}
 		// 创建销售账单
@@ -191,6 +192,11 @@ func (s *orderSrv) createInstantOrderSerialNo(db *gorm.DB) (string, error) {
 	saleBill, err := saleBillRepo.GetInstantSaleBillLatest()
 	if err != nil {
 		return "", err
+	}
+	// 如果没有查询到账单，则设置为0001
+	if saleBill == nil {
+		serialNo = "0001"
+		return serialNo, nil
 	}
 	createTime := saleBill.CreateTime
 	// 判断账单的创建时间是不是今天

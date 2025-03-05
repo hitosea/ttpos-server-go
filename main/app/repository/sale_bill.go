@@ -164,6 +164,9 @@ func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 		CommonRepo.SortWithCreateTime("desc"),
 	)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &saleBill, nil
