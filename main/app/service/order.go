@@ -3257,6 +3257,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
+		ctx.Log().Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), errSaleBill)))
 		return nil, errSaleBill
 	}
 

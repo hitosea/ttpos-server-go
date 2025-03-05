@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
@@ -121,6 +122,9 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 	c.Set(jwt.AssistantDeviceId, claims.Assistant.DeviceId)   // 点餐助手设备ID
 
 	c.Set(jwt.DeviceUuid, claims.DeviceUuid) // 桌台绑定的设备uuid
+	// 注入一个uuid
+
+	c.Set(jwt.RequestUuid, uuid.New().String()) // 桌台绑定的设备uuid
 }
 
 func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv) {
