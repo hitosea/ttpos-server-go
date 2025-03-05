@@ -24,6 +24,7 @@ const (
 	CodeAccountDisabled = -104 // 账号已禁用
 	CodeNeedLogin       = -105 // 需要登录
 	CodeLoginFailed     = -106 // 登录失败
+	CodeCashierNotLogin = -107 // 点餐助手绑定的收银机未登录
 )
 
 // 送厨检查的业务错误码
