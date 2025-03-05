@@ -4,16 +4,13 @@ namespace app\shop\model\product;
 
 use help\StringHelp;
 use help\ValidateHelp;
-use app\common\library\helper;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
-use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\store\MultiLanguageName;
-use app\common\model\product\ProductSkuMaterial;
 use app\common\model\erp\ErpMonthlyProductStatistics;
-use app\common\model\erp\ErpWarehouseOutForm;
-use app\common\model\erp\ErpWarehouseOutFormItem;
 use app\common\model\product\Product as ProductModel;
+use app\common\model\Product\Material as MaterialModel;
+use app\shop\model\product\ProductBom;
 
 /**
  * 商品模型
@@ -312,7 +309,6 @@ class Product extends ProductModel
         $data['spec_type'] = isset($data['spec_type']) ? $data['spec_type'] : $this['spec_type'];
         $data['content'] = isset($data['content']) ? $data['content'] : '';
         $data['alone_grade_equity'] = isset($data['alone_grade_equity']) ? json_decode($data['alone_grade_equity'], true) : '';
-        $productSkuIdList = helper::getArrayColumn(($this['sku']), 'product_sku_id');
         // 规格
         if (isset($data['sku']) && is_array($data['sku']) && !empty($data['sku'])) {
             // 初始化条码错误数组和条码去重检查
@@ -433,7 +429,7 @@ class Product extends ProductModel
             return false;
         }
         //
-        return $this->transaction(function () use ($data, $productSkuIdList) {
+        return $this->transaction(function () use ($data) {
             $data['product_attr'] = isset($data['product_attr']) ? $data['product_attr'] : '';
             $data['product_feed'] = isset($data['product_feed']) ? $data['product_feed'] : '';
             // 更新产品包
@@ -446,10 +442,6 @@ class Product extends ProductModel
             ProductBom::updateFeed($data, $this);
             // 更新产品属性
             ProductAttribute::updateAttribute($data, $this);
-            // 商品规格
-            // $this->addProductSpec($data, $productSkuIdList);
-            // 更新加料
-            // (new ProductFeed)->updateFeed($data['product_feed'], $this);
             //
             return true;
         });
@@ -507,211 +499,6 @@ class Product extends ProductModel
     }
 
     /**
-     * 添加商品规格
-     */
-    private function addProductSpec($data, $productSkuIdList = [])
-    {
-        // 更新模式: 先删除所有规格
-        $model = new ProductSku;
-        $stock = 0; //总库存
-        $materialStock = 0; //总材料库存
-        $product_price = 0; //价格
-        $cost_price = 0;
-        $bag_price = 0;
-        $shop_supplier_id = isset($data['shop_supplier_id']) ? $data['shop_supplier_id'] : $this['shop_supplier_id'];
-        $productSkuOld = ProductSku::where('product_id', '=', $this['product_id'])->select()->toArray();
-
-        // 添加规格数据
-        if ($data['spec_type'] == '10') {
-            // 规格名称新增或更新
-            (new Spec)->updateSpec($data['sku']);
-            // 单规格
-            $sku = $data['sku'][0] ?? [];
-            $sku['app_id'] = self::$app_id;
-            $sku['line_price'] = $sku['product_price'] ?? 0;
-            $sku['product_price'] = $sku['product_price'] ?? 0;
-            $sku['stock_num'] = $sku['stock_num'] ?? 0;
-            unset($sku['create_time']);
-            unset($sku['update_time']);
-            //
-            $skus = $this->sku()->where('product_sku_id', '<>', $sku['product_sku_id'] ?? 0)->select();
-            foreach ($skus as $skuDel) {
-                $skuDel->delete();
-            }
-            $this->sku()->save($sku);
-            //
-            $stock = $sku['stock_num'] ?? 0;
-            $materialStock = $sku['material_stock'] ?? 0;
-            $product_price = $sku['product_price'] ?? 0;
-            $cost_price = $sku['cost_price'] ?? 0;
-            $bag_price = $sku['bag_price'] ?? 0;
-        } else if ($data['spec_type'] == '20') {
-            // 规格名称新增或更新
-            (new Spec)->updateSpec($data['sku']);
-            //
-            $model->addSkuList($this['product_id'], $data['sku'], $productSkuIdList); // 添加商品sku
-            //
-            $product_price = $data['sku'][0]['product_price'] ?? 0;
-            $cost_price = $data['sku'][0]['cost_price'] ?? 0;
-            $bag_price = $data['sku'][0]['bag_price'] ?? 0;
-            //
-            foreach ($data['sku'] as $item) {
-                $stock += (int)$item['stock_num'] ?? 0;
-                $materialStock += (int)($item['material_stock'] ?? 0);
-                if (($item['product_price'] ?? 0) < $product_price) {
-                    $product_price = $item['product_price'] ?? 0;
-                }
-                if (($item['cost_price'] ?? 0) < $cost_price) {
-                    $cost_price = $item['cost_price'] ?? 0;
-                }
-                if (($item['bag_price'] ?? 0) < $bag_price) {
-                    $bag_price = $item['bag_price'] ?? 0;
-                }
-            }
-        }
-        // 判断是否开启授权进销存
-        if ($this->hasInventoryAuth()) {
-            $shopSupplierId = $data['shop_user_id'] ?? 0;
-            $productSku = ProductSku::where('product_id', '=', $this['product_id'])->select()->toArray();
-            // 关联产品规格材料
-            foreach ($productSku as $item) {
-                $materials = ProductSkuMaterial::where('product_sku_id', '=', $item['product_sku_id'] ?? 0)->select();
-                foreach ($materials as $material) {
-                    $material->delete();
-                }
-                if (isset($item['material']) && !empty($item['material'])) {
-                    foreach ($item['material'] as $material) {
-                        $material = [
-                            'spec_id' => 0, // 产品规格不需要规格id
-                            'product_sku_id' => $item['product_sku_id'] ?? 0,
-                            'material_id' => $material['product_id'],
-                            'material_num' => $material['material_num'] ?? 0,
-                        ];
-                        (new ProductSkuMaterial)->save($material);
-                    }
-                }
-            }
-            // 规格出入库记录
-            $this->productInventoryRecord($productSku, $productSkuOld, $data['sku'], $this['product_id'], $this['type'], $data['stock_remark'] ?? '', $shop_supplier_id, $shopSupplierId);
-        }
-        //
-        $this->save([
-            'product_stock' => $stock,
-            'product_material_stock' => $materialStock,
-            'product_price' => $product_price,
-            'line_price' => $product_price,
-            'cost_price' => $cost_price,
-            'bag_price' => $bag_price
-        ]);
-        // 如果是编辑材料，则更新所有产品的总库存、产品规格库存、加料库存
-        if ($this['type'] == ProductModel::TYPE_MATERIAL && count($productSkuIdList) > 0) {
-            $this->reCalProductStock(array_unique([$this['product_id']]));
-        }
-    }
-
-    /**
-     * 产品规格出入库记录
-     */
-    public function productInventoryRecord($productSku, $productSkuOld, $skuArrData, $productId, $productType, $stockRemark, $shopSupplierId, $shopUserId)
-    {
-        // 关联产品规格材料
-        foreach ($skuArrData as $sku) {
-            foreach ($productSku as &$product) {
-                if (isset($sku['spec_name']) && $product['spec_name'] == $sku['spec_name']) {
-                    $product['material'] = $sku['material'] ?? [];
-                }
-            }
-        }
-        //
-        $addIds = [];
-        $existingProductSkuOldIds = helper::getArrayColumn($productSkuOld, 'product_sku_id');
-        foreach ($productSku as $item) {
-            // 新增的规格
-            if (!in_array($item['product_sku_id'] ?? 0, $existingProductSkuOldIds)) {
-                $addIds[] = $item['product_sku_id'] ?? 0;
-            }
-        }
-        // 删除的规格
-        $existingProductSkuNewIds = helper::getArrayColumn($productSku, 'product_sku_id');
-        foreach ($productSkuOld as $item) {
-            if (!in_array($item['product_sku_id'] ?? 0, $existingProductSkuNewIds)) {
-                $this->deleteInventoryRecord($item, $stockRemark, $shopSupplierId, $shopUserId);
-            }
-        }
-        $productSkuOld = helper::arrayColumn2Key($productSkuOld, 'product_sku_id');
-        foreach ($productSku as $item) {
-            $productSkuId = $item['product_sku_id'] ?? 0;
-            // 关联产品规格材料
-            ProductSkuMaterial::where('product_sku_id', '=', $productSkuId)->delete();
-            if (isset($item['material']) && !empty($item['material'])) {
-                $materialIds = [];
-                foreach ($item['material'] as $material) {
-                    $materialIds = array_merge($materialIds, [$material['product_id']]);
-                    $material = [
-                        'spec_id' => 0, // 产品规格不需要规格id
-                        'product_sku_id' => $productSkuId,
-                        'material_id' => $material['product_id'],
-                        'material_num' => $material['material_num'] ?? 0,
-                    ];
-                    (new ProductSkuMaterial)->save($material);
-                }
-                // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-                $this->reCalProductStock(array_unique($materialIds));
-            }
-            // 出入库记录，每个规格都记录
-            $inventoryRecordData = [
-                'product_id' => $productId,
-                'product_sku_id' => $productSkuId,
-                'product_sku_name' => $item['spec_name'],
-                'operator_id' => $shopUserId ?? 0,
-                'remark' => $stockRemark ?? '',
-            ];
-
-            $oldStockNum = 0;
-            $newStockNum = 0;
-            if ($productType == ProductModel::TYPE_PRODUCT) {
-                $oldStockNum = $productSkuOld[$productSkuId]['stock_num'] ?? 0;
-                $newStockNum = $item['stock_num'] ?? 0;
-            } else {
-                $oldStockNum = $productSkuOld[$productSkuId]['material_stock'] ?? 0;
-                $newStockNum = $item['material_stock'] ?? 0;
-            }
-
-            if ($oldStockNum > $newStockNum) {
-                // 减少库存 出库记录
-                $inventoryRecordData['num'] = $oldStockNum - $newStockNum;
-                $inventoryRecordData['type'] = ErpInventoryRecord::TYPE_ADJUST_OUT;
-                $inventoryRecordData['status'] = ErpInventoryRecord::STATUS_OUT;
-                (new ErpInventoryRecord)->addNew(ErpInventoryRecord::INVENTORY_TYPE_OUT, $inventoryRecordData);
-            } else if ($oldStockNum < $newStockNum) {
-                // 增加库存 入库记录
-                $inventoryRecordData['num'] = $newStockNum - $oldStockNum;
-                $inventoryRecordData['type'] = !in_array($item['product_sku_id'] ?? 0, $addIds) ? ErpInventoryRecord::TYPE_ADJUST_IN : ErpInventoryRecord::TYPE_ADJUST_IN_ADD; // 调整入库和添加入库
-                $inventoryRecordData['status'] = ErpInventoryRecord::STATUS_IN;
-                (new ErpInventoryRecord)->addNew(ErpInventoryRecord::INVENTORY_TYPE_IN, $inventoryRecordData);
-            }
-        }
-    }
-
-    /**
-     * 删除出库记录
-     */
-    public function deleteInventoryRecord($productSku, $stockRemark, $shopSupplierId, $shopUserId)
-    {
-        $inventoryRecordData = [
-            'product_id' => $productSku['product_id'],
-            'product_sku_id' => $productSku['product_sku_id'] ?? 0,
-            'product_sku_name' => $productSku['spec_name'],
-            'operator_id' => $shopUserId,
-            'remark' => $stockRemark ?? '',
-        ];
-        $inventoryRecordData['num'] = $productSku['stock_num'];
-        $inventoryRecordData['type'] = ErpInventoryRecord::TYPE_ADJUST_OUT_DEL;
-        $inventoryRecordData['status'] = ErpInventoryRecord::STATUS_OUT;
-        (new ErpInventoryRecord)->addNew(ErpInventoryRecord::INVENTORY_TYPE_OUT, $inventoryRecordData);
-    }
-
-    /**
      * 修改商品状态
      */
     public function setStatus($state)
@@ -748,13 +535,10 @@ class Product extends ProductModel
                     foreach ($sku->relatedMaterial as $relatedMaterial) {
                         $relatedMaterial->delete();
                     }
+                    // 创建"删除出库"记录
+                    ProductBom::addWarehouseOutForm($sku, 4, $shop_user_id, $sku['stock_num']);
+                    // 删除规格
                     $sku->delete();
-                    // 添加删除商品出库记录
-                    $outForm = new ErpWarehouseOutForm();
-                    $outForm->addOutForm(4, $shop_user_id, [
-                        'material_uuid' => $sku->uuid,
-                        'num' => $sku->stock_num,
-                    ]);
                 }
                 // 删除加料
                 foreach ($product->feed as $feed) {
@@ -783,6 +567,7 @@ class Product extends ProductModel
                 'multiLanguageName',
                 'relatedMaterial'
             ])->whereIn('uuid', $product_ids)->select();
+            /** @var MaterialModel $material */
             foreach ($materialList as $material) {
                 if ($material->relatedMaterial()->count() > 0) {
                     $this->error = '该材料已被使用，无法删除';
@@ -795,14 +580,10 @@ class Product extends ProductModel
                 foreach ($material->relatedMaterial as $relatedMaterial) {
                     $relatedMaterial->delete();
                 }
+                // 创建"删除出库"记录
+                MaterialModel::addWarehouseOutForm($material, 4, $shop_user_id, $material['stock_num']);
                 // 删除材料
                 $material->delete();
-                // 添加删除材料出库记录
-                $outForm = new ErpWarehouseOutForm();
-                $outForm->addOutForm(4, $shop_user_id, [
-                    'material_uuid' => $material->uuid,
-                    'num' => $material->stock_num,
-                ]);
             }
             $this->commit();
             return true;
@@ -848,15 +629,6 @@ class Product extends ProductModel
             $model = $model->where('status', '=', 20);
         }
         return $model->count();
-    }
-
-    /**
-     * 查询指定商品
-     * @param $value
-     */
-    public function getProduct($value)
-    {
-        return $this->with(['image.file'])->where('product_id', 'in', $value)->hidden(['content'])->select();
     }
 
     /**

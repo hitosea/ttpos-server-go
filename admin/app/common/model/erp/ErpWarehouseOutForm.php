@@ -9,7 +9,6 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\ProductBom;
 use app\common\model\product\ProductSku;
-use think\facade\Log;
 
 /**
  * 库存记录模型
@@ -424,14 +423,6 @@ class ErpWarehouseOutForm extends BaseModel
      */
     public function addOutForm($scene, $shopUserUuid, $data)
     {
-        Log::debug('addOutForm:' . json_encode([
-            'form_no' => $this->generateOutCode(),
-            'scene' => $scene,
-            'operator_uuid' => $shopUserUuid,
-            'remark' => $data['remark'] ?? '',
-            'status' => $data['status'] ?? 0,
-            'associated_order_uuid' => $data['associated_order_uuid'] ?? 0,
-        ]));
         $res = $this->save([
             'form_no' => $this->generateOutCode(),
             'scene' => $scene,
