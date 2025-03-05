@@ -33,7 +33,7 @@ type MemberBalanceLogRepo struct {
 func (r *MemberBalanceLogRepo) GetMemberBalanceLogList() ([]model.MemberBalanceLog, error) {
 	var memberBalanceLogs []model.MemberBalanceLog
 	err := r.db.Model(&model.MemberBalanceLog{}).Where("delete_time = ?", 0).Find(&memberBalanceLogs).Error
-	return memberBalanceLogs, err
+	return memberBalanceLogs, errors.WithMessage(err)
 }
 
 // UpdateMemberBalanceLog 更新自助餐客户类型
@@ -48,7 +48,7 @@ func (r *MemberBalanceLogRepo) UpdateMemberBalanceLog(uuid uint, memberBalanceLo
 func (r *MemberBalanceLogRepo) CreateMemberBalanceLog(memberBalanceLog model.MemberBalanceLog) (uint64, error) {
 	// 创建会员余额变动记录
 	if err := r.db.Create(&memberBalanceLog).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return memberBalanceLog.Uuid, nil
 }

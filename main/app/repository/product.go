@@ -73,13 +73,13 @@ func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opt
 	// 获取总数
 	err := db.Count(&total).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	// 获取列表
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&products).Error
 
-	return products, total, err
+	return products, total, errors.WithMessage(err)
 }
 
 // GetSoldOutWithPagination 分页获取沽清商品列表
@@ -93,11 +93,11 @@ func (r *productRepo) GetSoldOutWithPagination(pageNo int, pageSize int, opts ..
 	// 获取总数
 	err := db.Count(&total).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取列表
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&productBom).Error
-	return productBom, total, err
+	return productBom, total, errors.WithMessage(err)
 }
 
 // GetProductCategoryList 获取产品类别列表
@@ -130,7 +130,7 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 
 	err := db.First(&product).Error
 
-	return product, err
+	return product, errors.WithMessage(err)
 }
 
 // GetProductFlavor 获取商品规格详情
@@ -145,7 +145,7 @@ func (r *productRepo) GetProductFlavor(opts ...DBOption) (model.ProductFlavor, e
 
 	err := db.First(&productFlavor).Error
 
-	return productFlavor, err
+	return productFlavor, errors.WithMessage(err)
 }
 
 // GetProductBom 获取商品BOM
@@ -160,7 +160,7 @@ func (r *productRepo) GetProductBom(opts ...DBOption) (model.ProductBom, error) 
 
 	err := db.First(&productBom).Error
 
-	return productBom, err
+	return productBom, errors.WithMessage(err)
 }
 
 // WithMultiLanguageName 预加载多语言名称
@@ -336,5 +336,5 @@ func (r *productRepo) WithTakeoutTax() DBOption {
 func (r *productRepo) GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error) {
 	var productPackages []model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ? AND delete_time = ?", uuids, constant.NotDeleted).Find(&productPackages).Error
-	return productPackages, err
+	return productPackages, errors.WithMessage(err)
 }

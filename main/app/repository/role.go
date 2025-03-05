@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type RoleRepoImpl struct {
 func (r *RoleRepoImpl) GetRoleList() ([]model.Role, error) {
 	var roles []model.Role
 	err := r.db.Model(&model.Role{}).Where("delete_time = ?", 0).Find(&roles).Error
-	return roles, err
+	return roles, errors.WithMessage(err)
 }
 
 // UpdateRole 更新角色

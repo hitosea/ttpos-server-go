@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type ProductPrinterRepoImpl struct {
 func (r *ProductPrinterRepoImpl) GetProductPrinterList() ([]model.ProductPrinter, error) {
 	var productPrinters []model.ProductPrinter
 	err := r.db.Model(&model.ProductPrinter{}).Where("delete_time = ?", 0).Find(&productPrinters).Error
-	return productPrinters, err
+	return productPrinters, errors.WithMessage(err)
 }
 
 // UpdateProductPrinter 更新商品打印（档口）

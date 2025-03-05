@@ -39,7 +39,7 @@ func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonList() ([]model.ReturnFood
 		Where("delete_time = ?", 0).
 		Order("id ASC").
 		Find(&returnFoodReasons).Error
-	return returnFoodReasons, err
+	return returnFoodReasons, errors.WithMessage(err)
 }
 
 // UpdateReturnFoodReason 更新退菜原因
@@ -76,13 +76,13 @@ func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model
 	// 创建多语言名称
 	if err := tx.Create(&returnFoodReason.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建退菜原因
 	if err := tx.Create(&returnFoodReason).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return returnFoodReason.Uuid, tx.Commit().Error // 提交事务
@@ -102,7 +102,7 @@ func (r *ReturnFoodReasonRepoImpl) ExistsByUuids(uuids []uint64) ([][2]uint64, [
 	var reasons []model.ReturnFoodReason
 	err := r.db.Where("uuid IN ? AND delete_time = 0", uuids).Find(&reasons).Error
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	// 创建存在的UUID集合

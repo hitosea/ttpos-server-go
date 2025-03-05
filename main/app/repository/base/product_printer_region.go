@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type ProductPrinterRegionRepoImpl struct {
 func (r *ProductPrinterRegionRepoImpl) GetProductPrinterRegionList() ([]model.ProductPrinterRegion, error) {
 	var productPrinterRegions []model.ProductPrinterRegion
 	err := r.db.Model(&model.ProductPrinterRegion{}).Where("delete_time = ?", 0).Find(&productPrinterRegions).Error
-	return productPrinterRegions, err
+	return productPrinterRegions, errors.WithMessage(err)
 }
 
 // UpdateProductPrinterRegion 更新商品打印（档口）区域

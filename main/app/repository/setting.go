@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func NewSettingRepoImpl(db *gorm.DB) *SettingRepo {
 func (r *SettingRepo) GetAll() ([]model.Setting, error) {
 	var settings []model.Setting
 	err := r.db.Model(&model.Setting{}).Find(&settings).Error
-	return settings, err
+	return settings, errors.WithMessage(err)
 }
 
 func (r *SettingRepo) Updates(key string, values string) error {
@@ -43,5 +44,5 @@ func (r *SettingRepo) GetByKey(key string) model.Setting {
 
 func (r *SettingRepo) Create(setting model.Setting) (model.Setting, error) {
 	err := r.db.Model(&model.Setting{}).Create(&setting).Error
-	return setting, err
+	return setting, errors.WithMessage(err)
 }

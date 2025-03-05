@@ -68,11 +68,11 @@ func (r *H5OrderRepoImpl) PaginateGetH5Order(pageNo, pageSize int, opts ...DBOpt
 	}
 	// 获取总数
 	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取分页数据
 	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&qrcodeOrders).Error
-	return qrcodeOrders, total, err
+	return qrcodeOrders, total, errors.WithMessage(err)
 }
 
 // GetH5Order 获取接单详情
@@ -83,7 +83,7 @@ func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (model.H5Order, error) {
 		db = opt(db)
 	}
 	err := db.First(&h5Order).Error
-	return h5Order, err
+	return h5Order, errors.WithMessage(err)
 }
 
 // GetH5OrderUuids 获取h5订单uuid
@@ -94,7 +94,7 @@ func (r *H5OrderRepoImpl) GetH5OrderUuids(opts ...DBOption) ([]uint64, error) {
 		db = opt(db)
 	}
 	err := db.Select("uuid").Scan(&h5OrderUuids).Error
-	return h5OrderUuids, err
+	return h5OrderUuids, errors.WithMessage(err)
 }
 
 // GetH5OrderCount 获取H5订单数量
@@ -105,7 +105,7 @@ func (r *H5OrderRepoImpl) GetH5OrderCount(opts ...DBOption) (int64, error) {
 		db = opt(db)
 	}
 	if err := db.Count(&total).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return total, nil
 }
@@ -122,7 +122,7 @@ func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]
 func (r *H5OrderRepoImpl) CreateH5Order(qrcodeOrder model.H5Order) (uint64, error) {
 	// 创建桌台
 	if err := r.db.Create(&qrcodeOrder).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return qrcodeOrder.Uuid, nil
 }
@@ -150,12 +150,12 @@ func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderP
 		db = opt(db)
 	}
 	err := db.Find(&products).Error
-	return products, err
+	return products, errors.WithMessage(err)
 }
 
 func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (model.H5OrderProduct, error) {
 	err := r.db.Model(&model.H5OrderProduct{}).Create(&h5OrderProduct).Error
-	return h5OrderProduct, err
+	return h5OrderProduct, errors.WithMessage(err)
 }
 
 func (r *H5OrderRepoImpl) WhereStatus(status []uint) DBOption {

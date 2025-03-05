@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type CustomerCallRepoImpl struct {
 func (r *CustomerCallRepoImpl) GetCustomerCallList() ([]model.CustomerCall, error) {
 	var customerCalls []model.CustomerCall
 	err := r.db.Model(&model.CustomerCall{}).Where("delete_time = ?", 0).Find(&customerCalls).Error
-	return customerCalls, err
+	return customerCalls, errors.WithMessage(err)
 }
 
 // UpdateCustomerCall 更新客户呼叫记录

@@ -117,7 +117,7 @@ func (r *paymentMethodRepo) GetPaymentMethodError(opts ...DBOption) (*model.Paym
 		db = opt(db)
 	}
 	err := db.First(&paymentMethod).Error
-	return &paymentMethod, err
+	return &paymentMethod, errors.WithMessage(err)
 }
 
 func (r *paymentMethodRepo) GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error) {

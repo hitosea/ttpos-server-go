@@ -33,7 +33,7 @@ type BuffetCustomerTypePriceRepoImpl struct {
 func (r *BuffetCustomerTypePriceRepoImpl) GetBuffetCustomerTypePriceList() ([]model.BuffetCustomerTypePrice, error) {
 	var buffetCustomerTypePrices []model.BuffetCustomerTypePrice
 	err := r.db.Model(&model.BuffetCustomerTypePrice{}).Where("delete_time = ?", 0).Find(&buffetCustomerTypePrices).Error
-	return buffetCustomerTypePrices, err
+	return buffetCustomerTypePrices, errors.WithMessage(err)
 }
 
 // UpdateBuffetCustomerTypePrice 更新自助餐客户类型
@@ -48,7 +48,7 @@ func (r *BuffetCustomerTypePriceRepoImpl) UpdateBuffetCustomerTypePrice(uuid uin
 func (r *BuffetCustomerTypePriceRepoImpl) CreateBuffetCustomerTypePrice(buffetCustomerTypePrice model.BuffetCustomerTypePrice) (uint64, error) {
 	// 创建自助餐客户类型
 	if err := r.db.Create(&buffetCustomerTypePrice).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return buffetCustomerTypePrice.Uuid, nil

@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -38,13 +39,13 @@ func (r *accessRepo) GetPermissions(opts ...DBOption) ([]model.Access, error) {
 		db = opt(db)
 	}
 	err := db.Order("sort asc, create_time asc").Find(&access).Error
-	return access, err
+	return access, errors.WithMessage(err)
 }
 
 func (r *accessRepo) GetAccessUuids(roleIds []uint64) ([]uint64, error) {
 	var accessUuids []uint64
 	err := r.db.Model(&model.RoleAccess{}).Where("role_uuid in (?)", roleIds).Pluck("access_uuid", &accessUuids).Error
-	return accessUuids, err
+	return accessUuids, errors.WithMessage(err)
 }
 
 func (r *accessRepo) WhereUuids(accessIds []uint64) DBOption {

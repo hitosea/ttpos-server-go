@@ -33,7 +33,7 @@ type BuffetDelayRepoImpl struct {
 func (r *BuffetDelayRepoImpl) GetBuffetDelayList() ([]model.BuffetDelay, error) {
 	var buffetDelays []model.BuffetDelay
 	err := r.db.Model(&model.BuffetDelay{}).Where("delete_time = ?", 0).Find(&buffetDelays).Error
-	return buffetDelays, err
+	return buffetDelays, errors.WithMessage(err)
 }
 
 // UpdateBuffetDelay 更新自助餐加钟价格
@@ -49,7 +49,7 @@ func (r *BuffetDelayRepoImpl) CreateBuffetDelay(buffetDelay model.BuffetDelay) (
 
 	// 创建自助餐加钟价格
 	if err := r.db.Create(&buffetDelay).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return buffetDelay.Uuid, nil
 }

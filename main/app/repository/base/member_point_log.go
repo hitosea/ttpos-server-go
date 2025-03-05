@@ -33,7 +33,7 @@ type MemberPointLogRepo struct {
 func (r *MemberPointLogRepo) GetMemberPointLogList() ([]model.MemberPointLog, error) {
 	var memberPointLogs []model.MemberPointLog
 	err := r.db.Model(&model.MemberPointLog{}).Where("delete_time = ?", 0).Find(&memberPointLogs).Error
-	return memberPointLogs, err
+	return memberPointLogs, errors.WithMessage(err)
 }
 
 // UpdateMemberPointLog 更新会员积分变动记录
@@ -48,7 +48,7 @@ func (r *MemberPointLogRepo) UpdateMemberPointLog(uuid uint, memberPointLog mode
 func (r *MemberPointLogRepo) CreateMemberPointLog(memberPointLog model.MemberPointLog) (uint64, error) {
 	// 创建会员积分变动记录
 	if err := r.db.Create(&memberPointLog).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return memberPointLog.Uuid, nil
 }

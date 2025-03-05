@@ -33,7 +33,7 @@ type ProductUnitRepoImpl struct {
 func (r *ProductUnitRepoImpl) GetProductUnitList() ([]model.ProductUnit, error) {
 	var productUnits []model.ProductUnit
 	err := r.db.Model(&model.ProductUnit{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productUnits).Error
-	return productUnits, err
+	return productUnits, errors.WithMessage(err)
 }
 
 // UpdateProductUnit 更新商品规格
@@ -70,13 +70,13 @@ func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (
 	// 创建多语言名称
 	if err := tx.Create(&productUnit.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建商品规格
 	if err := tx.Create(&productUnit).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productUnit.Uuid, tx.Commit().Error // 提交事务

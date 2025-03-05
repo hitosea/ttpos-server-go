@@ -34,7 +34,7 @@ type ProductPackageAttributeRepoImpl struct {
 func (r *ProductPackageAttributeRepoImpl) GetProductPackageAttributeList(productPackageAttributeGroupId uint) ([]model.ProductPackageAttribute, error) {
 	var productPackageAttributes []model.ProductPackageAttribute
 	err := r.db.Model(&model.ProductPackageAttribute{}).Where("product_package_attribute_group_id = ?", productPackageAttributeGroupId).Find(&productPackageAttributes).Error
-	return productPackageAttributes, err
+	return productPackageAttributes, errors.WithMessage(err)
 }
 
 // UpdateProductPackageAttribute 更新产品包属性
@@ -51,7 +51,7 @@ func (r *ProductPackageAttributeRepoImpl) UpdateProductPackageAttribute(productP
 func (r *ProductPackageAttributeRepoImpl) CreateProductPackageAttribute(productPackageAttribute model.ProductPackageAttribute) (uint64, error) {
 	// 创建产品包属性
 	if err := r.db.Model(&model.ProductPackageAttribute{}).Create(&productPackageAttribute).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productPackageAttribute.Uuid, nil // 返回产品包属性ID

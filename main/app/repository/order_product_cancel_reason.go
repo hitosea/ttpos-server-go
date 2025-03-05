@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -41,13 +42,13 @@ func (r *orderProductCancelReasonRepo) CreateRecord(saleBillUuid uint64, Action 
 	if data != nil {
 		dataJson, err := json.Marshal(data)
 		if err != nil {
-			return 0, err
+			return 0, errors.WithMessage(err)
 		}
 		record.Data = string(dataJson)
 	}
 
 	if err := r.db.Create(&record).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// // 添加异常日志

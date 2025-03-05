@@ -33,7 +33,7 @@ type BuffetCustomerTypeRepoImpl struct {
 func (r *BuffetCustomerTypeRepoImpl) GetBuffetCustomerTypeList() ([]model.BuffetCustomerType, error) {
 	var buffetCustomerTypes []model.BuffetCustomerType
 	err := r.db.Model(&model.BuffetCustomerType{}).Where("delete_time = ?", 0).Find(&buffetCustomerTypes).Error
-	return buffetCustomerTypes, err
+	return buffetCustomerTypes, errors.WithMessage(err)
 }
 
 // UpdateBuffetCustomerType 更新自助餐客户类型
@@ -49,7 +49,7 @@ func (r *BuffetCustomerTypeRepoImpl) CreateBuffetCustomerType(buffetCustomerType
 
 	// 创建自助餐客户类型
 	if err := r.db.Create(&buffetCustomerType).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return buffetCustomerType.Uuid, nil
 }

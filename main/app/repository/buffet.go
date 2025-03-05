@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -43,16 +44,16 @@ func (r *BuffetRepoImpl) GetBuffetList(pageNo, pageSize int, opts ...DBOption) (
 
 	err := db.Count(&total).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&buffets).Error
-	return buffets, total, err
+	return buffets, total, errors.WithMessage(err)
 }
 
 func (r *BuffetRepoImpl) GetBuffetListNoPage(opts ...DBOption) ([]*model.BuffetPackage, error) {
 	list, _, err := r.GetBuffetList(1, 1000000, opts...)
-	return list, err
+	return list, errors.WithMessage(err)
 }
 
 // GetBuffetListInDeskOpen 获取自助餐列表（桌台开台）
@@ -116,7 +117,7 @@ func (r *BuffetRepoImpl) GetBuffetInfo(opts ...DBOption) (model.BuffetPackage, e
 
 	err := db.First(&buffet).Error
 
-	return buffet, err
+	return buffet, errors.WithMessage(err)
 }
 
 // GetBuffetCustomerTypeInfo 获取自助餐顾客类型详情
@@ -130,7 +131,7 @@ func (r *BuffetRepoImpl) GetBuffetCustomerTypeInfo(opts ...DBOption) (model.Buff
 	}
 
 	err := db.First(&buffetCustomerType).Error
-	return buffetCustomerType, err
+	return buffetCustomerType, errors.WithMessage(err)
 }
 
 // GetBuffetCustomerTypePrice 获取自助餐顾客类型价格
@@ -144,5 +145,5 @@ func (r *BuffetRepoImpl) GetBuffetCustomerTypePrice(opts ...DBOption) (model.Buf
 	}
 
 	err := db.First(&buffetCustomerTypePrice).Error
-	return buffetCustomerTypePrice, err
+	return buffetCustomerTypePrice, errors.WithMessage(err)
 }

@@ -72,5 +72,5 @@ func (r *deviceRepo) UpdateDevice(uuid uint64, vars map[string]interface{}) erro
 
 func (r *deviceRepo) CreateDevice(device model.Device) (model.Device, error) {
 	err := r.db.Model(&model.Device{}).Create(&device).Error
-	return device, err
+	return device, errors.WithMessage(err)
 }

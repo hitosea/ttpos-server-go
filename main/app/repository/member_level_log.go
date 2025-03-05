@@ -1,8 +1,10 @@
 package repository
 
 import (
-	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IMemberLevelLogRepo interface {
@@ -25,5 +27,5 @@ func NewMemberLevelLogRepoImpl(db *gorm.DB) *MemberLevelLogRepo {
 // Create 创建会员余额日志
 func (r *MemberLevelLogRepo) Create(log model.MemberLevelLog) (model.MemberLevelLog, error) {
 	err := r.db.Model(&model.MemberLevelLog{}).Create(&log).Error
-	return log, err
+	return log, errors.WithMessage(err)
 }

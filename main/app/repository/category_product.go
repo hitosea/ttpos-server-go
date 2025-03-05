@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -21,7 +22,7 @@ func (r *ProductCategoryRepoImpl) GetProductCategoryList() ([]model.ProductCateg
 	// 实现获取商品类别列表的逻辑
 	var categories []model.ProductCategory
 	err := r.db.Model(&model.ProductCategory{}).Find(&categories).Error
-	return categories, err
+	return categories, errors.WithMessage(err)
 }
 
 // UpdateProductCategory 更新商品类别
@@ -34,7 +35,7 @@ func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory
 func (r *ProductCategoryRepoImpl) CreateProductCategory(productCategory model.ProductCategory) (uint64, error) {
 	// 实现创建商品类别的逻辑
 	err := r.db.Model(&model.ProductCategory{}).Create(&productCategory).Error
-	return productCategory.Uuid, err
+	return productCategory.Uuid, errors.WithMessage(err)
 }
 
 // DeleteProductCategory 软删除商品类别
@@ -46,11 +47,11 @@ func (r *ProductCategoryRepoImpl) DeleteProductCategory(id uint) error {
 func (r *ProductCategoryRepoImpl) GetProductCategoryByIdWithMultiLanguageName(id uint) (*model.ProductCategory, error) {
 	var productCategory model.ProductCategory
 	err := r.db.Model(&model.ProductCategory{}).Where("id = ?", id).Preload("MultiLanguageName").First(&productCategory).Error
-	return &productCategory, err
+	return &productCategory, errors.WithMessage(err)
 }
 
 func (r *ProductCategoryRepoImpl) GetProductCategoryListWithMultiLanguageName() ([]model.ProductCategory, error) {
 	var productCategories []model.ProductCategory
 	err := r.db.Model(&model.ProductCategory{}).Preload("MultiLanguageName").Find(&productCategories).Error
-	return productCategories, err
+	return productCategories, errors.WithMessage(err)
 }

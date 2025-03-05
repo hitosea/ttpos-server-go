@@ -33,7 +33,7 @@ func (r *cashBoxRepo) Get() model.CashBox {
 
 func (r *cashBoxRepo) Create(cashBox model.CashBox) (model.CashBox, error) {
 	err := r.db.Create(&cashBox).Error
-	return cashBox, err
+	return cashBox, errors.WithMessage(err)
 }
 
 func (r *cashBoxRepo) Update(uuid uint64, vars map[string]any) error {

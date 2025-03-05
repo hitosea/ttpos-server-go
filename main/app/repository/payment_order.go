@@ -55,7 +55,7 @@ func (r *paymentOrderRepo) GetPaymentOrder(opts ...DBOption) (model.PaymentOrder
 	}
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").First(&paymentOrder).Error
-	return paymentOrder, err
+	return paymentOrder, errors.WithMessage(err)
 }
 
 // GetPaymentOrderList 获取列表
@@ -67,7 +67,7 @@ func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.Paymen
 	}
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").Find(&paymentOrders).Error
-	return paymentOrders, err
+	return paymentOrders, errors.WithMessage(err)
 }
 
 // GetPaymentOrderRecordList 获取支付订单记录列表
@@ -79,7 +79,7 @@ func (r *paymentOrderRepo) GetPaymentOrderRecordList(opts ...DBOption) ([]*model
 	}
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").Find(&paymentOrders).Error
-	return paymentOrders, err
+	return paymentOrders, errors.WithMessage(err)
 }
 
 // GetPaymentOrderRecord 获取支付订单记录
@@ -119,7 +119,7 @@ func (r *paymentOrderRepo) UpdatePaymentOrderRecord(paymentOrder model.PaymentOr
 
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
 	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
-	return order, err
+	return order, errors.WithMessage(err)
 }
 
 func (r *paymentOrderRepo) UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error {

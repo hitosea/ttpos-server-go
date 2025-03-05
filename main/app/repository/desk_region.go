@@ -33,7 +33,7 @@ type DeskRegionRepoImpl struct {
 func (r *DeskRegionRepoImpl) GetDeskRegionList() ([]model.DeskRegion, error) {
 	var deskRegions []model.DeskRegion
 	err := r.db.Model(&model.DeskRegion{}).Where("delete_time = ?", 0).Find(&deskRegions).Error
-	return deskRegions, err
+	return deskRegions, errors.WithMessage(err)
 }
 
 // UpdateDeskRegion 更新桌台区域
@@ -48,7 +48,7 @@ func (r *DeskRegionRepoImpl) UpdateDeskRegion(uuid uint, deskRegion model.DeskRe
 func (r *DeskRegionRepoImpl) CreateDeskRegion(deskRegion model.DeskRegion) (uint64, error) {
 	// 创建桌台区域
 	if err := r.db.Model(&model.DeskRegion{}).Create(&deskRegion).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return deskRegion.Uuid, nil
 }

@@ -72,7 +72,7 @@ func (r *saleBillRepo) GetSaleBillListPage(pageNo, pageSize int, opts ...DBOptio
 	}
 
 	if err := db.Model(&model.SaleBill{}).Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	result := db.Order("create_time asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&saleBills)
@@ -154,7 +154,7 @@ func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleB
 		),
 	)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 	return saleBills, total, nil
 }

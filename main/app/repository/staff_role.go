@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -30,5 +31,5 @@ func (r *StaffRoleRepo) CreateStaffRole(staffRole model.StaffRole) error {
 func (r *StaffRoleRepo) GetRoleUuidsByStaffUuid(staffUuid uint64) ([]uint64, error) {
 	var roleIds []uint64
 	err := r.db.Model(&model.StaffRole{}).Where("staff_uuid = ?", staffUuid).Pluck("role_uuid", &roleIds).Error
-	return roleIds, err
+	return roleIds, errors.WithMessage(err)
 }

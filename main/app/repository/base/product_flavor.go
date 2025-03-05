@@ -33,7 +33,7 @@ type ProductFlavorRepoImpl struct {
 func (r *ProductFlavorRepoImpl) GetProductFlavorList() ([]model.ProductFlavor, error) {
 	var productFlavors []model.ProductFlavor
 	err := r.db.Model(&model.ProductFlavor{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productFlavors).Error
-	return productFlavors, err
+	return productFlavors, errors.WithMessage(err)
 }
 
 // UpdateProductFlavor 更新商品规格
@@ -70,13 +70,13 @@ func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductF
 	// 创建多语言名称
 	if err := tx.Create(&productFlavor.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建商品规格
 	if err := tx.Create(&productFlavor).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productFlavor.Uuid, tx.Commit().Error // 提交事务

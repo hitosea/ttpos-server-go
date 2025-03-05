@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -41,7 +42,7 @@ func (r *ProductMustPlanItemRepo) GetProductMustPlanItem(opts ...DBOption) (mode
 
 	err := db.First(&item).Error
 
-	return item, err
+	return item, errors.WithMessage(err)
 }
 
 // GetProductMustPlanItemList 查询必点方案商品列表
@@ -55,7 +56,7 @@ func (r *ProductMustPlanItemRepo) GetProductMustPlanItemList(opts ...DBOption) (
 
 	err := db.Find(&items).Error
 
-	return items, err
+	return items, errors.WithMessage(err)
 }
 
 // GetProductMustPlanItemByPackageUuid 通过商品包uuid查询必点方案商品
@@ -71,5 +72,5 @@ func (r *ProductMustPlanItemRepo) GetProductMustPlanItemByPackageUuid(packageUui
 		),
 	)
 
-	return items, err
+	return items, errors.WithMessage(err)
 }

@@ -145,7 +145,7 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 	// 获取列表
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orders).Error
 
-	return orders, total, err
+	return orders, total, errors.WithMessage(err)
 }
 
 // GetOrderNum 获取订单的数量

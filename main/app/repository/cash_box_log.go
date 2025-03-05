@@ -1,8 +1,10 @@
 package repository
 
 import (
-	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type ICashBoxLogRepo interface {
@@ -23,5 +25,5 @@ func NewCashBoxLogRepoImpl(db *gorm.DB) ICashBoxLogRepo {
 
 func (r *cashBoxLogRepo) Create(cashBoxLog model.CashBoxLog) (model.CashBoxLog, error) {
 	err := r.db.Model(&model.CashBoxLog{}).Create(&cashBoxLog).Error
-	return cashBoxLog, err
+	return cashBoxLog, errors.WithMessage(err)
 }

@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type SupplierRepoImpl struct {
 func (r *SupplierRepoImpl) GetSupplierList() ([]model.Supplier, error) {
 	var suppliers []model.Supplier
 	err := r.db.Model(&model.Supplier{}).Where("delete_time = ?", 0).Find(&suppliers).Error
-	return suppliers, err
+	return suppliers, errors.WithMessage(err)
 }
 
 // UpdateSupplier 更新供应商

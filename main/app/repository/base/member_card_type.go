@@ -33,7 +33,7 @@ type MemberCardTypeRepo struct {
 func (r *MemberCardTypeRepo) GetMemberCardTypeList() ([]model.MemberCardType, error) {
 	var memberCardTypes []model.MemberCardType
 	err := r.db.Model(&model.MemberCardType{}).Where("delete_time = ?", 0).Find(&memberCardTypes).Error
-	return memberCardTypes, err
+	return memberCardTypes, errors.WithMessage(err)
 }
 
 // UpdateMemberCardType 更新自助餐客户类型
@@ -48,7 +48,7 @@ func (r *MemberCardTypeRepo) UpdateMemberCardType(uuid uint, memberCardType mode
 func (r *MemberCardTypeRepo) CreateMemberCardType(memberCardType model.MemberCardType) (uint64, error) {
 	// 创建会员卡类型
 	if err := r.db.Create(&memberCardType).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return memberCardType.Uuid, nil
 }

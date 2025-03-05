@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -35,7 +36,7 @@ func (r *printerRepo) GetPrinter(opts ...DBOption) (model.Printer, error) {
 	}
 	err := db.First(&printer).Error
 
-	return printer, err
+	return printer, errors.WithMessage(err)
 }
 func (r *printerRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {

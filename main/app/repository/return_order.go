@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -25,7 +26,7 @@ func NewReturnOrderRepoImpl(db *gorm.DB) IReturnOrderRepo {
 
 func (r *returnOrderRepo) CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error) {
 	err := r.db.Model(&model.ReturnOrder{}).Create(&order).Error
-	return order, err
+	return order, errors.WithMessage(err)
 }
 
 func (r *returnOrderRepo) CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error {

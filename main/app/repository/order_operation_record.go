@@ -45,26 +45,26 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts 
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	// 获取分页数据
 	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orderOperationRecords).Error
-	return orderOperationRecords, total, err
+	return orderOperationRecords, total, errors.WithMessage(err)
 }
 
 // GetRecordLists 获取订单操作记录列表
 func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error) {
 	var orderOperationRecords []model.SaleBillOperationRecord
 	err := r.db.Model(&model.SaleBillOperationRecord{}).Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderOperationRecords).Error
-	return orderOperationRecords, err
+	return orderOperationRecords, errors.WithMessage(err)
 }
 
 // GetRecordInfo 获取订单操作记录信息
 func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error) {
 	var orderOperationRecord model.SaleBillOperationRecord
 	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).First(&orderOperationRecord).Error; err != nil {
-		return model.SaleBillOperationRecord{}, err
+		return model.SaleBillOperationRecord{}, errors.WithMessage(err)
 	}
 	return orderOperationRecord, nil
 }
@@ -86,13 +86,13 @@ func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action 
 	if data != nil {
 		dataJson, err := json.Marshal(data)
 		if err != nil {
-			return 0, err
+			return 0, errors.WithMessage(err)
 		}
 		record.Data = string(dataJson)
 	}
 
 	if err := r.db.Create(&record).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// // 添加异常日志

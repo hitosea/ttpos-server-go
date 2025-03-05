@@ -33,7 +33,7 @@ type MemberCardLogRepo struct {
 func (r *MemberCardLogRepo) GetMemberCardLogList() ([]model.MemberCardLog, error) {
 	var memberCardLogs []model.MemberCardLog
 	err := r.db.Model(&model.MemberCardLog{}).Where("delete_time = ?", 0).Find(&memberCardLogs).Error
-	return memberCardLogs, err
+	return memberCardLogs, errors.WithMessage(err)
 }
 
 // UpdateMemberCardLog 更新会员卡领取记录
@@ -48,7 +48,7 @@ func (r *MemberCardLogRepo) UpdateMemberCardLog(uuid uint, memberCardLog model.M
 func (r *MemberCardLogRepo) CreateMemberCardLog(memberCardLog model.MemberCardLog) (uint64, error) {
 	// 创建会员卡领取记录
 	if err := r.db.Create(&memberCardLog).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return memberCardLog.Uuid, nil
 }

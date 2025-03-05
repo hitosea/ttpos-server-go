@@ -2,6 +2,8 @@ package repository
 
 import (
 	"gorm.io/gorm"
+
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -43,12 +45,12 @@ func (r *callRepo) PaginateGet(page, pageSize int, opts ...DBOption) ([]model.Cu
 	// 获取总记录数
 	err := builder.Count(&total).Error
 	if err != nil {
-		return calls, 0, err
+		return calls, 0, errors.WithMessage(err)
 	}
 	// 执行分页查询
 	err = builder.Limit(pageSize).Offset((page - 1) * pageSize).Find(&calls).Error
 	if err != nil {
-		return calls, 0, err
+		return calls, 0, errors.WithMessage(err)
 	}
 	return calls, total, nil
 }
@@ -65,7 +67,7 @@ func (r *callRepo) GetUnprocessedCallCount(opts ...DBOption) (int64, error) {
 	// 获取总记录数
 	err := builder.Count(&total).Error
 
-	return total, err
+	return total, errors.WithMessage(err)
 }
 
 func (r *callRepo) WhereStatus(status uint8) DBOption {

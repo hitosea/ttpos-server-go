@@ -34,7 +34,7 @@ type MaterialRepoImpl struct {
 func (r *MaterialRepoImpl) GetMaterialList() ([]model.Material, error) {
 	var materials []model.Material
 	err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&materials).Error
-	return materials, err
+	return materials, errors.WithMessage(err)
 }
 
 // UpdateMaterial 更新原料
@@ -71,13 +71,13 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, erro
 	// 创建多语言名称
 	if err := tx.Create(&material.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建原料
 	if err := tx.Create(&material).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return material.Uuid, tx.Commit().Error // 提交事务

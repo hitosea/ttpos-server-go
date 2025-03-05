@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -27,7 +28,7 @@ type RoleAccessRepoImpl struct {
 func (r *RoleAccessRepoImpl) GetRoleAccessList() ([]model.RoleAccess, error) {
 	var roleAccesses []model.RoleAccess
 	err := r.db.Model(&model.RoleAccess{}).Find(&roleAccesses).Error
-	return roleAccesses, err
+	return roleAccesses, errors.WithMessage(err)
 }
 
 func (r *RoleAccessRepoImpl) CreateRoleAccess(roleAccess model.RoleAccess) (uint64, error) {

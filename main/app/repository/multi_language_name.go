@@ -3,6 +3,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -35,13 +36,13 @@ func NewMultiLanguageNameRepositoryImpl(db *gorm.DB) IMultiLanguageNameRepo {
 func (r *MultiLanguageNameRepoImpl) GetMultiLanguageName(id uint64) (model.MultiLanguageName, error) {
 	var multiLanguageName model.MultiLanguageName
 	err := r.db.Model(&model.MultiLanguageName{}).First(&multiLanguageName, id).Error // 从数据库中获取多语言名称
-	return multiLanguageName, err
+	return multiLanguageName, errors.WithMessage(err)
 }
 
 // CreateMultiLanguageName 创建多语言名称
 func (r *MultiLanguageNameRepoImpl) CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error) {
 	err := r.db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error // 将多语言名称插入数据库
-	return multiLanguageName.Uuid, err
+	return multiLanguageName.Uuid, errors.WithMessage(err)
 }
 
 // UpdateMultiLanguageName 更新多语言名称

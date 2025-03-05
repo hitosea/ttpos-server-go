@@ -53,12 +53,12 @@ func (r *deskRepo) GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	// 获取分页数据
 	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
-	return desks, total, err
+	return desks, total, errors.WithMessage(err)
 }
 
 // GetClientDeskList 获取客户端桌台列表，排除逻辑删除的桌台，排除被禁用的桌台
@@ -70,13 +70,13 @@ func (r *deskRepo) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64,
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 
 	// 获取分页数据
 	err := query.Order("sort asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
 
-	return desks, total, err
+	return desks, total, errors.WithMessage(err)
 }
 
 func (r *deskRepo) GetDesk(opts ...DBOption) (model.Desk, error) {
@@ -86,7 +86,7 @@ func (r *deskRepo) GetDesk(opts ...DBOption) (model.Desk, error) {
 		db = opt(db)
 	}
 	err := db.First(&desk).Error
-	return desk, err
+	return desk, errors.WithMessage(err)
 }
 
 func (r *deskRepo) GetDesks(opts ...DBOption) ([]model.Desk, error) {
@@ -96,7 +96,7 @@ func (r *deskRepo) GetDesks(opts ...DBOption) ([]model.Desk, error) {
 		db = opt(db)
 	}
 	err := db.Order("sort desc").Find(&desks).Error
-	return desks, err
+	return desks, errors.WithMessage(err)
 }
 
 // GetDeskInfo 获取桌台信息
@@ -169,7 +169,7 @@ func (r *deskRepo) UnbindDesk(deskUuid, deviceUuid uint64) error {
 func (r *deskRepo) CreateDesk(desk model.Desk) (uint64, error) {
 	// 创建桌台
 	if err := r.db.Create(&desk).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return desk.Uuid, nil
 }

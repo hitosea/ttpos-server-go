@@ -33,7 +33,7 @@ type MemberLevelRepo struct {
 func (r *MemberLevelRepo) GetMemberLevelList() ([]model.MemberLevel, error) {
 	var memberLevels []model.MemberLevel
 	err := r.db.Model(&model.MemberLevel{}).Where("delete_time = ?", 0).Find(&memberLevels).Error
-	return memberLevels, err
+	return memberLevels, errors.WithMessage(err)
 }
 
 // UpdateMemberLevel 更新自助餐客户类型
@@ -48,7 +48,7 @@ func (r *MemberLevelRepo) UpdateMemberLevel(uuid uint, memberLevel model.MemberL
 func (r *MemberLevelRepo) CreateMemberLevel(memberLevel model.MemberLevel) (uint64, error) {
 	// 创建会员等级
 	if err := r.db.Create(&memberLevel).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return memberLevel.Uuid, nil
 }

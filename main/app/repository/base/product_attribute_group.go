@@ -34,7 +34,7 @@ type ProductAttributeGroupRepoImpl struct {
 func (r *ProductAttributeGroupRepoImpl) GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error) {
 	var productAttributeGroups []model.ProductAttributeGroup
 	err := r.db.Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productAttributeGroups).Error
-	return productAttributeGroups, err
+	return productAttributeGroups, errors.WithMessage(err)
 }
 
 // UpdateProductAttributeGroup 更新退菜原因
@@ -71,13 +71,13 @@ func (r *ProductAttributeGroupRepoImpl) CreateProductAttributeGroup(productAttri
 	// 创建多语言名称
 	if err := tx.Create(&productAttributeGroup.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建产品属性组
 	if err := tx.Create(&productAttributeGroup).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productAttributeGroup.Uuid, tx.Commit().Error // 提交事务

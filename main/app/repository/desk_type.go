@@ -33,7 +33,7 @@ type DeskTypeRepoImpl struct {
 func (r *DeskTypeRepoImpl) GetDeskTypeList() ([]model.DeskType, error) {
 	var deskTypes []model.DeskType
 	err := r.db.Model(&model.DeskType{}).Where("delete_time = ?", 0).Find(&deskTypes).Error
-	return deskTypes, err
+	return deskTypes, errors.WithMessage(err)
 }
 
 // UpdateDeskType 更新桌台类型
@@ -48,7 +48,7 @@ func (r *DeskTypeRepoImpl) UpdateDeskType(uuid uint, deskType model.DeskType) er
 func (r *DeskTypeRepoImpl) CreateDeskType(deskType model.DeskType) (uint64, error) {
 	// 创建桌台类型
 	if err := r.db.Model(&model.DeskType{}).Create(&deskType).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return deskType.Uuid, nil
 }

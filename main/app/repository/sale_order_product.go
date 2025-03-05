@@ -36,20 +36,20 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj mode
 	saleOrderProduct := obj
 	saleOrderProduct.SetNil()
 	if err := db.Model(&model.SaleOrderProduct{}).Create(&saleOrderProduct).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	// 创建BOM
 	for _, bom := range obj.SaleOrderProductBoms {
 		bom.SaleOrderProductUuid = obj.Uuid
 		if err := db.Create(&bom).Error; err != nil {
-			return 0, err
+			return 0, errors.WithMessage(err)
 		}
 	}
 	// 创建属性
 	for _, attribute := range obj.SaleOrderProductAttributes {
 		attribute.SaleOrderProductUuid = obj.Uuid
 		if err := db.Create(&attribute).Error; err != nil {
-			return 0, err
+			return 0, errors.WithMessage(err)
 		}
 	}
 	return obj.Uuid, nil
@@ -59,7 +59,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj mode
 func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	if err := db.Create(&model).Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return model.Uuid, nil
 }

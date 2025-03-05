@@ -36,7 +36,7 @@ type ProductMustPlanRepoImpl struct {
 func (r *ProductMustPlanRepoImpl) GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error) {
 	var productMustPlans []model.ProductMustPlan
 	err := r.db.Model(&model.ProductMustPlan{}).Where("uuid IN ? AND delete_time = ?", uuids, constant.NotDeleted).Find(&productMustPlans).Error
-	return productMustPlans, err
+	return productMustPlans, errors.WithMessage(err)
 }
 
 // GetProductMustPlanByRegionUuid 通过区域uuid获取产品必点方案

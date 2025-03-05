@@ -33,7 +33,7 @@ type ProductPackageRepoImpl struct {
 func (r *ProductPackageRepoImpl) GetProductPackageList() ([]model.ProductPackage, error) {
 	var productPackages []model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productPackages).Error
-	return productPackages, err
+	return productPackages, errors.WithMessage(err)
 }
 
 // UpdateProductPackage 更新产品包
@@ -70,13 +70,13 @@ func (r *ProductPackageRepoImpl) CreateProductPackage(productPackage model.Produ
 	// 创建多语言名称
 	if err := tx.Create(&productPackage.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建产品包
 	if err := tx.Create(&productPackage).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productPackage.Uuid, tx.Commit().Error // 提交事务

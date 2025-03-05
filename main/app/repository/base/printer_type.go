@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type PrinterTypeRepoImpl struct {
 func (r *PrinterTypeRepoImpl) GetPrinterTypeList() ([]model.PrinterType, error) {
 	var printerTypes []model.PrinterType
 	err := r.db.Model(&model.PrinterType{}).Where("delete_time = ?", 0).Find(&printerTypes).Error
-	return printerTypes, err
+	return printerTypes, errors.WithMessage(err)
 }
 
 // UpdatePrinterType 更新打印机类型

@@ -63,7 +63,7 @@ func (r *orderProductRepo) GetProductList(opts ...DBOption) ([]model.SaleOrderPr
 	// 获取列表
 	err := db.Find(&products).Error
 
-	return products, err
+	return products, errors.WithMessage(err)
 }
 
 // Delete 软删除产品
@@ -75,7 +75,7 @@ func (r *orderProductRepo) Delete(uuid uint64) error {
 func (r *orderProductRepo) Create(model *model.SaleOrderProduct) (*model.SaleOrderProduct, error) {
 	err := r.db.Create(model).Error
 
-	return model, err
+	return model, errors.WithMessage(err)
 }
 
 // GetProductInfoByUuid 获取商品信息
@@ -88,7 +88,7 @@ func (r *orderProductRepo) GetProductInfoByUuid(uuid uint64) (model.SaleOrderPro
 		Preload("SaleOrderProductBoms").
 		First(&product).Error
 
-	return product, err
+	return product, errors.WithMessage(err)
 }
 
 // GetProductInfo 获取商品详情
@@ -104,7 +104,7 @@ func (r *orderProductRepo) GetProductInfo(opts ...DBOption) (*model.SaleOrderPro
 	err := db.First(&product).Error
 
 	if err != nil && !utils.IsNotFoundRecord(err) {
-		return &product, err
+		return &product, errors.WithMessage(err)
 	}
 
 	return &product, nil

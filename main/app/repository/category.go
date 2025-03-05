@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -59,7 +60,7 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 	nameId, err := NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
 		tx.Rollback() // 发生错误，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 创建分类
@@ -72,12 +73,12 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 	id, err := NewProductCategoryRepo(tx).CreateProductCategory(category)
 	if err != nil {
 		tx.Rollback() // 发生错误，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return id, nil

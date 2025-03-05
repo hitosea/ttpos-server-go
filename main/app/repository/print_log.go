@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -52,12 +53,12 @@ func (r *printerLogRepo) PaginateGet(page, pageSize int, opts ...DBOption) ([]mo
 	// 获取总记录数
 	err := builder.Count(&total).Error
 	if err != nil {
-		return printerLog, 0, err
+		return printerLog, 0, errors.WithMessage(err)
 	}
 	// 执行分页查询
 	err = builder.Limit(pageSize).Offset((page - 1) * pageSize).Order("create_time desc").Find(&printerLog).Error
 	if err != nil {
-		return printerLog, 0, err
+		return printerLog, 0, errors.WithMessage(err)
 	}
 	return printerLog, total, nil
 }
@@ -73,7 +74,7 @@ func (r *printerLogRepo) GetPrintLogCount(opts ...DBOption) (int64, error) {
 	// 获取总记录数
 	err := builder.Count(&total).Error
 	if err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 	return total, nil
 }
@@ -155,5 +156,5 @@ func (r *printerLogRepo) UpdateByWhere(vars map[string]any, opts ...DBOption) er
 
 func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {
 	err := r.db.Model(&model.PrinterLog{}).Create(&printerLog).Error
-	return printerLog, err
+	return printerLog, errors.WithMessage(err)
 }

@@ -54,5 +54,5 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 func (r *productPackageRepoImpl) GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error) {
 	var productPackages []*model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Find(&productPackages).Error
-	return productPackages, err
+	return productPackages, errors.WithMessage(err)
 }

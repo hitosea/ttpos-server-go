@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -26,10 +27,10 @@ func NewShiftLogRepoImpl(db *gorm.DB) *ShiftLogRepo {
 func (r *ShiftLogRepo) GetPreviousShiftCash() (float64, error) {
 	var previewShiftCash float64
 	err := r.db.Model(&model.StaffShiftLog{}).Where("status = 1").Order("id desc").Select("previous_shift_cash").Scan(&previewShiftCash).Error
-	return previewShiftCash, err
+	return previewShiftCash, errors.WithMessage(err)
 }
 
 func (r *ShiftLogRepo) Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error) {
 	err := r.db.Model(&model.StaffShiftLog{}).Create(&shiftLog).Error
-	return shiftLog, err
+	return shiftLog, errors.WithMessage(err)
 }

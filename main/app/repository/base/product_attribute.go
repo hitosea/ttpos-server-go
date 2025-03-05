@@ -34,7 +34,7 @@ type ProductAttributeRepoImpl struct {
 func (r *ProductAttributeRepoImpl) GetProductAttributeList() ([]model.ProductAttribute, error) {
 	var productAttributes []model.ProductAttribute
 	err := r.db.Model(&model.ProductAttribute{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productAttributes).Error
-	return productAttributes, err
+	return productAttributes, errors.WithMessage(err)
 }
 
 // UpdateProductAttribute 更新产品属性
@@ -71,7 +71,7 @@ func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model
 	// 创建多语言名称
 	if err := tx.Create(&productAttribute.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	// 将多语言名称ID存入产品属性
@@ -80,7 +80,7 @@ func (r *ProductAttributeRepoImpl) CreateProductAttribute(productAttribute model
 	// 创建产品属性
 	if err := tx.Create(&productAttribute).Error; err != nil {
 		tx.Rollback() // 创建失败，回滚事务
-		return 0, err
+		return 0, errors.WithMessage(err)
 	}
 
 	return productAttribute.Uuid, tx.Commit().Error // 提交事务

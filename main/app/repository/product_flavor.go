@@ -2,6 +2,8 @@ package repository
 
 import (
 	"gorm.io/gorm"
+
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -39,7 +41,7 @@ func (r *ProductFlavorRepo) GetProductFlavor(opts ...DBOption) (model.ProductFla
 
 	err := db.First(&flavor).Error
 
-	return flavor, err
+	return flavor, errors.WithMessage(err)
 }
 
 // WithMultiLanguageName 预加载多语言名称

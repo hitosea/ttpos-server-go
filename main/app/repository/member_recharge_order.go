@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 	"strings"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -57,7 +58,7 @@ func (r *memberRechargeOrderRepo) GetOrderCount(opts ...DBOption) (int64, error)
 		db = opt(db)
 	}
 	err := db.Count(&count).Error
-	return count, err
+	return count, errors.WithMessage(err)
 }
 
 // PaginateGetRechargeOrder 分页获取充值订单
@@ -71,11 +72,11 @@ func (r *memberRechargeOrderRepo) PaginateGetRechargeOrder(pageNo int, pageSize 
 	// 获取总数
 	err := db.Count(&total).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取列表
 	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("create_time desc").Find(&rechargeOrders).Error
-	return rechargeOrders, total, err
+	return rechargeOrders, total, errors.WithMessage(err)
 }
 
 // WithPaymentOrders 预加载支付订单
@@ -220,5 +221,5 @@ func (r *memberRechargeOrderRepo) Update(uuid uint64, vars map[string]any) error
 // Create 创建充值订单
 func (r *memberRechargeOrderRepo) Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error) {
 	err := r.db.Model(&model.MemberRechargeOrder{}).Create(&rechargeOrder).Error
-	return rechargeOrder, err
+	return rechargeOrder, errors.WithMessage(err)
 }
