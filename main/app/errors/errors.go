@@ -17,27 +17,27 @@ func (e AppError) GetCode() int {
 	return e.Code
 }
 
-func New(message string) *AppError {
-	return &AppError{Code: constant.CodeFail, Message: message}
+func New(message string) AppError {
+	return AppError{Code: constant.CodeFail, Message: message}
 }
 
-func NewWithCode(code int, message string) *AppError {
-	return &AppError{Code: code, Message: message}
+func NewWithCode(code int, message string) AppError {
+	return AppError{Code: code, Message: message}
 }
 
-func NewWithReplace(message string, replace []string) *AppError {
-	return &AppError{Code: constant.CodeFail, Message: message, Replace: replace}
+func NewWithReplace(message string, replace []string) AppError {
+	return AppError{Code: constant.CodeFail, Message: message, Replace: replace}
 }
 
-func NewWithCodeAndReplace(code int, message string, replace []string) *AppError {
-	return &AppError{Code: code, Message: message, Replace: replace}
+func NewWithCodeAndReplace(code int, message string, replace []string) AppError {
+	return AppError{Code: code, Message: message, Replace: replace}
 }
 
-func NewWithCodeAndData(code int, data interface{}, message string) *AppError {
-	return &AppError{Code: code, Message: message, data: data}
+func NewWithCodeAndData(code int, data interface{}, message string) AppError {
+	return AppError{Code: code, Message: message, data: data}
 }
 
 var (
-	ErrInternal   = &AppError{Code: constant.CodeSystemError, Message: "系统内部错误"}
-	ErrNoDeviceSn = &AppError{Code: constant.CodeParamError, Message: "无法解析到设备SN"}
+	ErrInternal   = AppError{Code: constant.CodeSystemError, Message: "系统内部错误"}
+	ErrNoDeviceSn = AppError{Code: constant.CodeParamError, Message: "无法解析到设备SN"}
 )
