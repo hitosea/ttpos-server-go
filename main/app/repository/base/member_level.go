@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *MemberLevelRepo) GetMemberLevelList() ([]model.MemberLevel, error) {
 // UpdateMemberLevel 更新自助餐客户类型
 func (r *MemberLevelRepo) UpdateMemberLevel(uuid uint, memberLevel model.MemberLevel) error {
 	if err := r.db.Model(&model.MemberLevel{}).Where("uuid = ?", uuid).Updates(memberLevel).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
 
@@ -119,5 +120,5 @@ func (r *orderProductRepo) Update(data map[string]interface{}, opts ...DBOption)
 
 	err := db.Updates(data).Error
 
-	return err
+	return errors.WithMessage(err)
 }

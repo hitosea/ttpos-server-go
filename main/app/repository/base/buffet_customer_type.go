@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *BuffetCustomerTypeRepoImpl) GetBuffetCustomerTypeList() ([]model.Buffet
 // UpdateBuffetCustomerType 更新自助餐客户类型
 func (r *BuffetCustomerTypeRepoImpl) UpdateBuffetCustomerType(uuid uint, buffetCustomerType model.BuffetCustomerType) error {
 	if err := r.db.Model(&model.BuffetCustomerType{}).Where("uuid = ?", uuid).Updates(buffetCustomerType).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -40,7 +41,7 @@ func (r *ProductPackageAttributeRepoImpl) GetProductPackageAttributeList(product
 func (r *ProductPackageAttributeRepoImpl) UpdateProductPackageAttribute(productPackageAttributeGroupId uint, productPackageAttribute model.ProductPackageAttribute) error {
 
 	if err := r.db.Model(&model.ProductPackageAttribute{}).Where("product_package_attribute_group_id = ?", productPackageAttributeGroupId).Updates(productPackageAttribute).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	return nil // 返回更新结果

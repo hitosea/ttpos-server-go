@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/utils"
@@ -719,31 +720,31 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.ProductionOrder{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error // TODO: 有可能会有多个生产单).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		//
 		return tx.Model(&model.SaleBill{}).
@@ -784,7 +785,7 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 		Where(map[string]interface{}{"uuid": saleOrderUuid}).
 		Update("delete_time", now).Error; err != nil {
 		tx.Rollback()
-		return err
+		return errors.WithMessage(err)
 	}
 
 	// 如果是删除全部订单或只剩最后一个订单,则同时删除主订单
@@ -794,7 +795,7 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 			Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusCanceled).
 			Update("delete_time", now).Error; err != nil {
 			tx.Rollback()
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -999,15 +1000,15 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrderProductBom{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.SaleOrderProductAttribute{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		return tx.Model(&model.SaleOrderProduct{}).
 			Where("(status != ? or cancel_time != 0)", constant.OrderProductStatusSentKitchen).
@@ -1031,7 +1032,7 @@ func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64
 			"is_custom_price": 1,
 			"product_price":   price,
 		}).Error
-	return err
+	return errors.WithMessage(err)
 }
 
 // ChangePopulation 修改订单人数
@@ -1062,7 +1063,7 @@ func (r *orderRepo) ChangeBuffetCustomerType(saleBillUuid uint64, population int
 		// 		"remark": remark,
 		// 	}).Error
 		// if err != nil {
-		// 	return err
+		// 	return errors.WithMessage(err)
 		// }
 		// 	//
 		return tx.Model(&model.SaleBill{}).

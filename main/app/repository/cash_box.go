@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -37,5 +38,5 @@ func (r *cashBoxRepo) Create(cashBox model.CashBox) (model.CashBox, error) {
 
 func (r *cashBoxRepo) Update(uuid uint64, vars map[string]any) error {
 	err := r.db.Model(&model.CashBox{}).Where("uuid = ?", uuid).Updates(vars).Error
-	return err
+	return errors.WithMessage(err)
 }

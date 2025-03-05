@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -112,7 +113,7 @@ func (r *H5OrderRepoImpl) GetH5OrderCount(opts ...DBOption) (int64, error) {
 // UpdateH5Order 更新接单
 func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error {
 	if err := r.db.Model(&model.H5Order{}).Where("uuid = ?", qrcodeOrderUuid).Updates(vars).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

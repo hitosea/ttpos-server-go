@@ -134,7 +134,7 @@ func (r *deskRepo) GetDeskRecord(deskUuid uint64) (*model.Desk, error) {
 func (r *deskRepo) UpdateDesk(deskUuid uint64, desk model.Desk) error {
 	desk.SetNil()
 	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(desk).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ func (r *deskRepo) UpdateDeskRecord(desk model.Desk) error {
 // UpdateDeskByMap 更新桌台
 func (r *deskRepo) UpdateDeskByMap(deskUuid uint64, vars map[string]any) error {
 	if err := r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(vars).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -160,7 +160,7 @@ func (r *deskRepo) UpdateDeskByMap(deskUuid uint64, vars map[string]any) error {
 func (r *deskRepo) UnbindDesk(deskUuid, deviceUuid uint64) error {
 	if err := r.db.Model(&model.Desk{}).Where("uuid <> ? AND device_uuid = ?", deskUuid, deviceUuid).
 		Updates(map[string]any{"device_uuid": 0}).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -183,7 +183,7 @@ func (r *deskRepo) DeleteDesk(deskUuid uint64) error {
 func (r *deskRepo) CloseDesk(deskUuid uint64, reason string) error {
 	err := NewOrderRepo(r.db).CancelDeskOrder(deskUuid, reason)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(map[string]any{
 		"status":         constant.DeskStatusClose,

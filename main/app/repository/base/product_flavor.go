@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -46,12 +47,12 @@ func (r *ProductFlavorRepoImpl) UpdateProductFlavor(id uint, productFlavor model
 
 	if err := tx.Model(&model.ProductFlavor{}).Where("id = ?", id).Updates(productFlavor).Error; err != nil {
 		tx.Rollback() // 更新失败，回滚事务
-		return err
+		return errors.WithMessage(err)
 	}
 
 	if err := tx.Model(&productFlavor.MultiLanguageName).Where("id = ?", productFlavor.MultiLanguageNameUuid).Updates(productFlavor.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
-		return err
+		return errors.WithMessage(err)
 	}
 
 	return tx.Commit().Error // 提交事务

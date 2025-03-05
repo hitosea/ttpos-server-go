@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *productionOrderRepoImpl) GetProductionOrder(opts ...DBOption) (*model.P
 // 创建ProductionOrder记录及它管理的表记录
 func (r *productionOrderRepoImpl) CreateProductionOrder(order *model.ProductionOrder) error {
 	if err := r.db.Model(order).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

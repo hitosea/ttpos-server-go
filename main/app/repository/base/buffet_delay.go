@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *BuffetDelayRepoImpl) GetBuffetDelayList() ([]model.BuffetDelay, error) 
 // UpdateBuffetDelay 更新自助餐加钟价格
 func (r *BuffetDelayRepoImpl) UpdateBuffetDelay(uuid uint, buffetDelay model.BuffetDelay) error {
 	if err := r.db.Model(&model.BuffetDelay{}).Where("uuid = ?", uuid).Updates(buffetDelay).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

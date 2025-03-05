@@ -125,13 +125,13 @@ func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder,
 func (r *paymentOrderRepo) UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error {
 	if obj.NoPrimaryKey() {
 		_, err := r.Create(obj)
-		return err
+		return errors.WithMessage(err)
 	}
 	// 如果标记支付订单需要更新才更新该支付订单
 	if obj.GetUpdate() {
 		err := r.UpdatePaymentOrderRecord(obj)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil
@@ -140,7 +140,7 @@ func (r *paymentOrderRepo) UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrd
 // Update 更新支付订单
 func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
 	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Updates(vars).Error
-	return err
+	return errors.WithMessage(err)
 }
 
 // WhereRelatedUuid 根据related_uuid(销售订单、充值订单)查询

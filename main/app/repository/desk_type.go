@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *DeskTypeRepoImpl) GetDeskTypeList() ([]model.DeskType, error) {
 // UpdateDeskType 更新桌台类型
 func (r *DeskTypeRepoImpl) UpdateDeskType(uuid uint, deskType model.DeskType) error {
 	if err := r.db.Model(&model.DeskType{}).Where("uuid = ?", uuid).Updates(deskType).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

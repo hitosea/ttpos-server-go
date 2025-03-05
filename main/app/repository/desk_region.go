@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *DeskRegionRepoImpl) GetDeskRegionList() ([]model.DeskRegion, error) {
 // UpdateDeskRegion 更新桌台区域
 func (r *DeskRegionRepoImpl) UpdateDeskRegion(uuid uint, deskRegion model.DeskRegion) error {
 	if err := r.db.Model(&model.DeskRegion{}).Where("uuid = ?", uuid).Updates(deskRegion).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

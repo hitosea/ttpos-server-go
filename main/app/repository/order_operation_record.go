@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/json"
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -71,7 +72,7 @@ func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model
 // UpdateRecord 更新订单操作记录
 func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error {
 	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).Updates(record).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

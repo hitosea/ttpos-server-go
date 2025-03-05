@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *MemberCardLogRepo) GetMemberCardLogList() ([]model.MemberCardLog, error
 // UpdateMemberCardLog 更新会员卡领取记录
 func (r *MemberCardLogRepo) UpdateMemberCardLog(uuid uint, memberCardLog model.MemberCardLog) error {
 	if err := r.db.Model(&model.MemberCardLog{}).Where("uuid = ?", uuid).Updates(memberCardLog).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }

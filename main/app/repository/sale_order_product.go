@@ -68,7 +68,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProd
 func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProduct) error {
 	db := r.db
 	if err := db.Model(&model).Updates(model).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProd
 func (r *saleOrderProductRepo) UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error {
 	db := r.db
 	if err := db.Model(&model.SaleOrderProduct{}).Where("uuid = ?", uuid).Updates(vars).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -85,7 +85,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductByMap(uuid uint64, vars map
 func (r *saleOrderProductRepo) UpdateSaleOrderProductRecord(obj model.SaleOrderProduct) error {
 	obj.SetNil()
 	if err := r.db.Model(&model.SaleOrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductRecord(obj model.SaleOrderP
 func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error {
 	if obj.ID == 0 {
 		_, err := r.CreateSaleOrderProductAndBomAndAttribute(obj)
-		return err
+		return errors.WithMessage(err)
 	}
 	// 如果标记商品需要更新才更新该商品
 	if obj.GetUpdate() {
@@ -108,7 +108,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOr
 	db := r.db
 	for _, m := range models {
 		if err := db.Model(&m).Updates(m).Error; err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

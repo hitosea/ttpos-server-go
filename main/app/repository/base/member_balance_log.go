@@ -2,6 +2,7 @@ package base
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,7 +39,7 @@ func (r *MemberBalanceLogRepo) GetMemberBalanceLogList() ([]model.MemberBalanceL
 // UpdateMemberBalanceLog 更新自助餐客户类型
 func (r *MemberBalanceLogRepo) UpdateMemberBalanceLog(uuid uint, memberBalanceLog model.MemberBalanceLog) error {
 	if err := r.db.Model(&model.MemberBalanceLog{}).Where("uuid = ?", uuid).Updates(memberBalanceLog).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
