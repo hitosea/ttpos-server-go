@@ -70,6 +70,7 @@ type IOrderSrv interface {
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
+	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 撤销一个支付单
 	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                  // 给销售订单创建一个支付单
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                     // 给销售订单创建一个销售订单
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
@@ -3128,6 +3129,35 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return infoResp, nil
+}
+
+// InstantOrderPaymentCancel 撤销一个支付单
+func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
+	if err != nil {
+		return nil, err
+	}
+	// 撤销支付单
+	paymentOrder.Cancel()
+
+	// 更新支付单
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, paymentOrder.RelatedUuid, paymentOrder.RelatedUuid)
 	if err != nil {
 		return nil, err
 	}

@@ -64,3 +64,12 @@ type PaymentOrder struct {
 	PaymentMethod       *PaymentMethod       `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`
 }
+
+func (model *PaymentOrder) SetNil() {
+	model.PaymentMethod = nil
+	model.MemberRechargeOrder = nil
+}
+
+func (model *PaymentOrder) Cancel() {
+	model.Status = constant.PaymentOrderStatusRefund
+}

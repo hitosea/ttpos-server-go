@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -20,6 +21,8 @@ type IPaymentOrderRepo interface {
 	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
 
+	GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.PaymentOrder, error)
+	UpdatePaymentOrderRecord(paymentOrder model.PaymentOrder) error
 	Create(order model.PaymentOrder) (model.PaymentOrder, error) // 创建支付订单
 	Update(uuid uint64, vars map[string]any) error               // 更新支付订单金额
 }
@@ -61,6 +64,27 @@ func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.Paymen
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").Find(&paymentOrders).Error
 	return paymentOrders, err
+}
+
+// GetPaymentOrderRecord 获取支付订单记录
+func (r *paymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.PaymentOrder, error) {
+	paymentOrder, err := r.GetPaymentOrder(
+		CommonRepo.WhereByUuid(paymentOrderUuid),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &paymentOrder, nil
+}
+
+// UpdatePaymentOrderRecord 更新支付订单记录
+func (r *paymentOrderRepo) UpdatePaymentOrderRecord(paymentOrder model.PaymentOrder) error {
+	paymentOrder.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	if paymentOrder.NoPrimaryKey() {
+		return errors.New("PaymentOrder不能没有ID或UUID")
+	}
+	return r.db.Model(&model.PaymentOrder{}).Select("*").Where("uuid = ?", paymentOrder.Uuid).Updates(&paymentOrder).Error
 }
 
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
