@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -38,7 +39,7 @@ func (h *MemberHandler) RechargeMember(c *gin.Context) {
 	}
 	info := h.memberSrv.GetRechargeMember(helper.GetCompanyUuid(c), uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 	}
 	helper.Success(c, info)
 }
@@ -61,7 +62,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		return
 	}
 	if err := h.memberSrv.AddMember(ctx, addMemberReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "添加会员成功")
@@ -102,7 +103,7 @@ func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
 	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, order)
@@ -141,7 +142,7 @@ func (h *MemberHandler) CheckPassword(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.memberSrv.CheckMemberPassword(ctx, passwordReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "密码正确")

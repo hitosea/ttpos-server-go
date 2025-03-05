@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -38,7 +39,7 @@ func (h *CallHandler) GetAbnormalPrintList(c *gin.Context) {
 	}
 	res, err := h.callSrv.GetAbnormalPrintList(helper.GetCompanyUuid(c), listReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -63,7 +64,7 @@ func (h *CallHandler) GetUnprocessedCallList(c *gin.Context) {
 	}
 	res, err := h.callSrv.GetUnprocessedCallList(helper.GetCompanyUuid(c), listReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -81,7 +82,7 @@ func (h *CallHandler) GetUnprocessedCallList(c *gin.Context) {
 func (h *CallHandler) GetUnprocessed(c *gin.Context) {
 	res, err := h.callSrv.GetUnprocessed(helper.GetCompanyUuid(c))
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -104,7 +105,7 @@ func (h *CallHandler) Processed(c *gin.Context) {
 	}
 	err := h.callSrv.Processed(helper.GetCompanyUuid(c), processedReq.Uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "成功")
@@ -127,7 +128,7 @@ func (h *CallHandler) DeletePrint(c *gin.Context) {
 	}
 	err := h.callSrv.DeletePrint(helper.GetCompanyUuid(c), printerLogReq.Uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "成功")
@@ -151,7 +152,7 @@ func (h *CallHandler) Reprint(c *gin.Context) {
 	}
 	res, err := h.callSrv.Reprint(helper.GetContext(c), printerLogReq.Uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res, "成功")

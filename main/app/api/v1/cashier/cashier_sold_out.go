@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -41,7 +42,7 @@ func (h *SoldOutHandler) SoldOutList(c *gin.Context) {
 	res, err := h.soldOutSrv.GetSoldOutList(helper.GetCompanyUuid(c), soldOutListReq)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -69,7 +70,7 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 	err := h.soldOutSrv.AddSoldOut(helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -97,7 +98,7 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 	err := h.soldOutSrv.CancelSoldOut(helper.GetCompanyUuid(c), cancelSoldOut.ProductBomUuid)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -118,7 +119,7 @@ func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 	err := h.soldOutSrv.CancelAllSoldOut(helper.GetCompanyUuid(c))
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果

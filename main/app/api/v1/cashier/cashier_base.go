@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -35,7 +36,7 @@ func (h *BaseHandler) GetCashierBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.CashierBase(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, info)
@@ -54,7 +55,7 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	language, err := h.settingSrv.GetCashierLanguage(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, language)
@@ -73,7 +74,7 @@ func (h *BaseHandler) GetAd(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ads, err := h.settingSrv.GetCashierAd(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, ads)
@@ -168,7 +169,7 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	updateInfo, err := h.settingSrv.CheckUpdate(ctx, constant.AppTypeCashier, c.Query("brand"), i18n.GetAcceptLanguage(c))
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, updateInfo)
@@ -206,7 +207,7 @@ func (h *BaseHandler) EditAcceptOrderSetting(c *gin.Context) {
 	}
 	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{})
@@ -231,7 +232,7 @@ func (h *BaseHandler) EditSystemSetting(c *gin.Context) {
 	}
 	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{})
@@ -250,7 +251,7 @@ func (h *BaseHandler) GetSetting(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	respSetting, err := h.settingSrv.GetCashierBaseSetting(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, respSetting)
@@ -269,7 +270,7 @@ func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	respSetting, err := h.otherSrv.GetReturnFoodReasonList(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, respSetting)
@@ -288,7 +289,7 @@ func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	respSetting, err := h.otherSrv.GetGiftOrFreeReasonList(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, respSetting)

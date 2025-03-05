@@ -3,6 +3,7 @@ package cashier
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -33,7 +34,7 @@ func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	res, err := h.Service.GetBuffetList(companyUuid)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果

@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -39,7 +40,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	loginReq.Source = constant.SourceTablet
 	loginResp, err := h.authSrv.Login(ctx, loginReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{"token": loginResp.Token})
@@ -58,7 +59,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.authSrv.Logout(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "退出成功")
@@ -77,7 +78,7 @@ func (h *AuthHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.TabletBase(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, info)
@@ -96,7 +97,7 @@ func (h *AuthHandler) GetDeskList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	list, err := h.deskSrv.GetTabletDeskList(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, list)
@@ -120,7 +121,7 @@ func (h *AuthHandler) BindDesk(c *gin.Context) {
 	}
 	err := h.deskSrv.BindDesk(helper.GetContext(c), bindDeskReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "绑定桌台成功")

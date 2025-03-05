@@ -1,11 +1,11 @@
 package cashier
 
 import (
-	"errors"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -41,7 +41,7 @@ func (h *H5OrderHandler) GetH5OrderList(c *gin.Context) {
 	}
 	res, err := h.h5OrderSrv.GetH5OrderList(helper.GetCompanyUuid(c), h5OrderListReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -64,7 +64,7 @@ func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 	}
 	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetCompanyUuid(c), orderUuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -88,7 +88,7 @@ func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
 
 	err = h.h5OrderSrv.RejectH5Order(helper.GetContext(c), orderUuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{})
@@ -111,7 +111,7 @@ func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 	}
 	err = h.h5OrderSrv.AcceptH5Order(helper.GetContext(c), orderUuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{})

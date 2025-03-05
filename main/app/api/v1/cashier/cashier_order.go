@@ -5,13 +5,12 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-
-	"errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,7 +46,7 @@ func (h *OrderHandler) GetCashierOrderList(c *gin.Context) {
 	res, err := h.service.GetOrderLists(companyUuid, staff, source, req)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -77,7 +76,7 @@ func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 	res, err := h.service.GetOrderInfos(ctx, req)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -106,7 +105,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	//
 	err := h.service.CancelOrder(ctx, req)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -135,7 +134,7 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	//
 	err := h.service.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
@@ -170,7 +169,7 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 		err = errors.New("参数错误")
 	}
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// todo 获取已经送厨的商品 - 等王总写完拿来用

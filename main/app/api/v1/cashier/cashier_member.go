@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -66,7 +67,7 @@ func (h *MemberHandler) RechargeMember(c *gin.Context) {
 	}
 	info := h.memberSrv.GetRechargeMember(helper.GetCompanyUuid(c), uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 	}
 	helper.Success(c, info)
 }
@@ -89,7 +90,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		return
 	}
 	if err := h.memberSrv.AddMember(ctx, addMemberReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "添加会员成功")
@@ -135,7 +136,7 @@ func (h *MemberHandler) CreateRechargeOrder(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	if order, err = h.rechargeOrderSrv.CreateRechargeOrder(ctx, rechargeReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	if order.Uuid == 0 {
@@ -169,7 +170,7 @@ func (h *MemberHandler) AddPaymentMethod(c *gin.Context) {
 
 	addPaymentMethodReq.CompanySetting = helper.GetCompanySetting(c)
 	if order, err = h.rechargeOrderSrv.AddPaymentMethod(ctx, addPaymentMethodReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	if order.Uuid == 0 {
@@ -201,7 +202,7 @@ func (h *MemberHandler) CancelPaymentMethod(c *gin.Context) {
 		return
 	}
 	if order, err = h.rechargeOrderSrv.CancelPaymentMethod(ctx, cancelPaymentMethodReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	if order.Uuid == 0 {
@@ -230,7 +231,7 @@ func (h *MemberHandler) ConfirmRechargeOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	order, err := h.rechargeOrderSrv.ConfirmRechargeOrder(ctx, confirmRechargeOrder)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, order)
@@ -254,7 +255,7 @@ func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 	}
 	order, err := h.rechargeOrderSrv.PrintTicket(helper.GetContext(c), printRechargeOrderReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, order)
@@ -282,7 +283,7 @@ func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
 	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, order)
@@ -307,7 +308,7 @@ func (h *MemberHandler) CheckPassword(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	err := h.memberSrv.CheckMemberPassword(ctx, passwordReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "密码正确")

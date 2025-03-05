@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -46,7 +47,7 @@ func (h *RechargeOrderHandler) GetRechargeOrderList(c *gin.Context) {
 	}
 	res, err := h.rechargeOrderSrv.GetRechargeOrderList(helper.GetContext(c), rechargeOrderListReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -70,7 +71,7 @@ func (h *RechargeOrderHandler) GetRechargeOrderInfo(c *gin.Context) {
 	}
 	res, err := h.rechargeOrderSrv.GetRechargeOrderInfo(helper.GetContext(c), uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -94,7 +95,7 @@ func (h *RechargeOrderHandler) CancelRechargeOrder(c *gin.Context) {
 	}
 	err := h.rechargeOrderSrv.CancelRechargeOrder(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{}, "操作成功")
@@ -118,7 +119,7 @@ func (h *RechargeOrderHandler) PrintTicket(c *gin.Context) {
 	}
 	order, err := h.rechargeOrderSrv.PrintTicket(helper.GetContext(c), printRechargeOrderReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, order)
@@ -142,7 +143,7 @@ func (h *RechargeOrderHandler) GetRechargeOrderRefundInfo(c *gin.Context) {
 	}
 	res, err := h.rechargeOrderSrv.GetRechargeOrderRefundInfo(helper.GetContext(c), uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -166,7 +167,7 @@ func (h *RechargeOrderHandler) CheckRechargeOrderReverseSettle(c *gin.Context) {
 	}
 	res, err := h.rechargeOrderSrv.CheckRechargeOrderReverseSettle(helper.GetContext(c), uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -190,7 +191,7 @@ func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
 	}
 	res, err := h.rechargeOrderSrv.RechargeOrderReverseSettle(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
@@ -214,7 +215,7 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 	}
 	err := h.rechargeOrderSrv.RechargeOrderRefund(helper.GetContext(c), orderRefundReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, gin.H{})

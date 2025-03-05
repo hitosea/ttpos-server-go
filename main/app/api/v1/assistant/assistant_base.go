@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -35,7 +36,7 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	language, err := h.settingSrv.GetCashierLanguage(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, language)
@@ -67,7 +68,7 @@ func (h *BaseHandler) GetAssistantBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.AssistantBase(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, info)
@@ -137,7 +138,7 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	updateInfo, err := h.settingSrv.CheckUpdate(ctx, constant.AppTypeAssistant, c.Query("brand"), i18n.GetAcceptLanguage(c))
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, updateInfo)
