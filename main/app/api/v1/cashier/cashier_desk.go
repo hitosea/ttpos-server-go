@@ -522,9 +522,9 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderCartInfo 处理查询点餐购物车信息
-// @Summary 查询点餐购物车信息
-// @Description 查询点餐购物车信息
+// OrderCartInfo 处理查询桌台购物车信息
+// @Summary 查询桌台购物车信息
+// @Description 查询桌台购物车信息
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
