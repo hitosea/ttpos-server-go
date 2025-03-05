@@ -1,10 +1,11 @@
 package model
 
 import (
-	"github.com/shopspring/decimal"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/i18n"
+
+	"github.com/shopspring/decimal"
 )
 
 // PaymentMethod 支付方式 `ttpos_payment_method`
@@ -73,6 +74,12 @@ type PaymentOrder struct {
 	// 关联字段
 	PaymentMethod       *PaymentMethod       `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`
+}
+
+// SetBaseModel 设置基础模型,当同一个支付方式已经存在付款单时，更新付款单
+func (model *PaymentOrder) SetBaseModel(baseModel BaseModel) {
+	defer model.SetUpdate()
+	model.BaseModel = baseModel
 }
 
 func (model *PaymentOrder) SetNil() {

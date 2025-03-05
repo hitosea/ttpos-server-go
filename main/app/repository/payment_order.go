@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -20,11 +21,14 @@ type IPaymentOrderRepo interface {
 
 	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
+	GetPaymentOrderRecordList(opts ...DBOption) ([]*model.PaymentOrder, error)
 
 	GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.PaymentOrder, error)
+	GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint64) ([]*model.PaymentOrder, error)
 	UpdatePaymentOrderRecord(paymentOrder model.PaymentOrder) error
-	Create(order model.PaymentOrder) (model.PaymentOrder, error) // 创建支付订单
-	Update(uuid uint64, vars map[string]any) error               // 更新支付订单金额
+	Create(order model.PaymentOrder) (model.PaymentOrder, error)   // 创建支付订单
+	UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error // 没有主键时创建，有主键时更新
+	Update(uuid uint64, vars map[string]any) error                 // 更新支付订单金额
 }
 
 // paymentOrderRepo 仓库
@@ -66,6 +70,18 @@ func (r *paymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.Paymen
 	return paymentOrders, err
 }
 
+// GetPaymentOrderRecordList 获取支付订单记录列表
+func (r *paymentOrderRepo) GetPaymentOrderRecordList(opts ...DBOption) ([]*model.PaymentOrder, error) {
+	var paymentOrders []*model.PaymentOrder
+	db := r.db
+	for _, w := range opts {
+		db = w(db)
+	}
+	db = CommonRepo.WhereBySoftDelete()(db)
+	err := db.Order("id asc").Find(&paymentOrders).Error
+	return paymentOrders, err
+}
+
 // GetPaymentOrderRecord 获取支付订单记录
 func (r *paymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.PaymentOrder, error) {
 	paymentOrder, err := r.GetPaymentOrder(
@@ -76,6 +92,20 @@ func (r *paymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*mode
 		return nil, err
 	}
 	return &paymentOrder, nil
+}
+
+// GetPaymentOrderListBySaleOrderUuid 销售订单支付订单列表
+func (r *paymentOrderRepo) GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint64) ([]*model.PaymentOrder, error) {
+	paymentOrders, err := r.GetPaymentOrderRecordList(
+		CommonRepo.WhereByRelatedUuid(saleOrderUuid),
+		CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid),
+		CommonRepo.WhereByRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return paymentOrders, nil
 }
 
 // UpdatePaymentOrderRecord 更新支付订单记录
@@ -90,6 +120,21 @@ func (r *paymentOrderRepo) UpdatePaymentOrderRecord(paymentOrder model.PaymentOr
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
 	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
 	return order, err
+}
+
+func (r *paymentOrderRepo) UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error {
+	if obj.NoPrimaryKey() {
+		_, err := r.Create(obj)
+		return err
+	}
+	// 如果标记支付订单需要更新才更新该支付订单
+	if obj.GetUpdate() {
+		err := r.UpdatePaymentOrderRecord(obj)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Update 更新支付订单

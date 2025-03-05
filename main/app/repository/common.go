@@ -36,6 +36,8 @@ type ICommonRepo interface {
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
+	WhereByRelatedUuid(relatedUuid uint64) DBOption                 // 根据关联UUID查询
+	WhereByRelatedType(relatedType uint) DBOption                   // 根据关联类型查询
 	WhereByOrderNo(orderNo string) DBOption                         // 根据订单编号查询
 	WhereByBillType(billType uint) DBOption                         // 根据账单类型查询
 	WhereByNotStatus(status uint) DBOption                          // 根据状态查询
@@ -136,6 +138,20 @@ func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	}
+}
+
+// WhereByRelatedUuid 根据关联UUID查询
+func (r *commonRepo) WhereByRelatedUuid(relatedUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related_uuid = ?", relatedUuid)
+	}
+}
+
+// WhereByRelatedType 根据关联类型查询
+func (r *commonRepo) WhereByRelatedType(relatedType uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related_type = ?", relatedType)
 	}
 }
 

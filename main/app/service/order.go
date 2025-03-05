@@ -3168,7 +3168,20 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		Status:               constant.PaymentOrderStatusPaid,
 	}
 
-	if _, err = repository.NewPaymentOrderRepo(db).Create(*paymentOrder); err != nil {
+	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
+	paymentOrderList, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderListBySaleOrderUuid(req.SaleOrderUuid)
+	if err != nil {
+		return nil, err
+	}
+	for _, oldPaymentOrder := range paymentOrderList {
+		if oldPaymentOrder.PaymentMethodUuid == req.PaymentMethodUuid {
+			paymentOrder.SetBaseModel(oldPaymentOrder.BaseModel)
+			break
+		}
+	}
+
+	// 创建或更新支付单
+	if err := repository.NewPaymentOrderRepo(db).UpdateOrCreatePaymentOrderRecord(*paymentOrder); err != nil {
 		return nil, err
 	}
 
