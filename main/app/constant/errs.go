@@ -6,7 +6,6 @@ const (
 	ServerModeTest    = "test"
 )
 
-// TODO 部分错误码直接拿重构前的，是否需要更换
 const (
 	CodeSuccess = 0 // 成功
 
