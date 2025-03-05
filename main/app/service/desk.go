@@ -156,7 +156,24 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 			return resp.CreateDeskOrderResp{}, errors.New("桌台用餐已关闭，请选择其他用餐方式")
 		}
 	}
-	// todo -- h5和平板没有判断是否可以开桌
+	if ctx.GetSource() == constant.SourceTablet {
+		tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, err
+		}
+		if tabletSetting.IsCustomerOrder != "1" {
+			return resp.CreateDeskOrderResp{}, errors.New("未开启顾客开桌")
+		}
+	}
+	if ctx.GetSource() == constant.SourceH5 {
+		tabletSetting, err := s.settingSrv.GetH5Setting(ctx, nil)
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, err
+		}
+		if tabletSetting.IsCustomerOrder != "1" {
+			return resp.CreateDeskOrderResp{}, errors.New("未开启顾客开桌")
+		}
+	}
 
 	// 判断是否自助餐订单
 	if !*req.IsBuffet {
