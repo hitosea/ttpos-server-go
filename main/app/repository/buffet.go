@@ -85,6 +85,14 @@ func (r *BuffetRepoImpl) GetBuffetListByUuids(uuids []uint64) ([]*model.BuffetPa
 				Query: "Tax",
 			},
 		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "BuffetProducts",
+			},
+			WithPreload{
+				Query: "Tax",
+			},
+		),
 		CommonRepo.Preload(WithPreload{
 			Query: "BuffetCustomerTypePrices",
 			Args: []interface{}{
