@@ -709,9 +709,9 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 				PageSize: listReq.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   getOrderNum(0),
-			CancelNum:   getOrderNum(1),
-			CompleteNum: getOrderNum(2),
+			UnpaidNum:   getOrderNum(constant.RechargeOrderStatusPending),
+			CancelNum:   getOrderNum(constant.RechargeOrderStatusCanceled),
+			CompleteNum: getOrderNum(constant.RechargeOrderStatusPaid),
 		},
 	}, nil
 }
