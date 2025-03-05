@@ -126,7 +126,7 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		Nickname: member.Nickname,
 		Card:     resp.Card{Name: cardName},
 		Level:    resp.Level{Name: level},
-		Balance:  member.Balance + member.GiftBalance,
+		Balance:  utils.DecimalAdd(member.Balance, member.GiftBalance),
 		Points:   member.Point,
 		Phone:    member.Phone,
 	}
@@ -191,7 +191,7 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 		}
 		// 处理会员积分
 		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"point": member.Point + changeReq.Points,
+			"point": utils.DecimalAdd(member.Point, changeReq.Points),
 		}); err != nil {
 			return errors.New("处理会员积分失败")
 		}
@@ -234,16 +234,16 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 			return errors.New("会员不存在")
 		}
 		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"balance":                     member.Balance + changeReq.Money,
-			"gift_balance":                member.GiftBalance + changeReq.GiftMoney,
-			"accumulated_recharge_amount": member.AccumulatedRechargeAmount + changeReq.Money + changeReq.GiftMoney,
+			"balance":                     utils.DecimalAdd(member.Balance, changeReq.Money),
+			"gift_balance":                utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
+			"accumulated_recharge_amount": utils.DecimalAdd(member.AccumulatedRechargeAmount, changeReq.Money, changeReq.GiftMoney),
 		}); err != nil {
 			return errors.New("更新会员余额失败")
 		}
 		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 			MemberUuid: changeReq.Uuid,
 			Scene:      changeReq.Scene,
-			Money:      changeReq.Money + changeReq.GiftMoney,
+			Money:      utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
 			GiftMoney:  changeReq.GiftMoney,
 			Describe:   changeReq.Describe,
 		}); err != nil {

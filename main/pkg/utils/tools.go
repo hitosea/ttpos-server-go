@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/shopspring/decimal"
 	"net/http"
 	"net/url"
 	"os"
@@ -154,4 +155,20 @@ func GetVersion(filePath string) string {
 	}
 
 	return versionInfo.Version
+}
+
+func DecimalAdd(f1 float64, fs ...float64) float64 {
+	num := decimal.NewFromFloat(f1)
+	for _, f := range fs {
+		num = num.Add(decimal.NewFromFloat(f))
+	}
+	return num.InexactFloat64()
+}
+
+func DecimalSub(f1 float64, fs ...float64) float64 {
+	num := decimal.NewFromFloat(f1)
+	for _, f := range fs {
+		num = num.Sub(decimal.NewFromFloat(f))
+	}
+	return num.InexactFloat64()
 }
