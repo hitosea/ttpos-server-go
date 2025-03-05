@@ -27,7 +27,7 @@ type IDeskRepo interface {
 	CloseDesk(deskUuid uint64, reason string) error
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
-	WhereIsBind() DBOption
+	WhereUnBind() DBOption
 	WhereIsNotDisable() DBOption
 }
 
@@ -158,7 +158,7 @@ func (r *deskRepo) UpdateDeskByMap(deskUuid uint64, vars map[string]any) error {
 
 // UnbindDesk 解绑桌台
 func (r *deskRepo) UnbindDesk(deskUuid, deviceUuid uint64) error {
-	if err := r.db.Model(&model.Desk{}).Where("uuid = <> ? AND device_uuid = ?", deskUuid, deviceUuid).
+	if err := r.db.Model(&model.Desk{}).Where("uuid <> ? AND device_uuid = ?", deskUuid, deviceUuid).
 		Updates(map[string]any{"device_uuid": 0}).Error; err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (r *deskRepo) WhereDeviceUuid(uuid uint64) DBOption {
 }
 
 // WhereIsBind 桌台绑定条件
-func (r *deskRepo) WhereIsBind() DBOption {
+func (r *deskRepo) WhereUnBind() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("device_uuid = 0")
 	}

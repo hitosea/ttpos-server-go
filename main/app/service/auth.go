@@ -551,7 +551,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	case constant.SourceTablet: // 平板端
 		if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
 			deskRepo := repository.NewDeskRepo(db)
-			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeviceUuid), deskRepo.WhereUuid(auth.DeskUuid), deskRepo.WhereIsBind())
+			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeskUuid), deskRepo.WhereDeviceUuid(auth.DeviceUuid))
 			if err != nil {
 				return company, companySetting, staff, errors.New("桌台未绑定")
 			}
