@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
 
@@ -45,7 +46,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanByRegionUuid(regionUuid uint
 		return db.Where("status = ? AND delete_time = ?", constant.ProductMustPlanStatusOn, constant.NotDeleted)
 	}).Preload("ProductMustPlan.ProductMustPlanItems").Where("desk_region_uuid = ? AND delete_time = ?", regionUuid, constant.NotDeleted).Find(&productMustPlanRegions).Error
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	var productMustPlans []model.ProductMustPlan
@@ -102,7 +103,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Con
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	return productMustPlans, nil
@@ -141,7 +142,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Co
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	return productMustPlans, nil

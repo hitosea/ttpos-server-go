@@ -9,8 +9,10 @@ import (
 	pkgErr "github.com/pkg/errors"
 )
 
-func WithMessage(err error, message string) error {
-	errorMessage := getErrorMessage(message)
+func WithMessage(err error, messages ...string) error {
+	var msg string
+	msg = strings.Join(messages, " ")
+	errorMessage := getErrorMessage(msg)
 	return pkgErr.WithMessage(err, errorMessage)
 }
 

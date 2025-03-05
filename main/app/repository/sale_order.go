@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"errors"
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -45,7 +45,7 @@ func (r *saleOrderRepo) GetSaleOrder(opts ...DBOption) (model.SaleOrder, error) 
 func (r *saleOrderRepo) GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error) {
 	order, err := r.GetSaleOrder(CommonRepo.WhereByUuid(uuid))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &order, nil
 }

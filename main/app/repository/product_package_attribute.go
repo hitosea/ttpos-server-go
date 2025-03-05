@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -60,7 +61,7 @@ func (r *productPackageAttributeRepoImpl) GetProductPackageAttributesByUuids(uui
 		}),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productPackageAttributes, nil
 }

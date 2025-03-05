@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
 
@@ -48,7 +49,7 @@ func (r *companyRepo) GetCompanyInfo(ctx context.Context, opts ...DBOption) (mod
 func (r *companyRepo) GetCompanyInfoByUuid(ctx context.Context) (*model.Company, error) {
 	companyInfo, err := r.GetCompanyInfo(ctx, NotDeleted)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &companyInfo, nil
 }

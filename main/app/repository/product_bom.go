@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -61,7 +62,7 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 		}),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productBom, nil
 }
@@ -74,7 +75,7 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 		}),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productBoms, nil
 }

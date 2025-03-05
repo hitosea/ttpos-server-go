@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -89,7 +89,7 @@ func (r *paymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*mode
 		CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &paymentOrder, nil
 }
@@ -103,7 +103,7 @@ func (r *paymentOrderRepo) GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint
 		CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return paymentOrders, nil
 }

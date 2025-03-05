@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -45,7 +46,7 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 		CommonRepo.Preload(WithPreload{Query: "ProductPackage.DineTax"}),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productBom, nil
 }

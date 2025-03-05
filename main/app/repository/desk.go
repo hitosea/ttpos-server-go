@@ -125,7 +125,7 @@ func (r *deskRepo) GetDeskRecord(deskUuid uint64) (*model.Desk, error) {
 		CommonRepo.WhereByNoDisable(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &desk, nil
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -111,7 +112,7 @@ func (r *productRepo) GetProductCategoryList(opts ...DBOption) ([]model.ProductC
 
 	err := db.Find(&categories).Error
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 
 	return categories, nil

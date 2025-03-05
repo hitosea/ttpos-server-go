@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -118,7 +119,7 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 	db := r.db
 	var model model.SaleOrderProduct
 	if err := db.Where("uuid = ?", uuid).First(&model).Error; err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &model, nil
 }

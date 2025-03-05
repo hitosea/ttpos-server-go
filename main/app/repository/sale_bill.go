@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
 
@@ -86,7 +86,7 @@ func (r *saleBillRepo) GetSaleBillListPage(pageNo, pageSize int, opts ...DBOptio
 func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(CommonRepo.WhereByUuid(uuid))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
 }
@@ -99,7 +99,7 @@ func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBi
 		CommonRepo.WhereByDeviceUuid(deviceUuid),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
 }
@@ -168,7 +168,7 @@ func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 		if utils.IsNotFoundRecord(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
 }
@@ -179,7 +179,7 @@ func (r *saleBillRepo) GetSaleBillRecord(uuid uint64) (*model.SaleBill, error) {
 		CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
 }

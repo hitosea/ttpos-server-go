@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
 
@@ -134,7 +135,7 @@ func (r *paymentMethodRepo) GetPaymentMethodByUuid(uuid uint64) (*model.PaymentM
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return paymentMethod, nil
 }
