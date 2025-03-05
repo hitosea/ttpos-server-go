@@ -540,7 +540,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 					return company, companySetting, staff, errors.New("收银员设备已解绑，请重新绑定")
 				}
 				if cashierDevice.FinallyLoginUuid == 0 || auth.Assistant.StaffUuid == 0 {
-					return company, companySetting, staff, errors.New("收银员登录信息错误，请重新登录")
+					return company, companySetting, staff, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
 				}
 			}
 			// 检查桌台功能是否开启

@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/utils"
 )
 
 type PayType struct {
@@ -111,10 +112,10 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 		var recharge RechargeLog
 		json.Unmarshal([]byte(log.Data), &recharge)
 		var payTypeList []string
-		for _, payType := range recharge.PayType { // ToDo 获取支付方式多语言
+		for _, payType := range recharge.PayType {
 			price := payType.Price
 			if payType.Value == constant.PaymentMethodCodeCash {
-				price = price - recharge.ChangeDue
+				price = utils.DecimalSub(price, recharge.ChangeDue)
 			}
 			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
 		}
@@ -129,10 +130,10 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 		var reverseSettle ReverseSettleLog
 		json.Unmarshal([]byte(log.Data), &reverseSettle)
 		var payTypeList []string
-		for _, payType := range reverseSettle.PayType { // ToDo 获取支付方式多语言
+		for _, payType := range reverseSettle.PayType {
 			price := payType.Price
 			if payType.Value == constant.PaymentMethodCodeCash {
-				price = price - reverseSettle.ChangeDue
+				price = utils.DecimalSub(price, reverseSettle.ChangeDue)
 			}
 			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
 		}

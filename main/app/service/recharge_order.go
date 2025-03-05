@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
@@ -106,7 +107,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 func (s *rechargeOrderSrv) sumPaymentAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.PaymentAmount
+		sum = utils.DecimalAdd(sum, paymentOrder.PaymentAmount)
 	}
 	return sum
 }
@@ -115,7 +116,7 @@ func (s *rechargeOrderSrv) sumPaymentAmount(paymentOrders []model.PaymentOrder) 
 func (s *rechargeOrderSrv) getRechargeOrderAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.PaymentAmount + paymentOrder.PaymentCommissionFee
+		sum = utils.DecimalAdd(sum, paymentOrder.PaymentAmount, paymentOrder.PaymentCommissionFee)
 	}
 	return sum
 }
@@ -124,7 +125,7 @@ func (s *rechargeOrderSrv) getRechargeOrderAmount(paymentOrders []model.PaymentO
 func (s *rechargeOrderSrv) getChargeDue(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.Amount - paymentOrder.PaymentCommissionFee - paymentOrder.PaymentAmount
+		sum = utils.DecimalAdd(sum, utils.DecimalSub(paymentOrder.Amount, paymentOrder.PaymentCommissionFee, paymentOrder.PaymentAmount))
 	}
 	return sum
 }
@@ -133,7 +134,7 @@ func (s *rechargeOrderSrv) getChargeDue(paymentOrders []model.PaymentOrder) floa
 func (s *rechargeOrderSrv) getActualAmount(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.Amount
+		sum = utils.DecimalAdd(sum, paymentOrder.Amount)
 	}
 	return sum
 }
@@ -142,7 +143,7 @@ func (s *rechargeOrderSrv) getActualAmount(paymentOrders []model.PaymentOrder) f
 func (s *rechargeOrderSrv) getPayFee(paymentOrders []model.PaymentOrder) float64 {
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
-		sum = sum + paymentOrder.PaymentCommissionFee
+		sum = utils.DecimalAdd(sum, paymentOrder.PaymentCommissionFee)
 	}
 	return sum
 }
@@ -281,13 +282,13 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	if sumPaymentAmount >= order.RechargeAmount {
 		return orderResp, errors.New("当前已足额")
 	}
-	sumPaymentAmountAddCash := sumPaymentAmount + addReq.PaymentAmount
+	sumPaymentAmountAddCash := utils.DecimalAdd(sumPaymentAmount, addReq.PaymentAmount)
 	if paymentMethod.Code != constant.PaymentMethodCodeCash && sumPaymentAmountAddCash > order.RechargeAmount {
 		return orderResp, errors.New("非现金支付不能大于应收")
 	}
 
 	// 支付订单总金额 = 支付金额 + 支付手续费
-	amount := addReq.PaymentAmount + paymentCommissionFee
+	amount := utils.DecimalAdd(addReq.PaymentAmount, paymentCommissionFee)
 
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	// 获取已存在的该支付方式的支付订单
@@ -301,7 +302,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		if paymentOrder.Uuid != 0 {
 			cashPaidPaymentAmount = paymentOrder.PaymentAmount
 		}
-		rechargeAmountLeft = order.RechargeAmount - (sumPaymentAmount - cashPaidPaymentAmount)
+		rechargeAmountLeft = utils.DecimalSub(order.RechargeAmount, utils.DecimalSub(sumPaymentAmount, cashPaidPaymentAmount))
 		if rechargeAmountLeft > 0 && addReq.PaymentAmount > rechargeAmountLeft {
 			addReq.PaymentAmount = rechargeAmountLeft
 		}
@@ -377,15 +378,15 @@ func (s *rechargeOrderSrv) CancelPaymentMethod(ctx context.Context, cancelReq re
 		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	var cashPaymentOrder model.PaymentOrder
 	var sumPaymentAmount float64
-	for _, order := range order.PaymentOrders {
-		if order.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-			cashPaymentOrder = order
+	for _, po := range order.PaymentOrders {
+		if po.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			cashPaymentOrder = po
 		}
-		sumPaymentAmount = sumPaymentAmount + order.PaymentAmount
+		sumPaymentAmount = utils.DecimalAdd(sumPaymentAmount, po.PaymentAmount)
 	}
 	if cashPaymentOrder.Uuid != 0 {
 		paymentOrderRepo.Update(cashPaymentOrder.Uuid, map[string]any{
-			"payment_amount": order.RechargeAmount - sumPaymentAmount,
+			"payment_amount": utils.DecimalSub(order.RechargeAmount, sumPaymentAmount),
 		})
 	}
 	return s.GetPendingRechargeOrder(companyUuid), nil
@@ -396,7 +397,7 @@ func (s *rechargeOrderSrv) sumPaymentAmountExcludeCash(paymentOrders []model.Pay
 	var sum float64
 	for _, paymentOrder := range paymentOrders {
 		if paymentOrder.PaymentMethod.Code != constant.PaymentMethodCodeCash {
-			sum = sum + paymentOrder.PaymentAmount
+			sum = utils.DecimalAdd(sum, paymentOrder.PaymentAmount)
 		}
 	}
 	return sum
@@ -480,7 +481,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 				if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 					CashBoxLogType: constant.CashBoxLogTypeIn,
-					Amount:         sumPaymentAmount - sumPaymentAmountExcludeCash,
+					Amount:         utils.DecimalSub(sumPaymentAmount, sumPaymentAmountExcludeCash),
 					Scene:          constant.CashBoxLogSceneRecharge,
 					OrderUuid:      order.Uuid,
 				}); err != nil {
@@ -684,7 +685,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			Status:         order.Status,
 			PaymentTime:    order.PaymentTime,
 			RechargeAmount: order.RechargeAmount,
-			Amount:         order.Amount,
+			Amount:         utils.DecimalSub(order.Amount, order.RefundMoney), // 实付金额要减去退款
 			PaymentMethods: paymentMethods,
 			Extra: resp.RechargeOrderItemExtra{
 				IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid,
@@ -777,7 +778,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 			RealName: cashierName,
 		},
 		RechargeAmount: order.RechargeAmount,
-		Amount:         order.Amount,
+		Amount:         utils.DecimalSub(order.Amount, order.RefundMoney),
 		ChargeDue:      order.ChargeDue,
 		PaymentTime:    order.PaymentTime,
 		CreateTime:     order.CreateTime,
@@ -1064,7 +1065,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderRefundInfo(ctx context.Context, uuid 
 	paymentRecords := s.getPaymentRecords(order.PaymentOrders, order.ReturnOrders)
 	return resp.RechargeOrderRefundInfo{
 		Uuid:             order.Uuid,
-		RefundableAmount: order.Amount - order.RefundMoney,
+		RefundableAmount: utils.DecimalSub(order.Amount, order.RefundMoney),
 		RechargeAmount:   order.RechargeAmount,
 		GiftAmount:       order.GiftAmount,
 		GiftPoint:        order.GiftPoint,
@@ -1093,19 +1094,21 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if order.Member == nil {
 		return errors.New("用户不存在")
 	}
-	refundMoney := refundReq.RefundMoney
 	paymentRecords := s.getPaymentRecords(order.PaymentOrders, order.ReturnOrders)
+	// 可退款金额
 	var refundableAmount float64
 	for _, record := range paymentRecords {
-		refundableAmount = refundableAmount + record.RefundableAmount
+		refundableAmount = utils.DecimalAdd(refundableAmount, record.RefundableAmount)
 	}
 	if refundableAmount <= 0 {
 		return errors.New("无法退款")
 	}
+	// 要退款金额
+	refundMoney := refundReq.RefundMoney
 	if refundableAmount < refundMoney {
 		return errors.New("退款金额不能大于实付金额")
 	}
-	if refundableAmount > order.Member.Balance {
+	if refundMoney > order.Member.Balance {
 		return errors.New("当前会员主账户余额不足以退款")
 	}
 	// 处理退款金额
@@ -1118,7 +1121,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 				PaymentMethodUuid: record.PaymentMethodUuid,
 				Amount:            record.RefundableAmount,
 			})
-			refundMoney = refundMoney - record.RefundableAmount
+			refundMoney = utils.DecimalSub(refundMoney, record.RefundableAmount)
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
 				refundCashMoney = record.RefundableAmount
 			}
@@ -1135,14 +1138,21 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		ctx.SetDB(tx)
+
+		err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
+			"refund_money": utils.DecimalAdd(order.RefundMoney, refundReq.RefundMoney),
+		})
+		if err != nil {
+			return errors2.ErrInternal
+		}
 		// 添加操作日志
-		err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
+		err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 			OperatorName:      ctx.GetStaff().RealName,
 			OperatorEmail:     ctx.GetStaff().Username,
 			Client:            ctx.GetSource(),
 			Message:           "退款",
 			Action:            constant.RechargeOrderActionRefund,
-			Data:              s.getRefundData(refundReq.RefundType, refundMoney), // todo 处理退关日志data
+			Data:              s.getRefundData(refundReq.RefundType, refundMoney), // ToDo 处理退款日志数据
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
@@ -1162,7 +1172,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		}
 		err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
 			Uuid:     order.MemberUuid,
-			Money:    -order.RechargeAmount,
+			Money:    -refundReq.RefundMoney,
 			Scene:    constant.MemberBalanceLogRechargeRefund,
 			Describe: fmt.Sprintf("退款：%s", order.OrderNo),
 		})
