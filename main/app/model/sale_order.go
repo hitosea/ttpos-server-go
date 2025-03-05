@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shopspring/decimal"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -32,10 +33,8 @@ type SaleOrder struct {
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣金额" json:"member_discount_fee"`
 
 	// 订单总额相关字段
-	Amount        float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"amount"`
-	CustomAmount  float64 `gorm:"column:custom_amount;type:decimal(12,2);default:-1;comment:整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额" json:"custom_amount"`
-	PaymentAmount float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
-	ChangeAmount  float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
+	Amount       float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"amount"`
+	CustomAmount float64 `gorm:"column:custom_amount;type:decimal(12,2);default:-1;comment:整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额" json:"custom_amount"`
 
 	// 时间相关字段
 	FinishTime int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
@@ -48,7 +47,14 @@ type SaleOrder struct {
 	ZeroRule         uint8   `gorm:"column:zero_rule;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero_rule"`
 	ZeroFee          float64 `gorm:"column:zero_fee;type:decimal(12,2);default:0;comment:优惠折扣抹零金额" json:"zero_fee"`
 	ZeroCheckoutRule uint8   `gorm:"column:zero_checkout_rule;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout_rule"`
-	ZeroCheckoutFee  float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
+
+	// 结账完成后才记录的字段
+	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额-订单总金额=支付手续费" json:"payment_amount"`
+	ChangeAmount         float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
+	ZeroCheckoutFee      float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
+	FinalPrice           float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
+	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
+	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 
 	// 关联对象
 	PaymentOrders                []PaymentOrder                 `gorm:"foreignKey:RelatedUuid;references:uuid"`
@@ -57,6 +63,22 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+// CalcGiftAmount 计算赠菜金额. 赠菜金额=销售订单赠菜商品.总最终单价之和
+func (model *SaleOrder) CalcGiftAmount() float64 {
+	amount := float64(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 删除的商品不计、退菜的商品不计入、未送厨的商品不计
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnCookingProduct() {
+			continue
+		}
+		// 商品的最终金额
+		giftFee := saleOrderProduct.GetPrice()
+		// 累计各个赠品的最终金额
+		amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
+	}
+	return amount
 }
 
 func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
@@ -105,10 +127,27 @@ func (model *SaleOrder) SetInitServiceFee(setting SaleBillSetting) float64 {
 	return 0
 }
 
-func (model *SaleOrder) SetFinishStatus(changeAmount float64) {
+type FinalAmount struct {
+	PaymentAmount        float64 // 已支付的金额
+	ChangeAmount         float64 // 找零金额
+	ZeroCheckoutFee      float64 // 结账抹零金额
+	FinalPrice           float64 // 最终应收金额
+	PaymentCommissionFee float64 // 支付手续费
+	GiftAmount           float64 // 赠菜金额
+}
+
+func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
+	// 修改状态
 	model.Status = constant.SaleOrderStatusFinish
 	model.FinishTime = time.Now().Unix()
-	model.ChangeAmount = changeAmount
+	// 更新订单结算后要计算的金额字段
+	model.PaymentAmount = final.PaymentAmount
+	model.ChangeAmount = final.ChangeAmount
+	model.ZeroCheckoutFee = final.ZeroCheckoutFee
+	model.FinalPrice = final.FinalPrice
+	model.PaymentCommissionFee = final.PaymentCommissionFee
+	model.GiftAmount = final.GiftAmount
+
 }
 
 // IsFreeSaleOrder 判断销售订单是否免单

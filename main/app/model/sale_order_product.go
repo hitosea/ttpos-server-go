@@ -27,7 +27,7 @@ type SaleOrderProduct struct {
 	Remark     string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 	IsBuffet   uint   `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
 	// 状态相关字段
-	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨 2-退菜'" json:"status"`
+	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨'" json:"status"`
 	IsRequire     uint `gorm:"column:is_require;type:tinyint(1);not null;default:0;comment:'是否必点商品 0-否 1-是。用于在前端显示必点图标'" json:"is_require"`
 	IsAcceptOrder uint `gorm:"column:is_accept_order;type:tinyint(1);not null;default:0;comment:'是否已接单, 0-否 1-是'" json:"is_accept_order"`
 
@@ -93,6 +93,17 @@ type SaleOrderProduct struct {
 	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+}
+
+// 是否为已送厨的商品
+func (model *SaleOrderProduct) IsCookingProduct() bool {
+	// 状态为已送厨且生产订单ID不为0
+	return model.Status == constant.SaleOrderProductStatusCooking && model.ProductionOrderUuid != 0
+}
+
+// 是否为未送厨的商品
+func (model *SaleOrderProduct) IsUnCookingProduct() bool {
+	return !model.IsCookingProduct()
 }
 
 // 设置该商品为自助餐商品

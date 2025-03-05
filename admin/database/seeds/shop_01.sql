@@ -56,34 +56,32 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-未结账 1-已结账',
+    -- 订单数据变动时要重新计算的字段
+    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
+    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和',
+    `zero_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零金额。',
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额，订单商品的最终单价(折后价)之和。商品已含税时，该金额包括了税费。当商品未含税时，该金额不包括税费',
     `product_original_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始商品金额(折前价)。 商品原始金额=订单商品的销售价(折前价)之和。',
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费固定服务费时，服务费=固定服务费；按比例收服务费时，服务费=(订单商品.总服务费)之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费。税费=(订单商品.总税费)之和',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
-    `custom_amount` DECIMAL(12, 2) NOT NULL DEFAULT -1 COMMENT '整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额',
-    -- 会员打折金额
-    `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
-    -- 自定义折扣金额
-    `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和',
-    -- 订单抹零
-    `zero_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
-    `zero_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零金额。',
-    `zero_checkout_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
-    `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
-    -- 实收金额。
-    `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
-    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
-    `change_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
-    `unpaid_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '未支付金额。未支付金额=最终应收-已支付金额',
-    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
-    `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
+    -- 免单。
     `is_free` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `free_reason` TEXT COMMENT '免单原因',
     -- 订单设置相关
     `member_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '会员折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
     `member_card_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '会员卡折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
     `custom_discount_rate` decimal(12, 4) NOT NULL DEFAULT 1.00 COMMENT '自定义折扣率(0-100%)，默认100%，取值范围0-1，如折扣率为10%，则取值为0.1',
+    `custom_amount` DECIMAL(12, 2) NOT NULL DEFAULT -1 COMMENT '整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额',
+    `zero_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
+    `zero_checkout_rule` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
+    -- 结账完成后才记录的字段
+    `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
+    `change_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
+    `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
+    `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
+    `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
+    `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -197,7 +195,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 自定义折扣金额
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单商品）。自定义折扣金额（单商品）=会员折扣后的价格（单商品）*(1-自定义折扣率) 。校验：自定义折扣金额（单商品）=销售价 - 最终单价（单商品）-会员折扣金额（单商品）；注意，不能这样算，自定义折扣金额（单商品）=销售价*(1-自定义折扣率)',
     -- 状态值
-    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨 2-已退菜',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨',
     `is_require` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否必点商品 0-否 1-是。用于在前端显示必点图标',
     -- 下单是指加购商品吗？还是送厨商品？如果下单指加购，则可以理解这类商品为抢购商品，先抢先得。
     `deduct_stock_type` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '库存计算方式,0-下单减库存 1-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数',

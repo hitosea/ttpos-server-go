@@ -3279,8 +3279,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		saleOrder.SetCheckOutZeroFee()
 	}
 
-	// 修改订单为支付完成，并记录找零金额
-	saleOrder.SetFinishStatus(changeAmount) // 设置销售订单状态为已结清
+	// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
+	final := model.FinalAmount{
+		PaymentAmount:        totalPay,
+		ChangeAmount:         changeAmount,
+		ZeroCheckoutFee:      saleOrder.CalcCheckOutZeroFee(),
+		FinalPrice:           finalAmount,
+		PaymentCommissionFee: amount.CommissionFee,
+		GiftAmount:           saleOrder.CalcGiftAmount(),
+	}
+	saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
 
 	// 更新销售账单
 	if !saleBill.CanFinishSaleBill() {
