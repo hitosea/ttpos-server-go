@@ -134,11 +134,10 @@ class Attribute extends AttributeModel
      */
     public function setDelete($attribute_id)
     {
-        // todo 兼容
-        // if ($this->isUseWithProduct($attribute_id)) {
-        //     $this->error = '该属性下存在商品，不允许删除';
-        //     return false;
-        // }
+        if ($this->isUseWithProduct($attribute_id)) {
+            $this->error = '该属性下存在商品，不允许删除';
+            return false;
+        }
 
         $this->startTrans();
         try {
