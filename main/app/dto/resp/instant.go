@@ -155,10 +155,10 @@ type Attribute struct {
 
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
-	MemberInfo     MemberInfo              `json:"member_info"`     // 会员信息。如果订单选择了会员，则返回会员信息
-	PaymentOrders  PaymentInfoList         `json:"payment_orders"`  // 支付订单列表
-	PaymentMethods PaymentMethodList       `json:"payment_methods"` // 支付方式列表
-	Amounts        PaymentMethodAmountList `json:"amounts"`         // 支付方式列表及订单金额信息
+	MemberInfo     *MemberInfo             `json:"member_info,omitempty"` // 会员信息。如果订单选择了会员，则返回会员信息
+	PaymentOrders  PaymentInfoList         `json:"payment_orders"`        // 支付订单列表
+	PaymentMethods PaymentMethodList       `json:"payment_methods"`       // 支付方式列表
+	Amounts        PaymentMethodAmountList `json:"amounts"`               // 支付方式列表及订单金额信息
 }
 
 type PaymentMethodAmountList struct {

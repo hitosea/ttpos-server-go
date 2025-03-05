@@ -3063,9 +3063,9 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	if len(paymentMethods) <= 0 {
 		return nil, errors.New("系统没有支付方式")
 	}
-	memberInfo := resp.MemberInfo{}
+	var memberInfo *resp.MemberInfo
 	if saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
-		memberInfo = resp.MemberInfo{
+		memberInfo = &resp.MemberInfo{
 			Uuid:     saleOrder.Member.Uuid,
 			Nickname: saleOrder.Member.Nickname,
 			Card:     resp.CardInfo{Name: saleOrder.Member.MemberCard.MemberCardType.Name},
