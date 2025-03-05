@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shopspring/decimal"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/i18n"
@@ -15,7 +16,7 @@ type PaymentMethod struct {
 	Source               int     `gorm:"column:source;type:tinyint(1);default:1;comment:来源 0-系统 1-手动 2-LianLianPay;NOT NULL" json:"source"`
 	LogoFileUuid         uint64  `gorm:"column:logo_file_uuid;type:bigint(20) unsigned;default:0;comment:logo图片ID;NOT NULL" json:"logo_file_uuid"`
 	QrcodeFileUuid       uint64  `gorm:"column:qrcode_file_uuid;type:bigint(20) unsigned;default:0;comment:二维码图片ID;NOT NULL" json:"qrcode_file_uuid"`
-	FeePercent           float64 `gorm:"column:fee_percent;type:decimal(5,2);default:0;comment:手续费百分比;NOT NULL" json:"fee_percent"`
+	FeePercent           float64 `gorm:"column:fee_percent;type:decimal(5,4);default:0;comment:手续费百分比，取值范围0-1;NOT NULL" json:"fee_percent"`
 	IsShowCashier        int     `gorm:"column:is_show_cashier;type:tinyint(1);default:0;comment:0-不显示 1-收银机结账显示;NOT NULL" json:"is_show_cashier"`
 	IsShowAssistant      int     `gorm:"column:is_show_assistant;type:tinyint(1);default:0;comment:0-不显示 1-点餐助手结账显示;NOT NULL" json:"is_show_assistant"`
 	IsShowMemberRecharge int     `gorm:"column:is_show_member_recharge;type:tinyint(1);default:0;comment:0-不显示 1-收银机会员充值显示;NOT NULL" json:"is_show_member_recharge"`
@@ -24,6 +25,15 @@ type PaymentMethod struct {
 
 	QrcodeFile *File `gorm:"foreignKey:QrcodeFileUuid;references:Uuid"` // 关联文件
 	LogoFile   *File `gorm:"foreignKey:LogoFileUuid;references:Uuid"`   // 关联文件
+}
+
+// GetFeePercent 获取手续费率
+func (model *PaymentMethod) GetFeePercent() float64 {
+	// 兼容按1-100取值范围。将1-100转位0-1
+	if model.FeePercent > 1 {
+		model.FeePercent = decimal.NewFromFloat(model.FeePercent).Div(decimal.NewFromUint64(100)).InexactFloat64()
+	}
+	return model.FeePercent
 }
 
 // 判断是否不允许取消支付
@@ -50,7 +60,7 @@ type PaymentOrder struct {
 	BaseModel
 	PaymentMethodName    string  `gorm:"column:payment_method_name;type:varchar(255);comment:支付类型名称;NOT NULL" json:"payment_method_name"`
 	PaymentMethodUuid    uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:支付类型ID;NOT NULL" json:"payment_method_uuid"`
-	PaymentFeePercent    float64 `gorm:"column:payment_fee_percent;type:decimal(5,2);default:0;comment:支付手续费百分比;NOT NULL" json:"payment_fee_percent"`
+	PaymentFeePercent    float64 `gorm:"column:payment_fee_percent;type:decimal(5,4);default:0;comment:支付手续费百分比;NOT NULL" json:"payment_fee_percent"`
 	RelatedType          int     `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售订单；1-充值订单;NOT NULL" json:"related_type"`
 	RelatedUuid          uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:关联的充值订单、销售订单ID;NOT NULL" json:"related_uuid"`
 	CurrencyUnit         string  `gorm:"column:currency_unit;type:varchar(10);comment:货币单位;NOT NULL" json:"currency_unit"`

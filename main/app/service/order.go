@@ -3151,12 +3151,13 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.New("添加支付方式失败")
 	}
 
-	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(paymentMethod.FeePercent)).InexactFloat64()
+	percent := paymentMethod.GetFeePercent()
+	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
 	amount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
 	paymentOrder := &model.PaymentOrder{
 		PaymentMethodName:    paymentMethod.PaymentName,
 		PaymentMethodUuid:    req.PaymentMethodUuid,
-		PaymentFeePercent:    paymentMethod.FeePercent,
+		PaymentFeePercent:    percent,
 		RelatedType:          constant.PaymentOrderRelatedTypeSaleOrder,
 		RelatedUuid:          req.SaleOrderUuid,
 		CurrencyUnit:         currencySetting.Unit,
