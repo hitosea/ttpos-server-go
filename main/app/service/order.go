@@ -78,8 +78,8 @@ type IOrderSrv interface {
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                     // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
-	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.ShopCart, error)                                                         // 取消使用会员优惠
-	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.ShopCart, error)                                                          // 使用会员优惠
+	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                      // 取消使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 使用会员优惠
 }
 
 // orderSrv 订单服务结构
@@ -3970,7 +3970,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 }
 
 // OrderMemberCancel 不使用此会员
-func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMemberCancelReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -3998,16 +3998,15 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取购物车信息失败")
+		return nil, errors.WithMessage(err)
 	}
-
-	return info, nil
+	return infoResp, nil
 }
 
 // OrderUseMember 使用会员优惠
-func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -4051,11 +4050,9 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取购物车信息失败")
+		return nil, errors.WithMessage(err)
 	}
-
-	return info, nil
-
+	return infoResp, nil
 }

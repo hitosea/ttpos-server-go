@@ -948,7 +948,7 @@ func (h *InstantHandler) GetMemberDiscount(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.CheckMemberPasswordReq true "确认使用会员优惠并验证密码"
-// @Success 200 {object} dto.Response{}
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
 // @Router /cashier/instant/order/member/confirm [post]
 func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 	var passwordReq req.CheckMemberPasswordReq
