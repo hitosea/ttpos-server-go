@@ -52,7 +52,7 @@ type SaleBill struct {
 	TaxFee     float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0;comment:税费,关联销售订单的税费之和" json:"tax_fee"`
 
 	// 金额字段 - 优惠相关
-	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);default:0;comment:折扣费用,关联销售订单的折扣费用之和" json:"discount_fee"`
+	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);default:0;comment:折扣费用,关联销售订单的折扣费用之和" json:"discount_fee"`
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用,关联销售订单的会员折扣费用之和" json:"member_discount_fee"`
 	GiftAmount        float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,关联销售订单的赠菜金额之和" json:"gift_amount"`
 	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额,关联销售订单的免单金额之和" json:"free_amount"`
@@ -365,7 +365,7 @@ func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
 	calc.TaxFee = model.calcTaxFee()
 	model.TaxFee = calc.TaxFee
 	calc.DiscountFee = model.calcDiscountFee()
-	model.DiscountFee = calc.DiscountFee
+	model.CustomDiscountFee = calc.DiscountFee
 	calc.MemberDiscountFee = model.calcMemberDiscountFee()
 	model.MemberDiscountFee = calc.MemberDiscountFee
 	calc.GiftAmount = model.calcGiftAmount()
@@ -801,20 +801,6 @@ type SaleOrderBuffetDelayProduct struct {
 func (model *SaleOrderBuffetDelayProduct) GetPrice(num uint) float64 {
 	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromInt(int64(num))).Round(2).InexactFloat64()
 	return price
-}
-
-// SaleBillOperationRecord 桌台账单操作记录 `ttpos_sale_bill_operation_record`
-type SaleBillOperationRecord struct {
-	BaseModel
-	// 基本信息
-	Data   string `gorm:"column:data;comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"data"`
-	Source string `gorm:"column:source;comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"source"`
-	Action string `gorm:"column:action;comment:操作行为" json:"action"`
-	Remark string `gorm:"column:remark;comment:备注" json:"remark"`
-	// 关联ID字段
-	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
-	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
-	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
 }
 
 // 销售订单优惠策略表
