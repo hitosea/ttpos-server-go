@@ -13,7 +13,7 @@ import (
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
-	GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetClientDeskList(Status, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]model.Desk, error)
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) //
@@ -62,11 +62,15 @@ func (r *deskRepo) GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error
 }
 
 // GetClientDeskList 获取客户端桌台列表，排除逻辑删除的桌台，排除被禁用的桌台
-func (r *deskRepo) GetClientDeskList(pageNo, pageSize int) ([]model.Desk, int64, error) {
+func (r *deskRepo) GetClientDeskList(Status, pageNo, pageSize int) ([]model.Desk, int64, error) {
 	var desks []model.Desk
 	var total int64
 
-	query := r.db.Model(&model.Desk{}).Preload("SaleBill").Where("delete_time = ?", 0)
+	query := r.db.Model(&model.Desk{}).Preload("SaleBill").Where("delete_time = ?", 0).Where("is_disable = ?", constant.DeskEnable)
+
+	if Status != -1 {
+		query = query.Where("status = ?", Status)
+	}
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {

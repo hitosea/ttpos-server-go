@@ -22,3 +22,7 @@ type UpdateSystemSetting struct {
 	DishCardStyle          string `json:"dish_card_style" binding:"required,oneof=0 1"`            // 菜品卡片样式 0-无图模式 1-图片模式
 	IsShowSoldOut          *int   `json:"is_show_sold_out" binding:"required,oneof=0 1"`           // 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 }
+
+type PaymentMethodListReq struct {
+	Type string `form:"type,default=all" binding:"omitempty,oneof=all checkout recharge" ` // 支付方式列表
+}

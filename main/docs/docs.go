@@ -235,6 +235,12 @@ const docTemplate = `{
                         "description": "每页大小",
                         "name": "pageSize",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "桌台状态, -1=全都、 0=未开台、1=已开台",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -717,6 +723,15 @@ const docTemplate = `{
                     "点餐助手端.支付方式"
                 ],
                 "summary": "获取支付方式列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "显示类型 all-默认全部 checkout-结账 recharge-充值",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -893,6 +908,37 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/cashier/buffet/delay/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取自助餐延迟列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.自助餐"
+                ],
+                "summary": "获取自助餐延迟列表",
+                "responses": {
+                    "200": {
+                        "description": "自助餐列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.BuffetDelayListResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -1428,6 +1474,12 @@ const docTemplate = `{
                         "description": "每页大小",
                         "name": "pageSize",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "桌台状态, -1=全都、 0=未开台、1=已开台",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1565,6 +1617,60 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.OrderChangeBuffetReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/buffet/clock": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台订单自助餐加钟",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "桌台订单自助餐加钟",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderChangeBuffetClockReq"
                         }
                     }
                 ],
@@ -3868,9 +3974,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "结账页面信息",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -5653,6 +5771,15 @@ const docTemplate = `{
                     "收银端.支付方式"
                 ],
                 "summary": "获取支付方式列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "显示类型 all-默认全部 checkout-结账 recharge-充值",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -8360,10 +8487,6 @@ const docTemplate = `{
                     "description": "桌台uuid, 必填",
                     "type": "integer"
                 },
-                "is_buffet": {
-                    "description": "是否是自助餐: false-否, true-是",
-                    "type": "boolean"
-                },
                 "meal_num": {
                     "description": "就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0",
                     "type": "integer"
@@ -8758,6 +8881,26 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderChangeBuffetClockReq": {
+            "type": "object",
+            "properties": {
+                "delay_uuids": {
+                    "description": "加钟uuid列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -9698,6 +9841,30 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.BuffetCustomerType"
+                    }
+                }
+            }
+        },
+        "resp.BuffetDelay": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "加钟名称",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "价格",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.BuffetDelayListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.BuffetDelay"
                     }
                 }
             }
@@ -13195,6 +13362,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "gift_amount": {
+                    "description": "赠送金额",
+                    "type": "number"
+                },
+                "gift_point": {
+                    "description": "赠送积分",
+                    "type": "number"
+                },
                 "order_no": {
                     "description": "订单编号",
                     "type": "string"
@@ -13403,10 +13578,6 @@ const docTemplate = `{
         "resp.RechargeOrderReverseSettleInfo": {
             "type": "object",
             "properties": {
-                "is_occupy": {
-                    "description": "是否存在进行中订单",
-                    "type": "boolean"
-                },
                 "member_info": {
                     "description": "会员信息",
                     "allOf": [
@@ -13416,15 +13587,11 @@ const docTemplate = `{
                     ]
                 },
                 "message": {
-                    "description": "提示消息",
+                    "description": "提示信息",
                     "type": "string"
                 },
-                "recharge_order_uuid": {
-                    "description": "充值订单Uuid",
-                    "type": "integer"
-                },
-                "to_recharge_order_uuid": {
-                    "description": "进行中的充值订单Uuid",
+                "status": {
+                    "description": "订单状态：0-正常；1-会员主账户余额不足；2-存在待支付订单",
                     "type": "integer"
                 }
             }

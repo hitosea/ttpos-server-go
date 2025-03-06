@@ -614,17 +614,18 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 		dbOptions = append(dbOptions, rechargeOrderRepo.WhereStatus(listReq.Status))
 	}
 
-	if listReq.DateType >= 0 && listReq.DateType <= 3 {
+	// -1=全都、 0=今天、 1=昨天、 2=本周
+	if listReq.DateType >= 0 && listReq.DateType <= 2 {
 		now := time.Now()
 		var startTime, endTime time.Time
 		switch listReq.DateType {
-		case 1: // 今天
+		case 0: // 今天
 			startTime = now.Truncate(24 * time.Hour)
 			endTime = startTime.Add(24*time.Hour - time.Second)
-		case 2: // 昨天
+		case 1: // 昨天
 			startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
 			endTime = startTime.Add(24*time.Hour - time.Second)
-		case 3: // 本周
+		case 2: // 本周
 			weekday := int(now.Weekday())
 			if weekday == 0 {
 				weekday = 7
@@ -687,8 +688,10 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			RechargeAmount: order.RechargeAmount,
 			Amount:         utils.DecimalSub(order.Amount, order.RefundMoney), // 实付金额要减去退款
 			PaymentMethods: paymentMethods,
+			GiftAmount:     order.GiftAmount,
+			GiftPoint:      order.GiftPoint,
 			Extra: resp.RechargeOrderItemExtra{
-				IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid,
+				IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid && order.Amount > order.RefundMoney, // 退款完不可再退款
 				IsCellCancel:        order.Status == constant.RechargeOrderStatusPending,
 				IsCellReverseSettle: isCellReverseSettle,
 			},
@@ -787,7 +790,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		PaymentMethods: paymentMethods,
 		OperationLog:   resp.RechargeOrderOperationLog{List: logs},
 		Extra: resp.RechargeOrderItemExtra{
-			IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid,
+			IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid && order.Amount > order.RefundMoney,
 			IsCellCancel:        order.Status == constant.RechargeOrderStatusPending,
 			IsCellReverseSettle: isCellReverseSettle,
 		},
@@ -847,20 +850,21 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 		return reverseSettleInfoResp, errors.New("退款后不能反结账")
 	}
 
-	var toRechargeOrderUuid uint64
-	var message string
-	var isOccupy bool
+	var (
+		message string
+		status  uint
+	)
 	pendingRechargeOrder := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereStatus(constant.RechargeOrderStatusPending))
 	if pendingRechargeOrder.Uuid > 0 {
-		toRechargeOrderUuid = pendingRechargeOrder.Uuid
 		message = i18n.Translate(ctx.GetLanguage(), "当前充值有待付款订单，请先完成订单再进行反结账")
-		isOccupy = true
+		status = 2
 	}
-
 	member := order.Member
+	if member.Balance < order.Amount {
+		message = i18n.Translate(ctx.GetLanguage(), "当前会员账户不足反结账")
+		status = 1
+	}
 	return resp.RechargeOrderReverseSettleInfo{
-		RechargeOrderUuid:   order.Uuid,
-		ToRechargeOrderUuid: toRechargeOrderUuid,
 		MemberInfo: resp.ReverseSettleRechargeOrderMemberInfo{
 			Uuid:        member.Uuid,
 			Nickname:    member.Nickname,
@@ -868,8 +872,8 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 			GiftBalance: member.GiftBalance,
 			Points:      member.Point,
 		},
-		Message:  message,
-		IsOccupy: isOccupy,
+		Status:  status,
+		Message: message,
 	}, nil
 }
 

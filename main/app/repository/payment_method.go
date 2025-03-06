@@ -11,9 +11,10 @@ import (
 
 // IPaymentMethodRepo 定义仓库接口
 type IPaymentMethodRepo interface {
-	WhereUuid(uuid uint64) DBOption // uuid条件
-	WhereCashier() DBOption         // 在收银端显示
-	WhereAssistant() DBOption       // 在助手端显示
+	WhereUuid(uuid uint64) DBOption       // uuid条件
+	WhereCashier() DBOption               // 在收银端结账显示
+	WhereCashierMemberRecharge() DBOption // 收银端充值时显示
+	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereStatus(status int) DBOption
 
 	WithLogoFile() DBOption   // 关联logo文件
@@ -63,7 +64,7 @@ func (r *paymentMethodRepo) GetPaymentMethods(opts ...DBOption) []model.PaymentM
 	return paymentMethods
 }
 
-// GetPaymentMethods  获取支付方式
+// GetPaymentMethodList  获取支付方式
 func (r *paymentMethodRepo) GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod {
 	var paymentMethods []*model.PaymentMethod
 	db := r.db.Model(&model.PaymentMethod{}).Scopes(NotDeleted)
@@ -83,6 +84,12 @@ func (r *paymentMethodRepo) WhereUuid(uuid uint64) DBOption {
 func (r *paymentMethodRepo) WhereCashier() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_cashier = 1")
+	}
+}
+
+func (r *paymentMethodRepo) WhereCashierMemberRecharge() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_member_recharge = 1")
 	}
 }
 

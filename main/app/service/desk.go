@@ -27,7 +27,7 @@ type IDeskSrv interface {
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
 	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                            // 完成桌台
-	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) error                                                // 切换桌台
+	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                              // 切换桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
 	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
 	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                            // 平板端绑定桌台
@@ -97,7 +97,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 // GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
-	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.PageNo, req.PageSize)
+	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.Status, req.PageNo, req.PageSize)
 	if err != nil {
 		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
 	}
@@ -313,7 +313,7 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 }
 
 // ChangeDesk 切换桌台
-func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error {
+func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(reqs.SaleBillUuid)
@@ -325,12 +325,12 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(reqs.SaleBillUuid)
 	if errSaleBill != nil {
-		return errSaleBill
+		return nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
 	// 获取桌台信息
 	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
 	if errDesk != nil {
-		return errDesk
+		return nil, errors.WithMessage(errDesk, "获取桌台信息失败")
 	}
 
 	// 设置新桌台的开台信息
@@ -353,9 +353,16 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) error 
 		}
 		return nil
 	}); err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
-	return nil
+
+	// 返回购物车信息
+	info, err := s.orderSrv.GetOrderCartInfo(ctx, reqs.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	return info, nil
 }
 
 // GetTabletDeskList 平板获取桌台列表

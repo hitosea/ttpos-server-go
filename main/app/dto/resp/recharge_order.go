@@ -11,6 +11,8 @@ type RechargeOrderItem struct {
 	RechargeAmount float64                `json:"recharge_amount"` // 充值金额
 	Amount         float64                `json:"amount"`          // 实付金额
 	PaymentMethods []string               `json:"payment_methods"` // 支付方式
+	GiftAmount     float64                `json:"gift_amount"`     // 赠送金额
+	GiftPoint      float64                `json:"gift_point"`      // 赠送积分
 	Extra          RechargeOrderItemExtra `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
 
@@ -111,9 +113,7 @@ type ReverseSettleRechargeOrderMemberInfo struct {
 }
 
 type RechargeOrderReverseSettleInfo struct {
-	RechargeOrderUuid   uint64                               `json:"recharge_order_uuid"`    // 充值订单Uuid
-	ToRechargeOrderUuid uint64                               `json:"to_recharge_order_uuid"` // 进行中的充值订单Uuid
-	MemberInfo          ReverseSettleRechargeOrderMemberInfo `json:"member_info"`            // 会员信息
-	Message             string                               `json:"message"`                // 提示消息
-	IsOccupy            bool                                 `json:"is_occupy"`              // 是否存在进行中订单
+	MemberInfo ReverseSettleRechargeOrderMemberInfo `json:"member_info"` // 会员信息
+	Status     uint                                 `json:"status"`      // 订单状态：0-正常；1-会员主账户余额不足；2-存在待支付订单
+	Message    string                               `json:"message"`     // 提示信息
 }

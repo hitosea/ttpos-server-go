@@ -182,10 +182,17 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param type query string true "显示类型 all-默认全部 checkout-结账 recharge-充值"
 // @Success 200 {object} dto.Response{data=resp.PaymentMethodList}
 // @Router /cashier/payment_method/list [get]
 func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {
-	helper.Success(c, h.paymentMethodSrv.GetList(helper.GetContext(c)))
+	var paymentListReq req.PaymentMethodListReq
+	if err := c.ShouldBindQuery(&paymentListReq); err != nil {
+		helper.HandleValidationError(c, err, paymentListReq, nil)
+		return
+	}
+
+	helper.Success(c, h.paymentMethodSrv.GetList(helper.GetContext(c), paymentListReq.Type))
 }
 
 // EditAcceptOrderSetting 修改接单设置
