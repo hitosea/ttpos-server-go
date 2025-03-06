@@ -21,12 +21,12 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -77,6 +77,8 @@ type IOrderSrv interface {
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                     // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
+	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.ShopCart, error)                                                         // 取消使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.ShopCart, error)                                                          // 使用会员优惠
 }
 
 // orderSrv 订单服务结构
@@ -449,9 +451,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	desk.SetOpenDesk(saleBillUuid)
 
 	// 创建订单编号
-	orderNo, errCreate := s.createOrderNo(db, constant.OrderSourceDesk)
-	if errCreate != nil {
-		return resp.CreateDeskOrderResp{}, errors.New("订单编号生成失败")
+	orderNo, err := s.createOrderNo(db, constant.OrderSourceDesk)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "订单编号生成失败")
 	}
 
 	// 构建销售账单
@@ -1094,16 +1096,15 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 	hasShowOrder, err := repository.NewOrderRepo(db).HasShowOrder(ctx.GetDeviceUuid())
 	if err != nil {
 		ctx.Log().Error("判断是否有未挂单的点餐账单失败", zap.Error(err))
-		return nil, errors.New("判断是否有未挂单的点餐账单失败")
+		return nil, errors.WithMessage(err, "判断是否有未挂单的点餐账单失败")
 	}
 	if hasShowOrder {
 		return nil, errors.New("该设备有未挂单的点餐账单，禁止取单")
 	}
 
-	saleBill, errGetSaleBill := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
-	if errGetSaleBill != nil {
-		ctx.Log().Debug("查询销售账单失败", zap.Error(errGetSaleBill))
-		return nil, errors.New("查询销售账单失败")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 
 	if saleBill.IsShowSaleBill() {
@@ -1112,8 +1113,8 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 
 	// 修改销售账单信息，标记账单取出
 	saleBill.SetShowSaleBill(ctx.GetDeviceUuid())
-	if errUpdate := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdate != nil {
-		return nil, errors.New("更新销售账单失败")
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+		return nil, errors.WithMessage(err, "更新销售账单失败")
 	}
 
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1205,10 +1206,9 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	db := s.dbm.GetDB(dbId)
 
 	// 获取操作的销售账单信息
-	saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
-	if errGetSaleOrder != nil {
-		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
-		return nil, errors.New("查询销售订单信息失败")
+	saleBill, saleOrder, saleOrderProduct, err := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
@@ -1230,7 +1230,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 删除订单商品
 		err := repository.NewOrderRepo(db).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 		if err != nil {
@@ -1245,10 +1245,8 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 			return errUpdateSaleBill
 		}
 		return nil
-	})
-	if errUpdate != nil {
-		ctx.Log().Info("更新销售订单失败", zap.Error(errUpdate))
-		return nil, errors.New("更新销售订单失败")
+	}); err != nil {
+		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
 
 	// 获取新的数据
@@ -1308,10 +1306,9 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取操作的销售账单信息
-	saleBill, saleOrder, saleOrderProduct, errGetSaleOrder := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
-	if errGetSaleOrder != nil {
-		ctx.Log().Error("改价商品时，查询销售订单信息失败", zap.Error(errGetSaleOrder))
-		return nil, errors.New("查询销售订单信息失败")
+	saleBill, saleOrder, saleOrderProduct, err := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 
 	// 判断订单状态
@@ -1337,7 +1334,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); errUpdateProduct != nil {
 			return errUpdateProduct
 		}
@@ -1349,10 +1346,8 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 			return errUpdateSaleBill
 		}
 		return nil
-	})
-	if errUpdate != nil {
-		ctx.Log().Info("更新销售订单失败", zap.Error(errUpdate))
-		return nil, errors.New("更新销售订单失败")
+	}); err != nil {
+		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
 
 	// 获取新的数据
@@ -1645,9 +1640,9 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(req.SaleBillUuid, 0, 0)
-	if errSaleBill != nil {
-		return nil, errors.New("销售账单不存在")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(req.SaleBillUuid, 0, 0)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	if !saleBill.IsBuffetSaleBill() {
 		return nil, errors.New("当前订单不是自助餐类型，无法调整自助餐")
@@ -1842,11 +1837,11 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 	}
 	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单
-	if saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); errGetSaleBill != nil {
-		if utils.IsNotFoundRecord(errGetSaleBill) {
+	if saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); err != nil {
+		if utils.IsNotFoundRecord(err) {
 			return 0, nil // 没有点餐账单
 		}
-		return 0, errors.New(errGetSaleBill.Error())
+		return 0, errors.WithMessage(err)
 	} else {
 		saleBillUuid = saleBill.Uuid
 	}
@@ -2072,7 +2067,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 		order, err := s.CreateInstantOrder(ctx)
 		if err != nil {
 			ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
-			return nil, errors.New(err.Error())
+			return nil, errors.WithMessage(err)
 		}
 		ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
 		req.SaleBillUuid = order.SaleBillUuid
@@ -2083,7 +2078,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 	shopCart, err := s.OrderCartProductAdd(ctx, req)
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", req), zap.Any("error", err))
-		return nil, errors.New(err.Error())
+		return nil, errors.WithMessage(err)
 	}
 	return shopCart, nil
 }
@@ -2182,9 +2177,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	mustPlanList, errGetMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
-	if errGetMustPlan != nil {
-		return nil, errors.New(errGetMustPlan.Error())
+	mustPlanList, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
 	}
 	for _, mustPlan := range mustPlanList {
 		if mustPlan.Uuid == mustPlanUuid {
@@ -2222,10 +2217,9 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		return nil, errors.New("销售订单不存在")
 	}
 	// 录入订单商品数据
-	saleOrderProduct, errNewProduct := s.newSaleOrderProduct(ctx, req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
-	if errNewProduct != nil {
-		ctx.Log().Error("构建商品失败", zap.Error(errNewProduct))
-		return nil, errors.New("构建商品失败")
+	saleOrderProduct, err := s.newSaleOrderProduct(ctx, req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
+	if err != nil {
+		return nil, errors.WithMessage(err, "构建商品失败")
 	}
 	// 生成签名
 	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
@@ -2307,8 +2301,7 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 			OrderProductUuid: request.SaleOrderProductUuid,
 		})
 		if err != nil {
-			ctx.Log().Debug("删除商品失败", zap.Error(err))
-			return nil, errors.New("删除商品失败")
+			return nil, errors.WithMessage(err, "删除商品失败")
 		}
 		return res, nil
 	}
@@ -2357,7 +2350,7 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errUpdate
 		}
@@ -2371,10 +2364,8 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 			return errUpdateSaleBill
 		}
 		return nil
-	})
-	if errUpdate != nil {
-		ctx.Log().Error("修改商品数量时，保存数据失败", zap.Error(errUpdate))
-		return nil, errors.New("操作失败")
+	}); err != nil {
+		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
 	// 获取新的桌台数据
@@ -2541,7 +2532,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 
 	ctx.Log().Debug("准备开始更新")
-	errUpdate := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 修改订单商品状态为已送厨
 		errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
 		if errUpdateSaleProductStatus != nil {
@@ -2563,16 +2554,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			}
 		}
 		return nil
-	})
-	if errUpdate != nil {
-		ctx.Log().Debug("更新数据失败", zap.Any("error", errUpdate))
-		return nil, nil, errors.New(errUpdate.Error())
+	}); err != nil {
+		return nil, nil, errors.WithMessage(err, "更新数据失败")
 	}
 
 	ctx.Log().Debug("获取新的购物车信息")
-	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-	if errGetCartInfo != nil {
-		return nil, nil, errors.New(errGetCartInfo.Error())
+	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 	return cartInfo, nil, nil
 }
@@ -2622,9 +2611,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 获取验证销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errors.New("销售账单不存在")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
 	switch {
@@ -2692,13 +2681,13 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil
 	})
 	if errUpdateDB != nil {
-		return nil, errors.New("更新数据失败")
+		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
-		return nil, errors.New(errGetCartInfo.Error())
+		return nil, errors.WithMessage(errGetCartInfo, "获取购物车信息失败")
 	}
 	return cartInfo, nil
 }
@@ -2712,9 +2701,9 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	}
 	// 获取验证销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errors.New("销售账单不存在")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
@@ -2755,13 +2744,13 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		return nil
 	})
 	if errUpdate != nil {
-		return nil, errors.New("操作失败")
+		return nil, errors.WithMessage(errUpdate, "操作失败")
 	}
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
-		return nil, errors.New(errGetCartInfo.Error())
+		return nil, errors.WithMessage(errGetCartInfo, "获取购物车信息失败")
 	}
 	return cartInfo, nil
 }
@@ -2775,9 +2764,9 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 	}
 	// 获取验证销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errors.New("销售账单不存在")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
@@ -2829,13 +2818,13 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		return nil
 	})
 	if errUpdateDB != nil {
-		return nil, errors.New("更新数据失败")
+		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if errGetCartInfo != nil {
-		return nil, errors.New(errGetCartInfo.Error())
+		return nil, errors.WithMessage(errGetCartInfo)
 	}
 	return cartInfo, nil
 }
@@ -2849,9 +2838,9 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	}
 	// 获取验证销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errors.New("销售账单不存在")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
@@ -2891,14 +2880,13 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 		return nil
 	})
 	if errUpdate != nil {
-		return nil, errors.New("操作失败")
+		return nil, errors.WithMessage(errUpdate, "操作失败")
 	}
 
 	// 获取新的购物车信息
-	var cartInfo *resp.ShopCart
-	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-	if errGetCartInfo != nil {
-		return nil, errors.New(errGetCartInfo.Error())
+	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 	return cartInfo, nil
 }
@@ -2910,8 +2898,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	// 通过deviceSn获取saleBillUuid
 	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
 	if errUuid != nil {
-		ctx.Log().Info("无法找到销售账单", zap.Error(errUuid))
-		return nil, errors.New("无法找到销售账单")
+		return nil, errors.WithMessage(errUuid, "无法找到销售账单")
 	}
 	ctx.Log().Debug("查询必点方案列表", zap.Any("saleBillUuid", saleBillUuid), zap.Any("deviceSn", deviceSn))
 
@@ -2951,14 +2938,12 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
 			if err != nil {
-				ctx.Log().Debug("自动添加必点商品失败", zap.Error(err))
-				return errors.New(err.Error())
+				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
 			return nil
 		})
 		if errTx != nil {
-			ctx.Log().Debug("自动添加必点商品失败", zap.Error(err))
-			return nil, errors.New(errTx.Error())
+			return nil, errors.WithMessage(errTx, "自动添加必点商品失败")
 		}
 	}
 
@@ -2990,7 +2975,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	deviceRepo := repository.NewDeviceRepo(db)
 	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
 	if errDevice != nil {
-		return nil, errors.New(errDevice.Error())
+		return nil, errors.WithMessage(errDevice)
 	}
 	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
@@ -3175,8 +3160,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
-		logger.Logger.Error("添加支付订单-获取货币设置失败", zap.Error(err))
-		return nil, errors.New("添加支付方式失败")
+		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
 	}
 
 	percent := paymentMethod.GetFeePercent()
@@ -3419,13 +3403,13 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	_, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo)
 	if errCreateSaleOrder != nil {
 		ctx.Log().Error("新建拆单失败", zap.Any("errCreateSaleOrder", errCreateSaleOrder))
-		return nil, errors.New("新建拆单失败")
+		return nil, errors.WithMessage(errCreateSaleOrder, "新建拆单失败")
 	}
 
 	cartInfo, errCartInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if errCartInfo != nil {
 		ctx.Log().Error("查询购物车信息失败", zap.Any("errCartInfo", errCartInfo))
-		return nil, errors.New("查询购物车信息失败")
+		return nil, errors.WithMessage(errCartInfo, "查询购物车信息失败")
 	}
 	return cartInfo, nil
 }
@@ -3686,7 +3670,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		return nil
 	})
 	if errUpdateDB != nil {
-		return nil, errors.New("更新数据失败")
+		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -3705,14 +3689,14 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
-		return false, errors.New("获取销售账单信息失败")
+		return false, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
 
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
 	if err != nil {
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return false, errors.New("获取购物车信息失败")
+		return false, errors.WithMessage(err, "获取购物车信息失败")
 	}
 
 	var mustPlanList []resp.InstantProductMustPlan
@@ -3744,7 +3728,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	ctx.Log().Debug("修改sale_bill表的show_must_plan", zap.Any("saleBill.ShowMustPlan", saleBill.ShowMustPlan))
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(req.SaleBillUuid); err != nil {
 		ctx.Log().Error("修改sale_bill表的show_must_plan失败", zap.Error(err))
-		return false, errors.New("确认必点商品失败")
+		return false, errors.WithMessage(err, "确认必点商品失败")
 	}
 
 	return true, nil
@@ -3812,7 +3796,7 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return nil, errors.New("获取购物车信息失败")
+		return nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 
 	return info, nil
@@ -3838,7 +3822,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
-		return nil, errors.New("获取销售账单信息失败")
+		return nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
 
 	firstSaleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
@@ -3880,7 +3864,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 			// 如果销售订单中没有商品，则直接删除订单
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
 				ctx.Log().Error("删除订单失败", zap.Error(err))
-				return nil, errors.New("删除订单失败")
+				return nil, errors.WithMessage(err, "删除订单失败")
 			}
 		}
 	}
@@ -3888,8 +3872,99 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return nil, errors.New("获取购物车信息失败")
+		return nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 
 	return info, nil
+}
+
+// OrderMemberCancel 不使用此会员
+func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMemberCancelReq) (*resp.ShopCart, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	saleOrder.SetMemberDiscountCancel()
+
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
+	}
+
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取购物车信息失败")
+	}
+
+	return info, nil
+}
+
+// OrderUseMember 使用会员优惠
+func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.ShopCart, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取会员信息
+	member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
+	if errMember != nil {
+		return nil, errMember
+	}
+
+	// 如果会员有密码的话，验证会员密码
+	if member.HasPassword() {
+		md5Password := cryptor.Md5String(request.Password)
+		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
+		if member.Password != md5Password {
+			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
+			return nil, errors.New("密码错误")
+		}
+	}
+
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	saleOrder.SetMemberDiscount(*member)
+
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
+	}
+
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取购物车信息失败")
+	}
+
+	return info, nil
+
 }

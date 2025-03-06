@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/shopspring/decimal"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -323,32 +324,18 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 }
 
 func (s *memberSrv) calcOrderAmount(ctx context.Context, member *model.Member, saleBill *model.SaleBill, saleOrder *model.SaleOrder) float64 {
-	var cardDiscountRate float64
-	if member.MemberCard != nil {
-		cardDiscountRate = member.MemberCard.Discount
-	}
-	var levelDiscountRate float64
-	if member.MemberLevel != nil {
-		levelDiscountRate = member.MemberLevel.Discount
-	}
-	saleOrder.ConsumerUuid = member.Uuid
-	saleOrder.MemberCardDiscountRate = cardDiscountRate
-	saleOrder.MemberDiscountRate = levelDiscountRate
+	saleOrder.SetMemberDiscount(*member)
 
 	for i, _ := range saleOrder.SaleOrderProducts {
 		saleOrderProduct := saleOrder.SaleOrderProducts[i]
 		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 			continue
 		}
-		saleOrderProduct.MemberCardDiscountRate = cardDiscountRate
-		saleOrderProduct.MemberDiscountRate = levelDiscountRate
 		calc := saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 		ctx.Log().Debug("商品会员优惠金额", zap.Any("discount", calc.MemberDiscountFee))
 	}
-	ctx.Log().Debug("获取会员优惠金额", zap.Any("levelDiscountRate", levelDiscountRate), zap.Any("cardDiscountRate", cardDiscountRate))
 	calc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
-	memberDiscountFee := calc.MemberDiscountFee
-	return memberDiscountFee
+	return decimal.NewFromFloat(calc.MemberDiscountFee).Round(2).InexactFloat64()
 }
 
 func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error {

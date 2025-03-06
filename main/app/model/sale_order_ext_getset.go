@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -76,6 +77,50 @@ func (model *SaleOrder) SetNil() {
 	model.ReturnOrders = nil
 	model.SaleOrderBuffetCustomerTypes = nil
 	model.SaleOrderBuffetDelayProducts = nil
+}
+
+// 设置会员折扣，并修改订单商品的折扣
+func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, cardDiscount float64) {
+	// 修改订单的会员信息
+	model.MemberDiscountRate = memberDiscount
+	model.MemberCardDiscountRate = cardDiscount
+	model.ConsumerUuid = memberUuid
+	fmt.Println("model.MemberDiscountRate", model.MemberDiscountRate)
+	fmt.Println("model.MemberCardDiscountRate", model.MemberCardDiscountRate)
+	fmt.Println("model.ConsumerUuid", model.ConsumerUuid)
+	// 对商品进行打折
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
+		saleOrderProduct.SetMemberDiscountInfo(model.MemberDiscountRate, model.MemberCardDiscountRate)
+		saleOrderProduct.SetUpdate()
+	}
+	// 对自助餐顾客进行打折. 顾客没有会员折扣
+}
+
+func (model *SaleOrder) SetMemberDiscount(member Member) {
+	// 修改订单的会员信息
+	model.setMemberDiscount(member.Uuid, member.GetMemberDiscountRate(), member.GetMemberCardDiscountRate())
+}
+
+// 设置取消会员折扣，并修改订单商品的折扣
+func (model *SaleOrder) SetMemberDiscountCancel() {
+	// 修改订单的会员信息
+	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价
+	model.MemberDiscountRate = discountRate     // 会员折扣，无折扣
+	model.MemberCardDiscountRate = discountRate // 会员卡折扣，无折扣
+	model.ConsumerUuid = 0                      // 会员ID置空
+	// 对商品进行打折
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
+		saleOrderProduct.SetMemberDiscountInfo(discountRate, discountRate)
+		saleOrderProduct.SetUpdate()
+	}
 }
 
 // 设置整单折扣，并修改订单商品的折扣

@@ -21,7 +21,8 @@ import (
 
 // InstantHandler 收银点餐处理程序
 type InstantHandler struct {
-	orderService service.IOrderSrv // 订单服务
+	orderService service.IOrderSrv  // 订单服务
+	memberSrv    service.IMemberSrv // 会员服务
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
@@ -911,6 +912,84 @@ func (h *InstantHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMemberDiscount 获取订单会员优惠
+// @Summary 获取订单会员优惠
+// @Description 获取订单会员优惠
+// @Tags 收银端.点餐.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @param member_uuid query integer true "会员Uuid"
+// @Success 200 {object} dto.Response{data=resp.MemberDiscountResp}
+// @Router /cashier/instant/order/member/discount [get]
+func (h *InstantHandler) GetMemberDiscount(c *gin.Context) {
+	var discountReq req.GetMemberDiscountReq
+	if err := c.ShouldBindQuery(&discountReq); err != nil {
+		helper.HandleValidationError(c, err, discountReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
+	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, order)
+}
+
+// OrderUseMember 确认使用会员优惠并验证密码
+// @Summary 确认使用会员优惠并验证密码
+// @Description 确认使用会员优惠并验证密码
+// @Tags 收银端.点餐.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CheckMemberPasswordReq true "确认使用会员优惠并验证密码"
+// @Success 200 {object} dto.Response{}
+// @Router /cashier/instant/order/member/confirm [post]
+func (h *InstantHandler) OrderUseMember(c *gin.Context) {
+	var passwordReq req.CheckMemberPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderUseMember(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderMemberCancel 不使用此会员
+// @Summary 不使用此会员
+// @Description 不使用此会员
+// @Tags 收银端.点餐.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderMemberCancelReq true "不使用此会员"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /cashier/instant/order/member/cancel [delete]
+func (h *InstantHandler) OrderMemberCancel(c *gin.Context) {
+	var passwordReq req.OrderMemberCancelReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderMemberCancel(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -923,10 +1002,11 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
-
+	memberSrv := service.NewMemberSrv(dbm)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
-		orderService: orderSrv, // 订单服务
+		orderService: orderSrv,  // 订单服务
+		memberSrv:    memberSrv, // 会员服务
 	}
 
 	// 需要认证
@@ -962,5 +1042,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/instant/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)
 		privateApi.DELETE("/instant/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)               // 删除所有子销售订单(撤销拆单)
+		privateApi.GET("/instant/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
+		privateApi.POST("/instant/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
+		privateApi.DELETE("/instant/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 	}
 }

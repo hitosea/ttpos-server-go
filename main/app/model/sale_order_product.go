@@ -282,9 +282,13 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 
 // 设置销售订单商品的折扣信息
 func (model *SaleOrderProduct) SetDiscountInfo(memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) {
+	model.SetMemberDiscountInfo(memberDiscountRate, memberCardDiscountRate)
+	model.CustomDiscountRate = customDiscountRate
+}
+
+func (model *SaleOrderProduct) SetMemberDiscountInfo(memberDiscountRate, memberCardDiscountRate float64) {
 	model.MemberDiscountRate = memberDiscountRate
 	model.MemberCardDiscountRate = memberCardDiscountRate
-	model.CustomDiscountRate = customDiscountRate
 }
 
 // 设置销售订单商品的必点信息，标记该商品是必点商品，标记该商品是某个必点方案的必点商品

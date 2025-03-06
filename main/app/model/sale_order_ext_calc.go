@@ -451,7 +451,7 @@ func (model *SaleOrder) calcMemberDiscountFee() float64 {
 				decimal.NewFromFloat(orderProduct.MemberDiscountFee))
 		}
 	}
-	return memberDiscountFee.InexactFloat64()
+	return memberDiscountFee.Round(2).InexactFloat64()
 }
 
 // 计算销售订单服务费消费税金额。销售订单服务费消费税金额=订单商品服务费消费税金额之和
