@@ -144,10 +144,13 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 	return ""
 }
 
-func (s *rechargeOrderSrv) getActionText(action string, refundType int, language string) string {
-
-	if action == constant.RechargeOrderActionRefund && refundType == 1 {
-		return i18n.Translate(language, "整单退款")
+func (s *rechargeOrderSrv) getActionText(log model.MemberRechargeOrderOperationLog, language string) string {
+	if log.Action == constant.RechargeOrderActionRefund {
+		var refundLog RefundLog
+		json.Unmarshal([]byte(log.Data), &refundLog)
+		if refundLog.RefundType == constant.ReturnOrderRefundTypeTotal {
+			return i18n.Translate(language, "整单退款")
+		}
 	}
 	texts := map[string]string{
 		constant.RechargeOrderActionGenerateOrder: i18n.Translate(language, "生成订单"),
@@ -158,7 +161,7 @@ func (s *rechargeOrderSrv) getActionText(action string, refundType int, language
 		constant.RechargeOrderActionRefund:        i18n.Translate(language, "部分退款"),
 	}
 
-	if text, ok := texts[action]; ok {
+	if text, ok := texts[log.Action]; ok {
 		return text
 	} else {
 		return i18n.Translate(language, "未知操作")

@@ -145,3 +145,15 @@ const (
 	DiscountTypePercent = 0 // 百分比折扣
 	DiscountTypeOff     = 1 // 百分比减免Off
 )
+
+// 退货类型
+const (
+	ReturnOrderRefundTypeTotal = 1 // 整单退
+	ReturnOrderRefundTypePart  = 2 // 部分退
+)
+
+// 退货单关联订单类型
+const (
+	ReturnOrderRelatedOrderTypeSaleOrder     = 0 //  销售订单
+	ReturnOrderRelatedOrderTypeRechargeOrder = 1 // 充值订单
+)
