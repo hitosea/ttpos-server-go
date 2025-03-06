@@ -195,3 +195,25 @@ func (req OrderChangeBuffetReq) Validate() error {
 	}
 	return nil
 }
+
+// OrderChangeBuffetClockReq 自助餐加钟
+type OrderChangeBuffetClockReq struct {
+	SaleBillUuid  uint64   `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64   `json:"sale_order_uuid"` // 销售订单UUID
+	DelayUuids    []uint64 `json:"delay_uuids"`     // 加钟uuid列表
+}
+
+func (req OrderChangeBuffetClockReq) Validate() error {
+	if req.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
+	}
+	if len(req.DelayUuids) <= 0 {
+		return errors.New("加钟uuid列表不能为空")
+	}
+	for _, delayUuid := range req.DelayUuids {
+		if delayUuid == 0 {
+			return errors.New("加钟uuid不能为空")
+		}
+	}
+	return nil
+}

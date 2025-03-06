@@ -1,11 +1,12 @@
 package model
 
 import (
-	"github.com/shopspring/decimal"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -79,6 +80,16 @@ func (model *SaleOrder) CalcGiftAmount() float64 {
 		amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
 	}
 	return amount
+}
+
+// SaleOrderBuffetDelayTimeTotal 总加钟时间
+func (model *SaleOrder) SaleOrderBuffetDelayTimeTotal() int64 {
+	delayTime := int64(0)
+	for _, saleOrderProduct := range model.SaleOrderBuffetDelayProducts {
+		// 商品的加钟时间
+		delayTime += saleOrderProduct.DelayTime
+	}
+	return delayTime
 }
 
 func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {

@@ -1,12 +1,13 @@
 package setting
 
 import (
-	"github.com/spf13/viper"
 	"strings"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/spf13/viper"
 )
 
 func (s *Srv) getIPAndPort() (string, string) {

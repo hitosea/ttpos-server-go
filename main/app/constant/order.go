@@ -113,6 +113,7 @@ const (
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"  // 撤销拆单
 	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
+	OrderClock               = "CLOCK"               // 加钟
 )
 
 const (
@@ -144,4 +145,16 @@ const (
 const (
 	DiscountTypePercent = 0 // 百分比折扣
 	DiscountTypeOff     = 1 // 百分比减免Off
+)
+
+// 退货类型
+const (
+	ReturnOrderRefundTypeTotal = 1 // 整单退
+	ReturnOrderRefundTypePart  = 2 // 部分退
+)
+
+// 退货单关联订单类型
+const (
+	ReturnOrderRelatedOrderTypeSaleOrder     = 0 //  销售订单
+	ReturnOrderRelatedOrderTypeRechargeOrder = 1 // 充值订单
 )

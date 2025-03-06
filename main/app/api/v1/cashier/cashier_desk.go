@@ -494,6 +494,35 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderChangePopulation 处理桌台订单自助餐加钟
+// @Summary 桌台订单自助餐加钟
+// @Description 桌台订单自助餐加钟
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderChangeBuffetClockReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/buffet/clock [post]
+func (h *DeskHandler) OrderChangeBuffetClock(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangeBuffetClockReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderService.OrderChangeBuffetClock(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderProductRemark 处理桌台订单商品备注
 // @Summary 桌台订单商品备注
 // @Description 桌台订单商品备注
@@ -1084,6 +1113,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消桌台订单所有优惠折扣，包括改价、打折、抹零
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
+		privateApi.POST("/desk/order/buffet/clock", wrapper.OrderChangeBuffetClock)                           // 桌台订单调整自助餐
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品

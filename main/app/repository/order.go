@@ -30,6 +30,7 @@ type IOrderRepo interface {
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
 	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                             // 删除销售订单自助餐顾客类型
+	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)     // 创建销售订单自助餐加钟
 	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
 	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
@@ -123,6 +124,15 @@ func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) erro
 		return fmt.Errorf("DeleteSaleOrderBuffetCustomerType: %v", err)
 	}
 	return nil
+}
+
+// CreateSaleOrderBuffetDelayProduct 创建销售订单自助餐加钟
+func (r *orderRepo) CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error) {
+	err := r.db.Create(&model).Error
+	if err != nil {
+		return model, fmt.Errorf("CreateSaleOrderBuffetDelayProduct: %v", err)
+	}
+	return model, nil
 }
 
 // GetOrderListWithPagination 获取订单列表
@@ -634,6 +644,15 @@ func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid
 						if saleOrderProductUuid > 0 {
 							db = db.Where("uuid = ?", saleOrderProductUuid)
 						}
+						return db
+					},
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
 						return db
 					},
 				},

@@ -81,7 +81,7 @@ type BuffetProduct struct {
 type BuffetDelay struct {
 	BaseModel
 	Name      string  `gorm:"default:'';column:name;comment:'自助餐加钟价格名称'"`
-	DelayTime uint    `gorm:"default:0;column:delay_time;comment:'加钟时间(分钟)'"`
+	DelayTime int64   `gorm:"default:0;column:delay_time;comment:'加钟时间(分钟)'"`
 	Price     float64 `gorm:"default:0;column:price;comment:'价格'"`
 	Status    uint    `gorm:"default:0;column:status;comment:'状态 0-禁用 1-启用'"`
 }

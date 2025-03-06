@@ -500,6 +500,11 @@ func (model *SaleBill) BuffetRemainingSeconds() int64 {
 	return remainingTime
 }
 
+// 判断是否超时
+func (model *SaleBill) BuffetIsTimeOut() bool {
+	return model.BuffetRemainingSeconds() == 0
+}
+
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
 	if operation != constant.OrderSettle && model.IsLock == 1 {
@@ -784,7 +789,8 @@ type SaleOrderBuffetDelayProduct struct {
 	Name string `gorm:"default:'';column:name;comment:'自助餐加钟商品名称，下单时固定不受后台改变'"`
 	// 废弃，直接使用桌台人数即可
 	//Num   uint    `gorm:"default:0;column:num;comment:'数量'"`
-	Price float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
+	Price     float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
+	DelayTime int64   `gorm:"column:delay_time;type:decimal(12,2);default:0;comment:'加钟时间'"`
 
 	// 关联ID字段
 	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`

@@ -746,7 +746,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 	logs := make([]resp.RechargeOrderOperationLogItem, 0, len(order.RechargeOrderOperationLogs))
 	for _, log := range order.RechargeOrderOperationLogs {
 		actionDesc := s.getActionDescription(log, ctx.GetLanguage())
-		actionText := s.getActionText(log.Action, 0, ctx.GetLanguage())
+		actionText := s.getActionText(log, ctx.GetLanguage())
 		var desc string
 		if actionDesc != "" {
 			desc = actionText + ": " + actionDesc
@@ -931,7 +931,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		// 存在现金支付订单
 		for _, paymentOrder := range order.PaymentOrders {
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-				refundCashMoney = paymentOrder.Amount - order.ChargeDue
+				refundCashMoney = utils.DecimalSub(paymentOrder.Amount, order.ChargeDue)
 			}
 			// 标记删除
 			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
@@ -964,10 +964,10 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		}
 
 		returnOrder, err := repository.NewReturnOrderRepo(tx).CreateReturnOrder(model.ReturnOrder{
-			RelatedOrderType:    1,
+			RelatedOrderType:    constant.ReturnOrderRelatedOrderTypeRechargeOrder, // 充值订单退款
 			RelatedOrderUuid:    order.Uuid,
 			RelatedOrderNo:      order.OrderNo,
-			ReturnType:          1,
+			ReturnType:          constant.ReturnOrderRefundTypeTotal, // 整单退
 			RefundAmount:        order.Amount,
 			ReturnOrderAmounts:  returnOrderAmounts,
 			IsReverseSettlement: 1,
@@ -1035,7 +1035,7 @@ func (s *rechargeOrderSrv) getPaymentRecords(paymentOrders []model.PaymentOrder,
 		for _, returnOrder := range returnOrders { // 减去退款金额
 			for _, amount := range returnOrder.ReturnOrderAmounts {
 				if amount.PaymentMethodUuid == paymentOrder.PaymentMethodUuid {
-					refundableAmount = refundableAmount - amount.Amount
+					refundableAmount = utils.DecimalSub(refundableAmount, amount.Amount)
 				}
 			}
 		}
@@ -1094,6 +1094,12 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if order.Member == nil {
 		return errors.New("用户不存在")
 	}
+	if refundReq.RefundType == constant.ReturnOrderRefundTypeTotal { // 整单退款
+		refundReq.RefundMoney = utils.DecimalSub(order.Amount, order.RefundMoney)
+	}
+	if refundReq.RefundMoney <= 0 {
+		return errors.New("退款金额错误")
+	}
 	paymentRecords := s.getPaymentRecords(order.PaymentOrders, order.ReturnOrders)
 	// 可退款金额
 	var refundableAmount float64
@@ -1105,7 +1111,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	}
 	// 要退款金额
 	refundMoney := refundReq.RefundMoney
-	if refundableAmount < refundMoney {
+	if refundMoney > refundableAmount {
 		return errors.New("退款金额不能大于实付金额")
 	}
 	if refundMoney > order.Member.Balance {
@@ -1160,7 +1166,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		}
 		// 创建退货单
 		returnOrder, err := repository.NewReturnOrderRepo(tx).CreateReturnOrder(model.ReturnOrder{
-			RelatedOrderType:   1,
+			RelatedOrderType:   constant.ReturnOrderRelatedOrderTypeRechargeOrder,
 			RelatedOrderUuid:   order.Uuid,
 			RelatedOrderNo:     order.OrderNo,
 			ReturnType:         refundReq.RefundType,
