@@ -565,7 +565,12 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Router /cashier/desk/order/cart/info [get]
 func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	saleBillUuid, err := strconv.ParseUint(c.Query("sale_bill_uuid"), 10, 64)
+	saleBillUuidStr := c.Query("sale_bill_uuid")
+	if saleBillUuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("账单ID不能为空"))
+		return
+	}
+	saleBillUuid, err := strconv.ParseUint(saleBillUuidStr, 10, 64)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -650,7 +655,6 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 // @Router /cashier/desk/order/cart/cooking [post]
 func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到桌台页面送厨购物车商品接口请求")
 	// 绑定请求参数
 	params := req.OrderCartProductCookingReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -659,14 +663,14 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
 	// 送厨购物车商品
-	res, errRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	res, checkRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if errRes != nil {
-		ctx.Log().Debug("送厨检查不通过", zap.Any("res", errRes))
-		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes)
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))

@@ -379,7 +379,7 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 	return nil // todo
 }
 
-func (model *SaleOrderProduct) AttributeName() *dto.LocaleResponse {
+func (model *SaleOrderProduct) GetAttributeName() *dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse

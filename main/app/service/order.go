@@ -84,6 +84,7 @@ type IOrderSrv interface {
 
 // orderSrv 订单服务结构
 type orderSrv struct {
+	bus         *event.SystemEventBus
 	dbm         *database.DBManager // 数据库管理器
 	lock        lock.Lock
 	localeSrv   ILocaleSrv
@@ -99,6 +100,7 @@ func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setti
 // NewOrderSrvImpl 创建订单服务实例实现
 func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv) IOrderSrv {
 	return &orderSrv{
+		bus:         event.NewSystemBus(),
 		dbm:         dbm,
 		lock:        lock.NewSystemLock(),
 		localeSrv:   localeSrv,
@@ -2064,7 +2066,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: *saleOrderProduct.AttributeName(),
+					LocaleAttributeName: *saleOrderProduct.GetAttributeName(),
 					Num:                 saleOrderProduct.Num,
 					SalePrice:           saleOrderProduct.GetSalePrice(),
 					DiscountPrice:       saleOrderProduct.GetPrice(),
@@ -2656,6 +2658,28 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
+
+	// 发起“送厨”操作的事件
+	products := make(event.Products, 0)
+	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+		products = append(products, event.OrderProduct{
+			OrderProductId: unCookingSaleOrderProduct.Uuid,
+			ProductId:      unCookingSaleOrderProduct.ProductPackageUuid,
+			ProductName:    unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    *unCookingSaleOrderProduct.GetAttributeName(),
+			TotalNum:       unCookingSaleOrderProduct.Num,
+		})
+	}
+	s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+		BasePayload: event.BasePayload{
+			CompanyUuid:   ctx.GetCompanyUuid(),
+			Source:        ctx.GetSource(),
+			SaleBillUuid:  req.SaleBillUuid,
+			SaleOrderUuid: req.SaleOrderUuid,
+			OperatorUuid:  int64(ctx.GetStaffUuid()),
+		},
+		Products: products,
+	})
 	return cartInfo, nil, nil
 }
 
@@ -2673,7 +2697,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 			FirstCategoryUuid:     firstCategoryUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
-			ProductAttributeNames: unCookingSaleOrderProduct.AttributeName().GetLocale(ctx.GetLanguage()),
+			ProductAttributeNames: unCookingSaleOrderProduct.GetAttributeName().GetLocale(ctx.GetLanguage()),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
 			//HasMaterial:              unCookingSaleOrderProduct, todo
