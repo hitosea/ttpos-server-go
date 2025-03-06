@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -13,7 +15,7 @@ import (
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
-	GetClientDeskList(Status, pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]model.Desk, error)
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) //
@@ -62,23 +64,44 @@ func (r *deskRepo) GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error
 }
 
 // GetClientDeskList 获取客户端桌台列表，排除逻辑删除的桌台，排除被禁用的桌台
-func (r *deskRepo) GetClientDeskList(Status, pageNo, pageSize int) ([]model.Desk, int64, error) {
+func (r *deskRepo) GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error) {
 	var desks []model.Desk
 	var total int64
 
-	query := r.db.Model(&model.Desk{}).Preload("SaleBill").Where("delete_time = ?", 0).Where("is_disable = ?", constant.DeskEnable)
+	tablePrefix := config.Database.TablePrefix
 
-	if Status != -1 {
-		query = query.Where("status = ?", Status)
+	query := r.db.Model(&model.Desk{}).
+		Joins(fmt.Sprintf("LEFT JOIN %ssale_bill ON %sdesk.sale_bill_uuid = %ssale_bill.uuid", tablePrefix, tablePrefix, tablePrefix)).
+		Preload("SaleBill").
+		Where(fmt.Sprintf("%sdesk.delete_time = ?", tablePrefix), 0).
+		Where(fmt.Sprintf("%sdesk.is_disable = ?", tablePrefix), constant.DeskEnable)
+
+	if status != -1 {
+		if status == 2 {
+			query = query.Where(fmt.Sprintf("%sdesk.status = ?", tablePrefix), constant.DeskStatusOpen)
+			query = query.Where(fmt.Sprintf("%sdesk.sale_bill_uuid <> ?", tablePrefix), 0)
+		} else {
+			query = query.Where(fmt.Sprintf("%sdesk.status = ?", tablePrefix), status)
+		}
 	}
 
-	// 获取总数
+	if isBuffet != -1 {
+		if isBuffet == 1 {
+			query = query.Where(fmt.Sprintf("%ssale_bill.is_buffet = ?", tablePrefix), 1)
+		} else {
+			query = query.Where(fmt.Sprintf("%ssale_bill.is_buffet = ?", tablePrefix), 0)
+		}
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
 
-	// 获取分页数据
-	err := query.Order("sort asc").Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&desks).Error
+	err := query.Order(fmt.Sprintf("%sdesk.sort asc", tablePrefix)).
+		Select(fmt.Sprintf("%sdesk.*", tablePrefix)).
+		Offset((pageNo - 1) * pageSize).
+		Limit(pageSize).
+		Find(&desks).Error
 
 	return desks, total, errors.WithMessage(err)
 }

@@ -97,7 +97,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 // GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
-	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.Status, req.PageNo, req.PageSize)
+	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.Status, req.IsBuffet, req.PageNo, req.PageSize)
 	if err != nil {
 		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
 	}

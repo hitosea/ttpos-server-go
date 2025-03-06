@@ -14,7 +14,8 @@ var DeskReqMessage = map[string]string{
 
 // DeskListReq 桌台列表查询
 type DeskListReq struct {
-	Status      int `form:"status,default=-1"` // 桌台状态, -1=全都、 0=未开台、1=已开台
+	Status      int `form:"status,default=-1"`    // 桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台
+	IsBuffet    int `form:"is_buffet,default=-1"` // 是否是自助餐: -1=全都、0=否、1=是
 	dto.PageReq     // 分页参数
 }
 
