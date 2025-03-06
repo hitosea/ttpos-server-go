@@ -72,7 +72,7 @@ func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct
 // 设置为空。为了更新数据库数据时，不更新关联对象
 func (model *SaleOrder) SetNil() {
 	model.PaymentOrders = nil
-	model.Member = Member{}
+	model.Member = nil
 	model.SaleOrderProducts = nil
 	model.ReturnOrders = nil
 	model.SaleOrderBuffetCustomerTypes = nil

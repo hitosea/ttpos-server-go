@@ -744,8 +744,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 			}
 		}
-		if order.Member.Nickname != "" && !slices.Contains(totalMemberNames, order.Member.Nickname) {
-			totalMemberNames = append(totalMemberNames, order.Member.Nickname)
+		if order.GetMemberName() != "" && !slices.Contains(totalMemberNames, order.GetMemberName()) {
+			totalMemberNames = append(totalMemberNames, order.GetMemberName())
 		}
 		if order.ConsumerUuid != 0 {
 			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(order.ConsumerUuid, 10))
@@ -792,7 +792,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			PaymentAmount: order.PaymentAmount - order.GetTotalRefundAmount(),
 			RefundAmount:  order.GetTotalRefundAmount(),
 			PayTypeName:   strings.Join(payTypeNames, ","),
-			MemberName:    order.Member.Nickname,
+			MemberName:    order.GetMemberName(),
 			MemberUuid:    order.ConsumerUuid,
 			Products:      products,
 		}
@@ -3146,13 +3146,15 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		return nil, errors.New("系统没有支付方式")
 	}
 	var memberInfo *resp.MemberInfo
-	memberInfo = &resp.MemberInfo{
-		Uuid:     saleOrder.Member.Uuid,
-		Nickname: saleOrder.Member.Nickname,
-		Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
-		Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
-		Balance:  saleOrder.Member.Balance,
-		Points:   saleOrder.Member.Point,
+	if saleOrder.Member != nil {
+		memberInfo = &resp.MemberInfo{
+			Uuid:     saleOrder.ConsumerUuid,
+			Nickname: saleOrder.GetMemberName(),
+			Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
+			Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
+			Balance:  saleOrder.Member.Balance,
+			Points:   saleOrder.Member.Point,
+		}
 	}
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {
@@ -3230,6 +3232,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			amounts = append(amounts, amount)
 		}
 	}
+
 	infoResp := &resp.InstantOrderPaymentInfoResp{
 		MemberInfo:     memberInfo,
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},

@@ -59,11 +59,18 @@ type SaleOrder struct {
 
 	// 关联对象
 	PaymentOrders                []PaymentOrder                 `gorm:"foreignKey:RelatedUuid;references:uuid"`
-	Member                       Member                         `gorm:"foreignKey:ConsumerUuid;references:uuid"`
+	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+func (model *SaleOrder) GetMemberName() string {
+	if model.Member == nil {
+		return ""
+	}
+	return model.Member.Nickname
 }
 
 // CalcGiftAmount 计算赠菜金额. 赠菜金额=销售订单赠菜商品.总最终单价之和
