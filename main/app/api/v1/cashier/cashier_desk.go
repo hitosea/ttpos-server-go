@@ -520,7 +520,7 @@ func (h *DeskHandler) OrderChangeBuffetClock(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, info, "加钟成功")
 }
 
 // OrderProductRemark 处理桌台订单商品备注
