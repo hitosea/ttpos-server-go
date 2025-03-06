@@ -55,3 +55,9 @@ const (
 	PaymentOrderRelatedTypeSaleOrder     = 0 // 销售订单
 	PaymentOrderRelatedTypeRechargeOrder = 1 // 充值订单
 )
+
+const (
+	PaymentMethodShowAll      = "all"
+	PaymentMethodShowCheckout = "checkout"
+	PaymentMethodShowRecharge = "recharge"
+)

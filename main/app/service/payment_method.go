@@ -18,7 +18,7 @@ import (
 type IPaymentMethodSrv interface {
 	IsEnabled(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否已启用
 	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64             // 计算税费
-	GetList(ctx context.Context) resp.PaymentMethodList                                                         // 获取支付方式列表
+	GetList(ctx context.Context, typ string) resp.PaymentMethodList                                             // 获取支付方式列表
 }
 
 // paymentMethodSrv  支付方式服务结构体
@@ -76,21 +76,48 @@ func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.Pay
 }
 
 // GetList 获取支付方式列表
-func (s *paymentMethodSrv) GetList(ctx context.Context) resp.PaymentMethodList {
+func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.PaymentMethodList {
+	if !slices.Contains([]string{constant.PaymentMethodShowAll, constant.PaymentMethodShowRecharge, constant.PaymentMethodShowCheckout}, typ) {
+		return resp.PaymentMethodList{}
+	}
 	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	companySetting := ctx.GetCompanySetting()
 	opts := []repository.DBOption{
 		paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
 	}
 	if ctx.GetSource() == constant.SourceCashier {
-		opts = append(opts, paymentMethodRepo.WhereCashier())
+		if typ != constant.PaymentMethodShowAll {
+			switch typ {
+			case constant.PaymentMethodShowRecharge:
+				opts = append(opts, paymentMethodRepo.WhereCashierMemberRecharge())
+			case constant.PaymentMethodShowCheckout:
+				opts = append(opts, paymentMethodRepo.WhereCashier())
+			}
+		}
 	} else if ctx.GetSource() == constant.SourceAssistant {
-		opts = append(opts, paymentMethodRepo.WhereAssistant())
+		if typ != constant.PaymentMethodShowAll {
+			switch typ {
+			case constant.PaymentMethodShowRecharge:
+				return resp.PaymentMethodList{}
+			case constant.PaymentMethodShowCheckout:
+				opts = append(opts, paymentMethodRepo.WhereAssistant())
+			}
+		}
 	}
 	opts = append(opts, paymentMethodRepo.WithLogoFile(), paymentMethodRepo.WithQrcodeFile())
 	paymentMethods := paymentMethodRepo.GetPaymentMethods(opts...)
 
 	paymentMethodItems := make([]resp.PaymentMethodItem, 0, len(paymentMethods))
 	for _, method := range paymentMethods {
+		// 不显示免单
+		if method.Code == constant.PaymentMethodCodeFreePay {
+			continue
+		}
+		// 充值不显示余额
+		if method.Code == constant.PaymentMethodCodeBalance &&
+			(companySetting.IsOpenMember != 1 || typ == constant.PaymentMethodShowRecharge) {
+			continue
+		}
 		var logo, qrcode string
 		if method.QrcodeFile != nil {
 			logo = method.LogoFile.GetUrl()
