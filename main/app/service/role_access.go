@@ -58,11 +58,11 @@ func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 	} else {
 		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuidsByStaffUuid(staff.Uuid)
 		if err != nil {
-			return nil, companySetting, errors.New("获取用户角色失败")
+			return nil, companySetting, errors.WithMessage(err, "获取用户角色失败")
 		}
 		accessUuids, err := accessRepo.GetAccessUuids(roleUuids)
 		if err != nil {
-			return nil, companySetting, errors.New("获取角色权限失败")
+			return nil, companySetting, errors.WithMessage(err, "获取角色权限失败")
 		}
 		options = append(options, accessRepo.WhereUuids(accessUuids))
 	}
@@ -70,7 +70,7 @@ func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 	dbPermissions, err := accessRepo.GetPermissions(options...)
 
 	if err != nil {
-		return nil, companySetting, errors.New("获取权限失败")
+		return nil, companySetting, errors.WithMessage(err, "获取权限失败")
 	}
 
 	return dbPermissions, companySetting, nil

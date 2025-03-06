@@ -198,7 +198,7 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 				return nil
 			}); err != nil {
 				ctx.Log().Error("修改充值订单失败", zap.Error(err))
-				return orderResp, errors.New("修改充值订单失败")
+				return orderResp, errors.WithMessage(err, "修改充值订单失败")
 			}
 
 			// 返回充值订单信息
@@ -241,7 +241,7 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 		return nil
 	})
 	if err != nil {
-		return orderResp, errors.New("创建充值订单失败")
+		return orderResp, errors.WithMessage(err, "创建充值订单失败")
 	}
 	return s.GetPendingRechargeOrder(companyUuid), nil
 }
@@ -316,13 +316,13 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		})
 		if err != nil {
 			logger.Logger.Error("添加支付订单-更新支付方式", zap.Error(err))
-			return orderResp, errors.New("添加支付方式失败")
+			return orderResp, errors.WithMessage(err, "添加支付方式失败")
 		}
 	} else { // 不存在则创建
 		currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 		if err != nil {
 			logger.Logger.Error("添加支付订单-获取货币设置失败", zap.Error(err))
-			return orderResp, errors.New("添加支付方式失败")
+			return orderResp, errors.WithMessage(err, "添加支付方式失败")
 		}
 		_, err = paymentOrderRepo.Create(model.PaymentOrder{
 			PaymentMethodName:    paymentMethod.PaymentName,
@@ -338,7 +338,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		})
 		if err != nil {
 			logger.Logger.Error("添加支付订单-创建支付订单", zap.Error(err))
-			return orderResp, errors.New("添加支付方式失败")
+			return orderResp, errors.WithMessage(err, "添加支付方式失败")
 		}
 	}
 

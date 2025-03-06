@@ -60,7 +60,7 @@ func (h *H5OrderHandler) GetH5OrderList(c *gin.Context) {
 func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err, "参数错误"))
 	}
 	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetCompanyUuid(c), orderUuid)
 	if err != nil {
@@ -83,7 +83,7 @@ func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
 	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err, "参数错误"))
 	}
 
 	err = h.h5OrderSrv.RejectH5Order(helper.GetContext(c), orderUuid)
@@ -107,7 +107,7 @@ func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
 func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err, "参数错误"))
 	}
 	err = h.h5OrderSrv.AcceptH5Order(helper.GetContext(c), orderUuid)
 	if err != nil {

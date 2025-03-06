@@ -1,11 +1,11 @@
 package service
 
 import (
-	"errors"
 	"slices"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
@@ -70,7 +70,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 
 	// 处理错误
 	if err != nil {
-		return cashier_resp.ProductListWithPaginationResp{}, errors.New("获取产品列表失败")
+		return cashier_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
 	}
 
 	// 转换为响应对象
@@ -189,7 +189,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCa
 		repository.NewCommonRepo().SortWithID("DESC"),
 	)
 	if err != nil {
-		return cashier_resp.ProductCategoryListResp{}, errors.New("获取产品类别列表失败")
+		return cashier_resp.ProductCategoryListResp{}, errors.WithMessage(err, "获取产品类别列表失败")
 	}
 
 	// 根据parent_uuid分组转换为响应对象

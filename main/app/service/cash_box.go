@@ -60,13 +60,13 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 			if err = cashBoxRepo.Update(cashBox.Uuid, map[string]any{
 				"balance": amount + cashBox.Balance,
 			}); err != nil {
-				return errors.New("更新钱箱失败")
+				return errors.WithMessage(err, "更新钱箱失败")
 			}
 		} else { // 不存在钱箱
 			if cashBox, err = cashBoxRepo.Create(model.CashBox{
 				Balance: amount,
 			}); err != nil {
-				return errors.New("更新钱箱失败")
+				return errors.WithMessage(err, "更新钱箱失败")
 			}
 		}
 

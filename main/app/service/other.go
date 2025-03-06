@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"log"
 	"time"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/captcha"
@@ -52,7 +52,7 @@ func (s *otherSrv) GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoo
 	productRepo := base.NewReturnFoodReasonRepo(db)
 	list, err := productRepo.GetReturnFoodReasonList()
 	if err != nil {
-		return nil, errors.New("获取退菜原因列表失败")
+		return nil, errors.WithMessage(err, "获取退菜原因列表失败")
 	}
 
 	result := make([]resp.ReturnFoodReasonResp, 0, len(list))
@@ -74,7 +74,7 @@ func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFre
 	productRepo := base.NewGiftOrFreeOrderReasonRepo(db)
 	list, err := productRepo.GetGiftOrFreeOrderReasonList()
 	if err != nil {
-		return nil, errors.New("获取免单原因列表失败")
+		return nil, errors.WithMessage(err, "获取免单原因列表失败")
 	}
 
 	result := make([]resp.GiftOrFreeOrderReasonResp, 0, len(list))

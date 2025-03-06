@@ -114,9 +114,9 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 
 		deviceRepo := repository.NewDeviceRepo(db)
 		// 获取设备uuid
-		device, errGetDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
-		if errGetDevice != nil {
-			return errors.New("获取设备uuid失败")
+		device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
+		if err != nil {
+			return errors.WithMessage(err, "获取设备uuid失败")
 		}
 
 		// 判断是否有待支付、未挂单的订单
@@ -136,16 +136,16 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建订单编号
-		orderNo, createErr := s.createOrderNo(tx, constant.OrderSourceInstant)
-		if createErr != nil {
-			ctx.Log().Error("订单编号生成失败", zap.Error(createErr))
-			return errors.New("订单编号生成失败")
+		orderNo, err := s.createOrderNo(tx, constant.OrderSourceInstant)
+		if err != nil {
+			ctx.Log().Error("订单编号生成失败", zap.Error(err))
+			return errors.WithMessage(err, "订单编号生成失败")
 		}
 
 		serialNo, err := s.createInstantOrderSerialNo(tx)
 		if err != nil {
 			ctx.Log().Error("订单序号生成失败", zap.Error(err))
-			return errors.New("订单序号生成失败")
+			return errors.WithMessage(err, "订单序号生成失败")
 		}
 		// 创建销售账单
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
@@ -441,9 +441,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
-	desk, errGetDesk := repository.NewDeskRepo(db).GetDeskRecord(req.DeskUuid)
-	if errGetDesk != nil {
-		return resp.CreateDeskOrderResp{}, errors.New("无法找到空闲桌台")
+	desk, err := repository.NewDeskRepo(db).GetDeskRecord(req.DeskUuid)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "无法找到空闲桌台")
 	}
 	saleBillUuid, _ := utils.GetID()
 	desk.SetOpenDesk(saleBillUuid)

@@ -2,10 +2,10 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/encrypt"
@@ -36,7 +36,7 @@ func (s *encryptSrv) GetServerPublicKey(clientId string, encryptType string) (*r
 		var keyPair encrypt.KeyPair
 		err := json.Unmarshal([]byte(data.(string)), &keyPair)
 		if err != nil {
-			return nil, errors.New("获取服务端公钥失败")
+			return nil, errors.WithMessage(err, "获取服务端公钥失败")
 		}
 		return &resp.ServerKey{
 			Type:      encryptType,
@@ -50,7 +50,7 @@ func (s *encryptSrv) GetServerPublicKey(clientId string, encryptType string) (*r
 	case "jsencrypt":
 		var err error
 		if keyPair, err = encrypt.GenerateRSAKeyPairPEM(2048); err != nil {
-			return nil, errors.New("获取服务端公钥失败")
+			return nil, errors.WithMessage(err, "获取服务端公钥失败")
 		}
 	default:
 		return nil, errors.New("获取服务端公钥失败")

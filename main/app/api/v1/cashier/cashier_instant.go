@@ -29,7 +29,7 @@ func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
 	// 创建订单
 	res, err := h.orderService.CreateInstantOrder(ctx)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("创建订单失败"))
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "创建订单失败"))
 		return
 	}
 	helper.Success(c, res)

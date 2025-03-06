@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 )
@@ -48,7 +48,7 @@ func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutLi
 		productRepo.WithProductFlavorMultiLanguageName())
 
 	if err != nil {
-		return resp.SoldOutPaginationResp{}, errors.New("获取沽清商品列表失败")
+		return resp.SoldOutPaginationResp{}, errors.WithMessage(err, "获取沽清商品列表失败")
 	}
 
 	soldOuts := make([]resp.SoldOut, 0, len(boms))
@@ -77,7 +77,7 @@ func (s *soldOutSrv) CancelSoldOut(companyUuid uint64, productBomUuid uint64) er
 	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(productBomUuid)}, map[string]any{
 		"is_sold_out": 0,
 	}); err != nil {
-		return errors.New("取消沽清商品失败")
+		return errors.WithMessage(err, "取消沽清商品失败")
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
 	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomIsSoldOut()}, map[string]any{
 		"is_sold_out": 0,
 	}); err != nil {
-		return errors.New("全部取消沽清商品失败")
+		return errors.WithMessage(err, "全部取消沽清商品失败")
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, map[string]any{
 			"is_sold_out": soldOutMap[*item.IsSoldOut],
 		}); err != nil {
-			return errors.New("沽清商品失败")
+			return errors.WithMessage(err, "沽清商品失败")
 		}
 	}
 	return nil

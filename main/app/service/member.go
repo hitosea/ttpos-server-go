@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
@@ -102,7 +102,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		MemberLevelUuid: addMemberReq.LevelUuid,
 	}); err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
-		return errors.New("添加会员失败")
+		return errors.WithMessage(err, "添加会员失败")
 	}
 	return nil
 }
@@ -193,7 +193,7 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
 			"point": utils.DecimalAdd(member.Point, changeReq.Points),
 		}); err != nil {
-			return errors.New("处理会员积分失败")
+			return errors.WithMessage(err, "处理会员积分失败")
 		}
 		// 添加积分日志
 		if _, err := repository.NewMemberPointLogRepo(tx).Create(model.MemberPointLog{
@@ -202,7 +202,7 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 			Value:      changeReq.Points,
 			Describe:   changeReq.Describe,
 		}); err != nil {
-			return errors.New("处理会员积分失败")
+			return errors.WithMessage(err, "处理会员积分失败")
 		}
 		return nil
 	}
@@ -238,7 +238,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 			"gift_balance":                utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
 			"accumulated_recharge_amount": utils.DecimalAdd(member.AccumulatedRechargeAmount, changeReq.Money, changeReq.GiftMoney),
 		}); err != nil {
-			return errors.New("更新会员余额失败")
+			return errors.WithMessage(err, "更新会员余额失败")
 		}
 		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 			MemberUuid: changeReq.Uuid,
@@ -247,7 +247,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 			GiftMoney:  changeReq.GiftMoney,
 			Describe:   changeReq.Describe,
 		}); err != nil {
-			return errors.New("处理会员余额失败")
+			return errors.WithMessage(err, "处理会员余额失败")
 		}
 		return nil
 	}
@@ -284,15 +284,15 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 		return nil, errMember
 	}
 	// 获取账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
-	if errSaleBill != nil {
-		ctx.Log().Error("查询销售账单失败", zap.Error(errSaleBill))
-		return nil, errors.New("查询销售账单失败")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
+	if err != nil {
+		ctx.Log().Error("查询销售账单失败", zap.Error(err))
+		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 	// 获取销售账单信息
 	saleOrder := saleBill.GetSaleOrder(discountReq.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
+		return nil, errors.WithMessage(err, "销售订单不存在")
 	}
 
 	// 计算销售订单的金额
@@ -370,10 +370,10 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	}
 
 	// 获取账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
-	if errSaleBill != nil {
-		ctx.Log().Error("查询销售账单失败", zap.Error(errSaleBill))
-		return errors.New("查询销售账单失败")
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(discountReq.SaleBillUuid)
+	if err != nil {
+		ctx.Log().Error("查询销售账单失败", zap.Error(err))
+		return errors.WithMessage(err, "查询销售账单失败")
 	}
 
 	// 获取销售账单信息
@@ -386,7 +386,7 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	memberDiscountFee := s.calcOrderAmount(ctx, member, saleBill, saleOrder)
 	ctx.Log().Debug("选定会员,优惠金额", zap.Any("memberDiscountFee", memberDiscountFee), zap.Any("saleOrder.MemberDiscountFee", saleOrder.MemberDiscountFee))
 
-	errUpdate := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
 		for index, _ := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[index]
@@ -405,9 +405,9 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 		}
 		return nil
 	})
-	if errUpdate != nil {
-		ctx.Log().Error("更新销售订单失败", zap.Error(errUpdate))
-		return errors.New("更新销售订单失败")
+	if err != nil {
+		ctx.Log().Error("更新销售订单失败", zap.Error(err))
+		return errors.WithMessage(err, "更新销售订单失败")
 	}
 
 	return nil

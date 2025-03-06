@@ -52,7 +52,7 @@ func (s *rechargePrintSrv) PrintTicket(ctx context.Context, printReq PrinterTick
 	}
 	settingPrinterInfo, err := s.settingSrv.GetPrinterInfo(ctx, printerSetting, printReq.DeviceId)
 	if err != nil {
-		return printerLogData, errors.New("未开启打印, 请联系管理员")
+		return printerLogData, errors.WithMessage(err, "未开启打印, 请联系管理员")
 	}
 	cashierBindKey := settingPrinterInfo.CashierBindKey
 
@@ -95,7 +95,7 @@ func (s *rechargePrintSrv) PrintTicket(ctx context.Context, printReq PrinterTick
 			FirstExecution:  firstExecution,
 		}, printReq.DeviceId)
 		if err != nil {
-			return printerLogData, errors.New("打印失败，未连接打印机")
+			return printerLogData, errors.WithMessage(err, "打印失败，未连接打印机")
 		}
 		return printerLogData, nil
 	}

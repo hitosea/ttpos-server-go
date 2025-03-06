@@ -49,7 +49,7 @@ func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.Unproce
 	calls, total, err := callRepo.PaginateGet(listReq.PageNo, listReq.PageSize,
 		callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
-		return res, errors.New("获取呼叫列表失败")
+		return res, errors.WithMessage(err, "获取呼叫列表失败")
 	}
 	callItems := make([]resp.UnprocessedCallItem, 0, len(calls))
 	for _, call := range calls {
@@ -75,7 +75,7 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd), printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
 		printerLogRepo.WithPrinter(), printerLogRepo.WithSaleBill(), printerLogRepo.WithSaleBillDesk())
 	if err != nil {
-		return res, errors.New("获取呼叫列表失败")
+		return res, errors.WithMessage(err, "获取呼叫列表失败")
 	}
 	abnormalPrintItems := make([]resp.AbnormalPrintItem, 0, len(printerLogs))
 	for _, printerLog := range printerLogs {
@@ -114,14 +114,14 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
 	unprocessedCallCount, err = callRepo.GetUnprocessedCallCount(callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
-		return res, errors.New("获取未处理呼叫数量失败")
+		return res, errors.WithMessage(err, "获取未处理呼叫数量失败")
 	}
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
 		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
 		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
-		return res, errors.New("获取异常打印数量失败")
+		return res, errors.WithMessage(err, "获取异常打印数量失败")
 	}
 	return resp.UnprocessedResp{
 		UnprocessedCallCount: unprocessedCallCount,
@@ -135,7 +135,7 @@ func (s *callSrv) Processed(companyUuid uint64, callUuid uint64) error {
 	err := callRepo.Update(map[string]any{"status": constant.CallStatusProcessed},
 		[]repository.DBOption{callRepo.WhereStatus(constant.CallStatusUnprocessed), callRepo.WhereDeskUuidByCallUuid(callUuid)})
 	if err != nil {
-		return errors.New("处理呼叫失败")
+		return errors.WithMessage(err, "处理呼叫失败")
 	}
 	return nil
 }
@@ -168,7 +168,7 @@ func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.Repr
 			return nil
 		})
 		if err != nil {
-			return res, errors.New("打印失败")
+			return res, errors.WithMessage(err, "打印失败")
 		}
 		res = resp.ReprintResp{PrinterLogUuid: printerLogUuid}
 	} else {
@@ -200,7 +200,7 @@ func (s *callSrv) DeletePrint(companyUuid uint64, printLogUuid uint64) error {
 		"delete_time": time.Now().Unix(),
 	})
 	if err != nil {
-		return errors.New("删除打印失败")
+		return errors.WithMessage(err, "删除打印失败")
 	}
 	return nil
 }

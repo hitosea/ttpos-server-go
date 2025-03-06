@@ -204,7 +204,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		}
 		err = staffRepo.Update(staff.Uuid, updates)
 		if err != nil {
-			return loginResp, errors.New("更新信息失败")
+			return loginResp, errors.WithMessage(err, "更新信息失败")
 		}
 	case constant.SourceAssistant: // 点餐助手登录
 		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()

@@ -208,7 +208,7 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 	for _, buffetUuid := range req.BuffetUuids {
 		_, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetInfo(repository.NewCommonRepo().WhereByUuid(buffetUuid))
 		if err != nil {
-			return resp.CreateDeskOrderResp{}, errors.New("自助餐套餐不存在")
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "自助餐套餐不存在")
 		}
 	}
 
@@ -216,7 +216,7 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 	for _, buffetCustomerType := range req.BuffetCustomerTypes {
 		_, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetCustomerTypeInfo(repository.NewCommonRepo().WhereByUuid(buffetCustomerType.Uuid))
 		if err != nil {
-			return resp.CreateDeskOrderResp{}, errors.New("自助餐顾客类型不存在")
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "自助餐顾客类型不存在")
 		}
 	}
 
@@ -229,7 +229,7 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
 	if err != nil {
-		return model.Desk{}, errors.New("桌台不存在")
+		return model.Desk{}, errors.WithMessage(err, "桌台不存在")
 	}
 	if desk.Status == 0 {
 		return model.Desk{}, errors.New("桌台已关闭")
@@ -337,7 +337,7 @@ func (s *deskSrv) GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, e
 	desks, err := deskRepo.GetDesks(deskRepo.WhereIsNotDisable(), deskRepo.WhereUnBind())
 
 	if err != nil {
-		return resp.TabletDeskList{}, errors.New("获取桌台列表失败")
+		return resp.TabletDeskList{}, errors.WithMessage(err, "获取桌台列表失败")
 	}
 	list := make([]resp.TabletDeskItem, 0, len(desks))
 	for _, desk := range desks {
@@ -368,8 +368,11 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) err
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
 		deskRepo := repository.NewDeskRepo(db)
 		desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid))
-		if err != nil || desk.Uuid == 0 {
+		if desk.Uuid == 0 {
 			return errors.New("桌台不存在")
+		}
+		if err != nil {
+			return errors.WithMessage(err, "桌台不存在")
 		}
 		if desk.DeviceUuid > 0 && desk.DeviceUuid != deviceUuid {
 			return errors.New("桌台已被占用")
@@ -392,7 +395,7 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) err
 			return nil
 		})
 		if err != nil {
-			return errors.New("绑定桌台失败")
+			return errors.WithMessage(err, "绑定桌台失败")
 		}
 	}
 	return nil

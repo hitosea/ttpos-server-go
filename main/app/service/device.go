@@ -77,7 +77,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"finally_login_time":   finallyLoginTime,
 		})
 		if err != nil {
-			return 0, errors.New("更新绑定信息失败")
+			return 0, errors.WithMessage(err, "更新绑定信息失败")
 		}
 		return existsDevice.Uuid, nil
 	}
@@ -125,7 +125,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			}
 			// 设置默认打印机
 			if err = s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting); err != nil {
-				return 0, errors.New("设置默认打印机失败")
+				return 0, errors.WithMessage(err, "设置默认打印机失败")
 			}
 		}
 	}

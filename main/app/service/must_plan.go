@@ -47,7 +47,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 	// 获取必选方案信息
 	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListAllInfos(ctx)
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return nil, errors.WithMessage(err)
 	}
 
 	// 构建必点方案响应列表
@@ -182,7 +182,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 
 	productMustPlanList, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListDeskInfos(ctx)
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return nil, errors.WithMessage(err)
 	}
 
 	productMustPlans := make([]*model.ProductMustPlan, 0) // 桌台的必选方案列表
@@ -395,14 +395,14 @@ func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleB
 		deskMustPlanList, err := s.GetDeskMustPlanList(ctx, db, shopCart, deskUuid)
 		if err != nil {
 			ctx.Log().Debug("加购商品时判断商品是不是必点商品时，获取桌台必点方案失败", zap.Error(err))
-			return 0, errors.New("获取桌台必点方案失败")
+			return 0, errors.WithMessage(err, "获取桌台必点方案失败")
 		}
 		plans = deskMustPlanList
 	} else {
 		instantMustPlanList, err := s.GetInstantMustPlanList(ctx, db, shopCart)
 		if err != nil {
 			ctx.Log().Debug("加购商品时判断商品是不是必点商品时，获取点餐必点方案失败", zap.Error(err))
-			return 0, errors.New("获取点餐必点方案失败")
+			return 0, errors.WithMessage(err, "获取点餐必点方案失败")
 		}
 		plans = instantMustPlanList
 	}

@@ -1,10 +1,10 @@
 package req
 
 import (
-	"errors"
 	"strconv"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,12 +51,12 @@ func (r *InstantOrderPaymentInfoReq) Parse(c *gin.Context) error {
 
 	saleBillUuid, err := strconv.ParseUint(saleBillUuidStr, 10, 64)
 	if err != nil {
-		return errors.New("销售账单UUID格式错误")
+		return errors.WithMessage(err, "销售账单UUID格式错误")
 	}
 
 	saleOrderUuid, err := strconv.ParseUint(saleOrderUuidStr, 10, 64)
 	if err != nil {
-		return errors.New("销售订单UUID格式错误")
+		return errors.WithMessage(err, "销售订单UUID格式错误")
 	}
 
 	r.SaleBillUuid = saleBillUuid

@@ -101,7 +101,7 @@ func (s *Srv) fromCache(ctx context.Context) ([]model.Setting, error) {
 	settings, err = settingRepo.GetAll()
 	if err != nil {
 		ctx.Log().Error("从数据库获取设置失败", zap.Error(err))
-		return nil, errors.New("获取设置失败")
+		return nil, errors.WithMessage(err, "获取设置失败")
 	}
 
 	data, _ := json.Marshal(settings)

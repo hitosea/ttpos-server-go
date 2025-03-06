@@ -70,7 +70,7 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 	// 检查销售账单或销售订单
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfo(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
-		return nil, errors.New("销售账单不存在")
+		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	if len(saleBill.SaleOrders) == 0 {
 		return nil, errors.New("销售订单不存在")
@@ -97,7 +97,7 @@ func (s *instantSrv) AddProductToInstantOrder(dbId uint64, lang string, req req.
 		Num:            1,
 	})
 	if err != nil {
-		return nil, errors.New("创建订单商品失败")
+		return nil, errors.WithMessage(err, "创建订单商品失败")
 	}
 
 	return &resp.GetInstantOrderInfoResp{}, nil
