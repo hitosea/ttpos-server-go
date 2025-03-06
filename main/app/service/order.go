@@ -3053,15 +3053,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		return nil, errors.New("系统没有支付方式")
 	}
 	var memberInfo *resp.MemberInfo
-	if saleOrder.Member.MemberCard != nil && saleOrder.Member.MemberLevel != nil {
-		memberInfo = &resp.MemberInfo{
-			Uuid:     saleOrder.Member.Uuid,
-			Nickname: saleOrder.Member.Nickname,
-			Card:     resp.CardInfo{Name: saleOrder.Member.MemberCard.MemberCardType.Name},
-			Level:    resp.LevelInfo{Name: saleOrder.Member.MemberLevel.Name},
-			Balance:  saleOrder.Member.Balance,
-			Points:   saleOrder.Member.Point,
-		}
+	memberInfo = &resp.MemberInfo{
+		Uuid:     saleOrder.Member.Uuid,
+		Nickname: saleOrder.Member.Nickname,
+		Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
+		Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
+		Balance:  saleOrder.Member.Balance,
+		Points:   saleOrder.Member.Point,
 	}
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {

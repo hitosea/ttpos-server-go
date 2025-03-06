@@ -24,6 +24,23 @@ type Member struct {
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
+func (model *Member) GetMemberCardName() string {
+	if model.MemberCard == nil {
+		return ""
+	}
+	if model.MemberCard.MemberCardType == nil {
+		return ""
+	}
+	return model.MemberCard.MemberCardType.Name
+}
+
+func (model *Member) GetMemberLevelName() string {
+	if model.MemberLevel == nil {
+		return ""
+	}
+	return model.MemberLevel.Name
+}
+
 func (model *Member) GetMemberDiscountRate() float64 {
 	discount := float64(1) // 默认不打折
 	if model.MemberLevel != nil {
