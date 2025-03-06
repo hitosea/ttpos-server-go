@@ -43,40 +43,62 @@ type DeskOrderCloseReq struct {
 // DeskBuffetCustomerType 自助餐顾客类型
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
-	MealNum *uint  `json:"meal_num"` // 就餐人数
+	MealNum uint   `json:"meal_num"` // 就餐人数
 }
 
 // DeskOrderCreateReq 桌台订单创建
 type DeskOrderCreateReq struct {
 	DeskUuid            uint64                   `json:"desk_uuid"`             // 桌台uuid, 必填
-	IsBuffet            *bool                    `json:"is_buffet"`             // 是否是自助餐: false-否, true-是
-	MealNum             *uint                    `json:"meal_num"`              // 就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0
+	MealNum             uint                     `json:"meal_num"`              // 就餐人数: 非自助餐时, 最小为0, 最大为999, 自助餐时为0
 	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
 	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
+}
+
+// 判断是不是自助餐
+func (req *DeskOrderCreateReq) IsBuffet() bool {
+	// 请求有自助餐套餐id的话，就肯定是自助餐
+	return len(req.BuffetUuids) > 0
+}
+
+// 获取就餐人数。
+// 当是非自助餐桌台请求时，就餐人数=MealNum
+// 当是自助餐桌台请求时，就餐人数=每种顾客数量的累计。如老人2人、小孩3人，那么就餐人数为5人
+func (req *DeskOrderCreateReq) GetMealNum() uint {
+	// 当是自助餐桌台请求时，就餐人数=每种顾客数量的累计。如老人2人、小孩3人，那么就餐人数为5人
+	if req.IsBuffet() {
+		mealNum := uint(0)
+		for _, customer := range req.BuffetCustomerTypes {
+			mealNum = customer.MealNum + customer.MealNum
+		}
+		return mealNum
+	}
+	// 当是非自助餐桌台请求时，就餐人数=MealNum
+	return req.MealNum
 }
 
 func (req *DeskOrderCreateReq) ValidateCreateDeskOrderReq() error {
 	if req.DeskUuid == 0 {
 		return errors.New("桌台uuid不能为0")
 	}
-	if req.IsBuffet == nil {
-		return errors.New("是否是自助餐不能为空")
+	// 非自助餐桌台的就餐人数不能为0
+	if !req.IsBuffet() && req.MealNum == 0 {
+		return errors.New("就餐人数不能为0")
 	}
-	if req.MealNum == nil {
-		return errors.New("就餐人数不能为空")
-	}
-	if !*req.IsBuffet {
-		if *req.MealNum < 1 || *req.MealNum > 999 {
+	if req.IsBuffet() {
+		if req.MealNum < 1 || req.MealNum > 999 {
 			return errors.New("就餐人数不能小于1或大于999")
 		}
 	}
-	if *req.IsBuffet {
+	if req.IsBuffet() {
 		if len(req.BuffetUuids) < 1 || len(req.BuffetUuids) > 2 {
-			return errors.New("自助餐uuid列表不能小于1或大于2")
+			return errors.New("选择自助餐套餐数量不能小于1或大于2")
 		}
 		if len(req.BuffetCustomerTypes) == 0 {
-			return errors.New("自助餐顾客类型列表不能为空")
+			return errors.New("自助餐顾客类型未选择")
+		}
+		if req.GetMealNum() < 1 {
+			return errors.New("自助餐就餐人数不能为零")
 		}
 	}
 	return nil

@@ -11,7 +11,9 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -33,6 +35,7 @@ type IDeskSrv interface {
 
 // deskSrv 收银服务结构体
 type deskSrv struct {
+	bus        *event.SystemEventBus
 	dbm        *database.DBManager // 数据库管理器
 	localeSrv  ILocaleSrv          // 多语言名称服务
 	orderSrv   IOrderSrv           // 订单服务
@@ -48,6 +51,7 @@ func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSr
 // NewDeskSrvImpl 创建新的收银服务实现
 func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv) IDeskSrv {
 	return &deskSrv{
+		bus:        event.NewSystemBus(),
 		dbm:        dbm,
 		localeSrv:  localeSrv,
 		orderSrv:   orderSrv,
@@ -176,16 +180,39 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	}
 
 	// 判断是否自助餐订单
-	if !*req.IsBuffet {
-		if req.MealNum == nil || *req.MealNum == 0 {
-			return resp.CreateDeskOrderResp{}, errors.New("就餐人数不能小于1")
+	var result resp.CreateDeskOrderResp
+	if req.IsBuffet() {
+		deskBuffetOrder, err := s.createDeskBuffetOrder(ctx, req)
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "s.createDeskBuffetOrder failed, request:", utils.ToJson(req))
 		}
+		result = deskBuffetOrder
 	} else {
-		return s.createDeskBuffetOrder(ctx, req)
+		// 创建桌台-非自助餐订单
+		deskOrder, err := s.orderSrv.CreateDeskOrder(ctx, req)
+		if err != nil {
+			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "s.orderSrv.CreateDeskOrder failed, request:", utils.ToJson(req))
+		}
+		result = deskOrder
 	}
 
-	// 创建桌台-非自助餐订单
-	return s.orderSrv.CreateDeskOrder(ctx, req)
+	// 发布“开台”操作事件
+	go func() {
+		s.bus.PublishOpenDeskEvent(event.OpenDeskPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   dbId,
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  result.SaleBillUuid,
+				SaleOrderUuid: result.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			MealNum:  req.GetMealNum(),
+			IsBuffet: req.IsBuffet(),
+			TableId:  req.DeskUuid,
+			TableNo:  desk.DeskNo,
+		})
+	}()
+	return result, nil
 }
 
 // createDeskBuffetOrder 创建桌台自助餐订单

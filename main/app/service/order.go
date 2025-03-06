@@ -458,7 +458,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	// 构建销售账单
-	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, *req.MealNum, req.Remark, req.DeskUuid)
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.MealNum, req.Remark, req.DeskUuid)
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)

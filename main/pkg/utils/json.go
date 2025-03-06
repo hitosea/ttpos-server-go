@@ -14,6 +14,14 @@ func ToJsonString(data interface{}) string {
 	return string(jsonBytes)
 }
 
+func ToJson(data interface{}) string {
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(jsonBytes)
+}
+
 // JsonToStruct 对象转结构体
 func JsonToStruct(data string, v interface{}) error {
 	return json.Unmarshal([]byte(data), v)

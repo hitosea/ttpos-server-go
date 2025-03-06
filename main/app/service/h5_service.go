@@ -263,17 +263,15 @@ func (s *h5Srv) GetBuffetList(ctx context.Context, deskUuid uint64) (resp.H5Buff
 
 func (s *h5Srv) OpenH5Desk(ctx context.Context, deskUuid uint64, request req.OpenDeskRequest) error {
 	var param req.DeskOrderCreateReq
-	iTrue := true
 	if request.IsBuffet == 1 {
 		param = req.DeskOrderCreateReq{
 			DeskUuid:    deskUuid,
-			IsBuffet:    &iTrue,
 			BuffetUuids: request.BuffetIds,
 			BuffetCustomerTypes: func() (list []req.DeskBuffetCustomerType) {
 				for _, customerType := range request.BuffetCustomerTypeList {
 					list = append(list, req.DeskBuffetCustomerType{
 						Uuid:    customerType.CustomerTypeId,
-						MealNum: &customerType.Num,
+						MealNum: customerType.Num,
 					})
 				}
 				return
@@ -282,7 +280,7 @@ func (s *h5Srv) OpenH5Desk(ctx context.Context, deskUuid uint64, request req.Ope
 	} else {
 		param = req.DeskOrderCreateReq{
 			DeskUuid: deskUuid,
-			MealNum:  &request.MealNum,
+			MealNum:  request.MealNum,
 		}
 	}
 	_, err := s.deskSrv.CreateDeskOrder(ctx, param)

@@ -16,6 +16,7 @@ type IOrderOperationRecordRepo interface {
 	GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error)
 	UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error
 	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error)
+	CreateSaleBillOperationRecord(model model.SaleBillOperationRecord) (uint64, error)
 	DeleteRecord(saleBillUuid uint64) error
 }
 
@@ -30,6 +31,14 @@ func NewOrderOperationRecordRepo(db *gorm.DB) IOrderOperationRecordRepo {
 // NewOrderOperationRecordRepoImpl 创建新的订单操作记录仓库实现
 func NewOrderOperationRecordRepoImpl(db *gorm.DB) *OrderOperationRecordRepoImpl {
 	return &OrderOperationRecordRepoImpl{db: db}
+}
+
+func (r *OrderOperationRecordRepoImpl) CreateSaleBillOperationRecord(obj model.SaleBillOperationRecord) (uint64, error) {
+	obj.SetNil()
+	if err := r.db.Model(&model.SaleBillOperationRecord{}).Create(&obj).Error; err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return obj.Uuid, nil
 }
 
 // GetRecordList 获取订单操作记录列表
