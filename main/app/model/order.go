@@ -803,7 +803,7 @@ func (model *SaleOrderBuffetDelayProduct) GetPrice(num uint) float64 {
 	return price
 }
 
-// SaleBillOperationRecord 桌台账单操作记录
+// SaleBillOperationRecord 桌台账单操作记录 `ttpos_sale_bill_operation_record`
 type SaleBillOperationRecord struct {
 	BaseModel
 	// 基本信息
