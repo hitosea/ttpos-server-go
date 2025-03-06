@@ -379,7 +379,7 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 	return nil // todo
 }
 
-func (model *SaleOrderProduct) GetAttributeName() *dto.LocaleResponse {
+func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
@@ -405,10 +405,15 @@ func (model *SaleOrderProduct) GetAttributeName() *dto.LocaleResponse {
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
-	if len(nameList) == 0 {
-		return &dto.LocaleResponse{}
-	}
 
+	return getLocaleResponse(nameList, ";")
+}
+
+// 将多个LocaleResponse合并成一个
+func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResponse {
+	if len(nameList) == 0 {
+		return dto.LocaleResponse{}
+	}
 	attributeResultNames := dto.LocaleResponse{}
 	for index, name := range nameList {
 		attributeResultNames.ZH += name.ZH
@@ -420,18 +425,17 @@ func (model *SaleOrderProduct) GetAttributeName() *dto.LocaleResponse {
 		attributeResultNames.MY += name.MY
 		attributeResultNames.TR += name.TR
 		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
-			attributeResultNames.ZH += ";"
-			attributeResultNames.TH += ";"
-			attributeResultNames.EN += ";"
-			attributeResultNames.ZHTW += ";"
-			attributeResultNames.JA += ";"
-			attributeResultNames.KO += ";"
-			attributeResultNames.MY += ";"
-			attributeResultNames.TR += ";"
+			attributeResultNames.ZH += div
+			attributeResultNames.TH += div
+			attributeResultNames.EN += div
+			attributeResultNames.ZHTW += div
+			attributeResultNames.JA += div
+			attributeResultNames.KO += div
+			attributeResultNames.MY += div
+			attributeResultNames.TR += div
 		}
 	}
-
-	return &attributeResultNames
+	return attributeResultNames
 }
 
 // 点餐时录入的原始数据

@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +16,8 @@ type IReturnFoodReasonRepo interface {
 	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error) // 创建退菜原因
 	DeleteReturnFoodReason(id uint) error                                           // 删除退菜原因
 	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                    // 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+	GetReturnFoodReasons(opts ...repository.DBOption) ([]*model.ReturnFoodReason, error)
+	GetReturnFoodReasonListByUuids(uuids []uint64) ([]*model.ReturnFoodReason, error)
 }
 
 // NewReturnFoodReasonRepo 创建新的退菜原因仓库
@@ -29,6 +32,37 @@ func NewReturnFoodReasonRepoImpl(db *gorm.DB) *ReturnFoodReasonRepoImpl {
 
 type ReturnFoodReasonRepoImpl struct {
 	db *gorm.DB // 数据库连接
+}
+
+func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonListByUuids(uuids []uint64) ([]*model.ReturnFoodReason, error) {
+	reasons, err := r.GetReturnFoodReasons(
+		repository.CommonRepo.WhereInUuids(uuids),
+		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.SortWithCreateTime("desc"),
+		repository.CommonRepo.Preload(repository.WithPreload{
+			Query: "MultiLanguageName",
+		}),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return reasons, nil
+}
+
+func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasons(opts ...repository.DBOption) ([]*model.ReturnFoodReason, error) {
+	returnFoodReasons := make([]*model.ReturnFoodReason, 0)
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&returnFoodReasons)
+	if result.Error != nil {
+		return nil, errors.WithMessage(result.Error)
+	}
+
+	return returnFoodReasons, nil
 }
 
 // GetReturnFoodReasonList 获取退菜原因列表，排除逻辑删除的退菜原因

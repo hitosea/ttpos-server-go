@@ -2066,7 +2066,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 				product := resp.Product{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: *saleOrderProduct.GetAttributeName(),
+					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 					Num:                 saleOrderProduct.Num,
 					SalePrice:           saleOrderProduct.GetSalePrice(),
 					DiscountPrice:       saleOrderProduct.GetPrice(),
@@ -2666,7 +2666,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			OrderProductId: unCookingSaleOrderProduct.Uuid,
 			ProductId:      unCookingSaleOrderProduct.ProductPackageUuid,
 			ProductName:    unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:    *unCookingSaleOrderProduct.GetAttributeName(),
+			ProductAttr:    unCookingSaleOrderProduct.GetAttributeName(),
 			TotalNum:       unCookingSaleOrderProduct.Num,
 		})
 	}
@@ -2691,13 +2691,14 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 		if unCookingSaleOrderProduct.ProductPackage != nil {
 			firstCategoryUuid = unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
 		}
+		attributeName := unCookingSaleOrderProduct.GetAttributeName()
 		productionOrderProduct := model.ProductionOrderProduct{
 			ProductionOrderUuid:   productionOrderUuid,
 			SaleOrderProductUuid:  unCookingSaleOrderProduct.Uuid,
 			FirstCategoryUuid:     firstCategoryUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
-			ProductAttributeNames: unCookingSaleOrderProduct.GetAttributeName().GetLocale(ctx.GetLanguage()),
+			ProductAttributeNames: attributeName.GetLocale(ctx.GetLanguage()),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
 			//HasMaterial:              unCookingSaleOrderProduct, todo
@@ -2762,8 +2763,13 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		returnFoodReasons = _returnFoodReasons
 	}
 
+	reasons, err := base.NewReturnFoodReasonRepo(db).GetReturnFoodReasonListByUuids(req.ReturnIds)
+	if err != nil {
+		return nil, errors.WithMessage(err, "params:", utils.ToJson(req.ReturnIds))
+	}
+
 	// 新建一个销售订单商品，该商品数量为移动数量
-	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
@@ -2796,10 +2802,28 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			return errors.WithMessage(err)
 		}
 		return nil
-	})
-	if errUpdateDB != nil {
+	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
+	// 发布“退菜”事件
+	go func() {
+		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.SaleOrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			Num:            saleOrderProduct.Num,
+			Reason:         model.GetReturnFoodReasonNames(reasons),
+			CustomReason:   saleOrderProduct.CancelReason,
+		})
+	}()
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
