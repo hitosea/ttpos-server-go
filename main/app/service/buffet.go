@@ -5,12 +5,14 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/database"
 )
 
 // IBuffetSrv 定义收银服务接口
 type IBuffetSrv interface {
 	GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, error) // 获取自助餐列表
+	GetBuffetDelayList(dbId uint64) (resp.BuffetDelayListResp, error) // 获取自助餐延迟列表
 }
 
 // buffetSrv 收银服务结构体
@@ -74,5 +76,29 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 			PageSize: 1000,
 			Total:    total,
 		},
+	}, nil
+}
+
+// GetBuffetDelayList 获取延迟列表
+func (s *buffetSrv) GetBuffetDelayList(dbId uint64) (resp.BuffetDelayListResp, error) {
+	// 获取列表
+	delayList, err := base.NewBuffetDelayRepo(s.dbm.GetDB(dbId)).GetBuffetDelayList()
+	if err != nil {
+		return resp.BuffetDelayListResp{}, errors.WithMessage(err)
+	}
+
+	// 转换为响应对象
+	respBuffets := make([]resp.BuffetDelay, 0, len(delayList))
+	for _, delay := range delayList {
+		respBuffet := resp.BuffetDelay{
+			Name:  delay.Name,
+			Price: delay.Price,
+		}
+		respBuffets = append(respBuffets, respBuffet)
+	}
+
+	// 返回响应对象
+	return resp.BuffetDelayListResp{
+		List: respBuffets,
 	}, nil
 }

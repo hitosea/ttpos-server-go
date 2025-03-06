@@ -28,3 +28,13 @@ type BuffetListPaginationResp struct {
 	List []Buffet         `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
 }
+
+type BuffetDelay struct {
+	Name  string  `json:"name"`  // 加钟名称
+	Price float64 `json:"price"` // 价格
+}
+
+// BuffetListPaginationResp 自助餐列表响应
+type BuffetDelayListResp struct {
+	List []BuffetDelay `json:"list"`
+}
