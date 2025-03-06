@@ -11,6 +11,7 @@ import (
 // IBuffetDelayRepo 自助餐加钟价格
 type IBuffetDelayRepo interface {
 	GetBuffetDelayList() ([]model.BuffetDelay, error)
+	GetBuffetDelayListByUuids(uuids []uint64) ([]*model.BuffetDelay, error) // 获取自助餐列表通过UUID列表，用于开台写入顾客数据
 	UpdateBuffetDelay(uuid uint, buffetDelay model.BuffetDelay) error
 	CreateBuffetDelay(buffetDelay model.BuffetDelay) (uint64, error)
 	DeleteBuffetDelay(uuid uint) error
@@ -34,6 +35,13 @@ func (r *BuffetDelayRepoImpl) GetBuffetDelayList() ([]model.BuffetDelay, error) 
 	var buffetDelays []model.BuffetDelay
 	err := r.db.Model(&model.BuffetDelay{}).Where("delete_time = ?", 0).Find(&buffetDelays).Error
 	return buffetDelays, errors.WithMessage(err)
+}
+
+// GetBuffetDelayListByUuids 获取商品规格列表，排除逻辑删除的规格
+func (r *BuffetDelayRepoImpl) GetBuffetDelayListByUuids(uuids []uint64) ([]*model.BuffetDelay, error) {
+	var buffetDelays []*model.BuffetDelay
+	err := r.db.Model(&model.BuffetDelay{}).Where("delete_time = ?", 0).Where("uuid in ?", uuids).Find(&buffetDelays).Error
+	return buffetDelays, err
 }
 
 // UpdateBuffetDelay 更新自助餐加钟价格

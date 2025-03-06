@@ -113,6 +113,7 @@ const (
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"  // 撤销拆单
 	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
+	OrderClock               = "CLOCK"               // 加钟
 )
 
 const (
