@@ -42,7 +42,8 @@ class RecreateReturnOrderAmount extends Migrator
             'comment' => '退款金额表'
         ]);
 
-        $table->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '退货金额唯一标识符'])
+        $table->addColumn('id', 'integer', ['signed' => false, 'identity' => true, 'comment' => '自增ID'])
+            ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '退货金额唯一标识符'])
             ->addColumn('return_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '关联退货单ID'])
             ->addColumn('payment_method_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '关联支付方式ID'])
             ->addColumn('amount', 'decimal', ['precision' => 12, 'scale' => 2, 'default' => '0.00', 'comment' => '退款金额'])
