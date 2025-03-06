@@ -1,6 +1,9 @@
 package errors
 
-import "ttpos-server-go/app/constant"
+import (
+	"strings"
+	"ttpos-server-go/app/constant"
+)
 
 type AppError struct {
 	Code    int         // 响应码
@@ -17,8 +20,9 @@ func (e AppError) GetCode() int {
 	return e.Code
 }
 
-func New(message string) AppError {
-	return AppError{Code: constant.CodeFail, Message: message}
+func New(messages ...string) AppError {
+	msg := strings.Join(messages, " ")
+	return AppError{Code: constant.CodeFail, Message: msg}
 }
 
 func NewWithCode(code int, message string) AppError {

@@ -1,8 +1,9 @@
 package req
 
 import (
-	"errors"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 var DeskReqMessage = map[string]string{
@@ -69,7 +70,7 @@ func (req *DeskOrderCreateReq) GetMealNum() uint {
 	if req.IsBuffet() {
 		mealNum := uint(0)
 		for _, customer := range req.BuffetCustomerTypes {
-			mealNum = customer.MealNum + customer.MealNum
+			mealNum = mealNum + customer.MealNum
 		}
 		return mealNum
 	}
@@ -98,7 +99,7 @@ func (req *DeskOrderCreateReq) ValidateCreateDeskOrderReq() error {
 			return errors.New("自助餐顾客类型未选择")
 		}
 		if req.GetMealNum() < 1 {
-			return errors.New("自助餐就餐人数不能为零")
+			return errors.WithMessage(errors.New("自助餐就餐人数不能为零"), utils.ToJson(req))
 		}
 	}
 	return nil

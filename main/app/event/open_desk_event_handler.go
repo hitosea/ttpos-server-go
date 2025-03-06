@@ -42,7 +42,7 @@ func openDeskEventHandler() {
 				logger.Logger.Error("SubscribeOpenDeskEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
-			logger.Logger.Info(fmt.Sprintf("%+v", payload), zap.Uint64("record", uuid))
+			logger.Logger.Info(fmt.Sprintf("操作记录:开台 %+v", payload), zap.Uint64("record", uuid))
 		})
 	})
 }
