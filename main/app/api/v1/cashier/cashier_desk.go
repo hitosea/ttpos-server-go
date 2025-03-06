@@ -222,13 +222,13 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.ChangeDesk(ctx, params)
+	info, err := h.service.ChangeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, info)
 }
 
 // CancelDeskOrder 处理取消桌台订单

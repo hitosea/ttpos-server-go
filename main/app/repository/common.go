@@ -202,7 +202,7 @@ func (r *commonRepo) WhereByDeviceUuid(deviceUuid uint64) DBOption {
 
 func (r *commonRepo) WhereByNoDisable() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where(fmt.Sprintf("is_disable = %d", constant.DeskDisable))
+		return db.Where(fmt.Sprintf("is_disable = %d", constant.DeskEnable))
 	}
 }
 
