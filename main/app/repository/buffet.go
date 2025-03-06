@@ -71,6 +71,8 @@ func (r *BuffetRepoImpl) GetBuffetListInDeskOpen(pageNo, pageSize int) ([]*model
 		CommonRepo.Preload(WithPreload{
 			Query: "BuffetCustomerTypePrices.BuffetCustomerType",
 		}),
+		CommonRepo.WhereByStatus(1),
+		CommonRepo.WhereBySoftDelete(),
 	)
 }
 
