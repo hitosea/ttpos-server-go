@@ -238,7 +238,7 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.MergeTableReq true "详情参数"
+// @param data body req.MergeDeskReq true "详情参数"
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/merge [post]

@@ -182,7 +182,7 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param type query string true "显示类型 all-默认全部 checkout-结账 recharge-充值"
+// @param type query string false "显示类型 all-默认全部 checkout-结账 recharge-充值"
 // @Success 200 {object} dto.Response{data=resp.PaymentMethodList}
 // @Router /cashier/payment_method/list [get]
 func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {

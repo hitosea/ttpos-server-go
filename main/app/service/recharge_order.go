@@ -40,7 +40,7 @@ type IRechargeOrderSrv interface {
 	CancelRechargeOrder(ctx context.Context, uuid uint64) error                                                                       // 取消充值订单
 	GetRechargeOrderRefundInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderRefundInfo, error)                                // 获取退款信息
 	CheckRechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrderReverseSettleInfo, error)                    // 检查反结账信息
-	RechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrder, error)                                          // 充值订单反结账
+	RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error                                                                // 充值订单反结账
 	RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error                                              // 充值订单退款
 }
 
@@ -860,7 +860,7 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 		status = 2
 	}
 	member := order.Member
-	if member.Balance < order.Amount {
+	if member.Balance < order.RechargeAmount || member.Point < order.GiftPoint || member.GiftBalance < order.GiftAmount {
 		message = i18n.Translate(ctx.GetLanguage(), "当前会员账户不足反结账")
 		status = 1
 	}
@@ -877,27 +877,26 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 	}, nil
 }
 
-func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrder, error) {
-	var rechargeOrderResp resp.RechargeOrder
+func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(uuid),
 		rechargeOrderRepo.WithMember(), rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 
 	if order.Uuid == 0 {
-		return rechargeOrderResp, errors.New("充值订单不存在")
+		return errors.New("充值订单不存在")
 	}
 
 	if order.Status != constant.RechargeOrderStatusPaid {
-		return rechargeOrderResp, errors.New("当前状态不可操作")
+		return errors.New("当前状态不可操作")
 	}
 
 	if order.RefundMoney > 0 {
-		return rechargeOrderResp, errors.New("退款后不能反结账")
+		return errors.New("退款后不能反结账")
 	}
 
 	if order.Member == nil {
-		return rechargeOrderResp, errors.New("会员不存在")
+		return errors.New("会员不存在")
 	}
 
 	var memberPointsChanged bool
@@ -931,12 +930,9 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		returnOrderAmounts := make([]model.ReturnOrderAmount, 0, len(order.PaymentOrders))
 		paymentOrderRepo := repository.NewPaymentOrderRepo(tx)
 
-		var refundCashMoney float64
-		// 存在现金支付订单
+		// 退款现金金额
+		var refundCashAmount float64
 		for _, paymentOrder := range order.PaymentOrders {
-			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-				refundCashMoney = utils.DecimalSub(paymentOrder.Amount, order.ChargeDue)
-			}
 			// 标记删除
 			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
 				"status":      constant.PaymentOrderStatusRefund,
@@ -948,6 +944,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			amount := paymentOrder.Amount
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 				amount = paymentOrder.PaymentAmount
+				refundCashAmount = utils.DecimalSub(paymentOrder.Amount, order.ChargeDue)
 			}
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
 				PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
@@ -980,10 +977,10 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			return errors2.ErrInternal
 		}
 
-		if refundCashMoney > 0 {
+		if refundCashAmount > 0 {
 			if err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 				CashBoxLogType: constant.CashBoxLogTypeOut,
-				Amount:         refundCashMoney,
+				Amount:         refundCashAmount,
 				Scene:          constant.CashBoxLogSceneRefund,
 				OrderUuid:      returnOrder.Uuid,
 			}); err != nil {
@@ -1005,14 +1002,14 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 	})
 
 	if err != nil {
-		return rechargeOrderResp, errors.WithMessage(err)
+		return errors.WithMessage(err)
 	}
 
 	if memberPointsChanged {
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
 	}
 
-	return s.GetPendingRechargeOrder(ctx.GetCompanyUuid()), nil
+	return nil
 }
 
 // 组装支付记录
@@ -1118,7 +1115,9 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if refundMoney > refundableAmount {
 		return errors.New("退款金额不能大于实付金额")
 	}
-	if refundMoney > order.Member.Balance {
+	// 要从会员主账户扣除的金额 > 用户主账户余额，不可退款
+	deductionMoney := utils.DecimalSub(order.RechargeAmount, order.RefundMoney)
+	if deductionMoney > order.Member.Balance {
 		return errors.New("当前会员主账户余额不足以退款")
 	}
 	// 处理退款金额
@@ -1162,7 +1161,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			Client:            ctx.GetSource(),
 			Message:           "退款",
 			Action:            constant.RechargeOrderActionRefund,
-			Data:              s.getRefundData(refundReq.RefundType, refundMoney), // ToDo 处理退款日志数据
+			Data:              s.getRefundData(refundReq.RefundType, refundReq.RefundMoney), // ToDo 处理退款日志数据
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
@@ -1174,21 +1173,25 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			RelatedOrderUuid:   order.Uuid,
 			RelatedOrderNo:     order.OrderNo,
 			ReturnType:         refundReq.RefundType,
-			RefundAmount:       refundMoney,
+			RefundAmount:       refundReq.RefundMoney,
 			ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
 		})
 		if err != nil {
 			return errors2.ErrInternal
 		}
-		err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-			Uuid:     order.MemberUuid,
-			Money:    -refundReq.RefundMoney,
-			Scene:    constant.MemberBalanceLogRechargeRefund,
-			Describe: fmt.Sprintf("退款：%s", order.OrderNo),
-		})
-		if err != nil {
-			return errors.WithMessage(err)
+
+		if deductionMoney > 0 {
+			err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+				Uuid:     order.MemberUuid,
+				Money:    -deductionMoney,
+				Scene:    constant.MemberBalanceLogRechargeRefund,
+				Describe: fmt.Sprintf("退款：%s", order.OrderNo),
+			})
+			if err != nil {
+				return errors.WithMessage(err)
+			}
 		}
+
 		if refundCashMoney > 0 {
 			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 				CashBoxLogType: constant.CashBoxLogTypeOut,

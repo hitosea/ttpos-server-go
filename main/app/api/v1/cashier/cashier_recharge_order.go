@@ -175,13 +175,13 @@ func (h *RechargeOrderHandler) CheckRechargeOrderReverseSettle(c *gin.Context) {
 
 // RechargeOrderReverseSettle 反结账充值订单
 // @Summary 反结账充值订单
-// @Description 反结账充值订单，响应结果和或者进行中的充值订单一致，成功后跳转到充值页面
+// @Description 反结账充值订单
 // @Tags 收银端.充值订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.RechargeOrderUuidReq true "反结账充值订单参数"
-// @Success 200 {object} dto.Response{data=resp.RechargeOrder}
+// @Success 200 {object} dto.Response
 // @Router /cashier/recharge_order/reverse_settle [post]
 func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
 	var rechargeOrderUuidReq req.RechargeOrderUuidReq
@@ -189,12 +189,12 @@ func (h *RechargeOrderHandler) RechargeOrderReverseSettle(c *gin.Context) {
 		helper.HandleValidationError(c, err, rechargeOrderUuidReq, req.LoginRequestMessage)
 		return
 	}
-	res, err := h.rechargeOrderSrv.RechargeOrderReverseSettle(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
+	err := h.rechargeOrderSrv.RechargeOrderReverseSettle(helper.GetContext(c), rechargeOrderUuidReq.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res)
+	helper.Success(c, gin.H{})
 }
 
 // RechargeOrderRefund 充值订单退款

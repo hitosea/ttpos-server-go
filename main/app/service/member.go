@@ -241,6 +241,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 		}); err != nil {
 			return errors.WithMessage(err, "更新会员余额失败")
 		}
+		// 余额明细
 		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 			MemberUuid: changeReq.Uuid,
 			Scene:      changeReq.Scene,
