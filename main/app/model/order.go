@@ -189,10 +189,13 @@ func (model *SaleBill) CanFinishSaleBill() bool {
 	return true
 }
 
+// 设置销售账单完成
 func (model *SaleBill) SetFinishSaleBill() {
 	model.Status = constant.SaleBillStatusComplete
 	model.FinishTime = time.Now().Unix()
 }
+
+// 设置自助餐套餐
 func (model *SaleBill) SetBuffetPackage(buffetPackageUuids []uint64) {
 	if len(buffetPackageUuids) == 1 {
 		model.BuffetPackage1Uuid = buffetPackageUuids[0]
@@ -212,6 +215,21 @@ func (model *SaleBill) IsTimeLimited() bool {
 	}
 	// 自助餐时长大于0，表示限时
 	return model.BuffetDuration > 0
+}
+
+// 判断销售账单是否拆单
+func (model *SaleBill) IsSplit() bool {
+	return len(model.SaleOrders) > 1
+}
+
+// 判断销售账单是否部分支付
+func (model *SaleBill) IsPartialPay() bool {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsPartialPay() {
+			return true
+		}
+	}
+	return false
 }
 
 // 获取未送厨的销售订单商品
@@ -418,6 +436,11 @@ func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	return nil
 }
 
+// 返回第一个销售订单
+func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
+	return model.SaleOrders[0]
+}
+
 // 获取销售账单的销售订单和销售订单商品
 func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderProductUuid uint64) (*SaleOrder, *SaleOrderProduct) {
 	// 获取销售订单
@@ -620,6 +643,15 @@ func (model *SaleBill) CopyOrderProductAndEdit(saleOrderProductUuid uint64, upda
 			}
 		}
 	}
+}
+
+// SetAllDiscountCancel 设置整单折扣取消
+func (model *SaleBill) SetAllDiscountCancel() bool {
+	isChange := false
+	for _, saleOrder := range model.SaleOrders {
+		isChange = saleOrder.SetAllDiscountCancel() || isChange
+	}
+	return isChange
 }
 
 type Sauce struct {

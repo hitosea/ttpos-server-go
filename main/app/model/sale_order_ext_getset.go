@@ -149,7 +149,8 @@ func (model *SaleOrder) SetCustomDiscount(discount float64) {
 }
 
 // 取消整单折扣
-func (model *SaleOrder) SetCustomDiscountCancel() {
+func (model *SaleOrder) SetCustomDiscountCancel() bool {
+	isChange := false
 	model.CustomDiscountRate = constant.NoDiscount
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
@@ -160,6 +161,7 @@ func (model *SaleOrder) SetCustomDiscountCancel() {
 		if saleOrderProduct.CustomDiscountRate != constant.NoDiscount {
 			saleOrderProduct.CustomDiscountRate = constant.NoDiscount
 			saleOrderProduct.SetUpdate()
+			isChange = true
 		}
 	}
 	// 取消自助餐顾客折扣
@@ -171,8 +173,10 @@ func (model *SaleOrder) SetCustomDiscountCancel() {
 		if buffetCustomer.CustomDiscountRate != constant.NoDiscount {
 			buffetCustomer.CustomDiscountRate = constant.NoDiscount
 			buffetCustomer.SetUpdate()
+			isChange = true
 		}
 	}
+	return isChange
 }
 
 // 设置整单改价金额
@@ -183,8 +187,10 @@ func (model *SaleOrder) SetCustomAmount(amount float64) {
 }
 
 // 取消整单改价金额
-func (model *SaleOrder) SetCustomAmountCancel() {
+func (model *SaleOrder) SetCustomAmountCancel() bool {
+	isChange := false
 	model.CustomAmount = constant.SaleOrderCustomAmountCancel
+	return isChange
 }
 
 // 设置订单抹零规则
@@ -193,14 +199,29 @@ func (model *SaleOrder) SetZeroRule(zeroRule int) {
 }
 
 // 取消订单抹零
-func (model *SaleOrder) SetZeroRuleCancel() {
+func (model *SaleOrder) SetZeroRuleCancel() bool {
+	isChange := false
 	// 将订单的抹零规则设置为实款实收
-	model.ZeroRule = constant.DiscountZeroRuleNone
+	if model.ZeroRule != constant.DiscountZeroRuleNone {
+		model.ZeroRule = constant.DiscountZeroRuleNone
+		isChange = true
+	}
+	return isChange
 }
 
 // 取消整单折扣
-func (model *SaleOrder) SetAllDiscountCancel() {
-	model.SetZeroRuleCancel()       // 取消订单抹零
-	model.SetCustomDiscountCancel() // 取消整单折扣
-	model.SetCustomAmountCancel()   // 取消整单改价
+func (model *SaleOrder) SetAllDiscountCancel() bool {
+	isChange := false
+	isChange = model.SetZeroRuleCancel() || isChange
+	isChange = model.SetCustomDiscountCancel() || isChange
+	isChange = model.SetCustomAmountCancel() || isChange
+	return isChange
+}
+
+// 是否存在折扣
+func (model *SaleOrder) IsDiscount() bool {
+	// custom_amount != -1 是没有进行订单改价
+	// custom_discount_rate = 1 是没有折扣
+	// zero_rule = 0 是没有去零
+	return model.CustomAmount != -1 && model.CustomDiscountRate != 1 && model.ZeroRule != 0
 }

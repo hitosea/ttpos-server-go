@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 // IPaymentMethodSrv 定义支付方式服务接口
@@ -119,11 +120,12 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			continue
 		}
 		var logo, qrcode string
-		if method.QrcodeFile != nil {
-			logo = method.LogoFile.GetUrl()
+		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+		if method.LogoFile != nil {
+			logo = utils.AddImageDomain("/api/product/thumbs/uploads/"+method.LogoFile.SaveName, baseUrl, true)
 		}
 		if method.QrcodeFile != nil {
-			qrcode = method.QrcodeFile.GetUrl()
+			qrcode = utils.AddImageDomain("/api/product/thumbs/uploads/"+method.QrcodeFile.SaveName, baseUrl, true)
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.SourceTextMap[method.Source]),

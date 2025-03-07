@@ -20,6 +20,7 @@ type BaseModel struct {
 	isUpdate   bool   // 用于判断该model是否需要更新
 }
 
+// NoPrimaryKey 判断是否无主键
 func (model *BaseModel) NoPrimaryKey() bool {
 	if model.ID == 0 {
 		return true
@@ -30,9 +31,12 @@ func (model *BaseModel) NoPrimaryKey() bool {
 	return false
 }
 
+// SetUpdate 设置需要更新
 func (model *BaseModel) SetUpdate() {
 	model.isUpdate = true
 }
+
+// GetUpdate 获取是否需要更新
 func (model *BaseModel) GetUpdate() bool {
 	return model.isUpdate
 }

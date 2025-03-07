@@ -231,6 +231,35 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// MergeTable 处理合并桌台
+// @Summary 合并桌台
+// @Description 合并桌台
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.MergeDeskReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/merge [post]
+func (h *DeskHandler) MergeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MergeDeskReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	info, deskMergeCheckResp, err := h.service.MergeDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // CancelDeskOrder 处理取消桌台订单
 // @Summary 取消桌台订单
 // @Description 取消桌台订单
@@ -1137,6 +1166,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
+		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                     // 合并桌台
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                        // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                         // 桌台订单商品改价

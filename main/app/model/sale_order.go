@@ -145,6 +145,11 @@ func (model *SaleOrder) SetInitServiceFee(setting SaleBillSetting) float64 {
 	return 0
 }
 
+// 判断销售订单是否部分支付
+func (model *SaleOrder) IsPartialPay() bool {
+	return len(model.PaymentOrders) > 1
+}
+
 type FinalAmount struct {
 	PaymentAmount        float64 // 已支付的金额
 	ChangeAmount         float64 // 找零金额

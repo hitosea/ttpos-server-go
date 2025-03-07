@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -22,16 +23,17 @@ import (
 
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
-	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                 // 获取桌台区域和类型列表
-	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                // 获取桌台详情
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)          // 创建桌台订单
-	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                  // 关闭桌台
-	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                            // 完成桌台
-	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                              // 切换桌台
-	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                   // 判断桌台是否可以关闭
-	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                         // 平板获取桌台列表
-	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                            // 平板端绑定桌台
+	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
+	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
+	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
+	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                          // 关闭桌台
+	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                    // 完成桌台
+	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                                      // 切换桌台
+	MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) // 合并桌台
+	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                           // 判断桌台是否可以关闭
+	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                                 // 平板获取桌台列表
+	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                                    // 平板端绑定桌台
 }
 
 // deskSrv 收银服务结构体
@@ -440,6 +442,159 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	}
 
 	return info, nil
+}
+
+// MergeDesk 合并桌台
+func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, nil, errors.WithMessage(err)
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+	}
+
+	// 判断销售账单是否拆单
+	if saleBill.IsSplit() {
+		return nil, nil, errors.New("当前桌台已拆单，不支持合并桌台")
+	}
+
+	// 获取销售订单
+	saleOrder := saleBill.GetFirstSaleOrder()
+
+	// 判断桌台是否符合合并条件
+	errDeskMsg := ""
+	deskMergeCheckRes := resp.DeskMergeCheckResp{}
+	saleBillList := []model.SaleBill{}
+	deskNos := []string{}
+	for _, deskUuid := range req.DeskUuids {
+		desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(deskUuid)
+		if errDesk != nil {
+			return nil, nil, errors.WithMessage(errDesk, "获取桌台信息失败")
+		}
+		deskSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(desk.SaleBillUuid)
+		if errSaleBill != nil {
+			deskMergeCheckRes.List = append(deskMergeCheckRes.List, resp.DeskNo{DeskNo: desk.DeskNo})
+			return nil, nil, errors.New("桌台有变动，请重新选择")
+		}
+		// 以下桌台是自助餐，不支持合并桌台
+		if deskSaleBill.IsBuffetSaleBill() {
+			deskMergeCheckRes.List = append(deskMergeCheckRes.List, resp.DeskNo{DeskNo: desk.DeskNo})
+			return nil, &deskMergeCheckRes, errors.New("自助餐桌台不符合并台")
+		}
+		// 以下桌台已被拆单，不支持合并桌台
+		if deskSaleBill.IsSplit() {
+			deskMergeCheckRes.List = append(deskMergeCheckRes.List, resp.DeskNo{DeskNo: desk.DeskNo})
+			errDeskMsg = "以下桌台已被拆单，不支持合并桌台"
+			continue
+		}
+		// 以下桌台已被部分支付，不支持合并桌台
+		if deskSaleBill.IsPartialPay() {
+			deskMergeCheckRes.List = append(deskMergeCheckRes.List, resp.DeskNo{DeskNo: desk.DeskNo})
+			errDeskMsg = "以下桌台已被部分支付，不支持合并桌台"
+			continue
+		}
+		// 将销售账单添加到销售账单列表
+		saleBillList = append(saleBillList, *deskSaleBill)
+		// 将桌台编号添加到桌台编号列表
+		deskNos = append(deskNos, desk.DeskNo)
+	}
+	if len(deskMergeCheckRes.List) > 0 {
+		return nil, &deskMergeCheckRes, errors.New(errDeskMsg)
+	}
+
+	resp := &resp.DeskMergeShopCartResp{}
+
+	// 更新桌台信息
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		mealNum := uint(0)
+		// 更新销售订单
+		for _, deskSaleBill := range saleBillList {
+			deskSaleOrder := deskSaleBill.GetFirstSaleOrder()
+
+			// 更新销售订单商品
+			if err := repository.NewOrderProductRepo(tx).Update(
+				map[string]interface{}{
+					"desk_uuid":       saleBill.DeskUuid,
+					"sale_bill_uuid":  saleBill.Uuid,
+					"sale_order_uuid": saleOrder.Uuid,
+					"create_time":     time.Now().Unix(),
+				},
+				repository.NewCommonRepo().WhereBySaleBillUuid(deskSaleBill.Uuid),
+				repository.NewCommonRepo().WhereBySaleOrderUuid(deskSaleOrder.Uuid),
+			); err != nil {
+				return errors.WithMessage(err)
+			}
+
+			// 静态追加到原订单
+			for _, deskSaleOrderProduct := range deskSaleOrder.SaleOrderProducts {
+				deskSaleOrderProduct.DeskUuid = saleBill.DeskUuid
+				deskSaleOrderProduct.SaleBillUuid = saleBill.Uuid
+				deskSaleOrderProduct.SaleOrderUuid = saleOrder.Uuid
+				deskSaleOrderProduct.CreateTime = time.Now().Unix()
+				saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, deskSaleOrderProduct)
+			}
+
+			// 被并桌待接单记录变更为本桌
+			if err := repository.NewH5OrderRepo(tx).Update(
+				map[string]interface{}{
+					"desk_uuid":   saleBill.DeskUuid,
+					"desk_no":     saleBill.Desk.DeskNo,
+					"create_time": time.Now().Unix(),
+				},
+				repository.NewCommonRepo().WhereByDeskUuid(deskSaleBill.DeskUuid),
+			); err != nil {
+				return errors.WithMessage(err)
+			}
+
+			// 关闭桌台 - 取消订单
+			if err := repository.NewDeskRepo(tx).CloseDesk(deskSaleBill.DeskUuid, "合并桌台"); err != nil {
+				return errors.WithMessage(err)
+			}
+
+			mealNum += deskSaleBill.MealNum
+		}
+
+		// 更新购买人数
+		saleBill.MealNum = saleBill.MealNum + mealNum
+		// 取消整单折扣
+		if saleBill.SetAllDiscountCancel() {
+			resp.IsResetDiscount = true
+		}
+		// 计算并保存销售账单
+		if err := s.orderSrv.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, nil, errors.WithMessage(err)
+	}
+
+	// todo： 操作记录
+	// deskNos
+	// OrderOperationLog::createLog($this->order_id, OrderOperationLog::ACTION_MERGE_TABLE, $tableNos, '并台');
+
+	// 返回购物车信息
+	info, err := s.orderSrv.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+	resp.ShopCart = info
+
+	//
+	return resp, &deskMergeCheckRes, nil
 }
 
 // GetTabletDeskList 平板获取桌台列表

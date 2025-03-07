@@ -14,6 +14,7 @@ type IH5OrderRepo interface {
 	GetH5Order(opts ...DBOption) (model.H5Order, error)
 	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
 	GetH5OrderCount(opts ...DBOption) (int64, error)
+	Update(data map[string]interface{}, opts ...DBOption) error // 更新订单商品
 	UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error
 
 	CreateH5Order(qrcodeOrder model.H5Order) (uint64, error)
@@ -108,6 +109,19 @@ func (r *H5OrderRepoImpl) GetH5OrderCount(opts ...DBOption) (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return total, nil
+}
+
+// Update 更新
+func (r *H5OrderRepoImpl) Update(data map[string]interface{}, opts ...DBOption) error {
+	db := r.db.Model(&model.H5Order{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Updates(data).Error
+
+	return errors.WithMessage(err)
 }
 
 // UpdateH5Order 更新接单

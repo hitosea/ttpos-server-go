@@ -81,6 +81,7 @@ type IOrderSrv interface {
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                      // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 使用会员优惠
+	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                                // 计算并保存销售账单
 }
 
 // orderSrv 订单服务结构
@@ -2145,6 +2146,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			Status:      saleOrder.Status,
 			ProductNum:  productNum,
 			ProductList: productList,
+			IsDiscount:  saleOrder.IsDiscount(),
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
@@ -2821,6 +2823,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+
+		// todo：退菜记录 - 订单id 产品id 产品规格 退菜原因 条件要一致
+
 		// 如果数量相等 就不需要复制新的商品
 		if saleOrderProduct.Num == req.Num {
 			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{

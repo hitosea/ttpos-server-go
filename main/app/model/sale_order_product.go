@@ -75,6 +75,7 @@ type SaleOrderProduct struct {
 	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);not null;default:0;comment:'销售账单ID'" json:"sale_bill_uuid"`
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20);not null;default:0;comment:'销售订单ID'" json:"sale_order_uuid"`
 	MustPlanUuid          uint64 `gorm:"column:must_plan_uuid;type:bigint(20);not null;default:0;comment:'必点方案ID,产品要求用这种方式标注各个必点'" json:"must_plan_uuid"`
+	DeskUuid              uint64 `gorm:"column:desk_uuid;type:bigint(20);not null;default:0;comment:'桌台ID, 默认为0是本台，大于0为合并过来的桌台'" json:"desk_uuid"`
 
 	// 其他字段
 	Sign             string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
