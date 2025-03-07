@@ -90,14 +90,14 @@ const (
 	OrderSendKitchen         = "SEND"                // 送厨
 	OrderRefundProduct       = "REFUND"              // 退菜
 	OrderCancelRefundProduct = "CANCEL_REFUND"       // 取消退菜
+	OrderProductFree         = "PRODUCT_FREE"        // 赠菜
+	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE" // 取消赠菜
 	OrderChangeTable         = "CHANGE_TABLE"        // 转台
 	OrderChangePrice         = "CHANGE_PRICE"        // 改价
 	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
 	OrderStayOrder           = "STAY_ORDER"          // 挂单
 	OrderPickOrder           = "PICK_ORDER"          // 取单
-	OrderProductFree         = "PRODUCT_FREE"        // 赠菜
-	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE" // 取消赠菜
 	OrderProductMove         = "PRODUCT_MOVE"        // 转菜
 	OrderDiscount            = "DISCOUNT"            // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"     // 撤销优惠折扣

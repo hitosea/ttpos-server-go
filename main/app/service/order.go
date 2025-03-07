@@ -2957,7 +2957,7 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		reasons = _reasons
 	}
 	// 执行
-	errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 			GiftTime:   time.Now().Unix(),
 			GiftReason: req.Reason,
@@ -2978,10 +2978,30 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 			return errors.WithMessage(err)
 		}
 		return nil
-	})
-	if errUpdateDB != nil {
+	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
+	// 发布赠菜事件
+	go func() {
+		s.bus.PublishGiftSaleOrderProductEvent(event.GiftSaleOrderProductPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.SaleOrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			ProductPrice:   saleOrderProduct.Price,
+			TotalNum:       saleOrderProduct.Num,
+			TotalPrice:     decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(saleOrderProduct.Num))).Round(2).InexactFloat64(),
+			FreeTagIds:     req.GiftIds,
+			FreeRemark:     req.Reason,
+		})
+	}()
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
