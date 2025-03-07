@@ -511,7 +511,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		deviceId = auth.Assistant.DeviceId
 	}
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
-		return company, companySetting, staff, errors.New("设备已解绑，请重新绑定")
+		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
 
 	switch auth.Source {

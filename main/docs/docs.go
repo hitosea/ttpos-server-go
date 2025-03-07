@@ -13842,6 +13842,10 @@ const docTemplate = `{
                 "amount_info": {
                     "$ref": "#/definitions/resp.AmountInfo"
                 },
+                "is_discount": {
+                    "description": "是否存在折扣 true:存在 false:不存在",
+                    "type": "boolean"
+                },
                 "order_no": {
                     "type": "string"
                 },

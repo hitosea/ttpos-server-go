@@ -122,10 +122,10 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 		if method.LogoFile != nil {
-			logo = utils.AddImageDomain("/api/product/thumbs/uploads/"+method.LogoFile.SaveName, baseUrl, true)
+			logo = method.LogoFile.GetUrl(baseUrl)
 		}
 		if method.QrcodeFile != nil {
-			qrcode = utils.AddImageDomain("/api/product/thumbs/uploads/"+method.QrcodeFile.SaveName, baseUrl, true)
+			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.SourceTextMap[method.Source]),

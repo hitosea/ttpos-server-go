@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -60,7 +61,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 			continue
 		}
 		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
-		productPackageList := s.getInstantMustPlanProductList(plan)
+		productPackageList := s.getInstantMustPlanProductList(ctx, plan)
 		// 如果列表为空，跳过不显示
 		if len(productPackageList) == 0 {
 			continue
@@ -130,7 +131,8 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 }
 
 // 获取点餐的必点方案的商品列表。用于加购商品时判断该商品是不是这些点餐列表里的商品
-func (s *mustPlanSrv) getInstantMustPlanProductList(mustPlan *model.ProductMustPlan) []resp.InstantMustPlanProductStat {
+func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPlan *model.ProductMustPlan) []resp.InstantMustPlanProductStat {
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 不是点餐的必单方案
 	if !mustPlan.IsInstantMustPlan() {
 		return []resp.InstantMustPlanProductStat{}
@@ -143,7 +145,7 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(mustPlan *model.ProductMustP
 	// 如果是固定商品
 	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 		for _, planItem := range mustPlan.ProductMustPlanItems {
-			productPackage := planItem.GetProductInfo()
+			productPackage := planItem.GetProductInfo(baseUrl)
 			if productPackage == nil {
 				continue
 			}
@@ -160,7 +162,7 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(mustPlan *model.ProductMustP
 	// 如果是可选商品
 	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 		for _, planItem := range mustPlan.ProductMustPlanItems {
-			productPackage := planItem.GetProductInfo()
+			productPackage := planItem.GetProductInfo(baseUrl)
 			if productPackage == nil {
 				continue
 			}
@@ -207,7 +209,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 		}
 		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
 		personNum := shopCart.SaleBill.MealNum
-		productPackageList := s.getIDeskMustPlanProductList(plan, personNum)
+		productPackageList := s.getIDeskMustPlanProductList(ctx, plan, personNum)
 		// 如果列表为空，跳过不检查
 		if len(productPackageList) == 0 {
 			continue
@@ -272,7 +274,8 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 }
 
 // 获取桌台的必点方案的商品列表。用于加购商品时判断该商品是不是这些商品列表里的商品
-func (s *mustPlanSrv) getIDeskMustPlanProductList(mustPlan *model.ProductMustPlan, personNum uint) []resp.InstantMustPlanProductStat {
+func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan *model.ProductMustPlan, personNum uint) []resp.InstantMustPlanProductStat {
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 不是桌台的必单方案
 	if !mustPlan.IsDeskMustPlan() {
 		return []resp.InstantMustPlanProductStat{}
@@ -286,7 +289,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(mustPlan *model.ProductMustPla
 	if mustPlan.GetMustType() == constant.ProductMustPlanMustTypeEachOrder {
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo()
+				productPackage := planItem.GetProductInfo(baseUrl)
 				if productPackage == nil {
 					continue
 				}
@@ -303,7 +306,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(mustPlan *model.ProductMustPla
 		// 如果是“每单必点”、可选商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo()
+				productPackage := planItem.GetProductInfo(baseUrl)
 				if productPackage == nil {
 					continue
 				}
@@ -324,7 +327,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(mustPlan *model.ProductMustPla
 		// 如果是“每人必点”、固定商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo()
+				productPackage := planItem.GetProductInfo(baseUrl)
 				if productPackage == nil {
 					continue
 				}
@@ -341,7 +344,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(mustPlan *model.ProductMustPla
 		// 如果是“每人必点”、可选商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo()
+				productPackage := planItem.GetProductInfo(baseUrl)
 				if productPackage == nil {
 					continue
 				}

@@ -7,13 +7,15 @@ import (
 	"ttpos-server-go/app/dto/resp/cashier_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 // IProductSrv 定义收银服务接口
 type IProductSrv interface {
-	GetProductList(dbId uint64, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
-	GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error)                       // 获取收银机点餐页面产品类别列表
+	GetProductList(ctx context.Context, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
+	GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
 }
 
 // productSrv 收银服务结构体
@@ -36,7 +38,8 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
+func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
 	// 获取产品列表
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
@@ -135,7 +138,7 @@ func (s *productSrv) GetProductList(dbId uint64, req req.ProductListReq) (cashie
 		}
 
 		// todo 去 ttpos_file表中获取图片url
-		image := product.ImageFile.GetUrl()
+		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 		// 添加到列表
 		minPrice := float64(0)
 		if len(prices) > 0 {

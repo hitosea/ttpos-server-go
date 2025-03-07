@@ -112,7 +112,7 @@ type ProductMustPlanItem struct {
 	ProductPackage  ProductPackage  `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
-func (model *ProductMustPlanItem) GetProductInfo() *resp.InstantMustPlanProduct {
+func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMustPlanProduct {
 	if model.IsDelete() {
 		return nil
 	}
@@ -176,7 +176,7 @@ func (model *ProductMustPlanItem) GetProductInfo() *resp.InstantMustPlanProduct 
 	productPackage := resp.InstantMustPlanProduct{
 		Uuid:       model.ProductPackage.Uuid,
 		LocaleName: model.ProductPackage.MultiLanguageName.GetNames(),
-		Image:      model.ProductPackage.ImageFile.GetUrl(),
+		Image:      model.ProductPackage.ImageFile.GetUrl(baseUrl),
 		Unit:       model.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
 		LimitNum:   model.ProductPackage.LimitNum,
 		Price:      model.ProductPackage.GetMinPrice(),
