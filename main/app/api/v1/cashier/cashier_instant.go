@@ -1022,7 +1022,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/amount/change", wrapper.OrderAmountChange)                               // 点餐订单改价
 		privateApi.POST("/instant/order/discount", wrapper.OrderDiscount)                                        // 点餐订单打折
 		privateApi.POST("/instant/order/zero_rule", wrapper.OrderZeroRule)                                       // 设置点餐订单订单抹零规则
-		privateApi.POST("/instant/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+		privateApi.POST("/instant/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消点餐订单所有优惠折扣，包括改价、打折、抹零（撤销优惠折扣）
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品

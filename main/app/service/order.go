@@ -1555,6 +1555,21 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 		return nil, errors.WithMessage(err)
 	}
 
+	// 发布取消优惠折扣事件
+	go func() {
+		event.NewSystemBus().PublishCancelSaleOrderDiscountEvent(event.CancelSaleOrderDiscountPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			ParentId:  req.SaleBillUuid,
+			OrderName: req.SaleOrderUuid,
+		})
+	}()
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -3081,6 +3096,8 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 			ProductPrice:   saleOrderProduct.Price,
 			TotalNum:       saleOrderProduct.Num,
 			TotalPrice:     decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(saleOrderProduct.Num))).Round(2).InexactFloat64(),
+			ParentId:       saleOrder.SaleBillUuid,
+			OrderName:      saleOrder.Uuid,
 		})
 	}()
 

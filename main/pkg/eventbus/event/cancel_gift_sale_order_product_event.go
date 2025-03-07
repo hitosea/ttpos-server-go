@@ -19,8 +19,8 @@ type CancelGiftSaleOrderProductPayload struct {
 	ProductPrice   float64            `json:"product_price"`    // 商品价格
 	TotalNum       uint               `json:"total_num"`        // 总数量
 	TotalPrice     float64            `json:"total_price"`      // 总价格
-	ParentId       uint64             `json:"parent_id"`        // 父订单ID
-	OrderName      string             `json:"order_name"`       // 订单名称
+	ParentId       uint64             `json:"parent_id"`        // 销售账单uuid
+	OrderName      uint64             `json:"order_name"`       // 销售订单uuid
 }
 
 func (payload *CancelGiftSaleOrderProductPayload) ToJsonString() string {
