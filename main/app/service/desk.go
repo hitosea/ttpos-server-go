@@ -573,7 +573,7 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			resp.IsResetDiscount = true
 		}
 		// 计算并保存销售账单
-		if err := s.orderSrv.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		if err := s.orderSrv.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 

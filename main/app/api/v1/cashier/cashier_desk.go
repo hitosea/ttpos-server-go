@@ -1137,6 +1137,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
+		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                     // 合并桌台
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                        // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                         // 桌台订单商品改价
