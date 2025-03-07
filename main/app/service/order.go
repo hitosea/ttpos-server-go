@@ -3416,9 +3416,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	}
 	var paymentMethods []*model.PaymentMethod
 	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
-	if len(paymentMethods) <= 0 {
-		return nil, errors.New("系统没有支付方式")
-	}
+
 	var memberInfo *resp.MemberInfo
 	if saleOrder.Member != nil {
 		memberInfo = &resp.MemberInfo{
