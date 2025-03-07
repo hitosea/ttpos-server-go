@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 )
 
 // DeskRegion 餐桌区域表,定义餐桌的区域信息 ttpos_desk_region
@@ -46,6 +47,33 @@ func (model *Desk) SetNil() {
 	model.SaleBill = nil
 	model.Device = nil
 	model.Region = nil
+}
+
+// CheckProductChangeDesk 检查商品转桌台是否符合条件。这个是目标桌台
+func (model *Desk) CheckProductChangeDesk() error {
+	// 判断目标桌台是否已经开台。只能转菜到已开台的桌台上
+	if model.IsAvailableDesk() {
+		return errors.New("目标桌台未开台")
+	}
+	// 判断目标桌台是否禁用
+	if model.IsDisableDesk() {
+		return errors.New("目标桌台已禁用")
+	}
+	// 判断目标桌台是否存在销售账单
+	if model.SaleBillUuid == 0 {
+		return errors.New("目标桌台不存在销售账单")
+	}
+	if model.SaleBill != nil {
+		// 判断销售账单是否已结账或已经取消
+		if model.SaleBill.IsEndStatus() {
+			return errors.New("目标桌台已结账")
+		}
+		// 判断销售账单是否锁定
+		if model.SaleBill.IsLockStatus() {
+			return errors.New("目标桌台已锁定")
+		}
+	}
+	return nil
 }
 func (model *Desk) IsDisableDesk() bool {
 	return model.IsDisable == constant.DeskDisable
@@ -90,7 +118,7 @@ func (model *Desk) getCustomerCount() uint {
 
 func (model *Desk) getLockStatus() bool {
 	if model.SaleBill != nil {
-		return model.SaleBill.IsLock == constant.SaleBillIsLockYes
+		return model.SaleBill.IsLockStatus()
 	}
 	return false
 }

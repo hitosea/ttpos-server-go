@@ -49,3 +49,11 @@ type OrderCartProductGivingReq struct {
 	Reason               string   `json:"reason"`                  // 赠菜原因
 	GiftIds              []uint64 `json:"gift_ids"`                // 赠菜标签ids
 }
+
+// OrderCartProductChangeDeskReq 转菜购物车商品请求参数
+type OrderCartProductChangeDeskReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+	DeskUuid             uint64 `json:"desk_uuid"`               // 目标桌台ID
+}

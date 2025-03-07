@@ -65,6 +65,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)          // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
+	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                // 转菜购物车商品
 	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                        // 取消赠菜购物车商品
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                           // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
@@ -2173,7 +2174,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
-		IsLock:        shopCart.SaleBill.IsLock == 1,
+		IsLock:        shopCart.SaleBill.IsLockStatus(),
 		Desk:          nil,
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
@@ -2964,6 +2965,91 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	if errGetCartInfo != nil {
 		return nil, errors.WithMessage(errGetCartInfo, "获取购物车信息失败")
 	}
+	return cartInfo, nil
+}
+
+// InstantOrderCartProductChangeDesk 转菜购物车商品
+func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	// 获取验证销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "销售账单不存在")
+	}
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(constant.OrderChangeTable, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售订单和商品
+	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
+	switch {
+	case saleOrder == nil:
+		return nil, errors.New("销售订单不存在")
+	case saleOrderProduct == nil:
+		return nil, errors.New("销售订单商品不存在")
+	case saleOrderProduct.IsCancelProduct():
+		return nil, errors.New("商品已取消")
+	}
+
+	// 获取目标桌台的信息和销售账单
+	targetDesk, err := repository.NewDeskRepo(db).GetDeskAndSaleBillByDeskUuid(req.DeskUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if err := targetDesk.CheckProductChangeDesk(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取目标桌台的销售账单信息
+	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(targetDesk.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "目标桌台的销售账单不存在", fmt.Sprintf("targetDesk.SaleBillUuid: %d", targetDesk.SaleBillUuid))
+	}
+
+	// 将销售订单商品的sale_bill_uuid和sale_order_uuid更新为新的桌台
+	targetSaleOrder := targetSaleBill.SaleOrders[0]
+	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
+	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
+	// 将商品的折扣改为使用目标桌台的折扣
+	saleOrderProduct.MemberDiscountRate = targetSaleOrder.MemberDiscountRate
+	saleOrderProduct.MemberCardDiscountRate = targetSaleOrder.MemberCardDiscountRate
+	saleOrderProduct.CustomDiscountRate = targetSaleOrder.CustomDiscountRate
+	saleOrderProduct.SetUpdate() // 标记该商品的记录要更新，会在原桌台账单的CalcAndSaveSaleBill方法中更新
+	// 将商品添加到目标桌台的销售订单中
+	targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
+
+	// todo
+	// 如果商品已经送厨且未完成出餐，要为这个商品生成一个目标桌台的送厨单并从原桌台的送厨单中删除该商品
+
+	// todo
+	// 如果商品已经送厨且已完成出餐，要为这个商品生成一个目标桌台的送厨单并完成出餐，并从原桌台的送厨单中删除该商品。考虑到该商品制作完成后，在厨显撤回制作完成，此时该商品不应该在原桌台的送厨单上
+
+	// todo 重新生成订单商品签名
+
+	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 重新计算原桌台的销售账单
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 重新计算目标桌台的销售账单
+		if err := s.CalcAndSaveSaleBill(ctx, tx, targetSaleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	})
+
+	// 获取新的购物车信息
+	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if errGetCartInfo != nil {
+		return nil, errors.WithMessage(errGetCartInfo, "获取购物车信息失败")
+	}
+
 	return cartInfo, nil
 }
 

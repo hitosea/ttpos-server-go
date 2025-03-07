@@ -120,6 +120,10 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+func (model *SaleBill) IsLockStatus() bool {
+	return model.IsLock == constant.SaleBillIsLockYes
+}
+
 // 设置账单为已送厨状态。如果状态已经是送厨，则不修改
 func (model *SaleBill) SetCookingStatus() {
 	defer model.SetUpdate()
@@ -512,7 +516,7 @@ func (model *SaleBill) BuffetIsTimeOut() bool {
 
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
-	if operation != constant.OrderSettle && model.IsLock == 1 {
+	if operation != constant.OrderSettle && model.IsLockStatus() {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {

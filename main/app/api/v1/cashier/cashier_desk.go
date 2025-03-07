@@ -736,6 +736,35 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductChangeDesk 转菜购物车商品
+// @Summary 转菜购物车商品
+// @Description 转菜购物车商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductChangeDeskReq true "转菜购物车商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/product/change_desk [post]
+func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductChangeDeskReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 转菜购物车商品
+	res, err := h.orderService.InstantOrderCartProductChangeDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("转菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderCartProductGiving 赠菜购物车商品
 // @Summary 赠菜购物车商品
 // @Description 赠菜购物车商品
@@ -1125,6 +1154,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
 		privateApi.POST("/desk/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
+		privateApi.POST("/desk/order/cart/product/change_desk", wrapper.OrderCartProductChangeDesk)           // 转菜
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品

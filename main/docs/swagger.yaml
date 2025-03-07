@@ -611,6 +611,21 @@ definitions:
           type: integer
         type: array
     type: object
+  req.OrderCartProductChangeDeskReq:
+    properties:
+      desk_uuid:
+        description: 目标桌台ID
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单ID
+        type: integer
+      sale_order_product_uuid:
+        description: 销售订单商品ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单ID
+        type: integer
+    type: object
   req.OrderCartProductCookingReq:
     properties:
       sale_bill_uuid:
@@ -5856,7 +5871,7 @@ paths:
           description: 未找到
       summary: 取消赠菜购物车商品
       tags:
-      - 收银端.点餐
+      - 收银端.桌台
   /cashier/desk/order/cart/product/cancel_returning:
     post:
       consumes:
@@ -5886,6 +5901,35 @@ paths:
       summary: 取消退菜购物车商品
       tags:
       - 收银端.点餐
+  /cashier/desk/order/cart/product/change_desk:
+    post:
+      consumes:
+      - application/json
+      description: 转菜购物车商品
+      parameters:
+      - description: 转菜购物车商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductChangeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 转菜购物车商品
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/cart/product/giving:
     post:
       consumes:
@@ -5912,7 +5956,7 @@ paths:
               type: object
         "404":
           description: 未找到
-      summary: 取赠菜购物车商品
+      summary: 赠菜购物车商品
       tags:
       - 收银端.桌台
   /cashier/desk/order/cart/product/num:

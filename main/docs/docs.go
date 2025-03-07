@@ -1921,7 +1921,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.点餐"
+                    "收银端.桌台"
                 ],
                 "summary": "取消赠菜购物车商品",
                 "parameters": [
@@ -2009,6 +2009,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/cart/product/change_desk": {
+            "post": {
+                "description": "转菜购物车商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "转菜购物车商品",
+                "parameters": [
+                    {
+                        "description": "转菜购物车商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductChangeDeskReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/cart/product/giving": {
             "post": {
                 "description": "赠菜购物车商品",
@@ -2021,7 +2070,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.桌台"
                 ],
-                "summary": "取赠菜购物车商品",
+                "summary": "赠菜购物车商品",
                 "parameters": [
                     {
                         "description": "商品参数",
@@ -8796,6 +8845,27 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "req.OrderCartProductChangeDeskReq": {
+            "type": "object",
+            "properties": {
+                "desk_uuid": {
+                    "description": "目标桌台ID",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单ID",
+                    "type": "integer"
+                },
+                "sale_order_product_uuid": {
+                    "description": "销售订单商品ID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单ID",
+                    "type": "integer"
                 }
             }
         },
