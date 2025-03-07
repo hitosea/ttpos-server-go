@@ -18,6 +18,10 @@ type Desk struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid"` // 订单UUID
 }
 
+type DeskNo struct {
+	DeskNo string `json:"desk_no"`
+}
+
 type DeskExtra struct {
 	AvailableNum       uint `json:"available_num"`         // 桌台可用数量
 	LockNum            uint `json:"lock_num"`              // 桌台锁定数量
@@ -73,4 +77,14 @@ type DeskInfoResp struct {
 type CreateDeskOrderResp struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
+}
+
+// 合并桌台接口响应 以下桌台已被拆单，不支持合并桌台"
+type DeskMergeCheckResp struct {
+	List []DeskNo `json:"list"`
+}
+
+type DeskMergeShopCartResp struct {
+	IsResetDiscount bool      `json:"is_reset_discount"`
+	ShopCart        *ShopCart `json:"shop_cart"`
 }

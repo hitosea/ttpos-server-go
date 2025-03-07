@@ -231,6 +231,35 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// MergeTable 处理合并桌台
+// @Summary 合并桌台
+// @Description 合并桌台
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.MergeTableReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/merge [post]
+func (h *DeskHandler) MergeTable(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MergeTableReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	info, deskMergeCheckResp, err := h.service.MergeTable(ctx, params)
+	if err != nil {
+		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // CancelDeskOrder 处理取消桌台订单
 // @Summary 取消桌台订单
 // @Description 取消桌台订单

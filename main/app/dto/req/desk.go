@@ -122,3 +122,15 @@ type ChangeDeskReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
 	DeskUuid      uint64 `json:"desk_uuid" binding:"required"`       // 新桌台UUID
 }
+
+type MergeTableReq struct {
+	SaleBillUuid uint64   `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	DeskUuids    []uint64 `json:"desk_uuids"`                        // 桌台UUID列表
+}
+
+func (req *MergeTableReq) Validate() error {
+	if len(req.DeskUuids) < 1 {
+		return errors.New("请选择桌台")
+	}
+	return nil
+}
