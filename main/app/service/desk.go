@@ -23,17 +23,17 @@ import (
 
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
-	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)           // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                           // 获取桌台区域和类型列表
-	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                          // 获取桌台详情
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                    // 创建桌台订单
-	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                            // 关闭桌台
-	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                      // 完成桌台
-	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                                        // 切换桌台
-	MergeTable(ctx context.Context, req req.MergeTableReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) // 合并桌台
-	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                             // 判断桌台是否可以关闭
-	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                                   // 平板获取桌台列表
-	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                                      // 平板端绑定桌台
+	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
+	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
+	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
+	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                          // 关闭桌台
+	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                    // 完成桌台
+	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                                      // 切换桌台
+	MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) // 合并桌台
+	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, error)                                           // 判断桌台是否可以关闭
+	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                                 // 平板获取桌台列表
+	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                                    // 平板端绑定桌台
 }
 
 // deskSrv 收银服务结构体
@@ -444,8 +444,8 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	return info, nil
 }
 
-// MergeTable 合并桌台
-func (s *deskSrv) MergeTable(ctx context.Context, req req.MergeTableReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
+// MergeDesk 合并桌台
+func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)

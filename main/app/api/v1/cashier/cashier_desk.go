@@ -242,16 +242,16 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 // @Success 200 {object} nil
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/merge [post]
-func (h *DeskHandler) MergeTable(c *gin.Context) {
+func (h *DeskHandler) MergeDesk(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	params := req.MergeTableReq{}
+	params := req.MergeDeskReq{}
 	if err := c.ShouldBind(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
 		return
 	}
 	//
-	info, deskMergeCheckResp, err := h.service.MergeTable(ctx, params)
+	info, deskMergeCheckResp, err := h.service.MergeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, errors.WithMessage(err))
 		return
