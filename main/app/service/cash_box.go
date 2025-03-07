@@ -46,8 +46,12 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 		return errors.New("钱箱操作类型错误")
 	}
 	companyUuid := ctx.GetCompanyUuid()
-	s.uuidLock.LockUuid(companyUuid)
-	defer s.uuidLock.UnlockUuid(companyUuid)
+
+	if ctx.NoLock() {
+		s.uuidLock.LockUuid(companyUuid)
+		defer s.uuidLock.UnlockUuid(companyUuid)
+		ctx.AddLock()
+	}
 
 	amount := param.Amount
 	fn := func(tx *gorm.DB) error {

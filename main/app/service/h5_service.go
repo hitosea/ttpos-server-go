@@ -303,8 +303,11 @@ func (s *h5Srv) RemarkProduct(ctx context.Context, remark string, saleOrderProdu
 	}
 
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(saleBill.Uuid)
-	defer lock.NewSystemLock().UnlockUuid(saleBill.Uuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(saleBill.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(saleBill.Uuid)
+		ctx.AddLock()
+	}
 
 	// 修改订单商品备注
 	_, err := s.orderSrv.OrderProductRemark(ctx, req.OrderProductRemarkReq{

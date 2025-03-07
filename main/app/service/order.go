@@ -40,7 +40,7 @@ type IOrderSrv interface {
 	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                             // 获取订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                // 获取订单详情
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                       // 取消订单
-	DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                            // 删除订单
+	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                       // 删除订单
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
@@ -1014,10 +1014,13 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 }
 
 // DeleteOrder 删除订单, saleOrderUuid = 等于0的时候删除主单，并且主单下的子单也会被删除， saleOrderUuid > 0 的时候删除子单
-func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error {
+func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error {
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(saleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(saleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
@@ -1054,8 +1057,11 @@ func (s *orderSrv) DeleteOrder(dbId uint64, saleBillUuid uint64, saleOrderUuid u
 // HideOrder 隐藏订单（挂单）
 func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(saleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(saleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1229,6 +1235,7 @@ func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUui
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
 	}
 	return s.orderProductDelete(ctx, dbId, staffUuid, source, req)
 }
@@ -1332,8 +1339,11 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	}
 
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1414,7 +1424,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 // OrderAmountChange  修改订单金额，整单改价
 func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1480,7 +1490,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 // OrderDiscount  修改订单折扣
 func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1528,7 +1538,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 // OrderZeroRule  修改订单抹零规则
 func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1576,7 +1586,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 // OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零
 func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1639,8 +1649,11 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}
 
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1702,7 +1715,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 // OrderChangeBuffet 调整自助餐
 func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1838,7 +1851,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 // OrderChangeBuffetClock 调整自助餐加钟
 func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
-	if !ctx.NoLock() {
+	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
@@ -1950,8 +1963,11 @@ func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, err
 func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
 	// 禁止并发操作
-	lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-	defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
 
 	// 获取信息源
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
@@ -2454,9 +2470,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 
 // OrderCartProductNum 修改购物车商品数量
 func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
-	s.lock.LockUuid(request.SaleBillUuid)
-	defer s.lock.UnlockUuid(request.SaleBillUuid)
-	ctx.AddLock()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
@@ -3776,8 +3795,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 加锁
 	saleBillUuid := req.SaleBillUuid
-	s.lock.LockUuid(saleBillUuid)
-	defer s.lock.UnlockUuid(saleBillUuid)
+	if ctx.NoLock() {
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
@@ -3880,6 +3902,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	if ctx.NoLock() {
 		s.lock.LockUuid(saleBillUuid)
 		defer s.lock.UnlockUuid(saleBillUuid)
+		ctx.AddLock()
 	}
 
 	// 需要更新的销售订单商品
@@ -4121,12 +4144,14 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 
 // InstantOrderSaleOrderDelete 删除一个销售订单(删除拆单)
 func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		// 加锁
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
 	ctx.Log().Debug("删除一个销售订单(删除拆单)", zap.Any("request", request))
 	db := s.dbm.GetDB(ctx.GetDbId())
-
-	// 加锁
-	s.lock.LockUuid(request.SaleBillUuid)
-	defer s.lock.UnlockUuid(request.SaleBillUuid)
 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)

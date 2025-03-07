@@ -29,7 +29,6 @@ type IOrderProductSrv interface {
 	GetMustPlanRuleByDeskUuid(ctx context.Context, deskUuid uint64) (*utils.Rule, *utils.Check, error)          // 查询某个桌台的必点商品规则
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
-	CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error                            // 创建订单商品
 	GenerateOrderProduct(req GenerateOrderProductReq) *model.SaleOrderProduct                   // 生成订单商品
 	UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error                // 更新订单商品金额
 }
@@ -314,82 +313,6 @@ type CreateOrderProductReq struct {
 	ProductPackage *model.ProductPackage
 	SauceUuids     []uint64
 	Num            uint
-}
-
-// CreateOrderProduct 创建订单商品
-func (o *orderProductSrv) CreateOrderProduct(dbId uint64, req CreateOrderProductReq) error {
-	db := o.dbm.GetDB(dbId)
-	err := db.Transaction(func(tx *gorm.DB) error {
-		// 生成销售订单商品
-		orderProductData := o.GenerateOrderProduct(GenerateOrderProductReq{
-			Lang:           req.Lang,
-			ProductPackage: req.ProductPackage,
-			SaleBill:       req.SaleBill,
-			SaleOrder:      req.SaleOrder,
-			SauceUuids:     req.SauceUuids,
-			Num:            req.Num,
-		})
-
-		// 判断销售订单商品签名是否存在, 存在则更新, 不存在则创建
-		orderProduct, err := repository.NewOrderProductRepo(tx).GetProductInfo(
-			repository.CommonRepo.WhereBySign(orderProductData.Sign),
-			repository.CommonRepo.WhereBySaleBillUuid(orderProductData.SaleBillUuid),
-			repository.CommonRepo.WhereBySaleOrderUuid(orderProductData.SaleOrderUuid),
-			repository.CommonRepo.WhereBySoftDelete(),
-		)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		if orderProduct.Uuid == 0 {
-			// 创建销售订单商品
-			orderProduct, err = repository.NewOrderProductRepo(tx).Create(orderProductData)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建销售订单商品bom
-			for key, bom := range orderProductData.SaleOrderProductBoms {
-				bom.SaleOrderProductUuid = orderProduct.Uuid
-				orderProductData.SaleOrderProductBoms[key] = bom
-			}
-			if err := repository.NewOrderProductBomRepo(tx).CreateBatch(orderProductData.SaleOrderProductBoms); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建销售订单商品属性
-			if len(orderProductData.SaleOrderProductAttributes) > 0 {
-				for key, attribute := range orderProductData.SaleOrderProductAttributes {
-					attribute.SaleOrderProductUuid = orderProduct.Uuid
-					orderProductData.SaleOrderProductAttributes[key] = attribute
-				}
-				if err := repository.NewOrderProductAttributeRepo(tx).CreateBatch(orderProductData.SaleOrderProductAttributes); err != nil {
-					return errors.WithMessage(err)
-				}
-			}
-		} else {
-			// 更新销售订单商品
-			if err := repository.NewOrderProductRepo(tx).Update(
-				map[string]interface{}{
-					"num": repository.NewCommonRepo().IncrementNum(req.Num),
-				},
-				repository.NewCommonRepo().WhereByUuid(orderProduct.Uuid),
-			); err != nil {
-				return errors.WithMessage(err)
-			}
-		}
-
-		// 计算销售订单商品相关金额
-		err = o.UpdateOrderProductAmount(tx, UpdateOrderProductAmountReq{
-			SaleBill:     req.SaleBill,
-			SaleOrder:    req.SaleOrder,
-			OrderProduct: orderProduct,
-		})
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-
-		return nil
-	})
-
-	return errors.WithMessage(err)
 }
 
 // GenerateOrderProductReq 生成订单商品请求

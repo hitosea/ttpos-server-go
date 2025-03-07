@@ -125,6 +125,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 // @Router /cashier/order/delete [delete]
 func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderDeleteReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -132,7 +133,7 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.DeleteOrder(companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	err := h.service.DeleteOrder(ctx, companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
