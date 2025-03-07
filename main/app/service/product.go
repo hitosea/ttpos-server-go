@@ -93,6 +93,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 						LocaleName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
 						Price:      bom.Price,
 						StockNum:   int(bom.StockNum),
+						Barcode:    bom.BarcodeValue,
 					})
 					if len(prices) == 0 {
 						prices = append(prices, bom.Price)
@@ -137,7 +138,6 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			}
 		}
 
-		// todo 去 ttpos_file表中获取图片url
 		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 		// 添加到列表
 		minPrice := float64(0)
