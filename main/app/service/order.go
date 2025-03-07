@@ -1131,9 +1131,22 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 
 	// 修改销售账单信息，标记账单取出
 	saleBill.SetShowSaleBill(ctx.GetDeviceUuid())
+	// 更新销售账单
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
-		return nil, errors.WithMessage(err, "更新销售账单失败")
+		return nil, errors.WithMessage(err, "更新销售账单失败", fmt.Sprintf("NewSaleBillRepo(db).UpdateSaleBillRecord failed, sale_bill uuid:%d", saleBill.Uuid))
 	}
+
+	// 发布"取单"事件
+	go func() {
+		event.NewSystemBus().PublishShowSaleBillEvent(event.ShowSaleBillPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: req.SaleBillUuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
 
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
