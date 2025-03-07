@@ -774,6 +774,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `is_default_select` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态',
     `is_sold_out` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否沽清, 0-否 1-是',
+    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1047,8 +1048,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_item` (
 CREATE TABLE `ttpos_purchase_form_log` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单日志UUID',
-    `purchase_form_uuid` int(11) DEFAULT 0 COMMENT '采购单ID',
-    `operator_uuid` int(11) DEFAULT 0 COMMENT '操作人ID',
+    `purchase_form_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '采购单uuid',
+    `operator_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '操作人uuid',
     `username` varchar(255) DEFAULT '' COMMENT '操作人员',
     `status` int(11) DEFAULT 10 COMMENT '操作状态 0-待审核 1-已驳回 2-采购中 3-已采购 4-已入库',
     `operation` varchar(255) DEFAULT '' COMMENT '操作动作',

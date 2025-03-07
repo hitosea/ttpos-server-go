@@ -14,6 +14,8 @@ class User extends BaseModel
     protected $name = 'staff';
     protected $pk = 'id';
 
+    protected $append = ['shop_user_id'];
+
     /**
      * 当real_name不存在时返回username
      * @return array
@@ -24,6 +26,11 @@ class User extends BaseModel
             return $data['username'] ?? '';
         }
         return $v;
+    }
+
+    public static function getShopUserIdAttr($value, $data)
+    {
+        return $data['uuid'];
     }
 
     /**
@@ -163,7 +170,10 @@ class User extends BaseModel
      */
     public function getList()
     {
-        return $this->with(['userRole.role', 'supplier'])
+        return $this->with([
+                'userRole.role', 
+                'supplier'
+            ])
             ->order(['create_time' => 'desc'])
             ->hidden(['password'])
             ->select();

@@ -334,7 +334,7 @@ class Product extends BaseModel
      */
     public function erpSupplier()
     {
-        return $this->hasMany(ErpSupplier::class, 'id', 'erp_supplier_id');
+        return $this->belongsTo(ErpSupplier::class, 'supplier_uuid', 'uuid');
     }
 
     /**

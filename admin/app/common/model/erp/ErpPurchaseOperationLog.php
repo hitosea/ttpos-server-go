@@ -2,7 +2,6 @@
 
 namespace app\common\model\erp;
 
-use help\StringHelp;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
@@ -16,6 +15,8 @@ class ErpPurchaseOperationLog extends BaseModel
     protected $name = 'purchase_form_log';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
+    protected $pk = 'id';
 
     /**
      * 追加字段

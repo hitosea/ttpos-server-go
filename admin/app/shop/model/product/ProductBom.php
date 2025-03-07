@@ -208,7 +208,7 @@ class ProductBom extends ProductBomModel
      * @param $num 入库数量
      * @param $remark 入库备注
      */
-    public static function addWarehouseInForm($flavor, $scene, $operatorUuid, $num, $remark = '')
+    public static function addWarehouseInForm($flavor, $scene, $operatorUuid, $num, $remark = '', $purchaseOrderUuid = 0)
     {
         if ((new Product())->hasInventoryAuth()) {
             $formModel = new ErpWarehouseForm();
@@ -219,6 +219,7 @@ class ProductBom extends ProductBomModel
                 'product_bom_uuid' => $flavor['uuid'],
                 'operator_uuid' => $operatorUuid,
                 'remark' => $remark,
+                'purchase_order_uuid' => $purchaseOrderUuid,
             ]);
         }
 

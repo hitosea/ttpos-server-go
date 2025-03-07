@@ -5,12 +5,14 @@ namespace app\common\model\product;
 use app\common\library\helper;
 use help\ValidateHelp;
 use app\common\model\BaseModel;
+use app\common\model\erp\ErpSupplier;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\product\RelatedMaterial as ProductRelatedMaterial;
 use app\common\model\store\MultiLanguageName;
+use app\common\model\supplier\Supplier;
 use app\shop\model\product\Product;
 use app\shop\model\product\RelatedMaterial;
 use think\facade\Db;
@@ -136,6 +138,22 @@ class Material extends BaseModel
     public function relatedMaterial()
     {
         return $this->hasMany(ProductRelatedMaterial::class, 'related_uuid', 'uuid');
+    }
+
+    /**
+     * 关联供应商
+     */
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_uuid', 'uuid');
+    }
+
+    /**
+     * 关联erp供应商
+     */
+    public function erpSupplier()
+    {
+        return $this->belongsTo(ErpSupplier::class, 'supplier_uuid', 'uuid');
     }
 
     /**
@@ -345,7 +363,7 @@ class Material extends BaseModel
      * @param $num 入库数量
      * @param $remark 入库备注
      */
-    public static function addWarehouseInForm($material, $scene, $operatorUuid, $num, $remark = '')
+    public static function addWarehouseInForm($material, $scene, $operatorUuid, $num, $remark = '', $purchaseOrderUuid = 0)
     {
         if ((new Product())->hasInventoryAuth()) {
             $formModel = new ErpWarehouseForm();
@@ -356,6 +374,7 @@ class Material extends BaseModel
                 'material_uuid' => $material['uuid'],
                 'operator_uuid' => $operatorUuid,
                 'remark' => $remark,
+                'purchase_order_uuid' => $purchaseOrderUuid,
             ]);
         }
 

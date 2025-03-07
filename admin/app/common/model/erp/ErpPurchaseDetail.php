@@ -7,7 +7,6 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
 use app\common\model\product\Material;
 use app\common\model\product\ProductBom;
-use app\common\model\product\ProductSku;
 
 /**
  * 采购单明细模型
@@ -18,6 +17,8 @@ class ErpPurchaseDetail extends BaseModel
     protected $name = 'purchase_form_item';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $pk = 'id';
+    protected $autoWriteTimestamp = true;
 
     /**
      * material_type 物料类型 0-商品 1-原料
@@ -80,7 +81,7 @@ class ErpPurchaseDetail extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo(ProductBom::class, 'material_uuid', 'uuid')->with(['product']);
+        return $this->belongsTo(ProductBom::class, 'material_uuid', 'uuid');
     }
 
     /**
@@ -96,7 +97,7 @@ class ErpPurchaseDetail extends BaseModel
      */
     public function material()
     {
-        return $this->belongsTo(Material::class, 'material_uuid', 'uuid')->field('uuid, name, category_uuid, supplier_uuid')->with(['sku', 'erpSupplier', 'erpSupplier.purchaser']);
+        return $this->belongsTo(Material::class, 'material_uuid', 'uuid');
     }
 
     /**

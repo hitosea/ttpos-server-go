@@ -2,15 +2,16 @@
 
 namespace app\common\model\erp;
 
+use app\common\library\helper;
 use think\facade\Env;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
-use app\common\model\product\Product;
 use app\common\model\product\Material;
-use app\common\model\product\ProductBom;
-use app\common\model\product\ProductSku;
-use app\common\model\erp\ErpWarehouseForm;
+use app\shop\model\product\ProductBom;
+use app\common\model\file\UploadFile;
+use app\shop\model\product\RelatedMaterial;
+use think\facade\Db;
 
 /**
  * 采购订单模型
@@ -22,6 +23,7 @@ class ErpPurchaseOrder extends BaseModel
     protected $pk = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加字段
@@ -92,14 +94,6 @@ class ErpPurchaseOrder extends BaseModel
     }
 
     /**
-     * 采购员
-     */
-    public function purchaser()
-    {
-        return $this->belongsTo(User::class, 'purchaser_uuid', 'uuid')->field('uuid, real_name');
-    }
-
-    /**
      * 申请人
      */
     public function applicant()
@@ -132,69 +126,78 @@ class ErpPurchaseOrder extends BaseModel
      */
     public function getList($params)
     {
-        $startTime = isset($params['date'][0]) ? strtotime($params['date'][0]) : 0;
-        $endTime = isset($params['date'][1]) ? strtotime($params['date'][1] . ' 23:59:59') : 0;
-        $erpSupplierId = trim($params['erp_supplier_id'] ?? "");
-        $purchaserId = trim($params['purchaser_id'] ?? "");
-
-        //
-        $where = '';
-        if (!empty($erpSupplierId)) {
-            $where .= "where es.id = $erpSupplierId";
-        }
-        if (!empty($purchaserId)) {
-            if (empty($erpSupplierId)) {
-                $where .= "where es.purchaser_id = $purchaserId";
-            } else {
-                $where .= " and es.purchaser_id = $purchaserId";
-            }
-        }
+        $startTime = isset($params['date'][0]) ? strtotime($params['date'][0]) : 0;  // 搜索供应商
+        $endTime = isset($params['date'][1]) ? strtotime($params['date'][1] . ' 23:59:59') : 0; // 搜索采购申请时间
+        $erpSupplierId = $params['erp_supplier_id'] ?: 0;// 搜索状态
+        $purchaserId = $params['purchaser_id'] ?: 0; // 搜索采购员
+        $keyword = $params['keyword'] ?: ''; // 搜索采购名称/申请人
+        $status = $params['status'] ?: 'all'; // 搜索状态
 
         //
         $prefix = Env::get('DB_PREFIX');
-        return self::alias('eo')->with(['purchaser'])
-            ->field('eo.*, COALESCE(NULLIF(suser.real_name, ""), suser.username) as applicant_name')
-            ->leftJoin("staff suser", "eo.applicant_uuid = suser.uuid")
-
-            // todo 兼容
-            // ->leftJoin(
-            //     "
-            //     (
-            //         SELECT
-            //             de.purchase_order_id, es.purchaser_id, p.erp_supplier_id,
-            //             group_concat(DISTINCT es.name) as erp_supplier_names,
-            //             group_concat(DISTINCT user.real_name) as erp_purchase_names
-            //         FROM {$prefix}erp_purchase_detail as de
-            //         LEFT JOIN {$prefix}product_sku as sku ON de.product_sku_id = sku.product_sku_id
-            //         LEFT JOIN {$prefix}product as p ON sku.product_id = p.product_id
-            //         LEFT JOIN {$prefix}erp_supplier as es ON es.id = p.erp_supplier_id
-            //         LEFT JOIN {$prefix}shop_user as user ON es.purchaser_id = user.shop_user_id
-            //         $where
-            //         GROUP BY de.purchase_order_id
-            //     ) as de",
-            //     "eo.id = de.purchase_order_id"
-            // )
-
-            ->when(!empty($erpSupplierId), function ($q) use ($erpSupplierId) {
-                $q->where('de.erp_supplier_id', $erpSupplierId);
+        $list = self::alias('o')
+            ->field("
+                o.*,
+                COALESCE(NULLIF(u.real_name, ''), u.username) as applicant_name,
+                GROUP_CONCAT(DISTINCT i.supplier_name SEPARATOR ', ') AS erp_supplier_names,
+                GROUP_CONCAT(DISTINCT i.real_name SEPARATOR ', ') AS erp_purchase_names
+            ")
+            ->leftJoin('staff u', 'o.applicant_uuid = u.uuid')
+            ->leftJoin(
+                "
+                (
+                    SELECT
+                        item.uuid,
+                        item.purchase_form_uuid,
+                        s.uuid AS s_uuid,
+                        s1.uuid AS s1_uuid,
+                        ss.uuid AS ss_uuid,
+                        ss1.uuid AS ss1_uuid,
+                        COALESCE (s.NAME, s1.NAME, '') AS supplier_name,
+                        COALESCE (ss.real_name, ss1.real_name, '') AS real_name
+                    FROM
+                        {$prefix}purchase_form_item item
+                    LEFT JOIN {$prefix}product_bom bom ON item.material_uuid = bom.uuid
+                    LEFT JOIN {$prefix}product_package p ON bom.product_package_uuid = p.uuid
+                    LEFT JOIN {$prefix}material m ON item.material_uuid = m.uuid
+                    LEFT JOIN {$prefix}supplier s ON p.supplier_uuid = s.uuid
+                    LEFT JOIN {$prefix}supplier s1 ON m.supplier_uuid = s1.uuid
+                    LEFT JOIN {$prefix}staff ss ON s.staff_uuid = ss.uuid
+                    LEFT JOIN {$prefix}staff ss1 ON s1.staff_uuid = ss1.uuid
+                ) i
+                ",
+                "o.uuid = i.purchase_form_uuid"
+            )
+            ->withAttr('id', function($value, $data) {
+                return $data['uuid'];
             })
-            ->when(!empty($purchaserId), function ($q) use ($purchaserId) {
-                $q->where('de.purchaser_id', $purchaserId);
+            ->when($erpSupplierId, function($q) use ($erpSupplierId) {
+                $q->where('i.s_uuid', $erpSupplierId)->whereOr('i.s1_uuid', $erpSupplierId);
             })
-            ->when(isset($params['keyword']) && $params['keyword'], function ($q) use ($params) {
-                $q->where(function ($q) use ($params) {
-                    $q->like('eo.name', $params['keyword']);
-                    $q->orLike('suser.real_name', $params['keyword']);
-                });
+            ->when($purchaserId, function($q) use ($purchaserId) {
+                $q->where('i.ss_uuid', $purchaserId)->whereOr('i.ss1_uuid', $purchaserId);
             })
-            ->when(isset($params['status']) && $params['status'], function ($q) use ($params) {
-                $q->where('eo.status', $params['status']);
+            ->when($status != 'all', function($q) use ($status) {
+                $q->where('o.status', self::NEW_STATUS[$status]);
             })
-            ->when($startTime && $endTime, function ($q) use ($startTime, $endTime) {
-                $q->where('eo.create_time', 'between', [$startTime, $endTime]);
+            ->when($keyword, function($q) use ($keyword) {
+                $q->where('o.name', 'like', "%{$keyword}%")
+                    ->whereOr('u.username', 'like', "%{$keyword}%")
+                    ->whereOr('u.real_name', 'like', "%{$keyword}%");
             })
-            ->order('eo.create_time desc')
+            ->when($startTime && $endTime, function($q) use ($startTime, $endTime) {
+                $q->where('o.create_time', 'between', [$startTime, $endTime]);
+            })
+            ->group('o.uuid')
+            ->order('o.create_time desc')
             ->paginate($params);
+
+            foreach ($list->items() as $data) {
+                $data['erp_supplier_names'] = ltrim($data['erp_supplier_names'], ', ');
+                $data['erp_purchase_names'] = ltrim($data['erp_purchase_names'], ', ');
+            }
+
+            return $list;
     }
 
     /**
@@ -206,30 +209,62 @@ class ErpPurchaseOrder extends BaseModel
     public function detail($id): self
     {
         $appId = request()->appId;
-        $licenses = request()->licenses;
-        return self::alias('eo')
+        $form = self::alias('o')
             ->with([
-                'purchaser',
-                'details',
-                // todo 兼容
-                // 'details' => function ($q) {
-                //     $q->alias('de')->with(['productImage' => function ($qi) {
-                //         $qi->field('file_id, save_name, storage');
-                //     }])
-                //         ->field('de.*, p.type as product_type, p.product_name, es.name as erp_supplier_name, sku.spec_name as product_sku_name, pm.image_id as product_image_id')
-                //         ->field('IF(p.type=10, sku.stock_num, sku.material_stock) as product_stock, sku.product_price')
-                //         ->leftJoin("product_sku sku", "de.product_sku_id = sku.product_sku_id")
-                //         ->leftJoin("product p", "sku.product_id = p.product_id")
-                //         ->leftJoin("erp_supplier es", "es.id = p.erp_supplier_id")
-                //         ->leftJoin("product_image pm", "pm.product_id = p.product_id")
-                //         ->group('sku.product_sku_id');
-                // },
+                'details' => function($q) {
+                    return $q->alias('i')
+                        ->field("
+                            i.*,
+                            IF(i.material_type > 0, m.uuid, bom.uuid) as product_sku_id,
+                            IF(i.material_type > 0, 20, 10) as product_type,
+                            IF(i.material_type > 0, m.stock_num, bom.stock_num) as product_stock,
+                            IF(i.material_type > 0, f2.file_url, f1.file_url) as file_url,
+                            IF(i.material_type > 0, f2.file_name, f1.file_name) as file_name,
+                            IF(i.material_type > 0, f2.storage, f1.storage) as storage,
+                            IF(i.material_type > 0, f2.save_name, f1.save_name) as save_name,
+                            IF(i.material_type > 0, f2.url_param, f1.url_param) as url_param,
+                            IF(i.material_type > 0, m.name, p.name) as product_name,
+                            IF(i.material_type > 0, '', f.name) as product_sku_name,
+                            IF(i.material_type > 0, IF(s2.name IS NULL, '', s2.name), IF(s1.name IS NULL, '', s1.name)) as erp_supplier_name
+                        ")
+                        ->leftJoin('product_bom bom', 'i.material_uuid = bom.uuid')
+                        ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
+                        ->leftJoin('product_flavor f', 'bom.product_flavor_uuid = f.uuid')
+                        ->leftJoin('file f1', 'p.image_file_uuid = f1.uuid')
+                        ->leftJoin('supplier s1', 'p.supplier_uuid = s1.uuid')
+                        ->leftJoin('material m', 'i.material_uuid = m.uuid')
+                        ->leftJoin('file f2', 'm.image_uuid = f2.uuid')
+                        ->leftJoin('supplier s2', 'm.supplier_uuid = s2.uuid');
+                },
                 'logs'
             ])
-            ->field("eo.*, suser.real_name as applicant_name, {$appId} as supplier_name")
-            ->leftJoin("staff suser", "eo.applicant_uuid = suser.uuid")
-            ->where('eo.id', $id)
+            ->withAttr('id', function($value, $data) {
+                return $data['uuid'];
+            })
+            ->field("o.*, suser.real_name as applicant_name, {$appId} as supplier_name")
+            ->leftJoin("staff suser", "o.applicant_uuid = suser.uuid")
+            ->where('o.uuid', $id)
             ->find();
+        
+        if ($form) {
+            $file = new UploadFile();
+            foreach ($form->details as $item) {
+                $filePath = $file->getFilePathAttr(null, [
+                    'file_type' => $item['file_type'],
+                    'file_url' => $item['file_url'],
+                    'file_name' => $item['file_name'],
+                    'storage' => $item['storage'],
+                    'save_name' => $item['save_name'],
+                    'url_param' => $item['url_param'],
+                ]);
+                $item->productImage = ['file_path' => $filePath];
+                $item->product_name = extractLanguage($item->product_name);
+                $item->product_sku_name = $item->product_sku_name ? extractLanguage($item->product_sku_name) : '';
+                $item->product_stock = floatval($item->product_stock);
+            }
+        }
+            
+        return $form;
     }
 
     /**
@@ -237,7 +272,7 @@ class ErpPurchaseOrder extends BaseModel
      */
     public function simpleDetail($id)
     {
-        return self::where('id', $id)->find();
+        return self::where('uuid', $id)->find();
     }
 
     /**
@@ -246,7 +281,6 @@ class ErpPurchaseOrder extends BaseModel
     public function add($params)
     {
         $shopUserId = $params['shop_user_id'] ?? 0;
-        $shopSupplierId = $params['shop_supplier_id'] ?? 0;
 
         if (!isset($params['purchase_detail']) || empty($params['purchase_detail'])) {
             $this->error = '请选择采购明细';
@@ -257,7 +291,7 @@ class ErpPurchaseOrder extends BaseModel
             $model = new self;
             $total_num = 0;
             $total_amount = 0;
-            foreach ($params['purchase_detail'] as &$value) {
+            foreach ($params['purchase_detail'] as $value) {
                 $total_num += floatval($value['estimate_purchase_num']);
                 $total_amount += floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
             }
@@ -273,7 +307,9 @@ class ErpPurchaseOrder extends BaseModel
             ];
             $model->save($data);
             //
-            foreach ($params['purchase_detail'] as &$value) {
+            $dataList = [];
+            $time = time();
+            foreach ($params['purchase_detail'] as $value) {
                 // 判断价格格式为 小数点后2位，范围：0-1000000
                 if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
                     $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
@@ -284,14 +320,26 @@ class ErpPurchaseOrder extends BaseModel
                     $this->error = '数量格式错误，请输入小数点后4位，范围：0-99999999';
                     return false;
                 }
-                $value['purchase_form_uuid'] = $model->uuid;
-                $value['estimate_amount'] = floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
-                $value['estimate_num'] = $value['estimate_purchase_num'];
-                $value['estimate_price'] = $value['estimate_purchase_price'];
-                $value['material_uuid'] = $value['product_sku_id'];
+                // 判断是商品还是材料
+                $materialType = 0;
+                $material = Material::where('uuid', $value['product_sku_id'])->find();
+                if ($material) {
+                    $materialType = 1;
+                }
+                $dataList[] = [
+                    'purchase_form_uuid' => $model->uuid,
+                    'material_type' => $materialType,
+                    'material_uuid' => $value['product_sku_id'],
+                    'estimate_num' => $value['estimate_purchase_num'],
+                    'estimate_price' => $value['estimate_purchase_price'],
+                    'estimate_amount' => floatval(helper::bcmul($value['estimate_purchase_price'], $value['estimate_purchase_num'], 2)),
+                    'create_time' => $time,
+                    'update_time' => $time,
+                ];
             }
+
             $purchaseDetailModel = new ErpPurchaseDetail;
-            $purchaseDetailModel->saveAll($params['purchase_detail']);
+            $purchaseDetailModel->saveAll($dataList);
             // 操作日志
             $shopUser = User::where('uuid', $shopUserId)->field('uuid, real_name, username')->find();
             $data = [
@@ -327,7 +375,7 @@ class ErpPurchaseOrder extends BaseModel
         try {
             $total_num = 0;
             $total_amount = 0;
-            foreach ($params['purchase_detail'] as &$value) {
+            foreach ($params['purchase_detail'] as $value) {
                 // 判断价格格式为 小数点后2位，范围：0-1000000
                 if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
                     $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
@@ -340,12 +388,6 @@ class ErpPurchaseOrder extends BaseModel
                 }
                 $total_num += floatval($value['estimate_purchase_num']);
                 $total_amount += floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
-                //
-                $value['purchase_form_uuid'] = $this->uuid;
-                $value['estimate_num'] = $value['estimate_purchase_num'];
-                $value['estimate_price'] = $value['estimate_purchase_price'];
-                $value['estimate_amount'] = floatval($value['estimate_purchase_price']) * floatval($value['estimate_purchase_num']);
-                $value['material_uuid'] = $value['product_sku_id'];
             }
 
             $data = [
@@ -357,11 +399,44 @@ class ErpPurchaseOrder extends BaseModel
                 'arrival_time' => strtotime($params['arrival_time']),
                 'remark' => $params['remark'],
             ];
-            $this->save($data);
+            self::update($data, ['uuid' => $this['uuid']]);
+
+            $dataList = [];
+            $time = time();
+            foreach ($params['purchase_detail'] as $value) {
+                // 判断价格格式为 小数点后2位，范围：0-1000000
+                if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
+                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
+                    return false;
+                }
+                // 判断数量格式为 小数点后4位，范围：0-99999999
+                if (!preg_match('/^(0|[1-9]\d{0,7})(\.\d{1,4})?$/', $value['estimate_purchase_num']) || floatval($value['estimate_purchase_num']) > 99999999) {
+                    $this->error = '数量格式错误，请输入小数点后4位，范围：0-99999999';
+                    return false;
+                }
+                // 判断是商品还是材料
+                $materialType = 0;
+                $material = Material::where('uuid', $value['product_sku_id'])->find();
+                if ($material) {
+                    $materialType = 1;
+                }
+                $dataList[] = [
+                    'purchase_form_uuid' => $this->uuid,
+                    'material_type' => $materialType,
+                    'material_uuid' => $value['product_sku_id'],
+                    'estimate_num' => $value['estimate_purchase_num'],
+                    'estimate_price' => $value['estimate_purchase_price'],
+                    'estimate_amount' => floatval(helper::bcmul($value['estimate_purchase_price'], $value['estimate_purchase_num'], 2)),
+                    'create_time' => $time,
+                    'update_time' => $time,
+                ];
+            }
 
             $purchaseDetailModel = new ErpPurchaseDetail;
-            $purchaseDetailModel->where('purchase_form_uuid', $this->uuid)->delete(); // 先删后加
-            $purchaseDetailModel->saveAll($params['purchase_detail']);
+            foreach ($this->details as $detial) {
+                $detial->delete();
+            }
+            $purchaseDetailModel->saveAll($dataList);
             // 操作日志
             $shopUser = User::where('uuid', $shopUserId)->field('uuid, real_name, username')->find();
             $data = [
@@ -484,6 +559,7 @@ class ErpPurchaseOrder extends BaseModel
 
         $this->startTrans();
         try {
+            $this->id = $this->getData('id');
             $this->status = self::NEW_STATUS[$params['status']] ?? 0;
             $this->save();
             // 采购单明细实际采购数量和实际价格
@@ -526,32 +602,24 @@ class ErpPurchaseOrder extends BaseModel
                     switch ($detail->material_type ) {
                         case ErpPurchaseDetail::MATERIAL_TYPE_PRODUCT:
                             ProductBom::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
+                            /** @var ProductBom $productBom */
+                            $productBom = ProductBom::where(['uuid' => $detail->material_uuid])->find();
+                            $productBom->addWarehouseInForm($productBom, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
                             break;
                         case ErpPurchaseDetail::MATERIAL_TYPE_MATERIAL:
                             $materialIds = array_merge($materialIds, [$detail->material_uuid]);
                             Material::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
+                            /** @var Material $material */
+                            $material = Material::where(['uuid' => $detail->material_uuid])->find();
+                            $material->addWarehouseInForm($material, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
                             break;
                     }
                 }
                 // 更新跟材料相关的所有产品总库存、产品规格库存、加料库存
-                (new Product)->reCalProductStock(array_unique($materialIds));
-                // 入库记录
-                $inventoryRecord = new ErpWarehouseForm;
-                $inventoryRecordData = [
-                    'purchase_order_uuid' => $this->uuid,
-                    'scene' => ErpWarehouseForm::SCENE_PURCHASE_IN,
-                    'num' => $this->total_num,
-                    'operator_uuid' => $operationLogData['operator_uuid'],
-                    'username' => $operationLogData['username'],
-                    'remark' => $this->remark ?: '',
-                ];
-                //
-                if ($params['erp_inventory_record_id'] ?? '') {
-                    $inventoryRecordData['id'] = $params['erp_inventory_record_id'];
+                if (!empty($materialIds)) {
+                    $relatedMaterialUuidList = RelatedMaterial::whereIn('material_uuid', $materialIds)->column('uuid') ?: [];
+                    RelatedMaterial::updateStock($relatedMaterialUuidList);
                 }
-                //
-                /** @var ErpWarehouseForm $inventoryRecord */
-                $inventoryRecord->add($inventoryRecordData);
             }
             $this->commit();
             //
@@ -574,7 +642,18 @@ class ErpPurchaseOrder extends BaseModel
             $this->error = '订单状态不能删除';
             return false;
         }
-        return $this->destroy(['id' => $this['id']]);
+
+        return Db::transaction(function () {
+            $details = ErpPurchaseDetail::where('purchase_form_uuid', $this->uuid)->select();
+            foreach ($details as $detail) {
+                $detail->delete();
+            }
+            $logs = ErpPurchaseOperationLog::where('purchase_form_uuid', $this->uuid)->select();
+            foreach ($logs as $log) {
+                $log->delete();
+            }
+            return $this->destroy(['id' => $this->id]);
+        });
     }
 
     /**
