@@ -3040,7 +3040,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	}
 
 	// 更新销售订单商品
-	errUpdate := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
 			saleOrderProduct.SaleOrderUuid,
 			saleOrderProduct.Uuid,
@@ -3060,10 +3060,29 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 			return errors.New("更新数据失败")
 		}
 		return nil
-	})
-	if errUpdate != nil {
-		return nil, errors.WithMessage(errUpdate, "操作失败")
+	}); err != nil {
+		return nil, errors.WithMessage(err, "操作失败")
 	}
+
+	// 发布取消赠菜事件
+	go func() {
+		s.bus.PublishCancelGiftSaleOrderProductEvent(event.CancelGiftSaleOrderProductPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.SaleOrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			ProductPrice:   saleOrderProduct.Price,
+			TotalNum:       saleOrderProduct.Num,
+			TotalPrice:     decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(saleOrderProduct.Num))).Round(2).InexactFloat64(),
+		})
+	}()
 
 	// 获取新的购物车信息
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
