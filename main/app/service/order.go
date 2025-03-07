@@ -2887,6 +2887,27 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	if errUpdate != nil {
 		return nil, errors.WithMessage(errUpdate, "操作失败")
 	}
+
+	// 发布取消退菜事件
+	go func() {
+		s.bus.PublishCancelReturnSaleOrderProductEvent(event.CancelReturnSaleOrderProductPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.SaleOrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			Num:            saleOrderProduct.Num,
+			ParentId:       saleOrder.SaleBillUuid,
+			OrderName:      saleOrder.Uuid,
+		})
+	}()
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
