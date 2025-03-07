@@ -14,58 +14,55 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler 认证鉴权控制器
-type AuthHandler struct {
-	authSrv service.IAuthSrv
+// DeskHandler 桌台相关控制器
+type DeskHandler struct {
 	deskSrv service.IDeskSrv
 }
 
-// Login 登录
-// @Summary 登录
-// @Description 登录
-// @Tags 平板端.认证鉴权
-// @Accept json
-// @Produce json
-// @Param X-SIGN header string true "验证码sign"
-// @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response
-// @Router /tablet/login [post]
-func (h *AuthHandler) Login(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var loginReq req.LoginReq
-	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
-		return
-	}
-	loginReq.Source = constant.SourceTablet
-	loginResp, err := h.authSrv.Login(ctx, loginReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, gin.H{"token": loginResp.Token})
-}
-
-// Logout 退出登录
-// @Summary 退出登录
-// @Description 退出登录
-// @Tags 平板端.认证鉴权
+// GetDeskList 获取桌台列表
+// @Summary 获取桌台列表
+// @Description 获取桌台列表
+// @Tags 平板端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response
-// @Router /tablet/logout [post]
-func (h *AuthHandler) Logout(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.TabletDeskList}
+// @Router /tablet/desk/list [get]
+func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.authSrv.Logout(ctx)
+	list, err := h.deskSrv.GetTabletDeskList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "退出成功")
+	helper.Success(c, list)
 }
 
-func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+// BindDesk 绑定/换绑桌台
+// @Summary 绑定/换绑桌台
+// @Description 绑定/换绑桌台，调用此接口之后的所有接口，都需要传递x-desk-uuid请求头
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BindDeskReq true "绑定/换绑桌台请求参数"
+// @Success 200 {object} dto.Response
+// @Router /tablet/desk/bind [post]
+func (h *DeskHandler) BindDesk(c *gin.Context) {
+	var bindDeskReq req.BindDeskReq
+	if err := c.ShouldBindJSON(&bindDeskReq); err != nil {
+		helper.HandleValidationError(c, err, bindDeskReq, req.LoginRequestMessage)
+		return
+	}
+	err := h.deskSrv.BindDesk(helper.GetContext(c), bindDeskReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{}, "绑定桌台成功")
+}
+
+func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
@@ -80,20 +77,14 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
 
-	wrapper := &AuthHandler{
-		authSrv: authSrv,
+	wrapper := &DeskHandler{
 		deskSrv: deskSrv,
-	}
-
-	publicApi := router.Group("")
-	{
-		publicApi.POST("/login", wrapper.Login) // 登录
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-
-		privateApi.POST("/logout", wrapper.Logout) // 退出登录
+		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取可绑定的桌台
+		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台
 	}
 }

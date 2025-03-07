@@ -19,9 +19,9 @@ type AuthHandler struct {
 	authSrv service.IAuthSrv
 }
 
-// Login 厨显端登录
-// @Summary 厨显端登录
-// @Description 厨显端登录
+// Login 登录
+// @Summary 登录
+// @Description 登录
 // @Tags 厨显端.认证鉴权
 // @Accept json
 // @Produce json
@@ -45,9 +45,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	helper.Success(c, gin.H{"token": loginResp.Token})
 }
 
-// Logout 厨显端退出登录
-// @Summary 厨显端退出登录
-// @Description 厨显端退出登录
+// Logout 退出登录
+// @Summary 退出登录
+// @Description 退出登录
 // @Tags 厨显端.认证鉴权
 // @Accept json
 // @Produce json
@@ -62,25 +62,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 	helper.Success(c, gin.H{}, "退出成功")
-}
-
-// GetBase 厨显端信息
-// @Summary 厨显端信息
-// @Description 厨显端信息
-// @Tags 厨显端.认证鉴权
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.KitchenBase}
-// @Router /kitchen/base [get]
-func (h *AuthHandler) GetBase(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	info, err := h.authSrv.KitchenBase(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, info)
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -104,7 +85,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/base", wrapper.GetBase)   // 获取基本信息
 		privateApi.POST("/logout", wrapper.Logout) // 退出登录
 	}
 }

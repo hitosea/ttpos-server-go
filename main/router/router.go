@@ -57,6 +57,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			assistant.RegisterAuthHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterBaseHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterMemberHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterCallHandlers(assistantGroup, dbm, cache)
 		}
 		// H5扫码端
 		h5Group := apiV1.Group("/h5")
@@ -66,13 +67,16 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")
 		{
-			kitchen.RegisterHandlers(kitchenGroup)
 			kitchen.RegisterAuthHandlers(kitchenGroup, dbm, cache)
+			kitchen.RegisterBaseHandlers(kitchenGroup, dbm, cache)
+			kitchen.RegisterCallHandlers(kitchenGroup, dbm, cache)
 		}
 		// 厨房端
 		tabletGroup := apiV1.Group("/tablet")
 		{
 			tablet.RegisterAuthHandlers(tabletGroup, dbm, cache)
+			tablet.RegisterBaseHandlers(tabletGroup, dbm, cache)
+			tablet.RegisterDeskHandlers(tabletGroup, dbm, cache)
 		}
 	}
 }

@@ -18,9 +18,9 @@ type AuthHandler struct {
 	authSrv service.IAuthSrv
 }
 
-// Login 收银端登录
-// @Summary 收银端登录
-// @Description 收银端登录
+// Login 登录
+// @Summary 登录
+// @Description 登录
 // @Tags 收银端.认证
 // @Accept json
 // @Produce json
@@ -47,9 +47,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// Logout 收银端退出登录
-// @Summary 收银端退出登录
-// @Description 收银端退出登录
+// Logout 退出登录
+// @Summary 退出登录
+// @Description 退出登录
 // @Tags 收银端.认证
 // @Accept json
 // @Produce json

@@ -23,9 +23,9 @@ type BaseHandler struct {
 	otherSrv         service.IOtherSrv
 }
 
-// GetLanguage 收银端语言
-// @Summary 收银端语言
-// @Description 收银端语言
+// GetLanguage 语言
+// @Summary 语言
+// @Description 语言
 // @Tags 点餐助手端.基础信息
 // @Accept json
 // @Produce json
@@ -55,16 +55,16 @@ func (h *BaseHandler) GetOnlineCashiers(c *gin.Context) {
 	helper.Success(c, h.authSrv.GetOnlineCashiers(helper.GetCompanyUuid(c)))
 }
 
-// GetAssistantBase 点餐助手端信息
-// @Summary 点餐助手端信息
-// @Description 点餐助手端信息
+// GetBase 基本信息
+// @Summary 基本信息
+// @Description 基本信息
 // @Tags 点餐助手端.基础信息
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.AssistantBase}
 // @Router /assistant/base [get]
-func (h *BaseHandler) GetAssistantBase(c *gin.Context) {
+func (h *BaseHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.AssistantBase(ctx)
 	if err != nil {
@@ -187,7 +187,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	{
 		privateApi.GET("/language", wrapper.GetLanguage)                             // 获取语言
 		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers)                // 获取在线的收银机
-		privateApi.GET("/base", wrapper.GetAssistantBase)                            // 获取基本信息
+		privateApi.GET("/base", wrapper.GetBase)                                     // 获取基本信息
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
 		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
