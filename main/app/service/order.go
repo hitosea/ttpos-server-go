@@ -450,6 +450,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "无法找到空闲桌台")
 	}
+	if !desk.IsAvailableDesk() {
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "该桌台非空闲桌台")
+	}
 	saleBillUuid, _ := utils.GetID()
 	desk.SetOpenDesk(saleBillUuid)
 
