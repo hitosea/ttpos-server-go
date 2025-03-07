@@ -462,7 +462,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, info, "操作成功")
 }
 
 // OrderChangePopulation 处理桌台订单修改人数
