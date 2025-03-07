@@ -1362,19 +1362,24 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, errors.WithMessage(err)
 	}
 
-	// 发布事件，记录销售账单操作记录
-	event.NewSystemBus().PublishAddSaleBillRecordEvent(event.AddSaleBillRecordPayload{
-		SaleBillUuid:     req.SaleBillUuid,
-		SaleOrderUuid:    req.SaleOrderUuid,
-		OrderProductUuid: req.OrderProductUuid,
-		OrderProductName: saleOrderProduct.Name,
-		OrderProductNum:  saleOrderProduct.Num,
-		CompanyUuid:      ctx.GetCompanyUuid(),
-		StaffUuid:        ctx.GetStaffUuid(),
-		Price:            req.Price,
-		AttributeNames:   saleOrderProduct.GetAttributeNames(),
-		Source:           ctx.GetSource(),
-	})
+	// 发布"改价"事件
+	go func() {
+		event.NewSystemBus().PublishChangeSaleOrderProductPriceEvent(event.ChangeSaleOrderProductPricePayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.OrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			TotalNum:       saleOrderProduct.Num,
+			Price:          req.Price,
+		})
+	}()
 
 	return info, nil
 }
