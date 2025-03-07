@@ -1441,6 +1441,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
+	oldPrice := saleOrder.GetAmount()
 
 	// 设置整单改价金额
 	saleOrder.SetCustomAmount(req.Price)
@@ -1449,6 +1450,23 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布"改价"事件
+	go func() {
+		event.NewSystemBus().PublishChangePriceSaleOrderEvent(event.ChangePriceSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OldPrice:        oldPrice,
+			NewPrice:        req.Price,
+			DiscountType:    constant.DiscountOperationLogTypeChangePriceSaleOrder, // 整单改价的类型值
+			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
+		})
+	}()
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

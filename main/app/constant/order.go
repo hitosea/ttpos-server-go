@@ -23,6 +23,11 @@ const (
 )
 
 const (
+	DiscountOperationLogTypeChangePriceSaleOrder = 1 // 订单改价、整单改价
+
+)
+
+const (
 	// 销售订单状态
 	SaleOrderStatusPending = 0 // 未结账
 	SaleOrderStatusFinish  = 1 // 已结账
@@ -98,9 +103,9 @@ const (
 	OrderPickOrder           = "PICK_ORDER"          // 取单
 	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
 	OrderProductMove         = "PRODUCT_MOVE"        // 转菜
-	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderDiscount            = "DISCOUNT"            // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"     // 撤销优惠折扣
+	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderSettle              = "SETTLE"              // 结账
 	OrderReverseSettle       = "REVERSE_SETTLE"      // 反结账
 	OrderRefund              = "REFUND"              // 退款
