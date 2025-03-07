@@ -71,6 +71,7 @@ type SaleOrder struct {
 	Uuid        uint64     `json:"uuid"`
 	OrderNo     string     `json:"order_no"`
 	Status      uint       `json:"status"`       // 订单状态, 0-未结账 1-已结账
+	IsDiscount  bool       `json:"is_discount"`  // 是否存在折扣 true:存在 false:不存在
 	ProductList []Product  `json:"product_list"` // 商品列表
 	ProductNum  int        `json:"product_num"`  // 商品数量
 	AmountInfo  AmountInfo `json:"amount_info"`

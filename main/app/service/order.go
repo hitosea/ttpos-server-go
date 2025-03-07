@@ -2113,6 +2113,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 			Status:      saleOrder.Status,
 			ProductNum:  productNum,
 			ProductList: productList,
+			IsDiscount:  saleOrder.IsDiscount(),
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
