@@ -1077,6 +1077,18 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 		return nil, errors.WithMessage(err)
 	}
 
+	// 发布"挂单"事件
+	go func() {
+		event.NewSystemBus().PublishHideSaleBillEvent(event.HideSaleBillPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBillUuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if err != nil {

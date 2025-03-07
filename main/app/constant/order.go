@@ -94,9 +94,9 @@ const (
 	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE" // 取消赠菜
 	OrderChangeTable         = "CHANGE_TABLE"        // 转台
 	OrderChangePrice         = "CHANGE_PRICE"        // 改价
+	OrderStayOrder           = "STAY_ORDER"          // 挂单
 	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
-	OrderStayOrder           = "STAY_ORDER"          // 挂单
 	OrderPickOrder           = "PICK_ORDER"          // 取单
 	OrderProductMove         = "PRODUCT_MOVE"        // 转菜
 	OrderDiscount            = "DISCOUNT"            // 优惠折扣
