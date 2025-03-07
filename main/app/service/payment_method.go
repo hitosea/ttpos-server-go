@@ -121,7 +121,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		}
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
-		if method.QrcodeFile != nil {
+		if method.LogoFile != nil {
 			logo = utils.AddImageDomain("/api/product/thumbs/uploads/"+method.LogoFile.SaveName, baseUrl, true)
 		}
 		if method.QrcodeFile != nil {
