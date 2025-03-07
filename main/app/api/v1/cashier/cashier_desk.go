@@ -408,9 +408,9 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderZeroRule 处理桌台订单订单抹零规则
-// @Summary 桌台订单订单抹零规则
-// @Description 桌台订单订单抹零规则
+// OrderZeroRule 处理桌台订单抹零规则
+// @Summary 桌台订单订单抹零
+// @Description 桌台订单订单抹零
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json

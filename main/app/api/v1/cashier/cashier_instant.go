@@ -270,9 +270,9 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderZeroRule 处理点餐订单订单抹零规则
-// @Summary 点餐订单订单抹零规则
-// @Description 点餐订单订单抹零规则
+// OrderZeroRule 处理点餐订单抹零规则
+// @Summary 点餐订单抹零
+// @Description 点餐订单抹零
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json

@@ -223,5 +223,5 @@ func (model *SaleOrder) IsDiscount() bool {
 	// custom_amount != -1 是没有进行订单改价
 	// custom_discount_rate = 1 是没有折扣
 	// zero_rule = 0 是没有去零
-	return model.CustomAmount != -1 && model.CustomDiscountRate != 1 && model.ZeroRule != 0
+	return model.CustomAmount != -1 && model.CustomDiscountRate == 1 && model.ZeroRule == 0
 }
