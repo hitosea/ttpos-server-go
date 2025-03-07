@@ -41,7 +41,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 	}
 
 	// 获取收银产品列表
-	res, err := h.productService.GetProductList(helper.GetCompanyUuid(c), req)
+	res, err := h.productService.GetProductList(helper.GetContext(c), req)
 
 	// 处理错误
 	if err != nil {

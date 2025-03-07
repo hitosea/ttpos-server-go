@@ -1,5 +1,10 @@
 package model
 
+import (
+	"path/filepath"
+	"slices"
+)
+
 // File 文件库记录表 ttpos_file
 type File struct {
 	BaseModel
@@ -21,8 +26,19 @@ type File struct {
 }
 
 // GetUrl 获取地址。file_url + save_name + url_param
-func (model *File) GetUrl() string {
-	return model.FileUrl + model.SaveName + model.UrlParam
+func (model *File) GetUrl(baseUrl string) string {
+	videoExtensions := []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm", ".m4v", ".mpeg", ".3gp"}
+	if model.Storage == "local" {
+		saveName := model.SaveName
+		if model.FileType == ".video" || slices.Contains(videoExtensions, "."+filepath.Ext(saveName)) {
+			return baseUrl + "uploads/" + saveName
+		}
+		return baseUrl + "api/product/thumbs/uploads/" + saveName
+	}
+	if model.Storage == "google" {
+		return model.FileUrl + "/" + model.SaveName + "?" + model.UrlParam
+	}
+	return model.FileUrl + "/" + model.FileName
 }
 
 // FileGroup 文件库分组记录表 ttpos_file_group

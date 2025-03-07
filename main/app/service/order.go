@@ -762,7 +762,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 		for j, product := range order.SaleOrderProducts {
 			url := ""
 			if product.ImageFile != nil {
-				url = product.ImageFile.GetUrl()
+				url = product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 			}
 			products[j] = resp.OrderProduct{
 				Uuid:           product.Uuid,
@@ -3415,6 +3415,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 
 // InstantOrderPaymentInfo 获取结账页面信息
 func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(saleBillUuid)
@@ -3470,10 +3471,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
-			logoUrl = paymentMethod.LogoFile.GetUrl()
+			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
 		}
 		if paymentMethod.QrcodeFile != nil {
-			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl()
+			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
 		methodItem := resp.PaymentMethodItem{
 			Source:      paymentMethod.Source,
