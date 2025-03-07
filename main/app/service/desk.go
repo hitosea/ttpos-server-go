@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -261,10 +262,10 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	if desk.Status == 0 {
 		return model.Desk{}, errors.New("桌台已关闭")
 	}
-	if desk.SaleBill.ID == 0 {
+	if desk.SaleBillUuid == 0 {
 		return model.Desk{}, nil
 	}
-	if _, err := NewOrderSrv(s.dbm, nil, nil, nil).IsCellCancelOrder(ctx, desk.SaleBill.Uuid); err != nil {
+	if _, err := NewOrderSrv(s.dbm, nil, nil, nil).IsCellCancelOrder(ctx, desk.SaleBillUuid); err != nil {
 		return model.Desk{}, errors.WithMessage(err)
 	}
 	return desk, nil
@@ -272,24 +273,59 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 
 // CloseDesk 关闭桌台
 func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(reqs.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(reqs.Uuid)
+		ctx.AddLock()
+	}
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
-	if desk.SaleBill.ID == 0 {
+	// 如果桌台空闲，则直接返回关闭桌台成功
+	if desk.IsAvailableDesk() {
 		return nil
 	}
+	// 如果桌台非空闲，但没有关联账单，则更新桌台状态为关闭
+	if !desk.IsAvailableDesk() && desk.SaleBillUuid == 0 {
+		desk.SetCloseDesk()
+		if err := repository.NewDeskRepo(db).UpdateDeskRecord(desk); err != nil {
+			return errors.WithMessage(err, "NewDeskRepo(db).UpdateDeskRecord(desk) failed, params:", utils.ToJson(desk.GetRecord()))
+		}
+		return nil
+	}
+	// 如果桌台非空闲，且账单已完成或已取消时，直接关闭桌台
+	if !desk.IsAvailableDesk() && desk.SaleBillUuid != 0 {
+		ctx.Log().Info("请求关闭桌台。桌台非空闲，但销售账单已完成或已取消")
+		// desk可能没有预加载SaleBill
+		if desk.SaleBill == nil {
+			saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillRecord(desk.SaleBillUuid)
+			if err != nil {
+				return errors.WithMessage(err, "NewSaleBillRepo(db).GetSaleBillRecord failed, param:", fmt.Sprintf("%d", desk.SaleBillUuid))
+			}
+			desk.SaleBill = saleBill
+		}
+		if desk.SaleBill != nil && desk.SaleBill.IsEndStatus() {
+			desk.SetCloseDesk()
+			if err := repository.NewDeskRepo(db).UpdateDeskRecord(desk); err != nil {
+				return errors.WithMessage(err, "NewDeskRepo(db).UpdateDeskRecord(desk) failed, params:", utils.ToJson(desk.GetRecord()))
+			}
+			return nil
+		}
+	}
+
+	// 如果桌台非空闲，且关联有账单时
 	// 取消订单
-	if err := NewOrderSrv(s.dbm, s.localeSrv, s.settingSrv, nil).CancelOrder(ctx, req.OrderCancelReq{
-		SaleBillUuid: desk.SaleBill.Uuid,
+	if err := s.orderSrv.CancelOrder(ctx, req.OrderCancelReq{
+		SaleBillUuid: desk.SaleBillUuid,
 		CancelReason: reqs.Reason,
 		Password:     reqs.Password,
 	}); err != nil {
 		return errors.WithMessage(err)
 	}
-	//
 	return nil
 }
 
@@ -327,10 +363,35 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
+
+	// 获取旧桌台信息
+	oldDesk, errOldDesk := repository.NewDeskRepo(db).GetDeskRecord(saleBill.Desk.Uuid)
+	if errOldDesk != nil {
+		return nil, errors.WithMessage(errOldDesk, "获取旧桌台信息失败，Desk.Uuid:", fmt.Sprintf("%d", saleBill.Desk.Uuid))
+	}
+	// 检查旧桌台是否支持转台
+	// 旧桌台已关闭,不允许转台
+	// 旧桌台待清台,不允许转台
+	if oldDesk.Status == constant.DeskStatusClose {
+		return nil, errors.New("旧桌台已关闭，不允许转台")
+	}
+	if oldDesk.GetIsWaitClearStatus() {
+		return nil, errors.New("旧桌台待清台，不允许转台")
+	}
+
 	// 获取桌台信息
 	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
 	if errDesk != nil {
 		return nil, errors.WithMessage(errDesk, "获取桌台信息失败")
+	}
+	// 检查新桌台是否支持转台
+	// 新桌台已禁用,不允许转台
+	// 新桌台非空闲,不允许转台
+	if desk.IsDisableDesk() {
+		return nil, errors.New("新桌台已禁用，不允许转台")
+	}
+	if !desk.IsAvailableDesk() {
+		return nil, errors.New("新桌台非空闲，不允许转台")
 	}
 
 	// 设置新桌台的开台信息
@@ -355,6 +416,22 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布转台事件
+	go func() {
+		ctx.Log().Info("发布转台事件")
+		s.bus.PublishChangeDeskEvent(event.ChangeDeskPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  reqs.SaleBillUuid,
+				SaleOrderUuid: reqs.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			Old: event.Old{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
+			New: event.New{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
+		})
+	}()
 
 	// 返回购物车信息
 	info, err := s.orderSrv.GetOrderCartInfo(ctx, reqs.SaleBillUuid)

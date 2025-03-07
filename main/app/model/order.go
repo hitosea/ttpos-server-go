@@ -159,6 +159,11 @@ func (model *SaleBill) IsCookingStatus() bool {
 	return model.ProductionTime > 0
 }
 
+// 判断账单是否为结束状态，包括已完成、已取消
+func (model *SaleBill) IsEndStatus() bool {
+	return model.Status == constant.SaleBillStatusComplete || model.Status == constant.SaleBillStatusCanceled
+}
+
 // 转台
 func (model *SaleBill) ChangeDesk(deskUuid uint64) {
 	model.DeskUuid = deskUuid

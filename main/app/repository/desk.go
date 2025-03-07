@@ -148,7 +148,7 @@ func (r *deskRepo) GetDeskRecord(deskUuid uint64) (*model.Desk, error) {
 	desk, err := r.GetDesk(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(deskUuid),
-		CommonRepo.WhereByStatus(constant.DeskStatusClose),
+		//CommonRepo.WhereByStatus(constant.DeskStatusClose),
 		CommonRepo.WhereByNoDisable(),
 	)
 	if err != nil {
