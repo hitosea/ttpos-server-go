@@ -3031,7 +3031,7 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 	// todo 重新生成订单商品签名
 
-	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 重新计算原桌台的销售账单
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -3042,7 +3042,30 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 			return errors.WithMessage(err)
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, errors.WithMessage(err, "更新数据失败")
+	}
+
+	// 发布转菜事件
+	go func() {
+		s.bus.PublishChangeDeskSaleOrderProductEvent(event.ChangeDeskSaleOrderProductPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderProductId: req.SaleOrderProductUuid,
+			ProductId:      saleOrderProduct.ProductPackageUuid,
+			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:    saleOrderProduct.GetAttributeName(),
+			TotalNum:       saleOrderProduct.Num,
+			ToOrderId:      targetSaleOrder.Uuid,
+			ToTableId:      targetDesk.Uuid,
+			ToTableNo:      targetDesk.DeskNo,
+		})
+	}()
 
 	// 获取新的购物车信息
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

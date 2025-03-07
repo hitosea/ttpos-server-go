@@ -97,8 +97,8 @@ const (
 	OrderStayOrder           = "STAY_ORDER"          // 挂单
 	OrderPickOrder           = "PICK_ORDER"          // 取单
 	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
-	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderProductMove         = "PRODUCT_MOVE"        // 转菜
+	OrderRemark              = "CHANGE_PRICE"        // 备注
 	OrderDiscount            = "DISCOUNT"            // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"     // 撤销优惠折扣
 	OrderSettle              = "SETTLE"              // 结账
