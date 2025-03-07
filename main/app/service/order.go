@@ -1625,13 +1625,13 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 
 	// 获取订单信息
 	billInfo, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, constant.OptionalUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	oldMealNum := billInfo.MealNum
 
 	// 判断订单状态
 	if err := billInfo.ValidateOrderStatus(constant.OrderUpdateMealNum, 0); err != nil {
@@ -1651,22 +1651,24 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 		return nil, errors.WithMessage(err)
 	}
 
-	// 添加操作日志
-	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
-		Source:        ctx.GetSource(),
-		Remark:        "修改桌台就餐人数",
-		SaleBillUuid:  req.SaleBillUuid,
-		SaleOrderUuid: 0,
-		OperatorUuid:  ctx.GetStaffUuid(),
-	}, map[string]interface{}{
-		"old_meal_num": billInfo.MealNum,
-		"new_meal_num": req.Population,
-	})
-
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布"修改桌台就餐人数"事件
+	go func() {
+		event.NewSystemBus().PublishChangeMealNumSaleBillEvent(event.ChangeMealNumSaleBillPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: req.SaleBillUuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+			OldMealNum: oldMealNum,
+			NewMealNum: uint(req.Population),
+		})
+	}()
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
