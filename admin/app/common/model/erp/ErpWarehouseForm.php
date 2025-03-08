@@ -229,7 +229,8 @@ class ErpWarehouseForm extends BaseModel
                 'status' => self::STATUS_MAP[$item['status']],
                 'operator' => $operator,
                 'create_time' => strtotime($item['create_time']),
-                'in_time' =>strtotime($item['create_time']),
+                'in_time' => strtotime($item['create_time']),
+                'revoke_time' => $item['revoke_time'],
                 'is_show_in_cancel' => $this->isShowInCancel($item),
             ];
         }
