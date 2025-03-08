@@ -1862,17 +1862,17 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	}
 
 	// 系统级验证
-	// companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
-	// if buffetErr != nil {
-	// 	return nil, buffetErr
-	// }
-	// if buffetSetting.IsAddClock != "1" {
-	// 	return nil, errors.New("未开启加钟")
-	// }
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if buffetErr != nil {
+		return nil, buffetErr
+	}
+	if buffetSetting.IsAddClock != "1" {
+		return nil, errors.New("未开启加钟")
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1886,7 +1886,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if saleBill.BuffetRemainingSeconds() == -1 {
 		return nil, errors.New("当前套餐已经是无限时，无法调整加钟")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderClock); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderClock, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
 
