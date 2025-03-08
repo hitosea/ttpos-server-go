@@ -371,15 +371,16 @@ class ProductBom extends BaseModel
             $productStock = 0;
             $productMaterialStock = 0;
             $historyPurchaseNum = 0; // 历史进货数
+            $historyLossNum = 0; // 历史报损数
             if ($row['type'] == 10) {
                 $productStock = $row['stock_num'];
                 $historyPurchaseNum = ErpWarehouseForm::where('product_bom_uuid', $row['uuid'])->where('status', 0)->sum('num') ?: 0;
+                $historyLossNum = ErpDamagedProductRecord::where('product_bom_uuid', $row['uuid'])->where('status', 1)->sum('num') ?: 0;
             } else {
                 $productMaterialStock = $row['stock_num'];
                 $historyPurchaseNum = ErpWarehouseForm::where('material_uuid', $row['uuid'])->where('status', 0)->sum('num') ?: 0;
+                $historyLossNum = ErpDamagedProductRecord::where('material_uuid', $row['uuid'])->where('status', 1)->sum('num') ?: 0;
             }
-            // todo 历史报损数
-            $historyLossNum = 0;
             
             $list[] = [
                 'product_id' => $row['uuid'],
