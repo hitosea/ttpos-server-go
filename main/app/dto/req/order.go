@@ -77,6 +77,11 @@ type OrderProductChangePriceReq struct {
 	Price            float64 `json:"price" binding:"required"`              // 改价
 }
 
+// OrderDiscountMethodReq 订单打折方式
+type OrderDiscountMethodReq struct {
+	DiscountMethod int `json:"discount_method"` // 打折类型 1=改价 2=打折, 3=抹零, 4=免单
+}
+
 // OrderAmountChangeReq 订单改价
 type OrderAmountChangeReq struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
