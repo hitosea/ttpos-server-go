@@ -194,9 +194,6 @@ func (req OrderChangeBuffetReq) Validate() error {
 		if customerType.Uuid == 0 {
 			return errors.New("自助餐顾客类型uuid不能为空")
 		}
-		if customerType.MealNum == 0 {
-			return errors.New("自助餐顾客就餐人数不能为0")
-		}
 	}
 	return nil
 }
