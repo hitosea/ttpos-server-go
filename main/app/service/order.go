@@ -687,6 +687,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		num, _ := orderRepo.GetOrderNum(
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByCooking(),
 		)
 		return num
 	}
