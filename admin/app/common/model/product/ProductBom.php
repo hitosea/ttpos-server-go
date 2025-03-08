@@ -8,6 +8,7 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Category;
 use app\common\model\erp\ErpPurchaseDetail;
 use app\common\model\erp\ErpDamagedProductRecord;
+use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\file\UploadFile AS UploadFileModel;
 use app\common\model\product\Product AS ProductModel;
 use think\facade\Db;
@@ -131,7 +132,7 @@ class ProductBom extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_package_uuid', 'uuid')->with(['image', 'category', 'erpSupplier', 'erpSupplier.purchaser']);
+        return $this->belongsTo(ProductModel::class, 'product_package_uuid', 'uuid')->with(['image', 'category', 'erpSupplier', 'erpSupplier.purchaser']);
     }
 
     /**
@@ -154,6 +155,8 @@ class ProductBom extends BaseModel
             'keyword' => '', // 搜索商品名称/条码
             'page' => 1, // 当前页
             'list_rows' => 15, // 每页数量
+            'sort' => '', // 排序库存: asc, desc
+            'stock_num' => '', // 搜索库存范围
         ], $params);
 
         // 规格
@@ -181,6 +184,7 @@ class ProductBom extends BaseModel
                 'bom.barcode_value',
                 'count(rm.uuid) as material_count',
                 's.name as supplier_name',
+                'bom.update_time as update_time',
             ]))
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
             ->leftJoin('supplier s', 'p.supplier_uuid = s.uuid')
@@ -217,6 +221,7 @@ class ProductBom extends BaseModel
                 'm.barcode_value',
                 '0 as material_count',
                 's.name as supplier_name',
+                'm.update_time as update_time',
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -265,6 +270,18 @@ class ProductBom extends BaseModel
             $bind['category_parent_uuid'] = $categoryId;
         }
 
+        // 搜索库存
+        $stockNum = $params['stock_num'] ?? '';
+        if ($stockNum) {
+            $where = "(stock_num < :stock_num)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+            $bind['stock_num'] = $stockNum;
+        }
+
         // 搜索商品名称/条码
         $keyword = $params['keyword'] ?? '';
         if ($keyword != '') {
@@ -278,6 +295,7 @@ class ProductBom extends BaseModel
             $bind['barcode_value'] = "%{$keyword}%";
         }
 
+        // 过滤有材料的规格
         if ($filterHavingMaterial) {
             $where = "(material_count = 0)";
             if (!$whereSql) {
@@ -285,6 +303,13 @@ class ProductBom extends BaseModel
             } else {
                 $whereSql .= " AND {$where}";
             }
+        }
+
+        // 排序
+        $sort = $params['sort'] ?? '';
+        $orderSql = ' ORDER BY update_time DESC';
+        if ($sort && in_array($sort, ['asc', 'desc'])) {
+            $orderSql = " ORDER BY stock_num {$sort}";
         }
 
         $querySql = "SELECT " . implode(',', [
@@ -310,8 +335,8 @@ class ProductBom extends BaseModel
             'barcode_value',
             'material_count',
             'supplier_name',
+            'update_time',
         ]) . " FROM ($productBomSql UNION ALL $materialSql) AS all_product";
-        $orderSql = ' ORDER BY create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
 
         // 执行查询
@@ -345,13 +370,20 @@ class ProductBom extends BaseModel
             // 库存
             $productStock = 0;
             $productMaterialStock = 0;
+            $historyPurchaseNum = 0; // 历史进货数
             if ($row['type'] == 10) {
                 $productStock = $row['stock_num'];
+                $historyPurchaseNum = ErpWarehouseForm::where('product_bom_uuid', $row['uuid'])->where('status', 0)->sum('num') ?: 0;
             } else {
                 $productMaterialStock = $row['stock_num'];
+                $historyPurchaseNum = ErpWarehouseForm::where('material_uuid', $row['uuid'])->where('status', 0)->sum('num') ?: 0;
             }
+            // todo 历史报损数
+            $historyLossNum = 0;
             
             $list[] = [
+                'product_id' => $row['uuid'],
+                'product_sku_id' => $row['uuid'],
                 'product' => [
                     'type' => $row['type'],
                     'image' => [
@@ -375,6 +407,9 @@ class ProductBom extends BaseModel
                 'stock_num' => floatval($productStock),
                 'material_stock' => floatval($productMaterialStock),
                 'product_sku_id' => $row['uuid'],
+                'update_time' => date('Y-m-d H:i:s', $row['update_time']),
+                'history_purchase_num' => floatval($historyPurchaseNum),
+                'history_loss_num' => floatval($historyLossNum),
             ];
         }
 
