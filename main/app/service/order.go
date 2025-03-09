@@ -73,6 +73,7 @@ type IOrderSrv interface {
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 撤销一个支付单
 	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                  // 给销售订单创建一个支付单
+	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                    // 免单
 	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                  // 设置结账抹零规则
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                     // 给销售订单创建一个销售订单
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
@@ -2849,19 +2850,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.WithMessage(err)
 	}
 
-	//  验证退菜标签
-	//returnFoodReasons := [][2]uint64{}
-	//if len(req.ReturnIds) > 0 {
-	//	_returnFoodReasons, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
-	//	if err != nil {
-	//		return nil, errors.WithMessage(err)
-	//	}
-	//	if len(notFound) > 0 {
-	//		return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
-	//	}
-	//	returnFoodReasons = _returnFoodReasons
-	//}
-
 	returnFoodReason, err := base.NewReturnFoodReasonRepo(db).GetReturnFoodReasonListByUuids(req.ReturnIds)
 	if err != nil {
 		return nil, errors.WithMessage(err, "params:", utils.ToJson(req.ReturnIds))
@@ -3723,8 +3711,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	updateSaleBill := false
 	if saleBill.CanFinishSaleBill() {
 		saleBill.SetFinishSaleBill()
-		updateSaleBill = true
 		saleBill.CalcAll()
+		updateSaleBill = true
 	}
 
 	// 获取门店业务设置
@@ -3748,13 +3736,14 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
 			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
 			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
-			if businessSetting.IsAutoClearDesk() {
+			if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
 				// 结账自动清台，将桌台状态设置为空闲
 				saleBill.Desk.SetCloseDesk()
 				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
 					return err
 				}
-			} else {
+			}
+			if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
 				// 结账不自动清台，将桌台状态设置为待清台
 				saleBill.Desk.SetWaitClearDesk()
 				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
@@ -3779,12 +3768,134 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
-			OrderAmount:  saleOrder.Amount,
+			OrderAmount:  saleOrder.GetAmount(),
 			PayAmount:    saleOrder.PaymentAmount,
 			ChangeAmount: saleOrder.ChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
+		},
+	}
+
+	return orderFinishResp, nil
+}
+
+// InstantOrderFree 免单
+func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	// 销售账单已经结束
+	if saleBill.IsEndStatus() {
+		return nil, errors.WithMessage(errors.New("销售账单结束"))
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+	// 订单是不是已经结束
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return nil, err
+	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 已经部分支付，无法进行免单
+	if len(infoResp.PaymentOrders.List) > 0 {
+		return nil, errors.WithMessage(errors.New("订单已部分支付，无法进行免单"))
+	}
+
+	// 获取免单原因
+	freeReasons, err := base.NewGiftOrFreeOrderReasonRepo(db).GetFreeOrderReasonListByUuids(req.ReasonIds)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if len(freeReasons) != len(req.ReasonIds) {
+		return nil, errors.WithMessage(errors.New("免单原因不存在"), fmt.Sprintf("原因ids：%v", req.ReasonIds))
+	}
+
+	freeOrderReasons := saleOrder.NewFreeOrderReason(freeReasons)
+
+	// 设置该销售订单为免单
+	saleOrder.SetFreeOrder(req.Reason, freeOrderReasons)
+
+	updateSaleBill := false
+	// 如果销售账单中只有一个销售订单，则可以结束销售账单
+	if saleBill.CanFinishSaleBill() {
+		saleBill.SetFinishSaleBill()
+		saleBill.CalcAll()
+		updateSaleBill = true
+	}
+
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建免单原因
+		if len(freeOrderReasons) > 0 {
+			if err := repository.NewSaleOrderProductReasonRepo(db).CreateSaleOrderProductReasons(freeOrderReasons); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		// 更新销售订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 更新账单
+		if updateSaleBill {
+			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+				return errUpdateSaleBill
+			}
+			// 如果是桌台账单，则将桌台状态改为待清台或者空闲
+			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
+			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
+			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
+			if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
+				// 结账自动清台，将桌台状态设置为空闲
+				saleBill.Desk.SetCloseDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			}
+			// 如果是桌台订单，且不自动清台
+			if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
+				// 结账不自动清台，将桌台状态设置为待清台
+				saleBill.Desk.SetWaitClearDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	orderFinishResp := &resp.OrderFinishResp{
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: req.SaleOrderUuid,
+		AmountInfo: resp.PayAmountInfo{
+			OrderAmount: saleOrder.GetAmount(),
+		},
+		PayMethodList: resp.PayMethodList{
+			List: []resp.PayMethod{
+				{
+					Name: "免单",
+				},
+			},
 		},
 	}
 

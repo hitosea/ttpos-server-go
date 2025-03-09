@@ -952,6 +952,66 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentFinish 完成销售订单的付款结账
+// @Summary 完成销售订单的付款结账
+// @Description 完成销售订单的付款结账
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
+// @Router /cashier/desk/order/payment/finish [post]
+func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面销售订单的付款结账接口请求")
+
+	params := req.InstantOrderPaymentFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
+	// 桌台销售订单的付款结账
+	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("桌台销售订单的付款结账成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderFree 免单
+// @Summary 免单
+// @Description 免单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderFreeReq true "免单参数"
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
+// @Router /cashier/desk/order/free [post]
+func (h *DeskHandler) OrderFree(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面免单接口请求")
+
+	params := req.InstantOrderFreeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("桌台免单", zap.Any("params", params))
+	// 桌台免单
+	res, err := h.orderService.InstantOrderFree(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("桌台免单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderPaymentZeroRule 设置结账抹零规则
 // @Summary 设置结账抹零规则
 // @Description 设置结账抹零规则
@@ -1165,6 +1225,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
+		privateApi.POST("/desk/order/free", wrapper.OrderFree)                                                // 免单
 		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单

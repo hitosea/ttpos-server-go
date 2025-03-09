@@ -64,6 +64,7 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
 func (model *SaleOrder) GetMemberName() string {
@@ -181,6 +182,33 @@ func (model *SaleOrder) IsFreeSaleOrder() bool {
 // TableName 指定表名
 func (model *SaleOrder) TableName() string {
 	return "ttpos_sale_order"
+}
+
+// SetFreeOrder 设置免单
+func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProductReason) {
+	defer model.SetUpdate() // 标记更新
+	model.IsFree = constant.SaleOrderIsFreeYes
+	model.FreeReason = reason
+	model.FreeReasons = freeReasons
+	// 订单状态
+	model.Status = constant.SaleOrderStatusFinish
+	model.FinishTime = time.Now().Unix()
+}
+
+func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range freeReasons {
+		reasonUuid, _ := utils.GetID()
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			FreeReasonUuid:        reason.Uuid,
+		})
+	}
+	return list
 }
 
 // ValidateOrderStatus 判断订单是否可操作
