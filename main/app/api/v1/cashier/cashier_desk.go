@@ -256,7 +256,7 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 	//
 	info, deskMergeCheckResp, err := h.service.MergeDesk(ctx, params)
 	if err != nil {
-		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, errors.WithMessage(err))
+		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, err)
 		return
 	}
 	// 返回结果
