@@ -96,6 +96,11 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
+func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
+	// 默认0是本台的商品。不为0的商品是从其他桌台并台过来的商品
+	return model.DeskUuid == 0
+}
+
 // 是否为已送厨的商品
 func (model *SaleOrderProduct) IsCookingProduct() bool {
 	// 状态为已送厨且生产订单ID不为0

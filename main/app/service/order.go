@@ -2594,6 +2594,11 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 		// product_package_uuid => SaleOrderProduct
 		saleOrderProductMap := make(map[uint64]*model.SaleOrderProduct) // key为商品包uuid value为订单商品
 		for _, saleOrderProduct := range saleOrderProductAll {
+			// 限购检查只检查本台的商品，并台过来的商品不记.
+			// 跳过非本台的商品
+			if !saleOrderProduct.IsCurrentDeskProduct() {
+				continue
+			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
 			numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
