@@ -1584,7 +1584,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 	return info, nil
 }
 
-// OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零
+// OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零。撤销优惠折扣
 func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -1611,7 +1611,7 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 设置整单改价金额
+	// 撤销订单的优惠折扣
 	saleOrder.SetAllDiscountCancel()
 
 	// 计算并保存销售账单
@@ -3978,7 +3978,7 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 	return infoResp, nil
 }
 
-// InstantOrderSaleOrderCreate 给销售订单创建一个销售订单
+// InstantOrderSaleOrderCreate 给销售账单创建一个销售订单。（创建新拆单）
 func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 加锁
@@ -3994,11 +3994,34 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errSaleBill
 	}
 
-	// 创建销售订单
-	_, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo)
-	if errCreateSaleOrder != nil {
-		ctx.Log().Error("新建拆单失败", zap.Any("errCreateSaleOrder", errCreateSaleOrder))
-		return nil, errors.WithMessage(errCreateSaleOrder, "新建拆单失败")
+	// 如果销售账单目前只有一个销售订单，增加一个销售订单后要求撤销订单1的优惠折扣
+	// 这是产品的特殊要求，可能后续会改。
+	// 撤销订单的优惠折扣
+	if len(saleBill.SaleOrders) == 1 {
+		saleOrder := saleBill.GetFirstSaleOrder()
+		// 撤销订单1的优惠折扣
+		saleOrder.SetAllDiscountCancel()
+	}
+
+	// 计算并保存销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建销售订单
+		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo); errCreateSaleOrder != nil {
+			return errors.WithMessage(errCreateSaleOrder, fmt.Sprintf("新建拆单失败,saleBill.Uuid:%v, saleBill.OrderNo:%v", saleBill.Uuid, saleBill.OrderNo))
+		}
+
+		// 计算并保存销售账单
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	cartInfo, errCartInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
