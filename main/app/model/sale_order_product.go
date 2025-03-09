@@ -281,6 +281,74 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 	return &product
 }
 
+// NewSaleOrderProductReasonList 新建一个销售订单商品的退菜原因列表
+func (model *SaleOrderProduct) NewSaleOrderProductReasonList(reasons []*ReturnFoodReason) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range reasons {
+		reasonUuid, _ := utils.GetID()
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.SaleOrderUuid,
+			SaleOrderProductUuid:  model.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			ReturnFoodReasonUuid:  reason.Uuid,
+		})
+	}
+	return list
+}
+
+// SetCancelInfo 设置订单商品的退菜信息，标记该商品为退菜商品
+func (model *SaleOrderProduct) SetCancelInfo(reasons []*SaleOrderProductReason) {
+	defer model.SetUpdate() // 标记该model需要更新
+	model.CancelTime = time.Now().Unix()
+	model.CancelReasons = append(model.CancelReasons, reasons...)
+	model.Sign = model.GenerateProductSign() // 更新签名
+}
+
+// SetCancelInfo 设置订单商品的退菜信息，标记该商品为退菜商品
+//func (model *SaleOrderProduct) SetCancelInfo(reasons []*ReturnFoodReason) {
+//	defer model.SetUpdate() // 标记该model需要更新
+//	model.CancelTime = time.Now().Unix()
+//	list := make([]*SaleOrderProductReason, 0)
+//	for _, reason := range reasons {
+//		reasonUuid, _ := utils.GetID()
+//		list = append(list, &SaleOrderProductReason{
+//			BaseModel: BaseModel{
+//				Uuid: reasonUuid,
+//			},
+//			SaleOrderUuid:         model.SaleOrderUuid,
+//			SaleOrderProductUuid:  model.Uuid,
+//			ReturnFoodReasonUuid:  reason.Uuid,
+//			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+//		})
+//	}
+//	model.CancelReasons = list
+//}
+
+// 从商品的原因列表中，只取出退菜原因
+func (model *SaleOrderProduct) GetCancelReasons() []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range model.CancelReasons {
+		// 严谨性检查。避免有不是该商品的退菜原因
+		if reason.SaleOrderProductUuid != model.Uuid || reason.SaleOrderUuid != model.SaleOrderUuid {
+			continue
+		}
+		// 三选一。只取出退菜原因，忽略赠菜原因和免单原因
+		if reason.ReturnFoodReasonUuid != 0 {
+			list = append(list, reason)
+		}
+	}
+	return list
+}
+
+// 设置销售订单商品的数量
+func (model *SaleOrderProduct) SetNum(num uint) {
+	defer model.SetUpdate() // 标记该model需要更新
+	model.Num = num
+}
+
 // 设置销售订单商品的折扣信息
 func (model *SaleOrderProduct) SetDiscountInfo(memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) {
 	model.SetMemberDiscountInfo(memberDiscountRate, memberCardDiscountRate)

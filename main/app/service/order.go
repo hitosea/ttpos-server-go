@@ -2824,6 +2824,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
+
+	// 校验是否合规
 	switch {
 	case saleOrder == nil:
 		return nil, errors.New("销售订单不存在")
@@ -2840,56 +2842,66 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	if err := saleBill.ValidateOrderStatus(constant.OrderRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	//  验证退菜标签
-	returnFoodReasons := [][2]uint64{}
-	if len(req.ReturnIds) > 0 {
-		_returnFoodReasons, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		if len(notFound) > 0 {
-			return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
-		}
-		returnFoodReasons = _returnFoodReasons
-	}
 
-	reasons, err := base.NewReturnFoodReasonRepo(db).GetReturnFoodReasonListByUuids(req.ReturnIds)
+	//  验证退菜标签
+	//returnFoodReasons := [][2]uint64{}
+	//if len(req.ReturnIds) > 0 {
+	//	_returnFoodReasons, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
+	//	if err != nil {
+	//		return nil, errors.WithMessage(err)
+	//	}
+	//	if len(notFound) > 0 {
+	//		return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
+	//	}
+	//	returnFoodReasons = _returnFoodReasons
+	//}
+
+	returnFoodReason, err := base.NewReturnFoodReasonRepo(db).GetReturnFoodReasonListByUuids(req.ReturnIds)
 	if err != nil {
 		return nil, errors.WithMessage(err, "params:", utils.ToJson(req.ReturnIds))
 	}
+	// 如果查到的原因数量跟提交的原因数量不一致，提示退菜原因不存在
+	if len(returnFoodReason) != len(req.ReturnIds) {
+		return nil, errors.WithMessage(fmt.Errorf("退菜原因不存在: %v", req.ReturnIds))
+	}
+	// 构建订单商品退菜原因列表
+	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
+	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
+	if saleOrderProduct.Num == req.Num {
+		saleOrderProduct.SetCancelInfo(returnFoodReasonList)
+	} else {
+		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
+		// 1. 修改原商品的数量
+		// 2. 新建一个销售订单商品，该商品数量为退菜数量.
+		// 3. 判断新建的销售订单商品是否要合并到已有的退菜商品中。当两个退菜商品的签名一致时，将两个商品合并，数量相加
+		// 修改原商品的数量
+		saleOrderProduct.SetNum(saleOrderProduct.Num - req.Num)
+		// 新建一个销售订单商品，该商品数量为退菜数量
+		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
+		newSaleOrderProduct.SetNum(req.Num)
+		newSaleOrderProduct.SetCancelInfo(returnFoodReasonList)
+		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
+		if sameSignSaleOrderProduct != nil {
+			// 有相同签名的商品。将两个商品合并，数量相加
+			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
+		} else {
+			// 没有相同签名的商品。将新建的商品添加到销售订单商品列表中
+			// CalcAndSaveSaleBill 方法会检查到newSaleOrderProduct没有主键ID，会创建新记录。所以不用另外创建该订单商品，否则会重复创建
+			saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSaleOrderProduct)
+		}
+	}
+
+	//
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-
-		// todo：退菜记录 - 订单id 产品id 产品规格 退菜原因 条件要一致
-
-		// 如果数量相等 就不需要复制新的商品
-		if saleOrderProduct.Num == req.Num {
-			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-				CancelTime:   time.Now().Unix(),
-				CancelReason: req.Reason,
-			})
-		} else {
-			saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-				Num: saleOrderProduct.Num - req.Num,
-			})
-			saleBill.CopyOrderProductAndEdit(saleOrderProduct.Uuid, model.SaleOrderProduct{
-				CancelTime:   time.Now().Unix(),
-				CancelReason: req.Reason,
-				Num:          req.Num,
-			})
-		}
-		// 添加退菜原因
-		if len(returnFoodReasons) > 0 {
-			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
-				saleOrderProduct.SaleOrderUuid,
-				saleOrderProduct.Uuid,
-				constant.ProductReasonTypeReturnFood,
-				returnFoodReasons,
-			); err != nil {
+		// 创建退菜记录
+		if len(returnFoodReasonList) > 0 {
+			if err := repository.NewSaleOrderProductReasonRepo(tx).CreateSaleOrderProductReasons(returnFoodReasonList); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
+
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -2898,6 +2910,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
 	}
+
 	// 发布“退菜”事件
 	go func() {
 		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
@@ -2913,7 +2926,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
 			ProductAttr:    saleOrderProduct.GetAttributeName(),
 			Num:            saleOrderProduct.Num,
-			Reason:         model.GetReturnFoodReasonNames(reasons),
+			Reason:         model.GetReturnFoodReasonNames(returnFoodReason),
 			CustomReason:   saleOrderProduct.CancelReason,
 		})
 	}()
