@@ -2058,6 +2058,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
+	if shopCart.SaleBill.IsEndStatus() {
+		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
+	}
 	// 重新计算金额
 	shopCart.SaleBill.CalcAll()
 
@@ -3723,6 +3727,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		saleBill.CalcAll()
 	}
 
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新销售订单
 		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
@@ -3733,6 +3743,23 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		if updateSaleBill {
 			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 				return errUpdateSaleBill
+			}
+			// 如果是桌台账单，则将桌台状态改为待清台或者空闲
+			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
+			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
+			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
+			if businessSetting.IsAutoClearDesk() {
+				// 结账自动清台，将桌台状态设置为空闲
+				saleBill.Desk.SetCloseDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			} else {
+				// 结账不自动清台，将桌台状态设置为待清台
+				saleBill.Desk.SetWaitClearDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

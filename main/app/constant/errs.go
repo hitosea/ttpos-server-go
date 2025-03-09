@@ -54,3 +54,8 @@ func ParseCodeOrderCheck(code int) string {
 		return "success"
 	}
 }
+
+// 桌台业务错误码
+const (
+	CodeDeskOrderEnd = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
+)
