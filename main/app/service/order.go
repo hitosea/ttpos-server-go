@@ -3454,13 +3454,17 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	var saleOrder *model.SaleOrder
-	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
+	if saleBill.IsEndStatus() {
+		return nil, errors.WithMessage(errors.New("销售账单已结束"))
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
-	var paymentMethods []*model.PaymentMethod
-	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	paymentMethods := repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
 
 	var memberInfo *resp.MemberInfo
 	if saleOrder.Member != nil {
@@ -3563,6 +3567,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 // InstantOrderPaymentCreate 给销售订单创建一个支付单
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	// 判断订单是否已经结束，若订单结束则拒绝操作
+	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
@@ -3616,9 +3624,36 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	return infoResp, nil
 }
 
+// 检查是否可以操作
+func (s *orderSrv) checkCanOperateOrder(ctx context.Context, saleBillUuid, saleOrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 判断订单是否已经结束，若订单结束不能创建支付单、不能撤销付款单、不能查看结账页信息
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return errors.WithMessage(errSaleBill)
+	}
+	if saleBill.IsEndStatus() {
+		return errors.WithMessage(errors.New("销售账单已结束"))
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return errors.New("无法查询到销售订单")
+	}
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
 // InstantOrderPaymentCancel 撤销一个支付单
 func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 判断订单是否已经结束，若订单结束则拒绝操作
+	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
