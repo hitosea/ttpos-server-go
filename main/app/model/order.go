@@ -97,7 +97,7 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 		BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 		DiningMethod: constant.SaleBillDiningMethodDineIn,
 		IsBuffet:     utils.BoolToUint(isBuffet),
-		MealNum:      mealNum,
+		MealNum:      mealNum, // 非自助餐订单，就餐人数等于开台时填写的人数。 自助餐订单，就餐人数等于各个顾客类型数量的累加，如老人2人、小孩3人，则就餐人数为5人。不会因为销售账单是两个自助餐套餐而导致人数变为10人
 		Remark:       remark,
 		DeskUuid:     deskUuid,
 	}

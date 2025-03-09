@@ -465,7 +465,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	// 构建销售账单
-	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.MealNum, req.Remark, req.DeskUuid)
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid)
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
@@ -484,7 +484,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
-	saleOrderBuffetCustomerTypes, _, mealNum, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
+	saleOrderBuffetCustomerTypes, _, _, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
 
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -495,7 +495,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 					return errors.WithMessage(err)
 				}
 			}
-			saleBill.MealNum = mealNum
 			if maxTimeLimit == -1 {
 				saleBill.BuffetDuration = 0
 			} else {
