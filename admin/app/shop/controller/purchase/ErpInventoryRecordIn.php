@@ -42,7 +42,7 @@ class ErpInventoryRecordIn extends Controller
         if (!$detail) {
             return $this->renderError('数据不存在');
         }
-        if ($detail?->cancel()) {
+        if ($detail->cancel()) {
             return $this->renderSuccess('撤销成功');
         }
         return $this->renderError($detail?->getError() ?: '撤销失败');

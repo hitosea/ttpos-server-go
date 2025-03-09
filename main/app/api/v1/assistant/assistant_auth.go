@@ -19,9 +19,9 @@ type AuthHandler struct {
 	authSrv service.IAuthSrv
 }
 
-// Login 点餐助手登录
-// @Summary 点餐助手登录
-// @Description 点餐助手登录
+// Login 登录
+// @Summary 登录
+// @Description 登录
 // @Tags 点餐助手端.认证鉴权
 // @Accept json
 // @Produce json
@@ -45,9 +45,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	helper.Success(c, gin.H{"token": loginResp.Token})
 }
 
-// Logout 点餐助手退出登录
-// @Summary 点餐助手退出登录
-// @Description 点餐助手退出登录
+// Logout 退出登录
+// @Summary 退出登录
+// @Description 退出登录
 // @Tags 点餐助手端.认证鉴权
 // @Accept json
 // @Produce json
@@ -64,9 +64,9 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	helper.Success(c, gin.H{}, "退出成功")
 }
 
-// BindCashier 点餐助手绑定收银机
-// @Summary 点餐助手绑定收银机
-// @Description 点餐助手绑定收银机
+// BindCashier 绑定收银机
+// @Summary 绑定收银机
+// @Description 绑定收银机
 // @Tags 点餐助手端.认证鉴权
 // @Accept json
 // @Produce json

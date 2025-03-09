@@ -1,11 +1,14 @@
 package cashier
 
 import (
+	"bytes"
+	"io"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -350,35 +353,6 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderAmountChange 处理桌台订单改价
-// @Summary 桌台订单改价
-// @Description 桌台订单改价
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderAmountChangeReq true "改价参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/amount/change [post]
-func (h *DeskHandler) OrderAmountChange(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := req.OrderAmountChangeReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		return
-	}
-	//
-	info, err := h.orderService.OrderAmountChange(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, info)
-}
-
 // OrderDiscount 处理桌台订单打折
 // @Summary 桌台订单打折
 // @Description 桌台订单打折
@@ -386,55 +360,57 @@ func (h *DeskHandler) OrderAmountChange(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderDiscountReq true "打折参数"
+// @param data body req.OrderDiscountMethodReq true "打折参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/discount [post]
 func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	// 绑定请求参数
-	params := req.OrderDiscountReq{}
+	params := req.OrderDiscountMethodReq{}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	//
-	info, err := h.orderService.OrderDiscount(ctx, params)
+	var shopCart *resp.ShopCart
+	var err error
+	// 改价
+	if params.DiscountMethod == 1 {
+		amountChangeReq := req.OrderAmountChangeReq{}
+		if err := c.ShouldBindJSON(&amountChangeReq); err != nil {
+			helper.HandleValidationError(c, err, amountChangeReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderAmountChange(ctx, amountChangeReq)
+	}
+	// 打折
+	if params.DiscountMethod == 2 {
+		discountReq := req.OrderDiscountReq{}
+		if err := c.ShouldBindJSON(&discountReq); err != nil {
+			helper.HandleValidationError(c, err, discountReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderDiscount(ctx, discountReq)
+	}
+	// 抹零
+	if params.DiscountMethod == 3 {
+		zeroRuleReq := req.OrderZeroRuleReq{}
+		if err := c.ShouldBindJSON(&zeroRuleReq); err != nil {
+			helper.HandleValidationError(c, err, zeroRuleReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderZeroRule(ctx, zeroRuleReq)
+	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, info)
-}
-
-// OrderZeroRule 处理桌台订单订单抹零规则
-// @Summary 桌台订单订单抹零规则
-// @Description 桌台订单订单抹零规则
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderZeroRuleReq true "抹零规则参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/zero_rule [post]
-func (h *DeskHandler) OrderZeroRule(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := req.OrderZeroRuleReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		return
-	}
-	//
-	info, err := h.orderService.OrderZeroRule(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, shopCart)
 }
 
 // @Summary 取消桌台订单所有优惠折扣，包括改价、打折、抹零
@@ -462,7 +438,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, info, "操作成功")
 }
 
 // OrderChangePopulation 处理桌台订单修改人数
@@ -1170,9 +1146,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                        // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                         // 桌台订单商品改价
-		privateApi.POST("/desk/order/amount/change", wrapper.OrderAmountChange)                               // 桌台订单改价
 		privateApi.POST("/desk/order/discount", wrapper.OrderDiscount)                                        // 桌台订单打折
-		privateApi.POST("/desk/order/zero_rule", wrapper.OrderZeroRule)                                       // 设置桌台订单订单抹零规则
 		privateApi.POST("/desk/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消桌台订单所有优惠折扣，包括改价、打折、抹零
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐

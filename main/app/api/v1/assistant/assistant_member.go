@@ -174,7 +174,6 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)   // 充值会员信息
 		privateApi.POST("/member/add", wrapper.AddMember)                   // 添加会员
 		privateApi.GET("/member/levels", wrapper.GetMemberLevels)           // 获取会员等级列表
-		privateApi.GET("/member/recharge", nil)                             // ToDo 会员充值
 		privateApi.GET("/member/order_discount", wrapper.GetMemberDiscount) // 获取会员优惠
 		privateApi.GET("/member/search", wrapper.SearchMember)              // 模糊搜索会员
 		privateApi.GET("/member/check_password", wrapper.CheckPassword)     // 使用会员优惠验证密码

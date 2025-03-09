@@ -37,7 +37,7 @@ class Table extends BaseModel
     }
     public function getSwitchStatusAttr($value, $data)
     {
-        return $this->is_disable ?: 0;
+        return $this->is_disable == 1 ? 0 : 1;
     }
 
     /**

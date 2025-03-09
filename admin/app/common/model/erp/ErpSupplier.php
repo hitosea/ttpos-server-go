@@ -51,13 +51,23 @@ class ErpSupplier extends BaseModel
             $model = $model->like('name', $params['name']);
         }
         $list = $model->with(['purchaser'])->order('create_time desc')->paginate($params);
+
+        foreach ($list as &$item) {
+            $item['id'] = $item['uuid'];
+            $item['purchaser_id'] = $item['staff_uuid'];
+            $item['shop_supplier_id'] = $item['purchaser']['company_uuid'];
+            $item['purchaser']['shop_user_id'] = $item['purchaser']['uuid'];
+        }
+        
         return $list;
     }
 
     public function getSelectList()
     {
         $model = new self;
-        $list = $model->with(['purchaser'])->order('create_time desc')->select();
+        $list = $model->with(['purchaser'])->withAttr('id', function ($value, $data) {
+            return $data['uuid'];
+        })->order('create_time desc')->select();
         return $list;
     }
 
@@ -70,7 +80,7 @@ class ErpSupplier extends BaseModel
     public function detail($erp_supplier_id)
     {
         $model = new self;
-        $info = $model->with(['purchaser'])->where('id', $erp_supplier_id)->find();
+        $info = $model->with(['purchaser'])->where('uuid', $erp_supplier_id)->find();
         return $info;
     }
 

@@ -23,9 +23,9 @@ type BaseHandler struct {
 	otherSrv         service.IOtherSrv
 }
 
-// GetCashierBase 收银端基础信息
-// @Summary 收银端基础信息
-// @Description 收银端基础信息
+// GetCashierBase 基本信息
+// @Summary 基本信息
+// @Description 基本信息
 // @Tags 收银端.基础信息
 // @Accept json
 // @Produce json
@@ -42,9 +42,9 @@ func (h *BaseHandler) GetCashierBase(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// GetLanguage 收银端语言
-// @Summary 收银端语言
-// @Description 收银端语言
+// GetLanguage 语言
+// @Summary 语言
+// @Description 语言
 // @Tags 收银端.基础信息
 // @Accept json
 // @Produce json
@@ -61,9 +61,9 @@ func (h *BaseHandler) GetLanguage(c *gin.Context) {
 	helper.Success(c, language)
 }
 
-// GetAd 收银端副屏广告
-// @Summary 收银端副屏广告
-// @Description 收银端副屏广告
+// GetAd 副屏广告
+// @Summary 副屏广告
+// @Description 副屏广告
 // @Tags 收银端.基础信息
 // @Accept json
 // @Produce json

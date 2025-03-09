@@ -334,7 +334,7 @@ class Product extends BaseModel
      */
     public function erpSupplier()
     {
-        return $this->hasMany(ErpSupplier::class, 'id', 'erp_supplier_id');
+        return $this->belongsTo(ErpSupplier::class, 'supplier_uuid', 'uuid');
     }
 
     /**
@@ -1131,7 +1131,7 @@ class Product extends BaseModel
             $product['product_attr'] = self::getProductAttr($product);
             // 商品加料
             $product['feed'] = self::getProductFeed($product);
-            // todo 税类, 先返回空数组, 后续根据设置返回税类
+            // 税类
             $product['productTaxes'] = self::getProductTaxes($product);
 
             unset($product['productAttributeGroup']);

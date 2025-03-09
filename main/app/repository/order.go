@@ -146,14 +146,8 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 		db = opt(db)
 	}
 
-	// 获取总数
-	err := db.Count(&total).Error
-	if err != nil {
-		return nil, 0, fmt.Errorf("GetOrderListWithPagination: %v", err)
-	}
-
 	// 获取列表
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orders).Error
+	err := db.Count(&total).Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orders).Error
 
 	return orders, total, errors.WithMessage(err)
 }

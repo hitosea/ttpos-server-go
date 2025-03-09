@@ -498,6 +498,18 @@ definitions:
         description: 目标销售订单UUID, 必填
         type: integer
     type: object
+  req.KitchenBindReq:
+    properties:
+      brand:
+        description: 品牌
+        type: string
+      product_printer_uuid:
+        description: 商品打印Uuid
+        type: integer
+      remark:
+        description: 备注
+        type: string
+    type: object
   req.LoginReq:
     properties:
       brand:
@@ -561,22 +573,6 @@ definitions:
       meal_num:
         description: 顾客数量
         type: integer
-    type: object
-  req.OrderAmountChangeReq:
-    properties:
-      price:
-        description: 改价
-        type: number
-      sale_bill_uuid:
-        description: 销售账单UUID
-        type: integer
-      sale_order_uuid:
-        description: 销售订单UUID
-        type: integer
-    required:
-    - price
-    - sale_bill_uuid
-    - sale_order_uuid
     type: object
   req.OrderCancelReq:
     properties:
@@ -769,19 +765,10 @@ definitions:
         description: 销售订单UUID
         type: integer
     type: object
-  req.OrderDiscountReq:
+  req.OrderDiscountMethodReq:
     properties:
-      discount:
-        description: 打折。0-100之间
-        type: number
-      discount_type:
-        description: 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
-        type: integer
-      sale_bill_uuid:
-        description: 销售账单UUID
-        type: integer
-      sale_order_uuid:
-        description: 销售订单UUID
+      discount_method:
+        description: 打折类型 1=改价 2=打折, 3=抹零, 4=免单
         type: integer
     type: object
   req.OrderMemberCancelReq:
@@ -852,18 +839,6 @@ definitions:
     properties:
       sale_bill_uuid:
         description: 销售账单UUID
-        type: integer
-    type: object
-  req.OrderZeroRuleReq:
-    properties:
-      sale_bill_uuid:
-        description: 销售账单UUID
-        type: integer
-      sale_order_uuid:
-        description: 销售订单UUID
-        type: integer
-      zero_rule:
-        description: 抹零规则
         type: integer
     type: object
   req.PrintRechargeOrderReq:
@@ -2816,17 +2791,6 @@ definitions:
         description: 已选数量。已选择xx份
         type: integer
     type: object
-  resp.KitchenBase:
-    properties:
-      company:
-        allOf:
-        - $ref: '#/definitions/resp.Company'
-        description: 商家信息
-      kitchen:
-        allOf:
-        - $ref: '#/definitions/setting.Kitchen'
-        description: 厨显端设置
-    type: object
   resp.Language:
     properties:
       i:
@@ -3596,6 +3560,22 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.InstantMustPlanProductStat'
+        type: array
+    type: object
+  resp.ProductPrinter:
+    properties:
+      name:
+        description: 商品打印机名称
+        type: string
+      uuid:
+        description: 商品打印机uuid
+        type: integer
+    type: object
+  resp.ProductPrinterList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ProductPrinter'
         type: array
     type: object
   resp.ProductSauce:
@@ -4727,7 +4707,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 点餐助手端信息
+      description: 基本信息
       produces:
       - application/json
       responses:
@@ -4742,14 +4722,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 点餐助手端信息
+      summary: 基本信息
       tags:
       - 点餐助手端.基础信息
   /assistant/bind_cashier:
     post:
       consumes:
       - application/json
-      description: 点餐助手绑定收银机
+      description: 绑定收银机
       parameters:
       - description: 绑定收银机参数
         in: body
@@ -4766,7 +4746,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 点餐助手绑定收银机
+      summary: 绑定收银机
       tags:
       - 点餐助手端.认证鉴权
   /assistant/buffet/list:
@@ -4788,6 +4768,79 @@ paths:
       summary: 获取自助餐列表
       tags:
       - 点餐助手端.自助餐
+  /assistant/call/processed:
+    post:
+      consumes:
+      - application/json
+      description: 处理呼叫
+      parameters:
+      - description: 处理呼叫参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProcessedCallReq'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
+      summary: 处理呼叫
+      tags:
+      - 点餐助手端.呼叫
+  /assistant/call/unprocessed:
+    get:
+      consumes:
+      - application/json
+      description: 获取未处理消息数量
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取未处理消息数量
+      tags:
+      - 点餐助手端.呼叫
+  /assistant/call/unprocessed/list:
+    get:
+      consumes:
+      - application/json
+      description: 未处理呼叫列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedCallList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 未处理呼叫列表
+      tags:
+      - 点餐助手端.呼叫
   /assistant/check_update:
     get:
       consumes:
@@ -4900,7 +4953,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 收银端语言
+      description: 语言
       produces:
       - application/json
       responses:
@@ -4915,14 +4968,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 收银端语言
+      summary: 语言
       tags:
       - 点餐助手端.基础信息
   /assistant/login:
     post:
       consumes:
       - application/json
-      description: 点餐助手登录
+      description: 登录
       parameters:
       - description: 验证码sign
         in: header
@@ -4942,14 +4995,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 点餐助手登录
+      summary: 登录
       tags:
       - 点餐助手端.认证鉴权
   /assistant/logout:
     post:
       consumes:
       - application/json
-      description: 点餐助手退出登录
+      description: 退出登录
       produces:
       - application/json
       responses:
@@ -4959,7 +5012,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 点餐助手退出登录
+      summary: 退出登录
       tags:
       - 点餐助手端.认证鉴权
   /assistant/member/add:
@@ -5221,7 +5274,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 收银端副屏广告
+      description: 副屏广告
       produces:
       - application/json
       responses:
@@ -5236,14 +5289,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 收银端副屏广告
+      summary: 副屏广告
       tags:
       - 收银端.基础信息
   /cashier/base:
     get:
       consumes:
       - application/json
-      description: 收银端基础信息
+      description: 基本信息
       produces:
       - application/json
       responses:
@@ -5258,7 +5311,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 收银端基础信息
+      summary: 基本信息
       tags:
       - 收银端.基础信息
   /cashier/buffet/delay/list:
@@ -5668,37 +5721,6 @@ paths:
       summary: 开台
       tags:
       - 收银端.桌台
-  /cashier/desk/order/amount/change:
-    post:
-      consumes:
-      - application/json
-      description: 桌台订单改价
-      parameters:
-      - description: 改价参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderAmountChangeReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ShopCart'
-              type: object
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 桌台订单改价
-      tags:
-      - 收银端.桌台
   /cashier/desk/order/buffet:
     post:
       consumes:
@@ -6067,7 +6089,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.OrderDiscountReq'
+          $ref: '#/definitions/req.OrderDiscountMethodReq'
       produces:
       - application/json
       responses:
@@ -6492,37 +6514,6 @@ paths:
       summary: 从一个销售订单移动商品到另一个销售订单
       tags:
       - 收银端.桌台
-  /cashier/desk/order/zero_rule:
-    post:
-      consumes:
-      - application/json
-      description: 桌台订单订单抹零规则
-      parameters:
-      - description: 抹零规则参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderZeroRuleReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ShopCart'
-              type: object
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 桌台订单订单抹零规则
-      tags:
-      - 收银端.桌台
   /cashier/desk/region_and_type:
     get:
       consumes:
@@ -6678,37 +6669,6 @@ paths:
       summary: 拒单
       tags:
       - 收银端.接单相关
-  /cashier/instant/order/amount/change:
-    post:
-      consumes:
-      - application/json
-      description: 点餐订单改价
-      parameters:
-      - description: 改价参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderAmountChangeReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ShopCart'
-              type: object
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 点餐订单改价
-      tags:
-      - 收银端.点餐
   /cashier/instant/order/cancel:
     post:
       consumes:
@@ -6971,7 +6931,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.OrderDiscountReq'
+          $ref: '#/definitions/req.OrderDiscountMethodReq'
       produces:
       - application/json
       responses:
@@ -7571,42 +7531,11 @@ paths:
       summary: 显示点餐订单（取单）
       tags:
       - 收银端.点餐
-  /cashier/instant/order/zero_rule:
-    post:
-      consumes:
-      - application/json
-      description: 点餐订单订单抹零规则
-      parameters:
-      - description: 抹零规则参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderZeroRuleReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ShopCart'
-              type: object
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 点餐订单订单抹零规则
-      tags:
-      - 收银端.点餐
   /cashier/language:
     get:
       consumes:
       - application/json
-      description: 收银端语言
+      description: 语言
       produces:
       - application/json
       responses:
@@ -7621,14 +7550,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 收银端语言
+      summary: 语言
       tags:
       - 收银端.基础信息
   /cashier/login:
     post:
       consumes:
       - application/json
-      description: 收银端登录
+      description: 登录
       parameters:
       - description: 验证码sign
         in: header
@@ -7653,14 +7582,14 @@ paths:
                 data:
                   $ref: '#/definitions/resp.CashierLoginResp'
               type: object
-      summary: 收银端登录
+      summary: 登录
       tags:
       - 收银端.认证
   /cashier/logout:
     post:
       consumes:
       - application/json
-      description: 收银端退出登录
+      description: 退出登录
       produces:
       - application/json
       responses:
@@ -7670,7 +7599,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 收银端退出登录
+      summary: 退出登录
       tags:
       - 收银端.认证
   /cashier/member/add:
@@ -8876,7 +8805,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 厨显端信息
+      description: 基本信息
       produces:
       - application/json
       responses:
@@ -8887,22 +8816,25 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.KitchenBase'
+                  $ref: '#/definitions/resp.AssistantBase'
               type: object
       security:
       - JwtToken: []
-      summary: 厨显端信息
+      summary: 基本信息
       tags:
-      - 厨显端.认证鉴权
-  /kitchen/call/handle:
+      - 厨显端.基础信息
+  /kitchen/bind:
     post:
       consumes:
       - application/json
+      description: 绑定商品打印
       parameters:
-      - description: id
+      - description: 绑定商品打印参数
         in: body
         name: data
         required: true
+        schema:
+          $ref: '#/definitions/req.KitchenBindReq'
       produces:
       - application/json
       responses:
@@ -8910,13 +8842,95 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 绑定商品打印
+      tags:
+      - 厨显端.基础信息
+  /kitchen/call/processed:
+    post:
+      consumes:
+      - application/json
+      description: 处理呼叫
+      parameters:
+      - description: 处理呼叫参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProcessedCallReq'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
       summary: 处理呼叫
       tags:
       - 厨显端.呼叫
-  /kitchen/call/list:
+  /kitchen/call/unprocessed:
     get:
       consumes:
       - application/json
+      description: 获取未处理消息数量
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取未处理消息数量
+      tags:
+      - 厨显端.呼叫
+  /kitchen/call/unprocessed/list:
+    get:
+      consumes:
+      - application/json
+      description: 未处理呼叫列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedCallList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 未处理呼叫列表
+      tags:
+      - 厨显端.呼叫
+  /kitchen/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -8924,14 +8938,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 获取呼叫列表
+      security:
+      - JwtToken: []
+      summary: 检查更新
       tags:
-      - 厨显端.呼叫
+      - 厨显端.基础信息
   /kitchen/login:
     post:
       consumes:
       - application/json
-      description: 厨显端登录
+      description: 登录
       parameters:
       - description: 验证码sign
         in: header
@@ -8951,14 +8967,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 厨显端登录
+      summary: 登录
       tags:
       - 厨显端.认证鉴权
   /kitchen/logout:
     post:
       consumes:
       - application/json
-      description: 厨显端退出登录
+      description: 退出登录
       produces:
       - application/json
       responses:
@@ -8968,161 +8984,43 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 厨显端退出登录
+      summary: 退出登录
       tags:
       - 厨显端.认证鉴权
-  /kitchen/production/finished_product/history:
+  /kitchen/product_printer_list:
     get:
       consumes:
       - application/json
-      parameters:
-      - description: 语言
-        in: query
-        name: language
-        required: true
-        type: string
-      - description: 页码
-        in: query
-        name: pageNum
-        required: true
-        type: integer
+      description: 获取打印档口列表
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取上菜历史
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductPrinterList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印档口列表
       tags:
-      - 厨显端.生产
-  /kitchen/production/finished_product/latest:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: 语言
-        in: query
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取最新成品
-      tags:
-      - 厨显端.生产
-  /kitchen/production/order/category:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: 分类ID。默认是0，全部
-        in: query
-        name: categoryId
-        required: true
-        type: string
-      - description: 页码
-        in: query
-        name: pageNum
-        type: integer
-      - description: 语言
-        in: query
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取生产订单分类
-      tags:
-      - 厨显端.生产
-  /kitchen/production/order/list:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: 页码
-        in: query
-        name: pageNum
-        required: true
-        type: integer
-      - description: 语言
-        in: query
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取生产订单列表
-      tags:
-      - 厨显端.生产
-  /kitchen/production/order/list_by_category:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: 分类ID。默认是0，全部
-        in: query
-        name: categoryId
-        required: true
-        type: string
-      - description: 页码
-        in: query
-        name: pageNum
-        required: true
-        type: integer
-      - description: 语言
-        in: query
-        name: language
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 按分类获取生产订单列表
-      tags:
-      - 厨显端.生产
-  /kitchen/setting/info:
-    get:
-      consumes:
-      - application/json
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取设置信息
-      tags:
-      - 厨显端.设置
-  /kitchen/setting/save:
+      - 厨显端.基础信息
+  /kitchen/verify_advanced_password:
     post:
       consumes:
       - application/json
+      description: 验证高级密码
       parameters:
-      - description: 设置参数
+      - description: 验证密码参数
         in: body
         name: data
         required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
       produces:
       - application/json
       responses:
@@ -9130,28 +9028,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 保存设置
-      tags:
-      - 厨显端.设置
-  /kitchen/setting/verify_advanced_password:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: 验证参数
-        in: body
-        name: data
-        required: true
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 验证高级密码
       tags:
-      - 厨显端.设置
+      - 厨显端.基础信息
   /passport/captcha:
     get:
       produces:
@@ -9358,7 +9239,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 平板端信息
+      description: 基本信息
       produces:
       - application/json
       responses:
@@ -9373,10 +9254,33 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 平板端信息
+      summary: 基本信息
       tags:
-      - 平板端.认证鉴权
-  /tablet/bind_desk:
+      - 平板端.基础信息
+  /tablet/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查更新
+      tags:
+      - 平板端.基础信息
+  /tablet/desk/bind:
     post:
       consumes:
       - application/json
@@ -9399,7 +9303,7 @@ paths:
       - JwtToken: []
       summary: 绑定/换绑桌台
       tags:
-      - 平板端.认证鉴权
+      - 平板端.桌台
   /tablet/desk/list:
     get:
       consumes:
@@ -9421,12 +9325,12 @@ paths:
       - JwtToken: []
       summary: 获取桌台列表
       tags:
-      - 平板端.认证鉴权
+      - 平板端.桌台
   /tablet/login:
     post:
       consumes:
       - application/json
-      description: 平板端登录
+      description: 登录
       parameters:
       - description: 验证码sign
         in: header
@@ -9446,14 +9350,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 平板端登录
+      summary: 登录
       tags:
       - 平板端.认证鉴权
   /tablet/logout:
     post:
       consumes:
       - application/json
-      description: 平板端退出登录
+      description: 退出登录
       produces:
       - application/json
       responses:
@@ -9463,9 +9367,33 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 平板端退出登录
+      summary: 退出登录
       tags:
       - 平板端.认证鉴权
+  /tablet/verify_advanced_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证高级密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证高级密码
+      tags:
+      - 平板端.基础信息
 securityDefinitions:
   JwtToken:
     in: header

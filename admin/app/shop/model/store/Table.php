@@ -58,6 +58,7 @@ class Table extends TableModel
         }
         $data = $this->sortData($data);
         $data['uuid'] = createUuid();
+        $data['is_disable'] = 0;
         return self::create($data);
     }
 
@@ -190,6 +191,6 @@ class Table extends TableModel
             $this->error = '当前桌位状态不允许该操作';
             return false;
         }
-        return $this->save(['is_disable' => $switch_status]);
+        return $this->save(['is_disable' => $switch_status == 0 ? 1 : 0]);
     }
 }

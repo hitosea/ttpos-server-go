@@ -22,7 +22,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "点餐助手端信息",
+                "description": "基本信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -32,7 +32,7 @@ const docTemplate = `{
                 "tags": [
                     "点餐助手端.基础信息"
                 ],
-                "summary": "点餐助手端信息",
+                "summary": "基本信息",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -62,7 +62,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "点餐助手绑定收银机",
+                "description": "绑定收银机",
                 "consumes": [
                     "application/json"
                 ],
@@ -72,7 +72,7 @@ const docTemplate = `{
                 "tags": [
                     "点餐助手端.认证鉴权"
                 ],
-                "summary": "点餐助手绑定收银机",
+                "summary": "绑定收银机",
                 "parameters": [
                     {
                         "description": "绑定收银机参数",
@@ -121,6 +121,132 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/call/processed": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "处理呼叫",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.呼叫"
+                ],
+                "summary": "处理呼叫",
+                "parameters": [
+                    {
+                        "description": "处理呼叫参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProcessedCallReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/assistant/call/unprocessed": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取未处理消息数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.呼叫"
+                ],
+                "summary": "获取未处理消息数量",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/call/unprocessed/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "未处理呼叫列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.呼叫"
+                ],
+                "summary": "未处理呼叫列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedCallList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -303,7 +429,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "收银端语言",
+                "description": "语言",
                 "consumes": [
                     "application/json"
                 ],
@@ -313,7 +439,7 @@ const docTemplate = `{
                 "tags": [
                     "点餐助手端.基础信息"
                 ],
-                "summary": "收银端语言",
+                "summary": "语言",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -338,7 +464,7 @@ const docTemplate = `{
         },
         "/assistant/login": {
             "post": {
-                "description": "点餐助手登录",
+                "description": "登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -348,7 +474,7 @@ const docTemplate = `{
                 "tags": [
                     "点餐助手端.认证鉴权"
                 ],
-                "summary": "点餐助手登录",
+                "summary": "登录",
                 "parameters": [
                     {
                         "type": "string",
@@ -384,7 +510,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "点餐助手退出登录",
+                "description": "退出登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -394,7 +520,7 @@ const docTemplate = `{
                 "tags": [
                     "点餐助手端.认证鉴权"
                 ],
-                "summary": "点餐助手退出登录",
+                "summary": "退出登录",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -844,7 +970,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "收银端副屏广告",
+                "description": "副屏广告",
                 "consumes": [
                     "application/json"
                 ],
@@ -854,7 +980,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.基础信息"
                 ],
-                "summary": "收银端副屏广告",
+                "summary": "副屏广告",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -884,7 +1010,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "收银端基础信息",
+                "description": "基本信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -894,7 +1020,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.基础信息"
                 ],
-                "summary": "收银端基础信息",
+                "summary": "基本信息",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1587,60 +1713,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/amount/change": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "桌台订单改价",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "桌台订单改价",
-                "parameters": [
-                    {
-                        "description": "改价参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderAmountChangeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/order/buffet": {
             "post": {
                 "security": [
@@ -2268,7 +2340,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderDiscountReq"
+                            "$ref": "#/definitions/req.OrderDiscountMethodReq"
                         }
                     }
                 ],
@@ -2992,60 +3064,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/zero_rule": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "桌台订单订单抹零规则",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "桌台订单订单抹零规则",
-                "parameters": [
-                    {
-                        "description": "抹零规则参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderZeroRuleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/region_and_type": {
             "get": {
                 "security": [
@@ -3303,60 +3321,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
-                    }
-                }
-            }
-        },
-        "/cashier/instant/order/amount/change": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "点餐订单改价",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "点餐订单改价",
-                "parameters": [
-                    {
-                        "description": "改价参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderAmountChangeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -3811,7 +3775,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderDiscountReq"
+                            "$ref": "#/definitions/req.OrderDiscountMethodReq"
                         }
                     }
                 ],
@@ -4828,60 +4792,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/instant/order/zero_rule": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "点餐订单订单抹零规则",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "点餐订单订单抹零规则",
-                "parameters": [
-                    {
-                        "description": "抹零规则参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderZeroRuleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/language": {
             "get": {
                 "security": [
@@ -4889,7 +4799,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "收银端语言",
+                "description": "语言",
                 "consumes": [
                     "application/json"
                 ],
@@ -4899,7 +4809,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.基础信息"
                 ],
-                "summary": "收银端语言",
+                "summary": "语言",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4924,7 +4834,7 @@ const docTemplate = `{
         },
         "/cashier/login": {
             "post": {
-                "description": "收银端登录",
+                "description": "登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -4934,7 +4844,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.认证"
                 ],
-                "summary": "收银端登录",
+                "summary": "登录",
                 "parameters": [
                     {
                         "type": "string",
@@ -4982,7 +4892,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "收银端退出登录",
+                "description": "退出登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -4992,7 +4902,7 @@ const docTemplate = `{
                 "tags": [
                     "收银端.认证"
                 ],
-                "summary": "收银端退出登录",
+                "summary": "退出登录",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -7033,7 +6943,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "厨显端信息",
+                "description": "基本信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -7041,9 +6951,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "厨显端.认证鉴权"
+                    "厨显端.基础信息"
                 ],
-                "summary": "厨显端信息",
+                "summary": "基本信息",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -7056,7 +6966,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.KitchenBase"
+                                            "$ref": "#/definitions/resp.AssistantBase"
                                         }
                                     }
                                 }
@@ -7066,8 +6976,53 @@ const docTemplate = `{
                 }
             }
         },
-        "/kitchen/call/handle": {
+        "/kitchen/bind": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "绑定商品打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.基础信息"
+                ],
+                "summary": "绑定商品打印",
+                "parameters": [
+                    {
+                        "description": "绑定商品打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenBindReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/call/processed": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "处理呼叫",
                 "consumes": [
                     "application/json"
                 ],
@@ -7080,9 +7035,136 @@ const docTemplate = `{
                 "summary": "处理呼叫",
                 "parameters": [
                     {
-                        "description": "id",
+                        "description": "处理呼叫参数",
                         "name": "data",
                         "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProcessedCallReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/kitchen/call/unprocessed": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取未处理消息数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.呼叫"
+                ],
+                "summary": "获取未处理消息数量",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/call/unprocessed/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "未处理呼叫列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.呼叫"
+                ],
+                "summary": "未处理呼叫列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedCallList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.基础信息"
+                ],
+                "summary": "检查更新",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "品牌参数",
+                        "name": "brand",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -7096,31 +7178,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/kitchen/call/list": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.呼叫"
-                ],
-                "summary": "获取呼叫列表",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/kitchen/login": {
             "post": {
-                "description": "厨显端登录",
+                "description": "登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -7130,7 +7190,7 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.认证鉴权"
                 ],
-                "summary": "厨显端登录",
+                "summary": "登录",
                 "parameters": [
                     {
                         "type": "string",
@@ -7166,7 +7226,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "厨显端退出登录",
+                "description": "退出登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -7176,7 +7236,7 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.认证鉴权"
                 ],
-                "summary": "厨显端退出登录",
+                "summary": "退出登录",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -7187,8 +7247,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/kitchen/production/finished_product/history": {
+        "/kitchen/product_printer_list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印档口列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -7196,247 +7262,39 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "厨显端.生产"
+                    "厨显端.基础信息"
                 ],
-                "summary": "获取上菜历史",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "pageNum",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
+                "summary": "获取打印档口列表",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPrinterList"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
             }
         },
-        "/kitchen/production/finished_product/latest": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.生产"
-                ],
-                "summary": "获取最新成品",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/production/order/category": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.生产"
-                ],
-                "summary": "获取生产订单分类",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "分类ID。默认是0，全部",
-                        "name": "categoryId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "pageNum",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/production/order/list": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.生产"
-                ],
-                "summary": "获取生产订单列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "pageNum",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/production/order/list_by_category": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.生产"
-                ],
-                "summary": "按分类获取生产订单列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "分类ID。默认是0，全部",
-                        "name": "categoryId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "pageNum",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "语言",
-                        "name": "language",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/setting/info": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.设置"
-                ],
-                "summary": "获取设置信息",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/setting/save": {
+        "/kitchen/verify_advanced_password": {
             "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "厨显端.设置"
-                ],
-                "summary": "保存设置",
-                "parameters": [
+                "security": [
                     {
-                        "description": "设置参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true
+                        "JwtToken": []
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/kitchen/setting/verify_advanced_password": {
-            "post": {
+                "description": "验证高级密码",
                 "consumes": [
                     "application/json"
                 ],
@@ -7444,15 +7302,18 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "厨显端.设置"
+                    "厨显端.基础信息"
                 ],
                 "summary": "验证高级密码",
                 "parameters": [
                     {
-                        "description": "验证参数",
+                        "description": "验证密码参数",
                         "name": "data",
                         "in": "body",
-                        "required": true
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -7790,7 +7651,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "平板端信息",
+                "description": "基本信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -7798,9 +7659,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "平板端.认证鉴权"
+                    "平板端.基础信息"
                 ],
-                "summary": "平板端信息",
+                "summary": "基本信息",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -7823,7 +7684,44 @@ const docTemplate = `{
                 }
             }
         },
-        "/tablet/bind_desk": {
+        "/tablet/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.基础信息"
+                ],
+                "summary": "检查更新",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "品牌参数",
+                        "name": "brand",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tablet/desk/bind": {
             "post": {
                 "security": [
                     {
@@ -7838,7 +7736,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "平板端.认证鉴权"
+                    "平板端.桌台"
                 ],
                 "summary": "绑定/换绑桌台",
                 "parameters": [
@@ -7877,7 +7775,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "平板端.认证鉴权"
+                    "平板端.桌台"
                 ],
                 "summary": "获取桌台列表",
                 "responses": {
@@ -7904,7 +7802,7 @@ const docTemplate = `{
         },
         "/tablet/login": {
             "post": {
-                "description": "平板端登录",
+                "description": "登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -7914,7 +7812,7 @@ const docTemplate = `{
                 "tags": [
                     "平板端.认证鉴权"
                 ],
-                "summary": "平板端登录",
+                "summary": "登录",
                 "parameters": [
                     {
                         "type": "string",
@@ -7950,7 +7848,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "平板端退出登录",
+                "description": "退出登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -7960,7 +7858,46 @@ const docTemplate = `{
                 "tags": [
                     "平板端.认证鉴权"
                 ],
-                "summary": "平板端退出登录",
+                "summary": "退出登录",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tablet/verify_advanced_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.基础信息"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -8715,6 +8652,23 @@ const docTemplate = `{
                 }
             }
         },
+        "req.KitchenBindReq": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "description": "品牌",
+                    "type": "string"
+                },
+                "product_printer_uuid": {
+                    "description": "商品打印Uuid",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                }
+            }
+        },
         "req.LoginReq": {
             "type": "object",
             "required": [
@@ -8801,28 +8755,6 @@ const docTemplate = `{
                 },
                 "meal_num": {
                     "description": "顾客数量",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.OrderAmountChangeReq": {
-            "type": "object",
-            "required": [
-                "price",
-                "sale_bill_uuid",
-                "sale_order_uuid"
-            ],
-            "properties": {
-                "price": {
-                    "description": "改价",
-                    "type": "number"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -9097,23 +9029,11 @@ const docTemplate = `{
                 }
             }
         },
-        "req.OrderDiscountReq": {
+        "req.OrderDiscountMethodReq": {
             "type": "object",
             "properties": {
-                "discount": {
-                    "description": "打折。0-100之间",
-                    "type": "number"
-                },
-                "discount_type": {
-                    "description": "打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off",
-                    "type": "integer"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
+                "discount_method": {
+                    "description": "打折类型 1=改价 2=打折, 3=抹零, 4=免单",
                     "type": "integer"
                 }
             }
@@ -9211,23 +9131,6 @@ const docTemplate = `{
             "properties": {
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.OrderZeroRuleReq": {
-            "type": "object",
-            "properties": {
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
-                    "type": "integer"
-                },
-                "zero_rule": {
-                    "description": "抹零规则",
                     "type": "integer"
                 }
             }
@@ -12117,27 +12020,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.KitchenBase": {
-            "type": "object",
-            "properties": {
-                "company": {
-                    "description": "商家信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.Company"
-                        }
-                    ]
-                },
-                "kitchen": {
-                    "description": "厨显端设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Kitchen"
-                        }
-                    ]
-                }
-            }
-        },
         "resp.Language": {
             "type": "object",
             "properties": {
@@ -13250,6 +13132,30 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.InstantMustPlanProductStat"
+                    }
+                }
+            }
+        },
+        "resp.ProductPrinter": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品打印机名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "商品打印机uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductPrinterList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductPrinter"
                     }
                 }
             }
