@@ -2299,8 +2299,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 	}
 
 	// 获取属性信息
-	var productAttributes map[uint64]*model.ProductPackageAttribute
-	if len(productAttributes) > 0 {
+	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
+	if len(productPackageAttributeUuidList) > 0 {
 		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(productPackageAttributeUuidList)
 		if errProductAttributeList != nil {
 			return nil, errProductAttributeList
@@ -2323,10 +2323,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 
 	// 构建属性信息
 	attributes := make([]model.Attribute, 0)
-	for productAttributeUuid, productAttribute := range productAttributes {
+	for _, productAttribute := range productAttributes {
 		attribute := model.Attribute{
 			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-			ProductAttributeUuid: productAttributeUuid,
+			ProductAttributeUuid: productAttribute.Attribute.Uuid,
 		}
 		attributes = append(attributes, attribute)
 	}

@@ -172,7 +172,7 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 func (model *SaleOrderProduct) CheckProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
-		if bom.ProductBom.IsFlavorProduct() {
+		if bom.ProductBom.IsFlavor() {
 			// 商品已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
 				return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
