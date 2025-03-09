@@ -1713,60 +1713,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/amount/change": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "桌台订单改价",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "桌台订单改价",
-                "parameters": [
-                    {
-                        "description": "改价参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderAmountChangeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/order/buffet": {
             "post": {
                 "security": [
@@ -2394,7 +2340,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderDiscountReq"
+                            "$ref": "#/definitions/req.OrderDiscountMethodReq"
                         }
                     }
                 ],
@@ -3118,60 +3064,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/zero_rule": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "桌台订单订单抹零规则",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "桌台订单订单抹零规则",
-                "parameters": [
-                    {
-                        "description": "抹零规则参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderZeroRuleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/desk/region_and_type": {
             "get": {
                 "security": [
@@ -3429,60 +3321,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
-                    }
-                }
-            }
-        },
-        "/cashier/instant/order/amount/change": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "点餐订单改价",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "点餐订单改价",
-                "parameters": [
-                    {
-                        "description": "改价参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderAmountChangeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
                     }
                 }
             }
@@ -3937,7 +3775,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderDiscountReq"
+                            "$ref": "#/definitions/req.OrderDiscountMethodReq"
                         }
                     }
                 ],
@@ -4926,60 +4764,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.OrderShowReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/instant/order/zero_rule": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "点餐订单订单抹零规则",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.点餐"
-                ],
-                "summary": "点餐订单订单抹零规则",
-                "parameters": [
-                    {
-                        "description": "抹零规则参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderZeroRuleReq"
                         }
                     }
                 ],
@@ -7192,6 +6976,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/kitchen/bind": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "绑定商品打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.基础信息"
+                ],
+                "summary": "绑定商品打印",
+                "parameters": [
+                    {
+                        "description": "绑定商品打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenBindReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kitchen/call/processed": {
             "post": {
                 "security": [
@@ -7419,6 +7242,46 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/product_printer_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印档口列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.基础信息"
+                ],
+                "summary": "获取打印档口列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPrinterList"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -8789,6 +8652,23 @@ const docTemplate = `{
                 }
             }
         },
+        "req.KitchenBindReq": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "description": "品牌",
+                    "type": "string"
+                },
+                "product_printer_uuid": {
+                    "description": "商品打印Uuid",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                }
+            }
+        },
         "req.LoginReq": {
             "type": "object",
             "required": [
@@ -8875,28 +8755,6 @@ const docTemplate = `{
                 },
                 "meal_num": {
                     "description": "顾客数量",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.OrderAmountChangeReq": {
-            "type": "object",
-            "required": [
-                "price",
-                "sale_bill_uuid",
-                "sale_order_uuid"
-            ],
-            "properties": {
-                "price": {
-                    "description": "改价",
-                    "type": "number"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -9171,23 +9029,11 @@ const docTemplate = `{
                 }
             }
         },
-        "req.OrderDiscountReq": {
+        "req.OrderDiscountMethodReq": {
             "type": "object",
             "properties": {
-                "discount": {
-                    "description": "打折。0-100之间",
-                    "type": "number"
-                },
-                "discount_type": {
-                    "description": "打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off",
-                    "type": "integer"
-                },
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
+                "discount_method": {
+                    "description": "打折类型 1=改价 2=打折, 3=抹零, 4=免单",
                     "type": "integer"
                 }
             }
@@ -9285,23 +9131,6 @@ const docTemplate = `{
             "properties": {
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.OrderZeroRuleReq": {
-            "type": "object",
-            "properties": {
-                "sale_bill_uuid": {
-                    "description": "销售账单UUID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单UUID",
-                    "type": "integer"
-                },
-                "zero_rule": {
-                    "description": "抹零规则",
                     "type": "integer"
                 }
             }
@@ -13303,6 +13132,30 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.InstantMustPlanProductStat"
+                    }
+                }
+            }
+        },
+        "resp.ProductPrinter": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品打印机名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "商品打印机uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductPrinterList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductPrinter"
                     }
                 }
             }

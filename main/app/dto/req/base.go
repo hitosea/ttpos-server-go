@@ -26,3 +26,9 @@ type UpdateSystemSetting struct {
 type PaymentMethodListReq struct {
 	Type string `form:"type,default=all" binding:"omitempty,oneof=all checkout recharge" ` // 支付方式列表
 }
+
+type KitchenBindReq struct {
+	Brand              string `json:"brand"`                // 品牌
+	ProductPrinterUuid uint64 `json:"product_printer_uuid"` // 商品打印Uuid
+	Remark             string `json:"remark"`               // 备注
+}

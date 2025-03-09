@@ -1,7 +1,9 @@
 package cashier
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -212,35 +214,6 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderAmountChange 处理点餐订单改价
-// @Summary 点餐订单改价
-// @Description 点餐订单改价
-// @Tags 收银端.点餐
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderAmountChangeReq true "改价参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/amount/change [post]
-func (h *InstantHandler) OrderAmountChange(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := req.OrderAmountChangeReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		return
-	}
-	//
-	info, err := h.orderService.OrderAmountChange(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, info)
-}
-
 // OrderDiscount 处理点餐订单打折
 // @Summary 点餐订单打折
 // @Description 点餐订单打折
@@ -248,55 +221,57 @@ func (h *InstantHandler) OrderAmountChange(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderDiscountReq true "打折参数"
+// @param data body req.OrderDiscountMethodReq true "打折参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/instant/order/discount [post]
 func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	bodyBytes, _ := io.ReadAll(c.Request.Body)
 	// 绑定请求参数
-	params := req.OrderDiscountReq{}
+	params := req.OrderDiscountMethodReq{}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	//
-	info, err := h.orderService.OrderDiscount(ctx, params)
+	var shopCart *resp.ShopCart
+	var err error
+	// 改价
+	if params.DiscountMethod == 1 {
+		amountChangeReq := req.OrderAmountChangeReq{}
+		if err := c.ShouldBindJSON(&amountChangeReq); err != nil {
+			helper.HandleValidationError(c, err, amountChangeReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderAmountChange(ctx, amountChangeReq)
+	}
+	// 打折
+	if params.DiscountMethod == 2 {
+		discountReq := req.OrderDiscountReq{}
+		if err := c.ShouldBindJSON(&discountReq); err != nil {
+			helper.HandleValidationError(c, err, discountReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderDiscount(ctx, discountReq)
+	}
+	// 抹零
+	if params.DiscountMethod == 3 {
+		zeroRuleReq := req.OrderZeroRuleReq{}
+		if err := c.ShouldBindJSON(&zeroRuleReq); err != nil {
+			helper.HandleValidationError(c, err, zeroRuleReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderService.OrderZeroRule(ctx, zeroRuleReq)
+	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, info)
-}
-
-// OrderZeroRule 处理点餐订单抹零规则
-// @Summary 点餐订单抹零
-// @Description 点餐订单抹零
-// @Tags 收银端.点餐
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderZeroRuleReq true "抹零规则参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/instant/order/zero_rule [post]
-func (h *InstantHandler) OrderZeroRule(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := req.OrderZeroRuleReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		return
-	}
-	//
-	info, err := h.orderService.OrderZeroRule(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, shopCart)
 }
 
 // OrderDiscountCancel 取消点餐订单所有优惠折扣，包括改价、打折、抹零
@@ -1019,9 +994,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                 // 显示点餐订单列表（取单列表）
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                           // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)                         // 点餐订单商品改价
-		privateApi.POST("/instant/order/amount/change", wrapper.OrderAmountChange)                               // 点餐订单改价
 		privateApi.POST("/instant/order/discount", wrapper.OrderDiscount)                                        // 点餐订单打折
-		privateApi.POST("/instant/order/zero_rule", wrapper.OrderZeroRule)                                       // 设置点餐订单订单抹零规则
 		privateApi.POST("/instant/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消点餐订单所有优惠折扣，包括改价、打折、抹零（撤销优惠折扣）
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息

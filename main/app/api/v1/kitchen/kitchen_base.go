@@ -18,7 +18,9 @@ import (
 // BaseHandler 基础相关控制器
 type BaseHandler struct {
 	authSrv    service.IAuthSrv
+	deviceSrv  service.IDeviceSrv
 	settingSrv setting.ISrv
+	pinterSrv  service.IPrinterSrv
 }
 
 // GetBase 基本信息
@@ -85,6 +87,57 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 	helper.Success(c, updateInfo)
 }
 
+// GetProductPrinterList 获取打印档口列表
+// @Summary 获取打印档口列表
+// @Description 获取打印档口列表
+// @Tags 厨显端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ProductPrinterList}
+// @Router /kitchen/product_printer_list [get]
+func (h *BaseHandler) GetProductPrinterList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	data, err := h.pinterSrv.GetProductPrinterList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, data)
+}
+
+// Bind 绑定商品打印
+// @Summary 绑定商品打印
+// @Description 绑定商品打印
+// @Tags 厨显端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KitchenBindReq true "绑定商品打印参数"
+// @Success 200 {object} dto.Response
+// @Router /kitchen/bind [post]
+func (h *BaseHandler) Bind(c *gin.Context) {
+	var kitchenBindReq req.KitchenBindReq
+	if err := c.ShouldBindJSON(&kitchenBindReq); err != nil {
+		helper.HandleValidationError(c, err, kitchenBindReq, nil)
+		return
+	}
+	_, err := h.deviceSrv.AddDevice(helper.GetContext(c), req.AddDeviceReq{
+		DeviceId:           helper.GetDeviceSn(c),
+		Brand:              kitchenBindReq.Brand,
+		Source:             constant.SourceKitchen,
+		FinallyLoginUuid:   helper.GetStaffUuid(c),
+		CompanyUuid:        helper.GetCompanyUuid(c),
+		ProductPrinterUuid: kitchenBindReq.ProductPrinterUuid,
+		Remark:             kitchenBindReq.Remark,
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -96,14 +149,18 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	wrapper := &BaseHandler{
 		authSrv:    authSrv,
+		deviceSrv:  deviceSrv,
 		settingSrv: settingSrv,
+		pinterSrv:  service.NewPrinterSrv(dbm),
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
 		privateApi.GET("/base", wrapper.GetBase)                                     // 获取基本信息
+		privateApi.POST("/bind", wrapper.Bind)                                       // 绑定商品打印（修改设置）
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
+		privateApi.GET("/product_printer_list", wrapper.GetProductPrinterList)       // 获取打印档口列表（商品打印列表）
 	}
 }

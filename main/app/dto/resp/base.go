@@ -70,6 +70,15 @@ type KitchenBase struct {
 	Company Company         `json:"company"` // 商家信息
 }
 
+type ProductPrinter struct {
+	Uuid uint64 `json:"uuid"` // 商品打印机uuid
+	Name string `json:"name"` // 商品打印机名称
+}
+
+type ProductPrinterList struct {
+	List []ProductPrinter `json:"list"`
+}
+
 type Company struct {
 	Uuid     uint64 `json:"uuid"`      // 商家UUID
 	Name     string `json:"name"`      // 商家名称
@@ -110,10 +119,10 @@ type Ads struct {
 }
 
 type UpdateInfo struct {
-	VersionName  string `json:"version_name"`
-	ForcedUpdate int    `json:"forced_update"`
-	UpdateLog    string `json:"update_log"`
-	DownloadURL  string `json:"download_url"`
+	VersionName  string `json:"version_name"`  // 版本名称
+	ForcedUpdate int    `json:"forced_update"` // 是否强制更新
+	UpdateLog    string `json:"update_log"`    // 更新日志
+	DownloadURL  string `json:"download_url"`  // 下载URL
 }
 
 type LoginResp struct {

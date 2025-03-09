@@ -687,6 +687,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		num, _ := orderRepo.GetOrderNum(
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByCooking(),
 		)
 		return num
 	}
@@ -1861,17 +1862,17 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	}
 
 	// 系统级验证
-	// companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
-	// if buffetErr != nil {
-	// 	return nil, buffetErr
-	// }
-	// if buffetSetting.IsAddClock != "1" {
-	// 	return nil, errors.New("未开启加钟")
-	// }
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if buffetErr != nil {
+		return nil, buffetErr
+	}
+	if buffetSetting.IsAddClock != "1" {
+		return nil, errors.New("未开启加钟")
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1885,7 +1886,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if saleBill.BuffetRemainingSeconds() == -1 {
 		return nil, errors.New("当前套餐已经是无限时，无法调整加钟")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderClock); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderClock, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
 
@@ -2175,12 +2176,14 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 
 		// 填写订单信息
 		order := resp.SaleOrder{
-			Uuid:        saleOrder.Uuid,
-			OrderNo:     saleOrder.OrderNo,
-			Status:      saleOrder.Status,
-			ProductNum:  productNum,
-			ProductList: productList,
-			IsDiscount:  saleOrder.IsDiscount(),
+			Uuid:               saleOrder.Uuid,
+			OrderNo:            saleOrder.OrderNo,
+			Status:             saleOrder.Status,
+			ProductNum:         productNum,
+			ProductList:        productList,
+			IsDiscount:         saleOrder.IsDiscount(),
+			CustomDiscountRate: saleOrder.CustomDiscountRate,
+			ZeroRule:           saleOrder.ZeroRule,
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,

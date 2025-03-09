@@ -157,6 +157,14 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联分类
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_uuid', 'uuid');
+    }
+
+    /**
      * 详情
      */
     public static function detail($id)

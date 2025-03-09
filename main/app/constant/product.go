@@ -125,3 +125,9 @@ const (
 	SaleOrderProductIsBuffetYes = Yes // 是, 自助餐商品
 	SaleOrderProductIsBuffetNo  = No  // 否, 不是自助餐商品
 )
+
+// 商品打印状态
+const (
+	ProductPrinterStatusOpen  = 1 // 开启
+	ProductPrinterStatusClose = 2 // 关闭
+)
