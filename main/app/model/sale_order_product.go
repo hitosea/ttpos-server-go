@@ -63,7 +63,7 @@ type SaleOrderProduct struct {
 
 	// 赠品相关字段
 	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
-	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳),用于判断不同时间退菜的商品不合并'" json:"cancel_time"`
+	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳)'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
 	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
 
@@ -524,7 +524,7 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜时间
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜原因
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -553,7 +553,19 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案-送厨批次-改价时间-赠菜时间-退菜时间
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d",
+
+	// 构建商品的退菜原因
+	type Reason struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	reason := Reason{Uuids: make([]uint64, 0), Text: model.CancelReason}
+	for _, item := range model.CancelReasons {
+		reason.Uuids = append(reason.Uuids, item.ReturnFoodReasonUuid)
+	}
+	reasonStr := utils.ToJson(reason)
+
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -561,7 +573,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.ProductionOrderUuid,
 		model.ChangePriceTime,
 		model.GiftTime,
-		model.CancelTime)
+		reasonStr)
 }
 
 // GetAttributeNames 获取属性名称字符串
