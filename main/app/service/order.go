@@ -3481,7 +3481,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Nickname: saleOrder.GetMemberName(),
 			Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
 			Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
-			Balance:  saleOrder.Member.Balance,
+			Balance:  saleOrder.Member.GetBalanceAll(),
 			Points:   saleOrder.Member.Point,
 		}
 	}

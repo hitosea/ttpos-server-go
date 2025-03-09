@@ -24,6 +24,13 @@ type Member struct {
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
+// 获取会员的余额，用于展示在前端。
+// 会员余额=余额+赠送余额
+func (model *Member) GetBalanceAll() float64 {
+	// 会员余额=余额+赠送余额
+	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.GiftBalance)).InexactFloat64()
+}
+
 func (model *Member) GetMemberCardName() string {
 	if model.MemberCard == nil {
 		return ""
