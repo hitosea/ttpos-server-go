@@ -857,6 +857,41 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderCheck 订单检查
+// @Summary 订单检查
+// @Description 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderCheckReq true "订单检查参数"
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
+// @Router /cashier/instant/order/check [post]
+func (h *InstantHandler) OrderCheck(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面订单检查接口请求")
+
+	params := req.InstantOrderCheckReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("订单检查", zap.Any("params", params))
+	// 订单检查
+	checkRes, err := h.orderService.InstantOrderCheck(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
+		return
+	}
+	ctx.Log().Debug("订单检查成功")
+	// 返回结果
+	helper.Success(c, resp.OrderCheckRes{})
+}
+
 // OrderSaleOrderDelete 删除一个销售订单(删除拆单)
 // @Summary 删除一个销售订单(删除拆单)
 // @Description 删除一个销售订单(删除拆单)
@@ -1036,6 +1071,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/instant/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
+		privateApi.POST("/instant/order/check", wrapper.OrderCheck)                                              // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/instant/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单

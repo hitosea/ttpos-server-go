@@ -2315,6 +2315,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/check": {
+            "post": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "description": "订单检查参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderCheckReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/discount": {
             "post": {
                 "security": [
@@ -3838,6 +3884,52 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/check": {
+            "post": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "description": "订单检查参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderCheckReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -8662,6 +8754,23 @@ const docTemplate = `{
                 }
             }
         },
+        "req.InstantOrderCheckReq": {
+            "type": "object",
+            "properties": {
+                "ignore_must_plan": {
+                    "description": "忽略必点计划, 非必填",
+                    "type": "boolean"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.InstantOrderFreeReq": {
             "type": "object",
             "properties": {
@@ -10114,6 +10223,17 @@ const docTemplate = `{
                 "name": {
                     "description": "卡名称",
                     "type": "string"
+                }
+            }
+        },
+        "resp.CartProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Product"
+                    }
                 }
             }
         },
@@ -12398,6 +12518,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.OperationLogItem"
                     }
+                }
+            }
+        },
+        "resp.OrderCheckRes": {
+            "type": "object",
+            "properties": {
+                "product_must_plans": {
+                    "$ref": "#/definitions/resp.ProductMustPlanList"
+                },
+                "products": {
+                    "$ref": "#/definitions/resp.CartProductList"
                 }
             }
         },
