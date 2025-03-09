@@ -3551,7 +3551,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			}
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
-				SaleOrderAmount:       saleOrder.Amount,
+				SaleOrderAmount:       saleOrder.GetAmount(),
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
