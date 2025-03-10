@@ -2315,6 +2315,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/check": {
+            "get": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/discount": {
             "post": {
                 "security": [
@@ -2419,6 +2470,52 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/free": {
+            "post": {
+                "description": "免单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "免单",
+                "parameters": [
+                    {
+                        "description": "免单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderFreeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderFinishResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -2545,6 +2642,52 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/payment/finish": {
+            "post": {
+                "description": "完成销售订单的付款结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "完成销售订单的付款结账",
+                "parameters": [
+                    {
+                        "description": "完成销售订单的付款结账参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentFinishReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderFinishResp"
                                         }
                                     }
                                 }
@@ -3750,6 +3893,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/check": {
+            "get": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/discount": {
             "post": {
                 "security": [
@@ -3854,6 +4048,52 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/free": {
+            "post": {
+                "description": "免单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "免单",
+                "parameters": [
+                    {
+                        "description": "免单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderFreeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderFinishResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -8102,6 +8342,10 @@ const docTemplate = `{
         "cashier_resp.ProductFlavor": {
             "type": "object",
             "properties": {
+                "barcode": {
+                    "description": "商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "商品规格名称",
                     "allOf": [
@@ -8517,6 +8761,30 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注: 最小空字符串,最大50字符",
                     "type": "string"
+                }
+            }
+        },
+        "req.InstantOrderFreeReq": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "description": "原因",
+                    "type": "string"
+                },
+                "reason_ids": {
+                    "description": "免单原因标签ids",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
                 }
             }
         },
@@ -9948,6 +10216,17 @@ const docTemplate = `{
                 "name": {
                     "description": "卡名称",
                     "type": "string"
+                }
+            }
+        },
+        "resp.CartProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Product"
+                    }
                 }
             }
         },
@@ -12235,6 +12514,17 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderCheckRes": {
+            "type": "object",
+            "properties": {
+                "product_must_plans": {
+                    "$ref": "#/definitions/resp.ProductMustPlanList"
+                },
+                "products": {
+                    "$ref": "#/definitions/resp.CartProductList"
+                }
+            }
+        },
         "resp.OrderFinishResp": {
             "type": "object",
             "properties": {
@@ -13748,6 +14038,10 @@ const docTemplate = `{
                 "amount_info": {
                     "$ref": "#/definitions/resp.AmountInfo"
                 },
+                "custom_discount_rate": {
+                    "description": "订单改价折扣率",
+                    "type": "number"
+                },
                 "is_discount": {
                     "description": "是否存在折扣 true:存在 false:不存在",
                     "type": "boolean"
@@ -13771,6 +14065,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "uuid": {
+                    "type": "integer"
+                },
+                "zero_rule": {
+                    "description": "订单抹零规则",
                     "type": "integer"
                 }
             }

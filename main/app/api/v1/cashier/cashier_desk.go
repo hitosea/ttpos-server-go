@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 
@@ -139,7 +138,6 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	if err != nil {
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		defer utils.Panic(err)
 		return
 	}
 
@@ -256,7 +254,7 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 	//
 	info, deskMergeCheckResp, err := h.service.MergeDesk(ctx, params)
 	if err != nil {
-		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, errors.WithMessage(err))
+		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, err)
 		return
 	}
 	// 返回结果
@@ -366,16 +364,17 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 // @Router /cashier/desk/order/discount [post]
 func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	bodyBytes, _ := io.ReadAll(c.Request.Body)
+	bodyBytes, _ := io.ReadAll(c.Request.Body) // Body只能读取一次，之后想再次从body中读取数据需要重新往body中写入数据
 	// 绑定请求参数
 	params := req.OrderDiscountMethodReq{}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+	// 从body中读取数据
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-	//
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+
 	var shopCart *resp.ShopCart
 	var err error
 	// 改价
@@ -858,6 +857,42 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderCheck 订单检查
+// @Summary 订单检查
+// @Description 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
+// @Router /cashier/desk/order/check [get]
+func (h *DeskHandler) OrderCheck(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面订单检查接口请求")
+
+	params := req.InstantOrderCheckReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("订单检查", zap.Any("params", params))
+	// 订单检查
+	checkRes, err := h.orderService.InstantOrderCheck(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
+		return
+	}
+	ctx.Log().Debug("订单检查成功")
+	// 返回结果
+	helper.Success(c, resp.OrderCheckRes{})
+}
+
 // OrderPaymentInfo 获取结账页面信息
 // @Summary 获取结账页面信息
 // @Description 获取结账页面信息
@@ -948,6 +983,66 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("撤销一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentFinish 完成销售订单的付款结账
+// @Summary 完成销售订单的付款结账
+// @Description 完成销售订单的付款结账
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
+// @Router /cashier/desk/order/payment/finish [post]
+func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面销售订单的付款结账接口请求")
+
+	params := req.InstantOrderPaymentFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
+	// 桌台销售订单的付款结账
+	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("桌台销售订单的付款结账成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderFree 免单
+// @Summary 免单
+// @Description 免单
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderFreeReq true "免单参数"
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
+// @Router /cashier/desk/order/free [post]
+func (h *DeskHandler) OrderFree(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面免单接口请求")
+
+	params := req.InstantOrderFreeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("桌台免单", zap.Any("params", params))
+	// 桌台免单
+	res, err := h.orderService.InstantOrderFree(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("桌台免单成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -1162,9 +1257,12 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
+		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
+		privateApi.POST("/desk/order/free", wrapper.OrderFree)                                                // 免单
 		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 		privateApi.POST("/desk/order/sale_order/create", wrapper.OrderSaleOrderCreate)                        // 创建一个销售订单
 		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单

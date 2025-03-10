@@ -109,19 +109,19 @@ func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
 	return memberDiscountRate.InexactFloat64()
 }
 
-// todo 会员折扣率 要除100才是%为单位。无折扣时，会员折扣率为0。会员折扣率的取值范围0-1，0表示没有折扣，1表示全免、满折扣、无需付钱
-// 计算商品的会员折扣费用。商品销售价-商品销售价*会员折扣率=商品销售价*（1-会员折扣率）
+// 计算商品的会员折扣费用。会员折扣费用=(商品销售价-商品销售价*会员折扣率) * 商品数量 =商品销售价 * 商品数量 *（1-会员折扣率）
 func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.calcMemberDiscountRate()
 
-	if memberDiscountRate == constant.NoDiscount {
+	// 会员折扣率的取值范围是大于0、小于等于1。如果值大于或等于1，则强制解释为不打折，折扣费用为0
+	if memberDiscountRate >= constant.NoDiscount {
 		return 0
 	}
 	// 1-会员折扣率
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
-	// 商品销售价*（1-会员折扣率）
-	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(discount)
+	// 商品销售价 * 商品数量 *（1-会员折扣率）
+	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(decimal.NewFromUint64(uint64(model.Num))).Mul(discount)
 	return memberDiscountFee.InexactFloat64()
 }
 

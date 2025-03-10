@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -85,9 +84,6 @@ func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, car
 	model.MemberDiscountRate = memberDiscount
 	model.MemberCardDiscountRate = cardDiscount
 	model.ConsumerUuid = memberUuid
-	fmt.Println("model.MemberDiscountRate", model.MemberDiscountRate)
-	fmt.Println("model.MemberCardDiscountRate", model.MemberCardDiscountRate)
-	fmt.Println("model.ConsumerUuid", model.ConsumerUuid)
 	// 对商品进行打折
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
@@ -124,6 +120,8 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 }
 
 // 设置整单折扣，并修改订单商品的折扣
+// 参数discount，表示给订单设置的打折率，统一使用百分比打折。比如八折，discount值为0.8；比如30% off，discount值为0.7。
+// 注意：请在调用该方法时，就做好discount值的转化
 func (model *SaleOrder) SetCustomDiscount(discount float64) {
 	defer model.SetCustomAmountCancel() // 取消整单改价金额
 	defer model.SetZeroRuleCancel()     // 取消订单抹零

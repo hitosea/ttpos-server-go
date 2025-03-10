@@ -47,7 +47,7 @@ type PrinterLog struct {
 // PrinterReadLog 打印读取日志表 ttpos_printer_read_log
 type PrinterReadLog struct {
 	BaseModel
-	LogUuid  int    `gorm:"column:log_uuid;type:int(11);default:0;comment:打印uuid" json:"log_uuid"`
+	LogUuid  uint64 `gorm:"column:log_uuid;type:int(11);default:0;comment:打印uuid" json:"log_uuid"`
 	DeviceId string `gorm:"column:device_id;type:varchar(255);comment:设备id" json:"device_id"`
 }
 
@@ -60,25 +60,49 @@ type ProductPrinter struct {
 	PrintMethod        int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,0-order整单打印 1-item按一菜一单打印;NOT NULL" json:"print_method"`
 	PrintProductSelect int    `gorm:"column:print_product_select;type:tinyint(2);default:0;comment:打印商品选择,0-category按商品分类 1-tag按打印标签;NOT NULL" json:"print_product_select"`
 	PrintModeScene     int    `gorm:"column:print_mode_scene;type:tinyint(2);default:0;comment:打印模式场景,0-merge合并 1-separate分开;NOT NULL" json:"print_mode_scene"`
+
+	// 关联模型
+	ProductPrinterRegions      []*ProductPrinterRegion      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"`
+	ProductPrinterItems        []*ProductPrinterItem        `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"`
+	ProductPrinterProductItems []*ProductPrinterProductItem `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"`
+}
+
+// GetPrinterRegionIds 获取打印机关联的区域ID列表
+func (model *ProductPrinter) GetPrinterRegionUuids() []uint64 {
+	var regionIds []uint64
+	for _, printerRegion := range model.ProductPrinterRegions {
+		regionIds = append(regionIds, printerRegion.DeskRegionUuid)
+	}
+	return regionIds
+}
+
+// GetPrinterProductIds 获取打印机关联的产品ID列表
+func (model *ProductPrinter) GetPrinterProductIds() []uint64 {
+	var productIds []uint64
+	for _, printerProductItem := range model.ProductPrinterProductItems {
+		productIds = append(productIds, printerProductItem.ProductPackageUuid)
+	}
+	return productIds
 }
 
 // ProductPrinterRegion 产品打印机区域信息表 ttpos_product_printer_region
 type ProductPrinterRegion struct {
 	BaseModel
-	ProductPrinterUuid uint `gorm:"default:0;column:product_printer_uuid;comment:'产品打印机ID'"`
-	DeskRegionUuid     uint `gorm:"default:0;column:desk_region_uuid;comment:'桌台区域ID'"`
+	ProductPrinterUuid uint64 `gorm:"default:0;column:product_printer_uuid;comment:'产品打印机ID'"`
+	DeskRegionUuid     uint64 `gorm:"default:0;column:desk_region_uuid;comment:'桌台区域ID'"`
 }
 
 // ProductPrinterItem 商品打印（档口）打印机信息表 ttpos_product_printer_item
 type ProductPrinterItem struct {
 	BaseModel
-	ProductPrinterUuid uint `gorm:"default:0;column:product_printer_uuid;comment:'商品打印（档口）ID'"`
-	PrinterUuid        uint `gorm:"default:0;column:printer_uuid;comment:'打印机ID'"`
+	ProductPrinterUuid uint64   `gorm:"default:0;column:product_printer_uuid;comment:'商品打印（档口）ID'"`
+	PrinterUuid        uint64   `gorm:"default:0;column:printer_uuid;comment:'打印机ID'"`
+	Printer            *Printer `gorm:"foreignKey:PrinterUuid;references:Uuid"`
 }
 
 // ProductPrinterProductItem 产品打印机产品明细信息表 ttpos_product_printer_product_item
 type ProductPrinterProductItem struct {
 	BaseModel
-	ProductPrinterUuid uint `gorm:"default:0;column:product_printer_uuid;comment:'产品打印机ID'"`
-	ProductPackageUuid uint `gorm:"default:0;column:product_package_uuid;comment:'产品包ID'"`
+	ProductPrinterUuid uint64 `gorm:"default:0;column:product_printer_uuid;comment:'产品打印机ID'"`
+	ProductPackageUuid uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包ID'"`
 }

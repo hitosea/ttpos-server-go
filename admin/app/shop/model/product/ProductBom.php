@@ -50,7 +50,9 @@ class ProductBom extends ProductBomModel
         // 新增或编辑规格
         $flavorList = $data['sku'];
         foreach ($flavorList as $item) {
-            $isAdd = true;
+            $isAdd = true; // 是否新增规格
+            $oldStockNum = 0; // 旧库存
+            $newStockNum = $item['stock_num']; // 新库存
             $flavorData = [
                 'purchase_price' => $item['purchase_price'] ?? 0, // 采购单价
                 'price' => $item['product_price'], // 销售单价
@@ -71,6 +73,7 @@ class ProductBom extends ProductBomModel
                     /** @var ProductBom $flavor */
                     $flavor = self::create($flavorData);
                 } else {
+                    $oldStockNum = $flavor['stock_num'];
                     /** @var ProductBom $flavor */
                     $flavor->save($flavorData);
                     $isAdd = false;
@@ -88,12 +91,10 @@ class ProductBom extends ProductBomModel
                     RelatedMaterial::updateRelatedMaterial($materialList, $flavor['uuid']);
                 }
 
-                // 如果新增规格，则创建"添加入库"记录, 否则创建"调整入库"记录
+                // 如果新增规格，则创建"添加入库"记录
                 if ($isAdd) {
                     self::addWarehouseInForm($flavor, 1, $data['shop_user_id'], $flavor->stock_num, $data['stock_remark']);
                 } else {
-                    $oldStockNum = $flavor['stock_num'];
-                    $newStockNum = $flavorData['stock_num'];
                     $diffStockNum = abs(floatval(helper::bcsub($newStockNum, $oldStockNum, 4)));
                     // 创建"调整入库"记录
                     if ($newStockNum > $oldStockNum) {

@@ -79,36 +79,37 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	// 转换为响应对象
 	list := make([]cashier_resp.Product, 0, len(products))
 	for _, product := range products {
-		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                              // 商品规格
-		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                                // 商品小料
-		attributes := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
-		var prices []float64                                                                                    // 保存所有价格，用于计算最低价格
+		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
+		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
+		attributeGroups := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
+		var prices []float64                                                                                         // 保存所有价格，用于计算最低价格
 
 		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
-			for _, bom := range product.ProductBoms {
-				if bom.ProductFlavor.Uuid > 0 {
+			for _, productBom := range product.ProductBoms {
+				if productBom.IsFlavor() {
 					flavors = append(flavors, cashier_resp.ProductFlavor{
-						Uuid:       bom.Uuid,
-						LocaleName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
-						Price:      bom.Price,
-						StockNum:   int(bom.StockNum),
+						Uuid:       productBom.Uuid,
+						LocaleName: s.localeSrv.GetLocaleNames(productBom.ProductFlavor.MultiLanguageName),
+						Price:      productBom.Price,
+						StockNum:   int(productBom.StockNum),
+						Barcode:    productBom.BarcodeValue,
 					})
 					if len(prices) == 0 {
-						prices = append(prices, bom.Price)
+						prices = append(prices, productBom.Price)
 					} else {
-						if prices[0] > bom.Price {
-							prices[0] = bom.Price
+						if prices[0] > productBom.Price {
+							prices[0] = productBom.Price
 						}
 					}
 				}
-				if bom.ProductSauce.Uuid > 0 {
+				if productBom.IsSauce() {
 					sauces = append(sauces, cashier_resp.ProductSauce{
-						Uuid:              bom.ProductSauce.Uuid,
-						LocaleName:        s.localeSrv.GetLocaleNames(bom.ProductSauce.MultiLanguageName),
-						Price:             bom.Price,
-						IsDefaultSelected: bom.IsDefaultSelect == 1,
-						StockNum:          int(bom.StockNum),
+						Uuid:              productBom.Uuid,
+						LocaleName:        s.localeSrv.GetLocaleNames(productBom.ProductSauce.MultiLanguageName),
+						Price:             productBom.Price,
+						IsDefaultSelected: productBom.IsDefaultSelect == 1,
+						StockNum:          int(productBom.StockNum),
 					})
 				}
 			}
@@ -117,27 +118,26 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		// 商品属性组
 		if len(product.ProductPackageAttributeGroups) > 0 {
 			for _, group := range product.ProductPackageAttributeGroups {
-				values := make([]cashier_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
+				attributeValues := make([]cashier_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
 				for _, attribute := range group.ProductPackageAttributes {
-					values = append(values, cashier_resp.ProductAttributeValue{
-						Uuid:              attribute.AttributeUuid,
+					attributeValues = append(attributeValues, cashier_resp.ProductAttributeValue{
+						Uuid:              attribute.Uuid,
 						LocaleName:        s.localeSrv.GetLocaleNames(attribute.Attribute.MultiLanguageName),
 						IsDefaultSelected: attribute.IsDefaultSelected == 1,
 					})
 				}
-				attributes = append(attributes, cashier_resp.ProductAttributeGroup{
+				attributeGroups = append(attributeGroups, cashier_resp.ProductAttributeGroup{
 					Uuid:       group.ProductAttributeGroupUuid,
 					LocaleName: s.localeSrv.GetLocaleNames(group.ProductAttributeGroup.MultiLanguageName),
 					IsMust:     group.IsMust == 1,
 					MaxSelect:  group.MaxSelection,
 					Attributes: cashier_resp.ProductAttributeValueList{
-						List: values,
+						List: attributeValues,
 					},
 				})
 			}
 		}
 
-		// todo 去 ttpos_file表中获取图片url
 		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 		// 添加到列表
 		minPrice := float64(0)
@@ -160,7 +160,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 				List: sauces,
 			},
 			AttributeGroups: cashier_resp.ProductAttributeGroupList{
-				List: attributes,
+				List: attributeGroups,
 			},
 		})
 	}

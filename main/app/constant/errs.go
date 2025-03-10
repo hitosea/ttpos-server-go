@@ -34,6 +34,8 @@ const (
 	CodeOrderCheckProductMust         = -203 // 未选择必点商品
 	CodeOrderCheckProductPriceChanged = -204 // 商品价格已变动
 	CodeOrderCheckProductLimitOut     = -205 // 商品超出限购
+	// 结账检查
+	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
 )
 
 func ParseCodeOrderCheck(code int) string {
@@ -54,3 +56,8 @@ func ParseCodeOrderCheck(code int) string {
 		return "success"
 	}
 }
+
+// 桌台业务错误码
+const (
+	CodeDeskOrderEnd = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
+)

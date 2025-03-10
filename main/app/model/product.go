@@ -168,7 +168,7 @@ func (model *ProductPackage) IsNoSelectProduct() bool {
 func (model *ProductPackage) GetMinPrice() float64 {
 	minPrice := float64(0)
 	for _, productBom := range model.ProductBoms {
-		if !productBom.IsFlavorProduct() {
+		if !productBom.IsFlavor() {
 			continue
 		}
 		if minPrice == 0 {
@@ -268,7 +268,7 @@ func (model *ProductPackage) GenerateOriginalAmount(sauceUuids []uint64) (float6
 		salePrice    float64
 	)
 	for _, bom := range model.ProductBoms {
-		if bom.IsFlavorProduct() {
+		if bom.IsFlavor() {
 			flavorPrice = bom.Price
 		}
 		if bom.IsSauce() && slices.Contains(sauceUuids, bom.ProductSauceUuid) {
@@ -282,7 +282,7 @@ func (model *ProductPackage) GenerateOriginalAmount(sauceUuids []uint64) (float6
 // GetFlavor 获取商品规格
 func (model *ProductPackage) GetFlavor() ProductFlavor {
 	for _, bom := range model.ProductBoms {
-		if bom.IsFlavorProduct() {
+		if bom.IsFlavor() {
 			return bom.ProductFlavor
 		}
 	}
@@ -302,8 +302,8 @@ func (model *ProductPackage) GetSauces() []ProductSauce {
 	return sauces
 }
 
-// IsFlavorProduct 判断是否为商品规格
-func (model *ProductBom) IsFlavorProduct() bool {
+// IsFlavor 判断是否为商品规格
+func (model *ProductBom) IsFlavor() bool {
 	return model.ProductFlavorUuid != 0
 }
 

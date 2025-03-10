@@ -21,8 +21,8 @@ type ShopCart struct {
 // 送厨接口响应：以下商品价格有变动，请核对后再下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
 // 送厨接口响应：以下商品超出限购数量，请在限购数量内下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
 type OrderCheckRes struct {
-	Products            CartProductList     `json:"products"`
-	ProductMustPlanList ProductMustPlanList `json:"product_must_plans"`
+	Products            *CartProductList     `json:"products,omitempty"`
+	ProductMustPlanList *ProductMustPlanList `json:"product_must_plans,omitempty"`
 }
 
 type OrderCheckServiceRes struct {

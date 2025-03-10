@@ -86,6 +86,14 @@ type InstantOrderPaymentFinishReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
 }
 
+// InstantOrderFreeReq 免单请求
+type InstantOrderFreeReq struct {
+	SaleBillUuid  uint64   `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64   `json:"sale_order_uuid"` // 销售订单UUID, 必填
+	ReasonIds     []uint64 `json:"reason_ids"`      // 免单原因标签ids
+	Reason        string   `json:"reason"`          // 原因
+}
+
 // InstantOrderPaymentZeroRuleReq 设置结账抹零规则请求
 type InstantOrderPaymentZeroRuleReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
@@ -144,4 +152,9 @@ type HideSaleBillListReq struct {
 type OrderMemberCancelReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+}
+
+type InstantOrderCheckReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID, 必填
 }

@@ -126,7 +126,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 		if productBom.IsDelete() {
 			continue
 		}
-		if productBom.IsFlavorProduct() {
+		if productBom.IsFlavor() {
 			flavor := resp.ProductFlavor{
 				Uuid:       productBom.Uuid,
 				LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
@@ -135,7 +135,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 			}
 			flavorList = append(flavorList, flavor)
 		}
-		if !productBom.IsFlavorProduct() {
+		if !productBom.IsFlavor() {
 			sauce := resp.ProductSauce{
 				Uuid:              productBom.Uuid,
 				LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),

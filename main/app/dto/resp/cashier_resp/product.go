@@ -23,6 +23,7 @@ type ProductFlavor struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
 	Price      float64            `json:"price"`       // 商品规格价格
 	StockNum   int                `json:"stock_num"`   // 商品库存数量
+	Barcode    string             `json:"barcode"`     // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
 }
 
 // ProductSauce 商品小料

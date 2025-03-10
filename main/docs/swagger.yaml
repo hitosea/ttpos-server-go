@@ -117,6 +117,9 @@ definitions:
     type: object
   cashier_resp.ProductFlavor:
     properties:
+      barcode:
+        description: 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -405,6 +408,23 @@ definitions:
       remark:
         description: '备注: 最小空字符串,最大50字符'
         type: string
+    type: object
+  req.InstantOrderFreeReq:
+    properties:
+      reason:
+        description: 原因
+        type: string
+      reason_ids:
+        description: 免单原因标签ids
+        items:
+          type: integer
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID, 必填
+        type: integer
     type: object
   req.InstantOrderMustPlanConfirmReq:
     properties:
@@ -1394,6 +1414,13 @@ definitions:
       name:
         description: 卡名称
         type: string
+    type: object
+  resp.CartProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Product'
+        type: array
     type: object
   resp.CashierBase:
     properties:
@@ -2937,6 +2964,13 @@ definitions:
           $ref: '#/definitions/resp.OperationLogItem'
         type: array
     type: object
+  resp.OrderCheckRes:
+    properties:
+      product_must_plans:
+        $ref: '#/definitions/resp.ProductMustPlanList'
+      products:
+        $ref: '#/definitions/resp.CartProductList'
+    type: object
   resp.OrderFinishResp:
     properties:
       amount_info:
@@ -3975,6 +4009,9 @@ definitions:
     properties:
       amount_info:
         $ref: '#/definitions/resp.AmountInfo'
+      custom_discount_rate:
+        description: 订单改价折扣率
+        type: number
       is_discount:
         description: 是否存在折扣 true:存在 false:不存在
         type: boolean
@@ -3992,6 +4029,9 @@ definitions:
         description: 订单状态, 0-未结账 1-已结账
         type: integer
       uuid:
+        type: integer
+      zero_rule:
+        description: 订单抹零规则
         type: integer
     type: object
   resp.SearchMember:
@@ -6078,6 +6118,37 @@ paths:
       summary: 退菜购物车商品
       tags:
       - 收银端.桌台
+  /cashier/desk/order/check:
+    get:
+      consumes:
+      - application/json
+      description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCheckRes'
+              type: object
+      summary: 订单检查
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/discount:
     post:
       consumes:
@@ -6138,6 +6209,33 @@ paths:
       security:
       - JwtToken: []
       summary: 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/free:
+    post:
+      consumes:
+      - application/json
+      description: 免单
+      parameters:
+      - description: 免单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderFreeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderFinishResp'
+              type: object
+      summary: 免单
       tags:
       - 收银端.桌台
   /cashier/desk/order/must_plan/confirm:
@@ -6216,6 +6314,33 @@ paths:
       security:
       - JwtToken: []
       summary: 创建一个支付单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/payment/finish:
+    post:
+      consumes:
+      - application/json
+      description: 完成销售订单的付款结账
+      parameters:
+      - description: 完成销售订单的付款结账参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentFinishReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderFinishResp'
+              type: object
+      summary: 完成销售订单的付款结账
       tags:
       - 收银端.桌台
   /cashier/desk/order/payment/info:
@@ -6920,6 +7045,37 @@ paths:
       summary: 退菜购物车商品
       tags:
       - 收银端.点餐
+  /cashier/instant/order/check:
+    get:
+      consumes:
+      - application/json
+      description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCheckRes'
+              type: object
+      summary: 订单检查
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/discount:
     post:
       consumes:
@@ -6980,6 +7136,33 @@ paths:
       security:
       - JwtToken: []
       summary: 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/free:
+    post:
+      consumes:
+      - application/json
+      description: 免单
+      parameters:
+      - description: 免单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderFreeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderFinishResp'
+              type: object
+      summary: 免单
       tags:
       - 收银端.点餐
   /cashier/instant/order/hide:

@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +16,8 @@ type IGiftOrFreeOrderReasonRepo interface {
 	CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.FreeReason) (uint64, error)  // 创建赠品或免费订单原因
 	DeleteGiftOrFreeOrderReason(id uint64) error                                         // 删除赠品或免费订单原因
 	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                         // 根据uuid数组验证赠品或免费订单原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+	GetFreeOrderReasons(opts ...repository.DBOption) ([]*model.FreeReason, error)        // 获取赠品或免单原因列表
+	GetFreeOrderReasonListByUuids(uuids []uint64) ([]*model.FreeReason, error)
 }
 
 // NewGiftOrFreeOrderReasonRepo 创建新的赠品或免费订单原因仓库
@@ -122,4 +125,36 @@ func (r *GiftOrFreeOrderReasonRepoImpl) ExistsByUuids(uuids []uint64) ([][2]uint
 	}
 
 	return result, notFound, nil
+}
+
+func (r *GiftOrFreeOrderReasonRepoImpl) GetFreeOrderReasons(opts ...repository.DBOption) ([]*model.FreeReason, error) {
+	freeReasons := make([]*model.FreeReason, 0)
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&freeReasons)
+	if result.Error != nil {
+		return nil, errors.WithMessage(result.Error)
+	}
+
+	return freeReasons, nil
+}
+
+func (r *GiftOrFreeOrderReasonRepoImpl) GetFreeOrderReasonListByUuids(uuids []uint64) ([]*model.FreeReason, error) {
+	reasons, err := r.GetFreeOrderReasons(
+		repository.CommonRepo.WhereInUuids(uuids),
+		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.SortWithCreateTime("desc"),
+		repository.CommonRepo.Preload(repository.WithPreload{
+			Query: "MultiLanguageName",
+		}),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return reasons, nil
 }

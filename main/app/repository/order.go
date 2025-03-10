@@ -311,6 +311,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 			WithPreload{
 				Query: "SaleBillSetting",
 			},
+			WithPreload{
+				Query: "Desk",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
@@ -919,6 +922,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage",

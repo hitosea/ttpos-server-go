@@ -35,3 +35,9 @@ const (
 	AppTypeShop      = 4 // 商家后台端
 	AppTypeAssistant = 5 // 点餐助手端
 )
+
+// 结账是否自动清台
+const (
+	AutoClearTable    = "0" // 自动清台
+	NotAutoClearTable = "1" // 不自动清台
+)

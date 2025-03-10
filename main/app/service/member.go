@@ -127,7 +127,7 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		Nickname: member.Nickname,
 		Card:     resp.Card{Name: cardName},
 		Level:    resp.Level{Name: level},
-		Balance:  utils.DecimalAdd(member.Balance, member.GiftBalance),
+		Balance:  member.GetBalanceAll(),
 		Points:   member.Point,
 		Phone:    member.Phone,
 	}
@@ -315,7 +315,7 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 			Nickname: member.Nickname,
 			Card:     resp.Card{Name: cardName},
 			Level:    resp.Level{Name: levelName},
-			Balance:  member.Balance,
+			Balance:  member.GetBalanceAll(),
 			Points:   member.Point,
 			Phone:    member.Phone,
 		},

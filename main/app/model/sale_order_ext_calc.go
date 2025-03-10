@@ -64,11 +64,12 @@ func (model *SaleOrder) CalcCommissionFee() float64 {
 // 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 // 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
 func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
+	amount := model.GetAmount()
 	if hasCommission {
 		// 销售订单各个支付单的支付金额之和
 		payOrderAmount := model.calcPayOrderAmount()
 		// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
-		unPayAmount := decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(payOrderAmount))
+		unPayAmount := decimal.NewFromFloat(amount).Sub(decimal.NewFromFloat(payOrderAmount))
 		return unPayAmount.InexactFloat64()
 	}
 	// 没有手续费时
@@ -77,7 +78,7 @@ func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
 	payOrderAmount := model.calcPayOrderAmount()
 	zeroFee := model.CalcCheckOutZeroFee()
 	// 销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
-	unPayAmount := decimal.NewFromFloat(model.Amount).Sub(
+	unPayAmount := decimal.NewFromFloat(amount).Sub(
 		decimal.NewFromFloat(payOrderAmount)).Sub(
 		decimal.NewFromFloat(zeroFee))
 	return unPayAmount.InexactFloat64()

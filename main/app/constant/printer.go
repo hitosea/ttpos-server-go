@@ -21,8 +21,8 @@ const (
 
 // 打印方式 1文本打印, 2图片打印
 const (
-	PrinterLogPintMethodText  = 1 // 文本打印
-	PrinterLogPintMethodImage = 2 // 图片打印
+	PrinterLogPrintMethodText  = 1 // 文本打印
+	PrinterLogPrintMethodImage = 2 // 图片打印
 )
 
 // 状态(0结束,1进行中,2成功)
@@ -37,6 +37,7 @@ const (
 	PrinterLogRelatedRechargeOrder = 1
 )
 
+// 打印类型
 const (
 	PrinterTypeFeiEYun       = "FEI_E_YUN"      // 飞鹅打印机
 	PrinterTypeFeiEYunTag    = "FEI_E_YUN_TAG"  // 飞鹅标签打印机
@@ -49,4 +50,11 @@ const (
 	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
 	PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
 	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
+)
+
+// 打印类型
+const (
+	PrinterProductTypeBackFood = -1 // 退菜打印
+	PrinterProductTypePay      = 0  // 付款打印
+	PrinterProductTypeKitchen  = 1  // 送厨打印
 )

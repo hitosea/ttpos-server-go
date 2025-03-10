@@ -64,6 +64,19 @@ type SaleOrder struct {
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+// GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+func (model *SaleOrder) GetOriginAmount() float64 {
+	//原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+	return decimal.NewFromFloat(model.Amount).Add(decimal.NewFromFloat(model.MemberDiscountFee)).Add(decimal.NewFromFloat(model.CustomDiscountFee)).Round(2).InexactFloat64()
+}
+
+// GetMemberDiscountAmount 获取订单的会员折扣后应收金额。 会员折扣后应收金额=原订单应收金额-会员折扣金额
+func (model *SaleOrder) GetMemberDiscountAmount() float64 {
+	//会员折扣后应收金额=现应收金额+会员折扣金额
+	return decimal.NewFromFloat(model.GetOriginAmount()).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
 }
 
 func (model *SaleOrder) GetMemberName() string {
@@ -183,6 +196,33 @@ func (model *SaleOrder) TableName() string {
 	return "ttpos_sale_order"
 }
 
+// SetFreeOrder 设置免单
+func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProductReason) {
+	defer model.SetUpdate() // 标记更新
+	model.IsFree = constant.SaleOrderIsFreeYes
+	model.FreeReason = reason
+	model.FreeReasons = freeReasons
+	// 订单状态
+	model.Status = constant.SaleOrderStatusFinish
+	model.FinishTime = time.Now().Unix()
+}
+
+func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range freeReasons {
+		reasonUuid, _ := utils.GetID()
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			FreeReasonUuid:        reason.Uuid,
+		})
+	}
+	return list
+}
+
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleOrder) ValidateOrderStatus() error {
 	if model.Status == constant.SaleBillStatusCanceled {
@@ -250,6 +290,8 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	mealNum := uint(0)
 	maxTimeLimit := int(0)
 	saleOrderBuffetCustomerTypes := make([]*SaleOrderBuffetCustomerType, 0)
+	// 创建一个map来跟踪已处理的CustomerType
+	processedCustomerTypes := make(map[uint64]bool)
 	//
 	for _, buffetUuid := range buffetUuids {
 		buffetPackage := buffetMap[buffetUuid]
@@ -283,7 +325,11 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 				}
 			}
 			//
-			mealNum += num
+			// 只有当这个CustomerType未被处理过时，才累加mealNum
+			if !processedCustomerTypes[CustomerType.Uuid] {
+				mealNum += num
+				processedCustomerTypes[CustomerType.Uuid] = true
+			}
 		}
 	}
 	//

@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
 
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
+    `buffet_start_time` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐开始时间(秒)',
+    `delay_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长(秒)',
+    `delay_start_time` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长开始时间(秒)',
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
@@ -206,7 +209,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `deduct_stock_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注，顾客对商品的备注信息',
     `gift_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠菜时间(时间戳),用于判断是否赠菜和不同时间赠送的商品不合并',
-    `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜时间(时间戳),用于判断是否退菜和不同时间退菜的商品不合并',
+    `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜时间(时间戳)',
     `gift_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '赠菜原因',
     `cancel_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '退菜原因',
     `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品',
@@ -234,10 +237,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自增UUID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
-    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID，如果说退菜和赠菜，则sale_order_product_uuid不为0；如果是整单免单，则sale_order_product_uuid为0',
+    -- 三选一
     `return_food_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜原因ID',
     `free_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '免单原因ID',
     `gift_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠菜原因ID',
+    -- 关联对象
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原因-多语言名称ID',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -1166,7 +1171,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
 CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型名称',
+    `name` TEXT DEFAULT NULL COMMENT '打印机类型名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型key',
     `config_json` TEXT DEFAULT "" COMMENT '打印机类型json配置,描述需要填写的字段',

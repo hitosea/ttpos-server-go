@@ -73,10 +73,12 @@ type IOrderSrv interface {
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 撤销一个支付单
 	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                  // 给销售订单创建一个支付单
+	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                    // 免单
 	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                  // 设置结账抹零规则
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                     // 给销售订单创建一个销售订单
 	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
+	InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                             // 订单检查
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                     // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                      // 取消使用会员优惠
@@ -465,7 +467,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	// 构建销售账单
-	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.MealNum, req.Remark, req.DeskUuid)
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid)
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
@@ -484,7 +486,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
-	saleOrderBuffetCustomerTypes, _, mealNum, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
+	saleOrderBuffetCustomerTypes, _, _, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
 
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -495,7 +497,6 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 					return errors.WithMessage(err)
 				}
 			}
-			saleBill.MealNum = mealNum
 			if maxTimeLimit == -1 {
 				saleBill.BuffetDuration = 0
 			} else {
@@ -1452,7 +1453,6 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
-	oldPrice := saleOrder.GetAmount()
 
 	// 设置整单改价金额
 	saleOrder.SetCustomAmount(req.Price)
@@ -1472,10 +1472,10 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OldPrice:        oldPrice,
+			OldPrice:        saleOrder.GetOriginAmount(), // 旧价格为订单的原始应收金额
 			NewPrice:        req.Price,
 			DiscountType:    constant.DiscountOperationLogTypeChangePriceSaleOrder, // 整单改价的类型值
-			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
+			SpecialDiscount: decimal.NewFromFloat(saleOrder.GetOriginAmount()).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
 		})
 	}()
 
@@ -1519,13 +1519,32 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 设置整单改价金额
+	// 在折扣之前计算会员打折后金额。必须在设置折扣之前获取，否则amount值已经改变了
+	memberDiscountAmount := saleOrder.GetMemberDiscountAmount()
+	// 设置整单折扣率
 	saleOrder.SetCustomDiscount(req.GetDiscount())
 
 	// 计算并保存销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布"整单打折"事件
+	go func() {
+		event.NewSystemBus().PublishDiscountSaleOrderEvent(event.DiscountSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OldPrice:        memberDiscountAmount, // 旧价格为订单的会员折扣后的金额。如果没有会员折扣，则旧价格为订单应收金额
+			NewPrice:        saleOrder.GetAmount(),
+			RoundingRate:    req.GetOffDiscount(),
+			SpecialDiscount: decimal.NewFromFloat(memberDiscountAmount).Sub(decimal.NewFromFloat(saleOrder.GetAmount())).InexactFloat64(),
+		})
+	}()
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1584,7 +1603,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 	return info, nil
 }
 
-// OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零
+// OrderDiscountCancel  取消点餐订单所有优惠折扣，包括改价、打折、抹零。撤销优惠折扣
 func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -1611,7 +1630,7 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 设置整单改价金额
+	// 撤销订单的优惠折扣
 	saleOrder.SetAllDiscountCancel()
 
 	// 计算并保存销售账单
@@ -1777,6 +1796,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 		// 如果改了套餐信息，需要处理时间 和调整商品是否自助餐
 		if len(addBuffetIds) != 0 || len(removeBuffetIds) != 0 {
+			// 维护套餐时长和加钟时长
 			if maxTimeLimit == -1 {
 				saleBill.BuffetDuration = 0
 				saleBill.BuffetStartTime = time.Now().Unix()
@@ -1786,7 +1806,9 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 					saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
 				}
 				// 永远等于最大时间限制 + 总加钟时间
-				saleBill.BuffetDuration = uint(int64(maxTimeLimit)) + uint(saleOrder.SaleOrderBuffetDelayTimeTotal())
+				saleBill.BuffetDuration = uint(int64(maxTimeLimit))
+				// 重新计算加钟的启动时长
+				saleBill.DelayStartTime = saleBill.GetBuffetEndTime()
 			}
 			// 更新商品为自助餐商品
 			buffetProductUuids := []uint64{}
@@ -1862,17 +1884,17 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	}
 
 	// 系统级验证
-	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-	if err != nil {
-		return nil, err
-	}
-	buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
-	if buffetErr != nil {
-		return nil, buffetErr
-	}
-	if buffetSetting.IsAddClock != "1" {
-		return nil, errors.New("未开启加钟")
-	}
+	// companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	// if buffetErr != nil {
+	// 	return nil, buffetErr
+	// }
+	// if buffetSetting.IsAddClock != "1" {
+	// 	return nil, errors.New("未开启加钟")
+	// }
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1883,7 +1905,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if !saleBill.IsBuffetSaleBill() {
 		return nil, errors.New("当前不是自助餐类订单，无法调整加钟")
 	}
-	if saleBill.BuffetRemainingSeconds() == -1 {
+	if saleBill.GetBuffetRemainingSeconds() == -1 {
 		return nil, errors.New("当前套餐已经是无限时，无法调整加钟")
 	}
 	if err := saleBill.ValidateOrderStatus(constant.OrderClock, req.SaleOrderUuid); err != nil {
@@ -1920,12 +1942,12 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 			totalDelayTime += delay.DelayTime * 60
 		}
 
-		// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
-		if saleBill.BuffetIsTimeOut() {
-			saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
+		// 加钟剩余时长是否为0，为真时等于当前系统时间，为否时保持不动
+		remainingDelayDuration := saleBill.GetRemainingDelayDuration()
+		if remainingDelayDuration == 0 {
+			saleBill.DelayStartTime = time.Now().Unix()
 		}
-		// 永远等于最大时间限制 + 总加钟时间
-		saleBill.BuffetDuration = saleBill.BuffetDuration + uint(totalDelayTime)
+		saleBill.DelayDuration = uint(remainingDelayDuration + totalDelayTime)
 
 		// 重新计算和保存
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
@@ -2058,6 +2080,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
+	}
+	if shopCart.SaleBill.IsEndStatus() {
+		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
 	}
 	// 重新计算金额
 	shopCart.SaleBill.CalcAll()
@@ -2236,7 +2262,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
 			shopCartInfo.Buffet = &resp.BuffetInfo{
-				RemainingSeconds: shopCart.SaleBill.BuffetRemainingSeconds(),
+				RemainingSeconds: shopCart.SaleBill.GetTotalRemainingSeconds(),
 				LocaleName:       shopCart.SaleBill.GetBuffetName(),
 				IsTimeLimited:    shopCart.SaleBill.IsTimeLimited(),
 			}
@@ -2299,8 +2325,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 	}
 
 	// 获取属性信息
-	var productAttributes map[uint64]*model.ProductPackageAttribute
-	if len(productAttributes) > 0 {
+	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
+	if len(productPackageAttributeUuidList) > 0 {
 		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(productPackageAttributeUuidList)
 		if errProductAttributeList != nil {
 			return nil, errProductAttributeList
@@ -2323,10 +2349,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, saleBillUuid, saleOr
 
 	// 构建属性信息
 	attributes := make([]model.Attribute, 0)
-	for productAttributeUuid, productAttribute := range productAttributes {
+	for _, productAttribute := range productAttributes {
 		attribute := model.Attribute{
 			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-			ProductAttributeUuid: productAttributeUuid,
+			ProductAttributeUuid: productAttribute.Attribute.Uuid,
 		}
 		attributes = append(attributes, attribute)
 	}
@@ -2589,6 +2615,11 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 		// product_package_uuid => SaleOrderProduct
 		saleOrderProductMap := make(map[uint64]*model.SaleOrderProduct) // key为商品包uuid value为订单商品
 		for _, saleOrderProduct := range saleOrderProductAll {
+			// 限购检查只检查本台的商品，并台过来的商品不记.
+			// 跳过非本台的商品
+			if !saleOrderProduct.IsCurrentDeskProduct() {
+				continue
+			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
 			numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
@@ -2626,7 +2657,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 			}
 			res := &resp.OrderCheckServiceRes{
 				Code:          code,
-				OrderCheckRes: resp.OrderCheckRes{Products: resp.CartProductList{List: products}},
+				OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
 			}
 			return res, nil
 		}
@@ -2641,11 +2672,13 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 		}
 		var instantMustPlanList []resp.InstantProductMustPlan
 		if deskUuid != 0 {
+			// 如果是桌台订单
 			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		} else {
+			// 如果不是桌台订单
 			instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -2661,7 +2694,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 		if len(mustPlans) > 0 {
 			res := &resp.OrderCheckServiceRes{
 				Code:          constant.CodeOrderCheckProductMust,
-				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: resp.ProductMustPlanList{List: instantMustPlanList}},
+				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: instantMustPlanList}},
 			}
 			return res, nil
 		}
@@ -2765,6 +2798,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 	s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 		BasePayload: event.BasePayload{
+			Ctx:           ctx,
 			CompanyUuid:   ctx.GetCompanyUuid(),
 			Source:        ctx.GetSource(),
 			SaleBillUuid:  req.SaleBillUuid,
@@ -2845,19 +2879,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	if err := saleBill.ValidateOrderStatus(constant.OrderRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
-	//  验证退菜标签
-	//returnFoodReasons := [][2]uint64{}
-	//if len(req.ReturnIds) > 0 {
-	//	_returnFoodReasons, notFound, err := base.NewReturnFoodReasonRepo(db).ExistsByUuids(req.ReturnIds)
-	//	if err != nil {
-	//		return nil, errors.WithMessage(err)
-	//	}
-	//	if len(notFound) > 0 {
-	//		return nil, fmt.Errorf("以下退菜原因不存在: %v", notFound)
-	//	}
-	//	returnFoodReasons = _returnFoodReasons
-	//}
 
 	returnFoodReason, err := base.NewReturnFoodReasonRepo(db).GetReturnFoodReasonListByUuids(req.ReturnIds)
 	if err != nil {
@@ -3463,13 +3484,17 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-	var saleOrder *model.SaleOrder
-	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
+	if saleBill.IsEndStatus() {
+		return nil, errors.WithMessage(errors.New("销售账单已结束"))
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
-	var paymentMethods []*model.PaymentMethod
-	paymentMethods = repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	paymentMethods := repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
 
 	var memberInfo *resp.MemberInfo
 	if saleOrder.Member != nil {
@@ -3478,7 +3503,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Nickname: saleOrder.GetMemberName(),
 			Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
 			Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
-			Balance:  saleOrder.Member.Balance,
+			Balance:  saleOrder.Member.GetBalanceAll(),
 			Points:   saleOrder.Member.Point,
 		}
 	}
@@ -3548,7 +3573,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			}
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
-				SaleOrderAmount:       saleOrder.Amount,
+				SaleOrderAmount:       saleOrder.GetAmount(),
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
@@ -3572,6 +3597,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 // InstantOrderPaymentCreate 给销售订单创建一个支付单
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	// 判断订单是否已经结束，若订单结束则拒绝操作
+	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
@@ -3625,9 +3654,36 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	return infoResp, nil
 }
 
+// 检查是否可以操作
+func (s *orderSrv) checkCanOperateOrder(ctx context.Context, saleBillUuid, saleOrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 判断订单是否已经结束，若订单结束不能创建支付单、不能撤销付款单、不能查看结账页信息
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return errors.WithMessage(errSaleBill)
+	}
+	if saleBill.IsEndStatus() {
+		return errors.WithMessage(errors.New("销售账单已结束"))
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return errors.New("无法查询到销售订单")
+	}
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
 // InstantOrderPaymentCancel 撤销一个支付单
 func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 判断订单是否已经结束，若订单结束则拒绝操作
+	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
@@ -3720,8 +3776,14 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	updateSaleBill := false
 	if saleBill.CanFinishSaleBill() {
 		saleBill.SetFinishSaleBill()
-		updateSaleBill = true
 		saleBill.CalcAll()
+		updateSaleBill = true
+	}
+
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -3734,6 +3796,24 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		if updateSaleBill {
 			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 				return errUpdateSaleBill
+			}
+			// 如果是桌台账单，则将桌台状态改为待清台或者空闲
+			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
+			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
+			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
+			if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
+				// 结账自动清台，将桌台状态设置为空闲
+				saleBill.Desk.SetCloseDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			}
+			if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
+				// 结账不自动清台，将桌台状态设置为待清台
+				saleBill.Desk.SetWaitClearDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -3753,12 +3833,134 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
-			OrderAmount:  saleOrder.Amount,
+			OrderAmount:  saleOrder.GetAmount(),
 			PayAmount:    saleOrder.PaymentAmount,
 			ChangeAmount: saleOrder.ChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
+		},
+	}
+
+	return orderFinishResp, nil
+}
+
+// InstantOrderFree 免单
+func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	// 销售账单已经结束
+	if saleBill.IsEndStatus() {
+		return nil, errors.WithMessage(errors.New("销售账单结束"))
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+	// 订单是不是已经结束
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return nil, err
+	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 已经部分支付，无法进行免单
+	if len(infoResp.PaymentOrders.List) > 0 {
+		return nil, errors.WithMessage(errors.New("订单已部分支付，无法进行免单"))
+	}
+
+	// 获取免单原因
+	freeReasons, err := base.NewGiftOrFreeOrderReasonRepo(db).GetFreeOrderReasonListByUuids(req.ReasonIds)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if len(freeReasons) != len(req.ReasonIds) {
+		return nil, errors.WithMessage(errors.New("免单原因不存在"), fmt.Sprintf("原因ids：%v", req.ReasonIds))
+	}
+
+	freeOrderReasons := saleOrder.NewFreeOrderReason(freeReasons)
+
+	// 设置该销售订单为免单
+	saleOrder.SetFreeOrder(req.Reason, freeOrderReasons)
+
+	updateSaleBill := false
+	// 如果销售账单中只有一个销售订单，则可以结束销售账单
+	if saleBill.CanFinishSaleBill() {
+		saleBill.SetFinishSaleBill()
+		saleBill.CalcAll()
+		updateSaleBill = true
+	}
+
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建免单原因
+		if len(freeOrderReasons) > 0 {
+			if err := repository.NewSaleOrderProductReasonRepo(db).CreateSaleOrderProductReasons(freeOrderReasons); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		// 更新销售订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 更新账单
+		if updateSaleBill {
+			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+				return errUpdateSaleBill
+			}
+			// 如果是桌台账单，则将桌台状态改为待清台或者空闲
+			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
+			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
+			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
+			if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
+				// 结账自动清台，将桌台状态设置为空闲
+				saleBill.Desk.SetCloseDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			}
+			// 如果是桌台订单，且不自动清台
+			if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
+				// 结账不自动清台，将桌台状态设置为待清台
+				saleBill.Desk.SetWaitClearDesk()
+				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	orderFinishResp := &resp.OrderFinishResp{
+		SaleBillUuid:  req.SaleBillUuid,
+		SaleOrderUuid: req.SaleOrderUuid,
+		AmountInfo: resp.PayAmountInfo{
+			OrderAmount: saleOrder.GetAmount(),
+		},
+		PayMethodList: resp.PayMethodList{
+			List: []resp.PayMethod{
+				{
+					Name: "免单",
+				},
+			},
 		},
 	}
 
@@ -3806,7 +4008,7 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 	return infoResp, nil
 }
 
-// InstantOrderSaleOrderCreate 给销售订单创建一个销售订单
+// InstantOrderSaleOrderCreate 给销售账单创建一个销售订单。（创建新拆单）
 func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 加锁
@@ -3822,11 +4024,34 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errSaleBill
 	}
 
-	// 创建销售订单
-	_, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo)
-	if errCreateSaleOrder != nil {
-		ctx.Log().Error("新建拆单失败", zap.Any("errCreateSaleOrder", errCreateSaleOrder))
-		return nil, errors.WithMessage(errCreateSaleOrder, "新建拆单失败")
+	// 如果销售账单目前只有一个销售订单，增加一个销售订单后要求撤销订单1的优惠折扣
+	// 这是产品的特殊要求，可能后续会改。
+	// 撤销订单的优惠折扣
+	if len(saleBill.SaleOrders) == 1 {
+		saleOrder := saleBill.GetFirstSaleOrder()
+		// 撤销订单1的优惠折扣
+		saleOrder.SetAllDiscountCancel()
+	}
+
+	// 计算并保存销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建销售订单
+		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo); errCreateSaleOrder != nil {
+			return errors.WithMessage(errCreateSaleOrder, fmt.Sprintf("新建拆单失败,saleBill.Uuid:%v, saleBill.OrderNo:%v", saleBill.Uuid, saleBill.OrderNo))
+		}
+
+		// 计算并保存销售账单
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	cartInfo, errCartInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
@@ -4161,6 +4386,65 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 
 	return true, nil
+}
+
+// InstantOrderCheck 订单检查
+func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	ctx.Log().Debug("获取销售账单信息")
+
+	// 获取未送厨的商品列表
+	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
+
+	// 检查是否有未送厨的商品
+	if len(unCookingSaleOrderProducts) > 0 {
+		products := make([]resp.Product, 0)
+		for _, product := range unCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:          product.Uuid,
+				LocaleName:    product.MultiLanguageName.GetNames(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
+			})
+		}
+		res := &resp.OrderCheckServiceRes{
+			Code:          constant.CodeOrderCheckProductUnCooking,
+			OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
+		}
+		return res, nil
+	}
+
+	// 获取所有商品,用于检查限购
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+
+	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
+	checkServiceRes, errCheck := s.checkOrder(ctx, db, req.SaleBillUuid, 0, unCookingSaleOrderProducts, saleOrderProductAll)
+	if errCheck != nil {
+		return nil, errors.WithMessage(errCheck, "订单检查失败")
+	}
+	if checkServiceRes != nil {
+		return checkServiceRes, nil
+	}
+
+	return nil, nil
 }
 
 // InstantOrderSaleOrderDelete 删除一个销售订单(删除拆单)

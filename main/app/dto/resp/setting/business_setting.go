@@ -1,5 +1,7 @@
 package setting
 
+import "ttpos-server-go/app/constant"
+
 // Business 门店业务设置
 type Business struct {
 	ZeroingMethodList         []ZeroingMethodItem         `json:"zeroing_method_list"`          // 优惠折扣自动抹零方式列表
@@ -17,6 +19,10 @@ type Business struct {
 	DishCardStyle             string                      `json:"dish_card_style"`              // 菜品卡片样式 0-无图模式 1-图片模式
 	DishCardStyleTime         string                      `json:"dish_card_style_time"`         // 菜品卡片样式最后更新时间
 	IsInvoice                 string                      `json:"is_invoice"`                   // 开票信息 0-不需要填写 1-需要填写
+}
+
+func (resp *Business) IsAutoClearDesk() bool {
+	return resp.NoClearTable == constant.AutoClearTable
 }
 
 type ZeroingMethodItem MethodItem

@@ -94,8 +94,14 @@ func (model *Desk) SetOpenDesk(saleBillUuid uint64) {
 	model.SaleBillUuid = saleBillUuid
 }
 
-// SetCloseDesk 设置关闭台信息
+// SetCloseDesk 设置关闭桌台信息，将桌台设置为空闲桌台
 func (model *Desk) SetCloseDesk() {
+	model.Status = constant.DeskStatusClose
+	model.SaleBillUuid = 0
+}
+
+// SetCloseDesk 设置待清台信息，将桌台改为待清台状态
+func (model *Desk) SetWaitClearDesk() {
 	model.Status = constant.DeskStatusClose
 	model.SaleBillUuid = 0
 }

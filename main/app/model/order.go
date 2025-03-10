@@ -32,6 +32,8 @@ type SaleBill struct {
 	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
 	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
 	BuffetStartTime int64 `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
+	DelayDuration   uint  `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
+	DelayStartTime  int64 `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
 
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
@@ -97,7 +99,7 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 		BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceDesk],
 		DiningMethod: constant.SaleBillDiningMethodDineIn,
 		IsBuffet:     utils.BoolToUint(isBuffet),
-		MealNum:      mealNum,
+		MealNum:      mealNum, // 非自助餐订单，就餐人数等于开台时填写的人数。 自助餐订单，就餐人数等于各个顾客类型数量的累加，如老人2人、小孩3人，则就餐人数为5人。不会因为销售账单是两个自助餐套餐而导致人数变为10人
 		Remark:       remark,
 		DeskUuid:     deskUuid,
 	}
@@ -510,31 +512,44 @@ func (model *SaleBill) IsBuffetSaleBill() bool {
 }
 
 // 获取自助餐结束时间
-func (model *SaleBill) BuffetEndTime() int64 {
+func (model *SaleBill) GetBuffetEndTime() int64 {
 	endTime := model.BuffetStartTime + int64(model.BuffetDuration)
 	return endTime
 }
 
-// 获取自助餐已用时长
-func (model *SaleBill) BuffetUsedTime() int64 {
-	return time.Now().Unix() - model.BuffetStartTime
+// 判断自助餐是否超时
+func (model *SaleBill) BuffetIsTimeOut() bool {
+	return model.GetBuffetRemainingSeconds() == 0
 }
 
 // 自助餐还剩余多少秒
-func (model *SaleBill) BuffetRemainingSeconds() int64 {
+func (model *SaleBill) GetBuffetRemainingSeconds() int64 {
 	if model.BuffetDuration == 0 {
 		return -1
 	}
-	remainingTime := model.BuffetEndTime() - time.Now().Unix()
+	remainingTime := model.GetBuffetEndTime() - time.Now().Unix()
 	if remainingTime < 0 {
 		return 0
 	}
 	return remainingTime
 }
 
-// 判断是否超时
-func (model *SaleBill) BuffetIsTimeOut() bool {
-	return model.BuffetRemainingSeconds() == 0
+// 获取加钟剩余时长
+func (model *SaleBill) GetRemainingDelayDuration() int64 {
+	useDuration := time.Now().Unix() - model.DelayStartTime
+	if useDuration <= 0 {
+		useDuration = 0
+	}
+	duration := int64(model.DelayDuration) - useDuration
+	if duration < 0 {
+		return 0
+	}
+	return duration
+}
+
+// 获取总的剩余时长
+func (model *SaleBill) GetTotalRemainingSeconds() int64 {
+	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -862,8 +877,8 @@ type SaleOrderProductReason struct {
 	BaseModel
 	// 关联ID字段
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
-	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID" json:"sale_order_product_uuid"`
-	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因-多语言名称ID" json:"multi_language_name_uuid"`
+	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID.如果说退菜和赠菜，则sale_order_product_uuid不为0；如果是整单免单，则sale_order_product_uuid为0	" json:"sale_order_product_uuid"`
+	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	// 三选一。
 	ReturnFoodReasonUuid uint64 `gorm:"column:return_food_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因ID" json:"return_food_reason_uuid"`
 	FreeReasonUuid       uint64 `gorm:"column:free_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:免单原因ID" json:"free_reason_uuid"`

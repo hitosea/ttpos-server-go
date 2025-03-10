@@ -1,6 +1,7 @@
 package event
 
 import (
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus"
 	"ttpos-server-go/pkg/utils"
 )
@@ -9,6 +10,7 @@ import (
 const EventOpenDesk EventName = "Event_Open_Desk"
 
 type BasePayload struct {
+	Ctx           context.Context
 	CompanyUuid   uint64 `json:"-"`
 	Source        string `json:"-"`
 	SaleBillUuid  uint64 `json:"-"`

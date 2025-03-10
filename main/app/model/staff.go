@@ -62,3 +62,17 @@ type StaffLoginLog struct {
 	Result    string `gorm:"column:result;type:varchar(128);comment:登录结果;NOT NULL" json:"result"`
 	// CreateTime 签到时间
 }
+
+// StaffOperationLog 员工操作日志表 ttpos_staff_operation_log
+type StaffOperationLog struct {
+	BaseModel
+	StaffUuid    uint64 `gorm:"column:staff_uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"staff_uuid"`
+	Title        string `gorm:"column:title;type:varchar(255);comment:标题;NOT NULL" json:"title"`
+	Url          string `gorm:"column:url;type:varchar(255);comment:操作URL;NOT NULL" json:"url"`
+	RequestData  string `gorm:"column:request_data;type:varchar(255);comment:请求数据;NOT NULL" json:"request_data"`
+	ResponseData string `gorm:"column:response_data;type:varchar(255);comment:响应数据;NOT NULL" json:"response_data"`
+	Type         string `gorm:"column:type;type:varchar(255);comment:操作类型;NOT NULL" json:"type"`
+	Ip           string `gorm:"column:ip;type:varchar(255);comment:操作IP;NOT NULL" json:"ip"`
+	Source       string `gorm:"column:source;type:varchar(255);comment:操作来源;NOT NULL" json:"source"`
+	Agent        string `gorm:"column:agent;type:varchar(255);comment:操作用户代理;NOT NULL" json:"agent"`
+}
