@@ -865,7 +865,7 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 // @Produce json
 // @param data body req.InstantOrderCheckReq true "订单检查参数"
 // @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
-// @Router /cashier/instant/order/check [post]
+// @Router /cashier/instant/order/check [get]
 func (h *InstantHandler) OrderCheck(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到点餐页面订单检查接口请求")
@@ -1071,7 +1071,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/instant/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
-		privateApi.POST("/instant/order/check", wrapper.OrderCheck)                                              // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+		privateApi.GET("/instant/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/instant/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
