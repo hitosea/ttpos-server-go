@@ -95,8 +95,8 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 					UpdateTime: supplierPrinting.UpdateTime,
 					DeleteTime: int64(supplierPrinting.IsDelete),
 				},
-				ProductPrinterUuid: uint(supplierPrinting.ID),
-				ProductPackageUuid: productID,
+				ProductPrinterUuid: uint64(supplierPrinting.ID),
+				ProductPackageUuid: uint64(productID),
 			}
 			_, err = base.NewProductPrinterProductItemRepo(s.targetDB).CreateProductPrinterProductItem(productPrinterProductItem)
 			if err != nil {
@@ -123,8 +123,8 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 					UpdateTime: supplierPrinting.UpdateTime,
 					DeleteTime: int64(supplierPrinting.IsDelete),
 				},
-				ProductPrinterUuid: uint(supplierPrinting.ID),
-				PrinterUuid:        printerID,
+				ProductPrinterUuid: uint64(supplierPrinting.ID),
+				PrinterUuid:        uint64(printerID),
 			}
 			_, err = base.NewProductPrinterItemRepo(s.targetDB).CreateProductPrinterItem(productPrinterItem)
 			if err != nil {
@@ -149,8 +149,8 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 					CreateTime: supplierPrinting.CreateTime,
 					UpdateTime: supplierPrinting.UpdateTime,
 				},
-				ProductPrinterUuid: uint(supplierPrinting.ID),
-				DeskRegionUuid:     regionID,
+				ProductPrinterUuid: uint64(supplierPrinting.ID),
+				DeskRegionUuid:     uint64(regionID),
 			}
 			_, err = base.NewProductPrinterRegionRepo(s.targetDB).CreateProductPrinterRegion(productPrinterRegion)
 			if err != nil {

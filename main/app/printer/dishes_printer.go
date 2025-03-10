@@ -97,7 +97,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 一菜一单打印
 			if !isCompleteOrderPrinter {
 				for _, product := range newProducts {
-					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
+					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product, model.Printer{})
 					if data != "" {
 						// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
 						// 	"data" => $data,
