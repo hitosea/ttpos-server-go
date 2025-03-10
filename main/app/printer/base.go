@@ -109,7 +109,7 @@ func (p *PrinterRepoImpl) getProductPrinterList() ([]model.ProductPrinter, error
 			Query: "ProductPrinterRegions",
 		}),
 		repository.CommonRepo.Preload(repository.WithPreload{
-			Query: "ProductPrinterItems.Printer",
+			Query: "ProductPrinterItems.Printer.PrinterType",
 		}),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterProductItems",
