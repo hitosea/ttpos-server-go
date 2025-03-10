@@ -411,9 +411,6 @@ definitions:
     type: object
   req.InstantOrderCheckReq:
     properties:
-      ignore_must_plan:
-        description: 忽略必点计划, 非必填
-        type: boolean
       sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
@@ -6131,7 +6128,7 @@ paths:
       tags:
       - 收银端.桌台
   /cashier/desk/order/check:
-    post:
+    get:
       consumes:
       - application/json
       description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账

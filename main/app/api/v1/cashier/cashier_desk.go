@@ -366,16 +366,17 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 // @Router /cashier/desk/order/discount [post]
 func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	bodyBytes, _ := io.ReadAll(c.Request.Body)
+	bodyBytes, _ := io.ReadAll(c.Request.Body) // Body只能读取一次，之后想再次从body中读取数据需要重新往body中写入数据
 	// 绑定请求参数
 	params := req.OrderDiscountMethodReq{}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+	// 从body中读取数据
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-	//
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+
 	var shopCart *resp.ShopCart
 	var err error
 	// 改价
@@ -866,7 +867,7 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 // @Produce json
 // @param data body req.InstantOrderCheckReq true "订单检查参数"
 // @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
-// @Router /cashier/desk/order/check [post]
+// @Router /cashier/desk/order/check [get]
 func (h *DeskHandler) OrderCheck(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到桌台页面订单检查接口请求")
@@ -1257,7 +1258,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
-		privateApi.POST("/desk/order/check", wrapper.OrderCheck)                                              // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
