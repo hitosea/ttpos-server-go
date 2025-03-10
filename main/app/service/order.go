@@ -1541,6 +1541,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 			},
 			OldPrice:        memberDiscountAmount, // 旧价格为订单的会员折扣后的金额。如果没有会员折扣，则旧价格为订单应收金额
 			NewPrice:        saleOrder.GetAmount(),
+			DiscountType:    constant.DiscountOperationLogTypeDiscountSaleOrder,
 			RoundingRate:    req.GetOffDiscount(),
 			SpecialDiscount: decimal.NewFromFloat(memberDiscountAmount).Sub(decimal.NewFromFloat(saleOrder.GetAmount())).InexactFloat64(),
 		})
@@ -1586,6 +1587,8 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 		return nil, errors.New("销售订单不存在")
 	}
 
+	oldAmount := saleOrder.GetAmount()
+
 	// 设置整单改价金额
 	saleOrder.SetZeroRule(req.ZeroRule)
 
@@ -1593,6 +1596,24 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布"订单抹零"事件
+	go func() {
+		newAmount := saleOrder.GetAmount()
+		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountZeroSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			DiscountType: constant.DiscountOperationLogTypeZeroSaleOrder,
+			RoundingType: req.ZeroRule,
+			// oldAmount - newAmount 旧应付金额减去抹零后的应付金额
+			SpecialDiscount: decimal.NewFromFloat(oldAmount).Sub(decimal.NewFromFloat(newAmount)).InexactFloat64(),
+		})
+	}()
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -3549,16 +3570,18 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 
 		commissionFee := saleOrder.CalcCommissionFee()
 
+		saleOrderAmount := saleOrder.GetAmount()
+		saleOrderOriginAmount := saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType)
 		if commissionFee > 0 {
 			// 如果有手续费
 			amount := resp.PaymentMethodAmount{
-				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
-				SaleOrderAmount:       saleOrder.Amount,
+				SaleOrderOriginAmount: saleOrderOriginAmount,
+				SaleOrderAmount:       saleOrderAmount,
+				CommissionFee:         commissionFee,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
 				PaymentMethodUuid:     methodItem.Uuid,
-				CommissionFee:         commissionFee,
 			}
 			amounts = append(amounts, amount)
 		} else {
@@ -3571,13 +3594,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 				hasCommission = true
 			}
 			amount := resp.PaymentMethodAmount{
-				SaleOrderOriginAmount: saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType),
-				SaleOrderAmount:       saleOrder.GetAmount(),
+				SaleOrderOriginAmount: saleOrderOriginAmount,
+				SaleOrderAmount:       saleOrderAmount,
+				CommissionFee:         commissionFee,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
 				PaymentMethodUuid:     methodItem.Uuid,
-				CommissionFee:         commissionFee,
 			}
 			amounts = append(amounts, amount)
 		}

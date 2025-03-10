@@ -24,7 +24,8 @@ const (
 
 const (
 	DiscountOperationLogTypeChangePriceSaleOrder = 1 // 订单改价、整单改价
-
+	DiscountOperationLogTypeDiscountSaleOrder    = 2 // 订单折扣、整单折扣
+	DiscountOperationLogTypeZeroSaleOrder        = 3 // 订单抹零、整单抹零
 )
 
 const (
