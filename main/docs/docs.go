@@ -3903,13 +3903,18 @@ const docTemplate = `{
                 "summary": "订单检查",
                 "parameters": [
                     {
-                        "description": "订单检查参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.InstantOrderCheckReq"
-                        }
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {

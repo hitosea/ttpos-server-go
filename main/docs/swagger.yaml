@@ -7056,12 +7056,16 @@ paths:
       - application/json
       description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
       parameters:
-      - description: 订单检查参数
-        in: body
-        name: data
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
         required: true
-        schema:
-          $ref: '#/definitions/req.InstantOrderCheckReq'
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
       produces:
       - application/json
       responses:

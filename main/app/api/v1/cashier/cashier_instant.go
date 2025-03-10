@@ -863,7 +863,8 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
-// @param data body req.InstantOrderCheckReq true "订单检查参数"
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
 // @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
 // @Router /cashier/instant/order/check [get]
 func (h *InstantHandler) OrderCheck(c *gin.Context) {
@@ -871,7 +872,7 @@ func (h *InstantHandler) OrderCheck(c *gin.Context) {
 	ctx.Log().Debug("收到点餐页面订单检查接口请求")
 
 	params := req.InstantOrderCheckReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBindQuery(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
