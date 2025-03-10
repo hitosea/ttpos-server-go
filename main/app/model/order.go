@@ -32,6 +32,8 @@ type SaleBill struct {
 	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
 	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
 	BuffetStartTime int64 `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
+	DelayDuration   uint  `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
+	DelayStartTime  int64 `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
 
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
@@ -510,31 +512,44 @@ func (model *SaleBill) IsBuffetSaleBill() bool {
 }
 
 // 获取自助餐结束时间
-func (model *SaleBill) BuffetEndTime() int64 {
+func (model *SaleBill) GetBuffetEndTime() int64 {
 	endTime := model.BuffetStartTime + int64(model.BuffetDuration)
 	return endTime
 }
 
-// 获取自助餐已用时长
-func (model *SaleBill) BuffetUsedTime() int64 {
-	return time.Now().Unix() - model.BuffetStartTime
+// 判断自助餐是否超时
+func (model *SaleBill) BuffetIsTimeOut() bool {
+	return model.GetBuffetRemainingSeconds() == 0
 }
 
 // 自助餐还剩余多少秒
-func (model *SaleBill) BuffetRemainingSeconds() int64 {
+func (model *SaleBill) GetBuffetRemainingSeconds() int64 {
 	if model.BuffetDuration == 0 {
 		return -1
 	}
-	remainingTime := model.BuffetEndTime() - time.Now().Unix()
+	remainingTime := model.GetBuffetEndTime() - time.Now().Unix()
 	if remainingTime < 0 {
 		return 0
 	}
 	return remainingTime
 }
 
-// 判断是否超时
-func (model *SaleBill) BuffetIsTimeOut() bool {
-	return model.BuffetRemainingSeconds() == 0
+// 获取加钟剩余时长
+func (model *SaleBill) GetRemainingDelayDuration() int64 {
+	useDuration := time.Now().Unix() - model.DelayStartTime
+	if useDuration <= 0 {
+		useDuration = 0
+	}
+	duration := int64(model.DelayDuration) - useDuration
+	if duration < 0 {
+		return 0
+	}
+	return duration
+}
+
+// 获取总的剩余时长
+func (model *SaleBill) GetTotalRemainingSeconds() int64 {
+	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
 }
 
 // ValidateOrderStatus 判断订单是否可操作

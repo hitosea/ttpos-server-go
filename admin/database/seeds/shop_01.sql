@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
 
     `tax_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-商品未含税 1-商品已含税,下单后不变',
     `buffet_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐可用时长(秒)',
+    `buffet_start_time` INT(10) NOT NULL DEFAULT 0 COMMENT '自助餐开始时间(秒)',
+    `delay_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长(秒)',
+    `delay_start_time` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长开始时间(秒)',
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',

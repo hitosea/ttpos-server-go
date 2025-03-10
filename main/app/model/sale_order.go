@@ -278,6 +278,8 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	mealNum := uint(0)
 	maxTimeLimit := int(0)
 	saleOrderBuffetCustomerTypes := make([]*SaleOrderBuffetCustomerType, 0)
+	// 创建一个map来跟踪已处理的CustomerType
+	processedCustomerTypes := make(map[uint64]bool)
 	//
 	for _, buffetUuid := range buffetUuids {
 		buffetPackage := buffetMap[buffetUuid]
@@ -311,7 +313,11 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 				}
 			}
 			//
-			mealNum += num
+			// 只有当这个CustomerType未被处理过时，才累加mealNum
+			if !processedCustomerTypes[CustomerType.Uuid] {
+				mealNum += num
+				processedCustomerTypes[CustomerType.Uuid] = true
+			}
 		}
 	}
 	//
