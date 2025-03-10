@@ -17,7 +17,7 @@ class ErpInventoryRecordOut extends Controller
      * @Apidoc\Title("列表")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/inventory.ErpInventoryRecordOut/list")
-     * @Apidoc\Param("type", type="int", require=false, desc="操作类型 10-采购入库 20-调整入库 21-添加入库 30-销售出库 40-调整出库 41-删除出库")
+     * @Apidoc\Param("type", type="int", require=false, desc="操作类型 30-销售出库 40-调整出库 41-删除出库")
      * @Apidoc\Param("date", type="array", require=true, default="", desc="起始时间 date[0]开始时间 date[1]结束时间")
      * @Apidoc\Param(ref="pageParam")
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\erp\ErpInventoryRecord\getList")
@@ -25,7 +25,7 @@ class ErpInventoryRecordOut extends Controller
     public function list()
     {
         $model = new ErpWarehouseOutForm;
-        $list = $model->getList($this->postData(), $model::INVENTORY_TYPE_OUT);
+        $list = $model->getList($this->postData());
         return $this->renderSuccess('', compact('list'));
     }
 
