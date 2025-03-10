@@ -30,11 +30,12 @@ func discountSaleOrderEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleBillOperationRecord{
-				Source:       payload.Source,
-				Action:       constant.OrderDiscount,
-				Remark:       "优惠折扣",
-				SaleBillUuid: payload.SaleBillUuid,
-				OperatorUuid: payload.GetOperatorUuid(),
+				Source:        payload.Source,
+				Action:        constant.OrderDiscount,
+				Remark:        "优惠折扣",
+				SaleBillUuid:  payload.SaleBillUuid,
+				SaleOrderUuid: payload.SaleOrderUuid,
+				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
 			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
