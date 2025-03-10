@@ -2,9 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/jinzhu/copier"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 	"slices"
 	"strconv"
 	"time"
@@ -17,6 +14,10 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+
+	"github.com/jinzhu/copier"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 // IPrinterLogSrv 定义打印日志服务接口
@@ -80,7 +81,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		}
 		// 记录打印方式  = 1 文本打印，2图片打印
 		// 默认文本打印
-		printerLogData.PrintMethod = constant.PrinterLogPintMethodText
+		printerLogData.PrintMethod = constant.PrinterLogPrintMethodText
 		// 打印方式（收银）
 		printMethodStr := printerSetting.PrintMethod
 		// 这几种是打印方式（送厨）
@@ -88,7 +89,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 			printMethodStr = printerSetting.KitchenPrintMethod
 		}
 		printMethod, _ := strconv.Atoi(printMethodStr)
-		if printMethod > 0 && slices.Contains([]int{constant.PrinterLogPintMethodText, constant.PrinterLogPintMethodImage}, printMethod) {
+		if printMethod > 0 && slices.Contains([]int{constant.PrinterLogPrintMethodText, constant.PrinterLogPrintMethodImage}, printMethod) {
 			printerLogData.PrintMethod = printMethod
 		}
 		if !isQueueService { // 直接打印

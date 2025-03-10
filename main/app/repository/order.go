@@ -311,6 +311,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 			WithPreload{
 				Query: "SaleBillSetting",
 			},
+			WithPreload{
+				Query: "Desk",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),

@@ -517,10 +517,41 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	var store setting.Store
 	st := s.getSettingByKey(ctx, constant.SettingStore)
 	ctx.Log().Info("", zap.String("st.Values", st.Values))
-	err := json.Unmarshal([]byte(st.Values), &store)
+
+	// 解析json字符串为map进行处理，处理language字段
+	jsonStr := st.Values
+	var jsonMap map[string]interface{}
+	err := json.Unmarshal([]byte(jsonStr), &jsonMap)
+	if err != nil {
+		ctx.Log().Error("解析商城设置失败-01", zap.Error(err))
+		return store, errors.New("解析商城设置失败-01 " + err.Error())
+	}
+	// 处理language数组中的key字段
+	if language, ok := jsonMap["language"].([]interface{}); ok {
+		for i, item := range language {
+			if langItem, ok := item.(map[string]interface{}); ok {
+				// 尝试将key转换为string
+				if keyNum, ok := langItem["key"].(string); ok {
+					langItem["key"], _ = strconv.Atoi(keyNum)
+					language[i] = langItem
+				}
+			}
+		}
+		jsonMap["language"] = language
+	}
+
+	// 重新序列化为JSON
+	modifiedJSON, err := json.Marshal(jsonMap)
+	if err != nil {
+		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
+		return store, errors.New("重新序列化JSON失败 " + err.Error())
+	}
+
+	// 使用处理后的JSON解析
+	err = json.Unmarshal(modifiedJSON, &store)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
-		return store, errors.New("解析商城设置失败")
+		return store, errors.New("解析商城设置失败 " + err.Error())
 	}
 	if store.IPWhiteList != "" {
 		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
@@ -555,10 +586,42 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingPrinter)
-	err = json.Unmarshal([]byte(st.Values), &printer)
+
+	// 使用正则表达式预处理JSON字符串，将language_list中的key字段从字符串转为数字
+	jsonStr := st.Values
+
+	// 解析json字符串为map进行处理
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
-		return printer, errors.New("解析小票打印机设置失败")
+		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
+	}
+	// 处理language_list中的key
+	if languageList, ok := jsonMap["language_list"].([]interface{}); ok {
+		for i, item := range languageList {
+			if langItem, ok := item.(map[string]interface{}); ok {
+				// 尝试将key转换为int
+				if keyStr, ok := langItem["key"].(string); ok {
+					langItem["key"], _ = strconv.Atoi(keyStr)
+					languageList[i] = langItem
+				}
+			}
+		}
+		jsonMap["language_list"] = languageList
+	}
+	// 重新序列化为JSON
+	modifiedJSON, err := json.Marshal(jsonMap)
+	if err != nil {
+		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
+		return printer, errors.New("重新序列化JSON失败 " + err.Error())
+	}
+
+	// 使用处理后的JSON解析
+	err = json.Unmarshal(modifiedJSON, &printer)
+	if err != nil {
+		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
+		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
 	}
 	// 过滤佛历、过滤打印方式，使用默认
 	printer.CalendarList = nil
