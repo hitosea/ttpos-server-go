@@ -50,10 +50,10 @@ func (s *CallService) ConvertCall() error {
 				CreateTime: call.CreateTime,
 				UpdateTime: call.UpdateTime,
 			},
-			DeskUUID: uint64(call.TableID),
+			DeskUuid: uint64(call.TableID),
 			DeskNo:   call.TableNo,
-			Status:   call.Status,
-			IsSend:   call.IsSend,
+			Status:   int(call.Status),
+			IsSend:   int(call.IsSend),
 		}
 		_, err := base.NewCustomerCallRepo(s.targetDB).CreateCustomerCall(customerCall)
 		if err != nil {

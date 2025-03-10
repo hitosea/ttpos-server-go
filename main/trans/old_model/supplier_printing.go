@@ -165,11 +165,11 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 				UpdateTime: supplierPrinting.UpdateTime,
 			},
 			Name:               supplierPrinting.Name,
-			Status:             supplierPrinting.IsOpen,
-			PrintMode:          uint(printType),
-			PrintMethod:        uint(printMethod),
-			PrintProductSelect: uint(printProductSelect),
-			PrintModeScene:     uint(printModeScene),
+			Status:             int(supplierPrinting.IsOpen),
+			PrintMode:          int(printType),
+			PrintMethod:        int(printMethod),
+			PrintProductSelect: int(printProductSelect),
+			PrintModeScene:     int(printModeScene),
 		}
 		_, err = base.NewProductPrinterRepo(s.targetDB).CreateProductPrinter(productPrinter)
 		if err != nil {

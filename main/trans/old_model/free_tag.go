@@ -61,7 +61,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 				UpdateTime: freeTag.UpdateTime,
 			},
 			Name:                  names.Zh,
-			MultiLanguageNameUuid: uint(id),
+			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewGiftOrFreeOrderReasonRepo(s.targetDB).CreateGiftOrFreeOrderReason(reason)
