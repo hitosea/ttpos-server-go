@@ -137,7 +137,7 @@ class Material extends BaseModel
      */
     public function relatedMaterial()
     {
-        return $this->hasMany(ProductRelatedMaterial::class, 'related_uuid', 'uuid');
+        return $this->hasMany(ProductRelatedMaterial::class, 'material_uuid', 'uuid');
     }
 
     /**
@@ -314,6 +314,13 @@ class Material extends BaseModel
             $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
             $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
 
+            $oldStockNum = floatval($this->stock_num); // 旧库存
+            $newStockNum = floatval($data['stock_num']); // 新库存
+
+            if(!$this->save($data)) {
+                return false;
+            }
+
             $product = new Product();
             if ($product->hasInventoryAuth()) {
                 $relatedMaterialUuidList = [];
@@ -325,8 +332,6 @@ class Material extends BaseModel
                 RelatedMaterial::updateStock($relatedMaterialUuidList);
 
                 // 出/入库记录
-                $oldStockNum = floatval($this->stock_num);
-                $newStockNum = floatval($data['stock_num']);
                 $diffStockNum = abs(floatval(helper::bcsub($newStockNum, $oldStockNum, 4)));
                 // 创建"调整入库"记录
                 if ($newStockNum > $oldStockNum) {
@@ -338,7 +343,7 @@ class Material extends BaseModel
                 }
             }
 
-            return $this->save($data);
+            return true;
         });
     }
 
