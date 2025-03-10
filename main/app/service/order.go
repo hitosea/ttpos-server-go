@@ -1453,7 +1453,6 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
-	oldPrice := saleOrder.GetAmount()
 
 	// 设置整单改价金额
 	saleOrder.SetCustomAmount(req.Price)
@@ -1473,10 +1472,10 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OldPrice:        oldPrice,
+			OldPrice:        saleOrder.GetOriginAmount(), // 旧价格为订单的原始应收金额
 			NewPrice:        req.Price,
 			DiscountType:    constant.DiscountOperationLogTypeChangePriceSaleOrder, // 整单改价的类型值
-			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
+			SpecialDiscount: decimal.NewFromFloat(saleOrder.GetOriginAmount()).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
 		})
 	}()
 
@@ -1520,13 +1519,32 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 设置整单改价金额
+	// 在折扣之前计算会员打折后金额。必须在设置折扣之前获取，否则amount值已经改变了
+	memberDiscountAmount := saleOrder.GetMemberDiscountAmount()
+	// 设置整单折扣率
 	saleOrder.SetCustomDiscount(req.GetDiscount())
 
 	// 计算并保存销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 发布"整单打折"事件
+	go func() {
+		event.NewSystemBus().PublishDiscountSaleOrderEvent(event.DiscountSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OldPrice:        memberDiscountAmount, // 旧价格为订单的会员折扣后的金额。如果没有会员折扣，则旧价格为订单应收金额
+			NewPrice:        saleOrder.GetAmount(),
+			RoundingRate:    req.GetOffDiscount(),
+			SpecialDiscount: decimal.NewFromFloat(memberDiscountAmount).Sub(decimal.NewFromFloat(saleOrder.GetAmount())).InexactFloat64(),
+		})
+	}()
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

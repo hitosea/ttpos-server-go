@@ -124,8 +124,28 @@ func (req OrderDiscountReq) Validate() error {
 
 // GetDiscount 获取折扣
 func (req OrderDiscountReq) GetDiscount() float64 {
-	// 前端传的值范围是0-100，所以需要转换为0-1
-	return decimal.NewFromFloat(req.Discount).Div(decimal.NewFromInt(100)).InexactFloat64()
+	if req.DiscountType == constant.DiscountTypePercent {
+		// 前端传的值范围是0-100，所以需要转换为0-1
+		return decimal.NewFromFloat(req.Discount).Div(decimal.NewFromInt(100)).InexactFloat64()
+	}
+	if req.DiscountType == constant.DiscountTypeOff {
+		// 前端传的值范围是0-100，所以需要转换为0-1
+		discountOff := decimal.NewFromFloat(req.Discount).Div(decimal.NewFromInt(100))
+		// % off 百分比减免。需要转换为百分比打折。 1 - discountOff
+		discount := decimal.NewFromFloat(1).Sub(discountOff).InexactFloat64()
+		return discount
+	}
+	// 异常的值，拒绝打折，返回折扣值1，表示不打折
+	return 1
+}
+
+// GetOffDiscount 获取百分比减免的折扣率。使用场景：1.记录订单操作日志时，“优惠折扣：折扣-80%（￥50）”
+// 示例1: 80% => -20
+// 示例1: 30% off => -30
+func (req OrderDiscountReq) GetOffDiscount() float64 {
+	discount := req.GetDiscount()
+	// (1-discount) * 100
+	return decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(discount)).Mul(decimal.NewFromFloat(100)).InexactFloat64()
 }
 
 // OrderZeroRuleReq 订单抹零规则

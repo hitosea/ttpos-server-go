@@ -3889,7 +3889,7 @@ const docTemplate = `{
             }
         },
         "/cashier/instant/order/check": {
-            "post": {
+            "get": {
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"

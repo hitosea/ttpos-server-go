@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 
@@ -139,7 +138,6 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	if err != nil {
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		defer utils.Panic(err)
 		return
 	}
 

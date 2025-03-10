@@ -67,6 +67,18 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
+// GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+func (model *SaleOrder) GetOriginAmount() float64 {
+	//原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+	return decimal.NewFromFloat(model.Amount).Add(decimal.NewFromFloat(model.MemberDiscountFee)).Add(decimal.NewFromFloat(model.CustomDiscountFee)).Round(2).InexactFloat64()
+}
+
+// GetMemberDiscountAmount 获取订单的会员折扣后应收金额。 会员折扣后应收金额=原订单应收金额-会员折扣金额
+func (model *SaleOrder) GetMemberDiscountAmount() float64 {
+	//会员折扣后应收金额=现应收金额+会员折扣金额
+	return decimal.NewFromFloat(model.GetOriginAmount()).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
+}
+
 func (model *SaleOrder) GetMemberName() string {
 	if model.Member == nil {
 		return ""

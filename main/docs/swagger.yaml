@@ -7051,7 +7051,7 @@ paths:
       tags:
       - 收银端.点餐
   /cashier/instant/order/check:
-    post:
+    get:
       consumes:
       - application/json
       description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
