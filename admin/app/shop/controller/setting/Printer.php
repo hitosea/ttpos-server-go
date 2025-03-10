@@ -6,6 +6,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\shop\model\settings\Printer as PrinterModel;
 
+
 /**
  * 打印机管理
  * @Apidoc\Group("supplier")
@@ -84,8 +85,11 @@ class Printer extends Controller
     public function detail($printer_id)
     {
         $detail = PrinterModel::detail($printer_id);
-        $detail['printer_config'] = json_decode($detail['config_json'], true);
-        $printerType = $detail::getPrinterTypeList();
+        $detail['printer_type'] = [
+            'text' => $detail['printerType']['name_text'],
+            'value' => $detail['printerType']['key'],
+        ];
+        $printerType = PrinterModel::getPrinterTypeList();
         return $this->renderSuccess('', compact('detail', 'printerType'));
     }
 

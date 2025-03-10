@@ -1171,7 +1171,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
 CREATE TABLE IF NOT EXISTS `ttpos_printer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型名称',
+    `name` TEXT DEFAULT NULL COMMENT '打印机类型名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机类型key',
     `config_json` TEXT DEFAULT "" COMMENT '打印机类型json配置,描述需要填写的字段',
