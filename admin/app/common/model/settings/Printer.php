@@ -2,12 +2,9 @@
 
 namespace app\common\model\settings;
 
-use think\facade\Request;
 use app\common\model\BaseModel;
 use app\common\model\shop\BindRecord;
-use app\common\model\supplier\Printing;
 use app\common\enum\settings\SettingEnum;
-use app\common\enum\settings\PrinterTypeEnum;
 
 /**
  * 打印机模型
@@ -20,22 +17,22 @@ class Printer extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['printer_id', 'printer_name'];
+    protected $append = ['printer_id', 'printer_name', 'printer_config', 'print_times'];
 
     /**
      * 兼容字段
      */
-    public function getPrinterIdAttr()
+    public function getPrinterIdAttr($value, $data)
     {
-        return $this->uuid ?: 0;
+        return $data['uuid'] ?: 0;
     }
 
     /**
      * 兼容字段
      */
-    public function getPrinterNameAttr()
+    public function getPrinterNameAttr($value, $data)
     {
-        return $this->name ?: 0;
+        return $data['name'] ?: '';
     }
 
     /**
@@ -43,28 +40,16 @@ class Printer extends BaseModel
      */
     public static function getPrinterTypeList()
     {
-        static $printerTypeEnum = [];
-        if (empty($printerTypeEnum)) {
-            $printerTypeEnum = PrinterTypeEnum::getTypeName();
-        }
-        return $printerTypeEnum;
+        return PrinterType::getPrinterType();
     }
 
-    /**
-     * 打印机类型名称
-     */
-    public function getPrinterTypeAttr($value)
-    {
-        $printerType = $this->getPrinterTypeList();
-        return ['value' => $value, 'text' => $printerType[$value] ?? ''];
-    }
 
     /**
      * 自动转换printer_config为array格式
      */
-    public function getPrinterConfigAttr($value)
+    public function getPrinterConfigAttr($value, $data)
     {
-        return json_decode($value, true);
+        return json_decode($data['config_json'], true);
     }
 
     /**
@@ -73,6 +58,19 @@ class Printer extends BaseModel
     public function setPrinterConfigAttr($value)
     {
         return json_encode($value) ?: '';
+    }
+
+    public function getPrintTimesAttr($value, $data)
+    {
+        return $data['copies'];
+    }
+
+    /**
+     * 关联打印机类型
+     */
+    public function PrinterType()
+    {
+        return $this->belongsTo(PrinterType::class, 'printer_type_uuid', 'uuid');
     }
 
     /**
@@ -116,7 +114,7 @@ class Printer extends BaseModel
     /**
      * 获取列表
      */
-    public function getList($limit = 10, $shop_supplier_id = 0)
+    public function getList($params, $shop_supplier_id = 0)
     {
         $printer = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         $printerIds = array_column($printer['cashier_printer'] ?? [], 'printer_id');
@@ -129,12 +127,34 @@ class Printer extends BaseModel
         // }
         $printerIds = implode(',', $printerIds);
         //
-        return $this->alias('a')
+        $paginate =  self::alias('a')
             ->field("a.*, IF(find_in_set(a.uuid, '$printerIds'), 1, 0) as is_use")
+            ->with(['printerType'])
             ->order(['a.sort' => 'asc'])
-            ->paginate($limit, false, [
-                'query' => Request::instance()->request()
-            ]);
+            ->paginate($params);
+
+        $list = [];
+        foreach ($paginate->items() as $item) {
+            $list[] = [
+                'printer_id' => $item['printer_id'],
+                'printer_name' => $item['printer_name'],
+                'printer_type' => [
+                    'value' => $item['printerType']['key'],
+                    'text' => $item['printerType']['name_text'],
+                ],
+                'sort' => $item['sort'],
+                'create_time' => $item['create_time'],
+                'printer_config' => $item['printer_config'],
+            ];
+        }
+
+        return [
+            'current_page' => $paginate->currentPage(),
+            'last_page' => $paginate->lastPage(),
+            'per_page' => $paginate->listRows(),
+            'total' => $paginate->total(),
+            'data' => $list,
+        ];
     }
 
     /**
@@ -142,7 +162,7 @@ class Printer extends BaseModel
      */
     public static function detail($printer_id)
     {
-        return self::where('uuid', $printer_id)->find();
+        return self::with(['printerType'])->where('uuid', $printer_id)->find();
     }
 
     /**

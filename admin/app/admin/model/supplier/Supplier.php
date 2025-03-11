@@ -156,41 +156,8 @@ class Supplier extends SupplierModel
         $datas['update_time'] = $this->getData('update_time');
         $pdo->exec($this->getInsertSql($prefix . 'company_setting', $datas, array_keys($this->getFields())));
 
-        // payment_method Cash-现金 Balance Payment-余额
-        $paymentMethodList = [
-            [
-                'uuid' => createUuid(),
-                'name' => 'Cash',
-                'code' => 40,
-                'payment_name' => 'Cash',
-                'source' => 0,
-                'is_show_cashier' => 1,
-                'is_show_assistant' => 1,
-                'is_show_member_recharge' => 1,
-                'status' => 1,
-                'create_time' => time(),
-                'update_time' => time(),
-            ],
-            [
-                'uuid' => createUuid(),
-                'name' => 'Balance Payment',
-                'code' => 10,
-                'payment_name' => 'Balance Payment',
-                'source' => 0,
-                'is_show_cashier' => 1,
-                'is_show_assistant' => 1,
-                'is_show_member_recharge' => 0,
-                'status' => $datas['is_open_member'],
-                'create_time' => time(),
-                'update_time' => time(),
-            ]
-        ];
-        foreach ($paymentMethodList as $paymentMethodItem) {
-            $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
-                'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
-                'is_show_member_recharge', 'status', 'create_time', 'update_time',
-            ]));
-        }
+        // 初始化支付方式
+        $this->initPaymentMethod($pdo, $prefix, $datas['is_open_member']);
 
         // 同步设置
         $this->synchronousSetting($this, 'initShopBaseData');
@@ -226,5 +193,47 @@ class Supplier extends SupplierModel
         }, array_values($filteredData)));
         //
         return "INSERT INTO $name ($columns) VALUES ($values);";
+    }
+
+    /**
+     * 初始化支付方式
+     */
+    private function initPaymentMethod($pdo, $prefix, $isOpenMember)
+    {
+        // payment_method Cash-现金 Balance Payment-余额
+        $paymentMethodList = [
+            [
+                'uuid' => createUuid(),
+                'name' => 'Cash',
+                'code' => 40,
+                'payment_name' => 'Cash',
+                'source' => 0,
+                'is_show_cashier' => 1,
+                'is_show_assistant' => 1,
+                'is_show_member_recharge' => 1,
+                'status' => 1,
+                'create_time' => time(),
+                'update_time' => time(),
+            ],
+            [
+                'uuid' => createUuid(),
+                'name' => 'Balance Payment',
+                'code' => 10,
+                'payment_name' => 'Balance Payment',
+                'source' => 0,
+                'is_show_cashier' => 1,
+                'is_show_assistant' => 1,
+                'is_show_member_recharge' => 0,
+                'status' => $isOpenMember,
+                'create_time' => time(),
+                'update_time' => time(),
+            ]
+        ];
+        foreach ($paymentMethodList as $paymentMethodItem) {
+            $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
+                'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
+                'is_show_member_recharge', 'status', 'create_time', 'update_time',
+            ]));
+        }
     }
 }

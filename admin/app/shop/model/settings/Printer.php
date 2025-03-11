@@ -5,6 +5,7 @@ namespace app\shop\model\settings;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\settings\PrinterTypeEnum;
 use app\common\model\settings\Printer as PrinterModel;
+use app\common\model\settings\PrinterType;
 use app\common\model\supplier\Printing as PrintingModel;
 
 class Printer extends PrinterModel
@@ -31,10 +32,16 @@ class Printer extends PrinterModel
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
         }
+        $type = PrinterType::getPrinterTypeByKey($printerType);
+        if (!$type) {
+            $this->error = '打印机类型不存在';
+            return false;
+        }
         $data['uuid'] = createUuid();
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;
-        $data['config_json'] = json_encode($data[$printerType]);
+        $data['printer_type_uuid'] = $type['uuid'];
+        $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
         return $this->save($data);
     }
 
@@ -54,9 +61,15 @@ class Printer extends PrinterModel
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
         }
+        $type = PrinterType::getPrinterTypeByKey($printerType);
+        if (!$type) {
+            $this->error = '打印机类型不存在';
+            return false;
+        }
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;
-        $data['config_json'] = json_encode($data[$printerType]);
+        $data['printer_type_uuid'] = $type['uuid'];
+        $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
         return $this->save($data);
     }
 

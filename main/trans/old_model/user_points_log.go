@@ -51,7 +51,7 @@ func (s *UserPointsLogService) ConvertUserPointsLog() error {
 			},
 			MemberUuid: uint64(userPointsLog.UserID),
 			Scene:      int(userPointsLog.Scene),
-			Value:      int(userPointsLog.Value),
+			Value:      userPointsLog.Value,
 			Describe:   userPointsLog.Describe,
 		}
 		_, err := base.NewMemberPointLogRepo(s.targetDB).CreateMemberPointLog(memberPointLog)

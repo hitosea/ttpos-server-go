@@ -49,7 +49,7 @@ func (s *BuffetDelayService) ConvertBuffetDelay() error {
 				UpdateTime: buffetDelay.UpdateTime,
 			},
 			Name:      buffetDelay.Name,
-			DelayTime: buffetDelay.DelayTime,
+			DelayTime: int64(buffetDelay.DelayTime),
 			Price:     buffetDelay.Price,
 			Status:    buffetDelay.Status,
 		}

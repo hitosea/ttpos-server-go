@@ -2815,6 +2815,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 	s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 		BasePayload: event.BasePayload{
+			Ctx:           ctx,
 			CompanyUuid:   ctx.GetCompanyUuid(),
 			Source:        ctx.GetSource(),
 			SaleBillUuid:  req.SaleBillUuid,

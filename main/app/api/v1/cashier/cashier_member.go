@@ -328,6 +328,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
 	memberSrv := service.NewMemberSrv(dbm)
 	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
+	staffOperationLogSrv := service.NewStaffOperationLogSrv(dbm, authSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv:        memberSrv,
@@ -335,7 +336,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv), middleware.OperationLog(staffOperationLogSrv))
 	{
 		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                    // 获取会员等级列表
 		privateApi.POST("/member/add", wrapper.AddMember)                                            // 添加会员

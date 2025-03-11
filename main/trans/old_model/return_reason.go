@@ -65,7 +65,7 @@ func (s *ReturnReasonService) ConvertReturnReason() error {
 				UpdateTime: returnReason.UpdateTime,
 			},
 			Name:                  names.Zh,
-			MultiLanguageNameUuid: uint(id),
+			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewReturnFoodReasonRepo(s.targetDB).CreateReturnFoodReason(reason)
