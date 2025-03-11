@@ -58,3 +58,15 @@ const (
 	PrinterProductTypePay      = 0  // 付款打印
 	PrinterProductTypeKitchen  = 1  // 送厨打印
 )
+
+const (
+	PrinterTemplateHandoverSheet  = 1 // 交班单
+	PrinterTemplateBilling        = 2 // 结账单
+	PrinterTemplatePreBilling     = 3 // 预结账单
+	PrinterTemplateOneDishOneMenu = 4 // 一菜一单
+	PrinterTemplateBusiness       = 5 // 营业数据
+	PrinterTemplateEntireOrder    = 6 // 整单打印
+	PrinterTemplateInvoice        = 7 // 打印发票
+	PrinterTemplateRecharge       = 8 // 充值单
+	PrinterTemplateReturnDish     = 9 // 退菜单
+)

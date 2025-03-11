@@ -90,7 +90,7 @@ class Printing extends PrintingModel
             
             // 添加打印区域
             $areaList = [];
-            foreach ($data['area_id'] as $id) {
+            foreach ($data['area_id'] ?: [] as $id) {
                 $areaList[] = [
                     'product_printer_uuid' => $this->uuid,
                     'desk_region_uuid' => $id,
@@ -152,7 +152,7 @@ class Printing extends PrintingModel
             
             // 添加打印区域
             $areaList = [];
-            foreach ($data['area_id'] as $id) {
+            foreach ($data['area_id'] ?: [] as $id) {
                 $areaList[] = [
                     'product_printer_uuid' => $this->uuid,
                     'desk_region_uuid' => $id,

@@ -2818,11 +2818,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	products := make(event.Products, 0)
 	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
 		products = append(products, event.OrderProduct{
-			OrderProductId: unCookingSaleOrderProduct.Uuid,
-			ProductId:      unCookingSaleOrderProduct.ProductPackageUuid,
-			ProductName:    unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:    unCookingSaleOrderProduct.GetAttributeName(),
-			TotalNum:       unCookingSaleOrderProduct.Num,
+			OrderProductId:  unCookingSaleOrderProduct.Uuid,
+			ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
+			ProductName:     unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
+			ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
+			TotalNum:        unCookingSaleOrderProduct.Num,
+			IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
+			Remark:          unCookingSaleOrderProduct.Remark,
 		})
 	}
 	s.bus.PublishSentCookingEvent(event.SentCookingPayload{

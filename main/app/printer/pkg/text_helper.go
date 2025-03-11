@@ -1,0 +1,201 @@
+// Package pkg 提供打印机相关功能
+package pkg
+
+import (
+	"math"
+	"regexp"
+	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/encoding/korean"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
+)
+
+// PrintTextHelper 提供文本处理和格式化功能用于打印
+type PrintTextHelper struct{}
+
+// GetTextWidth 获取文本宽度
+func (h *PrintTextHelper) GetTextWidth(text string) int {
+	// 泰语检测
+	thaiRegex := regexp.MustCompile(`[\p{Thai}฿]`)
+	if thaiRegex.MatchString(text) {
+		thaiMatches := thaiRegex.FindAllString(text, -1)
+		ttf := strings.Join(thaiMatches, "")
+		w := utf8.RuneCountInString(ttf)
+
+		// 检查特殊字符
+		for _, r := range ttf {
+			if string(r) == "ำ" {
+				w++
+			}
+		}
+
+		// 转换为GBK计算长度
+		encoder := simplifiedchinese.GBK.NewEncoder()
+		gbkStr, _, _ := transform.String(encoder, text)
+		w += len(gbkStr)
+		return w
+	}
+
+	// 韩语检测
+	koreanRegex := regexp.MustCompile(`[\p{Hangul}]`)
+	if koreanRegex.MatchString(text) {
+		encoder := korean.EUCKR.NewEncoder()
+		eucKrStr, _, _ := transform.String(encoder, text)
+		return len(eucKrStr)
+	}
+
+	// 默认情况，转换为GBK计算长度
+	encoder := simplifiedchinese.GBK.NewEncoder()
+	gbkStr, _, _ := transform.String(encoder, text)
+	return len(gbkStr)
+}
+
+// InterceptText 截取文本
+func (h *PrintTextHelper) InterceptText(text string, num int, intervalNum int) (string, string) {
+	if num <= 0 || text == "" {
+		return text, ""
+	}
+
+	afterText := ""
+	nums := num - intervalNum
+
+	// 检测中文/日文
+	cjkRegex := regexp.MustCompile(`[\p{Han}\p{Hiragana}\p{Katakana}]`)
+	if cjkRegex.MatchString(text) {
+		tmpText := SubString(text, 0, int(math.Ceil(float64(nums)/2)))
+		nonCJK := regexp.MustCompile(`[^\p{Han}\p{Hiragana}\p{Katakana}]`)
+		matches := nonCJK.FindAllString(tmpText, -1)
+		tmpTextCount := len(matches)
+
+		if tmpTextCount > 1 {
+			pos := int(math.Ceil(float64(nums)/2 + float64(tmpTextCount)/2))
+			afterText = SubString(text, pos, 1000)
+			text = SubString(text, 0, pos)
+		} else {
+			pos := int(math.Ceil(float64(nums) / 2))
+			afterText = SubString(text, pos, 1000)
+			text = tmpText
+		}
+	} else if thaiRegex := regexp.MustCompile(`[\p{Thai}]`); thaiRegex.MatchString(text) {
+		// 泰语
+		pos := int(math.Ceil(float64(nums) * 1.2))
+		afterText = SubString(text, pos, 1000)
+		text = SubString(text, 0, pos)
+	} else if koreanRegex := regexp.MustCompile(`[\p{Hangul}]`); koreanRegex.MatchString(text) {
+		// 韩语
+		pos := int(math.Ceil(float64(nums) / 1.7))
+		afterText = SubString(text, pos, 1000)
+		text = SubString(text, 0, pos)
+	} else {
+		// 其他
+		afterText = SubString(text, nums, 1000)
+		text = SubString(text, 0, nums)
+	}
+
+	// 处理换行符
+	if strings.Contains(text, "\n") {
+		texts := strings.SplitN(text, "\n", 2)
+		text = texts[0]
+		if len(texts) > 1 {
+			afterText = texts[1] + afterText
+		}
+	}
+
+	return text, afterText
+}
+
+// FilterCharacter 过滤特殊字符
+func (h *PrintTextHelper) FilterCharacter(text string) string {
+	text = strings.ReplaceAll(text, "​​", "")
+	text = strings.ReplaceAll(text, "　", " ")
+	text = strings.ReplaceAll(text, "ー", "-")
+	text = strings.ReplaceAll(text, "グ", "ク")
+	text = strings.ReplaceAll(text, "・", "·")
+	return text
+}
+
+// PrintText 获取格式化的打印文本
+func (h *PrintTextHelper) PrintText(
+	leftText, centerText, rightText string,
+	total int, leftNum, centerNum, rightNum, intervalNum int,
+) string {
+	if leftText == "" {
+		leftText = ""
+	}
+	if centerText == "" {
+		centerText = ""
+	}
+	if rightText == "" {
+		rightText = ""
+	}
+
+	// 过滤和修剪文本
+	leftText = h.FilterCharacter(strings.TrimSpace(leftText))
+	centerText = h.FilterCharacter(strings.TrimSpace(centerText))
+	rightText = h.FilterCharacter(strings.TrimSpace(rightText))
+
+	// 截取文本
+	var afterLeftText, afterCenterText, afterRightText string
+	leftText, afterLeftText = h.InterceptText(leftText, leftNum, intervalNum)
+	centerText, afterCenterText = h.InterceptText(centerText, centerNum, intervalNum)
+	rightText, afterRightText = h.InterceptText(rightText, rightNum, intervalNum)
+
+	// 计算宽度和填充
+	leftWidth := h.GetTextWidth(leftText)
+
+	leftPadding := ""
+	if leftNum-leftWidth > 0 {
+		leftPadding = strings.Repeat(" ", leftNum-leftWidth)
+	}
+
+	leftPaddingWidth := h.GetTextWidth(leftPadding)
+	centerWidth := 0
+	if centerText != "!" {
+		centerWidth = h.GetTextWidth(centerText)
+	}
+
+	rightWidth := h.GetTextWidth(rightText)
+	centerPaddingWidth := total - leftWidth - leftPaddingWidth - centerWidth - rightWidth
+
+	centerPadding := ""
+	if centerPaddingWidth > 0 {
+		centerPadding = strings.Repeat(" ", centerPaddingWidth)
+	}
+
+	// 生成内容
+	content := leftText + leftPadding + centerText + centerPadding + rightText
+
+	// 处理多行内容
+	if afterLeftText != "" || afterCenterText != "" || afterRightText != "" {
+		content += "\n" + h.PrintText(afterLeftText, afterCenterText, afterRightText, total, leftNum, centerNum, rightNum, intervalNum)
+	}
+
+	return content
+}
+
+// SubString 安全地截取字符串的指定范围（按Unicode字符计算）
+func SubString(str string, start, length int) string {
+	if length <= 0 {
+		return ""
+	}
+
+	runes := []rune(str)
+	strLen := len(runes)
+
+	if start >= strLen {
+		return ""
+	}
+
+	if start+length > strLen {
+		length = strLen - start
+	}
+
+	return string(runes[start : start+length])
+}
+
+// NewPrintTextHelper 创建PrintTextHelper的新实例
+func NewPrintTextHelper() *PrintTextHelper {
+	return &PrintTextHelper{}
+}

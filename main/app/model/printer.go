@@ -1,5 +1,10 @@
 package model
 
+import (
+	"encoding/json"
+	"strings"
+)
+
 // Printer 打印机信息表 ttpos_printer
 type Printer struct {
 	BaseModel
@@ -10,6 +15,36 @@ type Printer struct {
 	Sort            uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序;NOT NULL" json:"sort"`
 
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
+}
+
+type PrinterConfigJson struct {
+	IP      string `json:"IP"`
+	PORT    string `json:"PORT"`
+	APP_ID  string `json:"APP_ID"`
+	APP_KEY string `json:"APP_KEY"`
+	SN      string `json:"SN"`
+}
+
+// GetConfigJson 获取打印机配置
+func (model *Printer) GetConfigJson() PrinterConfigJson {
+	// 如果为空则返回空 map
+	if model.ConfigJson == "" {
+		return PrinterConfigJson{}
+	}
+	// 处理JSON字符串
+	// 1. 去除所有反斜杠
+	cleanedJson := strings.ReplaceAll(model.ConfigJson, "\\", "")
+	// 2. 去除外层引号 - 这是关键步骤
+	cleanedJson = strings.TrimPrefix(cleanedJson, "\"")
+	cleanedJson = strings.TrimSuffix(cleanedJson, "\"")
+	// 解析打印机配置JSON
+	var cfg PrinterConfigJson
+	err := json.Unmarshal([]byte(cleanedJson), &cfg)
+	if err != nil {
+		return PrinterConfigJson{}
+	}
+	// 返回配置
+	return cfg
 }
 
 // PrinterType 打印机类型信息表 ttpos_printer_type
