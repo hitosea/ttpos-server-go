@@ -161,6 +161,29 @@ type InstantOrderPaymentInfoResp struct {
 	Amounts        PaymentMethodAmountList `json:"amounts"`               // 支付方式列表及订单金额信息
 }
 
+// GetZeroAmount 获取结账抹零金额
+func (obj InstantOrderPaymentInfoResp) GetZeroAmount() float64 {
+	// 遍历支付方式列表，找到结账抹零金额
+	// 如果支付方式为有手续费时，结账抹零金额为0
+	// 如果支付方式为无手续费时，结账抹零金额都相同，返回第一个的结账抹零金额
+	for _, amount := range obj.Amounts.List {
+		if amount.ZeroAmount > 0 {
+			return amount.ZeroAmount
+		}
+	}
+	return 0
+}
+
+// GetCommissionAmount 获取已经支付的手续费金额。 已经支付的手续费金额= 所有付款单的手续费之和
+func (obj InstantOrderPaymentInfoResp) GetCommissionAmount() float64 {
+	// Amounts.List列表中的每一个元素的CommissionFee都相同，所以直接返回第一个元素的CommissionFee
+	if len(obj.Amounts.List) != 0 {
+		return obj.Amounts.List[0].CommissionFee
+	}
+	// 如果支付方式列表为空，则返回0
+	return 0
+}
+
 type PaymentMethodAmountList struct {
 	List []PaymentMethodAmount `json:"list"`
 }

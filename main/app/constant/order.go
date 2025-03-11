@@ -62,10 +62,11 @@ const (
 	DiscountZeroRuleRound   = 3 // 四舍五入保留一位小数
 	DiscountZeroRuleInteger = 4 // 四舍五入保留整数
 
-	SaleBillSettingCheckoutZeroingMethodNone    = 0 // 实款实收
-	SaleBillSettingCheckoutZeroingMethodPercent = 1 // 抹分
-	SaleBillSettingCheckoutZeroingMethodFixed   = 2 // 抹角
-	SaleBillSettingCheckoutZeroingMethodYuan    = 3 // 抹元
+	SaleBillSettingCheckoutZeroingMethodNone        = 0 // 实款实收
+	SaleBillSettingCheckoutZeroingMethodPercent     = 1 // 抹分
+	SaleBillSettingCheckoutZeroingMethodFixed       = 2 // 抹角
+	SaleBillSettingCheckoutZeroingMethodYuan        = 5 // 抹元。 为了整体无分歧，抹元使用5. 让在系统中各个抹零规格无歧义，0-5每个数字都代表不同含义
+	SaleBillSettingCheckoutZeroingMethodYuanAbandon = 3 // 抹元。废弃，将在下个版本中删除
 
 	SaleBillSettingIsStatGiftNone = 0 // 不计入总销售额、优惠折扣
 	SaleBillSettingIsStatGiftYes  = 1 // 计入总销售额、优惠折扣
@@ -120,6 +121,12 @@ const (
 	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
 	OrderClock               = "CLOCK"               // 加钟
+)
+
+// 结账抹零操作类型
+const (
+	OrderCheckoutDiscountAdd    = "add"    // 设置结账抹零
+	OrderCheckoutDiscountCancel = "cancel" // 撤销结账抹零
 )
 
 const (

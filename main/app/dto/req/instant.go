@@ -1,6 +1,7 @@
 package req
 
 import (
+	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -105,13 +106,17 @@ func (r *InstantOrderPaymentZeroRuleReq) Validate() error {
 	if r.SaleBillUuid == 0 || r.SaleOrderUuid == 0 {
 		return errors.New("SaleBillUuid或SaleOrderUuid不能为0")
 	}
+	// 兼容处理，如果ZeroRule为3，则设置为5
+	if r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodYuanAbandon {
+		r.ZeroRule = constant.SaleBillSettingCheckoutZeroingMethodYuan
+	}
 	if r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodNone ||
 		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodPercent ||
 		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodFixed ||
 		r.ZeroRule == constant.SaleBillSettingCheckoutZeroingMethodYuan {
 		return nil
 	}
-	return errors.New("结账抹零规则错误")
+	return errors.WithMessage(errors.New("结账抹零规则错误"), fmt.Sprintf("ZeroRule: %d", r.ZeroRule))
 }
 
 type InstantOrderSaleOrderCreateReq struct {

@@ -207,6 +207,22 @@ func (model *SaleOrder) SetZeroRuleCancel() bool {
 	return isChange
 }
 
+// SetCheckoutZeroRuleCancel 取消结账抹零
+func (model *SaleOrder) SetCheckoutZeroRuleCancel() {
+	// 将订单的结账抹零规则设置为实款实收
+	if model.ZeroCheckoutRule != constant.SaleBillSettingCheckoutZeroingMethodNone {
+		model.ZeroCheckoutRule = constant.SaleBillSettingCheckoutZeroingMethodNone
+		model.ZeroCheckoutFee = 0
+		model.SetUpdate()
+	}
+}
+
+// HasCheckoutZeroRule 判断订单是否存在结账抹零
+func (model *SaleOrder) HasCheckoutZeroRule() bool {
+	// 如果订单的结账抹零规则不为实款实收，则表示订单存在结账抹零
+	return model.ZeroCheckoutRule != constant.SaleBillSettingCheckoutZeroingMethodNone
+}
+
 // 取消整单折扣
 func (model *SaleOrder) SetAllDiscountCancel() bool {
 	isChange := false

@@ -1587,8 +1587,6 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 		return nil, errors.New("销售订单不存在")
 	}
 
-	oldAmount := saleOrder.GetAmount()
-
 	// 设置整单改价金额
 	saleOrder.SetZeroRule(req.ZeroRule)
 
@@ -1599,7 +1597,6 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 
 	// 发布"订单抹零"事件
 	go func() {
-		newAmount := saleOrder.GetAmount()
 		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountZeroSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				CompanyUuid:   ctx.GetCompanyUuid(),
@@ -1608,10 +1605,9 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			DiscountType: constant.DiscountOperationLogTypeZeroSaleOrder,
-			RoundingType: req.ZeroRule,
-			// oldAmount - newAmount 旧应付金额减去抹零后的应付金额
-			SpecialDiscount: decimal.NewFromFloat(oldAmount).Sub(decimal.NewFromFloat(newAmount)).InexactFloat64(),
+			DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
+			RoundingType:    req.ZeroRule,
+			SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
 		})
 	}()
 
@@ -3624,6 +3620,20 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	// 判断销售订单是否可操作
+	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.WithMessage(errors.New("无法查询到销售订单"))
+	}
+
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -3633,6 +3643,12 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
 	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	commissionAmount := infoResp.GetCommissionAmount()
 
 	percent := paymentMethod.GetFeePercent()
 	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
@@ -3658,22 +3674,56 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 	for _, oldPaymentOrder := range paymentOrderList {
 		if oldPaymentOrder.PaymentMethodUuid == req.PaymentMethodUuid {
-			paymentOrder.SetBaseModel(oldPaymentOrder.BaseModel)
+			paymentOrder.SetBaseModel(oldPaymentOrder.BaseModel) // 将旧付款单的ID、uuid赋值给新付款单，让旧的付款单记录被新的付款单更新
 			break
 		}
 	}
 
-	// 创建或更新支付单
-	if err := repository.NewPaymentOrderRepo(db).UpdateOrCreatePaymentOrderRecord(*paymentOrder); err != nil {
+	// 如果支付方式是含手续费的支付方式且该订单之前未产生过含手续且该订单设置了结账抹零，则自动取消结账抹零
+	needCancelCheckoutZeroRule := paymentMethod.HasCommission() && commissionAmount == 0 && saleOrder.HasCheckoutZeroRule()
+	if needCancelCheckoutZeroRule {
+		saleOrder.SetCheckoutZeroRuleCancel() // 将订单的结账抹零规格设置为实款实收，并清空结账抹零金额
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建或更新支付单
+		if err := repository.NewPaymentOrderRepo(db).UpdateOrCreatePaymentOrderRecord(*paymentOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新销售订单
+		if saleOrder.GetUpdate() {
+			// 如果销售订单有更新，则更新销售订单
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		return nil
+	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	// 发布"自动取消结账抹零"事件
+	// 如果支付方式是含手续费的支付方式且该订单之前未产生过含手续且该订单设置了结账抹零，则自动取消结账抹零
+	if needCancelCheckoutZeroRule {
+		go func() {
+			s.bus.PublishCheckoutZeroCancelSaleOrderEvent(event.CheckoutZeroCancelSaleOrderPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+			})
+		}()
+	}
+
+	newInfoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
-	return infoResp, nil
+	return newInfoResp, nil
 }
 
 // 检查是否可以操作
@@ -4003,12 +4053,16 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
-		return nil, errSaleBill
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	// 验证订单是否可操作
+	if err := saleBill.ValidateOrderStatus(constant.OrderSettle); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("无法查询到销售订单")
+		return nil, errors.WithMessage(errors.New("无法查询到销售订单"))
 	}
 
 	// 设置结账抹零规则
@@ -4027,6 +4081,25 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	zeroAmount := infoResp.GetZeroAmount()
+
+	// 发布“结账抹零”事件
+	go func() {
+		s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			Operation:       constant.OrderCheckoutDiscountAdd,
+			RoundingType:    req.ZeroRule,
+			SpecialDiscount: zeroAmount,
+		})
+	}()
+
 	return infoResp, nil
 }
 

@@ -118,6 +118,7 @@ func (r *paymentOrderRepo) UpdatePaymentOrderRecord(paymentOrder model.PaymentOr
 }
 
 func (r *paymentOrderRepo) Create(order model.PaymentOrder) (model.PaymentOrder, error) {
+	order.SetNil()
 	err := r.db.Model(&model.PaymentOrder{}).Create(&order).Error
 	return order, errors.WithMessage(err)
 }

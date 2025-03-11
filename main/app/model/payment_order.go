@@ -37,6 +37,11 @@ func (model *PaymentMethod) GetFeePercent() float64 {
 	return model.FeePercent
 }
 
+// HasCommission 判断是否含手续费
+func (model *PaymentMethod) HasCommission() bool {
+	return model.FeePercent > 0
+}
+
 // 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
 	return slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
