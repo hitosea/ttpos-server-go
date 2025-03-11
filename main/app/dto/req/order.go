@@ -45,6 +45,17 @@ type OrderCancelReq struct {
 	Password     string `form:"password"`       // 高级密码 后台开启的时候才传
 }
 
+// OrderReturnReq 订单退款
+type OrderReturnReq struct {
+	SaleBillUuid uint64               `json:"sale_bill_uuid"` // 销售账单UUID
+	Products     []OrderReturnProduct `json:"products"`       // 退款商品UUID列表. 如果为空，则退款所有商品
+}
+
+type OrderReturnProduct struct {
+	ProductUuid uint64 `json:"product_uuid"` // 商品UUID
+	Quantity    int    `json:"quantity"`     // 退款数量
+}
+
 // OrderDeleteReq 订单删除
 type OrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
