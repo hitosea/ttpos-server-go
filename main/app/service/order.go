@@ -42,6 +42,7 @@ type IOrderSrv interface {
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                       // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                       // 删除订单
 	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                       // 退款订单
+	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                               // 获取退款信息
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
@@ -1060,6 +1061,11 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 // ReturnOrder 退款订单
 func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) error {
 	return nil
+}
+
+// GetReturnOrderInfo 获取退款信息
+func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) {
+	return nil, nil
 }
 
 // HideOrder 隐藏订单（挂单）

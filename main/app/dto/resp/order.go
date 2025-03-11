@@ -157,3 +157,27 @@ type OrderInfosResp struct {
 	} `json:"operation_log"` // 操作日志
 	Extra BillListsExtra `json:"extra"` // 通过当前数据控制按钮是否显示
 }
+
+type OrderReturnInfoResp struct {
+	CanReturnAmount float64                    `json:"can_return_amount"` // 可退款金额
+	PaymentRecords  []OrderReturnPaymentRecord `json:"payment_records"`   // 支付记录
+	Products        []OrderReturnProduct       `json:"products"`          // 商品列表
+}
+
+type OrderReturnPaymentRecord struct {
+	PaymentOrderUuid uint64  `json:"payment_order_uuid"` // 支付单UUID
+	PaymentTypeName  string  `json:"payment_type_name"`  // 支付类型名称
+	CurrencyUnit     string  `json:"currency_unit"`      // 货币单位
+	PaymentAmount    float64 `json:"payment_amount"`     // 支付金额
+	CanReturnAmount  float64 `json:"can_return_amount"`  // 可退款金额。剩余可退xx
+}
+
+type OrderReturnProduct struct {
+	SaleOrderProductUuid uint64             `json:"sale_order_product_uuid"` // 销售订单商品ID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 产品名称
+	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 属性名称
+	Num                  uint               `json:"num"`                     // 数量。可退货数量=订单商品数量-已退货数量
+	Price                float64            `json:"price"`                   // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。
+	CanReturnAmount      float64            `json:"can_return_amount"`       // 可退款金额. 可退款金额=订单商品数量*最终单价
+	CurrencyUnit         string             `json:"currency_unit"`           // 货币单位
+}

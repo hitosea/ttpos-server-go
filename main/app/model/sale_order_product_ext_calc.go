@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
@@ -81,7 +80,6 @@ func (model *SaleOrderProduct) calcPrice() float64 {
 	if discountRate == constant.NoDiscount {
 		return model.SalePrice
 	}
-	fmt.Println(fmt.Sprintf("discountRate %f", discountRate))
 	// 销售价*折扣率
 	price := decimal.NewFromFloat(model.SalePrice).Mul(
 		decimal.NewFromFloat(discountRate))

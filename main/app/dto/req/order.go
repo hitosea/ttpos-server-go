@@ -45,6 +45,11 @@ type OrderCancelReq struct {
 	Password     string `form:"password"`       // 高级密码 后台开启的时候才传
 }
 
+// OrderReturnInfoReq 退款订单信息
+type OrderReturnInfoReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
+}
+
 // OrderReturnReq 订单退款
 type OrderReturnReq struct {
 	SaleBillUuid uint64               `json:"sale_bill_uuid"` // 销售账单UUID

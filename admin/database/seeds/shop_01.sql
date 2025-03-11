@@ -1628,6 +1628,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_amount` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退货金额唯一标识符',
     `return_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联退货单ID',
     `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联支付方式ID',
+    `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联支付单ID,用于判断支付单的钱还有多少未退',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
