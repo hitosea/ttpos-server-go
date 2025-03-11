@@ -66,7 +66,7 @@ class CheckService
                     $unique = (new \app\common\model\store\TableType)->checkNameExist($name, $shop_supplier_id, $id);
                     break;
                 case 'printer':
-                    $unique = (new \app\common\model\settings\Printer)->checkNameExist($name, $shop_supplier_id, $id);
+                    $unique = (new \app\common\model\settings\Printer)->checkNameExist($name, $id);
                     break;
                 case 'supplier_printing':
                     $unique = (new \app\common\model\supplier\Printing)->checkNameExist($name, $shop_supplier_id, $id);

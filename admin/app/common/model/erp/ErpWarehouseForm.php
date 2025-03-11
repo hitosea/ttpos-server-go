@@ -42,8 +42,8 @@ class ErpWarehouseForm extends BaseModel
 
     const OLD_TYPE_MAP = [
         0 => self::TYPE_PURCHASE_IN,
-        1 => self::TYPE_ADJUST_IN,
-        2 => self::TYPE_ADJUST_IN_ADD,
+        1 => self::TYPE_ADJUST_IN_ADD,
+        2 => self::TYPE_ADJUST_IN,
     ];
 
     /**

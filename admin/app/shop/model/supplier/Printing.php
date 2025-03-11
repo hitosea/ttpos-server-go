@@ -12,17 +12,40 @@ class Printing extends PrintingModel
     /**
      * 获取列表数据
      */
-    public function getLists($params, $user)
+    public function getLists($params)
     {
         $model = $this;
         // 查询列表数据
-        return $model->order(['create_time' => 'desc'])->paginate($params);
+        $paginate = $model->with([
+            'printingItem' => [ 'printer' ],
+        ])->order(['create_time' => 'desc'])->paginate($params);
+
+        $list = [];
+        foreach ($paginate->items() as $item) {
+            $list[] = [
+                'id' => $item['id'],
+                'name' => $item['name'],
+                'printer_name_text' => self::getPrinterNameText($item['printingItem']),
+                'print_type' => self::PRINT_MODE_REVERSE_MAP[$item['print_mode']],
+                'print_method' => self::PRINT_METHOD_REVERSE_MAP[$item['print_method']],
+                'is_open' => $item['status'],
+                'create_time' => $item['create_time'],
+            ];
+        }
+
+        return [
+            'current_page' => $paginate->currentPage(),
+            'last_page' => $paginate->lastPage(),
+            'per_page' => $paginate->listRows(),
+            'total' => $paginate->total(),
+            'data' => $list,
+        ];
     }
 
     /**
      * 添加
      */
-    public function add($data, $user)
+    public function add($data)
     {
         $detail = $this->where('name', '=', $data['name'])->find();
         if ($detail) {
@@ -32,7 +55,50 @@ class Printing extends PrintingModel
         // 开启事务
         $this->startTrans();
         try {
-            $this->save($data);
+            // 添加商品打印(档口)
+            $this->save([
+                'name' => $data['name'], // 名称
+                'status' => intval($data['is_open']), // 是否开启: 0开启 1关闭
+                'print_mode' => self::PRINT_MODE_MAP[intval($data['print_type'])], // 打印模式
+                'print_method' => self::PRINT_METHOD_MAP[intval($data['print_method'])], // 打印方式
+                'print_product_select' => self::PRINT_PRODUCT_SELECT_MAP[intval($data['product_method'])], // 打印商品选择
+                'print_mode_scene' => self::PRINT_MODE_SCENE_MAP[intval($data['print_select'])], // 打印场景
+            ]);
+            // 添加商品打印详情
+            $itemList = [];
+            foreach ($data['printer_id'] as $id) {
+                $itemList[] = [
+                    'product_printer_uuid' => intval($this->uuid),
+                    'printer_uuid' => intval($id),
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
+            }
+            (new PrintingItem())->saveAll($itemList);
+
+            // 添加打印的商品
+            $productList = [];
+            foreach ($data['product_ids'] as $id) {
+                $productList[] = [
+                    'product_printer_uuid' => $this->uuid,
+                    'product_package_uuid' => $id,
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
+            }
+            (new PrintingProduct())->saveAll($productList);
+            
+            // 添加打印区域
+            $areaList = [];
+            foreach ($data['area_id'] as $id) {
+                $areaList[] = [
+                    'product_printer_uuid' => $this->uuid,
+                    'desk_region_uuid' => $id,
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
+            }
+            (new PrintingRegion())->saveAll($areaList);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -55,13 +121,55 @@ class Printing extends PrintingModel
         // 开启事务
         $this->startTrans();
         try {
-            if (!isset($data['category_id'])) {
-                $data['category_id'] = '';
+            // 删除
+            $this['printingItem']->delete();
+            $this['printingProductItem']->delete();
+            $this['printingRegion']->delete();
+
+            // 添加商品打印详情
+            $itemList = [];
+            foreach ($data['printer_id'] as $id) {
+                $itemList[] = [
+                    'product_printer_uuid' => intval($this->uuid),
+                    'printer_uuid' => intval($id),
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
             }
-            if (!isset($data['label_id'])) {
-                $data['label_id'] = '';
+            (new PrintingItem())->saveAll($itemList);
+
+            // 添加打印的商品
+            $productList = [];
+            foreach ($data['product_ids'] as $id) {
+                $productList[] = [
+                    'product_printer_uuid' => $this->uuid,
+                    'product_package_uuid' => $id,
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
             }
-            $this->save($data);
+            (new PrintingProduct())->saveAll($productList);
+            
+            // 添加打印区域
+            $areaList = [];
+            foreach ($data['area_id'] as $id) {
+                $areaList[] = [
+                    'product_printer_uuid' => $this->uuid,
+                    'desk_region_uuid' => $id,
+                    'create_time' => time(),
+                    'update_time' => time(),
+                ];
+            }
+            (new PrintingRegion())->saveAll($areaList);
+
+            $this->save([
+                'name' => $data['name'], // 名称
+                'status' => intval($data['is_open']), // 是否开启: 0开启 1关闭
+                'print_mode' => self::PRINT_MODE_MAP[intval($data['print_type'])], // 打印模式
+                'print_method' => self::PRINT_METHOD_MAP[intval($data['print_method'])], // 打印方式
+                'print_product_select' => self::PRINT_PRODUCT_SELECT_MAP[intval($data['product_method'])], // 打印商品选择
+                'print_mode_scene' => self::PRINT_MODE_SCENE_MAP[intval($data['print_select'])], // 打印场景
+            ]);
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -72,10 +180,32 @@ class Printing extends PrintingModel
     }
 
     /**
+     * 设置状态
+     */
+    public function setStatus($status)
+    {
+        return $this->save(['status' => $status ? 1 : 0]);
+    }
+
+    /**
      * 软删除
      */
     public function setDelete()
     {
-        return $this->delete();
+        // 开启事务
+        $this->startTrans();
+        try {
+            $this['printingItem']->delete();
+            $this['printingProductItem']->delete();
+            $this['printingRegion']->delete();
+            $this->delete();
+
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
     }
 }

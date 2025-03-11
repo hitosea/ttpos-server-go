@@ -41,6 +41,7 @@ type IOrderSrv interface {
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                // 获取订单详情
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                       // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                       // 删除订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                       // 退款订单
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
@@ -1053,6 +1054,11 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 
 	// 发布事件，通知厨房取消制作
 	event.NewSystemBus().PublishCancelDoingProductEvent(event.CancelDoingProductPayload{SaleOrderProductUuids: doingProductList})
+	return nil
+}
+
+// ReturnOrder 退款订单
+func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) error {
 	return nil
 }
 
@@ -3897,6 +3903,40 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 发布"结账"事件
+	saleOrderAmount := saleOrder.GetAmount()
+	saleOrderPaymentAmount := saleOrder.PaymentAmount
+	saleOrderChangeAmount := saleOrder.ChangeAmount
+	go func() {
+		payTypes := make([]event.PayType, 0)
+		paymentAmount := decimal.NewFromFloat(0)
+		for _, paymentOrder := range infoResp.PaymentOrders.List {
+			payTypes = append(payTypes, event.PayType{
+				Name:           paymentOrder.PaymentMethodName,
+				Value:          paymentOrder.PaymentMethodCode,
+				DisabledCancel: utils.BoolToUint(paymentOrder.DisabledCancel),
+				Price:          paymentOrder.Amount,
+				FeeMoney:       paymentOrder.PaymentCommissionFee,
+			})
+			paymentAmount = paymentAmount.Add(decimal.NewFromFloat(paymentOrder.Amount))
+		}
+		s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderPrice:  saleOrderAmount,
+			PayPrice:    saleOrderPaymentAmount,
+			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）
+			ChangeDue:   saleOrderChangeAmount,
+			PayType:     payTypes,
+		})
+	}()
+
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{
@@ -3909,9 +3949,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
-			OrderAmount:  saleOrder.GetAmount(),
-			PayAmount:    saleOrder.PaymentAmount,
-			ChangeAmount: saleOrder.ChangeAmount,
+			OrderAmount:  saleOrderAmount,
+			PayAmount:    saleOrderPaymentAmount,
+			ChangeAmount: saleOrderChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
@@ -3928,21 +3968,17 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
-		return nil, errSaleBill
+		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 销售账单已经结束
-	if saleBill.IsEndStatus() {
-		return nil, errors.WithMessage(errors.New("销售账单结束"))
+	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	// 获取销售订单信息
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("无法查询到销售订单")
-	}
-	// 订单是不是已经结束
-	if err := saleOrder.ValidateOrderStatus(); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(errors.New("无法查询到销售订单"))
 	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
@@ -4039,6 +4075,26 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			},
 		},
 	}
+
+	// 发布"免单"事件
+	go func() {
+		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderPrice:    saleOrder.GetAmount(),
+			PayPrice:      0, // 免单时，支付金额为0
+			ActualPrice:   0, // 免单时，实际支付金额为0
+			ChangeDue:     0, // 免单时，找零金额为0
+			IsFree:        utils.BoolToUint(true),
+			DiscountMoney: saleOrder.GetAmount(),
+		})
+	}()
 
 	return orderFinishResp, nil
 }

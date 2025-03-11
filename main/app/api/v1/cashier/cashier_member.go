@@ -1,7 +1,6 @@
 package cashier
 
 import (
-	"go.uber.org/zap"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -261,34 +260,6 @@ func (h *MemberHandler) PrintRechargeOrder(c *gin.Context) {
 	helper.Success(c, order)
 }
 
-// GetMemberDiscount 获取会员优惠
-// @Summary 获取会员优惠
-// @Description 获取会员优惠
-// @Tags 收银端.会员
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param sale_order_uuid query integer true "销售订单uuid"
-// @param sale_bill_uuid query integer true "销售账单uuid"
-// @param member_uuid query integer true "会员Uuid"
-// @Success 200 {object} dto.Response{data=resp.MemberDiscountResp}
-// @Router /cashier/member/order_discount [get]
-func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
-	var discountReq req.GetMemberDiscountReq
-	if err := c.ShouldBindQuery(&discountReq); err != nil {
-		helper.HandleValidationError(c, err, discountReq, nil)
-		return
-	}
-	ctx := helper.GetContext(c)
-	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
-	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, order)
-}
-
 // CheckPassword 使用会员优惠验证密码
 // @Summary 使用会员优惠验证密码
 // @Description 使用会员优惠验证密码
@@ -342,7 +313,6 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 		privateApi.POST("/member/add", wrapper.AddMember)                                            // 添加会员
 		privateApi.GET("/member/search", wrapper.SearchMember)                                       // 模糊搜索会员
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)                            // 充值会员信息
-		privateApi.GET("/member/order_discount", wrapper.GetMemberDiscount)                          // 获取会员优惠
 		privateApi.GET("/member/check_password", wrapper.CheckPassword)                              // 使用会员优惠验证密码
 		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)        // 获取进行中的充值订单
 		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单

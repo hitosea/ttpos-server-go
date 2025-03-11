@@ -10,12 +10,12 @@ import (
 const EventOpenDesk EventName = "Event_Open_Desk"
 
 type BasePayload struct {
-	Ctx           context.Context
-	CompanyUuid   uint64 `json:"-"`
-	Source        string `json:"-"`
-	SaleBillUuid  uint64 `json:"-"`
-	SaleOrderUuid uint64 `json:"-"`
-	OperatorUuid  int64  `json:"-"` // -1 是系统平台； -2 是用户； 正数 是员工
+	Ctx           context.Context `json:"-"`
+	CompanyUuid   uint64          `json:"-"`
+	Source        string          `json:"-"`
+	SaleBillUuid  uint64          `json:"-"`
+	SaleOrderUuid uint64          `json:"-"`
+	OperatorUuid  int64           `json:"-"` // -1 是系统平台； -2 是用户； 正数 是员工
 }
 
 func (base BasePayload) GetOperatorUuid() uint64 {

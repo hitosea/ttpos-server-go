@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -21,12 +22,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	saleBillUuid uint64,
 	products printer_model.Products,
 ) bool {
-	// 设置时区
-	// tz := utils.SetTimezone(p.storeSetting.TimeZone)
-	// fmt.Println(tz.FormatUnixTimeDefault(1739283862))
-	// fmt.Println("printerSetting")
-	// fmt.Println(utils.ToJsonString(p.printerSetting))
-
 	// 获取商品打印机列表
 	productPrinters, err := p.getProductPrinterList()
 	if err != nil {
@@ -98,6 +93,9 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				for _, product := range newProducts {
 					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
 					if data != "" {
+						fmt.Println("data", data)
+						fmt.Println("data", printerItem.Printer.GetConfigJson())
+						p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
 						// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
 						// 	"data" => $data,
 						// 	"data_type" => PrinterLog::DATA_TYPE[3]['value'],
@@ -107,17 +105,63 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				continue
 			}
 			// 整单打印
-			// $data = $this->getPrintProductContent($printerConfig, $printerItem, $order);
-			// if ($data) {
-			// 	PrinterLog::addPrinterLog($printer, array_merge($printerData, [
-			// 		"data" => $data,
-			// 		"data_type" => PrinterLog::DATA_TYPE[4]['value'],
-			// 	]));
-			// }
+			data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts)
+			if data != "" {
+				p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
+				// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
+				// 	"data" => $data,
+				// 	"data_type" => PrinterLog::DATA_TYPE[4]['value'],
+				// ]));
+			}
 		}
 	}
 	// 打印
 	return true
+}
+
+// 构建订单菜品打印的内容
+func (p *PrinterRepoImpl) getPrintProductContent(
+	productPrinter model.ProductPrinter,
+	printerItem *model.ProductPrinterItem,
+	saleBill model.SaleBill,
+	products printer_model.Products,
+) string {
+
+	// 图片打印
+	if p.printerSetting.KitchenPrintMethod == "2" {
+		// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+	}
+
+	// 获取打印机类型
+	var printerType string
+	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
+		printerType = printerItem.Printer.PrinterType.Key
+	}
+
+	fmt.Println("???")
+	fmt.Println(printerType)
+
+	// CODESOFT 打印机
+	if printerItem.Printer != nil && slices.Contains([]string{
+		constant.PrinterTypeCodesoftLan,
+		constant.PrinterTypeCodesoftWifi,
+	}, printerType) {
+		// 创建Codesoft模板
+		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		// 调用CompleteOrder方法
+		return t.CompleteOrder(printerItem, saleBill, products)
+	}
+
+	// 商米和芯烨打印机
+	if printerItem.Printer != nil {
+		// 创建Codesoft模板
+		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		// 调用CompleteOrder方法
+		return t.CompleteOrder(printerItem, saleBill, products)
+		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+	}
+
+	return ""
 }
 
 // 构建订单菜品（一菜一单）打印的内容
@@ -152,36 +196,12 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
+		// 创建Codesoft模板
+		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		// 调用CompleteOrder方法
+		return t.CompleteOrder(printerItem, saleBill, []printer_model.OrderProduct{product})
 		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	}
-
-	// PrinterTypeFeiEYun       = "FEI_E_YUN"      // 飞鹅打印机
-	// PrinterTypeFeiEYunTag    = "FEI_E_YUN_TAG"  // 飞鹅标签打印机
-	// PrinterTypePrintCenter   = "PRINT_CENTER"   // 365云打印
-	// PrinterTypeSunmiLan      = "SUNMI_LAN"      // 商米 局域网内打印
-	// PrinterTypeSunmiCloud    = "SUNMI_CLOUD"    // 商米 云打印
-	// PrinterTypeXPrinterLan   = "XPRINTER_LAN"   // 芯烨-有线
-	// PrinterTypeXPrinterWifi  = "XPRINTER_WIFI"  // 芯烨-WIFI
-	// PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
-	// PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
-	// PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
-	// PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
-
-	// fmt.Println(utils.ToJsonString(printerItem.Printer))
-
-	// /* *
-	// * CODESOFT 打印机
-	// */
-	// if ($printerItem->printer && in_array($printerType, [PrinterTypeEnum::CODESOFT_LAN, PrinterTypeEnum::CODESOFT_WIFI])) {
-	// 	return (new CodesoftDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
-	// }
-
-	// /* *
-	// *商米 和 芯烨 打印机
-	// */
-	// if ($printerItem->printer) {
-	// 	return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
-	// }
 
 	return ""
 }

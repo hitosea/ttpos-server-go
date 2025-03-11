@@ -112,6 +112,35 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReturnOrder 处理退款订单
+// @Summary 退款订单
+// @Description 退款订单
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/return [post]
+func (h *OrderHandler) ReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	err := h.service.ReturnOrder(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // DeleteOrder 处理删除订单
 // @Summary 删除订单
 // @Description 删除订单
@@ -209,6 +238,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
+		privateApi.POST("/order/return", wrapper.ReturnOrder) // 用餐订单退款
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
 	}
