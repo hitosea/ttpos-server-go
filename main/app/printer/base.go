@@ -94,6 +94,17 @@ func NewPrinterRepo(ctx context.Context) PPrinterRepo {
 }
 
 // 获取商品打印机列表
+func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
+	// 获取打印机模板
+	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(p.dbm.GetDB(p.ctx.GetCompanyUuid())).GetPrinterTemplateInfo(id)
+	if err != nil {
+		logger.Logger.Error("获取打印机模板失败", zap.Error(err))
+		return 1
+	}
+	return printerTemplateRepo.Template
+}
+
+// 获取商品打印机列表
 func (p *PrinterRepoImpl) getProductPrinterList() ([]model.ProductPrinter, error) {
 	// 构建缓存键
 	cacheKey := fmt.Sprintf("PRODUCT_PRINTER_LIST:%d", p.ctx.GetCompanyUuid())

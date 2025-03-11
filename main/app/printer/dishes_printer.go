@@ -1,7 +1,6 @@
 package printer
 
 import (
-	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -54,7 +53,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 		// 区域对的上才走
 		regionUuids := productPrinter.GetPrinterRegionUuids()
-		if len(regionUuids) == 0 || !slices.Contains(regionUuids, regionUuid) {
+		if len(regionUuids) != 0 && !slices.Contains(regionUuids, regionUuid) {
 			continue
 		}
 
@@ -79,13 +78,14 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			}
 			// 退菜单打印
 			if printType == constant.PrinterProductTypeBackFood {
-				// $data = $this->getPrintReturnProductContent($printerConfig, $printerItem, $order);
-				// if ($data) {
-				// 	PrinterLog::addPrinterLog($printer, array_merge($printerData, [
-				// 		"data" => $data,
-				// 		// "data_type" => PrinterLog::DATA_TYPE[9]['value'],
-				// 	]));
-				// }
+				data := p.getPrintReturnProductContent(productPrinter, printerItem, billInfo, newProducts)
+				if data != "" {
+					p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
+					// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
+					// 		"data" => $data,
+					// 		// "data_type" => PrinterLog::DATA_TYPE[9]['value'],
+					// 	]));
+				}
 				continue
 			}
 			// 一菜一单打印
@@ -93,8 +93,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				for _, product := range newProducts {
 					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
 					if data != "" {
-						fmt.Println("data", data)
-						fmt.Println("data", printerItem.Printer.GetConfigJson())
 						p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
 						// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
 						// 	"data" => $data,
@@ -126,7 +124,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-
+	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
 		// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
@@ -138,9 +136,6 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		printerType = printerItem.Printer.PrinterType.Key
 	}
 
-	fmt.Println("???")
-	fmt.Println(printerType)
-
 	// CODESOFT 打印机
 	if printerItem.Printer != nil && slices.Contains([]string{
 		constant.PrinterTypeCodesoftLan,
@@ -149,7 +144,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		// 创建Codesoft模板
 		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		// 调用CompleteOrder方法
-		return t.CompleteOrder(printerItem, saleBill, products)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
@@ -157,7 +152,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		// 创建Codesoft模板
 		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		// 调用CompleteOrder方法
-		return t.CompleteOrder(printerItem, saleBill, products)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	}
 
@@ -171,7 +166,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	saleBill model.SaleBill,
 	product printer_model.OrderProduct,
 ) string {
-
+	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
 		// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
@@ -188,20 +183,37 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
-		// 创建Codesoft模板
 		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		// 调用CompleteOrder方法
-		return t.CompleteOrder(printerItem, saleBill, []printer_model.OrderProduct{product})
+		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		// 创建Codesoft模板
 		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		// 调用CompleteOrder方法
-		return t.CompleteOrder(printerItem, saleBill, []printer_model.OrderProduct{product})
+		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	}
 
+	return ""
+}
+
+// 构建退菜单打印的内容
+func (p *PrinterRepoImpl) getPrintReturnProductContent(
+	productPrinter model.ProductPrinter,
+	printerItem *model.ProductPrinterItem,
+	saleBill model.SaleBill,
+	products printer_model.Products,
+) string {
+	// 图片打印
+	// if p.printerSetting.KitchenPrintMethod == "2" {
+	// 	// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+	// }
+	// /* *
+	// *商米 和 芯烨 打印机
+	// */
+	// if ($printerItem->printer) {
+	//     return (new XprinterReturnDishesTemplate(null, $this->allSourceProductList))->completeOrder($printerConfig, $printerItem, $order);
+	// }
+	// return "";
 	return ""
 }
