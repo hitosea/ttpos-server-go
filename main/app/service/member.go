@@ -297,8 +297,10 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 		return nil, errors.WithMessage(err, "销售订单不存在")
 	}
 
-	// 计算销售订单的金额
-	memberDiscountFee := s.calcOrderAmount(ctx, member, saleBill, saleOrder)
+	// 设置会员折扣并重新计算订单的金额
+	saleOrder.SetMemberDiscount(*member)
+	saleBill.CalcAll()
+	memberDiscountFee := saleOrder.GetAmount()
 
 	var cardName string
 	var levelName string

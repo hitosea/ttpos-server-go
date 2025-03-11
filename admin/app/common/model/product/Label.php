@@ -50,7 +50,7 @@ class Label extends BaseModel
      */
     public function product()
     {
-        return $this->hasMany('app\\common\\model\\product\\Product', 'printer_tag_uuid', 'uuid');
+        return $this->hasMany(Product::class, 'printer_tag_uuid', 'uuid');
     }
 
     /**
@@ -79,7 +79,12 @@ class Label extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->order(['create_time' => 'desc'])->select()?->append(['product_ids'], true);
+        $list = $this->with(['product'])->order(['create_time' => 'desc'])->select();
+        foreach ($list as $item) {
+            $item->product_ids = $item->product()->column('uuid');
+        }
+
+        return $list;
     }
 
     /**

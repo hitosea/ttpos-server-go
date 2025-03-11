@@ -97,6 +97,8 @@ func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, car
 }
 
 func (model *SaleOrder) SetMemberDiscount(member Member) {
+	defer model.SetZeroRuleCancel()     // 设置会员折扣后，要取消订单抹零
+	defer model.SetCustomAmountCancel() // 设置会员折扣后，要取消整单改价
 	// 修改订单的会员信息
 	model.setMemberDiscount(member.Uuid, member.GetMemberDiscountRate(), member.GetMemberCardDiscountRate())
 }
