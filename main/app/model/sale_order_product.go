@@ -454,6 +454,10 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 }
 
 func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
+	return getLocaleResponse(model.GetAttributeNameList(), ";")
+}
+
+func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
@@ -479,8 +483,7 @@ func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
-
-	return getLocaleResponse(nameList, ";")
+	return nameList
 }
 
 // 将多个LocaleResponse合并成一个

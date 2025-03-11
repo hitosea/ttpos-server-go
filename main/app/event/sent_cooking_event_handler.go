@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
@@ -37,7 +38,7 @@ func sentCookingEventHandler() {
 			}()
 			// 创建送厨单打印记录
 			go func() {
-				products := printer.Products{}
+				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
 				printer.NewPrinterRepo(payload.Ctx).PrintingDishes(
 					constant.PrinterProductTypeKitchen,

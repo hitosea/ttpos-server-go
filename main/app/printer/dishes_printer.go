@@ -1,26 +1,25 @@
 package printer
 
 import (
-	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
 
 /**
  * 菜品打印
- * @param $order 订单
- * @param string $printType 打印类型 -1-为退菜打印 --付款打印 1-送厨打印
+ * @param int $printType 打印类型 -1-为退菜打印 0-付款打印 1-送厨打印
  */
 func (p *PrinterRepoImpl) PrintingDishes(
 	printType int,
 	saleBillUuid uint64,
-	products Products,
+	products printer_model.Products,
 ) bool {
 	// 设置时区
 	// tz := utils.SetTimezone(p.storeSetting.TimeZone)
@@ -39,7 +38,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	}
 
 	// 获取订单信息
-	db := p.dbm.GetDB(p.Ctx.GetCompanyUuid())
+	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
 	billInfo, err := repository.NewOrderRepo(db).GetSaleBillInfo(saleBillUuid, constant.No)
 	if err != nil {
 		return false
@@ -66,7 +65,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 		// 选中的商品才往下走
 		productIds := productPrinter.GetPrinterProductIds()
-		newProducts := make(Products, 0)
+		newProducts := make(printer_model.Products, 0)
 		for _, product := range products {
 			if !slices.Contains(productIds, product.ProductId) {
 				continue
@@ -77,7 +76,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 		// 是否整单打印
 		isCompleteOrderPrinter := productPrinter.PrintMethod == constant.No
 
-		// 循环下拉选中的打印机 - 一个个打印
+		// 循环下拉选中的打印机一个个打印
 		for _, printerItem := range productPrinter.ProductPrinterItems {
 			// 判断是否删除
 			if printerItem.IsDelete() {
@@ -97,7 +96,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 一菜一单打印
 			if !isCompleteOrderPrinter {
 				for _, product := range newProducts {
-					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product, model.Printer{})
+					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
 					if data != "" {
 						// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
 						// 	"data" => $data,
@@ -126,11 +125,8 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	saleBill model.SaleBill,
-	product OrderProduct,
-	printer model.Printer,
+	product printer_model.OrderProduct,
 ) string {
-
-	fmt.Println(utils.ToJsonString(printerItem.Printer))
 
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
@@ -148,7 +144,10 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
-		// return (new CodesoftDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+		// 创建Codesoft模板
+		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		// 调用CompleteOrder方法
+		return t.CompleteOrder(printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 商米和芯烨打印机
@@ -168,17 +167,21 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	// PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
 	// PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
 
+	// fmt.Println(utils.ToJsonString(printerItem.Printer))
+
 	// /* *
 	// * CODESOFT 打印机
 	// */
 	// if ($printerItem->printer && in_array($printerType, [PrinterTypeEnum::CODESOFT_LAN, PrinterTypeEnum::CODESOFT_WIFI])) {
 	// 	return (new CodesoftDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	// }
+
 	// /* *
 	// *商米 和 芯烨 打印机
 	// */
 	// if ($printerItem->printer) {
 	// 	return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	// }
+
 	return ""
 }

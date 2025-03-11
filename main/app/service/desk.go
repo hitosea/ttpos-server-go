@@ -399,7 +399,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	// 设置新桌台的开台信息
 	desk.SetOpenDesk(reqs.SaleBillUuid)
 	// 更新销售账单的桌台uuid,修改旧桌台的状态
-	saleBill.ChangeDesk(reqs.DeskUuid)
+	saleBill.ChangeDesk(reqs.DeskUuid, desk.DeskNo)
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 更新新桌台的记录

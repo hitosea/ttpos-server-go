@@ -171,8 +171,9 @@ func (model *SaleBill) IsEndStatus() bool {
 }
 
 // 转台
-func (model *SaleBill) ChangeDesk(deskUuid uint64) {
+func (model *SaleBill) ChangeDesk(deskUuid uint64, serialNo string) {
 	model.DeskUuid = deskUuid
+	model.SerialNo = serialNo
 	// 设置旧桌台关闭
 	model.Desk.SetCloseDesk()
 }
