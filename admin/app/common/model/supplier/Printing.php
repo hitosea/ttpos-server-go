@@ -3,16 +3,20 @@
 namespace app\common\model\supplier;
 
 use app\common\model\BaseModel;
-use app\common\model\product\Product;
-use app\common\model\settings\Printer;
+use think\model\concern\SoftDelete;
 
 /**
  * 菜品打印模型
  */
 class Printing extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'product_printer';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $autoWriteTimestamp = true;
+    protected $defaultSoftDelete = 0;
 
     // 打印类型
     const PRINT_TYPE_BACK_FOOD = 0;    // 退菜打印
@@ -20,127 +24,110 @@ class Printing extends BaseModel
     const PRINT_TYPE_ADD_ORDER = 20;   // 下单打印
     const PRINT_TYPE_KITCHEN = 30;     // 送厨打印
 
+    // 打印模式字段映射
+    const PRINT_MODE_MAP = [
+        self::PRINT_TYPE_PAY => 0,
+        self::PRINT_TYPE_KITCHEN => 1,
+    ];
+
+    // 打印模式字段反向映射
+    const PRINT_MODE_REVERSE_MAP = [
+        self::PRINT_TYPE_PAY,
+        self::PRINT_TYPE_KITCHEN,
+    ];
+
+    // 打印方式
+    const PRINT_METHOD_ALL = 10; // 整单打印
+    const PRINT_METHID_ONE = 40; // 按一菜一单打印
+
+    // 打印方式字段映射
+    const PRINT_METHOD_MAP = [
+        self::PRINT_METHOD_ALL => 0,
+        self::PRINT_METHID_ONE => 1,
+    ];
+
+    // 打印方式字段反向映射
+    const PRINT_METHOD_REVERSE_MAP = [
+        self::PRINT_METHOD_ALL,
+        self::PRINT_METHID_ONE,
+    ];
+
+    // 打印商品选择
+    const PRINT_PRODUCT_SELECT_CATEGORY = 1; // 按商品分类
+    const PRINT_PRODUCT_SELECT_TAG = 2; // 按打印标签
+
+    // 打印商品选择字段映射
+    const PRINT_PRODUCT_SELECT_MAP = [
+        self::PRINT_PRODUCT_SELECT_CATEGORY => 0,
+        self::PRINT_PRODUCT_SELECT_TAG => 1,
+    ];
+
+    // 打印商品选择字段反向映射
+    const PRINT_PRODUCT_SELECT_REVERSE_MAP = [
+        self::PRINT_PRODUCT_SELECT_CATEGORY,
+        self::PRINT_PRODUCT_SELECT_TAG,
+    ];
+
+    // 打印场景
+    const PRINT_MODE_SCENE_MERGE = 1; // 合并
+    const PRINT_MODE_SCENE_SEPARATE = 2; // 分开
+
+    // 打印场景字段映射
+    const PRINT_MODE_SCENE_MAP = [
+        self::PRINT_MODE_SCENE_MERGE => 0,
+        self::PRINT_MODE_SCENE_SEPARATE => 1,
+    ];
+
+    // 打印场景字段反向映射
+    const PRINT_MODE_SCENE_REVERSE_MAP = [
+        self::PRINT_MODE_SCENE_MERGE,
+        self::PRINT_MODE_SCENE_SEPARATE,
+    ];
+
     /**
-     * 追加字段
-     * @var string[]
+     * 关联商品打印详情
      */
-    protected $append = ['printer_name_text'];
+    public function printingItem()
+    {
+        return $this->hasMany(PrintingItem::class, 'product_printer_uuid', 'uuid');
+    }
+
+    /**
+     * 关联商品打印区域
+     */
+    public function printingRegion()
+    {
+        return $this->hasMany(PrintingRegion::class, 'product_printer_uuid', 'uuid');
+    }
+
+    /**
+     * 关联商品打印-商品列表
+     */
+    public function printingProductItem()
+    {
+        return $this->hasMany(PrintingProduct::class, 'product_printer_uuid', 'uuid');
+    }
 
     /**
      * 获取打印机名称
      */
-    public function getPrinterNameTextAttr($value, $data)
+    public static function getPrinterNameText($printingItemList)
     {
-        $printerIds = $data['printer_id'] ? json_decode($data['printer_id'], true) : [];
-        $printer = Printer::where('printer_id', 'in', $printerIds)->select()->toArray();
-        $printer = array_column($printer, 'printer_name');
-        if (count($printer) !== count($printerIds)) {
-            $printer[] = '-';
+        if (empty($printingItemList)) {
+            return '';
         }
-        return implode(',', $printer);
-    }
 
-    /**
-     * 获取商品ids列表
-     */
-    public function getProductIdsAttr($value, $data)
-    {
-        $product_ids = $data['product_ids'] ? json_decode($data['product_ids'], true) : [];
-        $list = Product::alias('product')
-            ->field(['product.product_id', 'product.category_id', 'product.label_id', 'pc.category_id as parent_category_id'])
-            ->leftJoin('category c', 'c.category_id = product.category_id')
-            ->leftJoin('category pc', 'pc.category_id = c.parent_id')
-            ->where('product_id', 'in', $product_ids)
-            ->select()?->append([]);
-        return $list->toArray();
-    }
+        $printerList = [];
+        foreach ($printingItemList as $item) {
+            $printer = $item['printer'] ?? null;
+            if (!$printer) {
+                $printerList[] = '-';
+            } else {
+                $printerList[] = $printer['printer_name'];
+            }
+        }
 
-    /**
-     * 获取商品分类
-     */
-    public function getCategoryIdAttr($value, $data)
-    {
-        return $value ? json_decode($value, true) : [];
-    }
-
-    /**
-     * 设置商品分类
-     */
-    public function setProductIdsAttr($value, $data)
-    {
-        return json_encode($value) ?: '';
-    }
-
-    /**
-     * 设置商品分类
-     */
-    public function setCategoryIdAttr($value, $data)
-    {
-        return json_encode($value) ?: '';
-    }
-
-    /**
-     * 关联打印机表
-     */
-    public function printers()
-    {
-        return Printer::whereIn('printer_id', $this->printer_id)->select();
-    }
-
-    /**
-     * 获取打印标签
-     */
-    public function getLabelIdAttr($value, $data)
-    {
-        return $value ? json_decode($value, true) : [];
-    }
-
-    /**
-     * 设置打印标签
-     */
-    public function setLabelIdAttr($value, $data)
-    {
-        return json_encode($value) ?: '';
-    }
-
-    /**
-     * 获取区域
-     */
-    public function getAreaIdAttr($value, $data)
-    {
-        return $value ? json_decode($value, true) : [];
-    }
-
-    /**
-     * 设置区域
-     */
-    public function setAreaIdAttr($value, $data)
-    {
-        return json_encode($value) ?: '';
-    }
-
-    /**
-     * 获取打印机ids
-     */
-    public function getPrinterIdAttr($value, $data)
-    {
-        return $value ? json_decode($value, true) : [];
-    }
-
-    /**
-     * 设置打印机ids
-     */
-    public function setPrinterIdAttr($value, $data)
-    {
-        return json_encode($value) ?: '';
-    }
-
-    /**
-     * 关联供应商表
-     */
-    public function supplier()
-    {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return implode(',', $printerList);
     }
 
 
@@ -150,6 +137,46 @@ class Printing extends BaseModel
     public static function detail($id, $with = [])
     {
         return static::with($with)->where('id', $id)->find();
+    }
+
+    /**
+     * 构建详情数据
+     */
+    public function buildDetailData()
+    {
+        // 区域uuid列表
+        $areaUuidList = [];
+        foreach ($this['printingRegion'] as $region) {
+            $areaUuidList[] = "{$region['desk_region_uuid']}";
+        }
+        // 商品列表
+        $productList = [];
+        foreach ($this['printingProductItem'] as $productItem) {
+            $productList[] = [
+                'product_id' => $productItem['product_package_uuid'],
+                'category_id' => $productItem['product']['category_uuid'],
+                'label_id' => $productItem['product']['label_id'],
+                'parent_category_id' => $productItem['product']['category']['parent_id'],
+            ];
+        }
+        // 打印机uuid列表
+        $printerUuidList = [];
+        foreach ($this['printingItem'] as $printingItem) {
+            $printerUuidList[] = "{$printingItem['printer_uuid']}";
+        }
+
+        return [
+            'id' => $this['id'],
+            'name' => $this['name'],
+            'is_open' => $this['status'],
+            'print_type' => self::PRINT_MODE_REVERSE_MAP[$this['print_mode']],
+            'print_method' => self::PRINT_METHOD_REVERSE_MAP[$this['print_method']],
+            'product_method' => self::PRINT_PRODUCT_SELECT_REVERSE_MAP[$this['print_product_select']],
+            'print_select' => self::PRINT_MODE_SCENE_REVERSE_MAP[$this['print_mode_scene']],
+            'area_id' => $areaUuidList,
+            'product_ids' => $productList,
+            'printer_id' => $printerUuidList,
+        ];
     }
 
     /**
@@ -166,14 +193,6 @@ class Printing extends BaseModel
     public function getPrintPortList($shop_supplier_id = 0)
     {
         return $this->where('is_open', '1')->order(['create_time' => 'desc'])->select();
-    }
-
-    /**
-     * 设置状态
-     */
-    public function setStatus($status)
-    {
-        return $this->save(['is_open' => $status ? 1 : 0]);
     }
 
     /**

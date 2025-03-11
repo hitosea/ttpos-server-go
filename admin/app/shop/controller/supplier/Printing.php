@@ -27,7 +27,7 @@ class Printing extends Controller
     {
         // 供应商列表
         $model = new PrintingModel;
-        $list = $model->getLists($this->postData(), $this->store['user']);
+        $list = $model->getLists($this->postData());
         return $this->renderSuccess('', compact('list'));
     }
 
@@ -51,24 +51,17 @@ class Printing extends Controller
      * @Apidoc\Returned("printerList", type="array", ref="app\shop\model\settings\Printer\getNoteAll", desc="打印机列表")
      * @Apidoc\Returned("printerTagList", type="array", ref="app\shop\model\settings\Printer\getTagAll", desc="标签打印机列表")
      * @Apidoc\Returned("storeList", type="array", ref="app\shop\model\product\Category\getAllCategory", desc="店内商品分类")
-     * @Apidoc\Returned("takeList", type="array", ref="app\shop\model\product\Category\getAllCategory", desc="外卖商品分类")
      * @Apidoc\Returned("labelList", type="array", ref="app\shop\model\product\Label\getAllList", desc="打印标签")
      */
     public function add()
     {
         $model = new PrintingModel;
         if ($this->request->isGet()) {
-            // todo 兼容 获取打印机列表
-            // $printerList = PrinterModel::getNoteAll($this->store['user']['shop_supplier_id']);
-            // todo 兼容 获取标签打印机列表
-            // $printerTagList = PrinterModel::getTagAll($this->store['user']['shop_supplier_id']);
-            // todo 兼容 店内商品分类
-            // $storeList = (new CategoryModel)->getAllCategory(1, $this->store['user']['shop_supplier_id'], 0, 0, true);
-            // todo 兼容 外卖商品分类
-            // $takeList = (new CategoryModel)->getAllCategory(0, $this->store['user']['shop_supplier_id'], true);
-            // todo 兼容 打印标签
-            // $labelList = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
-            return $this->renderSuccess('');
+            $printerList = PrinterModel::getNoteAll($this->store['user']['shop_supplier_id']);
+            $printerTagList = PrinterModel::getTagAll($this->store['user']['shop_supplier_id']);
+            $storeList = (new CategoryModel)->getAllCategory(1, $this->store['user']['shop_supplier_id'], 0, 0, true);
+            $labelList = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
+            return $this->renderSuccess('', compact('printerList', 'printerTagList', 'storeList', 'labelList'));
         }
         //
         $param = $this->postData();
@@ -84,7 +77,7 @@ class Printing extends Controller
             return $this->renderError('请正确选择商品方式');
         }
         // 新增记录
-        if ($model->add($param, $this->store['user'])) {
+        if ($model->add($param)) {
             return $this->renderSuccess('添加成功');
         }
         return $this->renderError($model->getError() ?: '添加失败');
@@ -109,25 +102,29 @@ class Printing extends Controller
      * @Apidoc\Returned("printerList", type="array", ref="app\shop\model\settings\Printer\getNoteAll", desc="打印机列表")
      * @Apidoc\Returned("printerTagList", type="array", ref="app\shop\model\settings\Printer\getTagAll", desc="标签打印机列表")
      * @Apidoc\Returned("storeList", type="array", ref="app\shop\model\product\Category\getAllCategory", desc="店内商品分类")
-     * @Apidoc\Returned("takeList", type="array", ref="app\shop\model\product\Category\getAllCategory", desc="外卖商品分类")
      * @Apidoc\Returned("labelList", type="array", ref="app\shop\model\product\Label\getAllList", desc="打印标签")
      */
     public function edit($id)
     {
         $param = $this->postData();
-        $model = PrintingModel::detail($id);
+        $model = PrintingModel::detail($id, [
+            'printingItem',
+            'printingRegion',
+            'printingProductItem' => [
+                'product' => [ 'category' ]
+            ],
+        ]);
         if ($this->request->isGet()) {
+            $model = $model->buildDetailData();
             // 获取打印机列表
             $printerList = PrinterModel::getNoteAll($this->store['user']['shop_supplier_id']);
             // 获取标签打印机列表
             $printerTagList = PrinterModel::getTagAll($this->store['user']['shop_supplier_id']);
             // 店内商品分类
             $storeList = (new CategoryModel)->getAllCategory(1, $this->store['user']['shop_supplier_id'], 0, 0, true);
-            // 外卖商品分类
-            $takeList = (new CategoryModel)->getAllCategory(0, $this->store['user']['shop_supplier_id'], true);
             // 打印标签
             $labelList = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
-            return $this->renderSuccess('', compact('model', 'printerList', 'printerTagList', 'storeList', 'takeList', 'labelList'));
+            return $this->renderSuccess('', compact('model', 'printerList', 'printerTagList', 'storeList', 'labelList'));
         }
         //
         if (mb_strlen($param['name'] ?? '') > 50) {
@@ -142,6 +139,7 @@ class Printing extends Controller
             return $this->renderError('请正确选择商品方式');
         }
         //
+        /** @var PrintingModel $model*/
         if ($model->edit($this->postData())) {
             return $this->renderSuccess('更新成功');
         }
@@ -158,7 +156,12 @@ class Printing extends Controller
     public function delete($id)
     {
         // 详情
-        $model = PrintingModel::detail($id);
+        $model = PrintingModel::detail($id, [
+            'printingItem',
+            'printingRegion',
+            'printingProductItem',
+        ]);
+        /** @var PrintingModel $model */
         if (!$model->setDelete()) {
             return $this->renderError('删除失败');
         }
@@ -177,6 +180,7 @@ class Printing extends Controller
     {
         // 详情
         $model = PrintingModel::detail($id);
+        /** @var PrintingModel $model */
         if (!$model->setStatus($status)) {
             return $this->renderError('操作失败');
         }

@@ -410,18 +410,12 @@ class Category extends BaseModel
     //获取所有分类
     public function getAllCategory($type, $shop_supplier_id, $isSpecial = '', $parentId = '', $button_filter = false)
     {
-        $supplier = SupplierModel::detail($shop_supplier_id);
-        if ($supplier['is_main'] == 0 && $supplier['category_set'] == 10) {
-            $detail = SupplierModel::where('is_main', '=', 1)->find();
-            $shop_supplier_id = $detail['shop_supplier_id'];
-        }
-        $list = $this->where('type', '=', $type)
-            ->with(['child'])
+        $list = $this->with(['child'])
             ->when($isSpecial !== '', function ($q) use ($isSpecial) {
                 $q->where('is_special', '=', $isSpecial);
             })
             ->when($parentId !== '', function ($q) use ($parentId) {
-                $q->where('parent_id', '=', $parentId);
+                $q->where('parent_uuid', '=', $parentId);
             })
             ->order('is_special desc, sort asc')
             ->select();

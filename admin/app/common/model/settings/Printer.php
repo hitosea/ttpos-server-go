@@ -5,14 +5,20 @@ namespace app\common\model\settings;
 use app\common\model\BaseModel;
 use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
+use think\model\concern\SoftDelete;
 
 /**
  * 打印机模型
  */
 class Printer extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'printer';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $autoWriteTimestamp = true;
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加属性
@@ -68,7 +74,7 @@ class Printer extends BaseModel
     /**
      * 关联打印机类型
      */
-    public function PrinterType()
+    public function printerType()
     {
         return $this->belongsTo(PrinterType::class, 'printer_type_uuid', 'uuid');
     }
@@ -100,7 +106,22 @@ class Printer extends BaseModel
      */
     public static function getNoteAll($shop_supplier_id = 0)
     {
-        return (new static)->where('printer_type', '<>', 'FEI_E_YUN_TAG')->order(['sort' => 'asc'])->select();
+        $list = (new static)->with([
+            'printerType',
+        ])->hasWhere('printerType', function($q) {
+            $q->where('key', '<>', 'FEI_E_YUN_TAG');
+        })->order(['sort' => 'asc'])->select();
+
+        foreach ($list as $item) {
+            $printerType = [ 'value' => '', 'text' => '' ];
+            if ($item->printerType) {
+                $printerType['value'] = $item->printerType['key'];
+                $printerType['text'] = $item->printerType['name_text'];
+            }
+            $item->printer_type = $printerType;
+        }
+
+        return $list;
     }
 
     /**
@@ -108,7 +129,22 @@ class Printer extends BaseModel
      */
     public static function getTagAll($shop_supplier_id = 0)
     {
-        return (new static)->where('printer_type', '=', 'FEI_E_YUN_TAG')->order(['sort' => 'asc'])->select();
+        $list = (new static)->with([
+            'printerType',
+        ])->hasWhere('printerType', function($q) {
+            $q->where('key', '<>', 'FEI_E_YUN_TAG');
+        })->order(['sort' => 'asc'])->select();
+
+        foreach ($list as $item) {
+            $printerType = [ 'value' => '', 'text' => '' ];
+            if ($item->printerType) {
+                $printerType['value'] = $item->printerType['key'];
+                $printerType['text'] = $item->printerType['name_text'];
+            }
+            $item->printer_type = $printerType;
+        }
+
+        return $list;
     }
 
     /**
@@ -168,7 +204,7 @@ class Printer extends BaseModel
     /**
      * 检查名称唯一性
      */
-    public function checkNameExist($name, $shop_supplier_id, $id = null)
+    public function checkNameExist($name, $id = null)
     {
         $filter = [
             'name' => $name,
