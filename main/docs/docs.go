@@ -5550,69 +5550,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/member/order_discount": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取会员优惠",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.会员"
-                ],
-                "summary": "获取会员优惠",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "销售订单uuid",
-                        "name": "sale_order_uuid",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "销售账单uuid",
-                        "name": "sale_bill_uuid",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "会员Uuid",
-                        "name": "member_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.MemberDiscountResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/cashier/member/print_recharge_order": {
             "post": {
                 "security": [
@@ -6160,6 +6097,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.OrderListPaginationResp"
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/return": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "退款订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "退款订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "退款订单成功"
                     },
                     "404": {
                         "description": "未找到"
@@ -9555,6 +9531,35 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderReturnProduct": {
+            "type": "object",
+            "properties": {
+                "product_uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "退款数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderReturnReq": {
+            "type": "object",
+            "properties": {
+                "products": {
+                    "description": "退款商品UUID列表. 如果为空，则退款所有商品",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.OrderReturnProduct"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
                     "type": "integer"
                 }
             }
