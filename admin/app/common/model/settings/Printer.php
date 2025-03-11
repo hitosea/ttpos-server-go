@@ -5,6 +5,8 @@ namespace app\common\model\settings;
 use app\common\model\BaseModel;
 use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
+use app\common\model\supplier\PrintingItem;
+use think\facade\Log;
 use think\model\concern\SoftDelete;
 
 /**
@@ -154,13 +156,10 @@ class Printer extends BaseModel
     {
         $printer = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         $printerIds = array_column($printer['cashier_printer'] ?? [], 'printer_id');
-        // todo 兼容
-        // $supplierPrinterIds = Printing::column('printer_id');
-        // foreach ($supplierPrinterIds as $supplierPrinterId) {
-        //     foreach (json_decode($supplierPrinterId) ?: [] as $id) {
-        //         $printerIds[] = $id;
-        //     }
-        // }
+        $supplierPrinterIds = PrintingItem::column('printer_uuid');
+        foreach ($supplierPrinterIds as $supplierPrinterId) {
+            $printerIds[] = $supplierPrinterId;
+        }
         $printerIds = implode(',', $printerIds);
         //
         $paginate =  self::alias('a')
@@ -181,6 +180,7 @@ class Printer extends BaseModel
                 'sort' => $item['sort'],
                 'create_time' => $item['create_time'],
                 'printer_config' => $item['printer_config'],
+                'is_use' => $item['is_use']
             ];
         }
 
