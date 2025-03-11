@@ -3894,6 +3894,40 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 发布"结账"事件
+	saleOrderAmount := saleOrder.GetAmount()
+	saleOrderPaymentAmount := saleOrder.PaymentAmount
+	saleOrderChangeAmount := saleOrder.ChangeAmount
+	go func() {
+		payTypes := make([]event.PayType, 0)
+		paymentAmount := decimal.NewFromFloat(0)
+		for _, paymentOrder := range infoResp.PaymentOrders.List {
+			payTypes = append(payTypes, event.PayType{
+				Name:           paymentOrder.PaymentMethodName,
+				Value:          paymentOrder.PaymentMethodCode,
+				DisabledCancel: utils.BoolToUint(paymentOrder.DisabledCancel),
+				Price:          paymentOrder.Amount,
+				FeeMoney:       paymentOrder.PaymentCommissionFee,
+			})
+			paymentAmount = paymentAmount.Add(decimal.NewFromFloat(paymentOrder.Amount))
+		}
+		s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderPrice:  saleOrderAmount,
+			PayPrice:    saleOrderPaymentAmount,
+			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）
+			ChangeDue:   saleOrderChangeAmount,
+			PayType:     payTypes,
+		})
+	}()
+
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{
@@ -3906,9 +3940,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
-			OrderAmount:  saleOrder.GetAmount(),
-			PayAmount:    saleOrder.PaymentAmount,
-			ChangeAmount: saleOrder.ChangeAmount,
+			OrderAmount:  saleOrderAmount,
+			PayAmount:    saleOrderPaymentAmount,
+			ChangeAmount: saleOrderChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
