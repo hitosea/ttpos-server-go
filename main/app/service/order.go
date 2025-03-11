@@ -3959,21 +3959,17 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
-		return nil, errSaleBill
+		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 销售账单已经结束
-	if saleBill.IsEndStatus() {
-		return nil, errors.WithMessage(errors.New("销售账单结束"))
+	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	// 获取销售订单信息
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("无法查询到销售订单")
-	}
-	// 订单是不是已经结束
-	if err := saleOrder.ValidateOrderStatus(); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(errors.New("无法查询到销售订单"))
 	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
@@ -4070,6 +4066,26 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			},
 		},
 	}
+
+	// 发布"免单"事件
+	go func() {
+		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			OrderPrice:    saleOrder.GetAmount(),
+			PayPrice:      0, // 免单时，支付金额为0
+			ActualPrice:   0, // 免单时，实际支付金额为0
+			ChangeDue:     0, // 免单时，找零金额为0
+			IsFree:        utils.BoolToUint(true),
+			DiscountMoney: saleOrder.GetAmount(),
+		})
+	}()
 
 	return orderFinishResp, nil
 }
