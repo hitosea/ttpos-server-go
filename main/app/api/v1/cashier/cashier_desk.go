@@ -23,7 +23,8 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	service      service.IDeskSrv // 主服务
+	service      service.IDeskSrv   // 主服务
+	memberSrv    service.IMemberSrv // 会员服务
 	orderService service.IOrderSrv
 }
 
@@ -1202,6 +1203,84 @@ func (h *DeskHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMemberDiscount 获取订单会员优惠
+// @Summary 获取订单会员优惠
+// @Description 获取订单会员优惠
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @param member_uuid query integer true "会员Uuid"
+// @Success 200 {object} dto.Response{data=resp.MemberDiscountResp}
+// @Router /cashier/desk/order/member/discount [get]
+func (h *DeskHandler) GetMemberDiscount(c *gin.Context) {
+	var discountReq req.GetMemberDiscountReq
+	if err := c.ShouldBindQuery(&discountReq); err != nil {
+		helper.HandleValidationError(c, err, discountReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
+	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, order)
+}
+
+// OrderUseMember 确认使用会员优惠并验证密码
+// @Summary 确认使用会员优惠并验证密码
+// @Description 确认使用会员优惠并验证密码
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CheckMemberPasswordReq true "确认使用会员优惠并验证密码"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /cashier/desk/order/member/confirm [post]
+func (h *DeskHandler) OrderUseMember(c *gin.Context) {
+	var passwordReq req.CheckMemberPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderUseMember(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderMemberCancel 不使用此会员
+// @Summary 不使用此会员
+// @Description 不使用此会员
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderMemberCancelReq true "不使用此会员"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /cashier/desk/order/member/cancel [delete]
+func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
+	var passwordReq req.OrderMemberCancelReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderMemberCancel(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1214,6 +1293,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
+	memberSrv := service.NewMemberSrv(dbm)
 
 	// 初始化处理器
 	wrapper := DeskHandler{
@@ -1224,6 +1304,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 			settingSrv, // 设置服务
 			deviceSrv,  // 设备服务
 		),
+		memberSrv:    memberSrv,
 		orderService: orderSrv,
 	}
 
@@ -1268,5 +1349,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/sale_order/move_product", wrapper.OrderSaleOrderMoveProduct)             // 从一个销售订单移动商品到另一个销售订单
 		privateApi.DELETE("/desk/order/sale_order/delete", wrapper.OrderSaleOrderDelete)                      // 删除一个销售订单(删除拆单)
 		privateApi.DELETE("/desk/order/sale_order/delete_all", wrapper.OrderSaleOrderDeleteAll)               // 删除所有子销售订单(撤销拆单)
+		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
+		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
+		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 	}
 }
