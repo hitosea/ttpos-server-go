@@ -6,6 +6,7 @@ use app\common\library\helper;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
 use app\common\model\product\ProductBom as ProductBomModel;
+use app\common\model\erp\ErpMonthlyProductStatistics as ErpMonthlyProductStatisticsModel;
 
 /**
  * 商家-商品BOM模型
@@ -37,6 +38,8 @@ class ProductBom extends ProductBomModel
 
                 // 创建"添加入库"记录
                 self::addWarehouseInForm($flavor, 1, $data['shop_user_id'], $flavor['stock_num']);
+                // erp商品月初库存记录
+                ErpMonthlyProductStatisticsModel::newProductRecord($flavor['uuid']);
             }
         }
     }
@@ -94,6 +97,8 @@ class ProductBom extends ProductBomModel
                 // 如果新增规格，则创建"添加入库"记录
                 if ($isAdd) {
                     self::addWarehouseInForm($flavor, 1, $data['shop_user_id'], $flavor->stock_num, $data['stock_remark']);
+                    // erp商品月初库存记录
+                    ErpMonthlyProductStatisticsModel::newProductRecord($flavor['uuid']);
                 } else {
                     $diffStockNum = abs(floatval(helper::bcsub($newStockNum, $oldStockNum, 4)));
                     // 创建"调整入库"记录
@@ -117,8 +122,10 @@ class ProductBom extends ProductBomModel
             foreach ($flavorList as $flavor) {
                 // 删除规格关联材料
                 RelatedMaterial::deleteRelatedMaterial($flavor['uuid']);
-                // 创建"删除出库"记录
-                self::addWarehouseOutForm($flavor, 4, $data['shop_user_id'], $flavor['stock_num'], $data['stock_remark']);
+                if ($product->hasInventoryAuth()) {
+                    // 创建"删除出库"记录
+                    self::addWarehouseOutForm($flavor, 4, $data['shop_user_id'], $flavor['stock_num'], $data['stock_remark']);
+                }
                 $flavor->delete();
             }
         }
@@ -211,20 +218,16 @@ class ProductBom extends ProductBomModel
      */
     public static function addWarehouseInForm($flavor, $scene, $operatorUuid, $num, $remark = '', $purchaseOrderUuid = 0)
     {
-        if ((new Product())->hasInventoryAuth()) {
-            $formModel = new ErpWarehouseForm();
-            return $formModel->save([
-                'form_no' => $formModel->generateInCode(),
-                'scene' => $scene,
-                'num' => $num,
-                'product_bom_uuid' => $flavor['uuid'],
-                'operator_uuid' => $operatorUuid,
-                'remark' => $remark,
-                'purchase_order_uuid' => $purchaseOrderUuid,
-            ]);
-        }
-
-        return true;
+        $formModel = new ErpWarehouseForm();
+        return $formModel->save([
+            'form_no' => $formModel->generateInCode(),
+            'scene' => $scene,
+            'num' => $num,
+            'product_bom_uuid' => $flavor['uuid'],
+            'operator_uuid' => $operatorUuid,
+            'remark' => $remark,
+            'purchase_order_uuid' => $purchaseOrderUuid,
+        ]);
     }
 
     /**
@@ -238,15 +241,11 @@ class ProductBom extends ProductBomModel
      */
     public static function addWarehouseOutForm($flavor, $scene, $operatorUuid, $num, $remark = '')
     {
-        if ((new Product())->hasInventoryAuth()) {
-            $outFormModel = new ErpWarehouseOutForm();
-            return $outFormModel->addOutForm($scene, $operatorUuid, [
-                'product_bom_uuid' => $flavor['uuid'],
-                'num' => $num,
-                'remark' => $remark,
-            ]);
-        }
-
-        return true;
+        $outFormModel = new ErpWarehouseOutForm();
+        return $outFormModel->addOutForm($scene, $operatorUuid, [
+            'product_bom_uuid' => $flavor['uuid'],
+            'num' => $num,
+            'remark' => $remark,
+        ]);
     }
 }

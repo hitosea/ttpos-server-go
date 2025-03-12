@@ -207,8 +207,7 @@ class Product extends ProductModel
             ProductBom::addFeed($data, $this);
             // 商品属性
             ProductAttribute::addAttribute($data, $this);
-            // erp商品月初库存记录
-            (new ErpMonthlyProductStatistics)->newProductRecord($this['product_id']);
+
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -519,6 +518,7 @@ class Product extends ProductModel
         $this->startTrans();
         try {
             $multiLanguageName = new MultiLanguageName();
+            $hasInventoryAuth = $this->hasInventoryAuth();
 
             // 删除商品
             $productList = self::with([
@@ -536,8 +536,10 @@ class Product extends ProductModel
                     foreach ($sku->relatedMaterial as $relatedMaterial) {
                         $relatedMaterial->delete();
                     }
-                    // 创建"删除出库"记录
-                    ProductBom::addWarehouseOutForm($sku, 4, $shop_user_id, $sku['stock_num']);
+                    if ($hasInventoryAuth) {
+                        // 创建"删除出库"记录
+                        ProductBom::addWarehouseOutForm($sku, 4, $shop_user_id, $sku['stock_num']);
+                    }
                     // 删除规格
                     $sku->delete();
                 }
@@ -581,8 +583,10 @@ class Product extends ProductModel
                 foreach ($material->relatedMaterial as $relatedMaterial) {
                     $relatedMaterial->delete();
                 }
-                // 创建"删除出库"记录
-                MaterialModel::addWarehouseOutForm($material, 4, $shop_user_id, $material['stock_num']);
+                if ($hasInventoryAuth) {
+                    // 创建"删除出库"记录
+                    MaterialModel::addWarehouseOutForm($material, 4, $shop_user_id, $material['stock_num']);
+                }
                 // 删除材料
                 $material->delete();
             }

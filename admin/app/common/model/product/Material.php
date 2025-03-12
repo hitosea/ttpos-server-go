@@ -5,6 +5,8 @@ namespace app\common\model\product;
 use app\common\library\helper;
 use help\ValidateHelp;
 use app\common\model\BaseModel;
+use app\common\model\erp\ErpInventoryRecord;
+use app\common\model\erp\ErpMonthlyMaterialStatistics;
 use app\common\model\erp\ErpSupplier;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
@@ -165,6 +167,22 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联月度库存记录
+     */
+    public function erpMonthlyMaterialStatistics()
+    {
+        return $this->hasMany(ErpMonthlyMaterialStatistics::class, 'material_uuid', 'uuid');
+    }
+
+    /**
+     * 关联入库记录
+     */
+    public function erpInventoryRecord()
+    {
+        return $this->hasMany(ErpInventoryRecord::class, 'material_uuid', 'uuid');
+    }
+
+    /**
      * 详情
      */
     public static function detail($id)
@@ -255,8 +273,14 @@ class Material extends BaseModel
                 return false;
             }
 
-            // 创建"添加入库"记录
-            return self::addWarehouseInForm($this, 1, $data['shop_user_id'], $this['stock_num']);
+            $hasInventoryAuth = (new Product())->hasInventoryAuth();
+            if ($hasInventoryAuth) {
+                // 创建"添加入库"记录
+                self::addWarehouseInForm($this, 1, $data['shop_user_id'], $this['stock_num']);
+                
+                // erp商品月初库存记录
+                ErpMonthlyMaterialStatistics::newMaterialRecord($this['uuid']);
+            }
         });
     }
 
@@ -378,20 +402,16 @@ class Material extends BaseModel
      */
     public static function addWarehouseInForm($material, $scene, $operatorUuid, $num, $remark = '', $purchaseOrderUuid = 0)
     {
-        if ((new Product())->hasInventoryAuth()) {
-            $formModel = new ErpWarehouseForm();
-            return $formModel->save([
-                'form_no' => $formModel->generateInCode(),
-                'scene' => $scene,
-                'num' => $num,
-                'material_uuid' => $material['uuid'],
-                'operator_uuid' => $operatorUuid,
-                'remark' => $remark,
-                'purchase_order_uuid' => $purchaseOrderUuid,
-            ]);
-        }
-
-        return true;
+        $formModel = new ErpWarehouseForm();
+        return $formModel->save([
+            'form_no' => $formModel->generateInCode(),
+            'scene' => $scene,
+            'num' => $num,
+            'material_uuid' => $material['uuid'],
+            'operator_uuid' => $operatorUuid,
+            'remark' => $remark,
+            'purchase_order_uuid' => $purchaseOrderUuid,
+        ]);
     }
 
     /**
@@ -405,15 +425,19 @@ class Material extends BaseModel
      */
     public static function addWarehouseOutForm($material, $scene, $operatorUuid, $num, $remark = '')
     {
-        if ((new Product())->hasInventoryAuth()) {
-            $outFormModel = new ErpWarehouseOutForm();
-            return $outFormModel->addOutForm($scene, $operatorUuid, [
-                'material_uuid' => $material['uuid'],
-                'num' => $num,
-                'remark' => $remark,
-            ]);
-        }
+        $outFormModel = new ErpWarehouseOutForm();
+        return $outFormModel->addOutForm($scene, $operatorUuid, [
+            'material_uuid' => $material['uuid'],
+            'num' => $num,
+            'remark' => $remark,
+        ]);
+    }
 
-        return true;
+    /**
+     * 获取材料总库存数
+     */
+    public static function getTotalStockNum()
+    {
+        return self::sum('stock_num') ?: 0;
     }
 }

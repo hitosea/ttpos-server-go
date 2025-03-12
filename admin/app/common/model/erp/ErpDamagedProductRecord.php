@@ -431,7 +431,7 @@ class ErpDamagedProductRecord extends BaseModel
                     }
                     $skuStock = helper::bcsub($material->stock_num, $this->num, 4);
                     $material->save(['stock_num' => $skuStock]);
-                    $relatedMaterialUuidList = RelatedMaterial::where('material_uuid', $material->uuid)->colnum('uuid') ?: [];
+                    $relatedMaterialUuidList = RelatedMaterial::where('material_uuid', $material->uuid)->column('uuid') ?: [];
                     RelatedMaterial::updateStock($relatedMaterialUuidList);
                 } else {
                     $this->error = '记录不存在';

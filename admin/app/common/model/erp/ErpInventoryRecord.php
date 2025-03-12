@@ -61,20 +61,6 @@ class ErpInventoryRecord extends BaseModel
     }
 
     /**
-     * 商品规格名称
-     */
-    public static function getProductSkuNameTextAttr($value, $data = [])
-    {
-        if (isset($data['product_sku_name']) && $data['product_sku_name']) {
-            return extractLanguage($value ?: $data['product_sku_name'] ?? '');
-        } else {
-            // 兼容旧数据
-            $sku = ProductSku::where('product_sku_id', $data['product_sku_id'])->find();
-            return extractLanguage($value ?: $sku['spec_name'] ?? '');
-        }
-    }
-
-    /**
      * 库存数量
      */
     public function getNumAttr($value)

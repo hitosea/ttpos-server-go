@@ -34,4 +34,12 @@ class ErpWarehouseOutFormItem extends BaseModel
     {
         return $this->belongsTo(Material::class, 'material_uuid', 'uuid');
     }
+
+    /**
+     * 关联出库单表
+     */
+    public function erpWarehouseOutForm()
+    {
+        return $this->belongsTo(ErpWarehouseOutForm::class, 'warehouse_out_form_uuid', 'uuid');
+    }
 }

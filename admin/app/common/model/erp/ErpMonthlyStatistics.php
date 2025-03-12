@@ -2,16 +2,15 @@
 
 namespace app\common\model\erp;
 
-use think\facade\Env;
 use app\common\library\helper;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
-use app\common\model\product\Product;
 use app\common\model\product\Material;
 use app\common\model\product\ProductBom;
-use app\common\model\product\ProductSku;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
+use think\facade\Db;
+
 /**
  * 月度报表记录模型
  */
@@ -21,6 +20,8 @@ class ErpMonthlyStatistics extends BaseModel
     protected $name = 'warehouse_monthly_form';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
+    protected $pk = 'id';
 
     /**
      * 追加字段
@@ -50,10 +51,12 @@ class ErpMonthlyStatistics extends BaseModel
             $start_time = date($year . "-" . $month . "-01");
             $end_time = date($year . "-" . $month . "-t 23:59:59");
         }
+
         return (new ErpWarehouseForm())
             ->where('create_time', 'between', [strtotime($start_time), strtotime($end_time)])
-            ->where('status', '=', 0)  // 状态,0-success已入库 1-canceled已撤销
-            ->sum('num');
+            ->whereIn('scene', [0, 2]) // 场景,0-采购入库 2-调整入库
+            ->where('status', '=', 0)  // 状态,0-success已入库
+            ->sum('num') ?: 0;
     }
 
     // 月出库
@@ -72,11 +75,13 @@ class ErpMonthlyStatistics extends BaseModel
             $start_time = date($year . "-" . $month . "-01");
             $end_time = date($year . "-" . $month . "-t 23:59:59");
         }
+
         return (new ErpWarehouseOutForm())->alias('wof')
             ->leftJoin('warehouse_out_form_item wofi', 'wof.uuid = wofi.warehouse_out_form_uuid')
-            ->where('wof.status', '=',)  // 状态,0-success已出库 1-canceled已撤销
+            ->whereIn('wof.scene', [0, 1]) // 场景,0-销售出库 1-调整出库
+            ->where('wof.status', 0)  // 状态,0-success已出库 1-canceled已撤销
             ->where('wof.create_time', 'between', [strtotime($start_time), strtotime($end_time)])
-            ->sum('wofi.num');
+            ->sum('wofi.num') ?: 0;
     }
 
     // 获取月初库存
@@ -91,7 +96,11 @@ class ErpMonthlyStatistics extends BaseModel
             $year = date("Y", $now);
             $month = date("m", $now);
         }
-        $total = self::where('year', $year)->where('month', $month)->where('scene', self::MONTH_START)->value('stock') ?? 0;
+        $total = self::where('year', $year)
+            ->where('month', $month)
+            ->where('scene', self::MONTH_START)
+            ->value('stock') ?? 0;
+
         return floatval($total);
     }
 
@@ -107,12 +116,14 @@ class ErpMonthlyStatistics extends BaseModel
             $year = date("Y", $now);
             $month = date("m", $now);
         }
-        $total = self::where('year', $year)->where('month', $month)->where('scene', self::MONTH_END)->value('stock') ?? 0;
+        // 如果月末数据未生成，则显示当前所有规格和材料的库存
+        $total = self::where('year', $year)
+            ->where('month', $month)
+            ->where('scene', self::MONTH_END)
+            ->value('stock') ?? 0;
+
         if ($total == 0) {
-            // 当月为当前商品库存
-            $productNum = ProductBom::sum('stock_num');
-            $productMaterialNum = Material::sum('stock_num');
-            $total = helper::bcadd($productNum, $productMaterialNum, 4);
+            $total = (new self())->getTotalStockNum();
         }
         return floatval($total);
     }
@@ -133,20 +144,19 @@ class ErpMonthlyStatistics extends BaseModel
             $start_time = date($year . "-" . $month . "-01");
             $end_time = date($year . "-" . $month . "-t 23:59:59");
         }
-        // 状态,0-pending待审核 1-approved已通过 2-rejected已驳回
-        return (new ErpDamagedProductRecord())->alias('dr')
-            ->where('dr.delete_time', 0)
-            ->where('dr.status', 1)
-            ->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)])
-            ->sum('dr.num');
+        
+        return (new ErpDamagedProductRecord())
+            ->where('status', 1) // 状态,0-pending待审核 1-approved已通过 2-rejected已驳回
+            ->where('create_time', 'between', [strtotime($start_time), strtotime($end_time)])
+            ->sum('num') ?: 0;
     }
 
     // 所有商品月损耗比例
-    public static function getMonthDamagedPercent($month_damaged_num, $month_entry_stock, $month_start_stock)
+    public static function getMonthDamagedPercent($monthDamaged_num, $monthEntry_stock, $monthStart_stock)
     {
-        $monthTotalStock = helper::bcadd($month_entry_stock, $month_start_stock, 4);
+        $monthTotalStock = helper::bcadd($monthEntry_stock, $monthStart_stock, 4);
         if ($monthTotalStock > 0) {
-            $percent = helper::bcdiv($month_damaged_num, $monthTotalStock, 4);
+            $percent = helper::bcdiv($monthDamaged_num, $monthTotalStock, 4);
             $re = helper::bcmul($percent, 100);
             return floatval($re);
         }
@@ -160,59 +170,93 @@ class ErpMonthlyStatistics extends BaseModel
             $timestamp = strtotime($params['date']);
             $year = date("Y", $timestamp);
             $month = date("m", $timestamp);
-            $start_time = date($year . "-" . $month . "-01");
-            $end_time = date($year . "-" . $month . "-t 23:59:59");
+            $startTime = date($year . "-" . $month . "-01");
+            $endTime = date($year . "-" . $month . "-t 23:59:59");
         } else {
             $now = time();
             $year = date("Y", $now);
             $month = date("m", $now);
-            $start_time = date($year . "-" . $month . "-01");
-            $end_time = date($year . "-" . $month . "-t 23:59:59");
+            $startTime = date($year . "-" . $month . "-01");
+            $endTime = date($year . "-" . $month . "-t 23:59:59");
         }
-        $list =  (new ErpDamagedProductRecord)->alias('dr')
-            ->leftJoin('product_bom pb', 'dr.material_uuid = pb.product_package_uuid')
-            ->where('dr.delete_time', 0)
-            ->where('dr.status', 1)
-            ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
-                $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
+        
+        $recordList = ErpDamagedProductRecord::with([
+            'sku' => function($q) use ($year, $month, $startTime, $endTime) {
+                return $q->with([
+                    'product' => function($q) {
+                        return $q->withTrashed();
+                    },
+                    'erpMonthlyProductStatistics' => function($q) use ($year, $month) {
+                        return $q->where('year', $year)->where('month', $month)->where('scene', self::MONTH_START);
+                    },
+                    'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                        return $q->where('status', 0)
+                            ->whereIn('scene', [0, 2])
+                            ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                    }
+                ])->withTrashed();
+            },
+            'material' => function($q) use ($year, $month, $startTime, $endTime) {
+                return $q->with([
+                    'erpMonthlyMaterialStatistics' => function($q) use ($year, $month) {
+                        return $q->where('year', $year)->where('month', $month)->where('scene', self::MONTH_START);
+                    },
+                    'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                        return $q->where('status', 0)
+                            ->whereIn('scene', [0, 2])
+                            ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                    }
+                ])->withTrashed();
+            },
+        ])
+            ->where('status', 1)
+            ->when($startTime && $endTime, function($q) use ($startTime, $endTime) {
+                $q->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
             })
-            ->field('pb.product_package_uuid, pb.name, SUM(num) as damage_count')
-            ->group('pb.product_package_uuid')
-            ->order('damage_count desc')
+            ->field('product_bom_uuid, material_uuid, SUM(num) as damage_count')
+            ->group('product_bom_uuid, material_uuid')
+            ->order('num desc')
             ->limit(10)
-            ->select()->toArray();
-        // 对结果进行处理
-        foreach ($list as &$damageCount) {
-            $product_package_uuid = $damageCount['product_package_uuid'];
-            $damageCount['name'] = Product::getProductNameTextAttr($damageCount['name']);
-            // 本月入库数
-            // 其他入库
-            $entry_other_num = (new ErpWarehouseForm())->alias('eir')
-                ->where('eir.product_package_uuid', $product_package_uuid)
-                ->where('eir.create_time', '>=', strtotime($start_time))
-                ->where('eir.create_time', '<=', strtotime($end_time))
-                ->where('eir.status', '=', ErpWarehouseForm::STATUS_SUCCESS)  // 0-success已入库 1-canceled已撤销
-                ->sum('num');
-            // 采购入库
-            $entry_purchase_num = (new ErpPurchaseDetail())->alias('epd')
-                ->leftJoin('warehouse_form eir', 'epd.purchase_form_uuid = eir.purchase_order_uuid')
-                ->where('epd.product_package_uuid', $product_package_uuid)
-                ->where('eir.create_time', '>=', strtotime($start_time))
-                ->where('eir.create_time', '<=', strtotime($end_time))
-                ->where('eir.status', '=', ErpWarehouseForm::STATUS_SUCCESS)  // 0-success已入库 1-canceled已撤销
-                ->sum('epd.num');
-            $entry_num = helper::bcadd($entry_other_num, $entry_purchase_num, 4);
-            // 本月初库存
-            $start_num = ErpMonthlyProductStatistics::where('year', $year)->where('month', $month)->where('material_uuid', $product_package_uuid)->value('stock') ?? 0;
-            $product_stock = helper::bcadd($start_num, $entry_num, 4);
-            $damageCount['damage_count'] = floatval($damageCount['damage_count']);
-            $damageCount['damage_ratio'] = $product_stock > 0 ? helper::bcdiv($damageCount['damage_count'], $product_stock, 5) : 0;
-            $damageCount['damage_ratio'] = ($damageCount['damage_ratio'] * 100);
-            $damageCount['damage_ratio'] = round($damageCount['damage_ratio'], 2);
+            ->select();
+
+        $list = [];
+        foreach ($recordList as $record) {
+            $product = $record->sku ? $record->sku->product : $record->material;
+            $productName = $product->product_name_text;
+            
+            $damageCount = $record->damage_count; // 损耗数量
+            $monthStartStock = 0; // 月初库存数
+            $monthEntryStock = 0; // 月入库存数
+            if ($record->sku) {
+                $productName .= ' - ' . $record->sku->spec_name_text;
+
+                $monthStartStock = $record->sku->erpMonthlyProductStatistics()->sum('stock') ?: 0;
+                $monthEntryStock = $record->sku->erpInventoryRecord()->sum('num') ?: 0;
+            }
+            if ($record->material) {
+                $monthStartStock = $record->material->erpMonthlyMaterialStatistics()->sum('stock') ?: 0;
+                $monthEntryStock = $record->material->erpInventoryRecord()->sum('num') ?: 0;
+            }
+
+            // 损耗数量/（月初原有库存+月入库数量）*100%=损耗比例（保留小数点后两位）
+            $damageRatio = 0;
+            $stock = helper::bcadd($monthStartStock, $monthEntryStock, 4);
+            if ($stock > 0) {
+                $damageRatio = helper::bcmul(helper::bcdiv($damageCount, $stock, 5), 100, 2);
+            }
+
+            $list[] = [
+                'product_id' => $record->product_bom_uuid ?: $record->material_uuid,
+                'product_name' => $productName,
+                'damage_count' => $damageCount,
+                'damage_ratio' => $damageRatio,
+            ];
         }
+
         usort($list, function ($item1, $item2) {
             return $item2['damage_ratio'] <=> $item1['damage_ratio'];
         });
+
         return $list;
     }
 
@@ -232,25 +276,45 @@ class ErpMonthlyStatistics extends BaseModel
             $start_time = date($year . "-" . $month . "-01");
             $end_time = date($year . "-" . $month . "-t 23:59:59");
         }
-        $start_time = strtotime($start_time);
-        $end_time = strtotime($end_time);
-        //
-        $prefix = Env::get('DB_PREFIX');
-        return (new Product)->alias('p')
-            ->leftJoin("
-                (
-                    select id, create_time, product_package_uuid, sum(if(op.id,op.total_price,0)) as total_price, sum(if(op.id,op.num,0)) as total_num
-                    from {$prefix}sale_order_product op
-                    where op.create_time >= {$start_time} And op.create_time <= {$end_time}
-                    group by id, product_package_uuid
-                ) op
-            ", $prefix . "product.product_package_uuid = op.product_package_uuid")
-            ->field('p.product_package_uuid, p.name, if(op.id,op.total_price,0) as total_price, if(op.id,op.num,0) as total_num')
-            ->group('p.product_package_uuid')
-            ->order('total_num,p.product_package_uuid  asc')
-            ->limit(10)
-            ->select()
-            ->toArray();
+        $startTime = strtotime($start_time);
+        $endTime = strtotime($end_time);
+
+        $productBomSql = ProductBom::alias('bom')
+            ->field('p.name as name,f.name as flavor_name,IF(item.num, sum(item.num), 0) as total_num,bom.create_time as create_time')
+            ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
+            ->leftJoin('product_flavor f', 'bom.product_flavor_uuid = f.uuid')
+            ->leftJoin('warehouse_out_form_item item', 'bom.uuid = item.product_bom_uuid AND item.scene = 0')
+            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0 AND form.create_time >= {$startTime} AND form.create_time <= {$endTime}")
+            ->where('bom.product_flavor_uuid', '>', 0)
+            ->group('bom.uuid')
+            ->buildSql();
+
+        $materialSql = Material::alias('m')
+            ->field("m.name as name,'' as flavor_name,IF(item.num, sum(item.num), 0) as total_num,m.create_time as create_time")
+            ->leftJoin('warehouse_out_form_item item', 'm.uuid = item.material_uuid AND item.scene = 0')
+            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0 AND form.create_time >= {$startTime} AND form.create_time <= {$endTime}")
+            ->group('m.uuid')
+            ->buildSql();        
+
+        $querySql = "SELECT name,flavor_name,total_num,create_time FROM ($productBomSql UNION ALL $materialSql) AS all_product";
+        $pageSql = " ORDER BY total_num ASC,create_time ASC LIMIT 10";
+
+        $rows = Db::connect('shop' . self::$app_id)->query($querySql . $pageSql);
+
+        $list = [];
+        foreach ($rows as $row) {
+            $productNametext = extractLanguage($row['name']);
+            if ($row['flavor_name']) {
+                $productNametext .= ' - ' . extractLanguage($row['flavor_name']);
+            }
+
+            $list[] = [
+                'product_name_text' => $productNametext,
+                'total_num' => $row['total_num']
+            ];
+        }
+
+        return $list;
     }
 
     /**
@@ -267,7 +331,7 @@ class ErpMonthlyStatistics extends BaseModel
             $data['year'] = $year;
             $data['month'] = $month;
             $data['scene'] = self::MONTH_START;
-            $data['stock'] = ProductSku::getTotalStock();
+            $data['stock'] = $this->getTotalStockNum();
             $model->save($data);
         }
 
@@ -282,8 +346,21 @@ class ErpMonthlyStatistics extends BaseModel
             $data['year'] = $year;
             $data['month'] = $month;
             $data['scene'] = self::MONTH_END;
-            $data['stock'] = ProductSku::getTotalStock();
+            $data['stock'] = $this->getTotalStockNum();
             $model->save($data);
         }
+    }
+
+    /**
+     * 获取总库存数
+     */
+    public function getTotalStockNum()
+    {
+        // 规格库存
+        $productBomStockNum = ProductBom::getTotalStockNum();
+        // 材料库存
+        $materialStockNum = Material::getTotalStockNum();
+
+        return floatval(helper::bcadd($productBomStockNum, $materialStockNum, 4));
     }
 }
