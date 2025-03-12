@@ -157,10 +157,15 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		return loginResp, errors.New("账号被禁用，请联系管理员")
 	}
 	// 商家状态
-	if staff.Company == nil || staff.Company.Uuid == 0 || staff.Company.DeleteTime != 0 {
+	if staff.Company == nil {
 		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-
+	if staff.Company.IsExpired() {
+		return loginResp, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+	}
+	if staff.Company.IsException() {
+		return loginResp, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
+	}
 	isFirstLogin := staff.CashierOnline == 0
 
 	switch loginReq.Source {
@@ -488,9 +493,8 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	// 修改密码后，token失效
 	if staff.PasswordChangeTime > auth.TokenIssuedAt {
-		return company, companySetting, staff, errors.New("无效的token")
+		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenInvalid, "无效的token")
 	}
-
 	if staff.DeleteTime != 0 {
 		return company, companySetting, staff, errors.New("用户被删除")
 	}
@@ -500,12 +504,14 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			companySetting = *staff.Company.CompanySetting
 		}
 	}
-
-	if company.Uuid == 0 || companySetting.ID == 0 {
-		return company, companySetting, staff, errors.New("商家不存在")
+	if company.Uuid == 0 || companySetting.Uuid == 0 {
+		return company, companySetting, staff, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	if company.Status == 0 {
-		return company, companySetting, staff, errors.New("商家被禁用")
+	if company.IsExpired() {
+		return company, companySetting, staff, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+	}
+	if company.IsException() {
+		return company, companySetting, staff, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
 	}
 	// 验证设备是否绑定
 	deviceId := auth.DeviceId

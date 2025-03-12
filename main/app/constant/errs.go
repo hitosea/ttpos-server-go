@@ -24,6 +24,13 @@ const (
 	CodeNeedLogin       = -105 // 需要登录
 	CodeLoginFailed     = -106 // 登录失败
 	CodeCashierNotLogin = -107 // 点餐助手绑定的收银机未登录
+
+	CashierLoginLimit   = -111 // 收银机登录已达上限
+	AssistantLoginLimit = -112 // 点餐助手登录已达上限
+	KitchenLoginLimit   = -113 // 厨显登录已达上限
+	TabletLoginLimit    = -114 // 平板登录已达上限
+
+	CompanyLicenceExpired = -191 // 商家过期
 )
 
 // 送厨检查的业务错误码
