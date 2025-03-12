@@ -735,9 +735,9 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 				PageSize: req.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   getOrderNum(0),
-			CancelNum:   getOrderNum(1),
-			CompleteNum: getOrderNum(2),
+			UnpaidNum:   getOrderNum(constant.SaleBillStatusPending),
+			CompleteNum: getOrderNum(constant.SaleBillStatusComplete),
+			CancelNum:   getOrderNum(constant.SaleBillStatusCanceled),
 		},
 	}, nil
 }

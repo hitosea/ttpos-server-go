@@ -189,7 +189,7 @@ type GetCashierOrderListWithPaginationType struct {
 	PageNo           int    // 页码
 	PageSize         int    // 页面大小
 	OrderNo          string // 订单编号
-	DateType         int    // 时间类型,-1=全部、0=今天、1=本周、2=本月、3=本年
+	DateType         int    // 时间类型,-1=全部、0=今天、1=昨天、2=本周
 	EnableCreateTime bool   // 是否启用创建时间
 	EnablePayTime    bool   // 是否启用支付时间
 	QueryStartTime   uint   // 查询开始时间
@@ -244,13 +244,14 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 					now := time.Now()
 					var startTime, endTime time.Time
 					switch param.DateType {
-					case 1: // 今天
+					case constant.OrderDateTypeToday: // 今天
 						startTime = now.Truncate(24 * time.Hour)
 						endTime = startTime.Add(24*time.Hour - time.Second)
-					case 2: // 昨天
+						fmt.Println("今天", startTime, endTime)
+					case constant.OrderDateTypeYesterday: // 昨天
 						startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
 						endTime = startTime.Add(24*time.Hour - time.Second)
-					case 3: // 本周
+					case constant.OrderDateTypeWeek: // 本周
 						weekday := int(now.Weekday())
 						if weekday == 0 {
 							weekday = 7

@@ -7,6 +7,15 @@ const (
 )
 
 const (
+	OrderDateTypeAll       = -1 // 全都
+	OrderDateTypeToday     = 0  // 今天
+	OrderDateTypeYesterday = 1  // 昨天
+	OrderDateTypeWeek      = 2  // 本周
+	OrderDateTypeMonth     = 3  // 本月
+	OrderDateTypeYear      = 4  // 本年
+)
+
+const (
 	SaleBillTypeInstant = 1 // 点餐
 	SaleBillTypeDesk    = 0 // 桌台
 )
