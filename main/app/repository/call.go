@@ -17,6 +17,7 @@ type ICallRepo interface {
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.CustomerCall, int64, error) // 分页获取呼叫列表
 	GetUnprocessedCallCount(opts ...DBOption) (int64, error)                               // 获取未处理呼叫数量
 	Update(vars map[string]any, opts []DBOption) error                                     // 根据条件修改呼
+	CreateCall(call model.CustomerCall) error                                              // 保存呼叫
 }
 
 func NewCallRepo(db *gorm.DB) ICallRepo {
@@ -113,4 +114,8 @@ func (r *callRepo) Update(vars map[string]any, opts []DBOption) error {
 		db = opt(db)
 	}
 	return db.Updates(vars).Error
+}
+
+func (r *callRepo) CreateCall(call model.CustomerCall) error {
+	return r.db.Model(&model.CustomerCall{}).Create(&call).Error
 }
