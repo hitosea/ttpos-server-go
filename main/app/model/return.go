@@ -1,6 +1,6 @@
 package model
 
-// ReturnOrder 退货单表 ttpos_return_order
+// ReturnOrder 退货单表 `ttpos_return_order`
 type ReturnOrder struct {
 	BaseModel
 	RelatedOrderType    uint    `gorm:"column:related_order_type;type:tinyint(1) unsigned;default:0;comment:关联订单类型：0-销售订单；1-充值订单;NOT NULL" json:"related_order_type"`
@@ -19,9 +19,12 @@ type ReturnOrder struct {
 // ReturnOrderAmount 退款金额表 ttpos_return_order_amount
 type ReturnOrderAmount struct {
 	BaseModel
-	ReturnOrderUuid   uint64  `gorm:"column:return_order_uuid;type:bigint(20) unsigned;default:0;comment:关联退货单ID;NOT NULL" json:"return_order_uuid"`
-	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:关联支付方式ID;NOT NULL" json:"payment_method_uuid"`
-	Amount            float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
+	Amount float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
+
+	// 关联字段
+	ReturnOrderUuid   uint64 `gorm:"column:return_order_uuid;type:bigint(20) unsigned;default:0;comment:关联退货单ID;NOT NULL" json:"return_order_uuid"`
+	PaymentMethodUuid uint64 `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:关联支付方式ID;NOT NULL" json:"payment_method_uuid"`
+	PaymentOrderUuid  uint64 `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:关联支付单ID,用于判断支付单的钱还有多少未退;NOT NULL" json:"payment_order_uuid"`
 
 	ReturnOrder   *ReturnOrder   `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
 	PaymentMethod *PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式
@@ -39,7 +42,7 @@ type ReturnOrderProduct struct {
 	ProductName          string  `gorm:"column:product_name;comment:商品名称" json:"product_name"`
 	ProductPrice         float64 `gorm:"column:product_price;comment:商品单价" json:"product_price"`
 	TaxRate              float64 `gorm:"column:tax_rate;comment:税率,根据结账时税率计算" json:"tax_rate"`
-	ProductQuantity      uint    `gorm:"column:product_quantity;comment:商品数量" json:"product_quantity"`
+	Num                  uint    `gorm:"column:num;comment:商品数量" json:"num"`
 	ProductDiscount      float64 `gorm:"column:product_discount;comment:商品折扣" json:"product_discount"`
 	ProductTotalAmount   float64 `gorm:"column:product_total_amount;comment:商品总金额" json:"product_total_amount"`
 }

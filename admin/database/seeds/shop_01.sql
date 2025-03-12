@@ -1647,7 +1647,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `product_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称',
     `product_price` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价',
     `tax_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '税率,根据结账时税率计算',
-    `product_quantity` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量,退货的商品数量',
     `product_discount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品折扣',
     `product_total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品总金额（退款总金额）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

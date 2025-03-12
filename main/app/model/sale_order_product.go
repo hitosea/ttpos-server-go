@@ -96,6 +96,15 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
+// GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
+func (model *SaleOrderProduct) GetCanReturnNum() uint {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrderProduct := range model.ReturnOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
+	}
+	return model.Num - uint(amount.InexactFloat64())
+}
+
 func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
 	// 默认0是本台的商品。不为0的商品是从其他桌台并台过来的商品
 	return model.DeskUuid == 0

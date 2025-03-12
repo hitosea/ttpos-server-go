@@ -122,7 +122,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 // @param data query req.OrderReturnInfoReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/order/return_info [get]
+// @Router /cashier/order/return [get]
 func (h *OrderHandler) ReturnOrderInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -267,7 +267,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
-		privateApi.GET("/order/return", wrapper.ReturnOrderInfo) //
+		privateApi.GET("/order/return", wrapper.ReturnOrderInfo) // 获取退款弹窗信息
 		privateApi.POST("/order/return", wrapper.ReturnOrder)    // 整单退款或部分退款
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)

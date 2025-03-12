@@ -86,7 +86,7 @@ type SaleBill struct {
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
-func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64) *SaleBill {
+func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64, serialNo string) *SaleBill {
 	isBuffet := len(buffetUuids) > 0
 
 	if saleBillUuid == 0 {
@@ -102,6 +102,7 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 		MealNum:      mealNum, // 非自助餐订单，就餐人数等于开台时填写的人数。 自助餐订单，就餐人数等于各个顾客类型数量的累加，如老人2人、小孩3人，则就餐人数为5人。不会因为销售账单是两个自助餐套餐而导致人数变为10人
 		Remark:       remark,
 		DeskUuid:     deskUuid,
+		SerialNo:     serialNo,
 	}
 
 	// 设置自助餐套餐

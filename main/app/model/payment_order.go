@@ -79,6 +79,17 @@ type PaymentOrder struct {
 	// 关联字段
 	PaymentMethod       *PaymentMethod       `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`
+	ReturnOrderAmounts  []*ReturnOrderAmount `gorm:"foreignKey:PaymentOrderUuid;references:Uuid"`
+}
+
+// GetCanReturnAmount 获取支付单的可退款金额. 可退款金额=支付金额-已退款金额
+func (model *PaymentOrder) GetCanReturnAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrderAmount := range model.ReturnOrderAmounts {
+		amount = amount.Add(decimal.NewFromFloat(returnOrderAmount.Amount))
+	}
+	// 可退款金额=支付金额-已退款金额
+	return decimal.NewFromFloat(model.Amount).Sub(amount).Round(2).InexactFloat64()
 }
 
 func (model *PaymentOrder) GetSource() int {

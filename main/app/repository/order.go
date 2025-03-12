@@ -855,11 +855,8 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", constant.NotDeleted)
-						return db
-					},
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			// ==================== 销售账单的桌台信息 ====================
@@ -899,13 +896,19 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders",
-				Args: []interface{}{
+				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
 				},
 			},
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders.PaymentMethod",
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.Member.MemberLevel",
@@ -915,13 +918,19 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
-				Args: []interface{}{
+				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 					CommonRepo.DBOption(CommonRepo.WhereBySaleBillUuid(saleBillUuid)),
 				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.CancelReasons",

@@ -159,17 +159,17 @@ type OrderInfosResp struct {
 }
 
 type OrderReturnInfoResp struct {
-	CanReturnAmount float64                    `json:"can_return_amount"` // 可退款金额
+	CanReturnAmount float64                    `json:"can_return_amount"` // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
 	PaymentRecords  []OrderReturnPaymentRecord `json:"payment_records"`   // 支付记录
 	Products        []OrderReturnProduct       `json:"products"`          // 商品列表
 }
 
 type OrderReturnPaymentRecord struct {
-	PaymentOrderUuid uint64  `json:"payment_order_uuid"` // 支付单UUID
-	PaymentTypeName  string  `json:"payment_type_name"`  // 支付类型名称
-	CurrencyUnit     string  `json:"currency_unit"`      // 货币单位
-	PaymentAmount    float64 `json:"payment_amount"`     // 支付金额
-	CanReturnAmount  float64 `json:"can_return_amount"`  // 可退款金额。剩余可退xx
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID
+	PaymentMethodName string  `json:"payment_method_name"` // 支付类型名称
+	CurrencyUnit      string  `json:"currency_unit"`       // 货币单位
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额
+	CanReturnAmount   float64 `json:"can_return_amount"`   // 可退款金额。剩余可退xx. 可退款金额=支付金额-已退款金额
 }
 
 type OrderReturnProduct struct {

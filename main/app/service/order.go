@@ -23,11 +23,12 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/cryptor"
+	"github.com/duke-git/lancet/v2/slice"
+
 	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
-	"github.com/duke-git/lancet/v2/cryptor"
-	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -469,7 +470,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	// 构建销售账单
-	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid)
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo)
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
@@ -1065,7 +1066,70 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 
 // GetReturnOrderInfo 获取退款信息
 func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) {
-	return nil, nil
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+	// 获取销售账单信息
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("找不到销售订单")
+	}
+
+	// 判断订单是否可以退款
+	// if !saleBill.IsReturnable() {
+	// 	return nil, errors.New("订单状态不允许退款")
+	// }
+
+	// 获取销售订单付款单列表
+
+	// 获取销售订单退货单列表
+
+	// 获取销售订单商品列表
+
+	paymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
+	products := make([]resp.OrderReturnProduct, 0)
+
+	currencyUnit := ""
+
+	for _, paymentOrder := range saleOrder.PaymentOrders {
+		paymentRecords = append(paymentRecords, resp.OrderReturnPaymentRecord{
+			PaymentOrderUuid:  paymentOrder.Uuid,
+			PaymentMethodName: paymentOrder.PaymentMethodName,
+			CurrencyUnit:      paymentOrder.CurrencyUnit,
+			PaymentAmount:     paymentOrder.Amount,
+			CanReturnAmount:   paymentOrder.GetCanReturnAmount(), // 可退款金额=支付金额-已退款金额
+		})
+		currencyUnit = paymentOrder.CurrencyUnit
+	}
+
+	// 获取销售订单商品列表
+	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		products = append(products, resp.OrderReturnProduct{
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
+			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
+			Price:                saleOrderProduct.Price,
+			CanReturnAmount:      decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.GetCanReturnNum()))).Round(2).InexactFloat64(),
+			CurrencyUnit:         currencyUnit,
+		})
+	}
+
+	// 获取销售订单付款单列表
+	// 可退款金额
+	canReturnAmount := saleOrder.GetCanReturnAmount()
+	res := &resp.OrderReturnInfoResp{
+		CanReturnAmount: canReturnAmount, // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+		PaymentRecords:  paymentRecords,
+		Products:        products,
+	}
+
+	return res, nil
 }
 
 // HideOrder 隐藏订单（挂单）

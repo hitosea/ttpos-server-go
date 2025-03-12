@@ -67,6 +67,20 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
+// GetReturnAmount 获取销售订单的退款金额. 退款金额=所有退货单的退款金额之和
+func (model *SaleOrder) GetReturnAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrder := range model.ReturnOrders {
+		amount = amount.Add(decimal.NewFromFloat(returnOrder.RefundAmount))
+	}
+	return amount.InexactFloat64()
+}
+
+// GetCanReturnAmount 获取销售订单的可退款金额. 可退款金额=订单最终应收金额-已退款金额
+func (model *SaleOrder) GetCanReturnAmount() float64 {
+	return decimal.NewFromFloat(model.PaymentAmount).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+}
+
 // GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
 func (model *SaleOrder) GetOriginAmount() float64 {
 	//原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额

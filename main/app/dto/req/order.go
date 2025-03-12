@@ -47,7 +47,8 @@ type OrderCancelReq struct {
 
 // OrderReturnInfoReq 退款订单信息
 type OrderReturnInfoReq struct {
-	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
+	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID。退款都是针对子单进行退款
 }
 
 // OrderReturnReq 订单退款
