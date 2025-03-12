@@ -230,12 +230,20 @@ class ErpMonthlyStatistics extends BaseModel
             if ($record->sku) {
                 $productName .= ' - ' . $record->sku->spec_name_text;
 
-                $monthStartStock = $record->sku->erpMonthlyProductStatistics()->sum('stock') ?: 0;
-                $monthEntryStock = $record->sku->erpInventoryRecord()->sum('num') ?: 0;
+                foreach ($record->sku->erpMonthlyProductStatistics as $item) {
+                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
+                }
+                foreach ($record->sku->erpInventoryRecord as $item) {
+                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
+                }   
             }
             if ($record->material) {
-                $monthStartStock = $record->material->erpMonthlyMaterialStatistics()->sum('stock') ?: 0;
-                $monthEntryStock = $record->material->erpInventoryRecord()->sum('num') ?: 0;
+                foreach ($record->material->erpMonthlyMaterialStatistics as $item) {
+                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
+                }
+                foreach ($record->material->erpInventoryRecord as $item) {
+                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
+                }
             }
 
             // 损耗数量/（月初原有库存+月入库数量）*100%=损耗比例（保留小数点后两位）

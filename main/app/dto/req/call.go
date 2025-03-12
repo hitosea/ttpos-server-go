@@ -21,3 +21,9 @@ type ProcessedCallReq struct {
 type PrinterLogReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 打印日志Uuid
 }
+
+// CallReq 呼叫请求
+type CallReq struct {
+	CallType uint8  `json:"call_type" binding:"required,oneof=1 2"` // 呼叫类型1-服务员；2-结账
+	DeskUuid uint64 `json:"desk_uuid" binding:"required"`           // 桌台ID
+}

@@ -99,24 +99,18 @@ func NewAuthSrvImpl(
 		},
 		tabletRoutes: []string{
 			"/api/v1/tablet/desk/list",
-			"/api/v1/tablet/bind_desk",
-			//'/passport/login',
-			//'/passport/captcha',
-			//'/passport/logout',
-			//'/base/base/bind',
-			//'/base/base/getNewVersion',
-			//'/base/base/getAllProductImg',
-			//'/base/base/getInfo',
+			"/api/v1/tablet/desk/bind",
+			"/api/v1/tablet/base",
+			"/api/v1/tablet/logout",
+			"/api/v1/tablet/check_update",
+			"/api/v1/tablet/verify_advanced_password",
+			"/api/v1/tablet/call",
+			"/api/v1/product/category/list",
+
 			//'/table/table/openPing',
-			//'/table/table/bind',
-			//'/table/table/index',
 			//'/table/table/getInfo',
-			//'/table/table/unbind',
 			//'/order/order/tableBuy',
-			//'/base/base/verifyPassword',
-			//'/call/call/call',
 			//'/order/order/buffetList',
-			//'/product/category/index', // 分类基础列表-缓存完完全外
 			//'/product/product/getBaseList', // 商品基础列表-缓存完完全外
 		},
 	}

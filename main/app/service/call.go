@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -24,6 +25,7 @@ type ICallSrv interface {
 	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
 	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
 	GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error)                                                 // 获取未处理消息数量
+	Call(ctx context.Context, callReq req.CallReq) error                                                             // 平板端呼叫
 }
 
 // callSrv 呼叫服务结构体
@@ -127,6 +129,25 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		UnprocessedCallCount: unprocessedCallCount,
 		AbnormalPrintCount:   abnormalPrintCount,
 	}, nil
+}
+
+// Call 平板端呼叫
+func (s *callSrv) Call(ctx context.Context, callReq req.CallReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	callRepo := repository.NewCallRepo(db)
+	deskRepo := repository.NewDeskRepo(db)
+	desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(callReq.DeskUuid))
+	if err != nil {
+		return errors.ErrInternal
+	}
+	if err := callRepo.CreateCall(model.CustomerCall{
+		DeskUuid: desk.Uuid,
+		DeskNo:   desk.DeskNo,
+		CallType: callReq.CallType,
+	}); err != nil {
+		return errors.ErrInternal
+	}
+	return nil
 }
 
 // Processed 消息已处理
