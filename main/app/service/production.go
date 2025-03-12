@@ -16,11 +16,11 @@ import (
 )
 
 type IProductionSrv interface {
-	GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error)    // 根据订单获取送厨商品
-	GetProductListByCategory(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error) // 根据分类获取送厨商品
-	GetHistory(ctx context.Context) (resp.ProductionHistory, error)                                                     // 获取上菜历史
-	Finish(ctx context.Context, productionUuid uint64) error                                                            // 完成制作
-	Recovery(ctx context.Context, productionUuid uint64) error                                                          // 恢复制作
+	GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error)              // 根据订单获取送厨商品
+	GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) // 根据分类获取送厨商品
+	GetHistory(ctx context.Context) (resp.ProductionHistory, error)                                                               // 获取上菜历史
+	Finish(ctx context.Context, productionUuid uint64) error                                                                      // 完成制作
+	Recovery(ctx context.Context, productionUuid uint64) error                                                                    // 恢复制作
 }
 
 // productionSrv 收银服务结构体
@@ -72,10 +72,16 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 }
 
 // GetProductListByCategory 根据订单获取送厨商品
-func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error) {
+func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) {
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	statusOption := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, statusOption)
+	dbOptions := []repository.DBOption{
+		statusOption,
+	}
+	if req.CategoryUuid != 0 {
+		dbOptions = append(dbOptions, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
+	}
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, dbOptions...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -93,7 +99,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	var groups []resp.ProductionGroup
 	for _, paginatedProduct := range limitedProducts {
 		var group resp.ProductionGroup
-		var items []resp.ProductionItem
+		items := make([]resp.ProductionItem, 0)
 		for _, product := range products {
 			if paginatedProduct.FirstCategoryUuid != product.FirstCategoryUuid {
 				continue

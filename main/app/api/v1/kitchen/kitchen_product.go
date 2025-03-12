@@ -70,11 +70,11 @@ func (h *ProductHandler) GetProductListByOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data query req.ProductionListReq true "分页参数"
+// @param data query req.ProductionListByCategoryReq true "分页参数"
 // @Success 200 {object} dto.Response{data=resp.ProductionListWithPagination}
 // @Router /kitchen/product/list_by_category [get]
 func (h *ProductHandler) GetProductListByCategory(c *gin.Context) {
-	var listReq req.ProductionListReq
+	var listReq req.ProductionListByCategoryReq
 	if err := c.ShouldBindQuery(&listReq); err != nil {
 		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return

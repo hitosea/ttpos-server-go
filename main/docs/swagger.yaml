@@ -9609,6 +9609,10 @@ paths:
       - application/json
       description: 根据分类获取送厨商品列表
       parameters:
+      - description: 分类Uuid，0-全部
+        in: query
+        name: category_uuid
+        type: integer
       - description: 页码
         in: query
         minimum: 1
