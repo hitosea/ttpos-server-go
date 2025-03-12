@@ -183,3 +183,22 @@ type OrderReturnProduct struct {
 	CanReturnAmount      float64            `json:"can_return_amount"`       // 可退款金额. 可退款金额=订单商品数量*最终单价
 	CurrencyUnit         string             `json:"currency_unit"`           // 货币单位
 }
+
+type OrderReverseSettleInfoResp struct {
+	SaleBillUuid  uint64                     `json:"sale_bill_uuid"` // 销售账单UUID
+	SaleBillNo    string                     `json:"sale_bill_no"`   // 销售账单编号
+	OrderAmount   float64                    `json:"order_amount"`   // 订单总金额
+	PaymentAmount float64                    `json:"payment_amount"` // 支付金额
+	PayMethods    []string                   `json:"pay_methods"`    // 支付方式名称列表
+	Desks         OrderReverseSettleDeskList `json:"desks"`          // 可用桌台列表
+}
+
+type OrderReverseSettleDeskList struct {
+	OriginDeskAvailable bool                     `json:"origin_desk_available"` // 原桌台是否空闲
+	List                []OrderReverseSettleDesk `json:"list"`                  // 桌台编号
+}
+
+type OrderReverseSettleDesk struct {
+	Uuid     uint64 `json:"uuid"`      // 桌台UUID
+	SerialNo string `json:"serial_no"` // 桌台编号
+}

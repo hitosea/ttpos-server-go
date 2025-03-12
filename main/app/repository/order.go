@@ -862,6 +862,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			// ==================== 销售账单的桌台信息 ====================
 			// 加载桌台信息
 			WithPreload{
+				// 使用场景：获取反结账信息，判断桌台是否空闲
 				Query: "Desk",
 			},
 			// ==================== 销售账单的自助餐套餐1、2信息 ====================

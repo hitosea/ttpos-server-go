@@ -44,6 +44,7 @@ type IOrderSrv interface {
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                       // 删除订单
 	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                       // 退款订单
 	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                               // 获取退款信息
+	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                               // 获取反结账信息
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
@@ -1149,6 +1150,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	// 发布退款事件 todo
+	// 退款到余额或现金 todo
 	return nil
 }
 
@@ -1214,6 +1217,61 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 	}
 
 	return res, nil
+}
+
+// GetReverseSettleInfo 获取反结账信息
+func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+	// 获取销售账单信息
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取支付方式名称列表
+	payMethods := saleBill.GetPaymentMethodNameList()
+	desk := saleBill.Desk
+	desks := make([]resp.OrderReverseSettleDesk, 0)
+	// 如果原桌台空闲
+	if desk.IsAvailableDesk() {
+		desks = append(desks, resp.OrderReverseSettleDesk{
+			Uuid:     desk.Uuid,
+			SerialNo: desk.DeskNo,
+		})
+	}
+	// 如果原桌台不空闲
+	if !desk.IsAvailableDesk() {
+		// 获取所有空闲的桌台
+		freeDesks, err := repository.NewDeskRepo(db).GetAvailableDeskList()
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		for _, freeDesk := range freeDesks {
+			desks = append(desks, resp.OrderReverseSettleDesk{
+				Uuid:     freeDesk.Uuid,
+				SerialNo: freeDesk.DeskNo,
+			})
+		}
+	}
+
+	return &resp.OrderReverseSettleInfoResp{
+		SaleBillUuid:  saleBill.Uuid,
+		SaleBillNo:    saleBill.OrderNo,
+		OrderAmount:   saleBill.Amount,
+		PaymentAmount: saleBill.PaymentAmount,
+		PayMethods:    payMethods,
+		Desks: resp.OrderReverseSettleDeskList{
+			OriginDeskAvailable: desk.IsAvailableDesk(),
+			List:                desks,
+		},
+	}, nil
 }
 
 // HideOrder 隐藏订单（挂单）

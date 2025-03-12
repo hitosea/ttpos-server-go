@@ -3354,6 +3354,40 @@ definitions:
         description: 销售订单商品ID
         type: integer
     type: object
+  resp.OrderReverseSettleDesk:
+    properties:
+      serial_no:
+        description: 桌台编号
+        type: string
+      uuid:
+        description: 桌台UUID
+        type: integer
+    type: object
+  resp.OrderReverseSettleInfoResp:
+    properties:
+      desks:
+        description: 可用桌台列表
+        items:
+          $ref: '#/definitions/resp.OrderReverseSettleDesk'
+        type: array
+      order_amount:
+        description: 订单总金额
+        type: number
+      pay_methods:
+        description: 支付方式名称列表
+        items:
+          type: string
+        type: array
+      payment_amount:
+        description: 支付金额
+        type: number
+      sale_bill_no:
+        description: 销售账单编号
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+    type: object
   resp.PayAmountInfo:
     properties:
       change_amount:
@@ -8482,6 +8516,35 @@ paths:
       security:
       - JwtToken: []
       summary: 退款订单
+      tags:
+      - 收银端.订单
+  /cashier/order/reverse_settle:
+    get:
+      consumes:
+      - application/json
+      description: 获取反结账弹窗信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderReverseSettleInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取反结账弹窗信息
       tags:
       - 收银端.订单
   /cashier/payment_method/list:

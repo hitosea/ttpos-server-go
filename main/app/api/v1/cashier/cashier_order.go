@@ -170,6 +170,35 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReverseSettleInfo 获取反结账弹窗信息
+// @Summary 获取反结账弹窗信息
+// @Description 获取反结账弹窗信息
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderReverseSettleInfoReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.OrderReverseSettleInfoResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/reverse_settle [get]
+func (h *OrderHandler) ReverseSettleInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReverseSettleInfoReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	res, err := h.service.GetReverseSettleInfo(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // DeleteOrder 处理删除订单
 // @Summary 删除订单
 // @Description 删除订单
@@ -267,8 +296,9 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
-		privateApi.GET("/order/return", wrapper.ReturnOrderInfo) // 获取退款弹窗信息
-		privateApi.POST("/order/return", wrapper.ReturnOrder)    // 整单退款或部分退款
+		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)           // 获取退款弹窗信息
+		privateApi.POST("/order/return", wrapper.ReturnOrder)              // 整单退款或部分退款
+		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo) // 获取反结账弹窗信息
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
 	}

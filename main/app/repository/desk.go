@@ -17,7 +17,8 @@ type IDeskRepo interface {
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
 	GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
-	GetDesks(opts ...DBOption) ([]model.Desk, error)
+	GetDesks(opts ...DBOption) ([]*model.Desk, error)
+	GetAvailableDeskList() ([]*model.Desk, error)                      // 获取所有空闲的桌台
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) //
 	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                // 通过uuid获取桌台的记录信息
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
@@ -116,14 +117,23 @@ func (r *deskRepo) GetDesk(opts ...DBOption) (model.Desk, error) {
 	return desk, errors.WithMessage(err)
 }
 
-func (r *deskRepo) GetDesks(opts ...DBOption) ([]model.Desk, error) {
-	var desks []model.Desk
+func (r *deskRepo) GetDesks(opts ...DBOption) ([]*model.Desk, error) {
+	var desks []*model.Desk
 	db := r.db.Model(&model.Desk{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
 	err := db.Order("sort desc").Find(&desks).Error
 	return desks, errors.WithMessage(err)
+}
+
+// GetAvailableDeskList 获取所有空闲的桌台
+func (r *deskRepo) GetAvailableDeskList() ([]*model.Desk, error) {
+	desks, err := r.GetDesks(CommonRepo.WhereByStatus(constant.DeskStatusClose))
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return desks, nil
 }
 
 // GetDeskInfo 获取桌台信息

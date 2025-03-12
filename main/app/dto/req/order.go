@@ -63,6 +63,11 @@ type OrderReturnProduct struct {
 	Num                  int    `json:"num"`                     // 退款数量
 }
 
+// OrderReverseSettleInfoReq 获取反结账弹窗信息
+type OrderReverseSettleInfoReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
+}
+
 // OrderDeleteReq 订单删除
 type OrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID

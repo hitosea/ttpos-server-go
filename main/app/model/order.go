@@ -123,6 +123,21 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 获取支付方式名称列表. 获取所有子单的付款单用到的支付方式，不重复
+func (model *SaleBill) GetPaymentMethodNameList() []string {
+	payMethods := make(map[string]bool)
+	for _, saleOrder := range model.SaleOrders {
+		for _, paymentOrder := range saleOrder.PaymentOrders {
+			payMethods[paymentOrder.PaymentMethodName] = true
+		}
+	}
+	payMethodList := make([]string, 0)
+	for payMethod := range payMethods {
+		payMethodList = append(payMethodList, payMethod)
+	}
+	return payMethodList
+}
+
 func (model *SaleBill) IsLockStatus() bool {
 	return model.IsLock == constant.SaleBillIsLockYes
 }

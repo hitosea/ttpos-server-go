@@ -6198,6 +6198,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/order/reverse_settle": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取反结账弹窗信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "获取反结账弹窗信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderReverseSettleInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/payment_method/list": {
             "get": {
                 "security": [
@@ -13267,6 +13318,54 @@ const docTemplate = `{
                 },
                 "sale_order_product_uuid": {
                     "description": "销售订单商品ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderReverseSettleDesk": {
+            "type": "object",
+            "properties": {
+                "serial_no": {
+                    "description": "桌台编号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderReverseSettleInfoResp": {
+            "type": "object",
+            "properties": {
+                "desks": {
+                    "description": "可用桌台列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderReverseSettleDesk"
+                    }
+                },
+                "order_amount": {
+                    "description": "订单总金额",
+                    "type": "number"
+                },
+                "pay_methods": {
+                    "description": "支付方式名称列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "sale_bill_no": {
+                    "description": "销售账单编号",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
                     "type": "integer"
                 }
             }
