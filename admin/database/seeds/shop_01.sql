@@ -1190,7 +1190,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `cashier_device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银机绑定的id',
     `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单、充值订单id',
-    `data` VARCHAR(255) DEFAULT NULL COMMENT '打印数据',
+    `data` longtext COMMENT '打印数据',
     `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型:0系统默认队列,1云上服务下放',
     `data_type` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
     `print_method` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',

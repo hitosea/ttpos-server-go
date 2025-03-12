@@ -3,10 +3,13 @@ package printer
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -21,6 +24,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	saleBillUuid uint64,
 	products printer_model.Products,
 ) bool {
+
 	// 获取商品打印机列表
 	productPrinters, err := p.getProductPrinterList()
 	if err != nil {
@@ -42,6 +46,15 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	regionUuid := uint64(0)
 	if billInfo.Desk != nil {
 		regionUuid = billInfo.Desk.RegionUuid
+	}
+
+	// 打印日志服务
+	pinterLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
+
+	// 打印方式
+	printMethod := constant.PrinterLogPrintMethodText
+	if p.printerSetting.KitchenPrintMethod == "2" {
+		printMethod = constant.PrinterLogPrintMethodImage
 	}
 
 	// 循环商品打印机
@@ -76,15 +89,42 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			if printerItem.IsDelete() {
 				continue
 			}
+			// 获取打印机类型
+			var printerType string
+			if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
+				printerType = printerItem.Printer.PrinterType.Key
+			}
+
 			// 退菜单打印
 			if printType == constant.PrinterProductTypeBackFood {
 				data := p.getPrintReturnProductContent(productPrinter, printerItem, billInfo, newProducts)
 				if data != "" {
-					p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
-					// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
-					// 		"data" => $data,
-					// 		// "data_type" => PrinterLog::DATA_TYPE[9]['value'],
-					// 	]));
+					// 执行打印
+					err := p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
+					if err != nil {
+						logger.Logger.Error("打印失败", zap.Error(err))
+					}
+
+					// 添加打印日志，依赖打印日志服务
+					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+						PrinterType:   printerType,
+						PrinterConfig: printerItem.Printer.ConfigJson,
+						PrintCopies:   printerItem.Printer.Copies,
+					}, resp.PrinterLogData{
+						PrintMethod:     printMethod,
+						RelatedType:     0,
+						RelatedUuid:     saleBillUuid,
+						PrinterUuid:     printerItem.PrinterUuid,
+						CashierDeviceId: p.ctx.GetDeviceSn(),
+						DataType:        constant.PrinterLogDataTypeReturnDish,
+						Data:            data,
+						Type:            1,
+						FirstExecution:  0,
+					}, "")
+					if err != nil {
+						logger.Logger.Error("添加打印日志失败", zap.Error(err))
+					}
+
 				}
 				continue
 			}
@@ -93,11 +133,32 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				for _, product := range newProducts {
 					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
 					if data != "" {
-						p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
-						// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
-						// 	"data" => $data,
-						// 	"data_type" => PrinterLog::DATA_TYPE[3]['value'],
-						// ]));
+						// 执行打印
+						err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
+						if err != nil {
+							logger.Logger.Error("打印失败", zap.Error(err))
+						}
+
+						// 添加打印日志，依赖打印日志服务
+						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+							PrinterType:   printerType,
+							PrinterConfig: printerItem.Printer.ConfigJson,
+							PrintCopies:   printerItem.Printer.Copies,
+						}, resp.PrinterLogData{
+							PrintMethod:     printMethod,
+							RelatedType:     0,
+							RelatedUuid:     saleBillUuid,
+							PrinterUuid:     printerItem.PrinterUuid,
+							CashierDeviceId: p.ctx.GetDeviceSn(),
+							DataType:        constant.PrinterLogDataTypeOneDishOneMenu,
+							Data:            data,
+							Type:            1,
+							FirstExecution:  0,
+						}, "")
+						if err != nil {
+							logger.Logger.Error("添加打印日志失败", zap.Error(err))
+						}
+
 					}
 				}
 				continue
@@ -105,11 +166,31 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 整单打印
 			data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts)
 			if data != "" {
-				p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
-				// PrinterLog::addPrinterLog($printer, array_merge($printerData, [
-				// 	"data" => $data,
-				// 	"data_type" => PrinterLog::DATA_TYPE[4]['value'],
-				// ]));
+				err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
+				if err != nil {
+					logger.Logger.Error("打印失败", zap.Error(err))
+				}
+
+				// 添加打印日志，依赖打印日志服务
+				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+					PrinterType:   printerType,
+					PrinterConfig: printerItem.Printer.ConfigJson,
+					PrintCopies:   printerItem.Printer.Copies,
+				}, resp.PrinterLogData{
+					PrintMethod:     printMethod,
+					RelatedType:     0,
+					RelatedUuid:     saleBillUuid,
+					PrinterUuid:     printerItem.PrinterUuid,
+					CashierDeviceId: p.ctx.GetDeviceSn(),
+					DataType:        constant.PrinterLogDataTypeEntireOrder,
+					Data:            data,
+					Type:            1,
+					FirstExecution:  0,
+				}, "")
+				if err != nil {
+					logger.Logger.Error("添加打印日志失败", zap.Error(err))
+				}
+
 			}
 		}
 	}
@@ -125,9 +206,11 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	products printer_model.Products,
 ) string {
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
+
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
-		// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+	if p.printerSetting.KitchenPrintMethod == "1" {
+		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
 	// 获取打印机类型
@@ -141,19 +224,14 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
-		// 创建Codesoft模板
 		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		// 调用CompleteOrder方法
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		// 创建Codesoft模板
-		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		// 调用CompleteOrder方法
+		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
-		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	}
 
 	return ""
@@ -167,9 +245,11 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	product printer_model.OrderProduct,
 ) string {
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
+
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
-		// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
+	if p.printerSetting.KitchenPrintMethod == "1" {
+		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 获取打印机类型
@@ -189,9 +269,8 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
-		// return (new XprinterDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	}
 
 	return ""
@@ -208,12 +287,11 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	// if p.printerSetting.KitchenPrintMethod == "2" {
 	// 	// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
 	// }
-	// /* *
-	// *商米 和 芯烨 打印机
-	// */
-	// if ($printerItem->printer) {
-	//     return (new XprinterReturnDishesTemplate(null, $this->allSourceProductList))->completeOrder($printerConfig, $printerItem, $order);
-	// }
-	// return "";
+
+	// 商米和芯烨打印机
+	if printerItem.Printer != nil {
+		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		return t.ReturnMenuTemplate(printerItem, saleBill, products)
+	}
 	return ""
 }

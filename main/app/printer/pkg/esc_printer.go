@@ -344,23 +344,15 @@ func (p *Printers) AppendText(text string, isReturn ...bool) string {
 	return p.AppendTextWithReturn(text, returnResult)
 }
 
-// LineFeedWithN 打印缓冲区数据并换行指定的行数
-func (p *Printers) LineFeedWithN(n int) {
-	if n <= 0 {
-		n = 1
-	}
-	for i := 0; i < n; i++ {
-		p.orderData += "0a"
-	}
-}
-
 // LineFeed 打印缓冲区数据并换行（可选参数n，默认为1）
 func (p *Printers) LineFeed(n ...int) {
 	lines := 1
 	if len(n) > 0 && n[0] > 0 {
 		lines = n[0]
 	}
-	p.LineFeedWithN(lines)
+	for i := 0; i < lines; i++ {
+		p.orderData += "0a"
+	}
 }
 
 // RestoreDefaultSettings 恢复默认设置

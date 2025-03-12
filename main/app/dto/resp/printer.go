@@ -1,14 +1,15 @@
 package resp
 
 type PrinterLogData struct {
+	RelatedType     int    `json:"related_type"`      // 关联类型
+	RelatedUuid     uint64 `json:"related_uuid"`      // 关联ID
 	PrinterUuid     uint64 `json:"printer_uuid"`      // 打印机uuid
 	CashierDeviceId string `json:"cashier_device_id"` // 收银机绑定的设备ID
 	DataType        int    `json:"data_type"`         // 数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;
 	Data            string `json:"data"`              // 打印数据
 	Type            int    `json:"type"`              // 类型:0系统默认队列,1云上服务下放
 	FirstExecution  int    `json:"first_execution"`   // 是否首次执行打印 1-是 0-否;
-	//OrderId         uint64 `json:"order_id"`          // 关联销售订单ID，废弃，直接传递No
-	No string `json:"no"` // 桌台号或者呼叫号(如果有)
+	No              string `json:"no"`                // 桌台号或者呼叫号(如果有)
 
 	Status int    `json:"status"` // 状态(0结束,1进行中,2成功)
 	Reason string `json:"reason"` // 原因

@@ -3325,19 +3325,23 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	go func() {
 		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
 			BasePayload: event.BasePayload{
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OrderProductId: req.SaleOrderProductUuid,
-			ProductId:      saleOrderProduct.ProductPackageUuid,
-			ProductName:    saleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:    saleOrderProduct.GetAttributeName(),
-			Num:            saleOrderProduct.Num,
-			Reason:         model.GetReturnFoodReasonNames(returnFoodReason),
-			CustomReason:   saleOrderProduct.CancelReason,
+			OrderProductId:  req.SaleOrderProductUuid,
+			ProductId:       saleOrderProduct.ProductPackageUuid,
+			ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+			ProductAttr:     saleOrderProduct.GetAttributeName(),
+			ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+			TotalNum:        saleOrderProduct.Num,
+			IsBuffet:        saleOrderProduct.IsBuffet == 1,
+			Remark:          saleOrderProduct.Remark,
+			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),
+			CustomReason:    saleOrderProduct.CancelReason,
 		})
 	}()
 	// 获取新的购物车信息

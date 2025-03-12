@@ -13,6 +13,7 @@ type OrderProduct struct {
 	TotalNum        uint                 `json:"total_num"`        // 总数量
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
 	Remark          string               `json:"remark"`           // 备注
+	ReturnReason    string               `json:"return_reason"`    // 退菜原因
 }
 
 // ProductPrinter 商品打印机

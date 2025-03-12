@@ -67,7 +67,7 @@ type PrinterLog struct {
 	RelatedUuid     uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:销售账单、充值订单id;NOT NULL" json:"related_uuid"`
 	Data            string `gorm:"column:data;type:varchar(255);comment:打印数据" json:"data"`
 	Type            int    `gorm:"column:type;type:int(11);default:0;comment:类型:0系统默认队列,1云上服务下放;NOT NULL" json:"type"`
-	DataType        int    `gorm:"column:data_type;type:tinyint(2);default:1;comment:数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;NOT NULL" json:"data_type"`
+	DataType        int    `gorm:"column:data_type;type:tinyint(2);default:1;comment:数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单 8-充值单 9-退菜单;NOT NULL" json:"data_type"`
 	PrintMethod     int    `gorm:"column:print_method;type:tinyint(2);default:1;comment:打印方式 1文本打印, 2图片打印;NOT NULL" json:"print_method"`
 	Num             int    `gorm:"column:num;type:int(11);default:0;comment:打印次数;NOT NULL" json:"num"`
 	Status          int    `gorm:"column:status;type:tinyint(2);default:1;comment:状态(0结束,1进行中,2成功);NOT NULL" json:"status"`

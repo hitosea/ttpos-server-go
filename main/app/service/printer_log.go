@@ -49,29 +49,37 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		respPrinterLogData resp.PrinterLogData
 		err                error
 	)
+
 	// 是否本机
 	isLocal := printerLogData.CashierDeviceId == controlDeviceId
+
 	// 如果是点餐助手操作的，就永远不是本机
 	if ctx.GetSource() == constant.SourceAssistant {
 		isLocal = false
 	}
+
 	// 是否队列服务
 	var isQueueService bool
+
 	// 如果是局域网部署 - 就都下放打印
 	if viper.GetBool("IS_CLOUD_DEPLOY") {
 		printerLogData.Type = constant.PrinterLogTypeCloud
 	} else if !isLocal && printerLogData.PrinterUuid > 0 {
 		isQueueService = true
 	}
+
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()
+
 	// 如果是商米云打印 -  就都队列打印
 	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
 		isQueueService = true
 		printerLogData.Type = constant.PrinterLogTypeDefault
 		printerLogData.FirstExecution = 0
 	}
-	if printer.PrinterType == "" { // 打印机不存在
+
+	// 打印机不存在
+	if printer.PrinterType == "" {
 		printerLogData.Status = constant.PrinterLogStatusEnd
 		printerLogData.Reason = "打印机不存在"
 	} else {
@@ -108,6 +116,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 			}
 		}
 	}
+
 	// 保存数据
 	printerLogData.PrinterTime = time.Now().Unix()
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
@@ -115,8 +124,10 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	copier.Copy(&printerLog, printerLogData)
 	printerLog, err = printerLogRepo.Create(printerLog)
 	if err != nil {
+		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return respPrinterLogData, errors.WithMessage(err)
 	}
+
 	// 只保留7天的数据
 	err = printerLogRepo.UpdateByWhere(map[string]any{"delete_time": time.Now().Unix()}, printerLogRepo.WhereCreatedBefore(7))
 	if err != nil {
@@ -152,4 +163,5 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 			return printerLogData, errors.New("未知错误")
 		}
 	}
+
 }
