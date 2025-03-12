@@ -5197,6 +5197,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/takeout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打包",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "打包",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderTakeoutReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/language": {
             "get": {
                 "security": [
@@ -9989,6 +10043,19 @@ const docTemplate = `{
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.OrderTakeoutReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "takeout": {
+                    "description": "是否打包,true：打包，false：不打包，默认堂食。 必填",
+                    "type": "boolean"
                 }
             }
         },

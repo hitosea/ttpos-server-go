@@ -50,6 +50,7 @@ type IOrderSrv interface {
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
 	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                       // 获取挂单订单列表
+	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                   // 打包
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
 	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
 	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
@@ -1595,6 +1596,52 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 	return res, nil
 }
 
+// OrderTakeout 打包
+func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取信息源
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取操作的销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+	if err := saleBill.ValidateOrderStatus(constant.OrderTakeout, 0); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 修改销售账单状态
+	if req.Takeout {
+		saleBill.SetTakeoutSaleBill(constant.SaleBillDiningMethodTakeout)
+	} else {
+		saleBill.SetTakeoutSaleBill(constant.SaleBillDiningMethodDineIn)
+	}
+
+	saleBill.CalcAll()
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return info, nil
+}
+
 // OrderProductDelete 删除订单商品
 func (s *orderSrv) OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -2617,10 +2664,12 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		}
 	}
 
+	takeout := shopCart.SaleBill.IsTakeout()
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
 		IsLock:        shopCart.SaleBill.IsLockStatus(),
+		Takeout:       &takeout,
 		Desk:          nil,
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,

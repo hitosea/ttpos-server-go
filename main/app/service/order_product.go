@@ -13,8 +13,6 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/shopspring/decimal"
-
-	"gorm.io/gorm"
 )
 
 // IOrderProductSrv 定义订单商品服务接口
@@ -29,8 +27,6 @@ type IOrderProductSrv interface {
 	GetMustPlanRuleByDeskUuid(ctx context.Context, deskUuid uint64) (*utils.Rule, *utils.Check, error)          // 查询某个桌台的必点商品规则
 	//CheckOderProductStock(productPackage model.ProductPackage) (bool, error)                                   // 检查订单商品库存是否都是
 	CheckCreateOrderProduct(dbId uint64, product req.AddProduct) (*model.ProductPackage, error) // 检查创建订单商品
-	GenerateOrderProduct(req GenerateOrderProductReq) *model.SaleOrderProduct                   // 生成订单商品
-	UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error                // 更新订单商品金额
 }
 
 // orderProductSrv 订单商品服务结构体
@@ -325,114 +321,11 @@ type GenerateOrderProductReq struct {
 	Num            uint
 }
 
-// GenerateOrderProduct 生成订单商品
-func (o *orderProductSrv) GenerateOrderProduct(req GenerateOrderProductReq) *model.SaleOrderProduct {
-	// 获取商品规格名称
-	flavorName := ""
-	flavor := req.ProductPackage.GetFlavor()
-	if flavor.Uuid > 0 {
-		flavorName = flavor.MultiLanguageName.GetNameByLang(req.Lang)
-	}
-
-	// 生成商品原始价格
-	flavorPrice, saucePrice, productPrice, salePrice := req.ProductPackage.GenerateOriginalAmount(req.SauceUuids)
-
-	// 获取消费税率
-	taxRate := req.ProductPackage.DineTax.TaxRate
-	if req.SaleBill.DiningMethod == constant.SaleBillDiningMethodTakeout {
-		taxRate = req.ProductPackage.TakeoutTax.TaxRate
-	}
-
-	// 构建销售订单商品模型
-	orderProduct := model.SaleOrderProduct{
-		Name:                  req.ProductPackage.MultiLanguageName.GetNameByLang(req.Lang),
-		FlavorName:            flavorName,
-		Num:                   req.Num,
-		FlavorPrice:           flavorPrice,
-		SaucePrice:            saucePrice,
-		ProductPrice:          productPrice,
-		SalePrice:             salePrice,
-		DeductStockType:       req.ProductPackage.DeductStockType,
-		MultiLanguageNameUuid: req.ProductPackage.MultiLanguageNameUuid,
-		ImageFileUuid:         req.ProductPackage.ImageFileUuid,
-		ProductPackageUuid:    req.ProductPackage.Uuid,
-		SaleBillUuid:          req.SaleBill.Uuid,
-		SaleOrderUuid:         req.SaleOrder.Uuid,
-		OpenMemberDiscount:    req.ProductPackage.OpenDiscount,
-		TaxRate:               taxRate,
-	}
-
-	// 构建销售订单商品BOM
-	var orderProductBoms []*model.SaleOrderProductBom
-	for _, bom := range req.ProductPackage.ProductBoms {
-		var name string
-		var isFlavorBom uint
-		if bom.ProductFlavorUuid > 0 {
-			name = bom.ProductFlavor.MultiLanguageName.GetNameByLang(req.Lang)
-			isFlavorBom = 1
-		}
-		if bom.ProductSauceUuid > 0 {
-			name = bom.ProductSauce.MultiLanguageName.GetNameByLang(req.Lang)
-		}
-		orderProductBoms = append(orderProductBoms, &model.SaleOrderProductBom{
-			Name:           name,
-			Price:          bom.Price,
-			IsFlavorBom:    isFlavorBom,
-			SaleOrderUuid:  req.SaleOrder.Uuid,
-			ProductBomUuid: bom.Uuid,
-		})
-	}
-
-	// 构建销售订单商品属性
-	var orderProductAttributes []*model.SaleOrderProductAttribute
-	for _, productPackageGroup := range req.ProductPackage.ProductPackageAttributeGroups {
-		for _, productPackageAttribute := range productPackageGroup.ProductPackageAttributes {
-			orderProductAttributes = append(orderProductAttributes, &model.SaleOrderProductAttribute{
-				Name:                 productPackageAttribute.Attribute.MultiLanguageName.GetNameByLang(req.Lang),
-				SaleOrderUuid:        req.SaleOrder.Uuid,
-				ProductAttributeUuid: productPackageAttribute.AttributeUuid,
-			})
-		}
-	}
-
-	orderProduct.SaleOrderProductBoms = orderProductBoms
-	orderProduct.SaleOrderProductAttributes = orderProductAttributes
-	orderProduct.Sign = orderProduct.GenerateProductSign()
-
-	return &orderProduct
-}
-
 // UpdateOrderProductAmountReq 更新订单商品金额请求
 type UpdateOrderProductAmountReq struct {
 	SaleBill     *model.SaleBill
 	SaleOrder    *model.SaleOrder
 	OrderProduct *model.SaleOrderProduct
-}
-
-// UpdateOrderProductAmount 更新订单商品金额
-func (o *orderProductSrv) UpdateOrderProductAmount(db *gorm.DB, req UpdateOrderProductAmountReq) error {
-	orderProductAmount := o.orderCalcSrv.CalcOrderProductAmount(req.SaleBill, req.SaleOrder, req.OrderProduct)
-	if err := repository.NewOrderProductRepo(db).Update(
-		map[string]interface{}{
-			"price":                     orderProductAmount.DiscountAmount.Price,
-			"discount_fee":              orderProductAmount.DiscountAmount.DiscountFee,
-			"member_discount_fee":       orderProductAmount.DiscountAmount.MemberDiscountFee,
-			"custom_discount_fee":       orderProductAmount.DiscountAmount.CustomDiscountFee,
-			"member_discount_rate":      orderProductAmount.DiscountAmount.MemberDiscountRate,
-			"member_card_discount_rate": orderProductAmount.DiscountAmount.MemberCardDiscountRate,
-			"custom_discount_rate":      orderProductAmount.DiscountAmount.CustomDiscountRate,
-			"tax_fee":                   orderProductAmount.TaxAmount.TaxFee,
-			"service_fee":               orderProductAmount.ServiceAmount.ServiceFee,
-			"service_tax_fee":           orderProductAmount.ServiceAmount.ServiceTaxFee,
-			"total_price":               orderProductAmount.TotalPrice,
-		},
-		repository.NewCommonRepo().WhereByUuid(req.OrderProduct.Uuid),
-		repository.NewCommonRepo().WhereBySoftDelete(),
-	); err != nil {
-		return errors.WithMessage(err)
-	}
-
-	return nil
 }
 
 // GetRuleByDeskUuid 获取桌台的必点商品规则

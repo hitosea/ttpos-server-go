@@ -896,6 +896,15 @@ definitions:
         description: 销售账单UUID
         type: integer
     type: object
+  req.OrderTakeoutReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      takeout:
+        description: 是否打包,true：打包，false：不打包，默认堂食。 必填
+        type: boolean
+    type: object
   req.PrintRechargeOrderReq:
     properties:
       print_lang:
@@ -8026,6 +8035,37 @@ paths:
       security:
       - JwtToken: []
       summary: 显示点餐订单（取单）
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/takeout:
+    post:
+      consumes:
+      - application/json
+      description: 打包
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderTakeoutReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打包
       tags:
       - 收银端.点餐
   /cashier/language:

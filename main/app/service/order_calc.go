@@ -2,7 +2,6 @@ package service
 
 import (
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/shopspring/decimal"
@@ -10,10 +9,9 @@ import (
 
 // 订单计算服务
 type IOrderCalcSrv interface {
-	CalcOrderProductAmount(saleBill *model.SaleBill, saleOrder *model.SaleOrder, orderProduct *model.SaleOrderProduct) CalcOrderProductAmountResp // 计算订单商品金额
-	CalcOrderProductDiscountAmount(req CalcOrderProductDiscountAmountReq) CalcOrderProductDiscountAmountResp                                      // 计算订单商品折扣金额
-	CalcOrderProductTaxAmount(req CalcOrderProductTaxAmountReq) CalcOrderProductTaxAmountResp                                                     // 计算订单商品税费
-	CalcOrderProductServiceAmount(req CalcOrderProductServiceAmountReq) CalcOrderProductServiceAmountResp                                         // 计算订单商品服务费
+	CalcOrderProductDiscountAmount(req CalcOrderProductDiscountAmountReq) CalcOrderProductDiscountAmountResp // 计算订单商品折扣金额
+	CalcOrderProductTaxAmount(req CalcOrderProductTaxAmountReq) CalcOrderProductTaxAmountResp                // 计算订单商品税费
+	CalcOrderProductServiceAmount(req CalcOrderProductServiceAmountReq) CalcOrderProductServiceAmountResp    // 计算订单商品服务费
 }
 
 // 订单计算服务实现
@@ -37,49 +35,6 @@ type CalcOrderProductAmountResp struct {
 	TaxAmount      CalcOrderProductTaxAmountResp      // 订单商品税费
 	ServiceAmount  CalcOrderProductServiceAmountResp  // 订单商品服务费
 	TotalPrice     float64                            // 订单商品应收金额
-}
-
-// CalcOrderProductAmount 计算订单商品金额
-func (o *orderCalcSrv) CalcOrderProductAmount(saleBill *model.SaleBill, saleOrder *model.SaleOrder, orderProduct *model.SaleOrderProduct) CalcOrderProductAmountResp {
-	// 计算订单商品折扣金额
-	discountAmount := o.CalcOrderProductDiscountAmount(CalcOrderProductDiscountAmountReq{
-		SalePrice:              orderProduct.SalePrice,
-		IsOpenMemberDiscount:   orderProduct.OpenMemberDiscount,
-		MemberDiscountRate:     saleOrder.MemberDiscountRate,
-		MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
-		CustomDiscountRate:     saleOrder.CustomDiscountRate,
-	})
-
-	// 计算订单商品税费
-	taxAmount := o.CalcOrderProductTaxAmount(CalcOrderProductTaxAmountReq{
-		FlavorPrice:  orderProduct.FlavorPrice,
-		ProductPrice: orderProduct.SalePrice,
-		TaxFeeType:   saleBill.SaleBillSetting.TaxFeeType,
-		TaxRate:      orderProduct.TaxRate,
-	})
-
-	// 计算订单商品服务费
-	serviceAmount := o.CalcOrderProductServiceAmount(CalcOrderProductServiceAmountReq{
-		Price:           discountAmount.Price,
-		TaxFeeType:      saleBill.SaleBillSetting.TaxFeeType,
-		TaxFee:          taxAmount.TaxFee,
-		ServiceFeeType:  saleBill.SaleBillSetting.ServiceFeeType,
-		ServiceFeeValue: saleBill.SaleBillSetting.ServiceFeeValue,
-	})
-
-	// 计算订单商品应收金额, 应收金额(单商品)=最终单价+服务费+总税费
-	totalPrice := decimal.NewFromFloat(discountAmount.Price).
-		Add(decimal.NewFromFloat(serviceAmount.ServiceFee)).
-		Add(decimal.NewFromFloat(taxAmount.TaxFee)).
-		Add(decimal.NewFromFloat(serviceAmount.ServiceTaxFee)).
-		InexactFloat64()
-
-	return CalcOrderProductAmountResp{
-		DiscountAmount: discountAmount,
-		TaxAmount:      taxAmount,
-		ServiceAmount:  serviceAmount,
-		TotalPrice:     totalPrice,
-	}
 }
 
 // CalcOrderProductDiscountAmountReq 计算订单商品折扣金额请求

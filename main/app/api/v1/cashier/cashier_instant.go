@@ -153,6 +153,35 @@ func (h *InstantHandler) OrderList(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// OrderTakeout 处理打包
+// @Summary 打包
+// @Description 打包
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderTakeoutReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/takeout [post]
+func (h *InstantHandler) OrderTakeout(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderTakeoutReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	res, err := h.orderService.OrderTakeout(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderProductDelete 处理删除点餐订单商品
 // @Summary 删除点餐订单商品
 // @Description 删除点餐订单商品
@@ -1058,6 +1087,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                                // 隐藏点餐订单（挂单）
 		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                                // 显示点餐订单（取单）
 		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                 // 显示点餐订单列表（取单列表）
+		privateApi.POST("/instant/order/takeout", wrapper.OrderTakeout)                                          // 打包
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                           // 删除点餐订单商品
 		privateApi.POST("/instant/order/product/price", wrapper.OrderProductChangePrice)                         // 点餐订单商品改价
 		privateApi.POST("/instant/order/discount", wrapper.OrderDiscount)                                        // 点餐订单打折

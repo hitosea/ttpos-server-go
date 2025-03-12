@@ -130,6 +130,7 @@ const (
 	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
 	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
 	OrderClock               = "CLOCK"               // 加钟
+	OrderTakeout             = "TAKEOUT"             // 打包
 )
 
 // 结账抹零操作类型

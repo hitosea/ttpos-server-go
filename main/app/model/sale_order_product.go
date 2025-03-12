@@ -96,6 +96,12 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 }
 
+// SetTaxRate 设置税率. 这个方法的定位是只能用这个方法设置商品的税率，不能用其他方式设置商品的税率
+func (model *SaleOrderProduct) SetTaxRate(taxRate float64) {
+	defer model.SetUpdate() // 标记要更新model
+	model.TaxRate = taxRate
+}
+
 // GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
 func (model *SaleOrderProduct) GetCanReturnNum() uint {
 	amount := decimal.NewFromFloat(0)
@@ -595,7 +601,6 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		MemberDiscountRate:         def.MemberDiscountRate,
 		MemberCardDiscountRate:     def.MemberCardDiscountRate,
 		CustomDiscountRate:         def.CustomDiscountRate,
-		TaxRate:                    def.TaxRate,
 		DeductStockType:            def.DeductStockType,
 		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
 		ImageFileUuid:              def.ImageFileUuid,
@@ -605,6 +610,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
 	}
+	product.SetTaxRate(def.TaxRate)
 	return &product
 }
 

@@ -123,6 +123,39 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 设置打包销售账单。并更新订单的税率
+func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
+	// 如果没有改变，则不更新
+	if model.DiningMethod == diningMethod {
+		return
+	}
+	// 默认堂食
+	method := constant.SaleBillDiningMethodDineIn
+	// 严谨判断。拒绝非法的值
+	if diningMethod == constant.SaleBillDiningMethodTakeout {
+		method = constant.SaleBillDiningMethodTakeout
+	}
+	// 严谨判断。拒绝非法的值
+	if diningMethod == constant.SaleBillDiningMethodDineIn {
+		method = constant.SaleBillDiningMethodDineIn
+	}
+	model.DiningMethod = uint(method)
+	model.SetUpdate() // 标记要更新model
+
+	// 由于就餐方式改变，导致税率改变，要重新计算账单金额
+	// 从ProductPackage中获取税率
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.ProductPackage == nil {
+				// 这种情况不应该出现，因为商品包是必填的.panic是为了提示没有预加载这个表
+				panic("saleOrderProduct.ProductPackage is nil")
+			}
+			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
+			saleOrderProduct.SetTaxRate(taxRate)
+		}
+	}
+}
+
 // 设置反结账
 func (model *SaleBill) SetReverseSettle() {
 	// 销售账单状态变为待付款
@@ -155,6 +188,10 @@ func (model *SaleBill) GetPaymentMethodNameList() []string {
 
 func (model *SaleBill) IsLockStatus() bool {
 	return model.IsLock == constant.SaleBillIsLockYes
+}
+
+func (model *SaleBill) IsTakeout() bool {
+	return model.DiningMethod == constant.SaleBillDiningMethodTakeout
 }
 
 // 设置账单为已送厨状态。如果状态已经是送厨，则不修改

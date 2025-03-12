@@ -154,6 +154,11 @@ type HideSaleBillListReq struct {
 	dto.PageReq // 分页参数
 }
 
+type OrderTakeoutReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+	Takeout      bool   `json:"takeout"`        // 是否打包,true：打包，false：不打包，默认堂食。 必填
+}
+
 type OrderMemberCancelReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
