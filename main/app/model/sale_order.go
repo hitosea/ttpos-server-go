@@ -1,8 +1,10 @@
 package model
 
 import (
+	"sort"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
@@ -65,6 +67,102 @@ type SaleOrder struct {
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+}
+
+// 获取销售订单的每个付款单的可退款金额。
+// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
+func (model *SaleOrder) GetPaymentOrderCanReturnAmount() ([]resp.OrderReturnPaymentRecord, string) {
+	paymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
+	currencyUnit := ""
+	for _, paymentOrder := range model.PaymentOrders {
+		paymentRecords = append(paymentRecords, resp.OrderReturnPaymentRecord{
+			PaymentOrderUuid:  paymentOrder.Uuid,
+			PaymentMethodName: paymentOrder.PaymentMethodName,
+			PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
+			CurrencyUnit:      paymentOrder.CurrencyUnit,
+			PaymentAmount:     paymentOrder.Amount,
+			CanReturnAmount:   paymentOrder.GetCanReturnAmount(), // 可退款金额=支付金额-已退款金额
+			PaymentMethodCode: paymentOrder.PaymentMethod.Code,
+		})
+		currencyUnit = paymentOrder.CurrencyUnit
+	}
+	// 排序。code越小，越靠前
+	sort.Slice(paymentRecords, func(i, j int) bool {
+		return paymentRecords[i].PaymentMethodCode < paymentRecords[j].PaymentMethodCode
+	})
+	return paymentRecords, currencyUnit
+}
+
+// 创建退货单
+func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
+	returnOrderUuid, _ := utils.GetID()
+
+	returnAmount := decimal.NewFromFloat(0)
+	returnOrderProducts := make([]*ReturnOrderProduct, 0)
+	for _, saleOrderProduct := range saleOrderProducts {
+		// 退货数量
+		num := numMap[saleOrderProduct.Uuid]
+		// 商品总金额=退货商品数量*商品最终单价
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
+			SaleOrderUuid:        model.Uuid,
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			ReturnOrderUuid:      returnOrderUuid,
+			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductPackageUuid:   saleOrderProduct.ProductPackageUuid,
+			ProductName:          saleOrderProduct.Name,
+			ProductPrice:         saleOrderProduct.Price,
+			TaxRate:              saleOrderProduct.TaxRate,
+			Num:                  num,
+			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+		})
+		returnAmount = returnAmount.Add(productTotalAmount)
+	}
+	refundAmount := returnAmount.Round(2).InexactFloat64()
+
+	// 获取销售订单的每个付款单的可退款金额
+	paymentRecords, currencyUnit := model.GetPaymentOrderCanReturnAmount()
+
+	// 退款金额. 按照产品规格的顺序依次原路退款
+	// 退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
+	returnOrderAmounts := make([]ReturnOrderAmount, 0)
+	for _, paymentOrder := range paymentRecords {
+		amount := decimal.NewFromFloat(0)
+		// 如果退款金额大于付款单的可退款金额，则该退款单的退款金额=付款单的可退款金额
+		if returnAmount.InexactFloat64() > paymentOrder.CanReturnAmount {
+			amount = decimal.NewFromFloat(paymentOrder.CanReturnAmount)
+		}
+		// 如果退款金额小于或等于付款单的可退款金额，则该退款单的退款金额=退款金额
+		if returnAmount.InexactFloat64() <= paymentOrder.CanReturnAmount {
+			amount = returnAmount
+		}
+		returnOrderAmounts = append(returnOrderAmounts, ReturnOrderAmount{
+			ReturnOrderUuid:   returnOrderUuid,
+			PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
+			PaymentOrderUuid:  paymentOrder.PaymentOrderUuid,
+			Amount:            amount.InexactFloat64(),
+		})
+		returnAmount = returnAmount.Sub(amount)
+		// 如果退款金额为0，则退出
+		if returnAmount.InexactFloat64() <= 0 {
+			break
+		}
+	}
+	return &ReturnOrder{
+		BaseModel: BaseModel{
+			Uuid: returnOrderUuid,
+		},
+		RelatedOrderType:    constant.ReturnOrderRelatedOrderTypeSaleOrder,
+		RelatedOrderUuid:    model.Uuid,
+		RelatedOrderNo:      model.OrderNo,
+		ReturnType:          uint(returnType),
+		RefundAmount:        refundAmount,
+		Unit:                currencyUnit,
+		RefundTaxAmount:     model.TaxFee,
+		RefundReason:        "退款",
+		ReturnOrderAmounts:  returnOrderAmounts,
+		ReturnOrderProducts: returnOrderProducts,
+	}
 }
 
 // GetReturnAmount 获取销售订单的退款金额. 退款金额=所有退货单的退款金额之和

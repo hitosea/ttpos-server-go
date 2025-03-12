@@ -9593,12 +9593,12 @@ const docTemplate = `{
         "req.OrderReturnProduct": {
             "type": "object",
             "properties": {
-                "product_uuid": {
-                    "description": "商品UUID",
+                "num": {
+                    "description": "退款数量",
                     "type": "integer"
                 },
-                "quantity": {
-                    "description": "退款数量",
+                "sale_order_product_uuid": {
+                    "description": "销售订单商品UUID",
                     "type": "integer"
                 }
             }
@@ -9607,7 +9607,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "products": {
-                    "description": "退款商品UUID列表. 如果为空，则退款所有商品",
+                    "description": "退款商品UUID列表. 如果为空，则退款所有商品,即整单退款",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/req.OrderReturnProduct"
@@ -9615,6 +9615,10 @@ const docTemplate = `{
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID。退款都是针对子单进行退款",
                     "type": "integer"
                 }
             }

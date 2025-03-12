@@ -53,13 +53,14 @@ type OrderReturnInfoReq struct {
 
 // OrderReturnReq 订单退款
 type OrderReturnReq struct {
-	SaleBillUuid uint64               `json:"sale_bill_uuid"` // 销售账单UUID
-	Products     []OrderReturnProduct `json:"products"`       // 退款商品UUID列表. 如果为空，则退款所有商品
+	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID。退款都是针对子单进行退款
+	Products      []OrderReturnProduct `json:"products"`        // 退款商品UUID列表. 如果为空，则退款所有商品,即整单退款
 }
 
 type OrderReturnProduct struct {
-	ProductUuid uint64 `json:"product_uuid"` // 商品UUID
-	Quantity    int    `json:"quantity"`     // 退款数量
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品UUID
+	Num                  int    `json:"num"`                     // 退款数量
 }
 
 // OrderDeleteReq 订单删除

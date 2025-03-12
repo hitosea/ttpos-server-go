@@ -171,3 +171,10 @@ const (
 	ReturnOrderRelatedOrderTypeSaleOrder     = 0 //  销售订单
 	ReturnOrderRelatedOrderTypeRechargeOrder = 1 // 充值订单
 )
+
+// 退货单商品类型
+const (
+	ReturnOrderProductTypeSaleOrderProduct        = 1 // 销售订单商品
+	ReturnOrderProductTypeSaleOrderBuffetCustomer = 2 // 销售订单顾客
+	ReturnOrderProductTypeBuffetAddTimeProduct    = 3 // 自助餐加钟商品
+)

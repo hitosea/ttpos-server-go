@@ -102,6 +102,11 @@ func (model *SaleOrderProduct) GetCanReturnNum() uint {
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
 		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
 	}
+	// 如果可退货数量小于0，则返回0
+	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
+	if model.Num <= uint(amount.InexactFloat64()) {
+		return 0
+	}
 	return model.Num - uint(amount.InexactFloat64())
 }
 

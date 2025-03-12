@@ -165,8 +165,10 @@ type OrderReturnInfoResp struct {
 }
 
 type OrderReturnPaymentRecord struct {
+	PaymentMethodCode int     `json:"-"`                   // 支付类型Code, 用于排序。退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
 	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID
 	PaymentMethodName string  `json:"payment_method_name"` // 支付类型名称
+	PaymentMethodUuid uint64  `json:"-"`                   // 支付类型UUID, 用于构建退款金额
 	CurrencyUnit      string  `json:"currency_unit"`       // 货币单位
 	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额
 	CanReturnAmount   float64 `json:"can_return_amount"`   // 可退款金额。剩余可退xx. 可退款金额=支付金额-已退款金额

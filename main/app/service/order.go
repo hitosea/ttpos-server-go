@@ -1061,11 +1061,105 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 
 // ReturnOrder 退款订单
 func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+	// 获取销售账单信息
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return errors.WithMessage(errors.New("找不到销售订单"))
+	}
+
+	ReturnType := constant.ReturnOrderRefundTypeTotal
+	saleOrderProducts := make([]*model.SaleOrderProduct, 0) // 退款商品列表
+	numMap := make(map[uint64]uint)                         // 每个退款商品的退货数量
+	// 整单退款
+	if len(req.Products) == 0 {
+		ReturnType = constant.ReturnOrderRefundTypeTotal
+		// 整单退款，退款商品列表为销售订单商品列表.
+		// 注意：要判断订单商品是否还有可退货数量
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+				numMap[saleOrderProduct.Uuid] = canReturnNum
+			}
+		}
+	}
+	// 部分退款
+	if len(req.Products) > 0 {
+		ReturnType = constant.ReturnOrderRefundTypePart
+		// 获取退款商品列表
+		saleOrderProductUuids := make([]uint64, 0)
+		for _, product := range req.Products {
+			saleOrderProductUuids = append(saleOrderProductUuids, product.SaleOrderProductUuid)
+			numMap[product.SaleOrderProductUuid] = uint(product.Num)
+		}
+		// 注意：要判断订单商品是否还有可退货数量
+		saleOrderProductList := saleOrder.GetSaleOrderProductList(saleOrderProductUuids)
+		if len(saleOrderProductList) == 0 {
+			return errors.WithMessage(errors.New("找不到退货商品"))
+		}
+		for _, saleOrderProduct := range saleOrderProductList {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				num := numMap[saleOrderProduct.Uuid] // 退货数量
+				if num <= canReturnNum {
+					saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+				} else {
+					return errors.WithMessage(errors.New("退货数量超过可退货数量"))
+				}
+			}
+		}
+	}
+
+	if len(saleOrderProducts) == 0 {
+		return errors.WithMessage(errors.New("没有可退货的商品"))
+	}
+
+	// 创建退款单
+	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, numMap, ReturnType)
+
+	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 创建退货单
+		if _, err = repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(*returnOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 创建退款金额
+		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount(returnOrder.ReturnOrderAmounts); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 创建退货单商品
+		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderProduct(returnOrder.ReturnOrderProducts); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err)
+	}
 	return nil
 }
 
 // GetReturnOrderInfo 获取退款信息
 func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 	// 获取销售账单信息
@@ -1091,21 +1185,11 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 
 	// 获取销售订单商品列表
 
-	paymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
 	products := make([]resp.OrderReturnProduct, 0)
 
-	currencyUnit := ""
-
-	for _, paymentOrder := range saleOrder.PaymentOrders {
-		paymentRecords = append(paymentRecords, resp.OrderReturnPaymentRecord{
-			PaymentOrderUuid:  paymentOrder.Uuid,
-			PaymentMethodName: paymentOrder.PaymentMethodName,
-			CurrencyUnit:      paymentOrder.CurrencyUnit,
-			PaymentAmount:     paymentOrder.Amount,
-			CanReturnAmount:   paymentOrder.GetCanReturnAmount(), // 可退款金额=支付金额-已退款金额
-		})
-		currencyUnit = paymentOrder.CurrencyUnit
-	}
+	// 获取销售订单的每个付款单的可退款金额
+	// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
+	paymentRecords, currencyUnit := saleOrder.GetPaymentOrderCanReturnAmount()
 
 	// 获取销售订单商品列表
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {

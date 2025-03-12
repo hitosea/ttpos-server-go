@@ -48,6 +48,23 @@ func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) (*SaleO
 	return nil, 0, errors.New("销售订单商品不存在")
 }
 
+// 获取退款商品列表
+func (model *SaleOrder) GetSaleOrderProductList(saleOrderProductUuids []uint64) []*SaleOrderProduct {
+	saleOrderProducts := make([]*SaleOrderProduct, 0)
+	productMap := make(map[uint64]*SaleOrderProduct)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		productMap[saleOrderProduct.Uuid] = saleOrderProduct
+	}
+	for _, saleOrderProductUuid := range saleOrderProductUuids {
+		saleOrderProduct, ok := productMap[saleOrderProductUuid]
+		if !ok {
+			continue
+		}
+		saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+	}
+	return saleOrderProducts
+}
+
 // 获取销售订单应收金额
 func (model *SaleOrder) GetAmount() float64 {
 	// 整单改价金额大于等于0时，返回整单改价金额
