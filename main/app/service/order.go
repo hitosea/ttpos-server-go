@@ -3328,7 +3328,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
-		saleOrderProduct.SetCancelInfo(returnFoodReasonList)
+		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 	} else {
 		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
 		// 1. 修改原商品的数量
@@ -3339,7 +3339,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 新建一个销售订单商品，该商品数量为退菜数量
 		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
 		newSaleOrderProduct.SetNum(req.Num)
-		newSaleOrderProduct.SetCancelInfo(returnFoodReasonList)
+		newSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
 		if sameSignSaleOrderProduct != nil {
 			// 有相同签名的商品。将两个商品合并，数量相加

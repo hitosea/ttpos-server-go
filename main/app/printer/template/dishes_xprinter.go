@@ -664,6 +664,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	printer.SetPrintModes(true, true, false)
 	printer.SetCharacterSize(2, 2)
 	printer.AppendText(t.base.Translate("退菜单"))
+	printer.LineFeed(2)
 	if printerType == PrinterTypeXPrinterWifi {
 		printer.LineFeed()
 	}
@@ -788,7 +789,17 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		// 退菜原因
 		printer.AppendText("------------------------------------------------")
 		printer.LineFeed(1, 34)
-		printer.AppendText(t.base.Translate("退菜原因") + "： " + product.ReturnReason)
+		// 获取退菜原因文本
+		reasonText := product.Reason.GetLocale(t.base.Lang)
+		// 如果有自定义原因，则添加
+		if product.CustomReason != "" {
+			reasonText += "、" + product.CustomReason
+		}
+		printer.AppendText(fmt.Sprintf(
+			"%s： %s",
+			t.base.Translate("退菜原因"),
+			reasonText,
+		))
 
 		// 标记已有打印内容
 		isPrinter = true

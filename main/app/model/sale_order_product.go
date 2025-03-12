@@ -65,7 +65,7 @@ type SaleOrderProduct struct {
 	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
 	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳)'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
-	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"refund_reason"`
+	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"cancel_reason"`
 
 	// 关联ID字段
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;not null;default:0;comment:'多语言名称UUID'" json:"multi_language_name_uuid"`
@@ -325,9 +325,10 @@ func (model *SaleOrderProduct) NewSaleOrderProductReasonList(reasons []*ReturnFo
 }
 
 // SetCancelInfo 设置订单商品的退菜信息，标记该商品为退菜商品
-func (model *SaleOrderProduct) SetCancelInfo(reasons []*SaleOrderProductReason) {
+func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrderProductReason) {
 	defer model.SetUpdate() // 标记该model需要更新
 	model.CancelTime = time.Now().Unix()
+	model.CancelReason = reason
 	model.CancelReasons = append(model.CancelReasons, reasons...)
 	model.Sign = model.GenerateProductSign() // 更新签名
 }

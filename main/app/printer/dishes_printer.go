@@ -59,11 +59,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 	// 循环商品打印机
 	for _, productPrinter := range productPrinters {
-		// 送厨打印才走
-		if productPrinter.PrintMode != printType {
-			continue
-		}
-
 		// 区域对的上才走
 		regionUuids := productPrinter.GetPrinterRegionUuids()
 		if len(regionUuids) != 0 && !slices.Contains(regionUuids, regionUuid) {
@@ -100,7 +95,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				data := p.getPrintReturnProductContent(productPrinter, printerItem, billInfo, newProducts)
 				if data != "" {
 					// 执行打印
-					err := p.ExecutePrinting(printerItem.Printer.GetConfigJson().IP, data)
+					err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
 					if err != nil {
 						logger.Logger.Error("打印失败", zap.Error(err))
 					}
@@ -208,7 +203,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "1" {
+	if p.printerSetting.KitchenPrintMethod == "2" {
 		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
@@ -247,7 +242,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "1" {
+	if p.printerSetting.KitchenPrintMethod == "2" {
 		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
@@ -284,9 +279,10 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	products printer_model.Products,
 ) string {
 	// 图片打印
-	// if p.printerSetting.KitchenPrintMethod == "2" {
-	// 	// 	return (new ImgDishesTemplate(null, $this->allSourceProductList))->oneDishOneOrder($printerConfig, $printerItem, $order, $products);
-	// }
+	if p.printerSetting.KitchenPrintMethod == "1" {
+		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		return t.ReturnMenuTemplate(printerItem, saleBill, products)
+	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
