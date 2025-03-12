@@ -1,16 +1,26 @@
 package model
 
+import "time"
+
 // Company 集团表 ttpos_company
 type Company struct {
 	BaseModel
 	Name          string `gorm:"column:name;type:varchar(255);comment:集团名称;NOT NULL" json:"name"`
 	Logo          string `gorm:"column:logo;type:varchar(255);comment:logo;NOT NULL" json:"logo"`
-	ExpireTime    int    `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
+	ExpireTime    int64  `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
 	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
 	Status        int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
+}
+
+func (company *Company) IsExpired() bool {
+	return company.ExpireTime > 0 && company.ExpireTime < time.Now().Unix()
+}
+
+func (company *Company) IsException() bool {
+	return company.Status == 0 || company.IsDelete()
 }
 
 // CompanySetting 公司设置表 ttpos_company_setting

@@ -85,14 +85,15 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	// 判断设备绑定上限
 	companySetting := repository.NewCompanySettingRepo(db).Get()
 	type Source struct {
-		Name  string
-		Limit uint
+		Name      string
+		Limit     uint
+		ErrorCode int
 	}
 	sources := map[string]Source{
-		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit)},
-		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit)},
-		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit)},
-		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit)},
+		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CashierLoginLimit},
+		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.AssistantLoginLimit},
+		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.KitchenLoginLimit},
+		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.TabletLoginLimit},
 	}
 	for sourceName, source := range sources {
 		if sourceName != addReq.Source {
@@ -100,7 +101,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 		bindCount := deviceRepo.GetBindCountBySource(sourceName)
 		if bindCount >= source.Limit { // 超过绑定上限
-			return 0, apperrors.New(source.Name + "登录设备已达上限，请在其他设备上退出登录或联系销售代表")
+			return 0, apperrors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 

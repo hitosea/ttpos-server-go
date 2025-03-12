@@ -357,6 +357,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-待制作 1-制作中 2-已完成 3-已退菜',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品备注',
     `has_material` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否无原料, 0-无原料,商品没有关联原料 1-有原料',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
+    `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
     `first_category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '一级分类ID',

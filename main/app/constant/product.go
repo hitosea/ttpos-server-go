@@ -131,3 +131,8 @@ const (
 	ProductPrinterStatusOpen  = 1 // 开启
 	ProductPrinterStatusClose = 2 // 关闭
 )
+
+const (
+	ProductionOrderProductColumnSaleBill = "sale_bill_uuid"
+	ProductionOrderProductColumnCategory = "first_category_uuid"
+)

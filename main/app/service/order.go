@@ -3061,7 +3061,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			return errors.New(errUpdateSaleProductStatus.Error())
 		}
 		ctx.Log().Debug("商品状态成功")
-		errCreateProduction := repository.NewProductionOrderRepo(tx).CreateProductionOrder(productionOrder)
+		errCreateProduction := repository.NewProductionRepo(tx).CreateProductionOrder(productionOrder)
 		if errCreateProduction != nil {
 			ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
 			return errors.New(errCreateProduction.Error())
@@ -3123,9 +3123,11 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 		}
 		attributeName := unCookingSaleOrderProduct.GetAttributeName()
 		productionOrderProduct := model.ProductionOrderProduct{
+			SaleBillUuid:          saleBillUuid,
 			ProductionOrderUuid:   productionOrderUuid,
 			SaleOrderProductUuid:  unCookingSaleOrderProduct.Uuid,
 			FirstCategoryUuid:     firstCategoryUuid,
+			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
 			ProductAttributeNames: attributeName.GetLocale(ctx.GetLanguage()),
