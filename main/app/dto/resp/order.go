@@ -36,6 +36,7 @@ type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 // BillLists 订单列表响应
 type BillLists struct {
 	SaleBillUuid  uint64           `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64           `json:"sale_order_uuid"` // 销售订单UUID,第一个销售订单的uuid
 	BillType      uint             `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
 	IsSplit       bool             `json:"is_split"`        // 是否拆单	false:否 true:是
 	SerialNo      string           `json:"serial_no"`       // 桌位编号 (点餐流水号)
