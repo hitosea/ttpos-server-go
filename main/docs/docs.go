@@ -6247,6 +6247,43 @@ const docTemplate = `{
                         "description": "未找到"
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "反结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "反结账",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReverseSettleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "反结账成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
             }
         },
         "/cashier/payment_method/list": {
@@ -9670,6 +9707,19 @@ const docTemplate = `{
                 },
                 "sale_order_uuid": {
                     "description": "销售订单UUID。退款都是针对子单进行退款",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderReverseSettleReq": {
+            "type": "object",
+            "properties": {
+                "desk_uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
                     "type": "integer"
                 }
             }
@@ -13335,15 +13385,32 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderReverseSettleDeskList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "桌台编号",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderReverseSettleDesk"
+                    }
+                },
+                "origin_desk_available": {
+                    "description": "原桌台是否空闲",
+                    "type": "boolean"
+                }
+            }
+        },
         "resp.OrderReverseSettleInfoResp": {
             "type": "object",
             "properties": {
                 "desks": {
                     "description": "可用桌台列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.OrderReverseSettleDesk"
-                    }
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderReverseSettleDeskList"
+                        }
+                    ]
                 },
                 "order_amount": {
                     "description": "订单总金额",

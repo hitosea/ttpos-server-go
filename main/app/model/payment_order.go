@@ -82,6 +82,18 @@ type PaymentOrder struct {
 	ReturnOrderAmounts  []*ReturnOrderAmount `gorm:"foreignKey:PaymentOrderUuid;references:Uuid"`
 }
 
+// RefundOrder 退款单表 `ttpos_refund_order`
+type RefundOrder struct {
+	BaseModel
+	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"`
+	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`
+	PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:支付单ID;NOT NULL" json:"payment_order_uuid"`
+	RefundType       uint    `gorm:"column:refund_type;type:int(11);default:0;comment:退款类型,1-反结账,2-取消付款;NOT NULL" json:"refund_type"`
+	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
+	Reason           string  `gorm:"column:reason;type:varchar(255);default:'';comment:退款原因;NOT NULL" json:"reason"`
+	Status           uint    `gorm:"column:status;type:int(11);default:0;comment:退款状态;NOT NULL" json:"status"`
+}
+
 // GetCanReturnAmount 获取支付单的可退款金额. 可退款金额=支付金额-已退款金额
 func (model *PaymentOrder) GetCanReturnAmount() float64 {
 	amount := decimal.NewFromFloat(0)

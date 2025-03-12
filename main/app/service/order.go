@@ -45,6 +45,7 @@ type IOrderSrv interface {
 	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                       // 退款订单
 	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                               // 获取退款信息
 	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                               // 获取反结账信息
+	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                              // 反结账
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
@@ -1272,6 +1273,70 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 			List:                desks,
 		},
 	}, nil
+}
+
+// ReverseSettle 处理反结账
+func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+	// 获取销售账单信息
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 销售账单状态变为未结账状态
+	// 销售订单状态变为未结账状态
+	// 销售订单的所有付款单都退款，并生成退款单
+	saleBill.SetReverseSettle()
+
+	// 开桌
+	deskRepo := repository.NewDeskRepo(db)
+	desk, err := deskRepo.GetDeskRecord(req.DeskUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if !desk.IsAvailableDesk() {
+		return errors.WithMessage(errors.New("桌台非空闲"))
+	}
+	desk.SetOpenDesk(saleBill.Uuid)
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新销售账单
+		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新销售订单
+		for _, saleOrder := range saleBill.SaleOrders {
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 退款
+		for _, saleOrder := range saleBill.SaleOrders {
+			for _, paymentOrder := range saleOrder.PaymentOrders {
+				fmt.Println("paymentOrder.Status111111111::::::::", paymentOrder.Status)
+				if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+		// 更新桌台
+		if err := deskRepo.UpdateDeskRecord(*desk); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
 }
 
 // HideOrder 隐藏订单（挂单）

@@ -123,6 +123,21 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 设置反结账
+func (model *SaleBill) SetReverseSettle() {
+	// 销售账单状态变为待付款
+	// 销售订单状态变为未结账状态
+	// 销售订单的所有付款单都退款，并生成退款单
+	model.Status = constant.SaleBillStatusPending
+	for _, saleOrder := range model.SaleOrders {
+		saleOrder.Status = constant.SaleOrderStatusPending
+		for _, paymentOrder := range saleOrder.PaymentOrders {
+			paymentOrder.Status = constant.PaymentOrderStatusRefund
+			fmt.Println("paymentOrder.Status", paymentOrder.Status)
+		}
+	}
+}
+
 // 获取支付方式名称列表. 获取所有子单的付款单用到的支付方式，不重复
 func (model *SaleBill) GetPaymentMethodNameList() []string {
 	payMethods := make(map[string]bool)

@@ -60,7 +60,7 @@ type SaleOrder struct {
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 
 	// 关联对象
-	PaymentOrders                []PaymentOrder                 `gorm:"foreignKey:RelatedUuid;references:uuid"`
+	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"`
 	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`

@@ -68,6 +68,12 @@ type OrderReverseSettleInfoReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
 }
 
+// OrderReverseSettleReq 处理反结账
+type OrderReverseSettleReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
+	DeskUuid     uint64 `json:"desk_uuid"`      // 桌台UUID
+}
+
 // OrderDeleteReq 订单删除
 type OrderDeleteReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
