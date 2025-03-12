@@ -71,7 +71,8 @@ type OrderReverseSettleInfoReq struct {
 // OrderReverseSettleReq 处理反结账
 type OrderReverseSettleReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
-	DeskUuid     uint64 `json:"desk_uuid"`      // 桌台UUID
+	DeskUuid     uint64 `json:"desk_uuid"`      // 桌台UUID. 仅桌台订单才填该字段
+	HideOrder    bool   `json:"hide_order"`     // 是否挂单. 仅点餐订单才填该字段
 }
 
 // OrderDeleteReq 订单删除

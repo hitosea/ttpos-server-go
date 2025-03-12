@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IDeviceRepo interface {
@@ -11,6 +12,7 @@ type IDeviceRepo interface {
 	WhereSource(source string) DBOption // 来源（cashier、tablet、kitchen、assistant）条件
 
 	GetDevice(opts ...DBOption) (model.Device, error)            // 获取设备
+	GetDeviceBySn(sn string) (*model.Device, error)              // 根据sn获取设备
 	GetDeviceBrand(opts ...DBOption) string                      // 获取设备品牌
 	GetBindCountBySource(source string) uint                     // 根据来源获取设备绑定数量
 	CreateDevice(device model.Device) (model.Device, error)      // 创建设备
@@ -38,6 +40,15 @@ func (r *deviceRepo) GetDevice(opts ...DBOption) (model.Device, error) {
 	err := db.First(&device).Error
 	return device, errors.WithMessage(err, "db.First failed")
 }
+
+// GetDeviceBySn 根据sn获取设备
+func (r *deviceRepo) GetDeviceBySn(sn string) (*model.Device, error) {
+	device, err := r.GetDevice(
+		CommonRepo.WhereByDeviceSn(sn),
+	)
+	return &device, errors.WithMessage(err, "r.GetDevice failed")
+}
+
 func (r *deviceRepo) GetDeviceBrand(opts ...DBOption) string {
 	var brand string
 	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)

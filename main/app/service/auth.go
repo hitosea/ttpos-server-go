@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -247,6 +248,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	if err != nil {
 		return loginResp, errors.New("生成token失败")
 	}
+	fmt.Println("login token:", token)
 	return resp.LoginResp{
 		Token:               token,
 		CashierIsFirstLogin: isFirstLogin,

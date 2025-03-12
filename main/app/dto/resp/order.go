@@ -185,12 +185,14 @@ type OrderReturnProduct struct {
 }
 
 type OrderReverseSettleInfoResp struct {
-	SaleBillUuid  uint64                     `json:"sale_bill_uuid"` // 销售账单UUID
-	SaleBillNo    string                     `json:"sale_bill_no"`   // 销售账单编号
-	OrderAmount   float64                    `json:"order_amount"`   // 订单总金额
-	PaymentAmount float64                    `json:"payment_amount"` // 支付金额
-	PayMethods    []string                   `json:"pay_methods"`    // 支付方式名称列表
-	Desks         OrderReverseSettleDeskList `json:"desks"`          // 可用桌台列表
+	SaleBillUuid    uint64                      `json:"sale_bill_uuid"`              // 销售账单UUID
+	SaleBillNo      string                      `json:"sale_bill_no"`                // 销售账单编号
+	SaleBillType    uint                        `json:"sale_bill_type"`              // 销售账单类型.0-桌台订单、1-点餐订单
+	OrderAmount     float64                     `json:"order_amount"`                // 订单总金额
+	PaymentAmount   float64                     `json:"payment_amount"`              // 支付金额
+	PayMethods      []string                    `json:"pay_methods"`                 // 支付方式名称列表
+	Desks           *OrderReverseSettleDeskList `json:"desks,omitempty"`             // 可用桌台列表。仅桌台订单才有该字段
+	HasInstantOrder *bool                       `json:"has_instant_order,omitempty"` // 是否存在即时订单。仅点餐订单才有该字段
 }
 
 type OrderReverseSettleDeskList struct {

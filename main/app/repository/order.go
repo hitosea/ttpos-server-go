@@ -17,6 +17,7 @@ type IOrderRepo interface {
 	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                              // 创建销售单
 	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                         // 创建销售账单设置
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                     // 获取销售单
+	GetInstantSaleBill() (*model.SaleBill, error)                                                                             // 获取待支付且未挂单的点餐订单
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
@@ -97,6 +98,20 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 	}
 
 	return saleBill, nil
+}
+
+// GetInstantSaleBill 获取待支付且未挂单的点餐订单
+func (r *orderRepo) GetInstantSaleBill() (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
+		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
+		CommonRepo.WhereByIsHide(false),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &saleBill, nil
 }
 
 // CreateSaleOrder 创建销售订单

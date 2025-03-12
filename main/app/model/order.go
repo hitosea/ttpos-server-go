@@ -619,6 +619,11 @@ func (model *SaleBill) SetShowSaleBill(deviceUuid uint64) {
 	model.DeviceUuid = deviceUuid
 }
 
+// 设置隐藏销售账单(挂单)
+func (model *SaleBill) SetHideSaleBill() {
+	model.HideBillTime = time.Now().Unix()
+}
+
 // 获取总的退款金额
 func (model *SaleBill) GetTotalRefundAmount() float64 {
 	refundAmount := 0.0

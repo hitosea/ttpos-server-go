@@ -118,13 +118,42 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 	}
 }
 
+// HasInstantOrder 判断该收银机是否有未挂单的点餐订单
+func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, error) {
+	// 获取设备uuid
+	device, err := repository.NewDeviceRepo(db).GetDeviceBySn(ctx.GetDeviceSn())
+	if err != nil {
+		return nil, false, errors.WithMessage(err, "获取设备uuid失败")
+	}
+
+	// 判断是否有待支付、未挂单的订单
+	orderRepo := repository.NewOrderRepo(db)
+	order, err := orderRepo.GetInstantSaleBill()
+	if err != nil && !strings.Contains(err.Error(), "record not found") {
+		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
+	}
+	if order != nil && device.Uuid == order.DeviceUuid {
+		return order, true, nil
+	}
+	return nil, false, nil
+}
+
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
 	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
-	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+
+	// 判断是否有待支付、未挂单的订单
+	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
+	if err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+	if hasInstantOrder {
+		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
+	}
+	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 
 		deviceRepo := repository.NewDeviceRepo(db)
 		// 获取设备uuid
@@ -133,21 +162,21 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.WithMessage(err, "获取设备uuid失败")
 		}
 
-		// 判断是否有待支付、未挂单的订单
-		commonRepo := repository.NewCommonRepo()
-		orderRepo := repository.NewOrderRepo(tx)
-		order, err := orderRepo.GetSaleBill(
-			commonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
-			commonRepo.WhereByStatus(constant.SaleBillStatusPending),
-			commonRepo.WhereByIsHide(false),
-			commonRepo.WhereBySoftDelete(),
-		)
-		if err != nil && !strings.Contains(err.Error(), "record not found") {
-			return fmt.Errorf("11 GetSaleBill: %s", err)
-		}
-		if order.Uuid > 0 && device.Uuid == order.DeviceUuid {
-			return errors.New("有待支付、未挂单的订单")
-		}
+		// // 判断是否有待支付、未挂单的订单
+		// commonRepo := repository.NewCommonRepo()
+		// orderRepo := repository.NewOrderRepo(tx)
+		// order, err := orderRepo.GetSaleBill(
+		// 	commonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
+		// 	commonRepo.WhereByStatus(constant.SaleBillStatusPending),
+		// 	commonRepo.WhereByIsHide(false),
+		// 	commonRepo.WhereBySoftDelete(),
+		// )
+		// if err != nil && !strings.Contains(err.Error(), "record not found") {
+		// 	return fmt.Errorf("11 GetSaleBill: %s", err)
+		// }
+		// if order.Uuid > 0 && device.Uuid == order.DeviceUuid {
+		// 	return errors.New("有待支付、未挂单的订单")
+		// }
 
 		// 创建订单编号
 		orderNo, err := s.createOrderNo(tx, constant.OrderSourceInstant)
@@ -189,8 +218,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		orderUuid = saleOrder.Uuid
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
 
@@ -1236,42 +1264,59 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 		return nil, errors.WithMessage(err)
 	}
 
-	// 获取支付方式名称列表
-	payMethods := saleBill.GetPaymentMethodNameList()
-	desk := saleBill.Desk
-	desks := make([]resp.OrderReverseSettleDesk, 0)
-	// 如果原桌台空闲
-	if desk.IsAvailableDesk() {
-		desks = append(desks, resp.OrderReverseSettleDesk{
-			Uuid:     desk.Uuid,
-			SerialNo: desk.DeskNo,
-		})
-	}
-	// 如果原桌台不空闲
-	if !desk.IsAvailableDesk() {
-		// 获取所有空闲的桌台
-		freeDesks, err := repository.NewDeskRepo(db).GetAvailableDeskList()
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		for _, freeDesk := range freeDesks {
+	var resDesks *resp.OrderReverseSettleDeskList
+	if saleBill.IsDeskSaleBill() {
+		desk := saleBill.Desk
+		desks := make([]resp.OrderReverseSettleDesk, 0)
+		// 如果原桌台空闲
+		if desk.IsAvailableDesk() {
 			desks = append(desks, resp.OrderReverseSettleDesk{
-				Uuid:     freeDesk.Uuid,
-				SerialNo: freeDesk.DeskNo,
+				Uuid:     desk.Uuid,
+				SerialNo: desk.DeskNo,
 			})
+		}
+		// 如果原桌台不空闲
+		if !desk.IsAvailableDesk() {
+			// 获取所有空闲的桌台
+			freeDesks, err := repository.NewDeskRepo(db).GetAvailableDeskList()
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			for _, freeDesk := range freeDesks {
+				desks = append(desks, resp.OrderReverseSettleDesk{
+					Uuid:     freeDesk.Uuid,
+					SerialNo: freeDesk.DeskNo,
+				})
+			}
+		}
+		resDesks = &resp.OrderReverseSettleDeskList{
+			OriginDeskAvailable: desk.IsAvailableDesk(),
+			List:                desks,
 		}
 	}
 
+	var hasInstantOrder *bool
+	if !saleBill.IsDeskSaleBill() {
+		// 判断该收银机是否有未挂单的点餐订单
+		_, hasInstantOrderBool, err := HasInstantOrder(ctx, db)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		hasInstantOrder = &hasInstantOrderBool
+	}
+
+	// 获取支付方式名称列表
+	payMethods := saleBill.GetPaymentMethodNameList()
+
 	return &resp.OrderReverseSettleInfoResp{
-		SaleBillUuid:  saleBill.Uuid,
-		SaleBillNo:    saleBill.OrderNo,
-		OrderAmount:   saleBill.Amount,
-		PaymentAmount: saleBill.PaymentAmount,
-		PayMethods:    payMethods,
-		Desks: resp.OrderReverseSettleDeskList{
-			OriginDeskAvailable: desk.IsAvailableDesk(),
-			List:                desks,
-		},
+		SaleBillUuid:    saleBill.Uuid,
+		SaleBillNo:      saleBill.OrderNo,
+		SaleBillType:    saleBill.BillType,
+		OrderAmount:     saleBill.Amount,
+		PaymentAmount:   saleBill.PaymentAmount,
+		PayMethods:      payMethods,
+		Desks:           resDesks,
+		HasInstantOrder: hasInstantOrder,
 	}, nil
 }
 
@@ -1290,24 +1335,58 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	if saleBill.IsDeskSaleBill() {
+		if req.DeskUuid == 0 {
+			return errors.WithMessage(errors.New("桌台UUID不能为0"))
+		}
+	}
 
 	// 销售账单状态变为未结账状态
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
 	saleBill.SetReverseSettle()
 
+	// 如果销售账单是桌台订单，则开桌
 	// 开桌
-	deskRepo := repository.NewDeskRepo(db)
-	desk, err := deskRepo.GetDeskRecord(req.DeskUuid)
-	if err != nil {
-		return errors.WithMessage(err)
+	var desk *model.Desk
+	if saleBill.IsDeskSaleBill() {
+		deskRepo := repository.NewDeskRepo(db)
+		desk, err = deskRepo.GetDeskRecord(req.DeskUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		if !desk.IsAvailableDesk() {
+			return errors.WithMessage(errors.New("桌台非空闲"))
+		}
+		desk.SetOpenDesk(saleBill.Uuid)
 	}
-	if !desk.IsAvailableDesk() {
-		return errors.WithMessage(errors.New("桌台非空闲"))
+
+	// 如果销售账单是点餐订单，则如果存在未挂单的点餐订单，根据参数决定是否挂单
+	var hideSaleBill *model.SaleBill
+	if !saleBill.IsDeskSaleBill() {
+		saleBill, hasInstantOrder, err := HasInstantOrder(ctx, db)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 如果存在未挂单的点餐订单，则根据参数决定是否挂单
+		if hasInstantOrder {
+			if req.HideOrder {
+				hideSaleBill = saleBill
+				hideSaleBill.SetHideSaleBill()
+			} else {
+				// 如果存在未挂单的点餐订单
+				return errors.WithMessage(errors.New("存在未挂单的点餐订单，请先挂单"))
+			}
+		}
 	}
-	desk.SetOpenDesk(saleBill.Uuid)
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 如果存在需要挂单的销售账单，则更新该销售账单
+		if hideSaleBill != nil {
+			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*hideSaleBill); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 更新销售账单
 		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -1321,15 +1400,16 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		// 退款
 		for _, saleOrder := range saleBill.SaleOrders {
 			for _, paymentOrder := range saleOrder.PaymentOrders {
-				fmt.Println("paymentOrder.Status111111111::::::::", paymentOrder.Status)
 				if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 		}
 		// 更新桌台
-		if err := deskRepo.UpdateDeskRecord(*desk); err != nil {
-			return errors.WithMessage(err)
+		if saleBill.IsDeskSaleBill() {
+			if err := repository.NewDeskRepo(db).UpdateDeskRecord(*desk); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		return nil
 	}); err != nil {

@@ -44,6 +44,7 @@ type ICommonRepo interface {
 	WhereByNotStatus(status uint) DBOption                          // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
 	WhereByDeviceUuid(deviceUuid uint64) DBOption                   // 根据设备uuid查询
+	WhereByDeviceSn(deviceSn string) DBOption                       // 根据设备Sn查询
 	WhereByNoDisable() DBOption                                     // 根据没禁用查询
 	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption     // 根据自助餐套餐UUID查询
 	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption       // 根据顾客类型UUID查询
@@ -197,6 +198,12 @@ func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
 func (r *commonRepo) WhereByDeviceUuid(deviceUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("device_uuid = ?", deviceUuid)
+	}
+}
+
+func (r *commonRepo) WhereByDeviceSn(deviceSn string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_id = ?", deviceSn)
 	}
 }
 
