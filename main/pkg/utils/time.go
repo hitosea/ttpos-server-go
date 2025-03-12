@@ -15,6 +15,7 @@ type TimeUtil interface {
 	WeekStartEndUnix() (int64, int64)                     // 获取本周的开始时间和结束时间戳
 	FormatUnixTime(timestamp int64, layout string) string // 将时间戳转换为指定格式的时间字符串
 	FormatUnixTimeDefault(timestamp int64) string         // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
+	FormatUnixTimeWithSlash(timestamp int64) string       // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
 }
 
 type Timezone string
@@ -114,5 +115,11 @@ func (t Timezone) FormatUnixTime(timestamp int64, layout string) string {
 // FormatUnixTimeDefault 将Unix时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 // 这是一个便捷方法，等同于使用FormatUnixTime方法并传入空字符串作为layout
 func (t Timezone) FormatUnixTimeDefault(timestamp int64) string {
-	return t.FormatUnixTime(timestamp, "")
+	return t.FormatUnixTime(timestamp, "2006-01-02 15:04:05")
+}
+
+// FormatUnixTimeDefault 将Unix时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
+// 这是一个便捷方法，等同于使用FormatUnixTime方法并传入空字符串作为layout
+func (t Timezone) FormatUnixTimeWithSlash(timestamp int64) string {
+	return t.FormatUnixTime(timestamp, "2006/01/02 15:04:05")
 }

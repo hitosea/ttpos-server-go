@@ -160,6 +160,43 @@ func (p *PrinterRepoImpl) getProductPrinterList() ([]model.ProductPrinter, error
 	return printers, nil
 }
 
+// 图片打印
+func (p *PrinterRepoImpl) ExecuteImgPrinting(printerIP string, content string) error {
+	// 连接打印机（TCP连接，端口9100是标准打印机端口）
+	conn, err := net.DialTimeout("tcp", printerIP+":9100", 3*time.Second)
+	if err != nil {
+		return fmt.Errorf("连接打印机出错: %v", err)
+	}
+	defer conn.Close()
+
+	fmt.Println("连接打印机成功")
+
+	// 转换十六进制字符串为二进制数据
+	binaryContent := hex2bin(content)
+
+	// 初始化打印机
+	initCmd := []byte{0x1B, 0x40}
+	_, err = conn.Write(initCmd)
+	if err != nil {
+		return fmt.Errorf("初始化打印机失败: %v", err)
+	}
+
+	// 发送打印数据
+	_, err = conn.Write([]byte(binaryContent))
+	if err != nil {
+		return fmt.Errorf("发送打印数据失败: %v", err)
+	}
+
+	// 发送切纸指令
+	// cutCmd := []byte{0x1D, 0x56, 0x00}
+	// _, err = conn.Write(cutCmd)
+	// if err != nil {
+	// 	return fmt.Errorf("发送切纸指令失败: %v", err)
+	// }
+
+	return nil
+}
+
 // ExecutePrinting 连接打印机并发送打印内容
 // 支持多种语言（泰语、韩语、中文等）的字符编码处理
 func (p *PrinterRepoImpl) ExecutePrinting(printerIP string, content string) error {
@@ -169,6 +206,9 @@ func (p *PrinterRepoImpl) ExecutePrinting(printerIP string, content string) erro
 		return fmt.Errorf("连接打印机出错: %v", err)
 	}
 	defer conn.Close()
+
+	fmt.Println("连接打印机成功")
+
 	// 转换十六进制字符串为二进制数据
 	content = hex2bin(content)
 	// 替换特殊字符

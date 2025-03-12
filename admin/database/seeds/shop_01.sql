@@ -1133,17 +1133,31 @@ CREATE TABLE `ttpos_warehouse_monthly_form` (
 
 CREATE TABLE `ttpos_warehouse_monthly_material_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表uuid',
     `year` int(11) DEFAULT 0 COMMENT '年',
     `month` int(11) DEFAULT 0 COMMENT '月',
     `scene` int(11) DEFAULT 0 COMMENT '记录类型,0-月初 1-月末',
-    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料ID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料uuid',
     `stock` decimal(20, 4) DEFAULT 0.0000 COMMENT '库存',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '月度物料报表';
+
+CREATE TABLE `ttpos_warehouse_monthly_product_bom_form` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表uuid',
+    `year` int(11) DEFAULT 0 COMMENT '年',
+    `month` int(11) DEFAULT 0 COMMENT '月',
+    `scene` int(11) DEFAULT 0 COMMENT '记录类型,0-月初 1-月末',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品bom uuid',
+    `stock` decimal(20, 4) DEFAULT 0.0000 COMMENT '库存',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '月度商品bom报表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1190,7 +1204,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `cashier_device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银机绑定的id',
     `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单、充值订单id',
-    `data` VARCHAR(255) DEFAULT NULL COMMENT '打印数据',
+    `data` longtext COMMENT '打印数据',
     `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型:0系统默认队列,1云上服务下放',
     `data_type` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
     `print_method` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',

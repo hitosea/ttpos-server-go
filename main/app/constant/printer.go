@@ -49,7 +49,7 @@ const (
 	PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
 	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
 	PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
-	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
+	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  // Codesoft（WIFI）80mm
 )
 
 // 打印类型

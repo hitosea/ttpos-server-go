@@ -12,13 +12,16 @@ const EventCancelSaleOrderProduct EventName = "Event_Cancel_Sale_Order_Product"
 // CancelSaleOrderProductPayload “退菜”订单商品事件数据结构
 type CancelSaleOrderProductPayload struct {
 	BasePayload
-	OrderProductId uint64             `json:"order_product_id"` // 订单商品ID
-	ProductId      uint64             `json:"product_id"`       // 商品ID
-	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
-	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 商品属性
-	Num            uint               `json:"num"`              // 退菜数量
-	Reason         dto.LocaleResponse `json:"reason"`           // 退菜原因
-	CustomReason   string             `json:"custom_reason"`    // 自定义退菜原因
+	OrderProductId  uint64               `json:"order_product_id"` // 订单商品ID
+	ProductId       uint64               `json:"product_id"`       // 商品ID
+	ProductName     dto.LocaleResponse   `json:"product_name"`     // 商品名称
+	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性
+	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
+	TotalNum        uint                 `json:"total_num"`        // 总数量
+	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
+	Remark          string               `json:"remark"`           // 备注
+	Reason          dto.LocaleResponse   `json:"reason"`           // 退菜原因
+	CustomReason    string               `json:"custom_reason"`    // 自定义退菜原因
 }
 
 func (payload *CancelSaleOrderProductPayload) ToJsonString() string {

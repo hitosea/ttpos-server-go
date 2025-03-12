@@ -15,8 +15,6 @@ use app\common\service\sync\SyncService;
 use app\common\enum\settings\SettingEnum;
 use app\common\library\language\engine\OpenAi;
 use app\shop\model\product\Label as LabelModel;
-use app\shop\model\product\Product as ProductModel;
-use app\common\model\erp\ErpMonthlyProductStatistics;
 use app\shop\model\product\Category as CategoryModel;
 use app\common\model\settings\Setting as SettingModel;
 
@@ -287,7 +285,6 @@ class Index extends Controller
         if (empty($authCode)) {
             return $this->renderError('请输入授权码');
         }
-        $oldLicense = request()->licenses ?? [];
         $licenseHelper = new LicenseHelp();
         $ret = $licenseHelper->validateLicense($authCode);
         if ($ret) {
@@ -320,10 +317,6 @@ class Index extends Controller
         }
         // 离线授权保存云基础信息
         SettingModel::saveCloudBasic($res, $shopSupplierId);
-        // 进销存由关到开更新当月商品库存记录统计
-        if (isset($oldLicense['sale']) && $oldLicense['sale'] == 0 && $res['sale'] == 1) {
-            (new ErpMonthlyProductStatistics)->recordUpdate();
-        }
         //
         return $this->renderSuccess('操作成功', $res);
     }

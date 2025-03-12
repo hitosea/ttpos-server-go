@@ -10,6 +10,7 @@ use think\model\concern\SoftDelete;
 use app\common\model\product\Material;
 use app\shop\model\product\ProductBom;
 use app\common\model\file\UploadFile;
+use app\common\model\product\Product;
 use app\shop\model\product\RelatedMaterial;
 use think\facade\Db;
 
@@ -599,19 +600,26 @@ class ErpPurchaseOrder extends BaseModel
                         $product = $detail->material;
                     }
                     if (!$product) continue;
+
+                    $hasInventoryAuth = (new Product())->hasInventoryAuth();
                     switch ($detail->material_type ) {
                         case ErpPurchaseDetail::MATERIAL_TYPE_PRODUCT:
                             ProductBom::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
-                            /** @var ProductBom $productBom */
-                            $productBom = ProductBom::where(['uuid' => $detail->material_uuid])->find();
-                            $productBom->addWarehouseInForm($productBom, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
+                            if ($hasInventoryAuth) {
+                                /** @var ProductBom $productBom */
+                                $productBom = ProductBom::where(['uuid' => $detail->material_uuid])->find();
+                                ProductBom::addWarehouseInForm($productBom, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
+                            }
                             break;
                         case ErpPurchaseDetail::MATERIAL_TYPE_MATERIAL:
                             $materialIds = array_merge($materialIds, [$detail->material_uuid]);
                             Material::where(['uuid' => $detail->material_uuid])->inc('stock_num', $detail->num)->update();
-                            /** @var Material $material */
-                            $material = Material::where(['uuid' => $detail->material_uuid])->find();
-                            $material->addWarehouseInForm($material, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
+                            // 如果开启了进销存, 则创建"采购入库"记录
+                            if ($hasInventoryAuth) {
+                                /** @var Material $material */
+                                $material = Material::where(['uuid' => $detail->material_uuid])->find();
+                                Material::addWarehouseInForm($material, 0, $operationLogData['operator_uuid'], $detail->num, $this->remark, $this->uuid);
+                            }
                             break;
                     }
                 }

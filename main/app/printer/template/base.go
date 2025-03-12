@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
@@ -15,10 +14,18 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// 设置枚举常量
+// 打印类型
 const (
-	SettingEnumCurrency = "currency" // 货币设置
-	SettingEnumPrinter  = "printer"  // 打印机设置
+	PrinterTypeFeiEYunTag    = "FEI_E_YUN_TAG"  // 飞鹅标签打印机
+	PrinterTypePrintCenter   = "PRINT_CENTER"   // 365云打印
+	PrinterTypeSunmiLan      = "SUNMI_LAN"      // 商米 局域网内打印
+	PrinterTypeSunmiCloud    = "SUNMI_CLOUD"    // 商米 云打印
+	PrinterTypeXPrinterLan   = "XPRINTER_LAN"   // 芯烨-有线
+	PrinterTypeXPrinterWifi  = "XPRINTER_WIFI"  // 芯烨-WIFI
+	PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
+	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
+	PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
+	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
 )
 
 // printerTemplate 模板基类
@@ -75,6 +82,8 @@ func NewPrinterTemplate(
 	}
 	// 设置语言 - 使用简化逻辑，后续可接入i18n包
 	template.Lang = ctx.GetLanguage()
+	// template.Lang = printerSetting.DefaultLanguage
+	// template.Lang = printerSetting.KitchenLanguage
 	//
 	return template
 }
@@ -177,7 +186,7 @@ func (p *printerTemplate) FormatUnixTimeDefault(datetime int64) string {
 	if p.DefaultCalendar == 3 {
 		return p.ChangeBuddhistCalendar(datetime)
 	}
-	return utils.SetTimezone(p.StoreSetting.TimeZone).FormatUnixTimeDefault(datetime)
+	return utils.SetTimezone(p.StoreSetting.TimeZone).FormatUnixTimeWithSlash(datetime)
 }
 
 /*
@@ -189,19 +198,16 @@ func (p *printerTemplate) FormatUnixTimeDefault(datetime int64) string {
 func (p *printerTemplate) ChangeBuddhistCalendar(datetime int64) string {
 	// 泰国佛历偏移量（公元543年对应佛历1年）
 	thaiOffset := 543
-	// 使用门店时区设置
-	t := utils.SetTimezone(p.StoreSetting.TimeZone).Now().Add(time.Duration(datetime) * time.Second)
+	// 获取时区
+	loc, err := time.LoadLocation(p.StoreSetting.TimeZone)
+	if err != nil {
+		loc = time.Local
+	}
+	// 将时间戳转换为time.Time
+	t := time.Unix(datetime, 0).In(loc)
 	// 计算佛历年份
 	thaiYear := t.Year() + thaiOffset
-	// 格式化结果
-	var result string
-	if strings.Contains(fmt.Sprintf("%v", datetime), "/") {
-		// 使用斜杠格式
-		result = fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d", thaiYear, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
-	} else {
-		// 使用连字符格式
-		result = fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d", thaiYear, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
-	}
-	// 否则返回字符串
+	// 格式化为斜杠格式
+	result := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d", thaiYear, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
 	return result
 }
