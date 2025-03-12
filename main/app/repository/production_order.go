@@ -16,8 +16,9 @@ type IProductionOrderRepo interface {
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error) // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                      // 历史获取销售账单Uuid
 	GetProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                                    // 获取生产订单商品
-	GetFinishedLimitProducts(limit int) ([]model.ProductionOrderProduct, error)                                              // 获取完成的生产订单商品
+	GetFinishedLimitProducts(limit int, opts ...DBOption) ([]model.ProductionOrderProduct, error)                            // 获取完成的生产订单商品
 	WhereProductStatus(status uint) DBOption                                                                                 // 生产商品状态
+	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                       // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                                                                    // 生产商品完成时间条件
 	WhereProductUuid(uuid uint64) DBOption                                                                                   // 生产商品Uuid条件
 	WhereProductSaleBillUuidIn(uuids []uint64) DBOption                                                                      // 生产商品销售账单uuid条件
@@ -86,9 +87,13 @@ func (r *productionRepo) GetProducts(opts ...DBOption) ([]model.ProductionOrderP
 	return productionOrderProducts, nil
 }
 
-func (r *productionRepo) GetFinishedLimitProducts(limit int) ([]model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetFinishedLimitProducts(limit int, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
-	result := r.db.Model(&model.ProductionOrderProduct{}).Preload("SaleBill").Scopes(NotDeleted).
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	result := db.Preload("SaleBill").
 		Where("status = ?", constant.ProductionOrderProductStatusFinished).
 		Order("finished_time desc").Limit(limit).Find(&productionOrderProducts)
 	if result.Error != nil {
@@ -152,6 +157,13 @@ func (r *productionRepo) WhereProductHistoryCondition() DBOption {
 func (r *productionRepo) WhereProductStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereProductPackageUuidIn 商品ID条件
+func (r *productionRepo) WhereProductPackageUuidIn(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_uuid in (?)", uuids)
 	}
 }
 
