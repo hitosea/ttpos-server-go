@@ -151,6 +151,7 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 				panic("saleOrderProduct.ProductPackage is nil")
 			}
 			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
+			fmt.Println("11111111111 taxRate", taxRate)
 			saleOrderProduct.SetTaxRate(taxRate)
 		}
 	}

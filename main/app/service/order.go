@@ -1609,7 +1609,7 @@ func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取操作的销售账单信息
-	saleBill, err := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}

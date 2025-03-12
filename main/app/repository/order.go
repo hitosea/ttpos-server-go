@@ -956,6 +956,12 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.DineTax",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.TakeoutTax",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
 			},
 			WithPreload{
