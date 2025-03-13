@@ -416,3 +416,156 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 	//
 	return img.Save("", !t.base.IsSunMi, false)
 }
+
+// ReturnMenuTemplate 退菜单模版
+func (t *dishesImgTemplate) ReturnMenuTemplate(
+	printerItem *model.ProductPrinterItem,
+	order model.SaleBill,
+	products printer_model.Products,
+) string {
+	// 人的翻译
+	name := t.base.Translate("人")
+	// 自助餐标记开关
+	buffetSignOpen := t.base.PrinterSetting.BuffetSignOpen
+	// 格式化时间
+	updateTime := t.base.FormatUnixTimeDefault(order.UpdateTime)
+	// 就餐人数
+	mealNumStr := ""
+	if order.MealNum > 0 {
+		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
+	}
+	// 是否有打印内容
+	isPrinter := false
+
+	// 创建打印机实例
+	img := pkg.NewImgFont(568, 0, 0)
+	img.SetAlignment(pkg.AlignCenter)
+	img.SetImagePadding(0) // 确保没有填充
+	img.SetFontWeight(5)
+	img.SetFontSize(30)
+	img.AppendText(t.base.Translate("退菜单"))
+	img.LineFeed(1, 68)
+
+	// 桌号
+	if order.DeskUuid > 0 {
+		// 判断文字是否包含缅甸语
+		spacing := 50
+		if t.base.IsMyText(order.SerialNo) {
+			spacing = 68
+		}
+		img.SetTextLineHeight(spacing)
+		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+		img.SetTextLineHeight(45)
+		img.LineFeed(1)
+	} else {
+		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+	}
+	// 设置字体
+	img.SetFontSize(20)
+	img.SetFontWeight(1)
+	img.SetTextLineHeight(36)
+	img.LineFeed(2, 32)
+
+	// 订单号和时间
+	img.PrintInColumns(
+		pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 280, Align: pkg.AlignLeft},
+		pkg.ColumnConfig{Text: order.OrderNo, Width: 0, Align: pkg.AlignRight},
+	)
+	img.PrintInColumns(
+		pkg.ColumnConfig{Text: t.base.Translate("时间"), Width: 280, Align: pkg.AlignLeft},
+		pkg.ColumnConfig{Text: updateTime, Width: 0, Align: pkg.AlignRight},
+	)
+	img.LineFeed(1)
+
+	// 商品和数量 - 标题
+	img.PrintInColumns(
+		pkg.ColumnConfig{Text: t.base.Translate("商品"), Width: 280, Align: pkg.AlignLeft},
+		pkg.ColumnConfig{Text: t.base.Translate("数量"), Width: 0, Align: pkg.AlignRight},
+	)
+	img.AppendSplitLine()
+	img.LineFeed(1)
+	img.SetTextLineHeight(50)
+
+	// 商品和数量
+	for _, product := range products {
+		// 处理自助餐文本
+		buffetText := ""
+		if buffetSignOpen == "1" {
+			if product.IsBuffet {
+				buffetText = t.base.Translate("自助餐") + "-"
+			}
+		}
+		// 产品名称
+		productName := "(" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		if t.base.Lang == "my" {
+			img.SetTextLineHeight(90)
+		} else {
+			img.SetTextLineHeight(64)
+		}
+		img.LineFeed(1, 12)
+
+		// 打印产品名称和数量
+		totalNum := "x" + fmt.Sprintf("%d", product.TotalNum)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+		)
+		if t.base.Lang == "my" {
+			img.LineFeed(1, 12)
+		}
+
+		// 分割处理属性
+		for _, attr := range product.ProductAttrList {
+			if t.base.Lang == "my" {
+				img.SetTextLineHeight(50)
+			} else {
+				img.SetTextLineHeight(40)
+			}
+			img.AppendText(attr.GetLocale(t.base.Lang))
+			img.LineFeed(1, 50)
+		}
+
+		if product.Remark != "" {
+			if t.base.IsMyText(product.Remark) {
+				img.SetTextLineHeight(50)
+			} else {
+				img.SetTextLineHeight(40)
+			}
+			img.AppendText(product.Remark)
+			img.LineFeed(1, 50)
+		}
+
+		img.LineFeed(1, 12)
+		img.SetTextLineHeight(50)
+
+		// 标记已打印
+		isPrinter = true
+
+		// 退菜原因
+		img.AppendSplitLine()
+		img.LineFeed(1, 34)
+		// 获取退菜原因文本
+		reasonText := product.Reason.GetLocale(t.base.Lang)
+		// 如果有自定义原因，则添加
+		if product.CustomReason != "" {
+			reasonText += "、" + product.CustomReason
+		}
+		img.AppendText(fmt.Sprintf(
+			"%s： %s",
+			t.base.Translate("退菜原因"),
+			reasonText,
+		))
+	}
+
+	if !isPrinter {
+		return ""
+	}
+
+	// 设置行间距
+	img.SetTextLineHeight(50)
+	// 换行
+	img.LineFeed(4)
+
+	//
+	return img.Save("", !t.base.IsSunMi, false)
+}
