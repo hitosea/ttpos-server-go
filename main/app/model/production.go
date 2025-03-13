@@ -15,7 +15,7 @@ type ProductionOrderProduct struct {
 	BaseModel
 	Name                  string `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
 	Num                   uint   `gorm:"column:num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"num"`
-	FlavorName            string `gorm:"column:flavor_name;type:varchar(255);comment:规格名称,不随后台改变;NOT NULL" json:"flavor_name"`
+	FlavorName            string `gorm:"column:flavor_name;type:text;comment:规格名称,不随后台改变;" json:"flavor_name"`
 	ProductAttributeNames string `gorm:"column:product_attribute_names;type:varchar(255);comment:商品属性名称,多个属性名用逗号分隔,不随后台改变;NOT NULL" json:"product_attribute_names"`
 	ProductSaucesNames    string `gorm:"column:product_sauces_names;type:varchar(255);comment:商品加料名称,多个加料名用逗号分隔,不随后台改变;NOT NULL" json:"product_sauces_names"`
 	Status                int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-待制作 1-制作中 2-已完成 3-已退菜;NOT NULL" json:"status"`

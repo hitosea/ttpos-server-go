@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
-    `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称,不随后台改变',
+    `flavor_name` TEXT DEFAULT NULL COMMENT '规格名称,不随后台改变',
     `product_attribute_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品属性名称,多个属性名用逗号分隔,不随后台改变',
     `product_sauces_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品加料名称,多个加料名用逗号分隔,不随后台改变',
     `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态, 0-待制作 1-制作中 2-已完成 3-已退菜',
