@@ -83,7 +83,12 @@ class Category extends BaseModel
 
     public function child()
     {
-        return $this->hasMany('app\\common\\model\\product\\Category', 'parent_uuid', 'uuid')->with(['images']);
+        return $this->hasMany(self::class, 'parent_uuid', 'uuid')->with(['images']);
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_uuid', 'uuid')->with(['images']);
     }
 
     /**
