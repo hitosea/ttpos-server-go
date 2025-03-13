@@ -5,7 +5,7 @@ import "ttpos-server-go/app/dto"
 // 桌台购物车
 type ShopCart struct {
 	SaleBillUuid  uint64               `json:"sale_bill_uuid"`       // 销售账单ID
-	Takeout       *bool                `json:"takeout"`              // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
+	Takeout       *bool                `json:"takeout,omitempty"`    // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
 	IsDeskOrder   bool                 `json:"is_desk_order"`        // 购物车类型 true:桌台购物车 false:点餐购物车
 	IsLock        bool                 `json:"is_lock"`              // 购物车是否锁定 true:锁定 false:未锁定
 	Desk          *DeskInfo            `json:"desk,omitempty"`       // 桌台信息

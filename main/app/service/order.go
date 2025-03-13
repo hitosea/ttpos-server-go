@@ -134,8 +134,10 @@ func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, e
 		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
 	}
 	if order != nil && device.Uuid == order.DeviceUuid {
+		fmt.Println("111111111111111  device.Uuid:", device.Uuid, "order.DeviceUuid:", order.DeviceUuid)
 		return order, true, nil
 	}
+	fmt.Println("222222222222222  device.Uuid:", device.Uuid)
 	return nil, false, nil
 }
 
@@ -2659,9 +2661,15 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 	}
 	var productMustPlanList *resp.ProductMustPlanList
 	if mustPlan != nil {
+		fmt.Println("444444444444444  mustPlan:", mustPlan)
+
 		productMustPlanList = &resp.ProductMustPlanList{
 			List: mustPlan.List,
 		}
+	}
+
+	if mustPlan == nil {
+		fmt.Println("333333333333333  mustPlan:", mustPlan)
 	}
 
 	takeout := shopCart.SaleBill.IsTakeout()
@@ -3840,6 +3848,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	if shopCartInfo.SaleBill.IsShowMustPlan() {
 		list = mustPlanList
 	}
+	fmt.Println("ssssssss111111111111111  list:", list)
 	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, nil
 }
 

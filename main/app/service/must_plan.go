@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -53,19 +54,21 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 
 	// 构建必点方案响应列表
 	for _, plan := range productMustPlans {
-		if plan.IsDeskMustPlan() {
+		if !plan.IsInstantMustPlan() {
 			// 忽略桌台必点方案
 			continue
 		}
 		if plan.IsDelete() {
 			continue
 		}
+		fmt.Println("777777777777777  plan:", plan)
 		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
 		productPackageList := s.getInstantMustPlanProductList(ctx, plan)
 		// 如果列表为空，跳过不显示
 		if len(productPackageList) == 0 {
 			continue
 		}
+		fmt.Println("888888888888888  productPackageList:", productPackageList)
 
 		// 获取购物车中已经点了多个这个必点方案的商品
 		selectedNum := uint(0)
@@ -96,7 +99,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				}
 			}
 		}
-
+		fmt.Println("999999999999999  mustMap:", mustMap)
 		// 如果必点方案是可选商品，NeedNum的取值要么是1 要么是0
 		// 当selectedNum>0时，NeedNum为0
 		needNum := uint(0)
@@ -113,6 +116,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				needNum += num
 			}
 		}
+		fmt.Println("1000000000000000  needNum:", needNum)
 
 		mustPlan := resp.InstantProductMustPlan{
 			Uuid:         plan.Uuid,
@@ -124,9 +128,11 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 			NeedNum:      needNum,     // 还差xx份。不应该算上自动加购商品的数量
 			Products:     resp.ProductPackageList{List: productPackageList},
 		}
+		fmt.Println("111111111111111122222  mustPlan:", mustPlan)
 		mustPlanList = append(mustPlanList, mustPlan)
 	}
 
+	fmt.Println("122222222222222233333  mustPlanList:", mustPlanList)
 	return mustPlanList, nil
 }
 
