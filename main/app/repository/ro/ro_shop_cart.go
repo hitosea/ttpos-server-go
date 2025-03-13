@@ -19,8 +19,11 @@ func (ro *ShopCartRepo) IsDeskShopCart() bool {
 	return ro.SaleBill.Desk.Uuid != 0 // 如果是桌台购物车的话肯定会查询有桌台信息
 }
 
+// 描述购物车中某个必点方案的某个商品已经选购了多少个
+type MustPlanProductInfo map[uint64]map[uint64]uint // MustPlanUuid => ProductPackageUuid => num
+
 // 获取购物车中的必点商品信息
-func (ro *ShopCartRepo) GetMustPlanProductInfo() map[uint64]map[uint64]uint {
+func (ro *ShopCartRepo) GetMustPlanProductInfo() MustPlanProductInfo {
 	// MustPlanUuid => ProductPackageUuid => num
 	dataMap := make(map[uint64]map[uint64]uint)
 	for _, saleOrder := range ro.SaleBill.SaleOrders {

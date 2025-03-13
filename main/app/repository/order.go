@@ -379,7 +379,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 		CommonRepo.WhereByIsHide(false),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GetOrderCartInfo: %v", err)
+		return nil, errors.WithMessage(fmt.Errorf("GetOrderCartInfo: %v, saleBillUuid: %d", err, saleBillUuid))
 	}
 
 	if saleBill.IsDeskSaleBill() {
@@ -471,7 +471,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 					),
 				)
 				if errDesk != nil {
-					return nil, errDesk
+					return nil, errors.WithMessage(errDesk)
 				}
 
 				bill := &saleBill
@@ -544,7 +544,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 					),
 				)
 				if errDesk != nil {
-					return nil, errDesk
+					return nil, errors.WithMessage(errDesk)
 				}
 				bill := &saleBill
 				// 计算一次金额，避免错误
@@ -623,7 +623,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 				),
 			)
 			if errSaleBill != nil {
-				return nil, fmt.Errorf("GetOrderCartInfo errSaleBill: %v", errSaleBill)
+				return nil, errors.WithMessage(fmt.Errorf("GetOrderCartInfo errSaleBill: %v", errSaleBill))
 			}
 			bill := &saleBill
 			// 计算一次金额，避免错误

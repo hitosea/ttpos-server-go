@@ -114,28 +114,27 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Co
 	productMustPlans, err := r.GetProductMustPlanList(ctx,
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.MultiLanguageName",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ProductUnit.MultiLanguageName",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ImageFile",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductFlavor.MultiLanguageName",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductSauce.MultiLanguageName",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
-			//},
-			//WithPreload{
-			//	Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
-			//},
-
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ImageFile",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+			},
 			WithPreload{
 				Query: "ProductMustPlanRegions.DeskRegion.Desks",
 			},

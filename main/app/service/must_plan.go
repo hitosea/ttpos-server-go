@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -18,9 +17,9 @@ import (
 
 // IMustPlanSrv 定义必点方案服务接口
 type IMustPlanSrv interface {
-	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) ([]resp.InstantProductMustPlan, error)               // 获取点餐的必点方案列表
-	GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
-	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)           // 通过商品包获取必点方案uuid
+	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo) ([]resp.InstantProductMustPlan, error) // 获取点餐的必点方案列表
+	GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo, deskUuid uint64) ([]resp.InstantProductMustPlan, error)        // 获取桌台的必点方案列表
+	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)                  // 通过商品包获取必点方案uuid
 }
 
 // mustPlanSrv 必点方案服务结构体
@@ -41,10 +40,8 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 }
 
 // 获取点餐的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCart *ro.ShopCartRepo) ([]resp.InstantProductMustPlan, error) {
+func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo) ([]resp.InstantProductMustPlan, error) {
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
-
-	shopCartMustProductInfo := shopCart.GetMustPlanProductInfo()
 
 	// 获取必选方案信息
 	productMustPlans, err := repository.NewProductMustPlanRepo(db).GetProductMustPlanListAllInfos(ctx)
@@ -61,29 +58,27 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		if plan.IsDelete() {
 			continue
 		}
-		fmt.Println("777777777777777  plan:", plan)
-		//productPackageList := make([]resp.InstantMustPlanProductStat, 0)
+
 		productPackageList := s.getInstantMustPlanProductList(ctx, plan)
 		// 如果列表为空，跳过不显示
 		if len(productPackageList) == 0 {
 			continue
 		}
-		fmt.Println("888888888888888  productPackageList:", productPackageList)
-
 		// 获取购物车中已经点了多个这个必点方案的商品
 		selectedNum := uint(0)
 		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
 		if ok {
 			for _, productPackage := range productPackageList {
 				// 不统计自动加购的商品
-				if productPackage.IsAutoAdd {
-					continue
-				}
+				//if productPackage.IsAutoAdd {
+				//	continue
+				//}
 				productPackageUuid := productPackage.Product.Uuid
 				num := productPackageMap[productPackageUuid]
 				selectedNum += num
 			}
 		}
+
 		// 获取购物车中各个必点商品已经点了多少个，还差多少个
 		mustMap := make(map[uint64]uint) // product_package_uuid => num 每个必点商品还差多少个
 		if ok {
@@ -99,7 +94,6 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				}
 			}
 		}
-		fmt.Println("999999999999999  mustMap:", mustMap)
 		// 如果必点方案是可选商品，NeedNum的取值要么是1 要么是0
 		// 当selectedNum>0时，NeedNum为0
 		needNum := uint(0)
@@ -116,7 +110,6 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				needNum += num
 			}
 		}
-		fmt.Println("1000000000000000  needNum:", needNum)
 
 		mustPlan := resp.InstantProductMustPlan{
 			Uuid:         plan.Uuid,
@@ -128,11 +121,9 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 			NeedNum:      needNum,     // 还差xx份。不应该算上自动加购商品的数量
 			Products:     resp.ProductPackageList{List: productPackageList},
 		}
-		fmt.Println("111111111111111122222  mustPlan:", mustPlan)
 		mustPlanList = append(mustPlanList, mustPlan)
 	}
 
-	fmt.Println("122222222222222233333  mustPlanList:", mustPlanList)
 	return mustPlanList, nil
 }
 
@@ -182,6 +173,7 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPla
 			productList = append(productList, productStat)
 		}
 	}
+
 	return productList
 }
 
@@ -265,6 +257,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, db *gorm.DB, shop
 		}
 
 		mustPlan := resp.InstantProductMustPlan{
+			Uuid:         plan.Uuid,
 			Name:         plan.Name,
 			MustType:     plan.GetMustType(),
 			MustRule:     plan.GetMustRule(),
@@ -408,7 +401,7 @@ func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleB
 		}
 		plans = deskMustPlanList
 	} else {
-		instantMustPlanList, err := s.GetInstantMustPlanList(ctx, db, shopCart)
+		instantMustPlanList, err := s.GetInstantMustPlanList(ctx, db, shopCart.GetMustPlanProductInfo())
 		if err != nil {
 			ctx.Log().Debug("加购商品时判断商品是不是必点商品时，获取点餐必点方案失败", zap.Error(err))
 			return 0, errors.WithMessage(err, "获取点餐必点方案失败")
