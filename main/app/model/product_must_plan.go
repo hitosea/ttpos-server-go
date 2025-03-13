@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -61,7 +60,6 @@ func (model *ProductMustPlan) IsCustomerCanChange() bool {
 }
 
 func (model *ProductMustPlan) IsDeskMustPlan() bool {
-	fmt.Println("666666666666666  model.UseChannel:", model.UseChannel)
 	return strings.Contains(model.UseChannel, constant.ProductMustPlanUseChannelDesk)
 }
 

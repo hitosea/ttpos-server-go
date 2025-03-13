@@ -92,13 +92,8 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 			// 退菜单打印
 			if printType == constant.PrinterProductTypeBackFood {
-				data := p.getPrintReturnProductContent(productPrinter, printerItem, billInfo, newProducts)
+				data := p.getPrintReturnProductContent(printerItem, billInfo, newProducts)
 				if data != "" {
-					// 执行打印
-					err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
-					if err != nil {
-						logger.Logger.Error("打印失败", zap.Error(err))
-					}
 
 					// 添加打印日志，依赖打印日志服务
 					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -128,11 +123,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				for _, product := range newProducts {
 					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
 					if data != "" {
-						// 执行打印
-						err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
-						if err != nil {
-							logger.Logger.Error("打印失败", zap.Error(err))
-						}
 
 						// 添加打印日志，依赖打印日志服务
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -161,10 +151,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 整单打印
 			data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts)
 			if data != "" {
-				err := p.ExecuteImgPrinting(printerItem.Printer.GetConfigJson().IP, data)
-				if err != nil {
-					logger.Logger.Error("打印失败", zap.Error(err))
-				}
 
 				// 添加打印日志，依赖打印日志服务
 				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -273,13 +259,12 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 
 // 构建退菜单打印的内容
 func (p *PrinterRepoImpl) getPrintReturnProductContent(
-	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "1" {
+	if p.printerSetting.KitchenPrintMethod == "2" {
 		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
 		return t.ReturnMenuTemplate(printerItem, saleBill, products)
 	}

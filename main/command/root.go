@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"ttpos-server-go/app/printer/printer_tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
 	"ttpos-server-go/i18n"
@@ -13,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/timer"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
@@ -32,12 +34,15 @@ var rootCommand = &cobra.Command{
 		if err := config.Init(); err != nil {
 			log.Fatalf("Failed to initialize config: %v", err)
 		}
+
 		// 初始化日志系统
 		if err := logger.Init(); err != nil {
 			log.Fatalf("Failed to initialize logger: %v", err)
 		}
+
 		// 初始化国际化
 		i18n.Init()
+
 		// 自定义验证规则
 		validator.Init()
 
@@ -45,54 +50,82 @@ var rootCommand = &cobra.Command{
 		var cacheConfig cache.Config
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cache.Redis, cacheConfig)
+
 		// 初始化Redis分布式并发锁
 		lock.InitRedisLock(cacheConfig)
 		lock.NewSystemLock()
-
-		// 初始化雪花ID生成器
-		//database.InitSonyFlakeId()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
+
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
+
 		// 初始化系统事件总线
 		event.NewSystemBus()
 
-		gin.SetMode(config.Server.Mode)
-		// 创建Gin引擎
-		r := gin.New()
-		// 添加中间件
-		r.Use(middleware.Cors())
-		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
-		// 注册 Swagger 路由
-		// 允许自定义Swagger文档链接
-		docs.SwaggerInfo.BasePath = "/api/v1"
-		// Swagger API 文档
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		// 定时器
+		initializeTimers(dbm, cache.Global)
 
-		// 注册路由
-		router.Setup(r, dbm, cache.Global)
+		// 内网服务
+		initializeInternalService(dbm, cache.Global)
 
-		internalRouter := gin.Default()
-		router.SetupInternal(internalRouter, dbm, cache.Global)
-		go func() {
-			// 启动内网服务
-			if err := internalRouter.Run(":9000"); err != nil {
-				fmt.Printf("Failed to start internal server: %v\n", err)
-			}
-		}()
-		// 启动服务器
-		if err := r.Run(":" + config.Server.Port); err != nil {
-			logger.Logger.Fatal("Error starting server", zap.Error(err))
-		}
+		// 外网服务
+		initializeExternalService(dbm, cache.Global)
 	},
 }
 
+// 执行命令
 func Execute() {
 	rootCommand.CompletionOptions.DisableDefaultCmd = true
 	if err := rootCommand.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+// 外网服务
+func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
+	// 启动服务器
+	gin.SetMode(config.Server.Mode)
+	// 创建Gin引擎
+	r := gin.New()
+	// 添加中间件
+	r.Use(middleware.Cors())
+	r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
+	// 注册 Swagger 路由
+	// 允许自定义Swagger文档链接
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	// Swagger API 文档
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// 注册路由
+	router.Setup(r, dbm, cache)
+	if err := r.Run(":" + config.Server.Port); err != nil {
+		logger.Logger.Fatal("Error starting server", zap.Error(err))
+	}
+}
+
+// 内网服务
+func initializeInternalService(dbm *database.DBManager, cache cache.Cache) {
+	internalRouter := gin.Default()
+	router.SetupInternal(internalRouter, dbm, cache)
+	go func() {
+		// 启动内网服务
+		if err := internalRouter.Run(":9000"); err != nil {
+			fmt.Printf("Failed to start internal server: %v\n", err)
+		}
+	}()
+}
+
+// 初始化定时器任务
+func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
+	// 获取定时器管理器实例
+	tm := timer.GetTimerManager()
+
+	// 每1秒执行一次的示例任务
+	secondTask := printer_tasks.NewSecondTask("second_task", 1, dbm, cache)
+	tm.RegisterTask(secondTask)
+
+	// 启动定时器
+	tm.Start()
 }

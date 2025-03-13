@@ -793,13 +793,12 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		reasonText := product.Reason.GetLocale(t.base.Lang)
 		// 如果有自定义原因，则添加
 		if product.CustomReason != "" {
-			reasonText += "、" + product.CustomReason
+			if reasonText != "" {
+				reasonText += "、"
+			}
+			reasonText += product.CustomReason
 		}
-		printer.AppendText(fmt.Sprintf(
-			"%s： %s",
-			t.base.Translate("退菜原因"),
-			reasonText,
-		))
+		printer.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
 
 		// 标记已有打印内容
 		isPrinter = true

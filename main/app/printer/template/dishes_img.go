@@ -548,13 +548,12 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		reasonText := product.Reason.GetLocale(t.base.Lang)
 		// 如果有自定义原因，则添加
 		if product.CustomReason != "" {
-			reasonText += "、" + product.CustomReason
+			if reasonText != "" {
+				reasonText += "、"
+			}
+			reasonText += product.CustomReason
 		}
-		img.AppendText(fmt.Sprintf(
-			"%s： %s",
-			t.base.Translate("退菜原因"),
-			reasonText,
-		))
+		img.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
 	}
 
 	if !isPrinter {
