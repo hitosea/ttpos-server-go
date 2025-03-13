@@ -675,7 +675,7 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	if checkRes != nil {
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
-		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
