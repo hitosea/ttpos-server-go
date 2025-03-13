@@ -4282,6 +4282,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.New("销售订单未结清")
 	}
 
+	// 检查是否有未送厨的商品。场景：当收银机1结账时，收银机2加购了新的商品。
+	if len(saleBill.GetSaleOrderProductUnCooking()) > 0 {
+		return nil, errors.New("有未送厨的商品")
+	}
+
 	// 最终应收=应收金额+手续费
 	finalAmount := decimal.NewFromFloat(saleOrder.Amount).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
 
