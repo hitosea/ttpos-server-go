@@ -34,52 +34,8 @@ class Order extends Controller
     public function index($dataType = 'all')
     {   
         $data = $this->postData();
-        // 订单来源 0-全都 10-桌台 20-收银
-        $bill_type = (trim($data['order_source'] ?? -1) ?: -1);
-        if ($bill_type == 10) {
-            $bill_type = 0;
-        }
-        if ($bill_type == 20) {
-            $bill_type = 1;
-        }
-        // 点餐方式
-        $dining_method = trim($data['style_id'] ?? -1) ?: -1;
-        if ($dining_method == 30) {
-            $dining_method = 1;
-        }
-        if ($dining_method == 40) {
-            $dining_method = 0;
-        }
-        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
-        $status = -1;
-        switch ($dataType) {
-            case 'payment':
-                $status = 0;
-                break;
-            case 'process':
-                $status = 1;
-                break;
-            case 'complete':
-                $status = 2;
-                break;
-            case 'cancel':
-                $status = 3;
-                break;
-        }
         // 
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/list', [
-            'order_no' => $data['order_no'] ?? '',
-            'bill_type' =>$bill_type,
-            'date_type' => (trim($data['time_type'] ?? '') ?: 0) - 1,
-            'dining_method' => $dining_method,
-            'status' => $status,
-            'page_no' => $data['page'] ?? 1,
-            'page_size' => $data['list_rows'] ?? 10,
-            'enable_create_time' => in_array(0, $data['time_mode'] ?? []),
-            'enable_pay_time' =>in_array(1, $data['time_mode'] ?? []),
-            'query_start_time' =>($data['time'][0] ?? '') ? strtotime($data['time'][0]) : 0,
-            'query_end_time' =>($data['time'][1] ?? '') ? strtotime($data['time'][1]) : 0,
-        ], [
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/list', $this->buildListQueryParams($data), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -87,7 +43,7 @@ class Order extends Controller
             return $this->renderError('请求失败');
         } 
         $result = json_decode($res, true);
-        if (($result['code'] ?? 0) != 1) {
+        if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
         // 
@@ -126,7 +82,7 @@ class Order extends Controller
             return $this->renderError('请求失败');
         } 
         $result = json_decode($res, true);
-        if (($result['code'] ?? 0) != 1) {
+        if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
         //
@@ -169,5 +125,70 @@ class Order extends Controller
         $operationLog = OrderOperationLog::getLogList($operationOrderId);
         //
         return $this->renderSuccess('', compact('detail', 'operationLog'));
+    }
+
+    /**
+     * 构建列表查询参数
+     */
+    private function buildListQueryParams($data)
+    {
+        // 搜索日期类型: '0'-全部 '1'-今天 '2'-昨天 '3'-本周
+        $dateType = intval($data['time_type']) - 1;
+        // 搜索订单类型: ''-全部 '10'-桌台 '20-点餐
+        $billType = intval(trim($data['order_source']) ?: -1);
+        if ($billType == 10) {
+            $billType = 0;
+        }
+        if ($billType == 20) {
+            $billType = 1;
+        }
+        // 搜索订单号
+        $orderNo = $data['order_no'];
+        // 搜索用餐方式: ''-全部 '30'-打包 '40'-堂食
+        $diningMethod = intval(trim($data['style_id']) ?: -1);
+        if ($diningMethod == 30) {
+            $diningMethod = 1;
+        }
+        if ($diningMethod == 40) {
+            $diningMethod = 0;
+        }
+        // 搜索开台时间、支付时间
+        $enableCreateTime = false;
+        $enablePayTime = false;
+        $queryStartTime = 0;
+        $queryEndTime = 0;
+        $time = $data['time'] ?: [];
+        if (!empty($time)) {
+            $queryStartTime = strtotime($time[0]);
+            $queryEndTime = strtotime($time[1]);
+            $timeMode = $data['time_mode'] ?: [];
+            if (in_array(0, $timeMode)) {
+                $enableCreateTime = true;
+            }
+            if (in_array(1, $timeMode)) {
+                $enablePayTime = true;
+            }
+        }
+        // 搜索订单状态
+        $status = [
+            'all' => -1,
+            'payment' => 0,
+            'complete' => 1,
+            'cancel' => 2,
+        ][$data['dataType']];
+
+        return [
+            'order_no' => $orderNo,
+            'bill_type' =>$billType,
+            'date_type' => $dateType,
+            'dining_method' => $diningMethod,
+            'status' => $status,
+            'page_no' => $data['page'] ?? 1,
+            'page_size' => $data['list_rows'] ?? 10,
+            'enable_create_time' => $enableCreateTime,
+            'enable_pay_time' => $enablePayTime,
+            'query_start_time' => $queryStartTime,
+            'query_end_time' => $queryEndTime,
+        ];
     }
 }
