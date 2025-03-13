@@ -2,7 +2,6 @@
 
 namespace app\shop\controller\setting;
 
-use help\SystemHelp;
 use think\facade\Cache;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
@@ -52,7 +51,7 @@ class Clear extends Controller
      */
     private function getItems()
     {
-        $app_id = $this->store['app']['app_id'];
+        $app_id = $this->store['app']['uuid'];
         return [
             'category' => [
                 'type' => 'cache',
@@ -61,8 +60,8 @@ class Clear extends Controller
             ],
             'setting' => [
                 'type' => 'cache',
-                'key' => 'setting_' . $app_id . '_0',
-                'keys' => 'setting_' . $app_id . '_' . $app_id,
+                'key' => 'setting:company_id:' . $app_id,
+                'keys' => 'setting:company_id:' . $app_id,
                 'name' => __('商城设置')
             ],
             'app' => [

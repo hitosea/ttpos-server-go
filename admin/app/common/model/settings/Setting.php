@@ -131,12 +131,11 @@ class Setting extends BaseModel
         is_null($app_id) && $app_id = $static::$app_id;
         is_null($shop_supplier_id) && $shop_supplier_id = $static::$app_id;
         $shop_supplier_id == 0 && $shop_supplier_id = $static::$app_id;
-        // todo 兼容
-        // if (!$data = Cache::get('setting_' . $app_id . '_' . $shop_supplier_id)) {
+        if (!$data = Cache::get(sprintf("setting:company_id:%d", $app_id))) {
             $setting = $static->select();
             $data = empty($setting) ? [] : array_column($static->collection($setting)->toArray(), null, 'key');
-        //     Cache::tag('cache')->set('setting_' . $app_id . '_' . $shop_supplier_id, $data);
-        // }
+            Cache::tag('cache')->set(sprintf("setting:company_id:%d", $app_id), $data);
+        }
         return $static->getMergeData($data, $languageList);
     }
 
@@ -315,7 +314,7 @@ class Setting extends BaseModel
             ]
         );
         // 删除系统设置缓存
-        Cache::set('setting_' . self::$app_id . '_' . $shop_supplier_id, null);
+        Cache::set(sprintf("setting:company_id:%d", self::$app_id), null);
         Cache::tag('common_get_settingLanguages')->clear();
         Cache::tag('cashier')->clear();
         //
@@ -380,7 +379,7 @@ class Setting extends BaseModel
             'values' => json_encode($values),
         ]);
         // 删除系统设置缓存
-        Cache::set('setting_' . $appId . '_' . $shopSupplierId, null);
+        Cache::set(sprintf("setting:company_id:%d", $appId), null);
         Cache::tag('common_get_settingLanguages')->clear();
         Cache::set('sync_setting_' . SettingEnum::CLOUD_BASIC, $data);
     }
