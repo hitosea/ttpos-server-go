@@ -184,6 +184,16 @@ func (obj InstantOrderPaymentInfoResp) GetCommissionAmount() float64 {
 	return 0
 }
 
+// GetUnpaidAmount 获取未收金额。未收金额=应收金额-实收金额
+func (obj InstantOrderPaymentInfoResp) GetUnpaidAmount() float64 {
+	//  Amounts.List列表中的每一个元素的UnpaidAmount都相同，所以直接返回第一个元素的UnpaidAmount
+	if len(obj.Amounts.List) != 0 {
+		return obj.Amounts.List[0].UnpaidAmount
+	}
+	// 如果Amounts.List列表为空，则返回0
+	return 0
+}
+
 type PaymentMethodAmountList struct {
 	List []PaymentMethodAmount `json:"list"`
 }

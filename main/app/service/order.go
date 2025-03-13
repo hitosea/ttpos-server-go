@@ -4073,6 +4073,14 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 	commissionAmount := infoResp.GetCommissionAmount()
 
+	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
+	unpaidAmount := infoResp.GetUnpaidAmount()
+	if unpaidAmount < req.PaymentAmount {
+		if paymentMethod.Code != constant.PaymentMethodCodeCash {
+			return nil, errors.WithMessage(errors.New(fmt.Sprintf("支付金额不能大于未收金额 %.2f", unpaidAmount)))
+		}
+	}
+
 	percent := paymentMethod.GetFeePercent()
 	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
 	amount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
