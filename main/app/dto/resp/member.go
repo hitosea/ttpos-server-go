@@ -41,13 +41,13 @@ type RechargeMember struct {
 
 // RechargeOrder 进行中的充值订单
 type RechargeOrder struct {
-	MemberUuid     uint64         `json:"member_uuid"`     // 会员Uuid
-	Uuid           uint64         `json:"uuid"`            // 充值订单Uuid
-	RechargeAmount float64        `json:"recharge_amount"` // 充值金额
-	GiftAmount     float64        `json:"gift_amount"`     // 赠送金额
-	GiftPoint      float64        `json:"gift_point"`      // 赠送积分
-	ChargeDue      float64        `json:"charge_due"`      // 找零
-	PaymentOrders  []PaymentOrder `json:"payment_orders"`  // 充值订单支付类型列表
+	MemberUuid     uint64          `json:"member_uuid"`     // 会员Uuid
+	Uuid           uint64          `json:"uuid"`            // 充值订单Uuid
+	RechargeAmount float64         `json:"recharge_amount"` // 充值金额
+	GiftAmount     float64         `json:"gift_amount"`     // 赠送金额
+	GiftPoint      float64         `json:"gift_point"`      // 赠送积分
+	ChargeDue      float64         `json:"charge_due"`      // 找零
+	PaymentOrders  PaymentInfoList `json:"payment_orders"`  // 充值订单支付类型列表
 }
 
 type PaymentOrder struct {

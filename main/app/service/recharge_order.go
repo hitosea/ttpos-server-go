@@ -78,7 +78,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 		rechargeOrderRepo.WhereStatus(constant.RechargeOrderStatusPending),
 		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	if order.Uuid == 0 {
-		return resp.RechargeOrder{PaymentOrders: make([]resp.PaymentOrder, 0)}
+		return resp.RechargeOrder{PaymentOrders: resp.PaymentInfoList{List: make([]resp.PaymentOrder, 0)}}
 	}
 
 	paymentOrderCount := len(order.PaymentOrders)
@@ -99,7 +99,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 	var respRechargeOrder resp.RechargeOrder
 	copier.Copy(&respRechargeOrder, order)
 
-	respRechargeOrder.PaymentOrders = respPaymentOrders
+	respRechargeOrder.PaymentOrders = resp.PaymentInfoList{List: respPaymentOrders}
 	return respRechargeOrder
 }
 
