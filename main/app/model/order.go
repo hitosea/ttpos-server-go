@@ -197,10 +197,10 @@ func (model *SaleBill) IsTakeout() bool {
 
 // 设置账单为已送厨状态。如果状态已经是送厨，则不修改
 func (model *SaleBill) SetCookingStatus() {
-	defer model.SetUpdate()
 	if model.IsCookingStatus() {
 		return
 	}
+	model.SetUpdate()
 	model.ProductionTime = time.Now().Unix()
 }
 
