@@ -70,7 +70,7 @@ type IOrderSrv interface {
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                                  // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                              // 向购物车添加商品
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
-	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                              // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)          // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
@@ -2952,7 +2952,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 }
 
 // OrderCartProductNum 修改购物车商品数量
-func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
@@ -2961,18 +2961,6 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
-
-	if request.Num == 0 {
-		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
-			SaleBillUuid:     request.SaleBillUuid,
-			SaleOrderUuid:    request.SaleOrderUuid,
-			OrderProductUuid: request.SaleOrderProductUuid,
-		})
-		if err != nil {
-			return nil, errors.WithMessage(err, "删除商品失败")
-		}
-		return res, nil
-	}
 
 	// 检查商品销售库存是否充足
 	// todo
@@ -3002,6 +2990,22 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 		return nil, errSaleOrderProduct
 	}
 	ctx.Log().Debug("获取到订单商品信息成功")
+
+	if saleOrderProduct.IsCookingProduct() {
+		return nil, errors.WithMessage(errors.New("商品已送厨，不能修改数量"))
+	}
+	// 数量为0删除商品
+	if request.Num == 0 {
+		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+			SaleBillUuid:     request.SaleBillUuid,
+			SaleOrderUuid:    request.SaleOrderUuid,
+			OrderProductUuid: request.SaleOrderProductUuid,
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err, "删除商品失败")
+		}
+		return res, nil
+	}
 
 	// 修改销售订单商品数量
 	saleOrderProduct.Num = uint(request.Num)

@@ -446,7 +446,7 @@ func (h *InstantHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	res, err := h.orderService.InstantOrderCartProductNum(ctx, params)
+	res, err := h.orderService.OrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
