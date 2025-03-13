@@ -13,7 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s *orderSrv) actionCooking(ctx context.Context, req req.OrderCartProductCookingReq, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.ShopCart, *resp.OrderCheckServiceRes, error) {
+// ActionCooking 送厨
+func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCookingReq, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)
 		defer s.lock.UnlockUuid(req.SaleBillUuid)
@@ -22,13 +23,6 @@ func (s *orderSrv) actionCooking(ctx context.Context, req req.OrderCartProductCo
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
-	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, nil, errSaleBill
-	}
-	ctx.Log().Debug("获取销售账单信息")
-
 	// 获取所有商品,用于检查限购
 	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
@@ -36,13 +30,13 @@ func (s *orderSrv) actionCooking(ctx context.Context, req req.OrderCartProductCo
 	checkServiceRes, errCheck := s.checkOrder(ctx, false, db, req.SaleBillUuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
 	if errCheck != nil {
 		ctx.Log().Error("检查商品失败", zap.Error(errCheck))
-		return nil, nil, errors.New("检查商品失败")
+		return nil, errors.New("检查商品失败")
 	}
 	if checkServiceRes != nil {
 		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && req.IgnoreMust {
 			// 必点方案未选择，且忽略必点方案
 		} else {
-			return nil, checkServiceRes, nil
+			return checkServiceRes, nil
 		}
 	}
 
@@ -84,8 +78,8 @@ func (s *orderSrv) actionCooking(ctx context.Context, req req.OrderCartProductCo
 		}
 		return nil
 	}); err != nil {
-		return nil, nil, errors.WithMessage(err, "更新数据失败")
+		return nil, errors.WithMessage(err, "更新数据失败")
 	}
 
-	return nil, nil, nil
+	return nil, nil
 }
