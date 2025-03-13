@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 基本信息
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品名称',
+    `name` TEXT DEFAULT NULL COMMENT '商品名称',
     `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
