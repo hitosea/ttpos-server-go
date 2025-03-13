@@ -62,7 +62,7 @@ class Business extends Controller
             'is_invoice' => $data['is_invoice'] ?? 0,
         ];
         if ($update_style_time) {
-            $arr['dish_card_style_time'] = time();
+            $arr['dish_card_style_time'] = time() . '';
         }
         // 过滤掉不需要的列表字段
         array_diff_key($arr, array_flip([
