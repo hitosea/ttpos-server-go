@@ -126,8 +126,17 @@ func (model *SaleBill) SetNil() {
 // 判断销售账单是否可反结账。
 // 1. 账单已完成
 // 2. 未交班。 todo
+// 3. 未退款 todo 在调用反结账接口时也检查
 func (model *SaleBill) IsCellReverseSettle() bool {
-	return model.Status == constant.SaleBillStatusComplete
+	// 账单未完成，不能反结账
+	if model.Status != constant.SaleBillStatusComplete {
+		return false
+	}
+	// 账单已退款，不能反结账
+	if model.GetTotalRefundAmount() > 0 {
+		return false
+	}
+	return true
 }
 
 // 设置打包销售账单。并更新订单的税率
