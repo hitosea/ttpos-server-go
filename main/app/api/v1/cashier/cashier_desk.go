@@ -715,7 +715,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 // OrderCartProductCancelReturning 取消退菜购物车商品
 // @Summary 取消退菜购物车商品
 // @Description 取消退菜购物车商品
-// @Tags 收银端.点餐
+// @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @param data body req.OrderCartProduct true "商品参数"

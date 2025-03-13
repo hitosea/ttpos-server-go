@@ -66,7 +66,7 @@ func (s *paymentMethodSrv) IsEnabled(ctx context.Context, paymentMethod model.Pa
 func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64 {
 	// 将 paymentAmount 和 fee/100 转换为 decimal
 	decimalPrice := decimal.NewFromFloat(paymentAmount)
-	feeRate := decimal.NewFromFloat(paymentMethod.FeePercent).Div(decimal.NewFromFloat(100))
+	feeRate := decimal.NewFromFloat(paymentMethod.FeePercent)
 
 	// 计算费用，先保留3位小数，然后四舍五入到2位
 	feeMoney := decimalPrice.Mul(feeRate).Round(3).Round(2)

@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -16,14 +17,16 @@ import (
 )
 
 /**
- * 菜品打印
+ * 结账单打印
  * @param int $printType 打印类型 -1-为退菜打印 0-付款打印 1-送厨打印
  */
-func (p *PrinterRepoImpl) PrintingDishes(
+func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printType int,
 	saleBillUuid uint64,
 	products printer_model.Products,
 ) bool {
+
+	fmt.Println(p.printerSetting)
 
 	// 获取商品打印机列表
 	productPrinters, err := p.getProductPrinterList()
@@ -179,8 +182,8 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	return true
 }
 
-// 构建订单菜品打印的内容
-func (p *PrinterRepoImpl) getPrintProductContent(
+// 构建订单打印的内容
+func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	saleBill model.SaleBill,
@@ -215,64 +218,5 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
-	return ""
-}
-
-// 构建订单菜品（一菜一单）打印的内容
-func (p *PrinterRepoImpl) getPrintProductOneContent(
-	productPrinter model.ProductPrinter,
-	printerItem *model.ProductPrinterItem,
-	saleBill model.SaleBill,
-	product printer_model.OrderProduct,
-) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
-
-	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
-		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
-	}
-
-	// 获取打印机类型
-	var printerType string
-	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
-		printerType = printerItem.Printer.PrinterType.Key
-	}
-
-	// CODESOFT 打印机
-	if printerItem.Printer != nil && slices.Contains([]string{
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-	}, printerType) {
-		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
-	}
-
-	// 商米和芯烨打印机
-	if printerItem.Printer != nil {
-		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
-	}
-
-	return ""
-}
-
-// 构建退菜单打印的内容
-func (p *PrinterRepoImpl) getPrintReturnProductContent(
-	printerItem *model.ProductPrinterItem,
-	saleBill model.SaleBill,
-	products printer_model.Products,
-) string {
-	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
-		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		return t.ReturnMenuTemplate(printerItem, saleBill, products)
-	}
-
-	// 商米和芯烨打印机
-	if printerItem.Printer != nil {
-		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-		return t.ReturnMenuTemplate(printerItem, saleBill, products)
-	}
 	return ""
 }

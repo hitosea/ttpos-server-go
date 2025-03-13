@@ -4,7 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp/cashier_resp"
+	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
@@ -14,8 +14,8 @@ import (
 
 // IProductSrv 定义收银服务接口
 type IProductSrv interface {
-	GetProductList(ctx context.Context, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
-	GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
+	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
+	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
 }
 
 // productSrv 收银服务结构体
@@ -38,7 +38,7 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 }
 
 // GetProductList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (cashier_resp.ProductListWithPaginationResp, error) {
+func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
 	dbId := ctx.GetDbId()
 	// 获取产品列表
 	commonRepo := repository.NewCommonRepo()
@@ -73,22 +73,22 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 
 	// 处理错误
 	if err != nil {
-		return cashier_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
+		return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
 	}
 
 	// 转换为响应对象
-	list := make([]cashier_resp.Product, 0, len(products))
+	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
-		flavors := make([]cashier_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
-		sauces := make([]cashier_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
-		attributeGroups := make([]cashier_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
+		flavors := make([]product_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
+		sauces := make([]product_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
+		attributeGroups := make([]product_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
 		var prices []float64                                                                                         // 保存所有价格，用于计算最低价格
 
 		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
 			for _, productBom := range product.ProductBoms {
 				if productBom.IsFlavor() {
-					flavors = append(flavors, cashier_resp.ProductFlavor{
+					flavors = append(flavors, product_resp.ProductFlavor{
 						Uuid:       productBom.Uuid,
 						LocaleName: s.localeSrv.GetLocaleNames(productBom.ProductFlavor.MultiLanguageName),
 						Price:      productBom.Price,
@@ -104,7 +104,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 					}
 				}
 				if productBom.IsSauce() {
-					sauces = append(sauces, cashier_resp.ProductSauce{
+					sauces = append(sauces, product_resp.ProductSauce{
 						Uuid:              productBom.Uuid,
 						LocaleName:        s.localeSrv.GetLocaleNames(productBom.ProductSauce.MultiLanguageName),
 						Price:             productBom.Price,
@@ -118,20 +118,20 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		// 商品属性组
 		if len(product.ProductPackageAttributeGroups) > 0 {
 			for _, group := range product.ProductPackageAttributeGroups {
-				attributeValues := make([]cashier_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
+				attributeValues := make([]product_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
 				for _, attribute := range group.ProductPackageAttributes {
-					attributeValues = append(attributeValues, cashier_resp.ProductAttributeValue{
+					attributeValues = append(attributeValues, product_resp.ProductAttributeValue{
 						Uuid:              attribute.Uuid,
 						LocaleName:        s.localeSrv.GetLocaleNames(attribute.Attribute.MultiLanguageName),
 						IsDefaultSelected: attribute.IsDefaultSelected == 1,
 					})
 				}
-				attributeGroups = append(attributeGroups, cashier_resp.ProductAttributeGroup{
+				attributeGroups = append(attributeGroups, product_resp.ProductAttributeGroup{
 					Uuid:       group.ProductAttributeGroupUuid,
 					LocaleName: s.localeSrv.GetLocaleNames(group.ProductAttributeGroup.MultiLanguageName),
 					IsMust:     group.IsMust == 1,
 					MaxSelect:  group.MaxSelection,
-					Attributes: cashier_resp.ProductAttributeValueList{
+					Attributes: product_resp.ProductAttributeValueList{
 						List: attributeValues,
 					},
 				})
@@ -144,7 +144,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		if len(prices) > 0 {
 			minPrice = slices.Min(prices)
 		}
-		list = append(list, cashier_resp.Product{
+		list = append(list, product_resp.Product{
 			Uuid:                product.Uuid,
 			Image:               image,
 			LocaleName:          s.localeSrv.GetLocaleNames(product.MultiLanguageName),
@@ -153,20 +153,20 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			LimitNum:            product.LimitNum,
 			CategoryUuid:        product.CategoryUuid,
 			SpecialCategoryUuid: product.SpecialCategoryUuid,
-			Flavors: cashier_resp.ProductFlavorList{
+			Flavors: product_resp.ProductFlavorList{
 				List: flavors,
 			},
-			Sauces: cashier_resp.ProductSauceList{
+			Sauces: product_resp.ProductSauceList{
 				List: sauces,
 			},
-			AttributeGroups: cashier_resp.ProductAttributeGroupList{
+			AttributeGroups: product_resp.ProductAttributeGroupList{
 				List: attributeGroups,
 			},
 		})
 	}
 
 	// 返回响应对象
-	return cashier_resp.ProductListWithPaginationResp{
+	return product_resp.ProductListWithPaginationResp{
 		List: list,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
@@ -177,7 +177,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 }
 
 // GetProductCategoryList 获取收银机点餐页面产品类别列表
-func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCategoryListResp, error) {
+func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error) {
 	// 获取产品类别列表
 	categories, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductCategoryList(
 		repository.NewCommonRepo().Preload(
@@ -192,33 +192,33 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCa
 		repository.NewCommonRepo().SortWithID("DESC"),
 	)
 	if err != nil {
-		return cashier_resp.ProductCategoryListResp{}, errors.WithMessage(err, "获取产品类别列表失败")
+		return product_resp.ProductCategoryListResp{}, errors.WithMessage(err, "获取产品类别列表失败")
 	}
 
 	// 根据parent_uuid分组转换为响应对象
-	list := make([]cashier_resp.ProductCategory, 0, len(categories))
+	list := make([]product_resp.ProductCategory, 0, len(categories))
 	for _, category := range categories {
 		if category.ParentUuid == 0 {
-			children := make([]cashier_resp.ProductCategory, 0)
+			children := make([]product_resp.ProductCategory, 0)
 			for _, child := range categories {
 				if child.ParentUuid == category.Uuid {
-					children = append(children, cashier_resp.ProductCategory{
+					children = append(children, product_resp.ProductCategory{
 						Uuid:       child.Uuid,
 						LocaleName: s.localeSrv.GetLocaleNames(child.MultiLanguageName),
 						ParentUuid: child.ParentUuid,
 						IsSpecial:  child.IsSpecial == 1,
-						Children: cashier_resp.ProductCategoryListResp{
-							List: make([]cashier_resp.ProductCategory, 0),
+						Children: product_resp.ProductCategoryListResp{
+							List: make([]product_resp.ProductCategory, 0),
 						},
 					})
 				}
 			}
-			list = append(list, cashier_resp.ProductCategory{
+			list = append(list, product_resp.ProductCategory{
 				Uuid:       category.Uuid,
 				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
 				ParentUuid: category.ParentUuid,
 				IsSpecial:  category.IsSpecial == 1,
-				Children: cashier_resp.ProductCategoryListResp{
+				Children: product_resp.ProductCategoryListResp{
 					List: children,
 				},
 			})
@@ -226,7 +226,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (cashier_resp.ProductCa
 	}
 
 	// 返回响应对象
-	return cashier_resp.ProductCategoryListResp{
+	return product_resp.ProductCategoryListResp{
 		List: list,
 	}, nil
 }

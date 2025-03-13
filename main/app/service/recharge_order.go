@@ -1115,8 +1115,12 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if refundMoney > refundableAmount {
 		return errors.New("退款金额不能大于实付金额")
 	}
+	// 本次退款要从会员主账户扣除的金额
+	deductionMoney := utils.DecimalSub(order.RechargeAmount, order.RefundAmount)
+	if refundMoney < deductionMoney {
+		deductionMoney = refundMoney
+	}
 	// 要从会员主账户扣除的金额 > 用户主账户余额，不可退款
-	deductionMoney := utils.DecimalSub(order.RechargeAmount, order.RefundMoney)
 	if deductionMoney > order.Member.Balance {
 		return errors.New("当前会员主账户余额不足以退款")
 	}
@@ -1142,6 +1146,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
 				refundCashMoney = refundMoney
 			}
+			break
 		}
 	}
 
@@ -1149,7 +1154,8 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		ctx.SetDB(tx)
 
 		err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
-			"refund_money": utils.DecimalAdd(order.RefundMoney, refundReq.RefundMoney),
+			"refund_money":  utils.DecimalAdd(order.RefundMoney, refundReq.RefundMoney),
+			"refund_amount": utils.DecimalAdd(order.RefundAmount, deductionMoney),
 		})
 		if err != nil {
 			return errors2.ErrInternal

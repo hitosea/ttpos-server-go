@@ -13,6 +13,8 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -91,6 +93,7 @@ type IOrderSrv interface {
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                      // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                                // 计算并保存销售账单
+	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error)                                                    // 打印
 }
 
 // orderSrv 订单服务结构
@@ -5278,6 +5281,47 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
+
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return infoResp, nil
+}
+
+// OrderPrint 打印
+func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 创建送厨单打印记录
+	go func() {
+		products := printer_model.Products{}
+		// copier.Copy(&products, saleOrder.Products)
+		printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+			constant.PrinterProductTypeKitchen,
+			saleBill.Uuid,
+			products,
+		)
+	}()
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {

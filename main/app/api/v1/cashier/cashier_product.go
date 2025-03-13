@@ -29,7 +29,7 @@ type ProductHandler struct {
 // @Security JwtToken
 // @Param page_no query int true "页码"
 // @Param page_size query int true "每页条数"
-// @Success 200 {object} cashier_resp.ProductListWithPaginationResp "成功"
+// @Success 200 {object} product_resp.ProductListWithPaginationResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /cashier/product/list [get]
 func (h *ProductHandler) GetProductList(c *gin.Context) {
@@ -60,7 +60,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} cashier_resp.ProductCategoryListResp "成功"
+// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /cashier/product/category/list [get]
 func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {

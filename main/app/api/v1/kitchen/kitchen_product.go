@@ -27,7 +27,7 @@ type ProductHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} cashier_resp.ProductCategoryListResp "成功"
+// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /kitchen/product/category/list [get]
 func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
