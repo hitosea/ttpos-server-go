@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
@@ -82,6 +83,7 @@ func NewPrinterTemplate(
 	}
 	// 设置语言 - 使用简化逻辑，后续可接入i18n包
 	template.Lang = ctx.GetLanguage()
+	// todo - wfs
 	// template.Lang = printerSetting.DefaultLanguage
 	// template.Lang = printerSetting.KitchenLanguage
 	//
@@ -91,8 +93,8 @@ func NewPrinterTemplate(
 // GetPriceAndUnit 获取价格和单位
 func (t *printerTemplate) GetPriceAndUnit(price float64) string {
 	// 格式化金额为字符串，保留两位小数
-	priceStr := strconv.FormatFloat(price, 'f', 2, 64)
-
+	priceStr := t.Amount(price)
+	// priceStr := strconv.FormatFloat(price, 'f', 2, 64)
 	if t.CurrencyUnitPosition == 1 {
 		return priceStr + t.CurrencyUnit
 	}
@@ -210,4 +212,17 @@ func (p *printerTemplate) ChangeBuddhistCalendar(datetime int64) string {
 	// 格式化为斜杠格式
 	result := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d", thaiYear, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
 	return result
+}
+
+// Amount 计算金额的千分位
+func (p *printerTemplate) Amount(amount float64) string {
+	if amount == 0 {
+		return "0"
+	}
+	formattedAmount := strconv.FormatFloat(amount, 'f', 2, 64)
+	formattedAmount = strings.TrimRight(formattedAmount, "0")
+	if strings.HasSuffix(formattedAmount, ".") {
+		formattedAmount = strings.TrimRight(formattedAmount, ".")
+	}
+	return formattedAmount
 }

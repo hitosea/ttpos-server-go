@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -70,7 +69,7 @@ type IOrderSrv interface {
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                                  // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                              // 向购物车添加商品
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
-	InstantOrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                              // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)          // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
@@ -2743,6 +2742,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 
 func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool, saleBillUuid, saleOrderUuid, deskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
 	// 获取商品包信息
 	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(flavorProductBomUuid)
 	if err != nil {
@@ -2838,27 +2838,21 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool,
 	var mustPlanList []resp.InstantProductMustPlan
 	var errMustPlanList error
 	if isDeskSaleBill {
-		mustPlanList, errMustPlanList = s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
-		fmt.Println("666666666")
+		mustPlanList, errMustPlanList = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
 	} else {
 		mustPlanList, errMustPlanList = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
 	}
 	if errMustPlanList != nil {
 		return nil, errors.WithMessage(errMustPlanList)
 	}
-	fmt.Println("222222mustPlanList", len(mustPlanList))
 	for _, mustPlan := range mustPlanList {
-		fmt.Println("mustPlan.Uuid::::::::", mustPlan.Uuid, "mustPlanUuid::::::::", mustPlanUuid)
 		if mustPlan.Uuid == mustPlanUuid {
 			isRequire = true
 		}
 	}
-	fmt.Println("1111111111isRequire", isRequire)
 	if isRequire {
 		saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 	}
-
-	fmt.Println("1111122222222222222222333333")
 
 	return saleOrderProduct, nil
 }
@@ -2957,7 +2951,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 }
 
 // OrderCartProductNum 修改购物车商品数量
-func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
@@ -2966,18 +2960,6 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
-
-	if request.Num == 0 {
-		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
-			SaleBillUuid:     request.SaleBillUuid,
-			SaleOrderUuid:    request.SaleOrderUuid,
-			OrderProductUuid: request.SaleOrderProductUuid,
-		})
-		if err != nil {
-			return nil, errors.WithMessage(err, "删除商品失败")
-		}
-		return res, nil
-	}
 
 	// 检查商品销售库存是否充足
 	// todo
@@ -3007,6 +2989,22 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 		return nil, errSaleOrderProduct
 	}
 	ctx.Log().Debug("获取到订单商品信息成功")
+
+	if saleOrderProduct.IsCookingProduct() {
+		return nil, errors.WithMessage(errors.New("商品已送厨，不能修改数量"))
+	}
+	// 数量为0删除商品
+	if request.Num == 0 {
+		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+			SaleBillUuid:     request.SaleBillUuid,
+			SaleOrderUuid:    request.SaleOrderUuid,
+			OrderProductUuid: request.SaleOrderProductUuid,
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err, "删除商品失败")
+		}
+		return res, nil
+	}
 
 	// 修改销售订单商品数量
 	saleOrderProduct.Num = uint(request.Num)
@@ -3053,11 +3051,10 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 
 // checkOrder 检查订单
 func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+	ctx.SetDB(db)
 	// 检查必选
-	fmt.Println("f4444444")
 
 	if !ignoreMust {
-		fmt.Println("f3333333333")
 		// 查询到购物车信息
 		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 		if err != nil {
@@ -3066,7 +3063,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		var instantMustPlanList []resp.InstantProductMustPlan
 		if deskUuid != 0 {
 			// 如果是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
+			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
@@ -3142,16 +3139,17 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			products := make([]resp.Product, 0)
 			for _, product := range saleOrderProduct {
 				products = append(products, resp.Product{
-					Uuid:          product.Uuid,
-					LocaleName:    product.MultiLanguageName.GetNames(),
-					Num:           product.Num,
-					SalePrice:     product.SalePrice,
-					DiscountPrice: product.DiscountFee,
-					Status:        int(product.Status),
-					Remark:        product.Remark,
-					IsMust:        product.IsMustProduct(),
-					IsGift:        product.IsGiftProduct(),
-					IsCancel:      product.IsCancelProduct(),
+					Uuid:                product.Uuid,
+					LocaleName:          product.MultiLanguageName.GetNames(),
+					LocaleAttributeName: product.GetAttributeName(),
+					Num:                 product.Num,
+					SalePrice:           product.SalePrice,
+					DiscountPrice:       product.DiscountFee,
+					Status:              int(product.Status),
+					Remark:              product.Remark,
+					IsMust:              product.IsMustProduct(),
+					IsGift:              product.IsGiftProduct(),
+					IsCancel:            product.IsCancelProduct(),
 				})
 			}
 			res := &resp.OrderCheckServiceRes{
@@ -3188,62 +3186,13 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		return nil, nil, errors.New("没有未送厨的商品")
 	}
 
-	// 获取所有商品,用于检查限购
-	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
-
-	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-	checkServiceRes, errCheck := s.checkOrder(ctx, false, db, req.SaleBillUuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
-	if errCheck != nil {
-		ctx.Log().Error("检查商品失败", zap.Error(errCheck))
-		return nil, nil, errors.New("检查商品失败")
+	// 送厨
+	checkServiceRes, err := s.ActionCooking(ctx, req, saleBill, unCookingSaleOrderProducts)
+	if err != nil {
+		return nil, nil, err
 	}
 	if checkServiceRes != nil {
-		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && req.IgnoreMust {
-			// 必点方案未选择，且忽略必点方案
-		} else {
-			return nil, checkServiceRes, nil
-		}
-	}
-
-	// 构建送厨单
-	productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
-
-	// 修改商品状态为已送厨
-	for index, _ := range unCookingSaleOrderProducts {
-		product := unCookingSaleOrderProducts[index]
-		product.SetCooking(productionOrder.Uuid)
-	}
-
-	// 修改账单状态为已送厨
-	if !saleBill.IsCookingStatus() {
-		saleBill.SetCookingStatus()
-	}
-
-	ctx.Log().Debug("准备开始更新")
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		// 修改订单商品状态为已送厨
-		errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
-		if errUpdateSaleProductStatus != nil {
-			ctx.Log().Debug("商品状态更新失败", zap.Error(errUpdateSaleProductStatus))
-			return errors.New(errUpdateSaleProductStatus.Error())
-		}
-		ctx.Log().Debug("商品状态成功")
-		errCreateProduction := repository.NewProductionRepo(tx).CreateProductionOrder(productionOrder)
-		if errCreateProduction != nil {
-			ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
-			return errors.New(errCreateProduction.Error())
-		}
-
-		// 如果账单有更新，则更新账单
-		if saleBill.GetUpdate() {
-			if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
-				ctx.Log().Debug("更新账单失败", zap.Error(err))
-				return errors.New(err.Error())
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, nil, errors.WithMessage(err, "更新数据失败")
+		return nil, checkServiceRes, nil
 	}
 
 	ctx.Log().Debug("获取新的购物车信息")
@@ -4332,6 +4281,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.New("销售订单未结清")
 	}
 
+	// 检查是否有未送厨的商品。场景：当收银机1结账时，收银机2加购了新的商品。
+	if len(saleBill.GetSaleOrderProductUnCooking()) > 0 {
+		return nil, errors.New("有未送厨的商品")
+	}
+
 	// 最终应收=应收金额+手续费
 	finalAmount := decimal.NewFromFloat(saleOrder.Amount).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
 
@@ -4818,7 +4772,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
-		return nil, errSaleBill
+		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 获取销售订单信息
 	saleOrderFrom := saleBill.GetSaleOrder(req.From)
@@ -4852,10 +4806,10 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 	// 选择移动的商品中有商品已经不在原销售订单中
 	for _, moveProduct := range req.Products {
 		if product, ok := fromProductMap[moveProduct.Uuid]; !ok {
-			return nil, errors.New("购物车商品变化，从重新操作")
+			return nil, errors.WithMessage(errors.New("购物车商品变化，请重新操作"))
 		} else {
 			if product.Num < moveProduct.Num {
-				return nil, errors.New("移动数量大于商品数量")
+				return nil, errors.WithMessage(errors.New("移动数量大于商品数量"))
 			}
 		}
 	}
@@ -4933,7 +4887,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 
 	if len(waitUpdateSaleOrderProductMap) == 0 {
 		ctx.Log().Debug("移动商品失败，没有需要更新的销售订单商品")
-		return nil, errors.New("移动商品失败")
+		return nil, errors.WithMessage(errors.New("移动商品失败"))
 	}
 
 	// 计算订单金额
@@ -5001,7 +4955,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 // InstantOrderMustPlanConfirm 确认必点商品
 func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
-
+	ctx.SetDB(db)
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
@@ -5018,7 +4972,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 
 	var mustPlanList []resp.InstantProductMustPlan
 	if saleBill.IsDeskSaleBill() {
-		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, saleBill.DeskUuid)
+		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), saleBill.DeskUuid)
 		if errMustPlan != nil {
 			return false, errMustPlan
 		}
@@ -5367,16 +5321,14 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 创建送厨单打印记录
-	go func() {
-		products := printer_model.Products{}
-		// copier.Copy(&products, saleOrder.Products)
-		printer.NewPrinterRepo(ctx).PrintingStatementOrder(
-			constant.PrinterProductTypeKitchen,
-			saleBill.Uuid,
-			products,
-		)
-	}()
+	_, err = printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+		constant.PrinterTemplatePreBilling,
+		saleBill,
+		saleOrder.Uuid,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {

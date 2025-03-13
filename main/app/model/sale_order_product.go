@@ -536,6 +536,35 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 	return attributeResultNames
 }
 
+func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
+	var flavorName string
+	var sauceNames []string
+	var attributeNames []string
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
+		} else {
+			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
+			sauceNames = append(sauceNames, sauceName)
+		}
+	}
+	// 获取商品属性
+	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(lang)
+		attributeNames = append(attributeNames, attributeName)
+	}
+	// 根据规格生成字符串。`(规格；属性；小料)`
+	nameList := make([]string, 0)
+	nameList = append(nameList, flavorName)
+	if len(attributeNames) > 0 {
+		nameList = append(nameList, attributeNames...)
+	}
+	if len(sauceNames) > 0 {
+		nameList = append(nameList, sauceNames...)
+	}
+	return strings.Join(nameList, ";")
+}
+
 // 点餐时录入的原始数据
 type DefaultSaleOrderProduct struct {
 	Name                   string

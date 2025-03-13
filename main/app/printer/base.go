@@ -22,7 +22,7 @@ import (
 // PPrinterRepo 打印
 type PPrinterRepo interface {
 	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
-	PrintingStatementOrder(printType int, saleBillUuid uint64, products printer_model.Products) bool
+	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64) (bool, error)
 }
 
 type PrinterRepoImpl struct {
@@ -135,3 +135,68 @@ func (p *PrinterRepoImpl) getProductPrinterList() ([]model.ProductPrinter, error
 
 	return printers, nil
 }
+
+// /**
+//  * 获取打印信息
+//  * @param printerConfig 打印机配置
+//  * @param deviceId 设备ID
+//  * @return 打印机信息
+//  */
+// func GetPrinterInfo(printerConfig map[string]interface{}, deviceId string) map[string]interface{} {
+// 	var printerLogData resp.PrinterLogData
+// 	// 获取打印设置
+// 	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+// 	if err != nil {
+// 		return printerLogData, errors.WithMessage(err)
+// 	}
+// 	settingPrinterInfo, err := s.settingSrv.GetPrinterInfo(ctx, printerSetting, printReq.DeviceId)
+// 	if err != nil {
+// 		return printerLogData, errors.WithMessage(err, "未开启打印, 请联系管理员")
+// 	}
+// 	cashierBindKey := settingPrinterInfo.CashierBindKey
+
+// 	// 主动点击打印-但未开启打印
+// 	if !printReq.IsQueue && settingPrinterInfo.IsCashierOpen {
+// 		return printerLogData, errors.New("未开启打印, 请联系管理员")
+// 	}
+// 	// 主动点击打印-但未配置打印机
+// 	if !printReq.IsQueue && settingPrinterInfo.PrinterType == "" {
+// 		return printerLogData, errors.New("未配置打印机, 请联系管理员")
+// 	}
+// 	// 如果是云打印, cashierBindKey 等于自己
+// 	if printReq.DeviceId != "" && settingPrinterInfo.IsCashierPrinter && viper.GetBool("IS_CLOUD_DEPLOY") {
+// 		cashierBindKey = printReq.DeviceId
+// 	}
+// 	if settingPrinterInfo.IsCashierOpen {
+// 		var printerType, content string
+// 		// ToDo 根据品牌获取打印内容
+// 		content = s.getPrintContent(printReq.RechargeOrder, printerType)
+
+// 		printerLogType := constant.PrinterLogTypeDefault
+// 		if settingPrinterInfo.IsCashierPrinter {
+// 			printerLogType = constant.PrinterLogTypeCloud
+// 		}
+// 		firstExecution := 0
+// 		if !printReq.IsQueue {
+// 			firstExecution = 1
+// 		}
+// 		// 添加打印日志，依赖打印日志服务
+// 		printerLogData, err = s.printerLogSrv.AddLog(ctx, resp.PrinterInfo{
+// 			PrinterType:   settingPrinterInfo.PrinterType,
+// 			PrinterConfig: settingPrinterInfo.PrinterConfig,
+// 			PrintCopies:   settingPrinterInfo.Copies,
+// 		}, resp.PrinterLogData{
+// 			PrinterUuid:     settingPrinterInfo.PrinterUuid,
+// 			CashierDeviceId: cashierBindKey,
+// 			DataType:        constant.PrinterLogDataTypeRecharge,
+// 			Data:            content,
+// 			Type:            printerLogType,
+// 			FirstExecution:  firstExecution,
+// 		}, printReq.DeviceId)
+// 		if err != nil {
+// 			return printerLogData, errors.WithMessage(err, "打印失败，未连接打印机")
+// 		}
+// 		return printerLogData, nil
+// 	}
+// 	return printerLogData, nil
+// }

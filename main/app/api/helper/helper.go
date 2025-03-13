@@ -165,10 +165,6 @@ func GetDeviceSn(c *gin.Context) string {
 	return c.GetString(jwt.DeviceId)
 }
 
-func GetDeviceId(c *gin.Context) string {
-	return c.GetString(jwt.DeviceId)
-}
-
 func GetDeviceUuid(c *gin.Context) uint64 {
 	return c.GetUint64(jwt.DeviceUuid)
 }

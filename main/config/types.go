@@ -4,6 +4,7 @@ type ServerConf struct {
 	Port       string // 端口
 	Mode       string // 模式：debug/release/test
 	DeployMode string // 部署模式：cloud云上，offline离线
+	BrandName  string // 品牌名称
 }
 
 type DatabaseConf struct {

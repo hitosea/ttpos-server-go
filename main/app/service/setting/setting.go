@@ -656,8 +656,9 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 				break
 			}
 		}
+
 		matched, _ := regexp.MatchString(`^\d+$`, printerId)
-		if len(printerId) == 18 && matched { // 普通打印机 uuid uint64 字符串
+		if len(printerId) <= 18 && matched { // 普通打印机 uuid uint64 字符串
 			printerUuid, _ = strconv.ParseUint(printerId, 10, 64)
 			printerRepo := repository.NewPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 			printer, err = printerRepo.GetPrinter(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())

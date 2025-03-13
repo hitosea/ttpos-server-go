@@ -11,7 +11,7 @@ type ShopCart struct {
 	Desk          *DeskInfo            `json:"desk,omitempty"`       // 桌台信息
 	Buffet        *BuffetInfo          `json:"buffet,omitempty"`     // 自助餐信息
 	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"` // 必点方案列表信息
-	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包
+	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 }
 

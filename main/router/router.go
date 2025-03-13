@@ -80,6 +80,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			tablet.RegisterDeskHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterCallHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterProductHandlers(tabletGroup, dbm, cache)
+			tablet.RegisterBuffetHandlers(tabletGroup, dbm, cache)
 		}
 	}
 }

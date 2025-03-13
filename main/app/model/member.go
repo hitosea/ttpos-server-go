@@ -175,9 +175,10 @@ type MemberRechargeOrder struct {
 	DutyNo         string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
 	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消;NOT NULL" json:"status"`
 	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
-	RefundMoney    float64 `gorm:"column:refund_money;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"refund_money"`
+	RefundMoney    float64 `gorm:"column:refund_money;type:decimal(12,2);default:0.00;comment:退款金额，不大于amount;NOT NULL" json:"refund_money"`
 	ChargeDue      float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
 	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0;comment:充值金额;NOT NULL" json:"recharge_amount"`
+	RefundAmount   float64 `gorm:"column:refund_amount;type:decimal(12,2);default:0;comment:退款充值金额，不大于recharge_amount;NOT NULL" json:"refund_amount"`
 	GiftAmount     float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠送金额;NOT NULL" json:"gift_amount"`
 	GiftPoint      float64 `gorm:"column:gift_point;type:decimal(12,2);default:0;comment:赠送积分;NOT NULL" json:"gift_point"`
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`

@@ -116,7 +116,7 @@
             </template>
           </el-tab-pane>
         </el-tabs>
-        <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="order_no">
+        <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="unique_key">
           <el-table-column prop="serial_no" :label="$t('订单类型')">
             <template #default="scope">
               {{ scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')}}
@@ -374,6 +374,7 @@
                 if (item.sale_orders.length > 0) {
                     item.children = item.sale_orders;
                 }
+                item.unique_key = item.order_no + item.serial_no
             });
             self.totalDataNumber = res.data.meta.total;
             self.exStyle = res.data.ex_style;
@@ -397,7 +398,7 @@
           path: '/' + this.app_id + '/store/order/detail',
           query: {
             sale_bill_uuid: row.sale_bill_uuid,
-            sale_order_uuid: row.sale_order_uuid,
+            sale_order_uuid: row?.children?.length > 0 ? 0 :row.sale_order_uuid,
           },
         });
       },

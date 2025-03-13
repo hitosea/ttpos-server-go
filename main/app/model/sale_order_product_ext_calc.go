@@ -329,7 +329,7 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 	for _, bom := range model.SaleOrderProductBoms {
 		if !bom.IsFlavor() {
 			// 累加每个小料的价格
-			saucePrice.Add(decimal.NewFromFloat(bom.Price))
+			saucePrice = saucePrice.Add(decimal.NewFromFloat(bom.Price))
 		}
 	}
 	return saucePrice.InexactFloat64()

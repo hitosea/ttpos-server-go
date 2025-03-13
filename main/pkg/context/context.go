@@ -25,7 +25,7 @@ type Context interface {
 	GetDeviceUuid() uint64                   // 获取设备uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
 	NoLock() bool                            // 判断上文中是否已经加锁
-	AddLock()                                // 在上下文中标记是否已经加锁
+	AddLock()                                // 在上下文中标记是否已经加锁 todo 改名为SetLock
 	Log() *zap.Logger                        // 获取日志实例
 	SetDB(tx *gorm.DB)                       // 设置gorm.DB
 	GetDB() *gorm.DB                         // 获取gorm.DB
@@ -217,7 +217,9 @@ func (c *ContextImpl) Log() *zap.Logger {
 }
 
 func (c *ContextImpl) SetDB(tx *gorm.DB) {
-	c.db = tx
+	if c.db == nil {
+		c.db = tx
+	}
 }
 
 // GetDB 获取gorm实例
