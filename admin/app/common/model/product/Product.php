@@ -270,7 +270,7 @@ class Product extends BaseModel
      */
     public function category()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Category', 'category_uuid', 'uuid');
+        return $this->belongsTo(Category::class, 'category_uuid', 'uuid');
     }
 
     /**

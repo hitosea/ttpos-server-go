@@ -6,10 +6,8 @@ use app\common\library\helper;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
-use app\common\model\product\Category;
 use app\common\model\product\Material;
 use app\common\model\product\ProductBom;
-use app\common\model\erp\ErpWarehouseForm;
 use app\shop\model\product\RelatedMaterial;
 
 /**
@@ -138,15 +136,9 @@ class ErpDamagedProductRecord extends BaseModel
         $paginate = $model
             ->with([
                 'sku' => [ 
-                    'product' => [
-                        'image',
-                        'category', 
-                    ]
+                    'product' => [ 'image', 'category' ]
                 ], 
-                'material' => [
-                    'image',
-                    'category',
-                ], 
+                'material' => [ 'image', 'category' ], 
                 'operator',
             ])
             ->when($type && $type > 0, function ($q) use ($type) {
@@ -232,64 +224,128 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function getChartList($params)
     {
-        $model = new self;
         $type = null;
         if ($params['date']) {
             $timestamp = strtotime($params['date']);
             $year = date("Y", $timestamp);
             $month = date("m", $timestamp);
-            $start_time = date($year . "-" . $month . "-01");
-            $end_time = date($year . "-" . $month . "-t 23:59:59");
+            $startTime = date($year . "-" . $month . "-01");
+            $endTime = date($year . "-" . $month . "-t 23:59:59");
         } else {
             $now = time();
             $year = date("Y", $now);
             $month = date("m", $now);
-            $start_time = date($year . "-" . $month . "-01");
-            $end_time = date($year . "-" . $month . "-t 23:59:59");
+            $startTime = date($year . "-" . $month . "-01");
+            $endTime = date($year . "-" . $month . "-t 23:59:59");
         }
         if (isset($params['type']) && $params['type']) {
             $type = $params['type'];
         }
-        $list = $model->alias('dr')
-            ->leftJoin('product_package p', 'dr.material_uuid = p.uuid')
-            ->leftJoin('product_category c', 'p.category_uuid = c.uuid')
-            ->where('dr.status', self::STATUS_APPROVED)
-            ->when($type && $type > 0, function ($q) use ($type) {
-                $q->where('dr.scene', $type);
-            })
-            ->when($start_time && $end_time, function ($q) use ($start_time, $end_time) {
-                $q->where('dr.create_time', 'between', [strtotime($start_time), strtotime($end_time)]);
-            })
-            ->field([
-                'IF(c.parent_uuid > 0, c.parent_uuid, p.category_uuid) AS category_uuid',
-                'c.parent_uuid',
-                'c.name',
-                'SUM(num) as damage_count'
+
+        $records = self::field('uuid,product_bom_uuid,material_uuid,num')
+            ->with([
+                'sku' => function($q) use ($year, $month, $startTime, $endTime) {
+                    return $q->field('uuid,product_package_uuid,name,barcode_value')->with([
+                            'product' => function($q) {
+                                return $q->field('uuid,category_uuid,name')->with([
+                                        'category' => function($q) {
+                                            return $q->field('uuid,parent_uuid,name')->with([
+                                                'parent' => function($q) {
+                                                    return $q->field('uuid,name')->withTrashed();
+                                                }
+                                            ])->withTrashed();
+                                        }
+                                    ])->withTrashed();
+                            },
+                            'erpMonthlyProductStatistics' => function($q) use ($year, $month) {
+                                return $q->where('year', $year)
+                                    ->where('month', $month)
+                                    ->where('scene', ErpMonthlyProductStatistics::MONTH_START);
+                            },
+                            'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                                return $q->where('status', 0)
+                                    ->whereIn('scene', [0, 2])
+                                    ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                            }
+                        ])->withTrashed();
+                },
+                'material' => function($q) use ($year, $month, $startTime, $endTime) {
+                    return $q->field('uuid,category_uuid,name')->with([
+                        'category' => function($q) {
+                            return $q->field('uuid,parent_uuid,name')->with([
+                                'parent' => function($q) {
+                                    return $q->field('uuid,name')->withTrashed();
+                                }
+                            ])->withTrashed();
+                        },
+                        'erpMonthlyMaterialStatistics' => function($q) use ($year, $month) {
+                            return $q->where('year', $year)
+                                ->where('month', $month)
+                                ->where('scene', ErpMonthlyProductStatistics::MONTH_START);
+                        },
+                        'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                            return $q->where('status', 0)
+                                ->whereIn('scene', [0, 2])
+                                ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                        }
+                    ])->withTrashed();
+                }
             ])
-            ->group('p.category_uuid')
-            ->order('p.category_uuid')
-            ->select()->toArray();
-        // 对结果进行处理
-        foreach ($list as &$damageCount) {
-            $category_uuid = $damageCount['category_uuid'];
-            $damageCount['name'] = Category::getNameTextAttr($damageCount['name']);
-            // 入库数
-            $entry_num = (new ErpWarehouseForm())->alias('eir')
-                ->leftJoin('product_package p', 'eir.material_uuid = p.uuid')
-                ->leftJoin('product_category c', 'p.category_uuid = c.uuid')
-                ->where(function ($q) use ($category_uuid) {
-                    $q->where('c.uuid', $category_uuid)->whereOr('c.parent_uuid', $category_uuid);
-                })
-                ->where('eir.create_time', '<=', strtotime($end_time))
-                ->where('eir.status', '=', ErpWarehouseForm::STATUS_SUCCESS)
-                ->sum('num');
-            // 出库数
-            $exit_num = 0;
-            $category_stock = helper::bcsub($entry_num, $exit_num);
-            $damageCount['damage_ratio'] = $category_stock > 0 ? helper::bcdiv($damageCount['damage_count'], $category_stock, 5) : 0;
-            $damageCount['damage_ratio'] = floatval($damageCount['damage_ratio'] * 100) . '%';
-            $damageCount['damage_count'] = floatval($damageCount['damage_count']);
+            ->when($type && $type > 0, function($q) use ($type) {
+                $q->where('scene', self::OLD_SCENE_LOSS[$type]);
+            })
+            ->where('status', self::STATUS_APPROVED)
+            ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)])
+            ->select();
+        
+        $list = [];
+        foreach ($records as $record) {
+            $monthStartStock = 0; // 月初库存数
+            $monthEntryStock = 0; // 月入库存数
+            if ($record->sku) {
+                foreach ($record->sku->erpMonthlyProductStatistics as $item) {
+                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
+                }
+                foreach ($record->sku->erpInventoryRecord as $item) {
+                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
+                }  
+                
+                $category = $record->sku->product->category;
+            } else {
+                foreach ($record->material->erpMonthlyMaterialStatistics as $item) {
+                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
+                }
+                foreach ($record->material->erpInventoryRecord as $item) {
+                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
+                }
+
+                $category = $record->material->category;
+            }
+            $totalEntryStock = helper::bcadd($monthEntryStock, $monthStartStock, 4);
+
+            if ($category->parent_uuid == 0) {
+                $categoryUuid = $category->uuid;
+                $categoryName = $category->name_text;
+            } else {
+                $categoryUuid = $category->parent->uuid;
+                $categoryName = $category->parent->name_text;
+            }
+            $list[$categoryUuid]['category_id'] = $categoryUuid;
+            $list[$categoryUuid]['name'] = $categoryName;
+            $list[$categoryUuid]['damage_count'] = helper::bcadd($list[$categoryUuid]['damage_count'] ?? 0, $record['num'], 4);
+            $list[$categoryUuid]['entry_stock'] = helper::bcadd($list[$categoryUuid]['entry_stock'] ?? 0, $totalEntryStock, 4);
         }
+        $list = array_values($list);
+        foreach ($list as $key => $item) {
+            $item['damage_ratio'] = $item['entry_stock'] > 0 ? helper::bcdiv($item['damage_count'], $item['entry_stock'], 5) : 0;
+            $item['damage_ratio'] = floatval(helper::bcmul($item['damage_ratio'], 100, 2)) . '%';
+            $item['damage_count'] = floatval($item['damage_count']);
+            $list[$key] = $item;
+        }
+        usort($list, function ($item1, $item2) {
+            return $item2['damage_count'] <=> $item1['damage_count'];
+        });
+
         return $list;
     }
 
