@@ -625,7 +625,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		billListsExtra := resp.BillListsExtra{
 			IsCellRefund:        false,
 			IsCellCancel:        bill.Status == constant.SaleBillStatusPending,
-			IsCellReverseSettle: false,
+			IsCellReverseSettle: bill.IsCellReverseSettle(),
 			IsCellPrint:         !isSplit && bill.Status != constant.SaleBillStatusPending,
 			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
 			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,

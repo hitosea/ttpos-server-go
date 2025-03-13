@@ -123,6 +123,13 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 判断销售账单是否可反结账。
+// 1. 账单已完成
+// 2. 未交班。 todo
+func (model *SaleBill) IsCellReverseSettle() bool {
+	return model.Status == constant.SaleBillStatusComplete
+}
+
 // 设置打包销售账单。并更新订单的税率
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 如果没有改变，则不更新
