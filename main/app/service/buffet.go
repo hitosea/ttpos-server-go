@@ -91,6 +91,7 @@ func (s *buffetSrv) GetBuffetDelayList(dbId uint64) (resp.BuffetDelayListResp, e
 	respBuffets := make([]resp.BuffetDelay, 0, len(delayList))
 	for _, delay := range delayList {
 		respBuffet := resp.BuffetDelay{
+			Uuid:  delay.Uuid,
 			Name:  delay.Name,
 			Price: delay.Price,
 		}

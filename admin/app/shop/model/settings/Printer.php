@@ -7,6 +7,7 @@ use app\common\enum\settings\PrinterTypeEnum;
 use app\common\model\settings\Printer as PrinterModel;
 use app\common\model\settings\PrinterType;
 use app\common\model\supplier\Printing as PrintingModel;
+use think\facade\Cache;
 
 class Printer extends PrinterModel
 {
@@ -42,7 +43,14 @@ class Printer extends PrinterModel
         $data['copies'] = $data['print_times'] ?? 0;
         $data['printer_type_uuid'] = $type['uuid'];
         $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
-        return $this->save($data);
+        if (!$this->save($data)) {
+            return false;
+        }
+
+        // 清除打印机列表缓存
+        $this->clearPrinterListCache();
+
+        return true;
     }
 
     /**
@@ -70,7 +78,14 @@ class Printer extends PrinterModel
         $data['copies'] = $data['print_times'] ?? 0;
         $data['printer_type_uuid'] = $type['uuid'];
         $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
-        return $this->save($data);
+        if (!$this->save($data)) {
+            return false;
+        }
+
+        // 清除打印机列表缓存
+        $this->clearPrinterListCache();
+
+        return true;
     }
 
     /**
@@ -89,6 +104,21 @@ class Printer extends PrinterModel
             $this->error = '该打印机已被使用，无法删除';
             return false;
         }
-        return $this->delete();
+        if (!$this->delete()) {
+            return false;
+        }
+
+        // 清除打印机列表缓存
+        $this->clearPrinterListCache();
+
+        return true;
+    }
+
+    /**
+     * 清除打印机列表缓存
+     */
+    private function clearPrinterListCache()
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d", self::$app_id), null);
     }
 }

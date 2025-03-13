@@ -139,8 +139,9 @@ class Buffet extends Controller
                 // 如果是编辑
                 if ($action == 'edit') {
                     if (isset($customer['id'])) {
-                        unset($customer['action']);
-                        $customerModel->update($customer, ['uuid' => $customer['id']]);
+                        $customerModel->update([
+                            'name' => $customer['name']
+                        ], ['uuid' => $customer['id']]);
                     }
                     continue;
                 }

@@ -30,6 +30,7 @@ type BuffetListPaginationResp struct {
 }
 
 type BuffetDelay struct {
+	Uuid  uint64  `json:"uuid"`  // 加钟UUID
 	Name  string  `json:"name"`  // 加钟名称
 	Price float64 `json:"price"` // 价格
 }
