@@ -118,7 +118,7 @@ func (t Timezone) FormatUnixTimeDefault(timestamp int64) string {
 	return t.FormatUnixTime(timestamp, "2006-01-02 15:04:05")
 }
 
-// FormatUnixTimeDefault 将Unix时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
+// FormatUnixTimeWithSlash 将Unix时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
 // 这是一个便捷方法，等同于使用FormatUnixTime方法并传入空字符串作为layout
 func (t Timezone) FormatUnixTimeWithSlash(timestamp int64) string {
 	return t.FormatUnixTime(timestamp, "2006/01/02 15:04:05")

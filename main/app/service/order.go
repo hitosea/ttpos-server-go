@@ -135,10 +135,8 @@ func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, e
 		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
 	}
 	if order != nil && device.Uuid == order.DeviceUuid {
-		fmt.Println("111111111111111  device.Uuid:", device.Uuid, "order.DeviceUuid:", order.DeviceUuid)
 		return order, true, nil
 	}
-	fmt.Println("222222222222222  device.Uuid:", device.Uuid)
 	return nil, false, nil
 }
 

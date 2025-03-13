@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IPrinterLogRepo interface {
@@ -18,11 +19,13 @@ type IPrinterLogRepo interface {
 	WhereFirstExecution(firstExecution int) DBOption // 是否首次执行
 	WhereUuid(uuid uint64) DBOption                  // uuid 查询条件
 	WhereCreatedBefore(days uint) DBOption           // n天前的数据
+	WherePrinterTime() DBOption                      // 打印时间查询条件
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
 	GetPrintLogCount(opts ...DBOption) (int64, error)
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
+	GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error)
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
 
@@ -89,6 +92,16 @@ func (r *printerLogRepo) GetPrinterLog(opts ...DBOption) model.PrinterLog {
 	return printerLog
 }
 
+func (r *printerLogRepo) GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error) {
+	var printerLog []model.PrinterLog
+	db := r.db.Model(&model.PrinterLog{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Find(&printerLog)
+	return printerLog, nil
+}
+
 func (r *printerLogRepo) WithPrinter() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Printer")
@@ -121,6 +134,12 @@ func (r *printerLogRepo) WhereStatus(status uint8) DBOption {
 func (r *printerLogRepo) WhereType(typ uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("type = ?", typ)
+	}
+}
+
+func (r *printerLogRepo) WherePrinterTime() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("((printer_time + 10) < UNIX_TIMESTAMP() OR num = 0)")
 	}
 }
 

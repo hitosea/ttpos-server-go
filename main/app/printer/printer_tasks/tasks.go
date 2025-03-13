@@ -1,0 +1,132 @@
+package printer_tasks
+
+import (
+	"log"
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
+)
+
+// 秒级任务
+type SecondTask struct {
+	name     string
+	interval int // 执行间隔（秒）
+	counter  int // 计数器，用于控制执行频率
+	dbm      *database.DBManager
+	cache    cache.Cache
+}
+
+// 创建新的秒级任务
+func NewSecondTask(name string, interval int, dbm *database.DBManager, cache cache.Cache) *SecondTask {
+	return &SecondTask{
+		name:     name,
+		interval: interval,
+		counter:  0,
+		dbm:      dbm,
+		cache:    cache,
+	}
+}
+
+// 获取任务名称
+func (t *SecondTask) GetName() string {
+	return t.name
+}
+
+// 执行任务
+func (t *SecondTask) Execute() {
+	t.counter++
+	// 根据设定的间隔执行任务
+	if t.counter >= t.interval {
+		// 根据 APP 表实例化数据库连接
+		var companies []model.Company
+		if err := t.dbm.GetDB(0).Scopes(repository.NotDeleted).Debug().Find(&companies).Error; err != nil {
+			log.Fatalf("Error querying companies: %s", err)
+			return
+		}
+		// 每5个公司为一组进行处理
+		for i := 0; i < len(companies); i += 5 {
+			// 计算当前批次的结束索引
+			end := i + 5
+			if end > len(companies) {
+				end = len(companies)
+			}
+			// 处理当前批次的公司
+			go func() {
+				batch := companies[i:end]
+				for _, company := range batch {
+					// 使用闭包捕获变量
+					t.sendPrinter(company.Uuid)
+				}
+			}()
+		}
+		// 重置计数器
+		t.counter = 0
+	}
+}
+
+// 执行任务
+func (t *SecondTask) sendPrinter(companyUuid uint64) {
+	// 获取打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(t.dbm.GetDB(companyUuid))
+	printerLogList, err := printerLogRepo.GetPrinterLogList(
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithPrinterPrinterType(),
+		printerLogRepo.WhereStatus(1),
+		printerLogRepo.WhereFirstExecution(0),
+		printerLogRepo.WherePrinterTime(),
+		func(db *gorm.DB) *gorm.DB {
+			if config.Server.Mode != constant.ServerModeDebug {
+				return db.Where("type = ?", constant.Yes)
+			}
+			return db
+		},
+	)
+	if err != nil {
+		log.Fatalf("执行打印任务失败 : %s", err)
+		return
+	}
+
+	// 执行打印
+	for _, printerLog := range printerLogList {
+		num := printerLog.Num + 1
+		if printerLog.Printer != nil {
+			// 执行打印
+			err := pkg.PrintTicket(printerLog.Printer.GetConfigJson().IP, printerLog.Data, printerLog.PrintMethod)
+			if err == nil {
+				// 打印成功
+				printerLog.Reason = "打印成功"
+				printerLog.Status = 2
+			} else {
+				// 打印失败
+				printerLog.Reason = err.Error()
+				if num >= 5 {
+					printerLog.Status = 0
+				} else {
+					printerLog.Status = 1
+				}
+			}
+		} else {
+			// 打印机不存在
+			printerLog.Reason = "The printer does not exist and has been deleted"
+			printerLog.Status = 0
+		}
+
+		// 更新打印日志
+		if err := printerLogRepo.Update(printerLog.Uuid, map[string]any{
+			"reason":       printerLog.Reason,
+			"status":       printerLog.Status,
+			"num":          num,
+			"printer_time": time.Now().Unix(),
+		}); err != nil {
+			log.Fatalf("更新打印日志失败 : %s", err)
+			return
+		}
+	}
+}
