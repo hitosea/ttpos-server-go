@@ -35,7 +35,6 @@ return [
             'select'     => 0,
             'timeout'    => 0,
             'persistent' => false,
-            'serialize' => ['json_encode', function($val) { return json_decode($val, true); }],
         ],
         'redis-write' => [
             'type'       => 'redis',
@@ -45,7 +44,6 @@ return [
             'select'     => 0,
             'timeout'    => 0,
             'persistent' => false,
-            'serialize' => ['json_encode', function($val) { return json_decode($val, true); }],
         ],
         // 更多的缓存连接
     ],
