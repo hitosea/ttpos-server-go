@@ -15,22 +15,20 @@ type IInstantSrv interface {
 
 // instantSrv 点餐订单服务结构体
 type instantSrv struct {
-	dbm             *database.DBManager // 数据库管理器
-	orderSrv        IOrderSrv           // 订单服务
-	orderProductSrv IOrderProductSrv    // 订单商品服务
+	dbm      *database.DBManager // 数据库管理器
+	orderSrv IOrderSrv           // 订单服务
 }
 
 // NewInstantSrv 创建点餐订单服务
-func NewInstantSrv(dbm *database.DBManager, orderSrv IOrderSrv, orderProductSrv IOrderProductSrv) IInstantSrv {
-	return NewInstantSrvImpl(dbm, orderSrv, orderProductSrv)
+func NewInstantSrv(dbm *database.DBManager, orderSrv IOrderSrv) IInstantSrv {
+	return NewInstantSrvImpl(dbm, orderSrv)
 }
 
 // NewInstantSrvImpl 创建点餐订单服务实现
-func NewInstantSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv, orderProductSrv IOrderProductSrv) IInstantSrv {
+func NewInstantSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv) IInstantSrv {
 	return &instantSrv{
-		dbm:             dbm,
-		orderSrv:        orderSrv,
-		orderProductSrv: orderProductSrv,
+		dbm:      dbm,
+		orderSrv: orderSrv,
 	}
 }
 

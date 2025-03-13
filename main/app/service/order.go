@@ -3051,7 +3051,47 @@ func (s *orderSrv) InstantOrderCartProductNum(ctx context.Context, request req.O
 }
 
 // checkOrder 检查订单
-func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+	// 检查必选
+	fmt.Println("f4444444")
+
+	if !ignoreMust {
+		fmt.Println("f3333333333")
+		// 查询到购物车信息
+		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		var instantMustPlanList []resp.InstantProductMustPlan
+		if deskUuid != 0 {
+			// 如果是桌台订单
+			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		} else {
+			// 如果不是桌台订单
+			instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		}
+
+		mustPlans := make([]resp.InstantProductMustPlan, 0)
+		for _, instantProductMustPlan := range instantMustPlanList {
+			if instantProductMustPlan.NeedNum > 0 {
+				mustPlans = append(mustPlans, instantProductMustPlan)
+			}
+		}
+		if len(mustPlans) > 0 {
+			res := &resp.OrderCheckServiceRes{
+				Code:          constant.CodeOrderCheckProductMust,
+				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: instantMustPlanList}},
+			}
+			return res, nil
+		}
+	}
+
 	statusMap := make(map[int][]*model.SaleOrderProduct)
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	{
@@ -3121,42 +3161,6 @@ func (s *orderSrv) checkOrder(ctx context.Context, db *gorm.DB, saleBillUuid uin
 		}
 	}
 
-	// 检查必选
-	{
-		// 查询到购物车信息
-		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		var instantMustPlanList []resp.InstantProductMustPlan
-		if deskUuid != 0 {
-			// 如果是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, db, shopCartInfo, deskUuid)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-		} else {
-			// 如果不是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-		}
-
-		mustPlans := make([]resp.InstantProductMustPlan, 0)
-		for _, instantProductMustPlan := range instantMustPlanList {
-			if instantProductMustPlan.NeedNum > 0 {
-				mustPlans = append(mustPlans, instantProductMustPlan)
-			}
-		}
-		if len(mustPlans) > 0 {
-			res := &resp.OrderCheckServiceRes{
-				Code:          constant.CodeOrderCheckProductMust,
-				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: instantMustPlanList}},
-			}
-			return res, nil
-		}
-	}
 	return nil, nil
 }
 
@@ -3187,7 +3191,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-	checkServiceRes, errCheck := s.checkOrder(ctx, db, req.SaleBillUuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
+	checkServiceRes, errCheck := s.checkOrder(ctx, false, db, req.SaleBillUuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
 	if errCheck != nil {
 		ctx.Log().Error("检查商品失败", zap.Error(errCheck))
 		return nil, nil, errors.New("检查商品失败")
@@ -5066,6 +5070,18 @@ func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCh
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 
+	// 获取所有商品,用于检查限购
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+
+	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
+	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, 0, unCookingSaleOrderProducts, saleOrderProductAll)
+	if errCheck != nil {
+		return nil, errors.WithMessage(errCheck, "订单检查失败")
+	}
+	if checkServiceRes != nil {
+		return checkServiceRes, nil
+	}
+
 	// 检查是否有未送厨的商品
 	if len(unCookingSaleOrderProducts) > 0 {
 		products := make([]resp.Product, 0)
@@ -5088,18 +5104,6 @@ func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCh
 			OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
 		}
 		return res, nil
-	}
-
-	// 获取所有商品,用于检查限购
-	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
-
-	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-	checkServiceRes, errCheck := s.checkOrder(ctx, db, req.SaleBillUuid, 0, unCookingSaleOrderProducts, saleOrderProductAll)
-	if errCheck != nil {
-		return nil, errors.WithMessage(errCheck, "订单检查失败")
-	}
-	if checkServiceRes != nil {
-		return checkServiceRes, nil
 	}
 
 	return nil, nil
