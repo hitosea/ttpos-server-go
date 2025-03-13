@@ -164,6 +164,13 @@ type OrderMemberCancelReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
 }
 
+type OrderPrintReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+	PrintLang     string `json:"print_lang"`      // 打印语言, 可选
+	PayMethodUuid uint64 `json:"pay_method_uuid"` // 支付方式UUID, 可选 (打印码时用)
+}
+
 type InstantOrderCheckReq struct {
 	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID, 必填

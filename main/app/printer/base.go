@@ -22,6 +22,7 @@ import (
 // PPrinterRepo 打印
 type PPrinterRepo interface {
 	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
+	PrintingStatementOrder(printType int, saleBillUuid uint64, products printer_model.Products) bool
 }
 
 type PrinterRepoImpl struct {
