@@ -235,9 +235,8 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 			return errors.New("会员不存在")
 		}
 		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"balance":                     utils.DecimalAdd(member.Balance, changeReq.Money),
-			"gift_balance":                utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
-			"accumulated_recharge_amount": utils.DecimalAdd(member.AccumulatedRechargeAmount, changeReq.Money, changeReq.GiftMoney),
+			"balance":      utils.DecimalAdd(member.Balance, changeReq.Money),
+			"gift_balance": utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
 		}); err != nil {
 			return errors.WithMessage(err, "更新会员余额失败")
 		}

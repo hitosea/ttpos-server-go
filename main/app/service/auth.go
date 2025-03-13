@@ -105,13 +105,12 @@ func NewAuthSrvImpl(
 			"/api/v1/tablet/check_update",
 			"/api/v1/tablet/verify_advanced_password",
 			"/api/v1/tablet/call",
-			"/api/v1/product/category/list",
+			"/api/v1/tablet/product/category/list",
+			"/api/v1/tablet/product/list",
+			"/api/v1/tablet/buffet/list",
 
 			//'/table/table/openPing',
 			//'/table/table/getInfo',
-			//'/order/order/tableBuy',
-			//'/order/order/buffetList',
-			//'/product/product/getBaseList', // 商品基础列表-缓存完完全外
 		},
 	}
 }
