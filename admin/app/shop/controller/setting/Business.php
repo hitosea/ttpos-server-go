@@ -311,8 +311,6 @@ class Business extends Controller
      */
     public function orderSchemeAdd()
     {
-        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
-        $app_id = $this->store['app']['app_id'] ?: 0;
         //
         $model = new OrderScheme;
         $data = $this->request->param();

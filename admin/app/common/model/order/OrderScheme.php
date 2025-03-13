@@ -2,7 +2,6 @@
 
 namespace app\common\model\order;
 
-use think\facade\Db;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
@@ -24,6 +23,26 @@ class OrderScheme extends BaseModel
     // 点餐方式、桌台方式
     const USE_CHANNEL_ORDER = 10; // 点餐方式
     const USE_CHANNEL_TABLE = 20; // 桌台方式
+
+    // 必点规则-旧
+    const OLD_MUST_RULE_MUST = 1; // 固定商品
+    const OLD_MUST_RULE_OPTIONAL = 2; // 可选商品
+
+    // 必点规则-新
+    const NEW_MUST_RULE_MUST = 0; // 固定商品
+    const NEW_MUST_RULE_OPTIONAL = 1; // 可选商品
+
+    // 必点规则, 旧->新
+    const OLD_MUST_RULE_MAP = [
+        self::OLD_MUST_RULE_MUST => self::NEW_MUST_RULE_MUST,
+        self::OLD_MUST_RULE_OPTIONAL => self::NEW_MUST_RULE_OPTIONAL,
+    ];
+
+    // 必点规则, 新-旧
+    const NEW_MUST_RULE_MAP = [
+        self::NEW_MUST_RULE_MUST => self::OLD_MUST_RULE_MUST,
+        self::NEW_MUST_RULE_OPTIONAL => self::OLD_MUST_RULE_OPTIONAL,
+    ];
 
     /**
      * 追加字段
@@ -106,6 +125,22 @@ class OrderScheme extends BaseModel
     public function setProductIdsAttr($value, $data)
     {
         return json_encode($value) ?: '';
+    }
+
+    /**
+     * 设置必点规则
+     */
+    public function setMustRuleAttr($value)
+    {
+        return self::OLD_MUST_RULE_MAP[$value];
+    }
+
+    /**
+     * 获取必点规则
+     */
+    public function getMustRuleAttr($value, $data)
+    {
+        return self::NEW_MUST_RULE_MAP[$value];
     }
 
     /**
