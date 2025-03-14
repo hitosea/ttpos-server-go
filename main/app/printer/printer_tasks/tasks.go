@@ -98,7 +98,7 @@ func (t *SecondTask) sendPrinter(companyUuid uint64) {
 		num := printerLog.Num + 1
 		if printerLog.Printer != nil {
 			// 执行打印
-			err := pkg.PrintTicket(printerLog.Printer.GetConfigJson().IP, printerLog.Data, printerLog.PrintMethod)
+			err := pkg.PrintTicket(printerLog.Printer.GetConfigJson().IP, printerLog.DecompressData(), printerLog.PrintMethod)
 			if err == nil {
 				// 打印成功
 				printerLog.Reason = "打印成功"

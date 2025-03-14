@@ -42,7 +42,6 @@ type IOrderRepo interface {
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
 	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
 	ChangePopulation(saleBillUuid uint64, population int) error                                                               // 修改订单人数
-	ChangeBuffetCustomerType(saleBillUuid uint64, population int) error                                                       // 调整自助餐
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
 	HasShowOrder(deviceUuid uint64) (bool, error)                                                                             // 判断该设备是否有未挂单的点餐订单
@@ -1111,36 +1110,6 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 		}).Error
 	if err != nil {
 		return fmt.Errorf("ChangePopulation: %v", err)
-	}
-	return nil
-}
-
-// ChangeBuffetCustomerType 修改订单人数
-func (r *orderRepo) ChangeBuffetCustomerType(saleBillUuid uint64, population int) error {
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		// saleOrder := &model.SaleOrder{}
-		// where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
-		// //
-		// err := tx.Model(&model.SaleOrderBuffetCustomerType{}).
-		// 	Where("delete_time = ?", 0).
-		// 	Where(where, saleBillUuid).
-		// 	Updates(map[string]interface{}{
-		// 		"num":    population,
-		// 		"remark": remark,
-		// 	}).Error
-		// if err != nil {
-		// 	return errors.WithMessage(err)
-		// }
-		// 	//
-		return tx.Model(&model.SaleBill{}).
-			Where("delete_time = ?", 0).
-			Where("uuid = ?", saleBillUuid).
-			Updates(map[string]interface{}{
-				"meal_num": population,
-			}).Error
-	})
-	if err != nil {
-		return fmt.Errorf("ChangeBuffetCustomerType: %v", err)
 	}
 	return nil
 }
