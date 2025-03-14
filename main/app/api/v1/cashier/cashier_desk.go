@@ -564,7 +564,6 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param sale_bill_uuid path string true "账单ID"
-// @Param sale_order_uuid path string true "销售订单UUID"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cart/info [get]
@@ -886,7 +885,7 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 	}
 	if checkRes != nil {
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
-		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
 	}
 	ctx.Log().Debug("订单检查成功")

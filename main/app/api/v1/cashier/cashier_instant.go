@@ -914,7 +914,7 @@ func (h *InstantHandler) OrderCheck(c *gin.Context) {
 	}
 	if checkRes != nil {
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
-		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes)
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
 	}
 	ctx.Log().Debug("订单检查成功")
