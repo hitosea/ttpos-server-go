@@ -3643,7 +3643,8 @@ definitions:
         description: 打印机.配置
         type: string
       printer_type:
-        description: 打印机.类型
+        description: 打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线
+          , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)
         type: string
       uuid:
         description: 打印日志Uuid
@@ -6840,7 +6841,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 结账页面信息
+          description: 打印数据
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -7920,7 +7921,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 结账页面信息
+          description: 打印数据
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -8724,6 +8725,35 @@ paths:
       security:
       - JwtToken: []
       summary: 获取订单列表
+      tags:
+      - 收银端.订单
+  /cashier/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 打印
+      parameters:
+      - description: 打印
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 打印
       tags:
       - 收银端.订单
   /cashier/order/return:

@@ -3052,7 +3052,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "结账页面信息",
+                        "description": "打印数据",
                         "schema": {
                             "allOf": [
                                 {
@@ -4889,7 +4889,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "结账页面信息",
+                        "description": "打印数据",
                         "schema": {
                             "allOf": [
                                 {
@@ -6256,6 +6256,57 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -14408,7 +14459,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "printer_type": {
-                    "description": "打印机.类型",
+                    "description": "打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)",
                     "type": "string"
                 },
                 "uuid": {
