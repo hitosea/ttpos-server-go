@@ -207,8 +207,8 @@ func (model *SaleOrder) GetMemberName() string {
 func (model *SaleOrder) CalcGiftAmount() float64 {
 	amount := float64(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		// 删除的商品不计、退菜的商品不计入、未送厨的商品不计
-		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnCookingProduct() {
+		// 删除的商品不计、退菜的商品不计入。 未送厨的商品也要计入
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() {
 			continue
 		}
 		// 商品的最终金额
