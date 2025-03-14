@@ -219,10 +219,41 @@ func (p *printerTemplate) Amount(amount float64) string {
 	if amount == 0 {
 		return "0"
 	}
+	// 先格式化为2位小数
 	formattedAmount := strconv.FormatFloat(amount, 'f', 2, 64)
-	formattedAmount = strings.TrimRight(formattedAmount, "0")
-	if strings.HasSuffix(formattedAmount, ".") {
-		formattedAmount = strings.TrimRight(formattedAmount, ".")
+
+	// 分割整数和小数部分
+	parts := strings.Split(formattedAmount, ".")
+	integerPart := parts[0]
+	decimalPart := ""
+	if len(parts) > 1 {
+		decimalPart = parts[1]
 	}
-	return formattedAmount
+
+	// 处理整数部分，添加千分位
+	var result strings.Builder
+	length := len(integerPart)
+	for i := length - 1; i >= 0; i-- {
+		result.WriteByte(integerPart[i])
+		if i > 0 && (length-i)%3 == 0 {
+			result.WriteByte(',')
+		}
+	}
+
+	// 反转字符串
+	reversed := result.String()
+	runes := []rune(reversed)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	integerPart = string(runes)
+
+	// 处理小数部分，去除尾部的0
+	decimalPart = strings.TrimRight(decimalPart, "0")
+
+	// 组合结果
+	if decimalPart != "" {
+		return integerPart + "." + decimalPart
+	}
+	return integerPart
 }

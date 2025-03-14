@@ -275,18 +275,20 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("订单号"), saleOrder.OrderNo))
 		img.LineFeed(1)
 	}
-	// 计算宽度
-	var productWidth, priceQtyWidth int
-	if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
-		productWidth = 220
-		priceQtyWidth = 230
-	} else {
-		productWidth = 120
-		priceQtyWidth = 120
-	}
 
 	// 商品列表 - 标题
 	if temp != 3 {
+		var productWidth, priceQtyWidth int
+		if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
+			productWidth = 210
+			priceQtyWidth = 230
+			if t.base.Lang == "th" {
+				productWidth = 200
+			}
+		} else {
+			productWidth = 310
+			priceQtyWidth = 130
+		}
 		img.SetTextLineHeight(30)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("商品"), Width: productWidth, Align: pkg.AlignLeft},
@@ -349,8 +351,8 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		//
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: productWidth, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num), Width: priceQtyWidth, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: productName, Width: 320, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()
