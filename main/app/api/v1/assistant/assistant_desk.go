@@ -1,7 +1,6 @@
 package assistant
 
 import (
-	"go.uber.org/zap"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -15,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // DeskHandler 桌台处理程序
@@ -167,9 +167,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
-		privateApi.GET("/desk/list", wrapper.GetDeskList)
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder) // 创建桌台订单(开桌)
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType) // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                     // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                     // 获取桌台详情
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                // 创建桌台订单(开桌)
 	}
 }

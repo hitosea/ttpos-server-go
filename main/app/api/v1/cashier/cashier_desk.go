@@ -1364,7 +1364,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
 		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
-		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
+		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台（清台）
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
 		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                     // 合并桌台
