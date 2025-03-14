@@ -7,6 +7,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
@@ -121,6 +122,30 @@ func (model *SaleBill) SetNil() {
 	model.Desk = nil
 	model.BuffetPackage1 = nil
 	model.BuffetPackage2 = nil
+}
+
+func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
+	buffetProductList := resp.BuffetProductList{}
+	buffetProductList.List = make([]resp.BuffetProduct, 0)
+	// 去重的列表
+	list := make([]resp.BuffetProduct, 0)
+	if model.BuffetPackage1 != nil {
+		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage1.GetBuffetProductList().List...)
+	}
+	if model.BuffetPackage2 != nil {
+
+		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage2.GetBuffetProductList().List...)
+	}
+	// 去重
+	buffetProductMap := make(map[uint64]bool)
+	for _, buffetProduct := range buffetProductList.List {
+		if !buffetProductMap[buffetProduct.Uuid] {
+			buffetProductMap[buffetProduct.Uuid] = true
+			list = append(list, buffetProduct)
+		}
+	}
+	buffetProductList.List = list
+	return buffetProductList
 }
 
 // 判断销售账单是否可反结账。
@@ -645,6 +670,9 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 	}
 	if model.Status == constant.SaleBillStatusCanceled {
 		return errors.New("订单已取消")
+	}
+	if model.IsDelete() {
+		return errors.New("订单已删除")
 	}
 	if model.Status == constant.SaleBillStatusComplete {
 		return errors.New("订单已结账")

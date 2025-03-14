@@ -1498,6 +1498,23 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.BuffetProduct:
+    properties:
+      name:
+        description: 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
+        type: string
+      uuid:
+        description: 商品uuid
+        type: integer
+    type: object
+  resp.BuffetProductList:
+    properties:
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.BuffetProduct'
+        type: array
+    type: object
   resp.Card:
     properties:
       name:
@@ -5675,6 +5692,55 @@ paths:
       summary: 获取支付方式列表
       tags:
       - 点餐助手端.支付方式
+  /assistant/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取产品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取产品类别列表
+      tags:
+      - 点餐助手端.产品
+  /assistant/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取产品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取产品列表
+      tags:
+      - 点餐助手端.产品
   /assistant/verify_advanced_password:
     post:
       consumes:
@@ -6234,6 +6300,35 @@ paths:
       security:
       - JwtToken: []
       summary: 桌台订单自助餐加钟
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/buffet/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助餐商品列表
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.BuffetProductList'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取自助餐商品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/cancel:

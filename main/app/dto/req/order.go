@@ -269,3 +269,8 @@ func (req OrderChangeBuffetClockReq) Validate() error {
 	}
 	return nil
 }
+
+// OrderChangeBuffetProductListReq 获取桌台的自助餐商品列表
+type OrderChangeBuffetProductListReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
+}
