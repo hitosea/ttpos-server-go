@@ -4768,7 +4768,6 @@ func (s *orderSrv) getMoveProductInfo(ctx context.Context, saleOrderFrom *model.
 	}
 
 	// 构建加钟map
-	fmt.Println("saleOrderFrom.SaleOrderBuffetDelayProducts", utils.ToJsonString(saleOrderFrom.SaleOrderBuffetDelayProducts))
 	buffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
 	for index, buffetDelayProduct := range saleOrderFrom.SaleOrderBuffetDelayProducts {
 		if buffetDelayProduct.IsDelete() || buffetDelayProduct.SaleOrderUuid != saleOrderFrom.Uuid {
@@ -5010,22 +5009,17 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 		}
 		toBuffetDelayProductSignMap[buffetDelayProduct.GetSign()] = saleOrderTo.SaleOrderBuffetDelayProducts[i]
 	}
-	fmt.Println("toBuffetDelayProductSignMap11111:", utils.ToJsonString(toBuffetDelayProductSignMap))
 
 	// 遍历要移动的订单加钟商品，移动到目标订单中
 	for _, delayProduct := range delayProducts {
 		ctx.Log().Debug("移动加钟商品", zap.Any("delayProduct", delayProduct.Name))
 		moveCustomerNum, ok := moveNumMap[delayProduct.Uuid]
 		if !ok {
-			fmt.Println("1111111122222222")
 			return nil, nil, errors.WithMessage(errors.New("加钟商品可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", delayProduct.Uuid))
 		}
 		if moveCustomerNum > delayProduct.Num {
-			fmt.Println("22224444444", moveCustomerNum, delayProduct.Num)
-
 			return nil, nil, errors.WithMessage(errors.New("移动数量大于加钟商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", delayProduct.Uuid))
 		}
-		fmt.Println(fmt.Sprintf("11111 delayProduct.Num:%d, moveCustomerNum:%d", delayProduct.Num, moveCustomerNum))
 
 		hasHandle := false // 是否已经处理过。因为一个加钟商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单加钟商品数量大于移动数量，则原销售订单加钟商品数量减少移动数量，目标销售订单中有签名一样的加钟商品，该加钟商品数量增加移动数量
@@ -5130,10 +5124,18 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	}
 
 	waitUpdateSaleOrderProductMap, waitCreateSaleOrderProductMap, err := s.moveSaleOrderProduct(ctx, saleBill, saleOrderFrom, saleOrderTo, saleOrderProducts, moveNumMap)
-
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	waitUpdateBuffetCustomerMap, waitCreateBuffetCustomerMap, err := s.moveBuffetCustomer(ctx, saleBill, saleOrderFrom, saleOrderTo, saleOrderBuffetCustomers, moveNumMap)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	waitUpdateBuffetDelayProductMap, waitCreateBuffetDelayProductMap, err := s.moveBuffetDelayProduct(ctx, saleBill, saleOrderFrom, saleOrderTo, buffetDelayProducts, moveNumMap)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	if len(waitUpdateSaleOrderProductMap) == 0 && len(waitUpdateBuffetCustomerMap) == 0 && len(waitUpdateBuffetDelayProductMap) == 0 {
 		ctx.Log().Debug("移动商品失败，没有需要更新的销售订单商品")
@@ -5343,6 +5345,7 @@ func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCh
 // getMoveProductList 获取删除某个子单要移动的商品列表,包括订单商品、订单顾客、订单加钟商品
 func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.MoveProduct {
 	moveProductList := make([]req.MoveProduct, 0) // 移动商品列表,包括订单商品、订单顾客、订单加钟商品
+	// 获取要移动的商品
 	for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
 		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
 			continue
@@ -5352,6 +5355,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 			Num:  saleOrderProduct.Num,
 		})
 	}
+	// 获取要移动的顾客
 	for _, saleOrderBuffetCustomer := range saleOrderFrom.SaleOrderBuffetCustomerTypes {
 		if saleOrderBuffetCustomer.IsDelete() || saleOrderBuffetCustomer.Num == 0 {
 			continue
@@ -5361,7 +5365,16 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 			Num:  saleOrderBuffetCustomer.Num,
 		})
 	}
-
+	// 获取要移动的加钟商品
+	for _, buffetDelayProduct := range saleOrderFrom.SaleOrderBuffetDelayProducts {
+		if buffetDelayProduct.IsDelete() || buffetDelayProduct.Num == 0 {
+			continue
+		}
+		moveProductList = append(moveProductList, req.MoveProduct{
+			Uuid: buffetDelayProduct.Uuid,
+			Num:  buffetDelayProduct.Num,
+		})
+	}
 	return moveProductList
 }
 
@@ -5394,16 +5407,9 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 
 	saleOrderFrom := saleBill.GetSaleOrder(request.SaleOrderUuid)
 
-	moveProductList := make([]req.MoveProduct, 0) // 移动商品列表,包括订单商品、订单顾客、订单加钟商品
-	for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
-		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
-			continue
-		}
-		moveProductList = append(moveProductList, req.MoveProduct{
-			Uuid: saleOrderProduct.Uuid,
-			Num:  saleOrderProduct.Num,
-		})
-	}
+	// 获取要移动的商品列表
+	moveProductList := s.getMoveProductList(saleOrderFrom)
+
 	moveProductReq := req.InstantOrderSaleOrderMoveProductReq{
 		SaleBillUuid: request.SaleBillUuid,
 		From:         request.SaleOrderUuid,
@@ -5469,16 +5475,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	}
 
 	for _, saleOrderFrom := range saleOrderFromList {
-		moveProductList := make([]req.MoveProduct, 0)
-		for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
-			if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
-				continue
-			}
-			moveProductList = append(moveProductList, req.MoveProduct{
-				Uuid: saleOrderProduct.Uuid,
-				Num:  saleOrderProduct.Num,
-			})
-		}
+		moveProductList := s.getMoveProductList(saleOrderFrom)
 		moveProductReq := req.InstantOrderSaleOrderMoveProductReq{
 			SaleBillUuid: request.SaleBillUuid,
 			From:         saleOrderFrom.Uuid,

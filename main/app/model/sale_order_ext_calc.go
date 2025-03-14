@@ -346,6 +346,24 @@ func (model *SaleOrder) calcSumOrderProductCustomerDiscountPrice() float64 {
 	return sumCustomerPrice.InexactFloat64()
 }
 
+// 计算自助餐加钟商品价格之和。等于所有自助餐加钟商品价格之和
+func (model *SaleOrder) calcSumOrderProductBuffetDelayPrice() float64 {
+	sumBuffetDelayPrice := decimal.NewFromFloat(0)
+	for _, orderBuffetDelay := range model.SaleOrderBuffetDelayProducts {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetDelay.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetDelay.IsDelete() {
+			continue
+		}
+		// 自助餐加钟商品价格之和
+		amount := decimal.NewFromFloat(orderBuffetDelay.GetAmount())
+		sumBuffetDelayPrice = sumBuffetDelayPrice.Add(amount)
+	}
+	return sumBuffetDelayPrice.InexactFloat64()
+}
+
 // 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格CustomerPrice之和 + 自助餐加钟商品价格Price之和
 func (model *SaleOrder) calcProductOriginalAmount() float64 {
 	sumSaleOrderProduct := model.calcSumOrderProductSalePrice()
@@ -360,8 +378,11 @@ func (model *SaleOrder) calcProductAmount() float64 {
 	sumOrderProductPrice := model.calcSumOrderProductPrice()
 	// 自助餐顾客价格Price之和
 	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
+	// 自助餐加钟商品价格之和
+	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
-		decimal.NewFromFloat(sumCustomerPrice)).InexactFloat64() // todo + 自助餐加钟商品价格之和
+		decimal.NewFromFloat(sumCustomerPrice)).Add(
+		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
 }
 
 // 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和
