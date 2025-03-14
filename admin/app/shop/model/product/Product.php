@@ -7,7 +7,6 @@ use help\ValidateHelp;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\store\MultiLanguageName;
-use app\common\model\erp\ErpMonthlyProductStatistics;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
 use app\shop\model\product\ProductBom;
@@ -193,6 +192,11 @@ class Product extends ProductModel
         $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
         $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
         $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+        $data['is_show_cashier'] = $data['is_show_cashier'] != 2 ? 1 : 0;
+        $data['is_show_tablet'] = $data['is_show_tablet'] != 2 ? 1 : 0;
+        $data['is_show_kitchen'] = $data['is_show_kitchen'] != 2 ? 1 : 0;
+        $data['is_show_assistant'] = $data['is_show_assistant'] != 2 ? 1 : 0;
+        $data['is_show_h5'] = $data['is_show_h5'] != 2 ? 1 : 0;
 
         // 开启事务
         $this->startTrans();
@@ -478,11 +482,11 @@ class Product extends ProductModel
             'takeout_tax_uuid' => $takeoutTaxUuid, // 外带税类id
             'category_uuid' => $data['category_id'], // 分类uuid
             'status' => $data['product_status'] == 10 ? 1 : 0, // 状态: 10-上架, 20-下架
-            'is_show_cashier' => $data['is_show_cashier'], // 是否显示收银台: 10-显示, 20-隐藏
-            'is_show_tablet' => $data['is_show_tablet'], // 是否显示平板: 10-显示, 20-隐藏,
-            'is_show_kitchen' => $data['is_show_kitchen'], // 是否显示厨房: 10-显示, 20-隐藏
-            'is_show_assistant' => $data['is_show_assistant'], // 是否显示助手: 10-显示, 20-隐藏,
-            'is_show_h5' => $data['is_show_h5'], // 是否显示h5: 10-显示, 20-隐藏
+            'is_show_cashier' => $data['is_show_cashier'] != 2 ? 1 : 0, // 是否显示收银台: 10-显示, 20-隐藏
+            'is_show_tablet' => $data['is_show_tablet'] != 2 ? 1 : 0, // 是否显示平板: 10-显示, 20-隐藏,
+            'is_show_kitchen' => $data['is_show_kitchen'] != 2 ? 1 : 0, // 是否显示厨房: 10-显示, 20-隐藏
+            'is_show_assistant' => $data['is_show_assistant'] != 2 ? 1 : 0, // 是否显示助手: 10-显示, 20-隐藏,
+            'is_show_h5' => $data['is_show_h5'] != 2 ? 1 : 0, // 是否显示h5: 10-显示, 20-隐藏
             'sort' => $data['product_sort'], // 排序
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,

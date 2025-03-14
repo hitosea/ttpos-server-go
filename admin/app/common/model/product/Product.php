@@ -1255,6 +1255,12 @@ class Product extends BaseModel
             return $model;
         }
 
+        $model->is_show_cashier = $model->is_show_cashier != 0 ? 1 : 2;
+        $model->is_show_tablet = $model->is_show_tablet != 0 ? 1 : 2;
+        $model->is_show_kitchen = $model->is_show_kitchen != 0 ? 1 : 2;
+        $model->is_show_assistant = $model->is_show_assistant != 0 ? 1 : 2;
+        $model->is_show_h5 = $model->is_show_h5 != 0 ? 1 : 2;
+
         // 整理商品数据并返回
         return $model->setProductListData($model, false);
     }
