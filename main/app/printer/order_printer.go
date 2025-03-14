@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -33,18 +34,18 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 	// 未开启打印
 	if !settingPrinterInfo.IsCashierOpen {
-		return nil, errors.WithMessage(err, "未开启打印, 请联系管理员")
+		return nil, errors.New("未开启打印, 请联系管理员")
 	}
 
 	// 未配置打印机
 	if settingPrinterInfo.PrinterType == "" {
-		return nil, errors.WithMessage(err, "未配置打印机, 请联系管理员")
+		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
 	// 获取销售订单信息
 	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.WithMessage(err, "销售订单不存在")
+		return nil, errors.New("销售订单不存在")
 	}
 
 	// 打印方式
@@ -56,8 +57,13 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
+	fmt.Println("sdasdsa")
+
 	// 获取打印内容
 	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
+	if printContent == "" {
+		return nil, errors.New("获取打印内容失败")
+	}
 
 	// 添加打印日志，依赖打印日志服务
 	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{

@@ -44,19 +44,19 @@ func NewPrinterRepo(ctx context.Context) PPrinterRepo {
 	storeSetting, err := setting.GetStoreSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
-		return nil
+		fmt.Println("获取门店设置失败", zap.Error(err))
 	}
 	// 获取打印机设置
 	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
 	if err != nil {
 		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
-		return nil
+		fmt.Println("获取打印机设置失败", zap.Error(err))
 	}
 	// 获取货币设置
 	currencySetting, err := setting.GetCurrencySetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取货币设置失败", zap.Error(err))
-		return nil
+		fmt.Println("获取货币设置失败", zap.Error(err))
 	}
 	//
 	return &PrinterRepoImpl{
