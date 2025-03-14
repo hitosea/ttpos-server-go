@@ -640,7 +640,7 @@ func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
-	if operation != constant.OrderSettle && model.IsLockStatus() {
+	if operation != constant.OrderSettle && operation != constant.OrderUnlock && model.IsLockStatus() {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {

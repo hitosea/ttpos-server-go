@@ -666,7 +666,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 				return setting.PrinterInfo{}, errors.WithMessage(err)
 			}
 			copies = printer.Copies
-			printerConfig = printer.ConfigJson
+			printerConfig = utils.ToJson(printer.GetConfigJson())
 			printerType = printer.PrinterType.Key
 		} else if printerId != "0" { // 收银机内置的打印机
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))

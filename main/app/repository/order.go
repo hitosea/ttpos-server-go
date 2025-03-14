@@ -45,7 +45,8 @@ type IOrderRepo interface {
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
 	HasShowOrder(deviceUuid uint64) (bool, error)                                                                             // 判断该设备是否有未挂单的点餐订单
-	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                           // 获取销售账单记录,不进行关联查询
+	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)
+	SetLock(saleBillUuid uint64, isLock bool) error
 }
 
 // orderRepo 订单仓库
@@ -1170,4 +1171,19 @@ func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
 		return false, fmt.Errorf("HasShowOrder: %v", err)
 	}
 	return saleBill.Uuid != 0, nil
+}
+
+// SetLock 设置订单锁定状态
+func (r *orderRepo) SetLock(saleBillUuid uint64, isLock bool) error {
+	isLockInt := 0
+	if isLock {
+		isLockInt = 1
+	}
+	err := r.db.Model(&model.SaleBill{}).
+		Where("delete_time = ? AND uuid = ?", constant.NotDeleted, saleBillUuid).
+		Update("is_lock", isLockInt).Error
+	if err != nil {
+		return fmt.Errorf("SetLock: %v", err)
+	}
+	return nil
 }

@@ -1,7 +1,6 @@
 package printer
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -21,7 +20,8 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printType int,
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
-) (*resp.PrinterLogData, error) {
+	FirstExecution int,
+) (*resp.PrinterData, error) {
 	// todo 设备id没对
 
 	// 获取打印设置
@@ -46,12 +46,6 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		return nil, errors.WithMessage(err, "销售订单不存在")
 	}
 
-	// 如果是云打印, cashierBindKey 等于自己
-	// if p.ctx.GetDeviceSn() != "" && settingPrinterInfo.IsCashierPrinter {
-	// 	settingPrinterInfo.CashierBindKey = p.ctx.GetDeviceSn()
-	// }
-	// fmt.Println(utils.ToJsonString(settingPrinterInfo))
-
 	// 打印方式
 	printMethod := constant.PrinterLogPrintMethodText
 	if p.printerSetting.PrintMethod == "2" {
@@ -61,23 +55,19 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
-	fmt.Println(settingPrinterInfo.PrinterConfig)
-
 	// 添加打印日志，依赖打印日志服务
 	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{
-		PrinterType:   settingPrinterInfo.PrinterType,
-		PrinterConfig: settingPrinterInfo.PrinterConfig,
-		PrintCopies:   settingPrinterInfo.Copies,
-	}, resp.PrinterLogData{
+		PrinterType: settingPrinterInfo.PrinterType,
+	}, model.PrinterLog{
 		PrintMethod:     printMethod,
-		RelatedType:     0,
+		RelatedType:     1,
 		RelatedUuid:     saleBill.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
 		DataType:        constant.PrinterLogDataTypeReturnDish,
 		Data:            p.getPrintingStatementOrderContent(printType, saleBill, saleOrder),
 		Type:            1,
-		FirstExecution:  0,
+		FirstExecution:  FirstExecution,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -85,7 +75,14 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}
 
 	// 打印
-	return &printerLogData, nil
+	return &resp.PrinterData{
+		Data:          printerLogData.Data,
+		PrintMethod:   printMethod,
+		Uuid:          printerLogData.Uuid,
+		Copies:        settingPrinterInfo.Copies,
+		PrinterType:   settingPrinterInfo.PrinterType,
+		PrinterConfig: settingPrinterInfo.PrinterConfig,
+	}, nil
 }
 
 // 构建订单打印的内容

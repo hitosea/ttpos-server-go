@@ -1306,6 +1306,31 @@ func (h *DeskHandler) OrderPrint(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderUnlock 订单解锁
+// @Summary 订单解锁
+// @Description 订单解锁
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderUnlockReq true "订单解锁"
+// @Success 200 {object} dto.Response
+// @Router /cashier/desk/order/unlock [post]
+func (h *DeskHandler) OrderUnlock(c *gin.Context) {
+	var unlockReq req.OrderUnlockReq
+	if err := c.ShouldBindJSON(&unlockReq); err != nil {
+		helper.HandleValidationError(c, err, unlockReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.orderService.OrderUnlock(ctx, unlockReq.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1378,5 +1403,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印
+		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
 	}
 }

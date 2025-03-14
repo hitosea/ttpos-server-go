@@ -176,3 +176,7 @@ type InstantOrderCheckReq struct {
 	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID, 必填
 	IgnoreMust    bool   `form:"ignore_must"`     // 是否忽略必点，可选
 }
+
+type OrderUnlockReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+}
