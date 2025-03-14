@@ -59,6 +59,9 @@ type SaleOrder struct {
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 
+	// 虚拟字段，用于标记当前子单是第几个
+	Index int `gorm:"-" json:"index,omitempty"`
+
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"`
 	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`

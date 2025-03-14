@@ -515,9 +515,9 @@ func (model *SaleBill) IsShowSaleBill() bool {
 
 // 返回新的销售账单
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
-	for _, saleOrder := range model.SaleOrders {
-		fmt.Println(saleOrder.Uuid)
+	for i, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
+			saleOrder.Index = i + 1
 			return saleOrder
 		}
 	}

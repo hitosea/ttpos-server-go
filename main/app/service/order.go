@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -5566,16 +5565,14 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 创建送厨单打印记录
-	go func() {
-		products := printer_model.Products{}
-		// copier.Copy(&products, saleOrder.Products)
-		printer.NewPrinterRepo(ctx).PrintingStatementOrder(
-			constant.PrinterProductTypeKitchen,
-			saleBill.Uuid,
-			products,
-		)
-	}()
+	_, err = printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+		constant.PrinterTemplatePreBilling,
+		saleBill,
+		saleOrder.Uuid,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {

@@ -125,10 +125,12 @@ func serverConf(opt copier.Option) {
 		Port:       "8080",
 		Mode:       "debug",
 		DeployMode: "cloud",
+		BrandName:  "TTPOS",
 	}
 	copier.CopyWithOption(&Server, ServerConf{
 		Port:       viper.GetString("SERVER_PORT"),
 		Mode:       viper.GetString("SERVER_MODE"),
 		DeployMode: viper.GetString("DEPLOY_MODE"),
+		BrandName:  viper.GetString("BRAND_NAME"),
 	}, opt)
 }
