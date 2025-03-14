@@ -14,12 +14,13 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
+func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
@@ -28,12 +29,12 @@ func Auth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		ParseJwt(c, authHeader, authSrv)
+		ParseJwt(c, authHeader, authSrv, dbm)
 		c.Next()
 	}
 }
 
-func DeskAuth(authSrv service.IAuthSrv) gin.HandlerFunc {
+func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		deskTokenHeader := c.GetHeader("Token") // 桌台二维码的token
 
@@ -48,12 +49,12 @@ func DeskAuth(authSrv service.IAuthSrv) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		ParseDeskToken(c, token, authSrv)
+		ParseDeskToken(c, token, authSrv, dbm)
 		c.Next()
 	}
 }
 
-func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
+func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *database.DBManager) {
 
 	parts := strings.SplitN(authHeader, " ", 2)
 	if !(len(parts) == 2 && parts[0] == "Bearer") {
@@ -83,7 +84,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 	}
 
 	// 桌台Uuid
-	deskUuid, _ := strconv.ParseUint(c.GetHeader("DESK-UUID"), 10, 64)
+	deskUuid, _ := strconv.ParseUint(c.GetHeader("X-DESK-UUID"), 10, 64)
 
 	// 用户鉴权
 	ctx := context.NewContext(context.WithSource(claims.Source), context.WithCompanyUuid(claims.CompanyUuid))
@@ -125,9 +126,11 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv) {
 	// 注入一个uuid
 
 	c.Set(jwt.RequestUuid, uuid.New().String()) // 桌台绑定的设备uuid
+
+	c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid)) // 数据库连接
 }
 
-func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv) {
+func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv, dbm *database.DBManager) {
 	deskUuid, err := strconv.Atoi(token.DeskUuid)
 	if err != nil {
 		helper.H5Fail(c, constant.CodeParamError, "二维码已失效，请联系商家")
@@ -147,5 +150,7 @@ func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuth
 	c.Set(jwt.Source, "H5")
 	c.Set(jwt.CompanyUuid, ctx.GetCompanyUuid()) // 商家Uuid
 	c.Set(jwt.DeskUuid, ctx.GetDeskUuid())       // 桌台Uuid
+
+	c.Set(jwt.DB, dbm.GetDB(ctx.GetCompanyUuid())) // 数据库连接
 	fmt.Println(fmt.Sprintf("deskUuid: %d, companyUuid: %d", ctx.GetDeskUuid(), ctx.GetCompanyUuid()))
 }

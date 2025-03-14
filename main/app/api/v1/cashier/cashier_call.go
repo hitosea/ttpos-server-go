@@ -173,7 +173,7 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/call/unprocessed/list", wrapper.GetUnprocessedCallList)  // 分页获取呼叫列表
 		privateApi.POST("/call/processed", wrapper.Processed)                     // 处理呼叫

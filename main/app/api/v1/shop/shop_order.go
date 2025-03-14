@@ -192,18 +192,12 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		service: orderSrv,
-		deskService: service.NewDeskSrv( // 订单服务
-			dbm,
-			service.NewLocaleSrv(),
-			orderSrv,
-			settingSrv,
-			deviceSrv,
-		),
+		service:     orderSrv,
+		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/order/list", wrapper.GetShopOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)

@@ -59,12 +59,39 @@ func NewProductRepoImpl(db *gorm.DB) IProductRepo {
 	return &productRepo{db: db}
 }
 
+// 默认关联对象
+func (r *productRepo) defaultPreload() []DBOption {
+	return []DBOption{
+		r.WithMultiLanguageName(),
+		r.WithProductUnit(),
+		r.WithProductUnitMultiLanguageName(),
+		r.WithProductBoms(),
+		r.WithProductBomsProductFlavor(),
+		r.WithProductBomsProductFlavorMultiLanguageName(),
+		r.WithProductBomsProductSauce(),
+		r.WithProductBomsProductSauceMultiLanguageName(),
+		r.WithProductPackageAttributeGroup(),
+		r.WithProductPackageAttributeGroupProductAttributeGroup(),
+		r.WithProductPackageAttributeGroupProductPackageAttributes(),
+		r.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		r.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
+		r.WithProductPackageAttributeGroupProductAttributeGroup(),
+		r.WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName(),
+		r.WithProductPackageAttributeGroupProductPackageAttributes(),
+		r.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
+		r.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
+		r.WithProductPackageImageFile(),
+	}
+}
+
 // GetProductListWithPagination 分页获取商品列表
 func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) {
 	var products []model.ProductPackage
 	var total int64
 
 	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{})
+
+	opts = append(r.defaultPreload(), opts...)
 
 	for _, opt := range opts {
 		db = opt(db)

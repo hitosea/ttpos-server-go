@@ -169,7 +169,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)   // 充值会员信息
 		privateApi.POST("/member/add", wrapper.AddMember)                   // 添加会员

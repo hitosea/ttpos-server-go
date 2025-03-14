@@ -162,7 +162,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.DeskAuth(authSrv))
+	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
 		privateApi.POST("/index.php/scan/base.base/getInfo", wrapper.GetBaseInfo)
 		privateApi.POST("/index.php/scan/order.Order/buffetList", wrapper.GetBuffetList)

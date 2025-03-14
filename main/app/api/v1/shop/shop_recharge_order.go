@@ -170,7 +170,7 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/recharge_order/list", wrapper.GetRechargeOrderList)
 		privateApi.GET("/recharge_order/info", wrapper.GetRechargeOrderInfo)

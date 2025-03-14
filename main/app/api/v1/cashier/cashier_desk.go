@@ -1376,19 +1376,13 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 初始化处理器
 	wrapper := DeskHandler{
-		service: service.NewDeskSrv(
-			dbm,        // 数据库管理器
-			localeSrv,  // 多语言服务
-			orderSrv,   // 订单服务
-			settingSrv, // 设置服务
-			deviceSrv,  // 设备服务
-		),
+		service:      service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
 		memberSrv:    memberSrv,
 		orderService: orderSrv,
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                                 // 获取桌台的区域和类型
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表

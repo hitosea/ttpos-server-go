@@ -19,7 +19,7 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv service.IDeskSrv // 主服务
+	deskSrv service.IDeskSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -155,17 +155,11 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 创建处理程序
 	wrapper := DeskHandler{
-		deskSrv: service.NewDeskSrv(
-			dbm,        // 数据库管理器
-			localeSrv,  // 多语言服务
-			orderSrv,   // 订单服务
-			settingSrv, // 设置服务
-			deviceSrv,  // 设备服务
-		),
+		deskSrv: service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType) // 获取桌台的区域和类型
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                     // 获取桌台列表

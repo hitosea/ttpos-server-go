@@ -60,6 +60,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			assistant.RegisterBaseHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterMemberHandlers(assistantGroup, dbm, cache)
 			assistant.RegisterCallHandlers(assistantGroup, dbm, cache)
+			assistant.RegisterOrderHandlers(assistantGroup, dbm, cache)
 		}
 		// H5扫码端
 		h5Group := apiV1.Group("/h5")
@@ -83,6 +84,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			tablet.RegisterCallHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterProductHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterBuffetHandlers(tabletGroup, dbm, cache)
+			tablet.RegisterOrderHandlers(tabletGroup, dbm, cache)
 		}
 	}
 }

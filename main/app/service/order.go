@@ -96,6 +96,7 @@ type IOrderSrv interface {
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                        // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
+	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
 }
 
 // orderSrv 订单服务结构
@@ -5703,4 +5704,20 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	}
 
 	return nil
+}
+
+// GetMustPlanList 点餐助手、平板端获取必点商品方案列表
+func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error) {
+	saleBillRepo := repository.NewSaleBillRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
+	if err != nil {
+		return resp.ProductMustPlanList{}, errors.ErrInternal
+	}
+	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]uint), saleBill.DeskUuid)
+	if err != nil {
+		return resp.ProductMustPlanList{}, errors.WithMessage(err)
+	}
+	return resp.ProductMustPlanList{
+		List: list,
+	}, nil
 }

@@ -83,7 +83,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.POST("/logout", wrapper.Logout) // 退出登录
 	}

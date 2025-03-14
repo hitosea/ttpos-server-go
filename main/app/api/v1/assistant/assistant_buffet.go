@@ -60,7 +60,7 @@ func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/buffet/list", wrapper.GetBuffetList)
 	}

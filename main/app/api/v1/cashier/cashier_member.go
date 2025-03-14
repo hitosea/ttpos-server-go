@@ -307,7 +307,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv), middleware.OperationLog(staffOperationLogSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm), middleware.OperationLog(staffOperationLogSrv))
 	{
 		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                    // 获取会员等级列表
 		privateApi.POST("/member/add", wrapper.AddMember)                                            // 添加会员

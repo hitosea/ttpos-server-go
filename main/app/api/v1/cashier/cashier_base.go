@@ -322,7 +322,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/base", wrapper.GetCashierBase)                              // 获取基础信息
 		privateApi.GET("/language", wrapper.GetLanguage)                             // 获取语言

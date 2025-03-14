@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -47,27 +48,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
 	}
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
-	dbOptions := []repository.DBOption{
-		productRepo.WithMultiLanguageName(),
-		productRepo.WithProductUnit(),
-		productRepo.WithProductUnitMultiLanguageName(),
-		productRepo.WithProductBoms(),
-		productRepo.WithProductBomsProductFlavor(),
-		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
-		productRepo.WithProductBomsProductSauce(),
-		productRepo.WithProductBomsProductSauceMultiLanguageName(),
-		productRepo.WithProductPackageAttributeGroup(),
-		productRepo.WithProductPackageAttributeGroupProductAttributeGroup(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
-		productRepo.WithProductPackageAttributeGroupProductAttributeGroup(),
-		productRepo.WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributes(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
-		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
-		productRepo.WithProductPackageImageFile(),
-	}
+	var dbOptions []repository.DBOption
 	if option, ok := sourceMap[ctx.GetSource()]; ok {
 		dbOptions = append(dbOptions, option)
 	}
@@ -83,6 +64,18 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
 	}
 
+	// 返回响应对象
+	return product_resp.ProductListWithPaginationResp{
+		List: s.formatProducts(ctx, products),
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+func (s *productSrv) formatProducts(ctx context.Context, products []model.ProductPackage) []product_resp.Product {
 	// 转换为响应对象
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
@@ -171,16 +164,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			},
 		})
 	}
-
-	// 返回响应对象
-	return product_resp.ProductListWithPaginationResp{
-		List: list,
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
-		},
-	}, nil
+	return list
 }
 
 // GetProductCategoryList 获取产品类别列表

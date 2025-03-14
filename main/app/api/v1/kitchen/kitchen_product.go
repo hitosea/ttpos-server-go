@@ -170,7 +170,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)      // 获取产品类别列表
 		privateApi.GET("/product/list_by_order", wrapper.GetProductListByOrder)       // 按照订单获取送厨商品
