@@ -661,7 +661,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	}
 
 	// 关联查询
-	dbOptions = append(dbOptions, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	dbOptions = append(dbOptions, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod(), rechargeOrderRepo.WithStaff())
 	rechargeOrders, total, err := rechargeOrderRepo.PaginateGetRechargeOrder(listReq.PageNo, listReq.PageSize, dbOptions...)
 
 	if err != nil {
@@ -677,6 +677,11 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			paymentMethods = append(paymentMethods, paymentOrder.PaymentMethodName)
 		}
 
+		var cashierName string
+		if order.Staff != nil {
+			cashierName = order.Staff.RealName
+		}
+
 		// 是否可反结账：同一个收银员工、同一个班次、已支付、未退款
 		isCellReverseSettle := order.Status == constant.RechargeOrderStatusPaid &&
 			order.DutyNo == staff.DutyNo && order.StaffUuid == staff.Uuid && order.RefundMoney == 0
@@ -690,6 +695,11 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			PaymentMethods: paymentMethods,
 			GiftAmount:     order.GiftAmount,
 			GiftPoint:      order.GiftPoint,
+			MemberUuid:     order.MemberUuid,
+			RefundMoney:    order.RefundMoney,
+			Cashier: resp.RechargeOrderCashier{
+				RealName: cashierName,
+			},
 			Extra: resp.RechargeOrderItemExtra{
 				IsCellRefund:        order.Status == constant.RechargeOrderStatusPaid && order.Amount > order.RefundMoney, // 退款完不可再退款
 				IsCellCancel:        order.Status == constant.RechargeOrderStatusPending,

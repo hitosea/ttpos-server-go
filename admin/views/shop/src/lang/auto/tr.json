@@ -1562,5 +1562,7 @@
     "税费，包含商品税费、服务费税费": "Vergiler, ürün vergisi ve hizmet ücreti vergisi dahil",
     "会员ID：": "Üye Kimliği:",
     "总销售额：": "Toplam satışlar:",
-    "（以上计算都不包含会员充值金额）": "(Yukarıdaki hesaplamalara üye yükleme tutarları dahil değildir)"
+    "（以上计算都不包含会员充值金额）": "(Yukarıdaki hesaplamalara üye yükleme tutarları dahil değildir)",
+    "店内就餐": "Restoranda yemek",
+    "是否取消此订单?": "Bu siparişi iptal etmek istiyor musunuz?"
 }

@@ -12,8 +12,8 @@
           </el-radio-group>
         </el-form-item>
         <!-- 整单退款 -->
-        <el-form-item for="no_click" :label="$t('可退款金额')" prop="cell_refund_money">
-          <el-input v-model="info.cell_refund_money" disabled :placeholder="$t('可退款金额')" :readonly="true">
+        <el-form-item for="no_click" :label="$t('可退款金额')" prop="refundable_amount">
+          <el-input v-model="info.refundable_amount" disabled :placeholder="$t('可退款金额')" :readonly="true">
             <template #prepend v-if="currency.unit_position == '0'">
               {{ currency.unit }}
             </template>
@@ -40,11 +40,11 @@
       <div class="detail-wrap">
         <div class="detail-item">
           <span class="span">{{ $t('充值金额：') }}</span>
-          <span class="span">{{ proxy.$formatPrice(info?.recharge_money || 0) }}</span>
+          <span class="span">{{ proxy.$formatPrice(info?.recharge_amount || 0) }}</span>
         </div>
         <div class="detail-item">
           <span class="span">{{ $t('赠送金额：') }}</span>
-          <span class="span">{{ proxy.$formatPrice(info?.gift_money || 0) }}</span>
+          <span class="span">{{ proxy.$formatPrice(info?.gift_amount || 0) }}</span>
         </div>
         <div class="detail-item">
           <span class="span">{{ $t('赠送积分：') }}</span>
@@ -56,15 +56,15 @@
       <div class="detail-wrap">
         <div class="detail-item">
           <span class="span">{{ $t('主账户：') }}</span>
-          <span class="span">{{ proxy.$formatPrice(info?.user?.balance || 0) }}</span>
+          <span class="span">{{ proxy.$formatPrice(info?.recharge_member_info?.balance || 0) }}</span>
         </div>
         <div class="detail-item">
           <span class="span">{{ $t('赠送账户：') }}</span>
-          <span class="span">{{ proxy.$formatPrice(info?.user?.gift_balance || 0) }}</span>
+          <span class="span">{{ proxy.$formatPrice(info?.recharge_member_info?.gift_balance || 0) }}</span>
         </div>
         <div class="detail-item">
           <span class="span">{{ $t('积分：') }}</span>
-          <span class="span">{{ info?.user?.points || 0 }}</span>
+          <span class="span">{{ info?.recharge_member_info?.points || 0 }}</span>
         </div>
       </div>
       <p class="tips mt4">{{ $t('退款后不变更赠送账户及积分，如需变更，请前去商家后台操作') }}</p>
@@ -72,13 +72,13 @@
       <div class="refund-total mt24">
         <p class="refund-total-title">{{ $t('支付记录（原路退款会按照以下顺序退回）') }}</p>
         <p class="refund-total-text" v-for="(item, index) in pay_list" :key="index">
-          <span>{{ item.name }}</span>
+          <span>{{ item.payment_name }}</span>
           <b>
-            <span>{{ item.price }}</span>
+            <span>{{ item.payment_amount }}</span>
             <span>
               (
               {{ $t('剩余可退') }}
-              <span class="span">{{ item.cell_refund_money }}</span>
+              <span class="span">{{ item.refundable_amount }}</span>
               )
             </span>
           </b>
