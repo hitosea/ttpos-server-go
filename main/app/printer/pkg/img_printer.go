@@ -63,14 +63,8 @@ type ImgFont struct {
 const (
 	// 横向排列
 	DIRECTION_X = 0
-
 	// 竖向排列
 	DIRECTION_Y = 1
-
-	// 文本对齐方向
-	ALIGN_LEFT   = 1
-	ALIGN_CENTER = 2
-	ALIGN_RIGHT  = 3
 )
 
 // NewImgFont 创建一个新的ImgFont实例
@@ -84,7 +78,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		TextSpacing:           1.0,
 		TextTotalHeight:       0,
 		TextLastLineUsedWidth: 0,
-		Alignment:             ALIGN_LEFT,
+		Alignment:             AlignLeft,
 		FontSize:              20,
 		FontWeight:            1,
 		Direction:             0,
@@ -143,6 +137,12 @@ func (i *ImgFont) createImg() {
 
 // GetFontPath 根据字符获取对应的字体路径
 func (i *ImgFont) GetFontPath(char string) string {
+	// 中文
+	chiPattern := regexp.MustCompile(`[\x{4E00}-\x{9FFF}\x{FF01}\x{FF0C}\x{FF08}\x{FF09}\x{FF1A}\x{FF5E}\x{2014}]`)
+	if chiPattern.MatchString(char) || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：" {
+		return fonts.FontZH
+	}
+
 	// 泰语
 	thaiPattern := regexp.MustCompile(`[\p{Thai}]`)
 	if thaiPattern.MatchString(char) || strings.Contains(char, "฿") {
@@ -153,12 +153,6 @@ func (i *ImgFont) GetFontPath(char string) string {
 	hangulPattern := regexp.MustCompile(`[\p{Hangul}]`)
 	if hangulPattern.MatchString(char) {
 		return fonts.FontKO
-	}
-
-	// 中文
-	chiPattern := regexp.MustCompile(`[\x{4E00}-\x{9FFF}\x{FF01}\x{FF0C}\x{FF08}\x{FF09}\x{FF1A}\x{FF5E}\x{2014}]`)
-	if chiPattern.MatchString(char) || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：" {
-		return fonts.FontZH
 	}
 
 	// 日文
@@ -255,7 +249,7 @@ func (i *ImgFont) getCharWidth(fontPath string, fontSize int, text string) int {
 	// 创建字体选项
 	opt := truetype.Options{
 		Size:    float64(fontSize),
-		DPI:     100,
+		DPI:     95,
 		Hinting: font.HintingNone, // 完全禁用hinting模式以避免栈溢出错误
 	}
 
@@ -561,7 +555,7 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int
 
 	// 创建上下文
 	ctx := freetype.NewContext()
-	ctx.SetDPI(100)
+	ctx.SetDPI(95)
 	ctx.SetFont(f)
 	ctx.SetClip(i.Image.Bounds())
 	ctx.SetDst(i.Image)
@@ -906,7 +900,7 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 
 	// 根据图像宽度添加分割线
 	if i.ImageWidth == 567 || i.ImageWidth == 568 {
-		i.AppendText("---------------------------------------------------------------")
+		i.AppendText("----------------------------------------------------------------------")
 	}
 
 	// 如果需要换行
@@ -978,7 +972,7 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 		}
 
 		// 处理居中和居右对齐
-		if align == ALIGN_CENTER || (align == ALIGN_RIGHT && key != len(columns)-1) {
+		if align == AlignCenter || (align == AlignRight && key != len(columns)-1) {
 			i.ImageWidth = int(deviationWidth) + columnWidth + i.ImagePadding
 		}
 
@@ -1118,6 +1112,9 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 
 // Save 保存图像并返回打印数据
 func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox bool) string {
+	// todo 测试
+	imageSrc = "./dishes_img.png"
+	//
 	var data []string
 	maxHeight := 2200
 	height := i.TextTotalHeight + i.TextLineHeight
