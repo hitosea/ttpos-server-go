@@ -132,7 +132,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 			&p.storeSetting,
 			&p.printerSetting,
 			&p.currencySetting,
-		).GetPrintContent(printType, tmp, saleBill, saleOrder)
+		).GetPrintContent(printerType, printType, tmp, saleBill, saleOrder)
 	}
 	// /* *
 	// * 商米打印机

@@ -1285,9 +1285,9 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	rv := make([]byte, height*bw+4)
 
 	// 设置头部信息（宽度和高度）
-	rv[0] = byte(bw & 0xFF)       // xL
-	rv[1] = byte((bw >> 8) & 0xFF) // xH
-	rv[2] = byte(height & 0xFF)    // yL
+	rv[0] = byte(bw & 0xFF)            // xL
+	rv[1] = byte((bw >> 8) & 0xFF)     // xH
+	rv[2] = byte(height & 0xFF)        // yL
 	rv[3] = byte((height >> 8) & 0xFF) // yH
 
 	// 优化：预处理行索引和移位计算
@@ -1315,10 +1315,10 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 				red := pix[i]
 				green := pix[i+1]
 				blue := pix[i+2]
-				
+
 				// 转换为灰度值
 				gray := RGB2Gray(red, green, blue)
-				
+
 				// 设置相应位
 				pixelIndex := rowOffsets[y] + x
 				index := pixelIndex/8 + 4

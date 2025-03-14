@@ -60,7 +60,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 
 	// 订单名称
 	orderName := fmt.Sprintf("%d", saleOrder.Index)
-	if orderName != "" {
+	if orderName != "" && saleOrder.Index > 0 {
 		orderName = "-" + orderName
 	}
 
@@ -436,12 +436,17 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				cardDiscount = saleOrder.MemberCardDiscountRate
 			}
 		}
+		// 中文/繁体中文
+		unit := "%"
+		if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
+			unit = "折"
+		}
 		if gradeEquity != 100 && gradeEquity > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员折扣"), float64(gradeEquity/10)))
+			img.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员折扣"), float64(gradeEquity/10), unit))
 			img.LineFeed(1)
 		}
 		if cardDiscount != 100 && cardDiscount > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员卡折扣"), float64(cardDiscount/10)))
+			img.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员卡折扣"), float64(cardDiscount/10), unit))
 			img.LineFeed(1)
 		}
 	}
@@ -473,11 +478,15 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 合计应收
+	finalPrice := saleOrder.FinalPrice
+	if payTime == "" {
+		finalPrice = saleOrder.Amount
+	}
 	img.SetFontSize(26)
 	img.SetFontWeight(2)
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("合计应收"), Width: 280, Align: pkg.AlignLeft},
-		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(saleOrder.Amount), Width: 0, Align: pkg.AlignRight},
+		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(finalPrice), Width: 0, Align: pkg.AlignRight},
 	)
 	img.SetFontSize(20)
 	img.SetFontWeight(1)
@@ -531,7 +540,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		}
 	}
 
-	// 会员积分
+	// 会员信息
 	if saleOrder.Member != nil {
 		img.AppendSplitLine()
 		img.LineFeed(1)

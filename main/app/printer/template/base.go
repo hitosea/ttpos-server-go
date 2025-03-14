@@ -185,6 +185,9 @@ func (t *printerTemplate) PrintText(
 * 格式化时间戳
  */
 func (p *printerTemplate) FormatUnixTimeDefault(datetime int64) string {
+	if datetime == 0 {
+		return ""
+	}
 	if p.DefaultCalendar == 3 {
 		return p.ChangeBuddhistCalendar(datetime)
 	}

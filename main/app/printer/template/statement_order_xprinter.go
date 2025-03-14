@@ -35,6 +35,7 @@ func NewStatementOrderXprinterTemplate(
 
 // GetPrintnrContent 获取打印内容
 func (t *statementOrderXprinterTemplate) GetPrintContent(
+	printerType string,
 	printType int,
 	temp int,
 	saleBill *model.SaleBill,
@@ -60,246 +61,254 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 
 	// 订单名称
 	orderName := fmt.Sprintf("%d", saleOrder.Index)
-	if orderName != "" {
+	if orderName != "" && saleOrder.Index > 0 {
 		orderName = "-" + orderName
 	}
 
-	//  创建打印机实例
-	img := pkg.NewImgFont(568, 0, 0)
-	img.SetTextLineHeight(50)
-	img.SetImagePadding(0)
-	if t.base.Lang == "my" {
-		img.SetImagePadding(3)
-	}
+	// 宽度
+	width := 48
+	// 左侧宽度
+	leftWidth := 28
+
+	// 创建打印机实例
+	printer := pkg.NewPrinter(567)
 	if temp != 3 {
-		img.SetAlignment(pkg.AlignLeft)
+		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
+			printer.AppendText(t.base.Translate("发票"))
 		} else if printType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
+			printer.AppendText(t.base.Translate("预结账单"))
 		} else {
-			img.AppendText(t.base.Translate("结账单"))
+			printer.AppendText(t.base.Translate("结账单"))
 		}
-		img.LineFeed(1, 60)
+		printer.LineFeed(2)
 	}
-	img.SetAlignment(pkg.AlignCenter)
-	img.SetFontSize(26)
-	img.SetFontWeight(2)
-	img.AppendText(t.base.StoreSetting.Name)
-	img.SetFontSize(20)
-	img.SetFontWeight(1)
-	img.LineFeed(1, 60)
-	//
+
+	printer.SetAlignment(pkg.AlignCenter)
+	printer.SetPrintModes(true, true, false)
+	printer.SetCharacterSize(2, 1)
+	printer.AppendText(t.base.StoreSetting.Name + "\n")
+	printer.SetLineSpacing(20)
+	printer.LineFeed(2)
+	printer.SetLineSpacing(90)
+	printer.SetPrintModes(false, false, false)
+	printer.SetCharacterSize(1, 1)
+	/* *
+	* 模版1
+	 */
 	if temp == 1 {
-		img.LineFeed(1, 10)
-		img.RecoverDefaultTextLineHeight()
-		img.SetAlignment(pkg.AlignLeft)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.SetLineSpacing(90)
+		printer.SetCharacterSize(1, 1)
+		printer.AppendText("\x1D\x21\x01")
+		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			img.SetFontWeight(2)
-			img.SetFontSize(28)
-			spacing := 50
-			if t.base.IsMyText(saleBill.SerialNo) {
-				spacing = 68
-			}
-			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			img.RecoverDefaultTextLineHeight()
-			img.SetFontSize(20)
-			img.LineFeed(1)
+			printer.SetLineSpacing(120)
+			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.SetLineSpacing(90)
 		} else if saleBill.SerialNo != "" {
-			img.SetFontWeight(2)
-			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
-			img.SetFontSize(20)
-			img.LineFeed(1)
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 		}
+		printer.SetLineSpacing(50)
+		printer.LineFeed(1)
+		printer.SetLineSpacing(90)
 		//
-		img.LineFeed(1, 12)
-		img.SetFontWeight(1)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 300, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: saleOrder.OrderNo, Width: 0, Align: pkg.AlignRight},
-		)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight},
-		)
-		if saleOrder.FinishTime > 0 {
-			img.PrintInColumns(
-				pkg.ColumnConfig{Text: t.base.Translate("时间"), Width: 300, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: t.base.FormatUnixTimeDefault(saleOrder.FinishTime), Width: 0, Align: pkg.AlignRight},
-			)
+		printer.SetCharacterSize(1, 1)
+		printer.SetPrintModes(false, false, false)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("订单号"), "", saleOrder.OrderNo, width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("收银员"), "", saleOrder.CashierName, width))
+		printer.LineFeed(1)
+		if payTime != "" {
+			printer.AppendText(t.base.PrintText(t.base.Translate("时间"), "", payTime+"\n", width))
+			printer.LineFeed()
 		}
-		img.LineFeed(1)
+		printer.SetLineSpacing(60)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
 	} else if temp == 2 {
-		img.AppendText(t.base.Translate("非常感谢您今天的到来，我们期待您的再次光临"))
-		img.LineFeed(1, 60)
-		//
-		if saleOrder.FinishTime > 0 {
-			img.AppendText(t.base.FormatUnixTimeDefault(saleOrder.FinishTime))
-			img.LineFeed(1)
-		}
-		//
-		img.SetFontWeight(2)
-		img.SetFontSize(28)
-		if saleBill.DeskUuid > 0 {
-			spacing := 50
-			if t.base.IsMy(saleBill.SerialNo) {
-				spacing = 68
+		printer.SetLineSpacing(20)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+		printer.AppendText(t.base.Translate("非常感谢您今天的到来，我们期待您的再次光临"))
+		printer.LineFeed()
+		printer.SetLineSpacing(30)
+		if payTime != "" {
+			printer.LineFeed()
+			printer.AppendText(payTime + "\n")
+			if printerType == PrinterTypeXPrinterWifi {
+				printer.LineFeed()
 			}
-			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			img.RecoverDefaultTextLineHeight()
-		} else {
-			img.SetFontWeight(2)
-			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
-			img.SetFontSize(20)
-			img.LineFeed(1)
 		}
 		//
-		img.SetFontSize(20)
-		img.RecoverDefaultTextLineHeight()
-		img.SetFontWeight(1)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: saleOrder.OrderNo, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
-		)
-		if saleOrder.CashierName != "" {
-			img.PrintInColumns(
-				pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
-			)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+		printer.SetCharacterSize(1, 1)
+		printer.SetPrintModes(true, true, false)
+		if saleBill.DeskUuid > 0 {
+			printer.SetLineSpacing(120)
+			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.LineFeed()
+			printer.SetLineSpacing(90)
+			printer.LineFeed()
+		} else if saleBill.SerialNo != "" {
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.LineFeed()
+			printer.LineFeed()
 		}
-		img.LineFeed(1)
+		printer.SetCharacterSize(1, 1)
+		//
+		printer.SetPrintModes(false, false, false)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("订单号"), "", saleOrder.OrderNo, width))
+		printer.LineFeed()
+		printer.AppendText(t.base.PrintText(t.base.Translate("收银员"), "", saleOrder.CashierName, width))
+		printer.LineFeed()
+		printer.SetLineSpacing(60)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
 	} else if temp == 3 {
-		// 打印logo
-		// if t.base.setting != nil {
-		// 	storeSetting := t.base.StoreSetting
-		// 	img.SetTextLineHeight(25)
-		// 	img.SetAlignment(ImgFont.AlignCenter)
-		// 	// whiteBackgroundWithBlackTextLogoPath := Supplier.GetWhiteBackgroundWithBlackTextLogoPath(saleOrder.AppId, "http://nginx"+ImgHelp.RemoveImageDomain(storeSetting["logoUrl"]))
-		// 	img.AppendImg(whiteBackgroundWithBlackTextLogoPath, 150, false, -25)
-		// 	img.LineFeed(1)
-		// }
 		//
-		img.LineFeed(1, 10)
-		img.SetAlignment(pkg.AlignCenter)
-		img.SetFontWeight(2)
-		img.SetFontSize(26)
-		img.SetTextLineHeight(50)
+		printer.SetCharacterSize(2, 2)
+		printer.SetPrintModes(true, true, false)
+		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
+			printer.AppendText(t.base.Translate("发票"))
 		} else if printType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
+			printer.AppendText(t.base.Translate("预结账单"))
 		} else {
-			img.AppendText(t.base.Translate("结账单"))
+			printer.AppendText(t.base.Translate("结账单"))
 		}
-		img.RecoverDefaultTextLineHeight()
-		img.SetFontSize(20)
-		img.SetFontWeight(1)
-		img.LineFeed(1)
+		printer.SetPrintModes(false, false, false)
+		printer.SetCharacterSize(1, 1)
+		printer.LineFeed()
+		//
+		printer.SetLineSpacing(20)
+		printer.LineFeed()
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
 		// 公司名称
 		if company != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("公司名称"), company))
-			img.LineFeed(1)
+			printer.SetLineSpacing(80)
+			printer.AppendText(t.base.Translate("公司名称") + ": " + company)
+			printer.SetLineSpacing(20)
+			printer.LineFeed(2)
 		}
-		// 连锁店编号
 		if chainNumber != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("连锁店编号"), chainNumber))
-			img.LineFeed(1)
+			printer.SetLineSpacing(80)
+			printer.AppendText(t.base.Translate("连锁店编号") + ": " + chainNumber)
+			printer.SetLineSpacing(20)
+			printer.LineFeed(2)
 		}
 		if address != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商家地址"), address))
-			img.LineFeed(1)
+			printer.SetLineSpacing(80)
+			printer.AppendText(t.base.Translate("商家地址") + ": " + address)
+			printer.SetLineSpacing(40)
+			printer.LineFeed(2)
 		}
 		if phone != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("电话"), phone))
-			img.LineFeed(1)
+			printer.SetLineSpacing(80)
+			printer.AppendText(t.base.Translate("电话") + ": " + phone)
+			printer.SetLineSpacing(40)
+			printer.LineFeed(2)
 		}
 		if taxNumber != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
-			img.LineFeed(1)
+			printer.SetLineSpacing(80)
+			printer.AppendText(t.base.Translate("税号") + ": " + taxNumber)
+			printer.SetLineSpacing(40)
+			printer.LineFeed(2)
 		}
 		// 发票信息
-		// if saleOrder.Template == 3 && saleOrder.InvoiceInfo && (saleOrder.InvoiceInfo.CompanyName || saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) {
-		// 	img.AppendSplitLine(true, 40)
-		// 	if saleOrder.InvoiceInfo.CompanyName != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyName)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyAddr != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyAddr)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyTaxNumber != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyTaxNumber)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyPhone != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyPhone)
-		// 		img.LineFeed(1, 40)
+		// if printType == constant.PrinterTemplateInvoice {
+		// 	if invoiceInfo != nil && (invoiceInfo.companyName || invoiceInfo.companyAddr || invoiceInfo.companyTaxNumber || invoiceInfo.companyPhone) {
+		// 		printer.SetLineSpacing(48)
+		// 		printer.AppendText("------------------------------------------------\n")
+		// 		printer.LineFeed()
+		// 		if invoiceInfo.companyName {
+		// 			printer.SetLineSpacing(80)
+		// 			printer.AppendText(invoiceInfo.companyName)
+		// 			printer.SetLineSpacing(40)
+		// 			printer.LineFeed(2)
+		// 		}
+		// 		if invoiceInfo.companyAddr {
+		// 			printer.SetLineSpacing(80)
+		// 			printer.AppendText(invoiceInfo.companyAddr)
+		// 			printer.SetLineSpacing(40)
+		// 			printer.LineFeed(2)
+		// 		}
+		// 		if invoiceInfo.companyTaxNumber {
+		// 			printer.SetLineSpacing(80)
+		// 			printer.AppendText(invoiceInfo.companyTaxNumber)
+		// 			printer.SetLineSpacing(40)
+		// 			printer.LineFeed(2)
+		// 		}
+		// 		if invoiceInfo.companyPhone {
+		// 			printer.SetLineSpacing(80)
+		// 			printer.AppendText(invoiceInfo.companyPhone)
+		// 			printer.SetLineSpacing(48)
+		// 			printer.LineFeed(2)
+		// 		}
 		// 	}
 		// }
 		//
-		img.AppendSplitLine()
-		img.RecoverDefaultTextLineHeight()
-		img.SetAlignment(pkg.AlignLeft)
+		printer.AppendText("------------------------------------------------\n")
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.SetCharacterSize(2, 2)
+		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			img.SetFontWeight(2)
-			img.SetFontSize(28)
-			if t.base.IsMy(saleBill.SerialNo) {
-				img.SetTextLineHeight(68)
-			} else {
-				img.SetTextLineHeight(50)
-			}
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			img.RecoverDefaultTextLineHeight()
-			img.LineFeed(1)
-		} else {
-			img.SetFontWeight(2)
-			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
-			img.RecoverDefaultTextLineHeight()
-			img.LineFeed(1)
+			printer.SetLineSpacing(120)
+			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.SetLineSpacing(90)
+			printer.LineFeed()
+		} else if saleBill.SerialNo != "" {
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.SetLineSpacing(90)
+			printer.LineFeed()
 		}
-		img.SetFontWeight(1)
-		img.SetFontSize(20)
-		img.SetAlignment(pkg.AlignLeft)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), saleOrder.CashierName))
-		img.LineFeed(1)
+		//
+		printer.SetLineSpacing(45)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+		printer.SetCharacterSize(1, 1)
+		printer.SetPrintModes(false, false, false)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.Translate("收银员") + ": " + saleOrder.CashierName)
+		printer.LineFeed()
 		if payTime != "" {
-			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("时间"), payTime))
-			img.LineFeed(1)
+			printer.AppendText(t.base.Translate("时间") + ": " + payTime)
+			printer.LineFeed()
 		}
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("订单号"), saleOrder.OrderNo))
-		img.LineFeed(1)
+		printer.AppendText(t.base.Translate("订单号") + ": " + saleOrder.OrderNo)
+		printer.LineFeed()
 	}
-
-	// 商品列表 - 标题
-	if temp != 3 {
-		var productWidth, priceQtyWidth int
-		if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
-			productWidth = 210
-			priceQtyWidth = 230
-			if t.base.Lang == "th" {
-				productWidth = 200
-			}
+	//
+	printer.RestoreDefaultLineSpacing()
+	printer.SetPrintModes(false, false, false)
+	printer.SetAlignment(pkg.AlignLeft)
+	//
+	leftWidth = 25
+	centerWidth := 16
+	rightWidth := 16
+	if temp == 3 {
+		printer.AppendText("------------------------------------------------\n")
+		printer.SetLineSpacing(25)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+	} else {
+		printer.SetPrintModes(true, false, false)
+		var hLeftWidth int
+		if t.base.Lang == "en" {
+			hLeftWidth = leftWidth - 10
+		} else if t.base.Lang == "th" {
+			hLeftWidth = leftWidth - 8
 		} else {
-			productWidth = 310
-			priceQtyWidth = 130
+			hLeftWidth = leftWidth
 		}
-		img.SetTextLineHeight(30)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("商品"), Width: productWidth, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: t.base.Translate("单价") + "|" + t.base.Translate("数量"), Width: priceQtyWidth, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.Translate("小计"), Width: 0, Align: pkg.AlignRight},
-		)
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品"), t.base.Translate("单价")+"|"+t.base.Translate("数量"), t.base.Translate("小计"), width, hLeftWidth))
+		printer.SetPrintModes(false, false, false)
+		printer.AppendText("\n------------------------------------------------\n")
 	}
-	img.AppendSplitLine()
-	img.LineFeed(1, 40)
-	img.SetTextLineHeight(50)
-
 	// 赠品金额 / 商品数量
 	freeMoney := float64(0)
 	productNum := uint(0)
@@ -314,11 +323,19 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
 		}
 		discountPrice := orderBuffetCustomer.GetDiscountPrice()
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: buffetNameText, Width: 320, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
-		)
+		printer.AppendText(t.base.PrintText(
+			buffetNameText,
+			fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num),
+			t.base.GetPriceAndUnit(discountPrice),
+			width,
+			leftWidth,
+			centerWidth,
+			rightWidth,
+		))
+		printer.LineFeed()
+		printer.SetLineSpacing(50)
+		printer.LineFeed()
+		printer.SetLineSpacing(60)
 	}
 	// 添加加钟商品
 	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
@@ -327,14 +344,22 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		}
 		productNum += delay.Num
 		discountPrice := delay.GetAmount()
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: delay.Name, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), saleBill.MealNum), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
-		)
+		printer.AppendText(t.base.PrintText(
+			delay.Name,
+			fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), delay.Num),
+			t.base.GetPriceAndUnit(discountPrice),
+			width,
+			leftWidth,
+			centerWidth,
+			rightWidth,
+		))
+		printer.LineFeed()
+		printer.SetLineSpacing(50)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
 	}
 	// 商品列表
-	for key, item := range saleOrder.SaleOrderProducts {
+	for _, item := range saleOrder.SaleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
 			continue
 		}
@@ -349,43 +374,49 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		}
 		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n" + item.GetAttributeNamesByLang(t.base.Lang)
 		//
-		img.SetTextLineHeight(45)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
-		)
-		img.RecoverDefaultTextLineHeight()
-		if key != len(saleOrder.SaleOrderProducts)-1 {
-			img.LineFeed(1, 10)
-		}
+		printer.AppendText(t.base.PrintText(
+			productName,
+			fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num),
+			t.base.GetPriceAndUnit(productTotalPrice),
+			width,
+			leftWidth,
+			centerWidth,
+			rightWidth,
+		))
+		printer.LineFeed()
+		printer.SetLineSpacing(50)
+		printer.LineFeed()
+		printer.SetLineSpacing(60)
 	}
 
-	// 商品数量
-	img.AppendSplitLine()
-	img.LineFeed(1)
-	img.SetAlignment(pkg.AlignRight)
 	// 商品金额 = 订单总价 - 赠品金额
-	totalProductPrice := saleOrder.Amount - freeMoney
+	printer.AppendText("------------------------------------------------\n")
+	printer.SetLineSpacing(25)
+	printer.LineFeed()
+	printer.SetLineSpacing(90)
+	printer.SetAlignment(pkg.AlignRight)
+	// 商品金额 = 订单总价 - 赠品金额
+	totalProductPrice := saleOrder.ProductAmount - freeMoney
 	if temp == 3 {
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(totalProductPrice)), Width: 0, Align: pkg.AlignRight},
-		)
+		printer.AppendText(t.base.PrintText(
+			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
+			"",
+			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(totalProductPrice),
+			width,
+			leftWidth,
+			centerWidth,
+			rightWidth,
+		))
+		printer.LineFeed()
 	} else {
-		img.SetAlignment(pkg.AlignRight)
-		img.AppendText(fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum))
-		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(totalProductPrice)))
-		img.LineFeed(1)
+		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%d", productNum))
+		printer.LineFeed()
+		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(totalProductPrice))
+		printer.LineFeed()
 	}
-
-	img.SetAlignment(pkg.AlignRight)
-
-	// 服务费
 	if saleOrder.ServiceFee > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("服务费"), t.base.GetPriceAndUnit(saleOrder.ServiceFee)))
-		img.LineFeed(1)
+		printer.AppendText(t.base.Translate("服务费") + ": " + t.base.GetPriceAndUnit(saleOrder.ServiceFee))
+		printer.LineFeed()
 	}
 
 	// 税费 - 商品未含税
@@ -394,11 +425,11 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			taxRate := percentage["TaxRate"]
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 			if t.base.Lang == "ja" {
-				img.AppendText(fmt.Sprintf("%s: %s", taxRate+"%"+t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
+				printer.AppendText(fmt.Sprintf("%s%% %s: %s", taxRate, t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
 			} else {
-				img.AppendText(fmt.Sprintf("%s: %s", "VAT ("+taxRate+"%)"+t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
+				printer.AppendText(fmt.Sprintf("VAT (%s%%): %s", taxRate, t.base.GetPriceAndUnit(taxFee)))
 			}
-			img.LineFeed(1)
+			printer.LineFeed()
 		}
 	}
 
@@ -416,15 +447,15 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 				}
 			}
 			//
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("优惠折扣"), t.base.GetPriceAndUnit(saleOrder.CustomDiscountFee), ratio))
-			img.LineFeed(1)
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("优惠折扣"), t.base.GetPriceAndUnit(saleOrder.CustomDiscountFee), ratio))
+			printer.LineFeed(1)
 		}
 	}
 
 	// 会员优惠
 	if saleOrder.MemberDiscountFee != 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("会员优惠"), t.base.GetPriceAndUnit(saleOrder.MemberDiscountFee)))
-		img.LineFeed(1)
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("会员优惠"), t.base.GetPriceAndUnit(saleOrder.MemberDiscountFee)))
+		printer.LineFeed(1)
 		// 会员折扣
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
@@ -436,73 +467,84 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 				cardDiscount = saleOrder.MemberCardDiscountRate
 			}
 		}
+		// 中文/繁体中文
+		unit := "%"
+		if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
+			unit = "折"
+		}
 		if gradeEquity != 100 && gradeEquity > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员折扣"), float64(gradeEquity/10)))
-			img.LineFeed(1)
+			printer.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员折扣"), float64(gradeEquity/10), unit))
+			printer.LineFeed(1)
 		}
 		if cardDiscount != 100 && cardDiscount > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员卡折扣"), float64(cardDiscount/10)))
-			img.LineFeed(1)
+			printer.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员卡折扣"), float64(cardDiscount/10), unit))
+			printer.LineFeed(1)
 		}
 	}
 
 	// 抹零
 	if saleOrder.ZeroFee > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(saleOrder.ZeroFee)))
-		img.LineFeed(1)
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(saleOrder.ZeroFee)))
+		printer.LineFeed(1)
 	}
+	// 退款金额
 	if saleOrder.GetReturnAmount() > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(saleOrder.GetReturnAmount())))
-		img.LineFeed(1)
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(saleOrder.GetReturnAmount())))
+		printer.LineFeed(1)
 	}
+	// 支付手续费
 	if saleOrder.PaymentCommissionFee > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("支付手续费"), t.base.GetPriceAndUnit(saleOrder.PaymentCommissionFee)))
-		img.LineFeed(1)
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("支付手续费"), t.base.GetPriceAndUnit(saleOrder.PaymentCommissionFee)))
+		printer.LineFeed(1)
 	}
+	// 免单金额
 	if saleOrder.IsFree != 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
-		img.LineFeed(1)
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
+		printer.LineFeed(1)
 	}
 
-	// 分割线
+	// 分隔
 	if temp == 3 {
-		img.AppendSplitLine()
-		img.LineFeed(1)
-	} else {
-		img.LineFeed(1, 10)
+		printer.SetLineSpacing(30)
+		printer.AppendText("------------------------------------------------\n")
 	}
 
-	// 合计应收
-	img.SetFontSize(26)
-	img.SetFontWeight(2)
-	img.PrintInColumns(
-		pkg.ColumnConfig{Text: t.base.Translate("合计应收"), Width: 280, Align: pkg.AlignLeft},
-		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(saleOrder.Amount), Width: 0, Align: pkg.AlignRight},
-	)
-	img.SetFontSize(20)
-	img.SetFontWeight(1)
+	// 应收
+	finalPrice := saleOrder.FinalPrice
+	if payTime == "" {
+		finalPrice = saleOrder.Amount
+	}
+	printer.AppendText("\x1D\x21\x01\x01")
+	printer.SetPrintModes(true, true, false)
+	printer.AppendText(t.base.PrintText(t.base.Translate("合计应收"), "", t.base.GetPriceAndUnit(finalPrice), width, 34))
+	if printerType != PrinterTypeXPrinterLan {
+		printer.SetLineSpacing(30)
+		printer.LineFeed()
+	}
+
+	// 恢复
+	printer.SetAlignment(pkg.AlignLeft)
+	printer.SetPrintModes(false, false, false)
+	printer.AppendText("\x1D\x21\x00\x00")
 
 	// 税费 - 商品已含税
 	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
-		img.AppendSplitLine()
-		img.LineFeed(1)
-		img.SetAlignment(pkg.AlignRight)
-		img.AppendText(t.base.Translate("合计 (其中VAT)"))
-		img.LineFeed(1)
+		printer.LineFeed()
+		printer.AppendText("------------------------------------------------\n")
+		printer.SetLineSpacing(20)
+		printer.LineFeed()
+		printer.SetAlignment(pkg.AlignRight)
+		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
+		printer.SetLineSpacing(90)
+		printer.LineFeed(1)
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 			totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
 			if t.base.Lang == "ja" {
-				img.PrintInColumns(
-					pkg.ColumnConfig{Text: taxRate + "%" + t.base.Translate("的对象"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.GetPriceAndUnit(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
-				)
+				printer.AppendText(t.base.PrintText(fmt.Sprintf("%s%% %s", taxRate, t.base.Translate("的对象")), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
 			} else {
-				img.PrintInColumns(
-					pkg.ColumnConfig{Text: fmt.Sprintf("VAT (%s)", taxRate+"%"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.GetPriceAndUnit(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
-				)
+				printer.AppendText(t.base.PrintText(fmt.Sprintf("VAT (%s%%)", taxRate), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
 			}
 		}
 	}
@@ -510,85 +552,51 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	// 支付方式
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
 		if len(saleOrder.PaymentOrders) > 0 {
-			img.AppendSplitLine()
-			img.LineFeed(1)
-		}
-		for _, paymentOrder := range saleOrder.PaymentOrders {
-			img.PrintInColumns(
-				pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 0, Align: pkg.AlignRight},
-			)
-			img.PrintInColumns(
-				pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight},
-			)
-			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-				img.PrintInColumns(
-					pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: t.base.Amount(saleOrder.ChangeAmount), Width: 0, Align: pkg.AlignRight},
-				)
+			printer.LineFeed()
+			printer.SetLineSpacing(90)
+			printer.AppendText("------------------------------------------------\n")
+			for _, paymentOrder := range saleOrder.PaymentOrders {
+				printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethodName, width, 20, 0, 28))
+				printer.LineFeed()
+				printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(paymentOrder.Amount), width, 34))
+				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+					printer.AppendText(t.base.PrintText(t.base.Translate("找零"), "", t.base.Amount(saleOrder.ChangeAmount), width, 34))
+				}
 			}
 		}
 	}
 
-	// 会员积分
+	// 会员信息
 	if saleOrder.Member != nil {
-		img.AppendSplitLine()
-		img.LineFeed(1)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+		printer.AppendText("------------------------------------------------\n")
+		//
 		point := saleOrder.GetMemberSurplusPoints()
 		balance := saleOrder.GetMemberSurplusBalance()
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("会员剩余余额"), Width: 350, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(balance), Width: 0, Align: pkg.AlignRight},
-		)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("本次积分"), Width: 280, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: t.base.Amount(point), Width: 0, Align: pkg.AlignRight},
-		)
+		printer.AppendText(t.base.PrintText(t.base.Translate("会员剩余余额"), "", t.base.GetPriceAndUnit(balance), width, 34) + "\n")
+		printer.AppendText(t.base.PrintText(t.base.Translate("本次积分"), "", point, width, 34))
+		printer.SetLineSpacing(50)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
 	}
-
-	// 打印支付二维码
-	// if saleOrder.PaymentOrders != nil && saleOrder.PaymentOrders[0].PayType != nil && saleOrder.PaymentOrders[0].PayType.Source != 0 && saleOrder.PaymentOrders[0].PayType.Value > 0 {
-	// 	payValue := saleOrder.PaymentOrders[0].PayType.Value
-	// 	paymentOrderId := saleOrder.PaymentOrders[0].Id
-	// 	payType := (new PayType([], t.Ctx.AppId)).Where("source", "<>", 0).Where("value", payValue).Find()
-	// 	paymentOrder := payType.Source == 2 ? (new PaymentOrder([], t.Ctx.AppId)).Where("id", paymentOrderId).Find() : nil
-	// 	if payType != nil && (payType.Source != 2 || (payType.Source == 2 && paymentOrder != nil)) {
-	// 		img.AppendSplitLine()
-	// 		img.LineFeed(1)
-	// 		img.SetAlignment(pkg.AlignCenter)
-	// 		img.SetTextLineHeight(35)
-	// 		img.AppendText(t.base.Translate("请用") + " " + payType.Name + " " + t.base.Translate("扫一扫支付"))
-	// 		img.LineFeed(1)
-	// 		// 1-自行添加 2-LianLianPay
-	// 		if payType.Source == 1 {
-	// 			$printer->appendImg('http://nginx' . $payType->qrcode);
-	// 		} else {
-	// 			if ($paymentOrder->link_url) {
-	// 				$printer->appendQrcode($paymentOrder->link_url);
-	// 			} else {
-	// 				$printer->appendQrcode($paymentOrder->qr_code, 280, 10, true);
-	// 			}
-	// 		}
-	// 		$printer->setTextLineHeight(50);
-	// 	}
-	// }
 
 	// 技术支持方
-	img.AppendSplitLine()
-	img.LineFeed(1)
-	img.SetAlignment(pkg.AlignCenter)
-	if t.base.Lang == "tr" {
-		img.AppendText("Ziyaretiniz için teşekkür ederiz! Bu mağaza")
-		img.LineFeed(1)
-		img.AppendText("tarafından: " + brandName + " Sistem destek sağlar.")
-	} else if t.base.Lang == "th" {
-		img.AppendText("ขอบคุณที่แวะมาหากัน!สนับสนุนโดย " + brandName)
+	printer.AppendText("------------------------------------------------\n")
+	printer.SetAlignment(pkg.AlignCenter)
+	if t.base.Lang == "th" {
+		printer.AppendText("ขอบคุณที่แวะมาหากัน!สนับสนุนโดย " + brandName)
 	} else {
-		img.AppendText(t.base.Translate("感谢您的光临！本店由") + " " + brandName + " " + t.base.Translate("系统提供支持。"))
+		printer.AppendText(t.base.Translate("感谢您的光临！本店由") + " " + brandName + " " + t.base.Translate("系统提供支持。"))
 	}
-	//
-	img.LineFeed(4)
 
-	return img.Save("", !t.base.IsSunMi, false)
+	// Print and exit page mode
+	printer.RestoreDefaultLineSpacing()
+	printer.LineFeed()
+	printer.PrintAndExitPageMode()
+	printer.LineFeed(6)
+	printer.CutPaper(true)
+
+	// 返回打印数据
+	return printer.GetOrderData()
 }
