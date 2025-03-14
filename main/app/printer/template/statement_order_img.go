@@ -174,12 +174,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	} else if temp == 3 {
 		// 打印logo
-		// if t.base.setting != nil {
+		// if t.base.StoreSetting != nil {
 		// 	storeSetting := t.base.StoreSetting
 		// 	img.SetTextLineHeight(25)
-		// 	img.SetAlignment(ImgFont.AlignCenter)
+		// 	img.SetAlignment(pkg.AlignCenter)
 		// 	// whiteBackgroundWithBlackTextLogoPath := Supplier.GetWhiteBackgroundWithBlackTextLogoPath(saleOrder.AppId, "http://nginx"+ImgHelp.RemoveImageDomain(storeSetting["logoUrl"]))
-		// 	img.AppendImg(whiteBackgroundWithBlackTextLogoPath, 150, false, -25)
+		// 	img.AppendImg(storeSetting.LogoURL, 150, false, -25)
 		// 	img.LineFeed(1)
 		// }
 		//
@@ -222,25 +222,45 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.LineFeed(1)
 		}
 		// 发票信息
-		// if saleOrder.Template == 3 && saleOrder.InvoiceInfo && (saleOrder.InvoiceInfo.CompanyName || saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) {
-		// 	img.AppendSplitLine(true, 40)
-		// 	if saleOrder.InvoiceInfo.CompanyName != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyName)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyAddr != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyAddr)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyTaxNumber != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyTaxNumber)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyPhone != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyPhone)
-		// 		img.LineFeed(1, 40)
-		// 	}
-		// }
+		if temp == 3 {
+			invoiceInfo := &model.SaleOrderInvoiceInfo{
+				CompanyName:      "",
+				CompanyAddr:      "",
+				CompanyTaxNumber: "",
+				CompanyPhone:     "",
+			}
+			if invoiceInfo.HasContent() {
+				img.AppendSplitLine()
+				if invoiceInfo.CompanyName != "" {
+					img.AppendText(invoiceInfo.CompanyName)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyAddr != "" || invoiceInfo.CompanyTaxNumber != "" || invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyAddr != "" {
+					img.AppendText(invoiceInfo.CompanyAddr)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyTaxNumber != "" || invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyTaxNumber != "" {
+					img.AppendText(invoiceInfo.CompanyTaxNumber)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyPhone != "" {
+					img.AppendText(invoiceInfo.CompanyPhone)
+					img.LineFeed(1, 40)
+				}
+			}
+		}
 		//
 		img.AppendSplitLine()
 		img.RecoverDefaultTextLineHeight()

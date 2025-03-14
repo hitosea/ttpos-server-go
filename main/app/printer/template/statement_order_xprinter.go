@@ -220,37 +220,43 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			printer.LineFeed(2)
 		}
 		// 发票信息
-		// if printType == constant.PrinterTemplateInvoice {
-		// 	if invoiceInfo != nil && (invoiceInfo.companyName || invoiceInfo.companyAddr || invoiceInfo.companyTaxNumber || invoiceInfo.companyPhone) {
-		// 		printer.SetLineSpacing(48)
-		// 		printer.AppendText("------------------------------------------------\n")
-		// 		printer.LineFeed()
-		// 		if invoiceInfo.companyName {
-		// 			printer.SetLineSpacing(80)
-		// 			printer.AppendText(invoiceInfo.companyName)
-		// 			printer.SetLineSpacing(40)
-		// 			printer.LineFeed(2)
-		// 		}
-		// 		if invoiceInfo.companyAddr {
-		// 			printer.SetLineSpacing(80)
-		// 			printer.AppendText(invoiceInfo.companyAddr)
-		// 			printer.SetLineSpacing(40)
-		// 			printer.LineFeed(2)
-		// 		}
-		// 		if invoiceInfo.companyTaxNumber {
-		// 			printer.SetLineSpacing(80)
-		// 			printer.AppendText(invoiceInfo.companyTaxNumber)
-		// 			printer.SetLineSpacing(40)
-		// 			printer.LineFeed(2)
-		// 		}
-		// 		if invoiceInfo.companyPhone {
-		// 			printer.SetLineSpacing(80)
-		// 			printer.AppendText(invoiceInfo.companyPhone)
-		// 			printer.SetLineSpacing(48)
-		// 			printer.LineFeed(2)
-		// 		}
-		// 	}
-		// }
+		if printType == constant.PrinterTemplateInvoice {
+			invoiceInfo := &model.SaleOrderInvoiceInfo{
+				CompanyName:      "",
+				CompanyAddr:      "",
+				CompanyTaxNumber: "",
+				CompanyPhone:     "",
+			}
+			if invoiceInfo.HasContent() {
+				printer.SetLineSpacing(48)
+				printer.AppendText("------------------------------------------------\n")
+				printer.LineFeed()
+				if invoiceInfo.CompanyName != "" {
+					printer.SetLineSpacing(80)
+					printer.AppendText(t.base.Translate("公司名称") + ": " + invoiceInfo.CompanyName)
+					printer.SetLineSpacing(40)
+					printer.LineFeed(2)
+				}
+				if invoiceInfo.CompanyAddr != "" {
+					printer.SetLineSpacing(80)
+					printer.AppendText(t.base.Translate("公司地址") + ": " + invoiceInfo.CompanyAddr)
+					printer.SetLineSpacing(40)
+					printer.LineFeed(2)
+				}
+				if invoiceInfo.CompanyTaxNumber != "" {
+					printer.SetLineSpacing(80)
+					printer.AppendText(t.base.Translate("公司税号") + ": " + invoiceInfo.CompanyTaxNumber)
+					printer.SetLineSpacing(40)
+					printer.LineFeed(2)
+				}
+				if invoiceInfo.CompanyPhone != "" {
+					printer.SetLineSpacing(80)
+					printer.AppendText(t.base.Translate("公司电话") + ": " + invoiceInfo.CompanyPhone)
+					printer.SetLineSpacing(48)
+					printer.LineFeed(2)
+				}
+			}
+		}
 		//
 		printer.AppendText("------------------------------------------------\n")
 		printer.SetAlignment(pkg.AlignLeft)

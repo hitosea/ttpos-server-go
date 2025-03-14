@@ -1,7 +1,6 @@
 package printer
 
 import (
-	"fmt"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -56,8 +55,6 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
-
-	fmt.Println("sdasdsa")
 
 	// 获取打印内容
 	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
