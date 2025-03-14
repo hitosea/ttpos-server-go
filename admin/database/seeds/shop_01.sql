@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
     `status` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消。',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
+    -- 收银员名称
+    `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
+
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID。系统自动创建的销售账单，收银员ID为0',
@@ -88,6 +91,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
+    -- 收银员名称
+    `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',

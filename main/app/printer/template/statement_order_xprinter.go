@@ -15,26 +15,26 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// statementOrderImgTemplate 图片订单打印模板
-type statementOrderImgTemplate struct {
+// statementOrderXprinterTemplate XPrinter订单打印模板
+type statementOrderXprinterTemplate struct {
 	base *printerTemplate
 }
 
-// NewStatementOrderImgTemplate 创建新的图片订单打印模板
-func NewStatementOrderImgTemplate(
+// NewStatementOrderXprinterTemplate 创建新的XPrinter订单打印模板
+func NewStatementOrderXprinterTemplate(
 	ctx context.Context,
 	setting *setting.Srv,
 	storeSetting *respSetting.Store,
 	printerSetting *respSetting.Printer,
 	currencySetting *respSetting.Currency,
-) *statementOrderImgTemplate {
-	return &statementOrderImgTemplate{
+) *statementOrderXprinterTemplate {
+	return &statementOrderXprinterTemplate{
 		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
 	}
 }
 
-// ImgPrint 图片打印
-func (t *statementOrderImgTemplate) GetPrintContent(
+// GetPrintnrContent 获取打印内容
+func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printType int,
 	temp int,
 	saleBill *model.SaleBill,
@@ -315,7 +315,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		}
 		discountPrice := orderBuffetCustomer.GetDiscountPrice()
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: buffetNameText, Width: 310, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: buffetNameText, Width: 320, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
 		)

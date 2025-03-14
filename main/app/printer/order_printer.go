@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -56,7 +57,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingStatementOrderContent(printType, saleBill, saleOrder)
+	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
 
 	// 添加打印日志，依赖打印日志服务
 	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -70,7 +71,8 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		DataType:        constant.PrinterLogDataTypeReturnDish,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		// FirstExecution:  FirstExecution,
+		FirstExecution: 0,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -95,6 +97,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
+	printerType string,
 	printType int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -103,35 +106,45 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	tmp := p.GetPrinterTemplate(uint64(printType))
 
 	// 图片打印
-	if p.printerSetting.PrintMethod == "2" {
-		return template.NewStatementOrderImgTemplate(
+	// if p.printerSetting.PrintMethod == "2" {
+	// 	return template.NewStatementOrderImgTemplate(
+	// 		p.ctx,
+	// 		p.setting,
+	// 		&p.storeSetting,
+	// 		&p.printerSetting,
+	// 		&p.currencySetting,
+	// 	).GetPrintContent(printType, tmp, saleBill, saleOrder)
+	// }
+
+	// /* *
+	// * Compax 收银打印机 80mm 自带
+	// */
+	// if (printerType == constant.PrinterTypeCompax80mm || printerType == constant.PrinterTypeCompax80mm) {
+	//     return (new CompaxBillTemplate(p.setting, nil, false)).create(saleOrder, printerType, false)
+	// }
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+		return template.NewStatementOrderXprinterTemplate(
 			p.ctx,
 			p.setting,
 			&p.storeSetting,
 			&p.printerSetting,
 			&p.currencySetting,
-		).ImgPrint(printType, tmp, saleBill, saleOrder)
+		).GetPrintContent(printType, tmp, saleBill, saleOrder)
 	}
-
-	// 获取打印机类型
-	// var printerType string
-	// if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
-	// 	printerType = printerItem.Printer.PrinterType.Key
+	// /* *
+	// * 商米打印机
+	// */
+	// if ($isSunmi) {
+	//     return (new SunmiBillTemplate($this->setting, null, $isSunmi))->create($order, $printerType, $isPrePrint);
 	// }
-
-	// // CODESOFT 打印机
-	// if printerItem.Printer != nil && slices.Contains([]string{
-	// 	constant.PrinterTypeCodesoftLan,
-	// 	constant.PrinterTypeCodesoftWifi,
-	// }, printerType) {
-	// 	t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-	// 	return t.CompleteOrder(tmp, printerItem, saleBill, products)
-	// }
-
-	// // 商米和芯烨打印机
-	// if printerItem.Printer != nil {
-	// 	t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
-	// 	return t.CompleteOrder(tmp, printerItem, saleBill, products)
+	// /* *
+	// * CODESOFT 打印机
+	// */
+	// if (in_array($printerType, [ PrinterTypeEnum::CODESOFT_LAN, PrinterTypeEnum::CODESOFT_WIFI])) {
+	//     return (new CodesoftBillTemplate($this->setting, null, $isSunmi))->create($order, $printerType, $isPrePrint);
 	// }
 
 	return ""

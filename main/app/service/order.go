@@ -851,12 +851,12 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	// 处理额外信息
 	order := saleBill.SaleOrders[0]
 	orderExtra := resp.BillListsExtra{
-		IsCellRefund:        false, // todo 待完善
-		IsCellCancel:        false, // todo 待完善
+		IsCellRefund:        false,
+		IsCellCancel:        order.Status == constant.SaleBillStatusPending,
 		IsCellReverseSettle: saleBill.IsCellReverseSettle(),
-		IsCellPrint:         (!isSplit || !isMain) && order.Status != constant.SaleBillStatusPending,
+		IsCellPrint:         true,
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
-		IsCellInvoice:       false, // todo 待完善
+		IsCellInvoice:       false,
 	}
 	if (!isSplit || !isMain) && order.IsFree == 0 && saleBill.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 		orderExtra.IsCellRefund = true

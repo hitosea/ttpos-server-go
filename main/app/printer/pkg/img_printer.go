@@ -1281,37 +1281,73 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	height := bounds.Dy()
 	bw := (width-1)/8 + 1
 
-	// 初始化返回的字节数组
+	// 预分配足够的空间
 	rv := make([]byte, height*bw+4)
 
 	// 设置头部信息（宽度和高度）
-	// xL
-	rv[0] = byte(bw & 0xFF)
-	// xH
-	rv[1] = byte((bw >> 8) & 0xFF)
-	// yL
-	rv[2] = byte(height & 0xFF)
-	// yH
-	rv[3] = byte((height >> 8) & 0xFF)
+	rv[0] = byte(bw & 0xFF)       // xL
+	rv[1] = byte((bw >> 8) & 0xFF) // xH
+	rv[2] = byte(height & 0xFF)    // yL
+	rv[3] = byte((height >> 8) & 0xFF) // yH
 
-	// 获取图像的像素数据
+	// 优化：预处理行索引和移位计算
+	rowOffsets := make([]int, height)
 	for i := 0; i < height; i++ {
-		for j := 0; j < width; j++ {
-			// 获取像素颜色
-			r, g, b, _ := bitmap.At(j+bounds.Min.X, i+bounds.Min.Y).RGBA()
+		rowOffsets[i] = i * width
+	}
 
-			// 转换为8位值
-			red := uint8(r >> 8)
-			green := uint8(g >> 8)
-			blue := uint8(b >> 8)
+	// 优化：预计算每个像素的移位量
+	shifts := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		shifts[i] = byte(7 - i)
+	}
 
-			// 转换为灰度值
-			gray := RGB2Gray(red, green, blue)
+	// 优化：使用类型断言加速常见图像类型的访问
+	switch img := bitmap.(type) {
+	case *image.RGBA:
+		// 直接访问 RGBA 图像的像素数据
+		pix := img.Pix
+		stride := img.Stride
+		for y := 0; y < height; y++ {
+			rowOffset := y * stride
+			for x := 0; x < width; x++ {
+				i := rowOffset + x*4
+				red := pix[i]
+				green := pix[i+1]
+				blue := pix[i+2]
+				
+				// 转换为灰度值
+				gray := RGB2Gray(red, green, blue)
+				
+				// 设置相应位
+				pixelIndex := rowOffsets[y] + x
+				index := pixelIndex/8 + 4
+				shift := pixelIndex % 8
+				rv[index] |= (gray << shifts[shift])
+			}
+		}
+	default:
+		// 对于其他类型的图像，使用通用方法
+		for y := 0; y < height; y++ {
+			rowOffset := rowOffsets[y]
+			for x := 0; x < width; x++ {
+				// 获取像素颜色
+				r, g, b, _ := bitmap.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
 
-			// 设置相应位
-			index := (width*i+j)/8 + 4
-			shift := 7 - ((width*i + j) % 8)
-			rv[index] |= (gray << shift)
+				// 转换为8位值
+				red := uint8(r >> 8)
+				green := uint8(g >> 8)
+				blue := uint8(b >> 8)
+
+				// 转换为灰度值
+				gray := RGB2Gray(red, green, blue)
+
+				// 设置相应位
+				pixelIndex := rowOffset + x
+				index := pixelIndex/8 + 4
+				shift := pixelIndex % 8
+				rv[index] |= (gray << shifts[shift])
+			}
 		}
 	}
 
@@ -1321,8 +1357,10 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 
 // RGB2Gray 将RGB转换为二值灰度值
 func RGB2Gray(red, green, blue uint8) byte {
-	// 计算加权灰度值
-	gray := float64(red)*0.299 + float64(green)*0.587 + float64(blue)*0.114
+	// 使用整数运算替代浮点运算，提高性能
+	// 使用标准的灰度转换权重：R:0.299, G:0.587, B:0.114
+	// 转换为整数计算: 30% R + 59% G + 11% B
+	gray := (30*uint32(red) + 59*uint32(green) + 11*uint32(blue)) / 100
 
 	// 如果上过阈值则为0，否则为1
 	if gray > 127 {
