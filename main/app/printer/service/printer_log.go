@@ -13,7 +13,6 @@ import (
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/jinzhu/copier"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -44,10 +43,10 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	// 标记进行中
 	printerLogData.Status = constant.PrinterLogStatusInProgress
 
-	// 如果是局域网部署 - 就都下放打印
-	if viper.GetBool("IS_CLOUD_DEPLOY") {
-		printerLogData.Type = constant.PrinterLogTypeCloud
-	}
+	// // 如果是局域网部署 - 就都下放打印
+	// if viper.GetBool("IS_CLOUD_DEPLOY") {
+	// 	printerLogData.Type = constant.PrinterLogTypeCloud
+	// }
 
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()

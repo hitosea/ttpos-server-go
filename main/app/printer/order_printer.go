@@ -74,6 +74,11 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		return nil, errors.WithMessage(err, "添加打印日志失败")
 	}
 
+	// 代表由服务器进行发送打印
+	if printerLogData.Type == 0 {
+		return &resp.PrinterData{}, nil
+	}
+
 	// 打印
 	return &resp.PrinterData{
 		Data:          printerLogData.Data,

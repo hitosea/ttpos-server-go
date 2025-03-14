@@ -323,8 +323,8 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		if delay.IsDelete() {
 			continue
 		}
-		productNum += saleBill.MealNum
-		discountPrice := delay.GetPrice(saleBill.MealNum)
+		productNum += delay.Num
+		discountPrice := delay.GetAmount()
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: delay.Name, Width: 320, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), saleBill.MealNum), Width: 120, Align: pkg.AlignCenter},
