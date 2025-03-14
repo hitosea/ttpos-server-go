@@ -2,11 +2,12 @@
 
 namespace app\shop\controller\store;
 
-use app\common\library\helper;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\model\order\UserRechargeOrderOperationLog;
 use app\common\model\order\UserRechargeOrder as UserRechargeOrderModel;
+use app\shop\service\order\UserRechargeExportService;
+use help\HttpHelp;
+use think\facade\Log;
 
 /**
  * 充值订单（v1.1.0）
@@ -29,36 +30,69 @@ class UserRechargeOrder extends Controller
      */
     public function index()
     {
-        // 订单列表
-        $model = new UserRechargeOrderModel();
+        // 获取参数
         $data = $this->postData();
-        $dataType = $data['data_type'] ?? 'all';
-        // 时间类型
-        if (isset($data['time_type']) && !in_array($data['time_type'], ['', 0, 1, 2, 3])) {
-            return $this->renderError('时间类型参数错误');
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/list', $this->buildListQueryParams($data), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        // 时间模式
-        if (isset($data['time_mode']) && !is_array($data['time_mode'])) {
-            return $this->renderError('时间模式参数错误');
+
+        foreach ($result['data']['list'] as &$item) {
+            $item['payment_time'] = $item['payment_time'] ? date('Y-m-d H:i:s', $item['payment_time']) : '';
         }
-        // 订单类型
-        if (!in_array($dataType, ['all', 'payment', 'process', 'complete', 'cancel'])) {
-            return $this->renderError('订单类型参数错误');
+
+        return $this->renderSuccess('', $result['data']);
+    }
+
+    /**
+     * 构建列表查询参数
+     */
+    private function buildListQueryParams($data)
+    {
+        // 搜索日期类型: 0全部 1今天 2昨天 3本周
+        $dateType = $data['time_type'] - 1;
+        // 搜索订单号
+        $orderNo = $data['order_no'] ?? '';
+        // 搜索日期范围
+        $enableCreateTime = false;
+        $enablePaymentTime = false;
+        $queryStartTime = 0;
+        $queryEndTime = 0;
+        $times = $data['time'] ?? [];
+        if (!empty($times)) {
+            $queryStartTime = strtotime($times[0]);
+            $queryEndTime = strtotime($times[1]);
+            $enableCreateTime = in_array(0, $data['time_mode']);
+            $enablePaymentTime = in_array(1, $data['time_mode']);
         }
-        //
-        $data['order_type'] = 1;
-        $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
-        $list = $model->getList($dataType, $data);
-        $order_count = [
-            'order_count' => [
-                'all' => $model->getCount('all', $data),
-                'payment' => $model->getCount('payment', $data),
-                'process' => $model->getCount('process', $data),
-                'complete' => $model->getCount('complete', $data),
-                'cancel' => $model->getCount('cancel', $data),
-            ],
+        // 搜索订单状态: all全部 payment待付款 cancel已取消 complete已完成
+        $status = [
+            'all' => -1,
+            'payment' => 0,
+            'complete' => 1,
+            'cancel' => 2,
+        ][$data['data_type']];
+
+        return [
+            'date_type' => $dateType, // 日期类型: -1全部 0今天 1昨天 2本周
+            'order_no' => $orderNo, // 订单号
+            'enable_create_time' => $enableCreateTime, // true启用添加时间 false禁用添加时间
+            'enable_payment_time' => $enablePaymentTime, // true启用支付时间 false禁用支付时间
+            'query_start_time' => $queryStartTime, // 起始时间
+            'query_end_time' => $queryEndTime, // 结束时间
+            'status' => $status, // 订单状态: -1全部 0待付款 1已完成 2已取消
+            'page' => intval($data['page'] ?? 1),
+            'page_size' => intval($data['list_rows'] ?? 10),
         ];
-        return $this->renderSuccess('', compact('list', 'order_count'));
     }
 
     /**
@@ -71,13 +105,29 @@ class UserRechargeOrder extends Controller
     public function detail()
     {
         $data = $this->postData();
-        $id = $data['id'] ?? 0;
-        // 订单详情
-        $detail = UserRechargeOrderModel::detail($id);
-        // 操作日志
-        $operationLog = UserRechargeOrderOperationLog::getLogList($id);
-        //
-        return $this->renderSuccess('', compact('detail', 'operationLog'));
+        $uuid = $data['id'] ?? 0;
+
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/info', ['uuid' => $uuid], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+
+        $result['data']['payment_time'] = $result['data']['payment_time'] ? date('Y-m-d H:i:s', $result['data']['payment_time']) : '';
+
+        foreach ($result['data']['operation_log']['list'] as &$item) {
+            $item['create_time'] = $item['create_time'] ? date('Y-m-d H:i:s', $item['create_time']) : '';
+        }
+
+        return $this->renderSuccess('', $result['data']);
     }
 
     /**
@@ -93,27 +143,27 @@ class UserRechargeOrder extends Controller
      */
     public function export()
     {
-        $model = new UserRechargeOrderModel();
         $data = $this->postData();
         $data['list_rows'] = 1000;
-        $dataType = $data['data_type'] ?? 'all';
-        $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
-        // 时间类型
-        if (isset($data['time_type']) && !in_array($data['time_type'], [0, 1, 2, 3])) {
-            return $this->renderError('时间类型参数错误');
+        Log::debug('data:' . json_encode($data));
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/list', $this->buildListQueryParams($data), [
+            'Authorization: Bearer ' . $data['token'],
+            'Accept-Language: ' . $data['language'],
+        ]);
+
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        // 时间模式
-        if (isset($data['time_mode']) && !is_array($data['time_mode'])) {
-            return $this->renderError('时间模式参数错误');
-        }
-        // 订单类型
-        if (!in_array($dataType, ['all', 'payment', 'process', 'complete', 'cancel'])) {
-            return $this->renderError('订单类型参数错误');
-        }
-        if ($model->exportList($dataType, $data)) {
-            return $this->renderSuccess('操作成功');
-        }
-        return $this->renderError($model->getError() ?: '操作失败');
+
+        $list = $result['data']['list'];
+
+        // 导出excel文件
+        return (new UserRechargeExportService)->orderList($list);
     }
 
     /**
@@ -127,15 +177,23 @@ class UserRechargeOrder extends Controller
     public function cancel()
     {
         $data = $this->postData();
-        /** @var UserRechargeOrderModel $model */
-        $model = UserRechargeOrderModel::detail($data['id'] ?? 0);
-        if (!$model) {
-            return $this->renderError('数据不存在');
+        $uuid = $data['id'] ?? 0;
+
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/recharge_order/cancel', json_encode(['uuid' => intval($uuid)]), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        if ($model->cancel($data)) {
-            return $this->renderSuccess('操作成功');
-        }
-        return $this->renderError($model->getError() ?: '操作失败');
+        
+        return $this->renderError('操作成功');
     }
 
     /**
@@ -167,21 +225,45 @@ class UserRechargeOrder extends Controller
     public function refund()
     {
         $data = $this->request->param(); // get post
-        /** @var UserRechargeOrderModel $model */
-        $model = UserRechargeOrderModel::detail($data['id'] ?? 0);
-        if (!$model) {
-            return $this->renderError('数据不存在');
-        }
         if ($this->request->isGet()) {
-            $info = $model->toArray();
-            $info['cell_refund_money'] = floatval(helper::bcsub($info['recharge_money'], $info['refund_money']));
-            $pay_list = $model->payTypeCellRefundMoneys();
+            // 请求获取充值订单列表接口
+            $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/refund', ['uuid' => $data['id'] ?? 0], [
+                'Authorization: Bearer ' . request()->header('token'),
+                'Accept-Language: ' . request()->header('language'),
+            ]);
+            if (!$res) {
+                return $this->renderError('请求失败');
+            } 
+            $result = json_decode($res, true);
+            if (($result['code'] ?? -1) != 0) {
+                return $this->renderError($result['message'] ?? '请求失败');
+            }
+
+            $info = $result['data'];
+            $pay_list = $result['data']['payment_records'];
+
             return $this->renderSuccess('', compact('info', 'pay_list'));
         }
-        if ($model?->refund($data)) {
-            return $this->renderSuccess('操作成功');
+
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/recharge_order/refund', json_encode([
+            'uuid' => intval($data['id']),
+            'refund_type' => intval($data['refund_type']),
+            'refund_money' => floatval($data['refund_money']),
+        ]), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        return $this->renderError($model?->getError() ?: '操作失败', $model->getErrorData(), $model->getErrorCode());
+
+        return $this->renderSuccess('操作成功');
     }
 
     /**

@@ -13,6 +13,9 @@ type RechargeOrderItem struct {
 	PaymentMethods []string               `json:"payment_methods"` // 支付方式
 	GiftAmount     float64                `json:"gift_amount"`     // 赠送金额
 	GiftPoint      float64                `json:"gift_point"`      // 赠送积分
+	MemberUuid     uint64                 `json:"member_uuid"`     // 会员uuid
+	RefundMoney    float64                `json:"refund_money"`    // 退款金额
+	Cashier        RechargeOrderCashier   `json:"cashier"`         // 收银员
 	Extra          RechargeOrderItemExtra `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
 

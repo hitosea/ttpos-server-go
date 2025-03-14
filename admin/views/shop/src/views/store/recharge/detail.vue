@@ -7,7 +7,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单类型：') }}</span>
-              {{ detail.order_type_text }}
+              {{ $t('充值订单') }}
             </div>
           </el-col>
           <el-col :span="6">
@@ -16,47 +16,45 @@
               {{ detail.order_no }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.user">
+          <el-col :span="6" v-if="detail.member">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail.user?.user_id }})</span>
+              <span>{{ $t('会员ID') }}&nbsp;({{ detail.member?.uuid }})</span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ proxy.$formatPrice(detail.order_price) }}
+              {{ proxy.$formatPrice(detail.recharge_amount) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
               <span v-if="currency.is_open == 1" style="padding-left: 8px">
                 <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ proxy.$formatPrice(Number(detail.order_price) * Number(currency.vices?.unit_rate)) }}
+                {{ proxy.$formatPrice(Number(detail.recharge_amount) * Number(currency.vices?.unit_rate)) }}
                 <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.order_status == 1">
+          <el-col :span="6" v-if="detail.status == 1">
             <div class="pb16">
               <span class="gray9">{{ $t('实付金额：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ proxy.$formatPrice(detail.actual_price || 0) }}
+              {{ proxy.$formatPrice(detail.amount || 0) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.order_status == 1" v-for="item in detail.payType">
+          <el-col :span="6" v-if="detail.status == 1" v-for="item in detail.payment_methods">
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
                 {{ item.name }}
-                <template v-if="item.source_text && item.value != 40 && item.value != 10 && item.value != -1"> ({{ item.source_text }}) </template>
-                <el-tag class="ml-8" v-if="item.pay_status == '0'" type="danger" size="large">{{ $t('异常') }}</el-tag>
               </span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('交易状态：') }}</span>
-              {{ detail.order_status == 0 ? $t('进行中') : detail.order_status == -1 ? $t('已取消') : $t('已完成') }}
+              {{ detail.status == 0 ? $t('进行中') : detail.status == 2 ? $t('已取消') : $t('已完成') }}
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.cashier">
@@ -68,7 +66,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('支付时间：') }}</span>
-              {{ detail.pay_time_text || '-' }}
+              {{ detail.payment_time || '-' }}
             </div>
           </el-col>
         </el-row>
@@ -79,8 +77,8 @@
       </div>
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%">
-          <el-table-column prop="recharge_money" :label="$t('充值金额')"></el-table-column>
-          <el-table-column prop="gift_money" :label="$t('赠送金额')"></el-table-column>
+          <el-table-column prop="recharge_amount" :label="$t('充值金额')"></el-table-column>
+          <el-table-column prop="gift_amount" :label="$t('赠送金额')"></el-table-column>
           <el-table-column prop="gift_point" :label="$t('赠送积分')"></el-table-column>
         </el-table>
       </div>
@@ -92,7 +90,7 @@
           <el-timeline-item v-for="(activity, index) in activities" placement="top" :key="index" :color="activity.color" :hollow="activity.hollow" :timestamp="activity.timestamp">
             <div class="flex">
               {{ activity.content }}
-              <template v-if="(activity.pay_type || []).length > 0">
+              <!-- <template v-if="(activity.pay_type || []).length > 0">
                 <template v-if="activity.refund_type == '2'">(</template>
                 <span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
                   <span>{{ item.name }}:{{ item.unit + proxy.$formatPrice(item.price) }}</span>
@@ -108,7 +106,7 @@
                   <span v-if="itemIndex < (activity.pay_type || []).length - 1">，</span>
                 </span>
                 <template v-if="activity.refund_type == '2'">)</template>
-              </template>
+              </template> -->
             </div>
           </el-timeline-item>
         </el-timeline>
@@ -117,14 +115,14 @@
     <div class="common-button-wrapper">
       <el-button size="small" @click="cancelFunc">{{ $t('返回') }}</el-button>
       <el-button
-        v-if="detail.order_status == 1 && Number(detail.refund_money) < Number(detail.pay_price)"
+        v-if="detail.extra?.is_cell_refund"
         @click="refundClick(detail)"
         type="danger"
         size="small"
         v-auth="'/store/recharge/refund'"
         >{{ $t('退款') }}</el-button
       >
-      <el-button v-if="detail.order_status == 0" @click="cancelClick(detail)" type="danger" size="small" v-auth="'/store/recharge/cancel'">{{ $t('取消') }} </el-button>
+      <el-button v-if="detail.extra?.is_cell_cancel" @click="cancelClick(detail)" type="danger" size="small" v-auth="'/store/recharge/cancel'">{{ $t('取消') }} </el-button>
     </div>
 
     <!--处理-->
@@ -144,6 +142,7 @@
   import Cancel from './dialog/cancel.vue';
   import refund from './dialog/refund.vue';
   import refundAgain from './dialog/refundAgain.vue';
+  import { message } from '@/utils/message.js';
 
   const route = useRoute();
   const router = useRouter();
@@ -242,28 +241,25 @@
       const res = await OrderApi.getRechargeOrderDetail({
         id: route.query.id,
       });
-      detail.value = res.data.detail;
-
+      detail.value = res.data;
       tableData.value = [];
       tableData.value.push({
-        recharge_money: detail.value.recharge_money,
-        gift_money: detail.value.gift_money,
+        recharge_amount: detail.value.recharge_amount,
+        gift_amount: detail.value.gift_amount,
         gift_point: detail.value.gift_point,
       });
 
       activities.value = [];
-      res.data.operationLog.map((item) => {
+      res.data.operation_log.list.map((item) => {
         activities.value.push({
-          refund_type: item.refund_type,
-          pay_type: item.pay_type,
+          // refund_type: item.refund_type,
+          // pay_type: item.pay_type,
           content: item.description,
           timestamp:
             item.create_time +
             ' ' +
             $t('操作人：') +
-            (item.user_name ? item.user_name + (item.user_email ? `(${item.user_email})` : '') : item.user_email || '') +
-            ' ' +
-            item.source,
+            (item.real_name ? item.real_name + (item.username ? `(${item.username})` : '') : item.username || ''),
           color: '#0bbd87',
         });
       });
@@ -286,9 +282,44 @@
 
   /*打开取消*/
   const cancelClick = (item) => {
-    order_no.value = item.order_no;
-    id.value = item.id;
-    open_edit.value = true;
+    id.value = item.uuid;
+    ElMessageBox.confirm($t('是否取消此订单?'), $t('提示'), {
+      confirmButtonText: $t('确定'),
+      cancelButtonText: $t('取消'),
+      type: 'warning',
+    })
+      .then(async () => {
+        await cancelSubmit();
+        await getDetail();
+      })
+      .catch(() => {
+        this.$ElMessage({
+          type: 'info',
+          message: $t('已取消'),
+        });
+      });
+  };
+
+  /*取消订单提交*/
+  const cancelSubmit = async () => {
+    if (loading.value) {
+      return;
+    }
+    loading.value = true;
+    try {
+      const params = {
+        id: id.value,
+      };
+      const res = await OrderApi.getRechargeOrderCancel(params, true);
+      const type = res.code == 1 ? 'success' : 'error';
+      loading.value = false;
+      message({
+        message: res.msg,
+        type: type,
+      });
+    } catch (error) {
+      loading.value = false;
+    }
   };
 
   /*关闭弹窗*/

@@ -47,20 +47,26 @@ class UserRechargeExportService
         $index = 0;
         foreach ($list as $order) {
             $payType = '';
-            foreach ($order['payType'] as $pay) {
-                $payType .= $pay['name'] . '、';
+            foreach ($order['payment_methods'] as $pay) {
+                $payType .= $pay . '、';
             }
-            $sheet->setCellValue('A' . ($index + 2), $order['order_type_text']); //订单类型
-            $sheet->setCellValue('B' . ($index + 2), $order['recharge_money']); //充值金额
-            $sheet->setCellValue('C' . ($index + 2), $order['gift_money']); //赠送金额
+            $order['order_status_text'] = [
+                0 => __('进行中'),
+                1 => __('已完成'),
+                2 => __('已取消')
+            ][$order['status']];
+            $order['pay_time_text'] = $order['payment_time'] ? date('Y-m-d H:i:s', $order['payment_time']) : '';
+            $sheet->setCellValue('A' . ($index + 2), __('充值订单')); //订单类型
+            $sheet->setCellValue('B' . ($index + 2), $order['recharge_amount']); //充值金额
+            $sheet->setCellValue('C' . ($index + 2), $order['gift_amount']); //赠送金额
             $sheet->setCellValue('D' . ($index + 2), $order['gift_point']); //赠送积分
             $sheet->setCellValue('E' . ($index + 2), "\t" . $order['order_no'] . "\t"); //订单号
             $sheet->setCellValue('F' . ($index + 2), $order['order_status_text']); //状态
             $sheet->setCellValue('G' . ($index + 2), $order['pay_time_text']); //支付时间
-            $sheet->setCellValue('H' . ($index + 2), $order['order_price']); //订单金额
-            $sheet->setCellValue('I' . ($index + 2), Helper::number2($order['pay_price'])); //实付金额
+            $sheet->setCellValue('H' . ($index + 2), $order['recharge_amount']); //订单金额
+            $sheet->setCellValue('I' . ($index + 2), Helper::number2($order['amount'])); //实付金额
             $sheet->setCellValue('J' . ($index + 2), $order['refund_money'] ?? 0); //退款金额
-            $sheet->setCellValue('K' . ($index + 2), $order['user'] ? __('会员') . 'ID' . '(' . $order['user']['user_id'] . ')' : ''); //会员
+            $sheet->setCellValue('K' . ($index + 2), $order['member_uuid'] ? __('会员') . 'ID' . '(' . $order['member_uuid'] .  ')' : ''); //会员
             $sheet->setCellValue('L' . ($index + 2), trim($payType, '、')); //支付方式
             $sheet->setCellValue('M' . ($index + 2), $order['cashier'] ? $order['cashier']['real_name'] : ''); //收银员
 

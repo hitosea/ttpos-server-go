@@ -178,7 +178,7 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// RegisterOrderHandlers 注册收银订单路由
+// RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

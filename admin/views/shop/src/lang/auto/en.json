@@ -1808,5 +1808,7 @@
     "税费，包含商品税费、服务费税费": "Taxes, including product taxes and service fee taxes",
     "会员ID：": "Member ID:",
     "总销售额：": "Total Sales:",
-    "（以上计算都不包含会员充值金额）": "(The above calculation does not include member top-up amounts)"
+    "（以上计算都不包含会员充值金额）": "(The above calculation does not include member top-up amounts)",
+    "店内就餐": "Dine in",
+    "是否取消此订单?": "Do you want to cancel this order?"
 }

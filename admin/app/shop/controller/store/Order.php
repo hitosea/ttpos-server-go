@@ -135,7 +135,7 @@ class Order extends Controller
         // 搜索日期类型: '0'-全部 '1'-今天 '2'-昨天 '3'-本周
         $dateType = intval($data['time_type']) - 1;
         // 搜索订单类型: ''-全部 '10'-桌台 '20-点餐
-        $billType = intval(trim($data['order_source']) ?: -1);
+        $billType = intval(trim($data['order_source']) ?? -1);
         if ($billType == 10) {
             $billType = 0;
         }
