@@ -71,8 +71,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		DataType:        constant.PrinterLogDataTypeReturnDish,
 		Data:            printContent,
 		Type:            1,
-		// FirstExecution:  FirstExecution,
-		FirstExecution: 0,
+		FirstExecution:  FirstExecution,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
