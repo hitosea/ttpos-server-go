@@ -102,7 +102,8 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-	//
+	// 订单列表中取消订单不需要密码
+	req.NotNeedPassword = true
 	err := h.service.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

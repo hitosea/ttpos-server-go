@@ -765,10 +765,11 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
+		// 取消订单的时候，不删除销售订单
+		// err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
+		// if err != nil {
+		// 	return errors.WithMessage(err)
+		// }
 		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
 		if err != nil {
 			return errors.WithMessage(err)
@@ -794,9 +795,9 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 			Where("uuid = ?", saleBillUuid).
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
-				"status":      constant.SaleBillStatusCanceled,
-				"delete_time": timeNow,
-				"reason":      reason,
+				"status": constant.SaleBillStatusCanceled,
+				// "delete_time": timeNow, // 取消订单的时候，不删除销售账单
+				"reason": reason,
 			}).Error
 	})
 	if err != nil {

@@ -984,8 +984,11 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if s.settingSrv == nil {
 		return errors.New("找不到 settingSrv")
 	}
-	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
-		return errors.WithMessage(err)
+	// 如果不需要验证高级密码，则跳过
+	if !req.NotNeedPassword {
+		if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password); err != nil {
+			return errors.WithMessage(err)
+		}
 	}
 
 	// 获取信息源
