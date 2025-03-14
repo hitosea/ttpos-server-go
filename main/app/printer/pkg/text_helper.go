@@ -20,20 +20,23 @@ func (h *PrintTextHelper) GetTextWidth(text string) int {
 	// 泰语检测
 	thaiRegex := regexp.MustCompile(`[\p{Thai}฿]`)
 	if thaiRegex.MatchString(text) {
+		// 1. 提取所有泰语字符序列 (相当于 preg_match_all)
 		thaiMatches := thaiRegex.FindAllString(text, -1)
 		ttf := strings.Join(thaiMatches, "")
+		// 2. 计算泰语字符的基本宽度 (相当于 grapheme_strlen)
 		w := utf8.RuneCountInString(ttf)
-
-		// 检查特殊字符
+		// 3. 检查特殊字符 "ำ" 并增加宽度
+		// (相当于 preg_split 和 foreach 循环检查 "ำ")
 		for _, r := range ttf {
 			if string(r) == "ำ" {
 				w++
 			}
 		}
-
-		// 转换为GBK计算长度
+		// 4. 从原文本中移除泰语字符
+		textWithoutThai := thaiRegex.ReplaceAllString(text, "")
+		// 5. 转换为GBK并添加长度 (相当于 iconv 和 strlen)
 		encoder := simplifiedchinese.GBK.NewEncoder()
-		gbkStr, _, _ := transform.String(encoder, text)
+		gbkStr, _, _ := transform.String(encoder, textWithoutThai)
 		w += len(gbkStr)
 		return w
 	}
