@@ -15,7 +15,7 @@ func NewDeviceRepository(dbm *database.DBManager) *DeviceRepository {
 
 func (r *DeviceRepository) Unbind(companyId uint64, source string, key string, staffId uint) error {
 	return r.dbm.GetDB(companyId).Model(&model.Device{}).Select("finally_login_id").
-		Where("`source` = ? AND `key` = ? AND `finally_login_id` = ?", source, key, staffId).Debug().
+		Where("`source` = ? AND `key` = ? AND `finally_login_id` = ?", source, key, staffId).
 		Updates(map[string]interface{}{
 			"finally_login_id": 0,
 		}).Error

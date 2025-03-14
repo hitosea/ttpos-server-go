@@ -39,35 +39,27 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 
 // AddLog 添加打印日志
 func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) {
-	var err error
+	// 获取打印日志仓库
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	// 标记进行中
 	printerLogData.Status = constant.PrinterLogStatusInProgress
-
-	// // 如果是局域网部署 - 就都下放打印
-	// if viper.GetBool("IS_CLOUD_DEPLOY") {
-	// 	printerLogData.Type = constant.PrinterLogTypeCloud
-	// }
-
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()
-
 	// 如果是商米云打印 - 就都队列打印
 	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
 		printerLogData.Type = constant.PrinterLogTypeDefault
 	}
-
 	// 打印机不存在
 	if printer.PrinterType == "" {
 		printerLogData.Status = constant.PrinterLogStatusEnd
 		printerLogData.Reason = "打印机不存在"
 	}
-
 	// 保存数据
 	printerLogData.PrinterTime = time.Now().Unix()
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
-	printerLog, err = printerLogRepo.Create(printerLog)
+	printerLog.Data = printerLog.CompressData()
+	printerLog, err := printerLogRepo.Create(printerLog)
 	if err != nil {
 		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)

@@ -470,7 +470,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderChangePopulation 处理桌台订单调整自助餐
+// OrderChangeBuffet 处理桌台订单调整自助餐
 // @Summary 桌台订单调整自助餐
 // @Description 桌台订单调整自助餐
 // @Tags 收银端.桌台
@@ -499,7 +499,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// OrderChangePopulation 处理桌台订单自助餐加钟
+// OrderChangeBuffetClock 处理桌台订单自助餐加钟
 // @Summary 桌台订单自助餐加钟
 // @Description 桌台订单自助餐加钟
 // @Tags 收银端.桌台

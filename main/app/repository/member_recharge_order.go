@@ -75,7 +75,7 @@ func (r *memberRechargeOrderRepo) PaginateGetRechargeOrder(pageNo int, pageSize 
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取列表
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("create_time desc").Find(&rechargeOrders).Error
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("create_time desc").Find(&rechargeOrders).Error
 	return rechargeOrders, total, errors.WithMessage(err)
 }
 

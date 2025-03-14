@@ -55,6 +55,9 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
+	// 获取打印内容
+	printContent := p.getPrintingStatementOrderContent(printType, saleBill, saleOrder)
+
 	// 添加打印日志，依赖打印日志服务
 	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 		PrinterType: settingPrinterInfo.PrinterType,
@@ -65,7 +68,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
 		DataType:        constant.PrinterLogDataTypeReturnDish,
-		Data:            p.getPrintingStatementOrderContent(printType, saleBill, saleOrder),
+		Data:            printContent,
 		Type:            1,
 		FirstExecution:  FirstExecution,
 	}, "")
@@ -100,7 +103,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	tmp := p.GetPrinterTemplate(uint64(printType))
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
+	if p.printerSetting.PrintMethod == "2" {
 		return template.NewStatementOrderImgTemplate(
 			p.ctx,
 			p.setting,

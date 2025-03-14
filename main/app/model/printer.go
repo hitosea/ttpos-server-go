@@ -2,6 +2,9 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -77,6 +80,64 @@ type PrinterLog struct {
 
 	Printer  *Printer  `gorm:"foreignKey:PrinterUuid;references:Uuid"` // 关联 printer
 	SaleBill *SaleBill `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 关联 sale_order
+}
+
+// 压缩数据
+func (model *PrinterLog) CompressData() string {
+	data := model.Data
+	if data == "" {
+		return data
+	}
+	var result strings.Builder
+	zeroCount := 0
+	for i := 0; i < len(data); i++ {
+		if data[i] == '0' {
+			zeroCount++
+			// 检查后面是否还有字符
+			if i == len(data)-1 || data[i+1] != '0' {
+				if zeroCount >= 10 {
+					result.WriteString(fmt.Sprintf("-zero%d-", zeroCount))
+				} else {
+					result.WriteString(strings.Repeat("0", zeroCount))
+				}
+				zeroCount = 0
+			}
+		} else {
+			if zeroCount > 0 {
+				if zeroCount >= 10 {
+					result.WriteString(fmt.Sprintf("-zero%d-", zeroCount))
+				} else {
+					result.WriteString(strings.Repeat("0", zeroCount))
+				}
+				zeroCount = 0
+			}
+			result.WriteByte(data[i])
+		}
+	}
+	return result.String()
+}
+
+// 还原压缩的数据
+func (model *PrinterLog) DecompressData() string {
+	data := model.Data
+	if data == "" {
+		return data
+	}
+	// 使用正则表达式匹配 "-zeroX-" 格式的字符串，其中X是数字
+	re := regexp.MustCompile(`-zero(\d+)-`)
+	result := re.ReplaceAllStringFunc(data, func(match string) string {
+		// 提取数字部分
+		numStr := re.FindStringSubmatch(match)[1]
+		// 转换为数字
+		num, err := strconv.Atoi(numStr)
+		if err != nil {
+			return match
+		}
+		// 返回对应数量的0
+		return strings.Repeat("0", num)
+	})
+
+	return result
 }
 
 // PrinterReadLog 打印读取日志表 ttpos_printer_read_log
