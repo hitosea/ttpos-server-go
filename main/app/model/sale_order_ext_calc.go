@@ -346,6 +346,24 @@ func (model *SaleOrder) calcSumOrderProductCustomerDiscountPrice() float64 {
 	return sumCustomerPrice.InexactFloat64()
 }
 
+// 计算自助餐加钟商品价格之和。等于所有自助餐加钟商品价格之和
+func (model *SaleOrder) calcSumOrderProductBuffetDelayPrice() float64 {
+	sumBuffetDelayPrice := decimal.NewFromFloat(0)
+	for _, orderBuffetDelay := range model.SaleOrderBuffetDelayProducts {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetDelay.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetDelay.IsDelete() {
+			continue
+		}
+		// 自助餐加钟商品价格之和
+		amount := decimal.NewFromFloat(orderBuffetDelay.GetAmount())
+		sumBuffetDelayPrice = sumBuffetDelayPrice.Add(amount)
+	}
+	return sumBuffetDelayPrice.InexactFloat64()
+}
+
 // 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格CustomerPrice之和 + 自助餐加钟商品价格Price之和
 func (model *SaleOrder) calcProductOriginalAmount() float64 {
 	sumSaleOrderProduct := model.calcSumOrderProductSalePrice()
@@ -360,8 +378,11 @@ func (model *SaleOrder) calcProductAmount() float64 {
 	sumOrderProductPrice := model.calcSumOrderProductPrice()
 	// 自助餐顾客价格Price之和
 	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
+	// 自助餐加钟商品价格之和
+	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
-		decimal.NewFromFloat(sumCustomerPrice)).InexactFloat64() // todo + 自助餐加钟商品价格之和
+		decimal.NewFromFloat(sumCustomerPrice)).Add(
+		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
 }
 
 // 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和
@@ -407,29 +428,70 @@ func (model *SaleOrder) calcOriginProductTaxFee(taxFeeType int) float64 {
 	return taxFee.InexactFloat64()
 }
 
-// 计算销售订单的自定义优惠折扣金额。订单自定义优惠金额=销售订单商品自定义优惠金额之和 + 自助餐顾客自定义优惠金额之和
-// todo 考虑每个价格循环一次商品列表计算带来的性能损耗与计算业务更清晰抉择哪个
-func (model *SaleOrder) calcCustomDiscountFee() float64 {
-	customDiscountFee := decimal.NewFromFloat(0)
+// 计算销售订单商品自定义优惠金额之和
+func (model *SaleOrder) calcSumOrderProductCustomDiscountFee() float64 {
+	sumCustomDiscountFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
 		// 已经移动到其他订单的商品不计
 		if orderProduct.SaleOrderUuid != model.Uuid {
 			continue
 		}
-		if orderProduct.IsAcceptOrderBool() && !orderProduct.IsDelete() {
-			// 赠菜？免费了不计入
-			// 退菜？退了不计入
-			if orderProduct.IsGiftBool() || orderProduct.IsCancelBool() {
-				continue
-			}
-			// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额
-			customDiscountFee = customDiscountFee.Add(
-				decimal.NewFromFloat(orderProduct.CustomDiscountFee))
+		// 未接单的商品不计入
+		if !orderProduct.IsAcceptOrderBool() {
+			continue
 		}
+		// 删除的商品不计入
+		if orderProduct.IsDelete() {
+			continue
+		}
+		// 赠菜？免费了不计入
+		// 退菜？退了不计入
+		if orderProduct.IsGiftBool() || orderProduct.IsCancelBool() {
+			continue
+		}
+
+		// 累加各个订单商品的自定义优惠金额
+		sumCustomDiscountFee = sumCustomDiscountFee.Add(
+			decimal.NewFromFloat(orderProduct.CustomDiscountFee))
 	}
-	// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额
+	return sumCustomDiscountFee.InexactFloat64()
+}
+
+// 计算销售订单自助餐顾客自定义优惠金额之和
+func (model *SaleOrder) calcSumOrderBuffetCustomerCustomDiscountFee() float64 {
+	sumOrderBuffetCustomerCustomDiscountFee := decimal.NewFromFloat(0)
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetCustomer.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 累加各个订单自助餐顾客的自定义优惠金额
+		sumOrderBuffetCustomerCustomDiscountFee = sumOrderBuffetCustomerCustomDiscountFee.Add(
+			decimal.NewFromFloat(orderBuffetCustomer.CustomDiscountFee))
+	}
+	return sumOrderBuffetCustomerCustomDiscountFee.InexactFloat64()
+}
+
+// 计算销售订单的自定义优惠折扣金额。订单自定义优惠金额=销售订单商品自定义优惠金额之和 + 自助餐顾客自定义优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
+func (model *SaleOrder) calcCustomDiscountFee() float64 {
+	customDiscountFee := decimal.NewFromFloat(0)
+	// 销售订单商品自定义优惠金额之和
+	sumOrderProductCustomDiscountFee := model.calcSumOrderProductCustomDiscountFee()
+	// 自助餐顾客自定义优惠金额之和
+	sumOrderBuffetCustomerCustomDiscountFee := model.calcSumOrderBuffetCustomerCustomDiscountFee()
+	// 订单抹零金额
+	zeroFee := model.calcZeroFee()
+	// 赠菜商品的金额之和
+	sumGiftAmount := model.CalcGiftAmount()
+	// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
 	customDiscountFee = customDiscountFee.Add(
-		decimal.NewFromFloat(model.calcZeroFee()))
+		decimal.NewFromFloat(sumOrderProductCustomDiscountFee)).Add(
+		decimal.NewFromFloat(sumOrderBuffetCustomerCustomDiscountFee)).Add(
+		decimal.NewFromFloat(zeroFee)).Add(
+		decimal.NewFromFloat(sumGiftAmount))
 	// todo  + 自助餐顾客自定义优惠金额之和
 	return customDiscountFee.InexactFloat64()
 }
