@@ -106,15 +106,15 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	tmp := p.GetPrinterTemplate(uint64(printType))
 
 	// 图片打印
-	// if p.printerSetting.PrintMethod == "2" {
-	// 	return template.NewStatementOrderImgTemplate(
-	// 		p.ctx,
-	// 		p.setting,
-	// 		&p.storeSetting,
-	// 		&p.printerSetting,
-	// 		&p.currencySetting,
-	// 	).GetPrintContent(printType, tmp, saleBill, saleOrder)
-	// }
+	if p.printerSetting.PrintMethod == "2" {
+		return template.NewStatementOrderImgTemplate(
+			p.ctx,
+			p.setting,
+			&p.storeSetting,
+			&p.printerSetting,
+			&p.currencySetting,
+		).GetPrintContent(printType, tmp, saleBill, saleOrder)
+	}
 
 	// /* *
 	// * Compax 收银打印机 80mm 自带
