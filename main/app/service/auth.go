@@ -309,6 +309,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return cashierBase, errors.WithMessage(err)
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -326,6 +330,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		},
 		Tablet:  tabletSetting,
 		Payment: paymentSetting,
+		Printer: printerSetting,
 	}, nil
 }
 

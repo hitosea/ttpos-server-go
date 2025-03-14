@@ -1,6 +1,7 @@
 package assistant
 
 import (
+	"go.uber.org/zap"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -18,7 +19,7 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	Service service.IDeskSrv // 主服务
+	deskSrv service.IDeskSrv // 主服务
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -34,7 +35,7 @@ type DeskHandler struct {
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 处理获取桌台的区域和类型的逻辑
-	res, err := h.Service.GetDeskRegionAndTypeList(companyId)
+	res, err := h.deskSrv.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -65,7 +66,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskList(ctx, companyId, deskListReq)
+	res, err := h.deskSrv.GetDeskList(ctx, companyId, deskListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
@@ -95,12 +96,46 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.Service.GetDeskInfo(companyId, deskInfoReq.Uuid)
+	res, err := h.deskSrv.GetDeskInfo(companyId, deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
 		return
 	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// CreateDeskOrder 处理创建开台
+// @Summary 开台
+// @Description 开台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeskOrderCreateReq true "开台参数"
+// @Success 200 {object} resp.CreateDeskOrderResp "开台成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/open [post]
+func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
+
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskOrderCreateReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+
+	// 创建桌台订单
+	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
+	// 处理错误
+	if err != nil {
+		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -120,7 +155,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 创建处理程序
 	wrapper := DeskHandler{
-		Service: service.NewDeskSrv(
+		deskSrv: service.NewDeskSrv(
 			dbm,        // 数据库管理器
 			localeSrv,  // 多语言服务
 			orderSrv,   // 订单服务
@@ -135,5 +170,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)
 		privateApi.GET("/desk/list", wrapper.GetDeskList)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder) // 创建桌台订单(开桌)
 	}
 }
