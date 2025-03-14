@@ -1281,6 +1281,31 @@ func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPrint 打印
+// @Summary 打印
+// @Description 打印
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintReq true "打印"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /cashier/desk/order/print [post]
+func (h *DeskHandler) OrderPrint(c *gin.Context) {
+	var printReq req.OrderPrintReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1352,5 +1377,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
 		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
+		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印
 	}
 }
