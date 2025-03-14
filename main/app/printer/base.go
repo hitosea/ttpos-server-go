@@ -34,8 +34,7 @@ type PrinterRepoImpl struct {
 	storeSetting    respSetting.Store
 	printerSetting  respSetting.Printer
 	currencySetting respSetting.Currency
-	Lang            string           // 可选语言参数
-	base            *PrinterRepoImpl // 用于获取基础配置
+	Lang            string // 可选语言参数
 }
 
 func NewPrinterRepo(ctx context.Context, opts ...string) PPrinterRepo {
@@ -77,11 +76,8 @@ func NewPrinterRepo(ctx context.Context, opts ...string) PPrinterRepo {
 		printerRepo.Lang = opts[0]
 	} else {
 		// 使用打印机设置中的默认语言
-		printerRepo.Lang = printerSetting.KitchenLanguage
+		printerRepo.Lang = printerSetting.DefaultLanguage
 	}
-
-	// 设置基础配置
-	printerRepo.base = printerRepo
 
 	return printerRepo
 }
