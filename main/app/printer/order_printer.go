@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -20,29 +21,29 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printType int,
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
-) (bool, error) {
+) (*resp.PrinterLogData, error) {
 	// todo 设备id没对
 
 	// 获取打印设置
 	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
 	if err != nil {
-		return false, errors.WithMessage(err, "获取打印设置失败")
+		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
 
 	// 未开启打印
 	if !settingPrinterInfo.IsCashierOpen {
-		return false, errors.WithMessage(err, "未开启打印, 请联系管理员")
+		return nil, errors.WithMessage(err, "未开启打印, 请联系管理员")
 	}
 
 	// 未配置打印机
 	if settingPrinterInfo.PrinterType == "" {
-		return false, errors.WithMessage(err, "未配置打印机, 请联系管理员")
+		return nil, errors.WithMessage(err, "未配置打印机, 请联系管理员")
 	}
 
 	// 获取销售订单信息
 	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
 	if saleOrder == nil {
-		return false, errors.WithMessage(err, "销售订单不存在")
+		return nil, errors.WithMessage(err, "销售订单不存在")
 	}
 
 	// 如果是云打印, cashierBindKey 等于自己
@@ -58,10 +59,12 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}
 
 	// 打印日志服务
-	pinterLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
+	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
+
+	fmt.Println(settingPrinterInfo.PrinterConfig)
 
 	// 添加打印日志，依赖打印日志服务
-	_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 		PrinterType:   settingPrinterInfo.PrinterType,
 		PrinterConfig: settingPrinterInfo.PrinterConfig,
 		PrintCopies:   settingPrinterInfo.Copies,
@@ -78,11 +81,11 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
-		return false, errors.WithMessage(err, "添加打印日志失败")
+		return nil, errors.WithMessage(err, "添加打印日志失败")
 	}
 
 	// 打印
-	return true, nil
+	return &printerLogData, nil
 }
 
 // 构建订单打印的内容

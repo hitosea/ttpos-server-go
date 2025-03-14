@@ -1289,7 +1289,7 @@ func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderPrintReq true "打印"
-// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "结账页面信息"
 // @Router /cashier/desk/order/print [post]
 func (h *DeskHandler) OrderPrint(c *gin.Context) {
 	var printReq req.OrderPrintReq

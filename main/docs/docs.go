@@ -3062,7 +3062,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                            "$ref": "#/definitions/resp.PrinterData"
                                         }
                                     }
                                 }
@@ -4899,7 +4899,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                            "$ref": "#/definitions/resp.PrinterData"
                                         }
                                     }
                                 }
@@ -9941,7 +9941,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "uuid": {
-                    "description": "销售订单商品UUID, 必填",
+                    "description": "销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid",
                     "type": "integer"
                 }
             }
@@ -14384,6 +14384,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrinterData": {
+            "type": "object",
+            "properties": {
+                "copies": {
+                    "description": "打印机.份数",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "打印数据",
+                    "type": "string"
+                },
+                "print_method": {
+                    "description": "打印方式 1文本打印, 2图片打印'",
+                    "type": "integer"
+                },
+                "printer_config": {
+                    "description": "打印机.配置",
+                    "type": "string"
+                },
+                "printer_type": {
+                    "description": "打印机.类型",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }

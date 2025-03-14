@@ -92,7 +92,7 @@ type IOrderSrv interface {
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                               // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                        // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error)                                            // 打印
+	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
 }
 
 // orderSrv 订单服务结构
@@ -5543,7 +5543,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 }
 
 // OrderPrint 打印
-func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error) {
+func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.PrinterData, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -5565,7 +5565,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
-	_, err = printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+	printerLogData, err := printer.NewPrinterRepo(ctx).PrintingStatementOrder(
 		constant.PrinterTemplatePreBilling,
 		saleBill,
 		saleOrder.Uuid,
@@ -5574,9 +5574,12 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.WithMessage(err)
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	return infoResp, nil
+	return &resp.PrinterData{
+		Data:          printerLogData.Data,
+		PrintMethod:   printerLogData.PrintMethod,
+		Uuid:          printerLogData.Uuid,
+		Copies:        printerLogData.Copies,
+		PrinterType:   printerLogData.PrinterType,
+		PrinterConfig: printerLogData.PrinterConfig,
+	}, nil
 }

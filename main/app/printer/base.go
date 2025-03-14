@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/printer_model"
@@ -22,7 +23,7 @@ import (
 // PPrinterRepo 打印
 type PPrinterRepo interface {
 	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
-	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64) (bool, error)
+	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterLogData, error)
 }
 
 type PrinterRepoImpl struct {
