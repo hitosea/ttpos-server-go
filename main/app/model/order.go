@@ -933,9 +933,9 @@ type SaleOrderBuffetDelayProduct struct {
 	BaseModel
 
 	// 数值字段
-	Name string `gorm:"default:'';column:name;comment:'自助餐加钟商品名称，下单时固定不受后台改变'"`
-	// 废弃，直接使用桌台人数即可
-	//Num   uint    `gorm:"default:0;column:num;comment:'数量'"`
+	Name      string  `gorm:"default:'';column:name;comment:'自助餐加钟商品名称，下单时固定不受后台改变'"`
+	Num       uint    `gorm:"default:0;column:num;comment:'数量,默认是等于桌台人数。但拆单移动后等于移动的数量；调整自助餐人数后，同一个加钟商品（不管此时被拆分为多少个单）的数量等于桌台人数'"`
+	Sign      string  `gorm:"default:'';column:sign;comment:'加钟商品签名。生成uuid,用于标识不同拆单中的加钟商品是不是同一次加购的。在同一个子单中相同签名的加钟商品要合并'"`
 	Price     float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:'价格（单价）,下单时固定不受后台改变，结账时再检查是否改变'"`
 	DelayTime int64   `gorm:"column:delay_time;type:decimal(12,2);default:0;comment:'加钟时间'"`
 
@@ -944,10 +944,34 @@ type SaleOrderBuffetDelayProduct struct {
 	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
 }
 
+func (model *SaleOrderBuffetDelayProduct) SetNil() {
+
+}
+
+func (model *SaleOrderBuffetDelayProduct) GetSign() string {
+	return model.Sign // 创建加钟商品的时候就生产的uuid，保证绝对唯一。不管该商品移动到哪个子单，只要该uuid一样就是同一个加钟商品
+}
+
+func (model *SaleOrderBuffetDelayProduct) CopyBuffetDelayProduct(saleOrderUuid uint64) *SaleOrderBuffetDelayProduct {
+	delayProduct := SaleOrderBuffetDelayProduct{}
+	err := copier.Copy(&delayProduct, model)
+	if err != nil {
+		return nil
+	}
+	// 重置base_model
+	delayProduct.BaseModel = BaseModel{}
+	delayProduct.SetNil()
+	// 指定目标销售订单。如果不移动到别的销售订单可以修改销售订单uuid
+	if saleOrderUuid != 0 {
+		delayProduct.SaleOrderUuid = saleOrderUuid
+	}
+	return &delayProduct
+}
+
 // 获取商品的价格。单价*数量
-func (model *SaleOrderBuffetDelayProduct) GetPrice(num uint) float64 {
-	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromInt(int64(num))).Round(2).InexactFloat64()
-	return price
+func (model *SaleOrderBuffetDelayProduct) GetAmount() float64 {
+	amount := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromInt(int64(model.Num))).Round(2).InexactFloat64()
+	return amount
 }
 
 // 销售订单优惠策略表

@@ -485,6 +485,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_delay_product` (
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格,下单时固定不受后台改变，结账时再检查是否改变',
     `delay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '加钟时间(分钟)',
+    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '加钟商品签名。生成uuid,用于标识不同拆单中的加钟商品是不是同一次加购的。在同一个子单中相同签名的加钟商品要合并',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

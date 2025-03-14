@@ -32,6 +32,7 @@ type IOrderRepo interface {
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
 	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                             // 删除销售订单自助餐顾客类型
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)     // 创建销售订单自助餐加钟
+	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                    // 更新销售订单自助餐加钟
 	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
 	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
@@ -142,12 +143,22 @@ func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) erro
 }
 
 // CreateSaleOrderBuffetDelayProduct 创建销售订单自助餐加钟
-func (r *orderRepo) CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error) {
-	err := r.db.Create(&model).Error
+func (r *orderRepo) CreateSaleOrderBuffetDelayProduct(obj model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error) {
+	obj.SetNil()
+	fmt.Println("CreateSaleOrderBuffetDelayProduct: ", utils.ToJsonString(obj))
+	err := r.db.Model(&model.SaleOrderBuffetDelayProduct{}).Create(&obj).Error
 	if err != nil {
-		return model, fmt.Errorf("CreateSaleOrderBuffetDelayProduct: %v", err)
+		return obj, errors.WithMessage(fmt.Errorf("CreateSaleOrderBuffetDelayProduct: %v", err))
 	}
-	return model, nil
+	return obj, nil
+}
+
+func (r *orderRepo) UpdateSaleOrderBuffetDelayProductRecord(obj model.SaleOrderBuffetDelayProduct) error {
+	obj.SetNil()
+	if obj.NoPrimaryKey() {
+		return errors.WithMessage(errors.New("UUID或ID不能为0"))
+	}
+	return r.db.Model(&model.SaleOrderBuffetDelayProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 // GetOrderListWithPagination 获取订单列表
