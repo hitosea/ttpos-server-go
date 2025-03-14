@@ -63,6 +63,7 @@ type IOrderSrv interface {
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                         // 修改订单人数
 	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                 // 调整自助餐
 	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                       // 调整自助餐
+	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                    // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                             // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                               // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                     // 创建销售账单设置
@@ -2404,6 +2405,27 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	}
 
 	return info, nil
+}
+
+// OrderDeskBuffetProductList 获取桌台的自助餐商品列表. 实现思路：通过账单uuid获取该账单的自助餐套餐，然后通过自助餐套餐uuid获取该自助餐套餐的商品列表
+func (s *orderSrv) OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	// 获取销售账单
+	saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillBuffetProductList(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	buffetProductList := saleBill.GetBuffetProductList()
+
+	return &buffetProductList, nil
 }
 
 // GetSaleBillByDeskId  获取桌台账单信息

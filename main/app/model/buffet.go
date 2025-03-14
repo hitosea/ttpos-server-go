@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/dto/resp"
+
 // BuffetPackage 自助餐套餐信息表 ttpos_buffet_package
 type BuffetPackage struct {
 	BaseModel
@@ -17,6 +19,18 @@ type BuffetPackage struct {
 	BuffetCustomerTypePrices []BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 	BuffetProducts           []BuffetProduct           `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
 	Tax                      *Tax                      `gorm:"foreignKey:tax_uuid;references:uuid"`
+}
+
+func (model *BuffetPackage) GetBuffetProductList() resp.BuffetProductList {
+	buffetProductList := resp.BuffetProductList{}
+	buffetProductList.List = make([]resp.BuffetProduct, 0)
+	for _, buffetProduct := range model.BuffetProducts {
+		buffetProductList.List = append(buffetProductList.List, resp.BuffetProduct{
+			Uuid: buffetProduct.ProductPackageUuid,
+			Name: buffetProduct.ProductPackage.Name,
+		})
+	}
+	return buffetProductList
 }
 
 // 获取自助餐税率。
@@ -74,7 +88,7 @@ type BuffetProduct struct {
 	IsShowAssistant    uint   `gorm:"default:0;column:is_show_assistant;comment:是否在助手显示, 0-否、1-是"`
 	Limit              uint   `gorm:"default:0;column:limit;comment:限购数量"`
 
-	ProductPackage *ProductPackage `gorm:"foreignKey:buffet_package_uuid;references:uuid"`
+	ProductPackage *ProductPackage `gorm:"foreignKey:product_package_uuid;references:uuid"`
 }
 
 // BuffetDelay 自助餐加钟价格表 `ttpos_buffet_delay`

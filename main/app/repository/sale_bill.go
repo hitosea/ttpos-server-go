@@ -19,6 +19,7 @@ type ISaleBillRepo interface {
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
 	GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                         // 获取最新的一条点餐销售账单
+	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)  // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 }
 
@@ -168,6 +169,49 @@ func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 		if utils.IsNotFoundRecord(err) {
 			return nil, nil
 		}
+		return nil, errors.WithMessage(err)
+	}
+	return &saleBill, nil
+}
+
+func (r *saleBillRepo) GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByUuid(saleBillUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "BuffetPackage1.BuffetProducts.ProductPackage",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "BuffetPackage1.BuffetProducts",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "BuffetPackage1.BuffetProducts.ProductPackage",
+			},
+			WithPreload{
+				Query: "BuffetPackage2",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "BuffetPackage2.BuffetProducts",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "BuffetPackage2.BuffetProducts.ProductPackage",
+			},
+		),
+	)
+	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
