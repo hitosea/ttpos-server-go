@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -171,4 +172,12 @@ func DecimalSub(f1 float64, fs ...float64) float64 {
 		num = num.Sub(decimal.NewFromFloat(f))
 	}
 	return num.InexactFloat64()
+}
+
+// ParseFloat 将字符串数字转为数字
+func ParseFloat(numStr string) (float64, error) {
+	if numStr == "" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(numStr, 64)
 }

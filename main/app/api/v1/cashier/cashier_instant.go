@@ -846,7 +846,7 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 	}
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
 	// 从一个销售订单移动商品到另一个销售订单
-	res, err := h.orderService.InstantOrderSaleOrderMoveProduct(ctx, params, false)
+	res, err := h.orderService.SaleOrderMoveProduct(ctx, params, false)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

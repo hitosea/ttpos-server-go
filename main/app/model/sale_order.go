@@ -65,7 +65,7 @@ type SaleOrder struct {
 	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
 	SaleOrderBuffetCustomerTypes []*SaleOrderBuffetCustomerType `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
-	SaleOrderBuffetDelayProducts []SaleOrderBuffetDelayProduct  `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
+	SaleOrderBuffetDelayProducts []*SaleOrderBuffetDelayProduct `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 }
 
@@ -246,6 +246,22 @@ func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCust
 		Price:                       buffetCustomerTypePricePrice,
 		TaxRate:                     buffetPackageTaxRate,
 		CustomDiscountRate:          1, // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
+	}
+	// 计算金额
+	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)
+	//
+	return saleOrderBuffetCustomerType
+}
+
+func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
+		SaleOrderUuid:               model.Uuid,
+		BuffetPackageUuid:           buffetPackageUuid,
+		BuffetCustomerTypePriceUuid: buffetCustomerTypePriceUuid,
+		Num:                         customerNum,
+		SalePrice:                   buffetCustomerTypePricePrice,
+		TaxRate:                     buffetPackageTaxRate,
+		CustomDiscountRate:          model.CustomDiscountRate, // 跟随订单的自定义折扣
 	}
 	// 计算金额
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)

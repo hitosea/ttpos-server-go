@@ -1,6 +1,10 @@
 package model
 
-import "github.com/shopspring/decimal"
+import (
+	"fmt"
+	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
+)
 
 // SaleOrderBuffetCustomerType 销售订单自助餐顾客类型 `ttpos_sale_order_buffet_customer_type`
 type SaleOrderBuffetCustomerType struct {
@@ -35,6 +39,31 @@ type SaleOrderBuffetCustomerType struct {
 func (model *SaleOrderBuffetCustomerType) SetNil() {
 	model.BuffetPackage = BuffetPackage{}
 	model.BuffetCustomerTypePrice = BuffetCustomerTypePrice{}
+}
+
+// CalcPrice 计算顾客最终单价。顾客最终单价=自助餐顾客类型原价*自定义折扣率
+func (model *SaleOrderBuffetCustomerType) CalcPrice() float64 {
+	model.Price = decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(model.CustomDiscountRate)).Round(2).InexactFloat64()
+	return model.Price
+}
+func (model *SaleOrderBuffetCustomerType) GetSign() string {
+	return fmt.Sprintf("%d-%d", model.BuffetPackageUuid, model.BuffetCustomerTypePriceUuid)
+}
+
+func (model *SaleOrderBuffetCustomerType) CopyBuffetCustomer(saleOrderUuid uint64) *SaleOrderBuffetCustomerType {
+	customerType := SaleOrderBuffetCustomerType{}
+	err := copier.Copy(&customerType, model)
+	if err != nil {
+		return nil
+	}
+	// 重置base_model
+	customerType.BaseModel = BaseModel{}
+	customerType.SetNil()
+	// 指定目标销售订单。如果不移动到别的销售订单可以修改销售订单uuid
+	if saleOrderUuid != 0 {
+		customerType.SaleOrderUuid = saleOrderUuid
+	}
+	return &customerType
 }
 
 // 获取顾客原价. = 原价*人数

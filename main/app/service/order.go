@@ -39,61 +39,61 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                         // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                   // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                             // 获取订单列表
-	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                // 获取订单详情
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                       // 取消订单
-	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                       // 删除订单
-	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                       // 退款订单
-	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                               // 获取退款信息
-	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                               // 获取反结账信息
-	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                              // 反结账
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                  // 判断桌台是否可取消
-	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                          // 挂单
-	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                         // 显示订单
-	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                       // 获取挂单订单列表
-	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                   // 打包
-	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)         // 删除订单商品
-	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                             // 修改订单商品价格
-	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                         // 修改订单金额
-	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                 // 修改订单折扣
-	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                 // 修改订单抹零规则
-	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                     // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
-	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                 // 修改订单人数
-	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                         // 调整自助餐
-	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                               // 调整自助餐
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                     // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                       // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                             // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                             // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                                  // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                              // 向购物车添加商品
-	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
-	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                     // 修改购物车商品数量
-	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)          // 送厨购物车商品
-	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                  // 退菜购物车商品
-	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                        // 退菜购物车商品
-	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                // 转菜购物车商品
-	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                        // 取消赠菜购物车商品
-	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                           // 取消赠菜购物车商品
-	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                 // 获取点餐必点方案
-	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                   // 获取结账页面信息
-	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 给销售订单创建一个支付单
-	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                      // 撤销一个支付单
-	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                  // 给销售订单创建一个支付单
-	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                    // 免单
-	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                  // 设置结账抹零规则
-	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                     // 给销售订单创建一个销售订单
-	InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) // 从一个销售订单移动商品到另一个销售订单
-	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                               // 确认必点商品
-	InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                             // 订单检查
-	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                     // 删除一个销售订单(删除拆单)
-	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                               // 删除所有子销售订单(撤销拆单)
-	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                      // 取消使用会员优惠
-	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 使用会员优惠
-	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                                // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error)                                                    // 打印
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                 // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                           // 创建桌台订单
+	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                     // 获取订单列表
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                        // 获取订单详情
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
+	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                               // 删除订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                               // 退款订单
+	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                       // 获取退款信息
+	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                       // 获取反结账信息
+	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                      // 反结账
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                          // 判断桌台是否可取消
+	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                  // 挂单
+	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                 // 显示订单
+	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                               // 获取挂单订单列表
+	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                           // 打包
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                     // 修改订单商品价格
+	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                 // 修改订单金额
+	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                         // 修改订单折扣
+	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                         // 修改订单抹零规则
+	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                             // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                         // 修改订单人数
+	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                 // 调整自助餐
+	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                       // 调整自助餐
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                             // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                               // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                     // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                     // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                          // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                      // 向购物车添加商品
+	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)  // 送厨购物车商品
+	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                          // 退菜购物车商品
+	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                // 退菜购物车商品
+	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                        // 转菜购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                // 取消赠菜购物车商品
+	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                   // 取消赠菜购物车商品
+	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                         // 获取点餐必点方案
+	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)           // 获取结账页面信息
+	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)              // 给销售订单创建一个支付单
+	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)              // 撤销一个支付单
+	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                          // 给销售订单创建一个支付单
+	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                            // 免单
+	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)          // 设置结账抹零规则
+	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                             // 给销售订单创建一个销售订单
+	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)     // 从一个销售订单移动商品到另一个销售订单
+	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                       // 确认必点商品
+	InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                     // 订单检查
+	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                             // 删除一个销售订单(删除拆单)
+	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                       // 删除所有子销售订单(撤销拆单)
+	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 取消使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                               // 使用会员优惠
+	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                        // 计算并保存销售账单
+	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error)                                            // 打印
 }
 
 // orderSrv 订单服务结构
@@ -329,7 +329,7 @@ func (s *orderSrv) newSaleBillSetting(ctx context.Context, saleBillUuid uint64) 
 				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
 			}
 		}
-		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
+		serviceFeeValue, err = utils.ParseFloat(serviceFeeSetting.ServiceCharge)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -423,7 +423,7 @@ func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId 
 				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
 			}
 		}
-		serviceFeeValue, err = strconv.ParseFloat(serviceFeeSetting.ServiceCharge, 64)
+		serviceFeeValue, err = utils.ParseFloat(serviceFeeSetting.ServiceCharge)
 		if err != nil {
 			return model.SaleBillSetting{}, errors.WithMessage(err)
 		}
@@ -4680,20 +4680,19 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	return cartInfo, nil
 }
 
-func MoreThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
-	return saleOrderProduct.Num > moveNum
+func MoreThanMoveNum(saleOrderProductNum, moveNum uint) bool {
+	return saleOrderProductNum > moveNum
 }
 
 func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
 	return saleOrderProduct.Num < moveNum
 }
 
-func EqualMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
-	return saleOrderProduct.Num == moveNum
+func EqualMoveNum(saleOrderProductNum, moveNum uint) bool {
+	return saleOrderProductNum == moveNum
 }
-
-func IsSameSignature(saleOrderProduct *model.SaleOrderProduct, toSaleOrderProductSignMap map[string]*model.SaleOrderProduct) bool {
-	return toSaleOrderProductSignMap[saleOrderProduct.Sign] != nil
+func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T) bool {
+	return toSaleOrderProductSignMap[sign] != nil
 }
 
 func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error {
@@ -4745,6 +4744,251 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	return nil
 }
 
+// 解析要移动的商品，识别为销售订单商品、顾客、加钟
+func (s *orderSrv) getMoveProductInfo(ctx context.Context, saleOrderFrom *model.SaleOrder, req req.InstantOrderSaleOrderMoveProductReq) ([]*model.SaleOrderProduct, []*model.SaleOrderBuffetCustomerType, []*model.SaleOrderBuffetDelayProduct, error) {
+	// 构建销售订单商品map
+	saleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
+	for index, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.SaleOrderUuid != saleOrderFrom.Uuid {
+			continue
+		}
+		saleOrderProductMap[saleOrderProduct.Uuid] = saleOrderFrom.SaleOrderProducts[index]
+	}
+
+	// 构建顾客map
+	buffetCustomerMap := make(map[uint64]*model.SaleOrderBuffetCustomerType)
+	for index, buffetCustomer := range saleOrderFrom.SaleOrderBuffetCustomerTypes {
+		if buffetCustomer.IsDelete() || buffetCustomer.SaleOrderUuid != saleOrderFrom.Uuid {
+			continue
+		}
+		buffetCustomerMap[buffetCustomer.Uuid] = saleOrderFrom.SaleOrderBuffetCustomerTypes[index]
+	}
+
+	// 构建加钟map
+	buffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
+	for index, buffetDelayProduct := range saleOrderFrom.SaleOrderBuffetDelayProducts {
+		if buffetDelayProduct.IsDelete() || buffetDelayProduct.SaleOrderUuid != saleOrderFrom.Uuid {
+			continue
+		}
+		buffetDelayProductMap[buffetDelayProduct.Uuid] = saleOrderFrom.SaleOrderBuffetDelayProducts[index]
+	}
+
+	// 遍历要移动的商品，识别为销售订单商品、顾客、加钟
+	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
+	buffetCustomers := make([]*model.SaleOrderBuffetCustomerType, 0)
+	buffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0)
+	for _, moveProduct := range req.Products {
+		if saleOrderProduct, ok := saleOrderProductMap[moveProduct.Uuid]; ok {
+			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+			continue
+		}
+		if buffetCustomer, ok := buffetCustomerMap[moveProduct.Uuid]; ok {
+			buffetCustomers = append(buffetCustomers, buffetCustomer)
+			continue
+		}
+		if buffetDelayProduct, ok := buffetDelayProductMap[moveProduct.Uuid]; ok {
+			buffetDelayProducts = append(buffetDelayProducts, buffetDelayProduct)
+			continue
+		}
+		return nil, nil, nil, errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", moveProduct.Uuid))
+	}
+
+	return saleOrderProducts, buffetCustomers, buffetDelayProducts, nil
+}
+
+// moveSaleOrderProduct 从一个销售订单移动商品到另一个销售订单
+// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+// 第二种移动方式：原销售订单商品数量小于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+// 数据处理：
+// 第一种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
+// 第二种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；新建目标销售订单商品，计算金额，表插入记录，数组增加这条记录，计算订单金额
+// 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
+// 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
+func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, saleOrderProducts []*model.SaleOrderProduct, moveNumMap map[uint64]uint, toSaleOrderProductSignMap map[string]*model.SaleOrderProduct) (map[uint64]*model.SaleOrderProduct, map[uint64]*model.SaleOrderProduct, error) {
+	// 需要更新的销售订单商品
+	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
+	// 需要新建的销售订单商品
+	waitCreateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
+
+	// 遍历要移动的订单商品，移动到目标订单中
+	for _, saleOrderProduct := range saleOrderProducts {
+		ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+		moveProductNum, ok := moveNumMap[saleOrderProduct.Uuid]
+		if !ok {
+			return nil, nil, errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
+		}
+		hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
+		// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", toSaleOrderProductSignMap[saleOrderProduct.Sign].SaleOrderUuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 修改原销售订单商品数量，更新记录，重新计算订单金额
+			saleOrderProduct.Num -= moveProductNum
+			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+		}
+
+		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", toSaleOrderProductSignMap[saleOrderProduct.Sign].SaleOrderUuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
+			// 修改原销售订单商品数量，更新记录，重新计算订单金额
+			saleOrderProduct.Num -= moveProductNum
+			// 新建一个销售订单商品，该商品数量为移动数量
+			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
+			newSaleOrderProduct.Num = moveProductNum
+			// 计算商品数据。折扣、税费、服务
+			discountInfo := saleOrderTo.GetDiscountInfo()
+			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+			newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+			// 在目标销售订单中新建一个销售订单商品
+			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
+			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
+		}
+
+		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
+			saleOrderProduct.DeleteTime = time.Now().Unix()
+			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+		}
+
+		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
+			discountInfo := saleOrderTo.GetDiscountInfo()
+			saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
+			saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+			// 计算商品数据。折扣、税费、服务
+			saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
+			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
+			// 记录到待更新列表中
+			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+		}
+	}
+
+	return waitUpdateSaleOrderProductMap, waitCreateSaleOrderProductMap, nil
+}
+
+// moveBuffetCustomer 移动自助餐顾客
+func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, buffetCustomers []*model.SaleOrderBuffetCustomerType, moveNumMap map[uint64]uint, toBuffetCustomerSignMap map[string]*model.SaleOrderBuffetCustomerType) (map[uint64]*model.SaleOrderBuffetCustomerType, map[uint64]*model.SaleOrderBuffetCustomerType, error) {
+	// 需要更新的销售订单顾客
+	waitUpdateBuffetCustomerMap := make(map[uint64]*model.SaleOrderBuffetCustomerType)
+	// 需要新建的销售订单顾客
+	waitCreateBuffetCustomerMap := make(map[uint64]*model.SaleOrderBuffetCustomerType)
+
+	// 遍历要移动的订单顾客，移动到目标订单中
+	for _, buffetCustomer := range buffetCustomers {
+		ctx.Log().Debug("移动顾客", zap.Any("buffetCustomer", buffetCustomer.Name))
+		moveCustomerNum, ok := moveNumMap[buffetCustomer.Uuid]
+		if !ok {
+			return nil, nil, errors.WithMessage(errors.New("顾客可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", buffetCustomer.Uuid))
+		}
+		hasHandle := false // 是否已经处理过。因为一个顾客被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
+		// 第一种移动方式：原销售订单顾客数量大于移动数量，则原销售订单顾客数量减少移动数量，目标销售订单中有签名一样的顾客，该顾客数量增加移动数量
+		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动顾客，第一种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", toBuffetCustomerSignMap[buffetCustomer.GetSign()].SaleOrderUuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
+			// 修改原销售订单顾客数量，更新记录，重新计算订单金额
+			buffetCustomer.Num -= moveCustomerNum
+			// 修改目标销售订单顾客数量，更新记录，重新计算订单金额
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			// 记录到待更新列表中
+			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
+			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
+		}
+
+		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动顾客，第二种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", toBuffetCustomerSignMap[buffetCustomer.GetSign()].SaleOrderUuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
+			ctx.Log().Debug("移动顾客", zap.Any("原销售订单商品修改前数量", buffetCustomer.Num))
+			// 修改原销售订单商品数量，更新记录，重新计算订单金额
+			buffetCustomer.Num -= moveCustomerNum
+			// 新建一个销售订单商品，该商品数量为移动数量
+			newBuffetCustomer := buffetCustomer.CopyBuffetCustomer(saleOrderTo.Uuid)
+			newBuffetCustomer.Num = moveCustomerNum
+			// 计算商品数据。折扣、税费、服务
+			newBuffetCustomer.CustomDiscountRate = saleOrderTo.CustomDiscountRate
+			newBuffetCustomer.CalcSaleOrderBuffetCustomerType(*saleBill.SaleBillSetting)
+			// 在目标销售订单中新建一个销售订单商品
+			saleOrderTo.SaleOrderBuffetCustomerTypes = append(saleOrderTo.SaleOrderBuffetCustomerTypes, newBuffetCustomer)
+			// 记录到待更新列表中
+			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
+			waitCreateBuffetCustomerMap[newBuffetCustomer.Uuid] = newBuffetCustomer
+			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", buffetCustomer.Num), zap.Any("目标销售订单商品数量", newBuffetCustomer.Num))
+		}
+
+		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
+			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
+			buffetCustomer.DeleteTime = time.Now().Unix()
+			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			// 记录到待更新列表中
+			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
+			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
+		}
+
+		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+			hasHandle = true
+			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
+			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
+			buffetCustomer.SaleOrderUuid = saleOrderTo.Uuid
+			buffetCustomer.CustomDiscountRate = saleOrderTo.CustomDiscountRate
+			// 计算商品数据。折扣、税费、服务
+			buffetCustomer.CalcSaleOrderBuffetCustomerType(*saleBill.SaleBillSetting)
+			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
+			saleOrderTo.SaleOrderBuffetCustomerTypes = append(saleOrderTo.SaleOrderBuffetCustomerTypes, buffetCustomer)
+			// 记录到待更新列表中
+			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
+		}
+	}
+
+	return waitUpdateBuffetCustomerMap, waitCreateBuffetCustomerMap, nil
+}
+
+// moveBuffetCustomer 移动加钟商品
+func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]uint, toBuffetCustomerSignMap map[string]*model.SaleOrderBuffetDelayProduct) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
+	// 需要更新的销售订单顾客
+	waitUpdateBuffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
+	waitCreateBuffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
+
+	// 遍历要移动的订单顾客，移动到目标订单中
+	for _, delayProduct := range delayProducts {
+		ctx.Log().Debug("移动顾客", zap.Any("delayProduct", delayProduct.Name))
+		//moveProductNum, ok := moveNumMap[delayProduct.Uuid]
+		//if !ok {
+		//	return nil, nil, errors.WithMessage(errors.New("顾客可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", delayProduct.Uuid))
+		//}
+		//hasHandle := false // 是否已经处理过。因为一个顾客被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
+
+	}
+
+	return waitUpdateBuffetDelayProductMap, waitCreateBuffetDelayProductMap, nil
+}
+
 // InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
 // 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
 // 第二种移动方式：原销售订单商品数量小于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
@@ -4755,7 +4999,7 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 // 第二种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；新建目标销售订单商品，计算金额，表插入记录，数组增加这条记录，计算订单金额
 // 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
 // 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
-func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) {
+func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error) {
 	saleBillUuid := req.SaleBillUuid
 	// 加锁
 	if ctx.NoLock() {
@@ -4822,7 +5066,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 
 		hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct, moveProduct.Num) && IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProduct.Num) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 			// 修改原销售订单商品数量，更新记录，重新计算订单金额
@@ -4835,7 +5079,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		}
 
 		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct, moveProduct.Num) && !IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProduct.Num) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
@@ -4857,7 +5101,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		}
 
 		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct, moveProduct.Num) && IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProduct.Num) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
@@ -4870,7 +5114,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 		}
 
 		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct, moveProduct.Num) && !IsSameSignature(saleOrderProduct, toSaleOrderProductSignMap) {
+		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProduct.Num) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", moveProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
@@ -4921,7 +5165,7 @@ func (s *orderSrv) InstantOrderSaleOrderMoveProduct(ctx context.Context, req req
 			}
 		}
 
-		// 当删除拆单时
+		// 当删除拆单时. needDeleteSaleOrder使用场景：1.删除某个子单，移动完商品后，需要删除该子单；2.撤销拆单，移动完商品后，需要删除所有子单
 		if needDeleteSaleOrder {
 			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
 				return errors.WithMessage(err)
@@ -5112,7 +5356,7 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 	}
 
 	if len(moveProductList) > 0 {
-		shopCart, err := s.InstantOrderSaleOrderMoveProduct(ctx, moveProductReq, true)
+		shopCart, err := s.SaleOrderMoveProduct(ctx, moveProductReq, true)
 		if err != nil {
 			ctx.Log().Error("移动商品失败", zap.Error(err))
 			return nil, errors.WithMessage(err)
@@ -5188,7 +5432,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 
 		if len(moveProductList) > 0 {
 			// todo 优化减少重复查询
-			_, err := s.InstantOrderSaleOrderMoveProduct(ctx, moveProductReq, true)
+			_, err := s.SaleOrderMoveProduct(ctx, moveProductReq, true)
 			if err != nil {
 				ctx.Log().Error("移动商品失败", zap.Error(err))
 				return nil, errors.WithMessage(err)

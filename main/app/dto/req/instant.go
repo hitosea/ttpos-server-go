@@ -133,7 +133,7 @@ type InstantOrderSaleOrderMoveProductReq struct {
 
 // MoveProduct 移动商品
 type MoveProduct struct {
-	Uuid uint64 `json:"uuid"` // 销售订单商品UUID, 必填
+	Uuid uint64 `json:"uuid"` // 销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid
 	Num  uint   `json:"num"`  // 移动数量, 必填
 }
 
