@@ -38,6 +38,8 @@ func (m *MultiLanguageName) GetNameByLang(lang string) string {
 		return m.ThName
 	case "en":
 		return m.EnName
+	case "zhtw":
+		return m.ZhTwName
 	case "zh_tw":
 		return m.ZhTwName
 	case "ja":

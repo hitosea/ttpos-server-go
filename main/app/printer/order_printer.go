@@ -107,15 +107,25 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(printType))
 
+	// 创建打印机实例
+	base := template.NewPrinterTemplate(
+		p.ctx,
+		p.setting,
+		&p.storeSetting,
+		&p.printerSetting,
+		&p.currencySetting,
+		false,
+		p.Lang,
+	)
+
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
-		return template.NewStatementOrderImgTemplate(
-			p.ctx,
-			p.setting,
-			&p.storeSetting,
-			&p.printerSetting,
-			&p.currencySetting,
-		).GetPrintContent(printType, tmp, saleBill, saleOrder)
+		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
+			printType,
+			tmp,
+			saleBill,
+			saleOrder,
+		)
 	}
 
 	// /* *
@@ -124,18 +134,20 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	// if (printerType == constant.PrinterTypeCompax80mm || printerType == constant.PrinterTypeCompax80mm) {
 	//     return (new CompaxBillTemplate(p.setting, nil, false)).create(saleOrder, printerType, false)
 	// }
+
 	/* *
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewStatementOrderXprinterTemplate(
-			p.ctx,
-			p.setting,
-			&p.storeSetting,
-			&p.printerSetting,
-			&p.currencySetting,
-		).GetPrintContent(printerType, printType, tmp, saleBill, saleOrder)
+		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
+			printerType,
+			printType,
+			tmp,
+			saleBill,
+			saleOrder,
+		)
 	}
+
 	// /* *
 	// * 商米打印机
 	// */

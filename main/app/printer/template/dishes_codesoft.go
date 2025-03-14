@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
-	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/pkg/context"
 )
 
 // printerTemplate Codesoft菜品打印模板
@@ -20,14 +17,10 @@ type dishesCodesoftTemplate struct {
 
 // NewdishesCodesoftTemplate 创建新的Codesoft菜品打印模板
 func NewDishesCodesoftTemplate(
-	ctx context.Context,
-	setting *setting.Srv,
-	storeSetting *respSetting.Store,
-	printerSetting *respSetting.Printer,
-	currencySetting *respSetting.Currency,
+	base *printerTemplate,
 ) *dishesCodesoftTemplate {
 	return &dishesCodesoftTemplate{
-		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
+		base: base,
 	}
 }
 

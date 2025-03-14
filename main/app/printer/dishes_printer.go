@@ -24,6 +24,8 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	saleBillUuid uint64,
 	products printer_model.Products,
 ) bool {
+	// 设置语言
+	p.Lang = p.printerSetting.KitchenLanguage
 
 	// 获取商品打印机列表
 	productPrinters, err := p.getProductPrinterList()
@@ -186,9 +188,20 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 ) string {
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
 
+	// 创建打印机实例
+	base := template.NewPrinterTemplate(
+		p.ctx,
+		p.setting,
+		&p.storeSetting,
+		&p.printerSetting,
+		&p.currencySetting,
+		false,
+		p.Lang,
+	)
+
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
-		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesImgTemplate(base)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
@@ -203,13 +216,13 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
-		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesCodesoftTemplate(base)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesXprinterTemplate(base)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
 
@@ -225,9 +238,20 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 ) string {
 	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
 
+	// 创建打印机实例
+	base := template.NewPrinterTemplate(
+		p.ctx,
+		p.setting,
+		&p.storeSetting,
+		&p.printerSetting,
+		&p.currencySetting,
+		false,
+		p.Lang,
+	)
+
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
-		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesImgTemplate(base)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
@@ -242,13 +266,13 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
-		t := template.NewDishesCodesoftTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesCodesoftTemplate(base)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesXprinterTemplate(base)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
@@ -261,15 +285,26 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
+	// 创建打印机实例
+	base := template.NewPrinterTemplate(
+		p.ctx,
+		p.setting,
+		&p.storeSetting,
+		&p.printerSetting,
+		&p.currencySetting,
+		false,
+		p.Lang,
+	)
+
 	// 图片打印
 	if p.printerSetting.KitchenPrintMethod == "2" {
-		t := template.NewDishesImgTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesImgTemplate(base)
 		return t.ReturnMenuTemplate(printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
-		t := template.NewDishesXprinterTemplate(p.ctx, p.setting, &p.storeSetting, &p.printerSetting, &p.currencySetting)
+		t := template.NewDishesXprinterTemplate(base)
 		return t.ReturnMenuTemplate(printerItem, saleBill, products)
 	}
 	return ""

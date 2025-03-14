@@ -54,6 +54,7 @@ func NewPrinterTemplate(
 	printerSetting *respSetting.Printer,
 	currencySetting *respSetting.Currency,
 	isSunMi bool,
+	opts ...string,
 ) *printerTemplate {
 	// 初始化默认值
 	template := &printerTemplate{
@@ -82,11 +83,11 @@ func NewPrinterTemplate(
 		}
 	}
 	// 设置语言 - 使用简化逻辑，后续可接入i18n包
-	template.Lang = ctx.GetLanguage()
-	// todo - wfs
-	// template.Lang = printerSetting.DefaultLanguage
-	// template.Lang = printerSetting.KitchenLanguage
-	//
+	if len(opts) > 0 && opts[0] != "" {
+		template.Lang = opts[0]
+	} else if printerSetting != nil {
+		template.Lang = printerSetting.DefaultLanguage
+	}
 	return template
 }
 

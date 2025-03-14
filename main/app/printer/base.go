@@ -34,9 +34,11 @@ type PrinterRepoImpl struct {
 	storeSetting    respSetting.Store
 	printerSetting  respSetting.Printer
 	currencySetting respSetting.Currency
+	Lang            string           // 可选语言参数
+	base            *PrinterRepoImpl // 用于获取基础配置
 }
 
-func NewPrinterRepo(ctx context.Context) PPrinterRepo {
+func NewPrinterRepo(ctx context.Context, opts ...string) PPrinterRepo {
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	//
 	setting := setting.NewSrvImpl(dbm, cache.Global)
@@ -58,8 +60,9 @@ func NewPrinterRepo(ctx context.Context) PPrinterRepo {
 		logger.Logger.Error("获取货币设置失败", zap.Error(err))
 		fmt.Println("获取货币设置失败", zap.Error(err))
 	}
-	//
-	return &PrinterRepoImpl{
+
+	// 创建打印机实例
+	printerRepo := &PrinterRepoImpl{
 		ctx:             ctx,
 		dbm:             dbm,
 		cache:           cache.Global,
@@ -68,6 +71,19 @@ func NewPrinterRepo(ctx context.Context) PPrinterRepo {
 		printerSetting:  printerSetting,
 		currencySetting: currencySetting,
 	}
+
+	// 设置语言参数
+	if len(opts) > 0 {
+		printerRepo.Lang = opts[0]
+	} else {
+		// 使用打印机设置中的默认语言
+		printerRepo.Lang = printerSetting.KitchenLanguage
+	}
+
+	// 设置基础配置
+	printerRepo.base = printerRepo
+
+	return printerRepo
 }
 
 // 获取商品打印机列表

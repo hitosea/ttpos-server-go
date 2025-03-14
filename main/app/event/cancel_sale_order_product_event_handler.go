@@ -56,7 +56,7 @@ func cancelSaleOrderProductEventHandler() {
 			go func() {
 				products := printer_model.OrderProduct{}
 				copier.Copy(&products, payload)
-				printer.NewPrinterRepo(payload.Ctx).PrintingDishes(
+				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					constant.PrinterProductTypeBackFood,
 					payload.SaleBillUuid,
 					[]printer_model.OrderProduct{products},

@@ -5653,7 +5653,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
 		constant.PrinterTemplatePreBilling,
 		saleBill,
 		saleOrder.Uuid,

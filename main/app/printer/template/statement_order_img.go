@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
-	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
-	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/context"
 
 	"github.com/shopspring/decimal"
 )
@@ -22,14 +19,10 @@ type statementOrderImgTemplate struct {
 
 // NewStatementOrderImgTemplate 创建新的图片订单打印模板
 func NewStatementOrderImgTemplate(
-	ctx context.Context,
-	setting *setting.Srv,
-	storeSetting *respSetting.Store,
-	printerSetting *respSetting.Printer,
-	currencySetting *respSetting.Currency,
+	base *printerTemplate,
 ) *statementOrderImgTemplate {
 	return &statementOrderImgTemplate{
-		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
+		base: base,
 	}
 }
 
