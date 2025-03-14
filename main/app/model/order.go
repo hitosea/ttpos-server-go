@@ -545,7 +545,9 @@ func (model *SaleBill) IsShowSaleBill() bool {
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for i, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
-			saleOrder.Index = i + 1
+			if len(model.SaleOrders) > 1 {
+				saleOrder.Index = i + 1
+			}
 			return saleOrder
 		}
 	}

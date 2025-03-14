@@ -646,7 +646,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 				}
 				orderExtra := resp.BillListsExtra{
 					IsCellRefund:        false,
-					IsCellCancel:        order.Status == constant.SaleBillStatusPending,
+					IsCellCancel:        false,
 					IsCellReverseSettle: false,
 					IsCellPrint:         !isSplit && order.Status != constant.SaleBillStatusPending,
 					IsCellInvoice:       !isSplit && order.Status == constant.SaleBillStatusComplete,
@@ -755,19 +755,22 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
+	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, 0)
 	if err != nil {
 		return resp.OrderInfosResp{}, errors.WithMessage(err)
 	}
-	isMain := req.SaleOrderUuid > 0         // 是否查询主单
+	isMain := req.SaleOrderUuid == 0        // 是否查询主单
 	isSplit := len(saleBill.SaleOrders) > 1 // 是否拆单
 
 	// 组合信息
 	totalMemberNames := []string{}
 	totalMemberUuids := []string{}
 	payTypes := make([]resp.OrderInfoPayTypes, 0)
-	orderList := make([]resp.OrderInfo, len(saleBill.SaleOrders))
+	orderList := make([]resp.OrderInfo, 0)
 	for i, order := range saleBill.SaleOrders {
+		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != order.Uuid {
+			continue
+		}
 		payTypeNames := []string{}
 		if order.IsFree == 1 {
 			payTypes = append(payTypes, resp.OrderInfoPayTypes{
@@ -828,8 +831,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				RefundAmount: 0,
 			}
 		}
-		// todo - SerialNo 取值不对
-		orderList[i] = resp.OrderInfo{
+		//
+		orderList = append(orderList, resp.OrderInfo{
 			SaleOrderUuid: order.Uuid,
 			BillType:      saleBill.BillType,
 			DiningMethod:  saleBill.DiningMethod,
@@ -845,14 +848,14 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			MemberName:    order.GetMemberName(),
 			MemberUuid:    order.ConsumerUuid,
 			Products:      products,
-		}
+		})
 	}
 
 	// 处理额外信息
-	order := saleBill.SaleOrders[0]
+	order := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund:        false,
-		IsCellCancel:        order.Status == constant.SaleBillStatusPending,
+		IsCellCancel:        !isSplit && order.Status == constant.SaleBillStatusPending,
 		IsCellReverseSettle: saleBill.IsCellReverseSettle(),
 		IsCellPrint:         true,
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
