@@ -44,7 +44,9 @@ func (r *productPrinterRepo) GetProductPackageUuids(opts ...DBOption) ([]uint64,
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Select("product_package_uuid").Pluck("product_package_uuid", &uuids).Error
+	err := db.Select("product_package_uuid").
+		Where("product_package_uuid not in (?)", r.db.Model(&model.ProductPackage{}).Scopes(NotDeleted).Where("is_show_kitchen = 0").Select("uuid")).
+		Pluck("product_package_uuid", &uuids).Error
 	if err != nil {
 		return nil, err
 	}

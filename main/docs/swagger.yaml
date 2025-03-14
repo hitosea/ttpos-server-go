@@ -938,6 +938,12 @@ definitions:
         description: 是否打包,true：打包，false：不打包，默认堂食。 必填
         type: boolean
     type: object
+  req.OrderUnlockReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+    type: object
   req.PrintRechargeOrderReq:
     properties:
       print_lang:
@@ -7171,6 +7177,30 @@ paths:
       summary: 从一个销售订单移动商品到另一个销售订单
       tags:
       - 收银端.桌台
+  /cashier/desk/order/unlock:
+    post:
+      consumes:
+      - application/json
+      description: 订单解锁
+      parameters:
+      - description: 订单解锁
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderUnlockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 订单解锁
+      tags:
+      - 收银端.点餐
   /cashier/desk/region_and_type:
     get:
       consumes:
@@ -8304,6 +8334,30 @@ paths:
       security:
       - JwtToken: []
       summary: 打包
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/unlock:
+    post:
+      consumes:
+      - application/json
+      description: 订单解锁
+      parameters:
+      - description: 订单解锁
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderUnlockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 订单解锁
       tags:
       - 收银端.点餐
   /cashier/language:

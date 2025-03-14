@@ -79,12 +79,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 func (s *productionSrv) getProductPackageUuids(ctx context.Context) ([]uint64, resp.ProductionListWithPagination, error) {
 	var productPackageUuids []uint64
 	emptyResp := resp.ProductionListWithPagination{
-		List: []resp.ProductionGroup{{
-			LocaleName: &dto.LocaleResponse{},
-			ProductionList: resp.ProductionList{
-				List: make([]resp.ProductionItem, 0),
-			},
-		}},
+		List: make([]resp.ProductionGroup, 0),
 		FinishedList: resp.ProductionList{
 			List: make([]resp.ProductionItem, 0),
 		},
@@ -221,10 +216,10 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 
 // 根据销售账单分组
 func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct) []resp.ProductionGroup {
-	var groups []resp.ProductionGroup
+	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
 	for _, paginatedProduct := range limitProducts {
 		var group resp.ProductionGroup
-		var items []resp.ProductionItem
+		items := make([]resp.ProductionItem, 0)
 		for _, product := range products {
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
