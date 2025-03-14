@@ -63,7 +63,7 @@ type PrinterLog struct {
 	BaseModel
 	PrinterUuid     uint64 `gorm:"column:printer_uuid;type:bigint(20) unsigned;default:0;comment:打印机id;NOT NULL" json:"printer_uuid"`
 	CashierDeviceId string `gorm:"column:cashier_device_id;type:varchar(255);comment:收银机绑定的id;NOT NULL" json:"cashier_device_id"`
-	RelatedType     int    `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售订单；1-充值订单;NOT NULL" json:"related_type"`
+	RelatedType     int    `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售账单；1-销售订单, 2-充值订单;NOT NULL" json:"related_type"`
 	RelatedUuid     uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:销售账单、充值订单id;NOT NULL" json:"related_uuid"`
 	Data            string `gorm:"column:data;type:varchar(255);comment:打印数据" json:"data"`
 	Type            int    `gorm:"column:type;type:int(11);default:0;comment:类型:0系统默认队列,1云上服务下放;NOT NULL" json:"type"`

@@ -295,6 +295,31 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderPrint 打印
+// @Summary 打印
+// @Description 打印
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintReq true "打印"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/order/print [post]
+func (h *OrderHandler) OrderPrint(c *gin.Context) {
+	var printReq req.OrderPrintReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.service.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -331,5 +356,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)    // 反结账
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
+		privateApi.POST("/order/print", wrapper.OrderPrint) // 打印
 	}
 }

@@ -587,7 +587,7 @@ definitions:
         description: 移动数量, 必填
         type: integer
       uuid:
-        description: 销售订单商品UUID, 必填
+        description: 销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid
         type: integer
     type: object
   req.OpenDeskRequest:
@@ -1551,6 +1551,10 @@ definitions:
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
+      printer:
+        allOf:
+        - $ref: '#/definitions/setting.Printer'
+        description: 打印设置
       tablet:
         allOf:
         - $ref: '#/definitions/setting.Tablet'
@@ -3628,6 +3632,28 @@ definitions:
       uuid:
         type: integer
     type: object
+  resp.PrinterData:
+    properties:
+      copies:
+        description: 打印机.份数
+        type: integer
+      data:
+        description: 打印数据
+        type: string
+      print_method:
+        description: 打印方式 1文本打印, 2图片打印'
+        type: integer
+      printer_config:
+        description: 打印机.配置
+        type: string
+      printer_type:
+        description: 打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线
+          , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)
+        type: string
+      uuid:
+        description: 打印日志Uuid
+        type: integer
+    type: object
   resp.PrinterLogData:
     properties:
       cashier_device_id:
@@ -4332,7 +4358,7 @@ definitions:
         - $ref: '#/definitions/resp.DeskInfo'
         description: 桌台信息
       dining_method:
-        description: 用餐方式 0:堂食 1:打包
+        description: 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
         type: integer
       is_desk_order:
         description: 购物车类型 true:桌台购物车 false:点餐购物车
@@ -4668,6 +4694,13 @@ definitions:
           $ref: '#/definitions/setting.ZeroingMethodItem'
         type: array
     type: object
+  setting.CalendarItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
   setting.CarouselItem:
     properties:
       file_path:
@@ -4754,6 +4787,15 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Server'
         description: 收银机服务器连接
+    type: object
+  setting.CashierPrinterItem:
+    properties:
+      key:
+        description: 收银机设备ID
+        type: string
+      printer_id:
+        description: 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
+        type: string
     type: object
   setting.CheckoutZeroingMethodItem:
     properties:
@@ -4874,6 +4916,74 @@ definitions:
         type: string
       is_other:
         description: 是否开启其他方式支付 0-关闭 1-开启
+        type: string
+    type: object
+  setting.PrintItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+  setting.Printer:
+    properties:
+      buffet_sign_open:
+        description: 自助餐标识设置（默认开启）
+        type: string
+      calendar_list:
+        description: 日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+        items:
+          $ref: '#/definitions/setting.CalendarItem'
+        type: array
+      cashier_open:
+        description: 是否开启打印
+        type: string
+      cashier_printer:
+        description: 打印机列表
+        items:
+          $ref: '#/definitions/setting.CashierPrinterItem'
+        type: array
+      cashier_printer_id:
+        description: 打印机id
+        type: string
+      consumption_tax:
+        description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
+        type: string
+      default_calendar:
+        description: 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+        type: string
+      default_language:
+        description: 打印语言（收银）
+        type: string
+      kitchen_language:
+        description: 打印语言（送厨）
+        type: string
+      kitchen_print_method:
+        description: 打印方式（送厨） 1-文本打印 2-图片打印
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      language_method:
+        description: 语言方式（收银） 1-单语言 2-多语言
+        type: string
+      monetary_unit_open:
+        description: 货币单位（默认开启）
+        type: string
+      print_list:
+        description: 打印方式列表 （1-文本打印 2-图片打印 ）
+        items:
+          $ref: '#/definitions/setting.PrintItem'
+        type: array
+      print_method:
+        description: 打印方式（收银） 1-文本打印 2-图片打印
         type: string
     type: object
   setting.Server:
@@ -5239,6 +5349,32 @@ paths:
       security:
       - JwtToken: []
       summary: 获取桌台列表
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/open:
+    post:
+      consumes:
+      - application/json
+      description: 开台
+      parameters:
+      - description: 开台参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskOrderCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 开台成功
+          schema:
+            $ref: '#/definitions/resp.CreateDeskOrderResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 开台
       tags:
       - 点餐助手端.桌台
   /assistant/desk/region_and_type:
@@ -6803,6 +6939,35 @@ paths:
       summary: 桌台订单修改人数
       tags:
       - 收银端.桌台
+  /cashier/desk/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 打印
+      parameters:
+      - description: 打印
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 打印
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/product/delete:
     delete:
       consumes:
@@ -7870,13 +8035,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: 结账页面信息
+          description: 打印数据
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+                  $ref: '#/definitions/resp.PrinterData'
               type: object
       security:
       - JwtToken: []
@@ -8674,6 +8839,35 @@ paths:
       security:
       - JwtToken: []
       summary: 获取订单列表
+      tags:
+      - 收银端.订单
+  /cashier/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 打印
+      parameters:
+      - description: 打印
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 打印
       tags:
       - 收银端.订单
   /cashier/order/return:

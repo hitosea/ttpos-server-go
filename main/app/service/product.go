@@ -2,6 +2,7 @@ package service
 
 import (
 	"slices"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp/product_resp"
@@ -12,24 +13,21 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// IProductSrv 定义收银服务接口
+// IProductSrv 定义产品服务接口
 type IProductSrv interface {
-	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) // 获取收银机点餐页面产品类别列表
-	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                               // 获取收银机点餐页面产品类别列表
+	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) // 获取产品列表
+	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                               // 获取产品类别列表
 }
 
-// productSrv 收银服务结构体
 type productSrv struct {
 	dbm       *database.DBManager // 数据库管理器
 	localeSrv ILocaleSrv          // 多语言名称服务
 }
 
-// NewProductSrv 创建新的收银产品类别服务
 func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
 	return NewProductSrvImpl(dbm, localeSrv)
 }
 
-// NewProductSrvImpl 创建新的收银服务实现
 func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
 	return &productSrv{
 		dbm:       dbm,
@@ -37,15 +35,19 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSr
 	}
 }
 
-// GetProductList 获取收银机点餐页面产品类别列表
+// GetProductList 获取产品列表
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
 	dbId := ctx.GetDbId()
 	// 获取产品列表
 	commonRepo := repository.NewCommonRepo()
+	sourceMap := map[string]repository.DBOption{
+		constant.SourceCashier:   commonRepo.WhereByIsShowCashier(1),
+		constant.SourceAssistant: commonRepo.WhereByIsShowAssistant(1),
+		constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
+		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
+	}
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
-	products, total, err := productRepo.GetProductListWithPagination(
-		req.PageNo,
-		req.PageSize,
+	dbOptions := []repository.DBOption{
 		productRepo.WithMultiLanguageName(),
 		productRepo.WithProductUnit(),
 		productRepo.WithProductUnitMultiLanguageName(),
@@ -65,10 +67,15 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttribute(),
 		productRepo.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
 		productRepo.WithProductPackageImageFile(),
-		commonRepo.WhereByIsShowCashier(1),
-		commonRepo.WhereByStatus(1),
-		commonRepo.WhereBySoftDelete(),
-		commonRepo.SortWithID("DESC"),
+	}
+	if option, ok := sourceMap[ctx.GetSource()]; ok {
+		dbOptions = append(dbOptions, option)
+	}
+	dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithID("DESC"))
+	products, total, err := productRepo.GetProductListWithPagination(
+		req.PageNo,
+		req.PageSize,
+		dbOptions...,
 	)
 
 	// 处理错误
@@ -106,7 +113,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 				if productBom.IsSauce() {
 					sauces = append(sauces, product_resp.ProductSauce{
 						Uuid:              productBom.Uuid,
-						LocaleName:        s.localeSrv.GetLocaleNames(productBom.ProductSauce.MultiLanguageName),
+						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 						Price:             productBom.Price,
 						IsDefaultSelected: productBom.IsDefaultSelect == 1,
 						StockNum:          int(productBom.StockNum),
@@ -122,13 +129,13 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 				for _, attribute := range group.ProductPackageAttributes {
 					attributeValues = append(attributeValues, product_resp.ProductAttributeValue{
 						Uuid:              attribute.Uuid,
-						LocaleName:        s.localeSrv.GetLocaleNames(attribute.Attribute.MultiLanguageName),
+						LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
 						IsDefaultSelected: attribute.IsDefaultSelected == 1,
 					})
 				}
 				attributeGroups = append(attributeGroups, product_resp.ProductAttributeGroup{
 					Uuid:       group.ProductAttributeGroupUuid,
-					LocaleName: s.localeSrv.GetLocaleNames(group.ProductAttributeGroup.MultiLanguageName),
+					LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
 					IsMust:     group.IsMust == 1,
 					MaxSelect:  group.MaxSelection,
 					Attributes: product_resp.ProductAttributeValueList{
@@ -147,8 +154,8 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		list = append(list, product_resp.Product{
 			Uuid:                product.Uuid,
 			Image:               image,
-			LocaleName:          s.localeSrv.GetLocaleNames(product.MultiLanguageName),
-			Unit:                s.localeSrv.GetLocaleNames(product.ProductUnit.MultiLanguageName),
+			LocaleName:          product.MultiLanguageName.GetNames(),
+			Unit:                product.ProductUnit.MultiLanguageName.GetNames(),
 			Price:               minPrice,
 			LimitNum:            product.LimitNum,
 			CategoryUuid:        product.CategoryUuid,
@@ -176,7 +183,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	}, nil
 }
 
-// GetProductCategoryList 获取收银机点餐页面产品类别列表
+// GetProductCategoryList 获取产品类别列表
 func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error) {
 	// 获取产品类别列表
 	categories, err := repository.NewProductRepo(s.dbm.GetDB(dbId)).GetProductCategoryList(

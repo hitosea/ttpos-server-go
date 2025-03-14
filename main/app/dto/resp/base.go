@@ -18,6 +18,7 @@ type CashierBase struct {
 	Company      Company          `json:"company"`       // 商家信息
 	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
 	Payment      setting.Payment  `json:"payment"`       // 支付设置
+	Printer      setting.Printer  `json:"printer"`       // 打印设置
 }
 
 type AssistantStaff struct {

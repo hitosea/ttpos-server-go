@@ -385,6 +385,48 @@
                 }
             }
         },
+        "/assistant/desk/open": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "开台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "开台",
+                "parameters": [
+                    {
+                        "description": "开台参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskOrderCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "开台成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.CreateDeskOrderResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/region_and_type": {
             "get": {
                 "security": [
@@ -3015,6 +3057,57 @@
                 }
             }
         },
+        "/cashier/desk/order/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/product/delete": {
             "delete": {
                 "security": [
@@ -4832,7 +4925,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "结账页面信息",
+                        "description": "打印数据",
                         "schema": {
                             "allOf": [
                                 {
@@ -4842,7 +4935,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                            "$ref": "#/definitions/resp.PrinterData"
                                         }
                                     }
                                 }
@@ -6199,6 +6292,57 @@
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/order/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -9884,7 +10028,7 @@
                     "type": "integer"
                 },
                 "uuid": {
-                    "description": "销售订单商品UUID, 必填",
+                    "description": "销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid",
                     "type": "integer"
                 }
             }
@@ -11293,6 +11437,14 @@
                     "items": {
                         "$ref": "#/definitions/resp.Permission"
                     }
+                },
+                "printer": {
+                    "description": "打印设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Printer"
+                        }
+                    ]
                 },
                 "tablet": {
                     "description": "平板端设置",
@@ -14331,6 +14483,35 @@
                 }
             }
         },
+        "resp.PrinterData": {
+            "type": "object",
+            "properties": {
+                "copies": {
+                    "description": "打印机.份数",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "打印数据",
+                    "type": "string"
+                },
+                "print_method": {
+                    "description": "打印方式 1文本打印, 2图片打印'",
+                    "type": "integer"
+                },
+                "printer_config": {
+                    "description": "打印机.配置",
+                    "type": "string"
+                },
+                "printer_type": {
+                    "description": "打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.PrinterLogData": {
             "type": "object",
             "properties": {
@@ -15391,7 +15572,7 @@
                     ]
                 },
                 "dining_method": {
-                    "description": "用餐方式 0:堂食 1:打包",
+                    "description": "用餐方式 0:堂食 1:打包。与Takeout重复，废弃",
                     "type": "integer"
                 },
                 "is_desk_order": {
@@ -15889,6 +16070,17 @@
                 }
             }
         },
+        "setting.CalendarItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "setting.CarouselItem": {
             "type": "object",
             "properties": {
@@ -16012,6 +16204,19 @@
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
+                }
+            }
+        },
+        "setting.CashierPrinterItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "收银机设备ID",
+                    "type": "string"
+                },
+                "printer_id": {
+                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符",
+                    "type": "string"
                 }
             }
         },
@@ -16186,6 +16391,101 @@
                 },
                 "is_other": {
                     "description": "是否开启其他方式支付 0-关闭 1-开启",
+                    "type": "string"
+                }
+            }
+        },
+        "setting.PrintItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "setting.Printer": {
+            "type": "object",
+            "properties": {
+                "buffet_sign_open": {
+                    "description": "自助餐标识设置（默认开启）",
+                    "type": "string"
+                },
+                "calendar_list": {
+                    "description": "日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CalendarItem"
+                    }
+                },
+                "cashier_open": {
+                    "description": "是否开启打印",
+                    "type": "string"
+                },
+                "cashier_printer": {
+                    "description": "打印机列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CashierPrinterItem"
+                    }
+                },
+                "cashier_printer_id": {
+                    "description": "打印机id",
+                    "type": "string"
+                },
+                "consumption_tax": {
+                    "description": "消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示",
+                    "type": "string"
+                },
+                "default_calendar": {
+                    "description": "日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "打印语言（收银）",
+                    "type": "string"
+                },
+                "kitchen_language": {
+                    "description": "打印语言（送厨）",
+                    "type": "string"
+                },
+                "kitchen_print_method": {
+                    "description": "打印方式（送厨） 1-文本打印 2-图片打印",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "language_method": {
+                    "description": "语言方式（收银） 1-单语言 2-多语言",
+                    "type": "string"
+                },
+                "monetary_unit_open": {
+                    "description": "货币单位（默认开启）",
+                    "type": "string"
+                },
+                "print_list": {
+                    "description": "打印方式列表 （1-文本打印 2-图片打印 ）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.PrintItem"
+                    }
+                },
+                "print_method": {
+                    "description": "打印方式（收银） 1-文本打印 2-图片打印",
                     "type": "string"
                 }
             }

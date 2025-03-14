@@ -31,3 +31,29 @@ type ProductionListWithPagination struct {
 type ProductionHistory struct {
 	List []ProductionGroup `json:"list"`
 }
+
+// SendKitchenProduction 平板端和助手端已送厨商品列表
+type SendKitchenProduction struct {
+	List                []SendKitchenProductionItem `json:"list"`                  // 送厨商品列表
+	IsSplitOrder        bool                        `json:"is_split_order"`        // 是否已拆单
+	TotalPrice          string                      `json:"total_price"`           // 小计
+	TotalProductNum     int                         `json:"total_product_num"`     // 总数量
+	TotalProductPrice   string                      `json:"total_product_price"`   // 商品金额
+	ServiceMoney        string                      `json:"service_money"`         // 服务费
+	ConsumptionTaxMoney string                      `json:"consumption_tax_money"` // 消费税
+	DiscountMoney       string                      `json:"discount_money"`        // 优惠折扣
+	UserDiscountMoney   string                      `json:"user_discount_money"`   //
+}
+
+// SendKitchenProductionItem 平板端和助手端已送厨商品列表
+type SendKitchenProductionItem struct {
+	Products   []SendKitchenProduct `json:"products"`    // 商品列表
+	CreateTime int64                `json:"create_time"` // 送厨时间
+}
+
+type SendKitchenProduct struct {
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 送厨商品名称
+	Num        uint               `json:"num"`         // 送厨商品数量
+
+	ProductAttributeNames string `json:"product_attribute_names"` // 商品属性
+}

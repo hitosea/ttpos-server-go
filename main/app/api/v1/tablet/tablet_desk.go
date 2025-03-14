@@ -157,6 +157,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder) // 创建桌台订单(开桌)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)      // 获取桌台详情
 		privateApi.GET("/desk/place_order", nil)               // todo 桌台下单(送厨)
-		privateApi.GET("/desk/get_ordered_product", nil)       // todo 桌台已下单商品
+		privateApi.GET("/desk/production_list", nil)           // todo 桌台已下单商品
 	}
 }

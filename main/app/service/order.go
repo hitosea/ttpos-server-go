@@ -93,7 +93,8 @@ type IOrderSrv interface {
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                               // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                        // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error)                                            // 打印
+	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
+	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 }
 
 // orderSrv 订单服务结构
@@ -5599,7 +5600,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 }
 
 // OrderPrint 打印
-func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.InstantOrderPaymentInfoResp, error) {
+func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.PrinterData, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -5621,18 +5622,56 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
-	_, err = printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+	// 打印
+	printerData, err := printer.NewPrinterRepo(ctx).PrintingStatementOrder(
 		constant.PrinterTemplatePreBilling,
 		saleBill,
 		saleOrder.Uuid,
+		1,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 保存销售账单
+	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
+		return nil, errors.WithMessage(err, "设置锁单失败")
 	}
-	return infoResp, nil
+
+	return printerData, nil
+}
+
+// OrderUnlock 订单解锁
+func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 验证订单是否可操作
+	if err := saleBill.ValidateOrderStatus(constant.OrderUnlock); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 验证销售账单是否已锁定
+	if !saleBill.IsLockStatus() {
+		return errors.New("销售账单未锁定")
+	}
+
+	// 保存销售账单
+	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, false); err != nil {
+		return errors.WithMessage(err, "解锁失败")
+	}
+
+	return nil
 }

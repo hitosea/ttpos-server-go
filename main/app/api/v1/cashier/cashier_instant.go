@@ -1068,7 +1068,7 @@ func (h *InstantHandler) OrderMemberCancel(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderPrintReq true "打印"
-// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/instant/order/print [post]
 func (h *InstantHandler) OrderPrint(c *gin.Context) {
 	var printReq req.OrderPrintReq
@@ -1083,6 +1083,31 @@ func (h *InstantHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	helper.Success(c, res)
+}
+
+// OrderUnlock 订单解锁
+// @Summary 订单解锁
+// @Description 订单解锁
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderUnlockReq true "订单解锁"
+// @Success 200 {object} dto.Response
+// @Router /cashier/instant/order/unlock [post]
+func (h *InstantHandler) OrderUnlock(c *gin.Context) {
+	var unlockReq req.OrderUnlockReq
+	if err := c.ShouldBindJSON(&unlockReq); err != nil {
+		helper.HandleValidationError(c, err, unlockReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.orderService.OrderUnlock(ctx, unlockReq.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
 }
 
 // RegisterInstantHandlers 注册收银订单路由
@@ -1142,5 +1167,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/instant/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 		privateApi.POST("/instant/order/print", wrapper.OrderPrint)                                              // 打印
+		privateApi.POST("/instant/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
 	}
 }

@@ -35,6 +35,9 @@ type ICommonRepo interface {
 	WhereBySaleOrderUuid(uuid uint64) DBOption                      // 根据销售订单UUID查询
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
+	WhereByIsShowAssistant(isShow uint) DBOption                    // 根据是否显示点餐助手端查询
+	WhereByIsShowTablet(isShow uint) DBOption                       // 根据是否显示平板端查询
+	WhereByIsShowKitchen(isShow uint) DBOption                      // 根据是否显示厨显端查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
 	WhereByCooking() DBOption                                       // 根据账单已经送厨房查询
 	WhereByRelatedUuid(relatedUuid uint64) DBOption                 // 根据关联UUID查询
@@ -134,6 +137,27 @@ func (r *commonRepo) WhereByStatus(status uint) DBOption {
 func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_cashier = ?", isShowCashier)
+	}
+}
+
+// WhereByIsShowAssistant 根据是否显示点餐助手端查询
+func (r *commonRepo) WhereByIsShowAssistant(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_assistant = ?", isShow)
+	}
+}
+
+// WhereByIsShowTablet 根据是否显示平板端查询
+func (r *commonRepo) WhereByIsShowTablet(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_tablet = ?", isShow)
+	}
+}
+
+// WhereByIsShowKitchen 根据是否显示厨显端查询
+func (r *commonRepo) WhereByIsShowKitchen(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_kitchen = ?", isShow)
 	}
 }
 

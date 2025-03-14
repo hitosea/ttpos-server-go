@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"sort"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -32,7 +33,7 @@ type SaleOrder struct {
 	// 费用相关字段
 	ServiceFee        float64 `gorm:"column:service_fee;type:decimal(12,2);default:0;comment:服务费" json:"service_fee"`
 	TaxFee            float64 `gorm:"column:tax_fee;type:decimal(12,2);default:0;comment:税费" json:"tax_fee"`
-	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);default:0;comment:自定义折扣金额" json:"discount_fee"`
+	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);default:0;comment:自定义折扣金额" json:"custom_discount_fee"`
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣金额" json:"member_discount_fee"`
 
 	// 订单总额相关字段
@@ -194,6 +195,7 @@ func (model *SaleOrder) GetMemberDiscountAmount() float64 {
 	return decimal.NewFromFloat(model.GetOriginAmount()).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
 }
 
+// GetMemberName 获取订单的会员名称
 func (model *SaleOrder) GetMemberName() string {
 	if model.Member == nil {
 		return ""
@@ -465,4 +467,71 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	}
 	//
 	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit
+}
+
+// GetPercentageList 获取当前订单的百分比对象列表
+func (model *SaleOrder) GetPercentageList() []map[string]string {
+	// 创建 map 来存储不同税率的税费和商品总价
+	taxRateMap := make(map[string]float64)
+	totalPriceMap := make(map[string]float64)
+
+	// 自助餐顾客类型
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 获取税率
+		taxRate := fmt.Sprintf("%.0f", orderBuffetCustomer.TaxRate*100)
+		// 累加相同税率的税费和总价
+		taxRateMap[taxRate] += orderBuffetCustomer.TaxFee
+		totalPriceMap[taxRate] += orderBuffetCustomer.Price
+	}
+
+	// 商品列表
+	for _, item := range model.SaleOrderProducts {
+		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
+			continue
+		}
+		// 获取税率
+		taxRate := fmt.Sprintf("%.0f", item.TaxRate*100)
+		// 累加相同税率的税费和总价
+		taxRateMap[taxRate] += item.TaxFee
+		totalPriceMap[taxRate] += item.GetPrice()
+	}
+
+	// 将 map 转换为数组
+	result := make([]map[string]string, 0, len(taxRateMap))
+	for taxRate, taxFee := range taxRateMap {
+		if taxFee > 0 {
+			result = append(result, map[string]string{
+				"TaxRate":    taxRate,
+				"TaxFee":     fmt.Sprintf("%.2f", taxFee),
+				"TotalPrice": fmt.Sprintf("%.2f", totalPriceMap[taxRate]),
+			})
+		}
+	}
+
+	return result
+}
+
+// 获取会员余额
+func (model *SaleOrder) GetMemberSurplusBalance() float64 {
+	if model.Member == nil {
+		return 0
+	}
+	if model.Status == constant.SaleOrderStatusFinish {
+		// todo 未完成
+		return 0
+	}
+	return model.Member.GetBalanceAll()
+}
+
+// 获取会员积分
+func (model *SaleOrder) GetMemberSurplusPoints() float64 {
+	if model.IsFree != 0 {
+		return 0
+	} else {
+		// todo 未完成
+		return model.Member.Point
+	}
 }

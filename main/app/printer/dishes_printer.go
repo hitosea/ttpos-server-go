@@ -100,7 +100,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						PrinterType:   printerType,
 						PrinterConfig: printerItem.Printer.ConfigJson,
 						PrintCopies:   printerItem.Printer.Copies,
-					}, resp.PrinterLogData{
+					}, model.PrinterLog{
 						PrintMethod:     printMethod,
 						RelatedType:     0,
 						RelatedUuid:     saleBillUuid,
@@ -129,7 +129,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							PrinterType:   printerType,
 							PrinterConfig: printerItem.Printer.ConfigJson,
 							PrintCopies:   printerItem.Printer.Copies,
-						}, resp.PrinterLogData{
+						}, model.PrinterLog{
 							PrintMethod:     printMethod,
 							RelatedType:     0,
 							RelatedUuid:     saleBillUuid,
@@ -154,10 +154,8 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 				// 添加打印日志，依赖打印日志服务
 				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
-					PrinterType:   printerType,
-					PrinterConfig: printerItem.Printer.ConfigJson,
-					PrintCopies:   printerItem.Printer.Copies,
-				}, resp.PrinterLogData{
+					PrinterType: printerType,
+				}, model.PrinterLog{
 					PrintMethod:     printMethod,
 					RelatedType:     0,
 					RelatedUuid:     saleBillUuid,
