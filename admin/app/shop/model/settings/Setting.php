@@ -104,7 +104,10 @@ class Setting extends SettingModel
             }
         }
         // 删除系统设置缓存
-        Cache::set(sprintf("setting:company_id:%d", $appId), null);
+        $key = sprintf("setting:company_id:%d", $appId);
+        if (Cache::has($key)) {
+            Cache::delete($key);
+        }
         // 删除全局缓存
         Cache::tag('common_get_settingLanguages')->clear();
         // 删除收银机缓存
