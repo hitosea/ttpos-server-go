@@ -57,6 +57,8 @@ type ImgFont struct {
 	MySpecialFonts map[string]string
 	// 字体缓存
 	FontCache map[string]*truetype.Font
+	// 字符宽度缓存
+	CharWidthCache map[string]int
 }
 
 // 字体常量
@@ -84,6 +86,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		Direction:             0,
 		MySpecialFonts:        make(map[string]string),
 		FontCache:             make(map[string]*truetype.Font),
+		CharWidthCache:        make(map[string]int),
 	}
 
 	// 设置自定义宽度
@@ -191,12 +194,19 @@ func (i *ImgFont) GetFontPath(char string) string {
  */
 // GetFontWeight 获取字体宽度
 func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
-	fontPath := i.GetFontPath(char)
-
 	// 特殊字符'ြ'的处理
 	if char == "ြ" {
 		return 5
 	}
+
+	// 检查缓存
+	cacheKey := fmt.Sprintf("%s_%d_%s", i.GetFontPath(char), fontSize, char)
+	if width, ok := i.CharWidthCache[cacheKey]; ok {
+		return width
+	}
+
+	// 获取字体路径
+	fontPath := i.GetFontPath(char)
 
 	// 获取字体宽度
 	// 使用getCharWidth计算字符宽度
@@ -209,6 +219,8 @@ func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
 		}
 	}
 
+	// 存入缓存
+	i.CharWidthCache[cacheKey] = contextWidth
 	return contextWidth
 }
 
@@ -391,7 +403,7 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 
 		for _, char := range segments {
 			tmpStr += char
-			tmpw = float64(i.GetFontWeight(fontSize, tmpStr)) * i.TextSpacing
+			tmpw = i.GetTextWidth(fontSize, tmpStr)
 			if tmpw > canWidth {
 				break
 			}
@@ -427,7 +439,7 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 			continue
 		}
 
-		// 获取当前字符的宽度
+		// 获取当前字符的宽度 - 直接使用GetFontWeight，已经有缓存机制
 		charWidth := float64(i.GetFontWeight(fontSize, char)) * i.TextSpacing
 
 		// 非居左对齐的处理
@@ -435,12 +447,8 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 			// 获取当前到最后的所有字符
 			lastText := segments[key:]
 
-			// 计算最后一行的宽度
-			lastTextWidth := 0.0
-			for _, c := range lastText {
-				lastTextWidth += float64(i.GetFontWeight(fontSize, c))
-			}
-			lastTextWidth = lastTextWidth * i.TextSpacing
+			// 计算最后一行的宽度 - 使用优化的GetTextWidth函数
+			lastTextWidth := i.GetTextWidth(fontSize, strings.Join(lastText, ""))
 
 			// 文本居中处理
 			if (useWidth == 0 || isDeviation != 0) && i.Alignment == AlignCenter {
@@ -531,23 +539,54 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 	}
 }
 
-// drawText 使用freetype绘制文本
-func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int, textColor color.RGBA) {
-	var f *truetype.Font
-	var err error
-
-	// 使用嵌入的字体文件
-	fontBytes, err := fonts.GetFontData(fontPath)
-	if err != nil {
-		fmt.Println("获取嵌入字体文件失败:", err)
-		return
+// GetTextWidth 批量计算文本宽度
+func (i *ImgFont) GetTextWidth(fontSize int, text string) float64 {
+	if text == "" {
+		return 0
 	}
 
-	// 解析字体
-	f, err = freetype.ParseFont(fontBytes)
-	if err != nil {
-		fmt.Println("解析字体失败:", err)
-		return
+	// 检查缓存
+	cacheKey := fmt.Sprintf("text_%d_%s", fontSize, text)
+	if width, ok := i.CharWidthCache[cacheKey]; ok {
+		return float64(width) * i.TextSpacing
+	}
+
+	// 计算宽度
+	totalWidth := 0.0
+	for _, char := range i.GetFontArrays(text) {
+		totalWidth += float64(i.GetFontWeight(fontSize, char))
+	}
+
+	// 存入缓存 - 只缓存短文本
+	if len(text) <= 10 {
+		i.CharWidthCache[cacheKey] = int(totalWidth)
+	}
+
+	return totalWidth * i.TextSpacing
+}
+
+// drawText 使用freetype绘制文本
+func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int, textColor color.RGBA) {
+	// 从缓存获取字体
+	f, ok := i.FontCache[fontPath]
+	if !ok {
+		// 使用嵌入的字体文件
+		fontBytes, err := fonts.GetFontData(fontPath)
+		if err != nil {
+			fmt.Println("获取嵌入字体文件失败:", err)
+			return
+		}
+
+		// 解析字体
+		var parseErr error
+		f, parseErr = freetype.ParseFont(fontBytes)
+		if parseErr != nil {
+			fmt.Println("解析字体失败:", parseErr)
+			return
+		}
+
+		// 添加到缓存
+		i.FontCache[fontPath] = f
 	}
 
 	// 先绘制描边（黑色或深色）
@@ -566,11 +605,10 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
 	pt := freetype.Pt(x, y+fontSize)
-	_, err = ctx.DrawString(text, pt)
+	_, err := ctx.DrawString(text, pt)
 	if err != nil {
 		fmt.Println("绘制原始文本失败:", err)
 	}
-
 }
 
 // AppendPartingline 添加文本行

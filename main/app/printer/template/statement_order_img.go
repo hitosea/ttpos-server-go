@@ -122,7 +122,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: "saleOrder.CashierUuid", Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight},
 		)
 		if saleOrder.FinishTime > 0 {
 			img.PrintInColumns(
@@ -165,12 +165,12 @@ func (t *statementOrderImgTemplate) ImgPrint(
 			pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: saleOrder.OrderNo, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
-		// if saleOrder.CashierName != "" {
-		// 	img.PrintInColumns(
-		// 		pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-		// 		pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
-		// 	)
-		// }
+		if saleOrder.CashierName != "" {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
+				pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
+			)
+		}
 		img.LineFeed(1)
 	} else if temp == 3 {
 		// 打印logo
@@ -266,7 +266,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		img.SetFontWeight(1)
 		img.SetFontSize(20)
 		img.SetAlignment(pkg.AlignLeft)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), "saleOrder.CashierName"))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), saleOrder.CashierName))
 		img.LineFeed(1)
 		if payTime != "" {
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("时间"), payTime))

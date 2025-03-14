@@ -16,10 +16,11 @@ import (
 type SaleOrder struct {
 	BaseModel
 	// 基础标识字段
-	OrderNo    string `gorm:"column:order_no;comment:订单编号" json:"order_no"`
-	Status     uint   `gorm:"column:status;comment:订单状态, 0-未结账 1-已结账" json:"status"`
-	IsFree     uint   `gorm:"column:is_free;comment:是否免单, 0-否 1-是" json:"is_free"`
-	FreeReason string `gorm:"column:free_reason;comment:免单原因" json:"free_reason"`
+	OrderNo     string `gorm:"column:order_no;comment:订单编号" json:"order_no"`
+	Status      uint   `gorm:"column:status;comment:订单状态, 0-未结账 1-已结账" json:"status"`
+	IsFree      uint   `gorm:"column:is_free;comment:是否免单, 0-否 1-是" json:"is_free"`
+	FreeReason  string `gorm:"column:free_reason;comment:免单原因" json:"free_reason"`
+	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
 
 	// 关联ID字段
 	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
