@@ -45,6 +45,9 @@ func (r *returnOrderRepo) CreateReturnOrderAmount(amounts []model.ReturnOrderAmo
 }
 
 func (r *returnOrderRepo) CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error {
+	if len(products) == 0 {
+		return nil // 避免gorm报错empty slice found
+	}
 	for _, product := range products {
 		product.SetNil()
 	}

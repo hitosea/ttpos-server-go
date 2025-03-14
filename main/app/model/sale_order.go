@@ -101,7 +101,9 @@ func (model *SaleOrder) GetPaymentOrderCanReturnAmount() ([]resp.OrderReturnPaym
 func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
 	returnOrderUuid, _ := utils.GetID()
 
-	returnAmount := decimal.NewFromFloat(0)
+	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
+	// 如果退款类型为部分退款，则退款金额=退货单商品总金额之和
+	returnAmount := decimal.NewFromFloat(0) // 本次退款操作的退款金额。退款金额=退货单商品总金额之和
 	returnOrderProducts := make([]*ReturnOrderProduct, 0)
 	for _, saleOrderProduct := range saleOrderProducts {
 		// 退货数量
@@ -123,6 +125,11 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
 	refundAmount := returnAmount.Round(2).InexactFloat64()
+
+	if returnType == constant.ReturnOrderRefundTypeTotal {
+		// 整单退款，退款金额=订单最终应收金额-已退款金额
+		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+	}
 
 	// 获取销售订单的每个付款单的可退款金额
 	paymentRecords, currencyUnit := model.GetPaymentOrderCanReturnAmount()

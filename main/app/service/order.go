@@ -1121,12 +1121,12 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 		return errors.WithMessage(errors.New("找不到销售订单"))
 	}
 
-	ReturnType := constant.ReturnOrderRefundTypeTotal
+	returnType := constant.ReturnOrderRefundTypeTotal
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0) // 退款商品列表
 	numMap := make(map[uint64]uint)                         // 每个退款商品的退货数量
 	// 整单退款
 	if len(req.Products) == 0 {
-		ReturnType = constant.ReturnOrderRefundTypeTotal
+		returnType = constant.ReturnOrderRefundTypeTotal
 		// 整单退款，退款商品列表为销售订单商品列表.
 		// 注意：要判断订单商品是否还有可退货数量
 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
@@ -1139,7 +1139,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 	}
 	// 部分退款
 	if len(req.Products) > 0 {
-		ReturnType = constant.ReturnOrderRefundTypePart
+		returnType = constant.ReturnOrderRefundTypePart
 		// 获取退款商品列表
 		saleOrderProductUuids := make([]uint64, 0)
 		for _, product := range req.Products {
@@ -1164,12 +1164,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 		}
 	}
 
-	if len(saleOrderProducts) == 0 {
+	// 如果退款类型为部分退款，则必须有可退货的商品。整单退款则可以没有可退货的商品，可能已经退完商品了但还有手续费没有退
+	if len(saleOrderProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
 		return errors.WithMessage(errors.New("没有可退货的商品"))
 	}
 
 	// 创建退款单
-	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, numMap, ReturnType)
+	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, numMap, returnType)
 
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建退货单
