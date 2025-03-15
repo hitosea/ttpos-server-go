@@ -11,12 +11,12 @@ type IDeviceRepo interface {
 	WhereSn(deviceId string) DBOption   // sn/device_id 条件
 	WhereSource(source string) DBOption // 来源（cashier、tablet、kitchen、assistant）条件
 
-	GetDevice(opts ...DBOption) (model.Device, error)            // 获取设备
-	GetDeviceBySn(sn string) (*model.Device, error)              // 根据sn获取设备
-	GetDeviceBrand(opts ...DBOption) string                      // 获取设备品牌
-	GetBindCountBySource(source string) uint                     // 根据来源获取设备绑定数量
-	CreateDevice(device model.Device) (model.Device, error)      // 创建设备
-	UpdateDevice(uuid uint64, vars map[string]interface{}) error // 更新设备
+	GetDevice(opts ...DBOption) (model.Device, error)       // 获取设备
+	GetDeviceBySn(sn string) (*model.Device, error)         // 根据sn获取设备
+	GetDeviceBrand(opts ...DBOption) string                 // 获取设备品牌
+	GetBindCountBySource(source string) uint                // 根据来源获取设备绑定数量
+	CreateDevice(device model.Device) (model.Device, error) // 创建设备
+	UpdateDevice(uuid uint64, vars map[string]any) error    // 更新设备
 }
 
 func NewDeviceRepo(db *gorm.DB) IDeviceRepo {

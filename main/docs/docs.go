@@ -11606,6 +11606,10 @@ const docTemplate = `{
                 "menu_show_sold_out"
             ],
             "properties": {
+                "device_remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                },
                 "dish_card_style": {
                     "description": "菜品卡片样式 0-无图模式 1-图片模式",
                     "type": "string",
@@ -11797,7 +11801,7 @@ const docTemplate = `{
                     "description": "点餐助手设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Assistant"
+                            "$ref": "#/definitions/setting.AssistantResp"
                         }
                     ]
                 },
@@ -11849,14 +11853,6 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "kitchen": {
-                    "description": "厨显端设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Kitchen"
-                        }
-                    ]
-                },
                 "payment": {
                     "description": "支付设置",
                     "allOf": [
@@ -11865,7 +11861,7 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "permission": {
+                "permissions": {
                     "description": "点餐助手权限",
                     "type": "array",
                     "items": {
@@ -12296,7 +12292,7 @@ const docTemplate = `{
                     "description": "收银机设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Cashier"
+                            "$ref": "#/definitions/setting.CashierResp"
                         }
                     ]
                 },
@@ -12355,7 +12351,7 @@ const docTemplate = `{
                     "description": "平板端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Tablet"
+                            "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
                 },
@@ -16664,7 +16660,7 @@ const docTemplate = `{
                     "description": "厨显端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Kitchen"
+                            "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
                 },
@@ -16680,7 +16676,7 @@ const docTemplate = `{
                     "description": "平板端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Tablet"
+                            "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
                 }
@@ -16788,13 +16784,9 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Assistant": {
+        "setting.AssistantResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "auto_lock_screen": {
                     "description": "自动锁屏（秒），默认5分钟",
                     "type": "string"
@@ -16835,10 +16827,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
-                },
-                "lock_password": {
-                    "description": "锁屏密码",
-                    "type": "string"
                 },
                 "remain_color": {
                     "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
@@ -17149,6 +17137,103 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.CashierResp": {
+            "type": "object",
+            "properties": {
+                "auto_lock_screen": {
+                    "description": "自动锁屏（秒），默认5分钟",
+                    "type": "string"
+                },
+                "auto_order_limit": {
+                    "description": "自动接单金额上限",
+                    "type": "string"
+                },
+                "carousel": {
+                    "description": "上传后的轮播内容url（图片 + 视频）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_auto_lock_screen": {
+                    "description": "是否开启自动锁屏 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_auto_order": {
+                    "description": "是否自动接单",
+                    "type": "string"
+                },
+                "is_auto_send": {
+                    "description": "收银结账自动送厨房 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_auto_voice": {
+                    "description": "是否开启自动接单语音播报",
+                    "type": "string"
+                },
+                "is_open_cashier_password": {
+                    "description": "是否开启钱箱密码 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_remain_color": {
+                    "description": "是否开启剩余时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_show_assistant_sold_out": {
+                    "description": "点餐助手是否显示售罄商品 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "is_show_scan_sold_out": {
+                    "description": "扫码点餐是否显示售罄商品 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "menu_show_sold_out": {
+                    "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "string"
+                },
+                "order_method": {
+                    "description": "用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.OrderMethodItem"
+                        }
+                    ]
+                },
+                "remain_color": {
+                    "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "server": {
+                    "description": "收银机服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                }
+            }
+        },
         "setting.CheckoutZeroingMethodItem": {
             "type": "object",
             "properties": {
@@ -17215,13 +17300,9 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Kitchen": {
+        "setting.KitchenResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "default_language": {
                     "description": "默认语言",
                     "type": "string"
@@ -17503,13 +17584,9 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Tablet": {
+        "setting.TabletResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "buffet_order_limit": {
                     "description": "自助餐下单限制",
                     "allOf": [

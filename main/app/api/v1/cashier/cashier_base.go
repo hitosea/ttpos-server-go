@@ -232,12 +232,12 @@ func (h *BaseHandler) EditAcceptOrderSetting(c *gin.Context) {
 // @Router /cashier/setting/edit_system [post]
 func (h *BaseHandler) EditSystemSetting(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var acceptOrderSetting req.UpdateAcceptOrderSetting
-	if err := c.ShouldBindJSON(&acceptOrderSetting); err != nil {
-		helper.HandleValidationError(c, err, acceptOrderSetting, req.UpdateAcceptOrderSettingMessage)
+	var systemSetting req.UpdateSystemSetting
+	if err := c.ShouldBindJSON(&systemSetting); err != nil {
+		helper.HandleValidationError(c, err, systemSetting, req.UpdateAcceptOrderSettingMessage)
 		return
 	}
-	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
+	err := h.settingSrv.EditSystemSetting(ctx, systemSetting)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

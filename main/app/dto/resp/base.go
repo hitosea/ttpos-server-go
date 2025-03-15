@@ -6,19 +6,19 @@ import (
 )
 
 type CashierBase struct {
-	Username     string           `json:"username"`      // 登录账号
-	CashierUuid  uint64           `json:"cashier_uuid"`  // 收银员UUID
-	DeviceId     string           `json:"device_id"`     // 设备ID
-	DeviceRemark string           `json:"device_remark"` // 设备备注
-	Cashier      setting.Cashier  `json:"cashier"`       // 收银机设置
-	Business     setting.Business `json:"business"`      // 门店业务设置
-	Buffet       setting.Buffet   `json:"buffet"`        // 自助餐设置
-	Currency     setting.Currency `json:"currency"`      // 货币单位
-	Permissions  []*Permission    `json:"permissions"`   // 页面权限
-	Company      Company          `json:"company"`       // 商家信息
-	Tablet       setting.Tablet   `json:"tablet"`        // 平板端设置
-	Payment      setting.Payment  `json:"payment"`       // 支付设置
-	Printer      setting.Printer  `json:"printer"`       // 打印设置
+	Username     string              `json:"username"`      // 登录账号
+	CashierUuid  uint64              `json:"cashier_uuid"`  // 收银员UUID
+	DeviceId     string              `json:"device_id"`     // 设备ID
+	DeviceRemark string              `json:"device_remark"` // 设备备注
+	Cashier      setting.CashierResp `json:"cashier"`       // 收银机设置
+	Business     setting.Business    `json:"business"`      // 门店业务设置
+	Buffet       setting.Buffet      `json:"buffet"`        // 自助餐设置
+	Currency     setting.Currency    `json:"currency"`      // 货币单位
+	Permissions  []*Permission       `json:"permissions"`   // 页面权限
+	Company      Company             `json:"company"`       // 商家信息
+	Tablet       setting.TabletResp  `json:"tablet"`        // 平板端设置
+	Payment      setting.Payment     `json:"payment"`       // 支付设置
+	Printer      setting.Printer     `json:"printer"`       // 打印设置
 }
 
 type AssistantStaff struct {
@@ -36,25 +36,25 @@ type CashierStaff struct {
 }
 
 type AssistantBase struct {
-	Permission     []string          `json:"permission"`      // 点餐助手权限
-	CashierStaff   CashierStaff      `json:"cashier_staff"`   // 收银机员工
-	AssistantStaff AssistantStaff    `json:"assistant_staff"` // 点餐助手员工
-	Company        Company           `json:"company"`         // 商家信息
-	Assistant      setting.Assistant `json:"assistant"`       // 点餐助手设置
-	Buffet         setting.Buffet    `json:"buffet"`          // 自助餐设置
-	Payment        setting.Payment   `json:"payment"`         // 支付设置
-	Business       setting.Business  `json:"business"`        // 门店业务设置
-	Kitchen        setting.Kitchen   `json:"kitchen"`         // 厨显端设置
-	Currency       setting.Currency  `json:"currency"`        // 货币设置
+	Permissions    []string              `json:"permissions"`     // 点餐助手权限
+	CashierStaff   CashierStaff          `json:"cashier_staff"`   // 收银机员工
+	AssistantStaff AssistantStaff        `json:"assistant_staff"` // 点餐助手员工
+	Company        Company               `json:"company"`         // 商家信息
+	Assistant      setting.AssistantResp `json:"assistant"`       // 点餐助手设置
+	Buffet         setting.Buffet        `json:"buffet"`          // 自助餐设置
+	Payment        setting.Payment       `json:"payment"`         // 支付设置
+	Business       setting.Business      `json:"business"`        // 门店业务设置
+	Currency       setting.Currency      `json:"currency"`        // 货币设置
 }
+
 type TabletBase struct {
-	Company  Company          `json:"company"`  // 商家信息
-	Cashier  setting.Cashier  `json:"cashier"`  // 收银机设置
-	Buffet   setting.Buffet   `json:"buffet"`   // 自助餐设置
-	Currency setting.Currency `json:"currency"` // 货币单位
-	Tablet   setting.Tablet   `json:"tablet"`   // 平板端设置
-	Kitchen  setting.Kitchen  `json:"kitchen"`  // 厨显端设置
-	Store    setting.Store    `json:"store"`    // 商家设置
+	Company  Company             `json:"company"`  // 商家信息
+	Cashier  setting.Cashier     `json:"cashier"`  // 收银机设置
+	Buffet   setting.Buffet      `json:"buffet"`   // 自助餐设置
+	Currency setting.Currency    `json:"currency"` // 货币单位
+	Tablet   setting.TabletResp  `json:"tablet"`   // 平板端设置
+	Kitchen  setting.KitchenResp `json:"kitchen"`  // 厨显端设置
+	Store    setting.Store       `json:"store"`    // 商家设置
 }
 
 type TabletDeskItem struct {
@@ -67,8 +67,8 @@ type TabletDeskList struct {
 }
 
 type KitchenBase struct {
-	Kitchen setting.Kitchen `json:"kitchen"` // 厨显端设置
-	Company Company         `json:"company"` // 商家信息
+	Kitchen setting.KitchenResp `json:"kitchen"` // 厨显端设置
+	Company Company             `json:"company"` // 商家信息
 }
 
 type ProductPrinter struct {
