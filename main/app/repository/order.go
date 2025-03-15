@@ -331,6 +331,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
+				Query: "SaleBillSetting",
+			},
+			WithPreload{
 				Query: "SaleOrders",
 				Args: []interface{}{
 					func(db *gorm.DB) *gorm.DB {
@@ -343,28 +346,25 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				},
 			},
 			WithPreload{
-				Query: "SaleBillSetting",
-			},
-			WithPreload{
-				Query: "Desk",
+				Query: "SaleOrders.ReturnOrders",
 			},
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			},
+			WithPreload{
+				Query: "Desk",
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
