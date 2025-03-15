@@ -672,7 +672,6 @@ func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
 	if operation != constant.OrderSettle &&
 		operation != constant.OrderUnlock &&
-		operation != constant.OrderDiscount &&
 		model.IsLockStatus() {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}

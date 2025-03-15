@@ -343,7 +343,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 
 // OneDishOneOrder 一菜一单
 func (t *dishesXprinterTemplate) OneDishOneOrder(
-	templateID int,
+	tmp int,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
@@ -370,13 +370,12 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
-	printer.LineFeed()
 	printer.RestoreDefaultLineSpacing()
 
 	/**
 	 * 模版二
 	 */
-	if templateID == 2 {
+	if tmp == 2 {
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 2)
@@ -405,6 +404,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			[]int{490, pkg.AlignLeft, 0},
 			[]int{0, pkg.AlignRight, 0},
 		)
+		printer.SetPrintModes(false, false, false)
 
 		// 遍历订单中的产品
 		for _, product := range products {

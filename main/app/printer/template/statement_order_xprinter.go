@@ -511,7 +511,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	// 应收
 	finalPrice := saleOrder.FinalPrice
 	if payTime == "" {
-		finalPrice = saleOrder.Amount
+		finalPrice = saleOrder.GetAmount()
 	}
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)

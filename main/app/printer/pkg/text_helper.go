@@ -41,6 +41,31 @@ func (h *PrintTextHelper) GetTextWidth(text string) int {
 		return w
 	}
 
+	// 缅甸语检测
+	myanmarRegex := regexp.MustCompile(`[\p{Myanmar}]`)
+	if myanmarRegex.MatchString(text) {
+		// 1. 提取所有缅甸语字符
+		myanmarMatches := myanmarRegex.FindAllString(text, -1)
+		myanmar := strings.Join(myanmarMatches, "")
+
+		// 2. 计算缅甸语字符的基本宽度
+		w := utf8.RuneCountInString(myanmar)
+
+		// 3. 从原文本中移除缅甸语字符
+		textWithoutMyanmar := myanmarRegex.ReplaceAllString(text, "")
+
+		// 4. 转换为GBK并添加长度
+		encoder := simplifiedchinese.GBK.NewEncoder()
+		gbkStr, _, err := transform.String(encoder, textWithoutMyanmar)
+		if err == nil {
+			w += len(gbkStr)
+		} else {
+			w += len(textWithoutMyanmar)
+		}
+
+		return w
+	}
+
 	// 韩语检测
 	koreanRegex := regexp.MustCompile(`[\p{Hangul}]`)
 	if koreanRegex.MatchString(text) {

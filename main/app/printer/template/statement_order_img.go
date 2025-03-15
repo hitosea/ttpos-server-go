@@ -493,7 +493,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	// 合计应收
 	finalPrice := saleOrder.FinalPrice
 	if payTime == "" {
-		finalPrice = saleOrder.Amount
+		finalPrice = saleOrder.GetAmount()
 	}
 	img.SetFontSize(26)
 	img.SetFontWeight(2)

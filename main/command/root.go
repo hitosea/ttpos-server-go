@@ -14,12 +14,12 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/timer"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -119,13 +119,13 @@ func initializeInternalService(dbm *database.DBManager, cache cache.Cache) {
 
 // 初始化定时器任务
 func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
-	// 获取定时器管理器实例
-	tm := timer.GetTimerManager()
+	c := cron.New(cron.WithSeconds())
 
-	// 每1秒执行一次的示例任务
-	secondTask := printer_tasks.NewSecondTask("second_task", 1, dbm, cache)
-	tm.RegisterTask(secondTask)
+	// 1秒检查打印
+	_, _ = c.AddFunc("*/1 * * * * *", func() {
+		printer_tasks.NewPrinterTask(dbm, cache).Execute()
+	})
 
 	// 启动定时器
-	tm.Start()
+	c.Start()
 }
