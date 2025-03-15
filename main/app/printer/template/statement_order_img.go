@@ -322,7 +322,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			continue
 		}
 		productNum += orderBuffetCustomer.Num
-		buffetNameText := orderBuffetCustomer.Name
+		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
 		}

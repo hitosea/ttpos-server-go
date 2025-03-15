@@ -145,7 +145,6 @@ func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) erro
 // CreateSaleOrderBuffetDelayProduct 创建销售订单自助餐加钟
 func (r *orderRepo) CreateSaleOrderBuffetDelayProduct(obj model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error) {
 	obj.SetNil()
-	fmt.Println("CreateSaleOrderBuffetDelayProduct: ", utils.ToJsonString(obj))
 	err := r.db.Model(&model.SaleOrderBuffetDelayProduct{}).Create(&obj).Error
 	if err != nil {
 		return obj, errors.WithMessage(fmt.Errorf("CreateSaleOrderBuffetDelayProduct: %v", err))
@@ -1028,6 +1027,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetDelayProducts",

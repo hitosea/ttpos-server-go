@@ -12,22 +12,22 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// statementOrderXprinterTemplate XPrinter订单打印模板
-type statementOrderXprinterTemplate struct {
+// statementOrderCodesoftTemplate Codesoft订单打印模板
+type statementOrderCodesoftTemplate struct {
 	base *printerTemplate
 }
 
-// NewStatementOrderXprinterTemplate 创建新的XPrinter订单打印模板
-func NewStatementOrderXprinterTemplate(
+// NewStatementOrderCodesoftTemplate 创建新的Codesoft订单打印模板
+func NewStatementOrderCodesoftTemplate(
 	base *printerTemplate,
-) *statementOrderXprinterTemplate {
-	return &statementOrderXprinterTemplate{
+) *statementOrderCodesoftTemplate {
+	return &statementOrderCodesoftTemplate{
 		base: base,
 	}
 }
 
 // GetPrintnrContent 获取打印内容
-func (t *statementOrderXprinterTemplate) GetPrintContent(
+func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	printerType string,
 	printType int,
 	temp int,
@@ -82,7 +82,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printer.SetCharacterSize(2, 1)
 	printer.AppendText(t.base.StoreSetting.Name + "\n")
 	printer.SetLineSpacing(20)
-	printer.LineFeed(2)
+	printer.LineFeed(1)
 	printer.SetLineSpacing(90)
 	printer.SetPrintModes(false, false, false)
 	printer.SetCharacterSize(1, 1)
@@ -96,15 +96,15 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.AppendText("\x1D\x21\x01")
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			printer.SetLineSpacing(120)
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			printer.SetLineSpacing(90)
 		} else if saleBill.SerialNo != "" {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 		}
-		printer.SetLineSpacing(50)
-		printer.LineFeed(1)
-		printer.SetLineSpacing(90)
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(50)
+			printer.LineFeed(1)
+			printer.SetLineSpacing(90)
+		}
 		//
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
@@ -121,33 +121,30 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetLineSpacing(90)
 	} else if temp == 2 {
-		printer.SetLineSpacing(20)
-		printer.LineFeed()
-		printer.SetLineSpacing(90)
 		printer.AppendText(t.base.Translate("非常感谢您今天的到来，我们期待您的再次光临"))
 		printer.LineFeed()
 		printer.SetLineSpacing(30)
 		if payTime != "" {
 			printer.LineFeed()
 			printer.AppendText(payTime + "\n")
-			if printerType == PrinterTypeXPrinterWifi {
-				printer.LineFeed()
-			}
 		}
 		//
 		printer.LineFeed()
-		printer.SetLineSpacing(90)
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(90)
+		} else {
+			printer.SetLineSpacing(50)
+		}
 		printer.SetCharacterSize(1, 1)
+		printer.AppendText("\x1D\x21\x01")
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			printer.SetLineSpacing(120)
+			printer.SetLineSpacing(50)
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			printer.LineFeed()
-			printer.SetLineSpacing(90)
+			printer.SetLineSpacing(50)
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
-			printer.LineFeed()
 			printer.LineFeed()
 		}
 		printer.SetCharacterSize(1, 1)
@@ -177,37 +174,33 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.SetCharacterSize(1, 1)
 		printer.LineFeed()
 		//
-		printer.SetLineSpacing(20)
-		printer.LineFeed()
-		printer.LineFeed()
-		printer.SetLineSpacing(90)
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(20)
+			printer.LineFeed(2)
+			printer.SetLineSpacing(90)
+		}
 		// 公司名称
 		if company != "" {
-			printer.SetLineSpacing(80)
 			printer.AppendText(t.base.Translate("公司名称") + ": " + company)
 			printer.SetLineSpacing(20)
 			printer.LineFeed(2)
 		}
 		if chainNumber != "" {
-			printer.SetLineSpacing(80)
 			printer.AppendText(t.base.Translate("连锁店编号") + ": " + chainNumber)
 			printer.SetLineSpacing(20)
 			printer.LineFeed(2)
 		}
 		if address != "" {
-			printer.SetLineSpacing(80)
 			printer.AppendText(t.base.Translate("商家地址") + ": " + address)
 			printer.SetLineSpacing(40)
 			printer.LineFeed(2)
 		}
 		if phone != "" {
-			printer.SetLineSpacing(80)
 			printer.AppendText(t.base.Translate("电话") + ": " + phone)
 			printer.SetLineSpacing(40)
 			printer.LineFeed(2)
 		}
 		if taxNumber != "" {
-			printer.SetLineSpacing(80)
 			printer.AppendText(t.base.Translate("税号") + ": " + taxNumber)
 			printer.SetLineSpacing(40)
 			printer.LineFeed(2)
@@ -223,32 +216,42 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			if invoiceInfo.HasContent() {
 				printer.SetLineSpacing(48)
 				printer.AppendText("------------------------------------------------\n")
-				printer.LineFeed()
+				if !t.base.IsThText(invoiceInfo.CompanyName) {
+					printer.LineFeed()
+				}
 				if invoiceInfo.CompanyName != "" {
-					printer.SetLineSpacing(80)
 					printer.AppendText(t.base.Translate("公司名称") + ": " + invoiceInfo.CompanyName)
-					printer.SetLineSpacing(40)
+					printer.SetLineSpacing(20)
 					printer.LineFeed(2)
 				}
 				if invoiceInfo.CompanyAddr != "" {
-					printer.SetLineSpacing(80)
 					printer.AppendText(t.base.Translate("公司地址") + ": " + invoiceInfo.CompanyAddr)
-					printer.SetLineSpacing(40)
+					printer.SetLineSpacing(20)
 					printer.LineFeed(2)
 				}
 				if invoiceInfo.CompanyTaxNumber != "" {
-					printer.SetLineSpacing(80)
+					if !t.base.IsThText(invoiceInfo.CompanyTaxNumber) {
+						printer.LineFeed(1)
+					}
 					printer.AppendText(t.base.Translate("公司税号") + ": " + invoiceInfo.CompanyTaxNumber)
-					printer.SetLineSpacing(40)
+					printer.SetLineSpacing(20)
 					printer.LineFeed(2)
 				}
 				if invoiceInfo.CompanyPhone != "" {
-					printer.SetLineSpacing(80)
+					if !t.base.IsThText(invoiceInfo.CompanyPhone) {
+						printer.LineFeed(1)
+					}
 					printer.AppendText(t.base.Translate("公司电话") + ": " + invoiceInfo.CompanyPhone)
-					printer.SetLineSpacing(48)
+					printer.SetLineSpacing(20)
 					printer.LineFeed(2)
 				}
 			}
+		}
+		//
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(90)
+		} else {
+			printer.SetLineSpacing(10)
 		}
 		//
 		printer.AppendText("------------------------------------------------\n")
@@ -256,19 +259,18 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			printer.SetLineSpacing(120)
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			printer.SetLineSpacing(90)
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
-			printer.SetLineSpacing(90)
 			printer.LineFeed()
 		}
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(45)
+			printer.LineFeed()
+			printer.SetLineSpacing(90)
+		}
 		//
-		printer.SetLineSpacing(45)
-		printer.LineFeed()
-		printer.SetLineSpacing(90)
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
 		printer.SetAlignment(pkg.AlignLeft)
@@ -311,6 +313,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	// 赠品金额 / 商品数量
 	freeMoney := float64(0)
 	productNum := uint(0)
+	printer.SetLineSpacing(70)
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 		if orderBuffetCustomer.IsDelete() {
@@ -332,9 +335,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			rightWidth,
 		))
 		printer.LineFeed()
-		printer.SetLineSpacing(50)
+		printer.SetLineSpacing(20)
 		printer.LineFeed()
-		printer.SetLineSpacing(60)
+		printer.SetLineSpacing(70)
 	}
 	// 添加加钟商品
 	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
@@ -353,9 +356,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			rightWidth,
 		))
 		printer.LineFeed()
-		printer.SetLineSpacing(50)
+		printer.SetLineSpacing(20)
 		printer.LineFeed()
-		printer.SetLineSpacing(90)
+		printer.SetLineSpacing(70)
 	}
 	// 商品列表
 	for _, item := range saleOrder.SaleOrderProducts {
@@ -383,14 +386,14 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			rightWidth,
 		))
 		printer.LineFeed()
-		printer.SetLineSpacing(50)
+		printer.SetLineSpacing(30)
 		printer.LineFeed()
-		printer.SetLineSpacing(60)
+		printer.SetLineSpacing(70)
 	}
 
 	// 商品金额 = 订单总价 - 赠品金额
 	printer.AppendText("------------------------------------------------\n")
-	printer.SetLineSpacing(25)
+	printer.SetLineSpacing(10)
 	printer.LineFeed()
 	printer.SetLineSpacing(90)
 	printer.SetAlignment(pkg.AlignRight)
@@ -426,6 +429,11 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			if t.base.Lang == "ja" {
 				printer.AppendText(fmt.Sprintf("%s%% %s: %s", taxRate, t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
 			} else {
+				if t.base.Lang != "en" && !t.base.IsThText(t.base.CurrencyUnit) {
+					printer.SetLineSpacing(20)
+					printer.LineFeed()
+					printer.SetLineSpacing(90)
+				}
 				printer.AppendText(fmt.Sprintf("VAT (%s%%): %s", taxRate, t.base.GetPriceAndUnit(taxFee)))
 			}
 			printer.LineFeed()
@@ -503,9 +511,11 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 
 	// 分隔
+	if t.base.Lang == "th" {
+		printer.SetLineSpacing(10)
+	}
 	if temp == 3 {
-		printer.SetLineSpacing(30)
-		printer.AppendText("------------------------------------------------\n")
+		printer.AppendText("------------------------------------------------")
 	}
 
 	// 应收
@@ -530,7 +540,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
 		printer.LineFeed()
 		printer.AppendText("------------------------------------------------\n")
-		printer.SetLineSpacing(20)
+		printer.SetLineSpacing(5)
 		printer.LineFeed()
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
@@ -543,6 +553,11 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			if t.base.Lang == "ja" {
 				printer.AppendText(t.base.PrintText(fmt.Sprintf("%s%% %s", taxRate, t.base.Translate("的对象")), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
 			} else {
+				if t.base.Lang != "en" && !t.base.IsThText(t.base.CurrencyUnit) {
+					printer.SetLineSpacing(20)
+					printer.LineFeed()
+					printer.SetLineSpacing(90)
+				}
 				printer.AppendText(t.base.PrintText(fmt.Sprintf("VAT (%s%%)", taxRate), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
 			}
 		}
@@ -562,25 +577,28 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 					printer.AppendText(t.base.PrintText(t.base.Translate("找零"), "", t.base.Amount(saleOrder.ChangeAmount), width, 34))
 				}
 			}
+			printer.SetLineSpacing(30)
+			printer.LineFeed()
 		}
 	}
 
 	// 会员信息
 	if saleOrder.Member != nil {
 		printer.LineFeed()
-		printer.SetLineSpacing(90)
+		printer.SetLineSpacing(70)
 		printer.AppendText("------------------------------------------------\n")
 		//
 		point := saleOrder.GetMemberSurplusPoints()
 		balance := saleOrder.GetMemberSurplusBalance()
 		printer.AppendText(t.base.PrintText(t.base.Translate("会员剩余余额"), "", t.base.GetPriceAndUnit(balance), width, 34) + "\n")
 		printer.AppendText(t.base.PrintText(t.base.Translate("本次积分"), "", point, width, 34))
-		printer.SetLineSpacing(50)
-		printer.LineFeed()
+		printer.SetLineSpacing(30)
+		printer.LineFeed(2)
 		printer.SetLineSpacing(90)
 	}
 
 	// 技术支持方
+	printer.SetLineSpacing(90)
 	printer.AppendText("------------------------------------------------\n")
 	printer.SetAlignment(pkg.AlignCenter)
 	if t.base.Lang == "th" {

@@ -154,12 +154,19 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	// if ($isSunmi) {
 	//     return (new SunmiBillTemplate($this->setting, null, $isSunmi))->create($order, $printerType, $isPrePrint);
 	// }
-	// /* *
-	// * CODESOFT 打印机
-	// */
-	// if (in_array($printerType, [ PrinterTypeEnum::CODESOFT_LAN, PrinterTypeEnum::CODESOFT_WIFI])) {
-	//     return (new CodesoftBillTemplate($this->setting, null, $isSunmi))->create($order, $printerType, $isPrePrint);
-	// }
+
+	/* *
+	* CODESOFT 打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
+			printerType,
+			printType,
+			tmp,
+			saleBill,
+			saleOrder,
+		)
+	}
 
 	return ""
 }

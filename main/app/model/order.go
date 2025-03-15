@@ -210,7 +210,6 @@ func (model *SaleBill) SetReverseSettle() {
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			paymentOrder.Status = constant.PaymentOrderStatusRefund
-			fmt.Println("paymentOrder.Status", paymentOrder.Status)
 		}
 	}
 }

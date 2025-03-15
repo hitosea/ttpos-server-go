@@ -907,6 +907,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					ImageUrl:            url,
+					CancelReason:        saleOrderProduct.CancelReason,
 					// todo 退款金额 待处理
 					RefundAmount: 0,
 				})
@@ -2621,8 +2622,6 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 		return nil, errors.WithMessage(errUuid)
 	}
 	// 没有找到销售账单
-	fmt.Println(2222222222, "saleBillUuid", saleBillUuid)
-
 	if saleBillUuid == 0 {
 		ctx.Log().Info("没有找到销售账单", zap.String("deviceSn", deviceSn))
 		// 收银机点餐页面没有销售账单时，检查是否有自动加购的必点方案，如果有，则创建一个销售账单并自动加购商品
@@ -4040,8 +4039,6 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 
 	// 遍历得到要自动加购的商品
-	fmt.Println(utils.ToJsonString(mustPlanList))
-
 	for i, plan := range mustPlanList {
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
