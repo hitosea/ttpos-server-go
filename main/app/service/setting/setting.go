@@ -1173,6 +1173,14 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
 		return errors.WithMessage(err)
 	}
+
+	if systemSetting.DeviceRemark != "" {
+		if err := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).UpdateDevice(ctx.GetDeviceUuid(), map[string]any{
+			"remark": systemSetting.DeviceRemark,
+		}); err != nil {
+			return errors2.ErrInternal
+		}
+	}
 	return nil
 }
 
