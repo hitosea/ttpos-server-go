@@ -757,12 +757,13 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, 0)
+	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return resp.OrderInfosResp{}, errors.WithMessage(err)
 	}
 	isMain := req.SaleOrderUuid == 0        // 是否查询主单
 	isSplit := len(saleBill.SaleOrders) > 1 // 是否拆单
+	isCellCancel := isMain
 
 	// 组合信息
 	totalMemberNames := []string{}
@@ -796,7 +797,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Source:          uint(payment.GetSource()),
 					SourceText:      payment.GetSourceText(ctx.GetLanguage()),
 				})
-				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+				// 只有当支付方式名称不在切片中时才添加，实现去重
+				if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+					payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+				}
 			}
 		}
 		if order.GetMemberName() != "" && !slices.Contains(totalMemberNames, order.GetMemberName()) {
@@ -818,7 +822,6 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				FlavorName:     product.FlavorName,
 				Num:            product.Num,
 				Price:          product.Price,
-				SalePrice:      product.SalePrice,
 				TotalPrice:     decimal.NewFromFloat(product.TotalPrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
 				TotalSalePrice: decimal.NewFromFloat(product.SalePrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
 				TaxRate:        product.TaxRate,
@@ -851,13 +854,17 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			MemberUuid:    order.ConsumerUuid,
 			Products:      products,
 		})
+		//
+		if order.Status != constant.SaleBillStatusPending {
+			isCellCancel = false
+		}
 	}
 
 	// 处理额外信息
 	order := saleBill.SaleOrders[0]
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund:        false,
-		IsCellCancel:        !isSplit && order.Status == constant.SaleBillStatusPending,
+		IsCellCancel:        isCellCancel,
 		IsCellReverseSettle: saleBill.IsCellReverseSettle(),
 		IsCellPrint:         true,
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
