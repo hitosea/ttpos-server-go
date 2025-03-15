@@ -351,6 +351,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders.PaymentOrders",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 			},
 			WithPreload{

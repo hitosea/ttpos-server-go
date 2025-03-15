@@ -889,9 +889,9 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				if saleOrderProduct.IsDelete() {
 					continue
 				}
-				url := ""
+				imageUrl := ""
 				if saleOrderProduct.ImageFile != nil {
-					url = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+					imageUrl = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 				}
 				products = append(products, resp.OrderProduct{
 					Uuid:                saleOrderProduct.Uuid,
@@ -906,8 +906,9 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsMust:              saleOrderProduct.IsMustProduct(),
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
-					ImageUrl:            url,
+					ImageUrl:            imageUrl,
 					CancelReason:        saleOrderProduct.CancelReason,
+					GiftReason:          saleOrderProduct.GiftReason,
 					// todo 退款金额 待处理
 					RefundAmount: 0,
 				})
