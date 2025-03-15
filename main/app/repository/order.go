@@ -348,6 +348,24 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 			WithPreload{
 				Query: "Desk",
 			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),

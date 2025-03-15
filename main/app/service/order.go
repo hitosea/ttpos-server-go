@@ -761,7 +761,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
 	if err != nil {
 		return resp.OrderInfosResp{}, errors.WithMessage(err)
 	}
