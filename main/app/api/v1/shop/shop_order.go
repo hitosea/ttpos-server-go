@@ -33,9 +33,7 @@ type OrderHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/list [get]
 func (h *OrderHandler) GetShopOrderList(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	orderListReq := req.OrderListReq{}
 	if err := c.ShouldBindQuery(&orderListReq); err != nil {
@@ -43,7 +41,7 @@ func (h *OrderHandler) GetShopOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetOrderLists(companyUuid, staff, source, orderListReq)
+	res, err := h.service.GetOrderLists(ctx, orderListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

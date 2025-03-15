@@ -41,7 +41,7 @@ import (
 type IOrderSrv interface {
 	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                 // 创建点餐订单
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                           // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                     // 获取订单列表
+	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                               // 获取订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                        // 获取订单详情
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                               // 删除订单
@@ -612,8 +612,8 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 }
 
 // GetCashierOrderList 获取订单列表
-func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
-	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
 	_ = copier.Copy(&reqs, req)
@@ -629,6 +629,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		totalPayTypeNames := []string{}
 		isSplit := len(bill.SaleOrders) > 1 // 拆单
 		orderList := make([]resp.BillListsOrder, 0)
+		var paymentAmounts float64
 		//
 		billListsExtra := resp.BillListsExtra{
 			IsCellRefund:        false,
@@ -646,10 +647,16 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 				}
 				// 获取支付方式
 				payTypeNames := []string{}
-				for _, payment := range order.PaymentOrders {
-					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
-					payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+				if order.IsFree == 1 {
+					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+					payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+				} else {
+					for _, payment := range order.PaymentOrders {
+						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
 				}
+
 				orderExtra := resp.BillListsExtra{
 					IsCellRefund:        false,
 					IsCellCancel:        false,
@@ -663,9 +670,12 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 					orderExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
 					orderExtra.IsCellReverseSettle = true
 				}
+				//
+				paymentAmount := order.GetActualPaymentAmount()
+				paymentAmounts += paymentAmount
 				//
 				orderList = append(orderList, resp.BillListsOrder{
 					SaleBillUuid:  order.SaleBillUuid,
@@ -682,8 +692,8 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 					Status:        order.Status,
 					FinishTime:    order.FinishTime,
 					OrderAmount:   order.Amount,
-					PaymentAmount: order.PaymentAmount,
-					PayTypeName:   strings.Join(payTypeNames, ","),
+					PaymentAmount: paymentAmount,
+					PayTypeName:   strings.Join(utils.RemoveDuplicates(payTypeNames), ","),
 					Extra:         orderExtra,
 				})
 				//
@@ -698,16 +708,19 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 				if order.ConsumerUuid > 0 {
 					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
 				}
-				//
-				for _, payment := range order.PaymentOrders {
-					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+				if order.IsFree == 1 {
+					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+				} else {
+					for _, payment := range order.PaymentOrders {
+						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+					}
 				}
 				// 不等于免单 && 未退款 && 完成
 				if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 					billListsExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
 					billListsExtra.IsCellReverseSettle = true
 				}
 			}
@@ -723,9 +736,9 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			Status:        bill.Status,
 			FinishTime:    bill.FinishTime,
 			OrderAmount:   bill.Amount,
-			PaymentAmount: bill.PaymentAmount,
+			PaymentAmount: bill.GetPaymentAmount(),
 			ConsumerUuids: strings.Join(consumerUuids, ","),
-			PayTypeName:   strings.Join(totalPayTypeNames, ","),
+			PayTypeName:   strings.Join(utils.RemoveDuplicates(totalPayTypeNames), ","),
 			SaleOrders:    orderList,
 			Extra:         billListsExtra,
 		}
@@ -779,34 +792,55 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
 			continue
 		}
+		payTypeMap := make(map[string]*resp.OrderInfoPayTypes) // key 为 "支付方式名称_状态"
 		payTypeNames := []string{}
 		if saleOrder.IsFree == 1 {
-			payTypes = append(payTypes, resp.OrderInfoPayTypes{
-				Uuid:            0,
-				PaymentTypeName: i18n.Translate(ctx.GetLanguage(), "免单"),
-				CurrencyUnit:    "",
-				PaymentAmount:   saleOrder.PaymentAmount,
-				Status:          2,
-				Source:          0,
-				SourceText:      "",
-			})
-			payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+			// 免单处理
+			payTypeName := i18n.Translate(ctx.GetLanguage(), "免单")
+			key := fmt.Sprintf("%s_%d", payTypeName, 2)
+			if existingPayType, ok := payTypeMap[key]; ok {
+				existingPayType.PaymentAmount += saleOrder.PaymentAmount
+			} else {
+				payType := resp.OrderInfoPayTypes{
+					Uuid:            0,
+					PaymentTypeName: payTypeName,
+					CurrencyUnit:    "",
+					PaymentAmount:   saleOrder.PaymentAmount,
+					Status:          2,
+					Source:          0,
+					SourceText:      "",
+				}
+				payTypeMap[key] = &payType
+				payTypeNames = append(payTypeNames, payTypeName)
+			}
 		} else {
+			// 正常支付方式处理
 			for _, payment := range saleOrder.PaymentOrders {
-				payTypes = append(payTypes, resp.OrderInfoPayTypes{
-					Uuid:            payment.Uuid,
-					PaymentTypeName: payment.PaymentMethodName,
-					CurrencyUnit:    payment.CurrencyUnit,
-					PaymentAmount:   payment.PaymentAmount,
-					Status:          uint(payment.Status),
-					Source:          uint(payment.GetSource()),
-					SourceText:      payment.GetSourceText(ctx.GetLanguage()),
-				})
-				// 只有当支付方式名称不在切片中时才添加，实现去重
-				if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
-					payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
+				if existingPayType, ok := payTypeMap[key]; ok {
+					existingPayType.PaymentAmount += payment.PaymentAmount
+				} else {
+					payType := resp.OrderInfoPayTypes{
+						Uuid:            payment.Uuid,
+						PaymentTypeName: payment.PaymentMethodName,
+						CurrencyUnit:    payment.CurrencyUnit,
+						PaymentAmount:   payment.PaymentAmount,
+						Status:          uint(payment.Status),
+						Source:          uint(payment.GetSource()),
+						SourceText:      payment.GetSourceText(ctx.GetLanguage()),
+					}
+					payTypeMap[key] = &payType
+					if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
 				}
 			}
+		}
+
+		// 将 map 转换为切片
+		payTypes = make([]resp.OrderInfoPayTypes, 0, len(payTypeMap))
+		for _, payType := range payTypeMap {
+			payTypes = append(payTypes, *payType)
 		}
 		if saleOrder.GetMemberName() != "" && !slices.Contains(totalMemberNames, saleOrder.GetMemberName()) {
 			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
@@ -926,7 +960,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			IsFree:        saleOrder.IsFree == 1,
 			FreeReason:    saleOrder.FreeReason,
 			OrderAmount:   saleOrder.Amount,
-			PaymentAmount: saleOrder.PaymentAmount - saleOrder.GetTotalRefundAmount(),
+			PaymentAmount: saleOrder.GetActualPaymentAmount(),
 			RefundAmount:  saleOrder.GetTotalRefundAmount(),
 			PayTypeName:   strings.Join(payTypeNames, ","),
 			MemberName:    saleOrder.GetMemberName(),
