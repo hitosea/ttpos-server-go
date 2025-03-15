@@ -2213,6 +2213,12 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 点餐助手，拆单后不可以修改人数
+	if ctx.GetSource() == constant.SourceAssistant && billInfo.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	oldMealNum := billInfo.MealNum
 
 	// 判断订单状态
@@ -2282,7 +2288,10 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	if !saleBill.IsBuffetSaleBill() {
 		return nil, errors.New("当前订单不是自助餐类型，无法调整自助餐")
 	}
-	if len(saleBill.SaleOrders) > 1 {
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.New("当前订单已拆单，请前去收银机操作")
+	}
+	if saleBill.IsSplit() {
 		return nil, errors.New("当前订单已拆单，无法调整自助餐")
 	}
 	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateMealNum); err != nil {

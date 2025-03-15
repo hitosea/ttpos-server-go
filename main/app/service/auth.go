@@ -346,7 +346,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
-	permissions := make([]string, len(perms))
+	permissions := make([]string, 0, len(perms))
 	for _, perm := range perms {
 		permissions = append(permissions, perm.Path)
 	}
@@ -651,6 +651,8 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 		DeviceId:  ctx.GetGin().GetString(jwt.DeviceId),
 		StaffUuid: ctx.GetGin().GetUint64(jwt.StaffUuid),
 	})
+	// ToDo 记得删除
+	fmt.Println("bind cashier token:", newToken)
 	if err != nil {
 		return newToken, errors.New("生成token失败")
 	}

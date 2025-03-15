@@ -5325,6 +5325,54 @@ paths:
       summary: 检查更新
       tags:
       - 点餐助手端.基础信息
+  /assistant/desk/change:
+    post:
+      consumes:
+      - application/json
+      description: 切换桌台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 切换桌台
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/complete:
+    post:
+      consumes:
+      - application/json
+      description: 清台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 清台
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/info:
     get:
       consumes:
@@ -5391,6 +5439,30 @@ paths:
       summary: 获取桌台列表
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/merge:
+    post:
+      consumes:
+      - application/json
+      description: 合并桌台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MergeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 合并桌台
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/open:
     post:
       consumes:
@@ -5415,6 +5487,97 @@ paths:
       security:
       - JwtToken: []
       summary: 开台
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/buffet:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单调整自助餐
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderChangeBuffetReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单调整自助餐
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 向购物车添加商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/population:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单修改人数
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderChangePopulationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单修改人数
       tags:
       - 点餐助手端.桌台
   /assistant/desk/region_and_type:

@@ -335,9 +335,12 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) error {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
-	_, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
+	desk, err := repository.NewDeskRepo(db).GetDeskInfo(reqs.Uuid)
 	if err != nil {
 		return errors.WithMessage(err)
+	}
+	if desk.SaleBill != nil && ctx.GetSource() == constant.SourceAssistant && desk.SaleBill.IsSplit() {
+		return errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	err = repository.NewDeskRepo(db).UpdateDeskByMap(reqs.Uuid, map[string]any{
 		"sale_bill_uuid": 0,
@@ -463,6 +466,11 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+	}
+
+	// 点餐助手，拆单后不可以修改人数
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, nil, errors.New("当前订单已拆单，请前去收银机操作")
 	}
 
 	// 判断销售账单是否拆单
