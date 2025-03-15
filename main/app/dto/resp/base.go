@@ -22,11 +22,10 @@ type CashierBase struct {
 }
 
 type AssistantStaff struct {
-	Uuid       uint64   `json:"uuid"`       // 点餐助手员工uuid
-	RealName   string   `json:"real_name"`  // 点餐助手员工真实姓名
-	Phone      string   `json:"phone"`      // 点餐助手员工手机号
-	DeviceId   string   `json:"device_id"`  // 点餐助手设备ID
-	Permission []string `json:"permission"` // 点餐助手权限
+	Uuid     uint64 `json:"uuid"`      // 点餐助手员工uuid
+	RealName string `json:"real_name"` // 点餐助手员工真实姓名
+	Phone    string `json:"phone"`     // 点餐助手员工手机号
+	DeviceId string `json:"device_id"` // 点餐助手设备ID
 }
 
 type CashierStaff struct {
@@ -37,6 +36,7 @@ type CashierStaff struct {
 }
 
 type AssistantBase struct {
+	Permission     []string          `json:"permission"`      // 点餐助手权限
 	CashierStaff   CashierStaff      `json:"cashier_staff"`   // 收银机员工
 	AssistantStaff AssistantStaff    `json:"assistant_staff"` // 点餐助手员工
 	Company        Company           `json:"company"`         // 商家信息

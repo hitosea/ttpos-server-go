@@ -383,6 +383,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		return assistantBase, errors.WithMessage(err)
 	}
 	return resp.AssistantBase{
+		Permission: permissions,
 		CashierStaff: resp.CashierStaff{
 			RealName:     staff.RealName,
 			Username:     staff.Username,
@@ -390,11 +391,10 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			DeviceRemark: device.Remark,
 		},
 		AssistantStaff: resp.AssistantStaff{
-			Uuid:       assistantStaff.Uuid,
-			RealName:   assistantStaff.RealName,
-			Phone:      assistantStaff.Phone,
-			DeviceId:   assistantStaff.BindKey,
-			Permission: permissions,
+			Uuid:     assistantStaff.Uuid,
+			RealName: assistantStaff.RealName,
+			Phone:    assistantStaff.Phone,
+			DeviceId: assistantStaff.BindKey,
 		},
 		Company: resp.Company{
 			Uuid:     company.Uuid,
