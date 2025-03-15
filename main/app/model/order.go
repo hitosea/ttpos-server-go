@@ -346,6 +346,23 @@ func (model *SaleBill) IsPartialPay() bool {
 	return false
 }
 
+// 获取已送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductCooking() []*SaleOrderProduct {
+	cookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+				continue
+			}
+			if orderProduct.Status == constant.SaleOrderProductStatusCooking {
+				cookingSaleOrderProducts = append(cookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+			}
+		}
+	}
+	return cookingSaleOrderProducts
+}
+
 // 获取未送厨的销售订单商品
 func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)

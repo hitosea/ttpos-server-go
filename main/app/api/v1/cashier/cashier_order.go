@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -277,8 +278,13 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	}
 	//
 	var err error
+	var productList *resp.CartProductList
 	if params.DeskUuid > 0 {
-		_, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
+		_, productList, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
+		if productList != nil {
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			return
+		}
 	} else if params.SaleBillUuid > 0 {
 		_, err = h.service.IsCellCancelOrder(ctx, params.SaleBillUuid)
 	} else {
@@ -288,8 +294,6 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	// todo 获取已经送厨的商品 - 等王总写完拿来用
-
 	// 返回结果
 	helper.Success(c, gin.H{})
 }
