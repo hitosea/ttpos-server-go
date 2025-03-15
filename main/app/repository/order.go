@@ -832,22 +832,11 @@ func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error
 
 	// 删除销售订单
 	if err := tx.Model(&model.SaleOrder{}).
-		Where("sale_bill_uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusPending).
-		Where(map[string]interface{}{"uuid": saleOrderUuid}).
+		Where("sale_bill_uuid = ? AND status = ?", saleBillUuid, constant.SaleOrderStatusCanceled).
+		Where("uuid = ?", saleOrderUuid).
 		Update("delete_time", now).Error; err != nil {
 		tx.Rollback()
 		return errors.WithMessage(err)
-	}
-
-	// 如果是删除全部订单或只剩最后一个订单,则同时删除主订单
-	var count int64
-	if saleOrderUuid == 0 || tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ? AND delete_time = 0", saleBillUuid).Count(&count).Error == nil && count <= 1 {
-		if err := tx.Model(&model.SaleBill{}).
-			Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusCanceled).
-			Update("delete_time", now).Error; err != nil {
-			tx.Rollback()
-			return errors.WithMessage(err)
-		}
 	}
 
 	err := tx.Commit().Error

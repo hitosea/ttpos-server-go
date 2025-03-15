@@ -640,6 +640,10 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		// 拆单
 		if isSplit {
 			for k, order := range bill.SaleOrders {
+				if order.IsDelete() {
+					continue
+				}
+				// 获取支付方式
 				payTypeNames := []string{}
 				for _, payment := range order.PaymentOrders {
 					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
