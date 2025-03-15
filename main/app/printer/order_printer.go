@@ -118,6 +118,15 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 		p.Lang,
 	)
 
+	// 商米打印机
+	if slices.Contains([]string{
+		constant.PrinterTypeSunmiLan,
+		constant.PrinterTypeSunmiCloud,
+		constant.PrinterTypeCashierSunmi,
+	}, printerType) {
+		base.IsSunMi = true
+	}
+
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
 		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
@@ -128,12 +137,18 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 		)
 	}
 
-	// /* *
-	// * Compax 收银打印机 80mm 自带
-	// */
-	// if (printerType == constant.PrinterTypeCompax80mm || printerType == constant.PrinterTypeCompax80mm) {
-	//     return (new CompaxBillTemplate(p.setting, nil, false)).create(saleOrder, printerType, false)
-	// }
+	/* *
+	* Compax 收银打印机 80mm 自带
+	 */
+	if printerType == constant.PrinterTypeCashierCompax {
+		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
+			printerType,
+			printType,
+			tmp,
+			saleBill,
+			saleOrder,
+		)
+	}
 
 	/* *
 	 * 芯烨打印机
@@ -148,12 +163,18 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 		)
 	}
 
-	// /* *
-	// * 商米打印机
-	// */
-	// if ($isSunmi) {
-	//     return (new SunmiBillTemplate($this->setting, null, $isSunmi))->create($order, $printerType, $isPrePrint);
-	// }
+	/* *
+	* 商米打印机
+	 */
+	if base.IsSunMi {
+		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
+			printerType,
+			printType,
+			tmp,
+			saleBill,
+			saleOrder,
+		)
+	}
 
 	/* *
 	* CODESOFT 打印机
