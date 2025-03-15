@@ -617,7 +617,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
 	_ = copier.Copy(&reqs, req)
-	lists, total, err := orderRepo.GetCashierOrderListWithPagination(reqs)
+	lists, total, dbOption, err := orderRepo.GetCashierOrderListWithPagination(reqs)
 	if err != nil {
 		return resp.OrderListPaginationResp{}, errors.WithMessage(err)
 	}
@@ -731,6 +731,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
 			repository.CommonRepo.WhereByCooking(),
+			dbOption,
 		)
 		return num
 	}
@@ -853,7 +854,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	}
 
 	// 处理额外信息
-	order := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	order := saleBill.SaleOrders[0]
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund:        false,
 		IsCellCancel:        !isSplit && order.Status == constant.SaleBillStatusPending,

@@ -21,7 +21,7 @@ type IOrderRepo interface {
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)           // 获取收银的订单列表
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
 	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                     // 获取桌台的销售账单详细信息
@@ -211,7 +211,93 @@ type GetCashierOrderListWithPaginationType struct {
 }
 
 // GetCashierOrderListWithPagination 获取收银台订单列表
-func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) (lists []model.SaleBill, total int64, err error) {
+func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) (
+	lists []model.SaleBill,
+	total int64,
+	dbOption DBOption,
+	err error,
+) {
+	// 额外条件
+	dbOption = func() DBOption {
+		return func(db *gorm.DB) *gorm.DB {
+			// 订单编号
+			if param.OrderNo != "" {
+				db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
+			}
+			// 账单类型
+			if param.BillType != -1 {
+				db = db.Where("bill_type = ?", param.BillType)
+			}
+			if param.DiningMethod != -1 {
+				db = db.Where("dining_method = ?", param.DiningMethod)
+			}
+			//  账单状态
+			if param.Status != -1 {
+				db = db.Where("status = ?", uint(param.Status))
+			}
+			//  日期类型 -1-全都 1-今天 2-昨天 3-本周
+			if param.DateType >= 0 && param.DateType <= 3 {
+				now := time.Now()
+				var startTime, endTime time.Time
+				switch param.DateType {
+				case constant.OrderDateTypeToday: // 今天
+					startTime = now.Truncate(24 * time.Hour)
+					endTime = startTime.Add(24*time.Hour - time.Second)
+					fmt.Println("今天", startTime, endTime)
+				case constant.OrderDateTypeYesterday: // 昨天
+					startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
+					endTime = startTime.Add(24*time.Hour - time.Second)
+				case constant.OrderDateTypeWeek: // 本周
+					weekday := int(now.Weekday())
+					if weekday == 0 {
+						weekday = 7
+					}
+					startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
+					endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+				}
+				db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
+			}
+			// 日期范围
+			if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
+				timeFields := []string{}
+				if param.EnableCreateTime || !param.EnablePayTime {
+					timeFields = append(timeFields, "create_time")
+				}
+				if param.EnablePayTime {
+					timeFields = append(timeFields, "finish_time")
+				}
+				// 开始时间
+				endTime := uint(0)
+				if param.QueryEndTime != 0 {
+					endTime = param.QueryEndTime + 86399
+				}
+				//
+				query := ""
+				args := []interface{}{}
+				for i, field := range timeFields {
+					if i > 0 {
+						query += " OR "
+					}
+					if param.QueryStartTime > 0 && endTime > 0 {
+						query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
+						args = append(args, param.QueryStartTime, endTime)
+					} else if param.QueryStartTime > 0 {
+						query += fmt.Sprintf("(%s > ?)", field)
+						args = append(args, param.QueryStartTime)
+					} else if endTime > 0 {
+						query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
+						args = append(args, endTime)
+					}
+				}
+				if query != "" {
+					db = db.Where(query, args...)
+				}
+			}
+			//
+			return db
+		}
+	}()
+	//
 	lists, total, err = r.GetOrderListWithPagination(
 		param.PageNo,
 		param.PageSize,
@@ -232,91 +318,12 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
 		CommonRepo.SortWithID("DESC"),
-		// 额外条件
-		func() DBOption {
-			return func(db *gorm.DB) *gorm.DB {
-				// 订单编号
-				if param.OrderNo != "" {
-					db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
-				}
-				// 账单类型
-				if param.BillType != -1 {
-					db = db.Where("bill_type = ?", param.BillType)
-				}
-				if param.DiningMethod != -1 {
-					db = db.Where("dining_method = ?", param.DiningMethod)
-				}
-				//  账单状态
-				if param.Status != -1 {
-					db = db.Where("status = ?", uint(param.Status))
-				}
-				//  日期类型 -1-全都 1-今天 2-昨天 3-本周
-				if param.DateType >= 0 && param.DateType <= 3 {
-					now := time.Now()
-					var startTime, endTime time.Time
-					switch param.DateType {
-					case constant.OrderDateTypeToday: // 今天
-						startTime = now.Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-						fmt.Println("今天", startTime, endTime)
-					case constant.OrderDateTypeYesterday: // 昨天
-						startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-					case constant.OrderDateTypeWeek: // 本周
-						weekday := int(now.Weekday())
-						if weekday == 0 {
-							weekday = 7
-						}
-						startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
-						endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
-					}
-					db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
-				}
-				// 日期范围
-				if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
-					timeFields := []string{}
-					if param.EnableCreateTime || !param.EnablePayTime {
-						timeFields = append(timeFields, "create_time")
-					}
-					if param.EnablePayTime {
-						timeFields = append(timeFields, "finish_time")
-					}
-					// 开始时间
-					endTime := uint(0)
-					if param.QueryEndTime != 0 {
-						endTime = param.QueryEndTime + 86399
-					}
-					//
-					query := ""
-					args := []interface{}{}
-					for i, field := range timeFields {
-						if i > 0 {
-							query += " OR "
-						}
-						if param.QueryStartTime > 0 && endTime > 0 {
-							query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
-							args = append(args, param.QueryStartTime, endTime)
-						} else if param.QueryStartTime > 0 {
-							query += fmt.Sprintf("(%s > ?)", field)
-							args = append(args, param.QueryStartTime)
-						} else if endTime > 0 {
-							query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
-							args = append(args, endTime)
-						}
-					}
-					if query != "" {
-						db = db.Where(query, args...)
-					}
-				}
-				//
-				return db
-			}
-		}(),
+		dbOption,
 	)
 	if err != nil {
-		return nil, 0, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
+		return nil, 0, dbOption, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
 	}
-	return lists, total, nil
+	return lists, total, dbOption, nil
 }
 
 // GetSaleBillInfo 获取销售账单详细信息
