@@ -768,7 +768,7 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 	where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
 	//
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
+		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleOrderStatusPending).Update("status", constant.SaleOrderStatusCanceled).Error
 		if err != nil {
 			return errors.WithMessage(err)
 		}
