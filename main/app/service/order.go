@@ -757,7 +757,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return resp.OrderInfosResp{}, errors.WithMessage(err)
 	}
@@ -770,24 +770,24 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	totalMemberUuids := []string{}
 	payTypes := make([]resp.OrderInfoPayTypes, 0)
 	orderList := make([]resp.OrderInfo, 0)
-	for i, order := range saleBill.SaleOrders {
-		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != order.Uuid {
+	for i, saleOrder := range saleBill.SaleOrders {
+		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
 			continue
 		}
 		payTypeNames := []string{}
-		if order.IsFree == 1 {
+		if saleOrder.IsFree == 1 {
 			payTypes = append(payTypes, resp.OrderInfoPayTypes{
 				Uuid:            0,
 				PaymentTypeName: i18n.Translate(ctx.GetLanguage(), "免单"),
 				CurrencyUnit:    "",
-				PaymentAmount:   order.PaymentAmount,
+				PaymentAmount:   saleOrder.PaymentAmount,
 				Status:          2,
 				Source:          0,
 				SourceText:      "",
 			})
 			payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 		} else {
-			for _, payment := range order.PaymentOrders {
+			for _, payment := range saleOrder.PaymentOrders {
 				payTypes = append(payTypes, resp.OrderInfoPayTypes{
 					Uuid:            payment.Uuid,
 					PaymentTypeName: payment.PaymentMethodName,
@@ -803,59 +803,129 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				}
 			}
 		}
-		if order.GetMemberName() != "" && !slices.Contains(totalMemberNames, order.GetMemberName()) {
-			totalMemberNames = append(totalMemberNames, order.GetMemberName())
+		if saleOrder.GetMemberName() != "" && !slices.Contains(totalMemberNames, saleOrder.GetMemberName()) {
+			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
 		}
-		if order.ConsumerUuid != 0 {
-			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+		if saleOrder.ConsumerUuid != 0 {
+			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(saleOrder.ConsumerUuid, 10))
 		}
 		//
-		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
-		for j, product := range order.SaleOrderProducts {
-			url := ""
-			if product.ImageFile != nil {
-				url = product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-			}
-			products[j] = resp.OrderProduct{
-				Uuid:           product.Uuid,
-				LocaleName:     product.MultiLanguageName.GetNames(),
-				FlavorName:     product.FlavorName,
-				Num:            product.Num,
-				Price:          product.Price,
-				TotalPrice:     decimal.NewFromFloat(product.TotalPrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
-				TotalSalePrice: decimal.NewFromFloat(product.SalePrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
-				TaxRate:        product.TaxRate,
-				Status:         product.Status,
-				Remark:         product.Remark,
-				IsGift:         product.IsGiftProduct(),
-				GiftReason:     product.GiftReason,
-				ImageUrl:       url,
-				Attributes:     product.GetAttributeNames(),
-				CancelReason:   product.CancelReason,
-				// todo 待完善
-				RefundAmount: 0,
+		products := make([]resp.OrderProduct, 0)
+
+		// 添加自助餐顾客
+		{
+			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
+				if orderBuffetCustomer.IsDelete() {
+					continue
+				}
+				// 自助餐顾客价格收费列表
+				products = append(products, resp.OrderProduct{
+					Uuid:       orderBuffetCustomer.Uuid,
+					LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+					LocaleAttributeName: dto.LocaleResponse{
+						ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					},
+					Price:            orderBuffetCustomer.Price,
+					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
+					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
+					Status:           1,
+					Remark:           "",
+					IsMust:           false,
+					IsGift:           false,
+					IsBuffetCustomer: true,
+				})
 			}
 		}
+
+		// 添加加钟商品
+		{
+			for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+				if delayProduct.IsDelete() {
+					continue
+				}
+				products = append(products, resp.OrderProduct{
+					Uuid: delayProduct.Uuid,
+					LocaleName: dto.LocaleResponse{
+						ZH:   delayProduct.Name,
+						TH:   delayProduct.Name,
+						EN:   delayProduct.Name,
+						ZHTW: delayProduct.Name,
+						JA:   delayProduct.Name,
+						KO:   delayProduct.Name,
+						MY:   delayProduct.Name,
+						TR:   delayProduct.Name,
+					},
+					LocaleAttributeName: dto.LocaleResponse{},
+					Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+					Price:               delayProduct.Price,
+					SalePrice:           delayProduct.GetAmount(),
+					TotalPrice:          delayProduct.GetAmount(),
+					Status:              1,  // 添加后标记送厨状态，不可修改
+					Remark:              "", // 加钟商品没有备注
+					IsMust:              false,
+					IsGift:              false,
+					IsBuffet:            false,
+					IsDelay:             true,
+				})
+			}
+		}
+
+		// 添加正常商品
+		{
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsDelete() {
+					continue
+				}
+				url := ""
+				if saleOrderProduct.ImageFile != nil {
+					url = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}
+				products = append(products, resp.OrderProduct{
+					Uuid:                saleOrderProduct.Uuid,
+					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+					Price:               saleOrderProduct.Price,
+					Num:                 saleOrderProduct.Num,
+					SalePrice:           saleOrderProduct.GetSalePrice(),
+					TotalPrice:          saleOrderProduct.GetTotalPrice(),
+					Status:              saleOrderProduct.Status,
+					Remark:              saleOrderProduct.Remark,
+					IsMust:              saleOrderProduct.IsMustProduct(),
+					IsGift:              saleOrderProduct.IsGiftProduct(),
+					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
+					ImageUrl:            url,
+				})
+			}
+		}
+
 		//
 		orderList = append(orderList, resp.OrderInfo{
-			SaleOrderUuid: order.Uuid,
+			SaleOrderUuid: saleOrder.Uuid,
 			BillType:      saleBill.BillType,
 			DiningMethod:  saleBill.DiningMethod,
 			SerialNo:      saleBill.SerialNo + "-" + strconv.Itoa(i+1),
-			OrderNo:       order.OrderNo,
-			Status:        order.Status,
-			IsFree:        order.IsFree == 1,
-			FreeReason:    order.FreeReason,
-			OrderAmount:   order.Amount,
-			PaymentAmount: order.PaymentAmount - order.GetTotalRefundAmount(),
-			RefundAmount:  order.GetTotalRefundAmount(),
+			OrderNo:       saleOrder.OrderNo,
+			Status:        saleOrder.Status,
+			IsFree:        saleOrder.IsFree == 1,
+			FreeReason:    saleOrder.FreeReason,
+			OrderAmount:   saleOrder.Amount,
+			PaymentAmount: saleOrder.PaymentAmount - saleOrder.GetTotalRefundAmount(),
+			RefundAmount:  saleOrder.GetTotalRefundAmount(),
 			PayTypeName:   strings.Join(payTypeNames, ","),
-			MemberName:    order.GetMemberName(),
-			MemberUuid:    order.ConsumerUuid,
+			MemberName:    saleOrder.GetMemberName(),
+			MemberUuid:    saleOrder.ConsumerUuid,
 			Products:      products,
 		})
 		//
-		if order.Status != constant.SaleBillStatusPending {
+		if saleOrder.Status != constant.SaleBillStatusPending {
 			isCellCancel = false
 		}
 	}

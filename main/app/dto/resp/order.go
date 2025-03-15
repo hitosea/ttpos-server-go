@@ -76,23 +76,25 @@ type OrderInfoPayTypes struct {
 }
 
 type OrderProduct struct {
-	Uuid           uint64             `json:"uuid"`             // 销售订单商品ID
-	LocaleName     dto.LocaleResponse `json:"locale_name"`      // 产品名称
-	FlavorName     string             `json:"flavor_name"`      // 口味名称
-	Num            uint               `json:"num"`              // 数量
-	SalePrice      float64            `json:"sale_price"`       // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
-	Price          float64            `json:"price"`            // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
-	TotalPrice     float64            `json:"total_price"`      // 应收金额(单商品)=最终单价+服务费+总税费
-	TotalSalePrice float64            `json:"total_sale_price"` // 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'
-	TaxRate        float64            `json:"tax_rate"`         // 税率,单位%.下单时单税率,结账时再重新核算
-	RefundAmount   float64            `json:"refund_amount"`    // 退款金额
-	Status         uint               `json:"status"`           // 状态, 0-正常 1-退菜
-	Remark         string             `json:"remark"`           // 备注
-	IsGift         bool               `json:"is_gift"`          // 是否赠品, false-否 true-是
-	GiftReason     string             `json:"gift_reason"`      // 赠品原因
-	Attributes     string             `json:"attributes"`       // 规格属性加料
-	ImageUrl       string             `json:"image_url"`        // 图片地址
-	CancelReason   string             `json:"refund_reason"`    // 退菜原因
+	Uuid                uint64             `json:"uuid"`                  // 销售订单商品ID
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 产品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 口味名称
+	Price               float64            `json:"price"`                 // 单价
+	Num                 uint               `json:"num"`                   // 数量
+	SalePrice           float64            `json:"sale_price"`            // 销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示
+	TotalPrice          float64            `json:"total_price"`           // 最终总价
+	RefundAmount        float64            `json:"refund_amount"`         // 退款金额
+	Status              uint               `json:"status"`                // 状态, 0-正常 1-退菜
+	Remark              string             `json:"remark"`                // 备注
+	IsGift              bool               `json:"is_gift"`               // 是否赠品, false-否 true-是
+	IsBuffet            bool               `json:"is_buffet"`             // 是否自助餐, false-否 true-是
+	IsBuffetCustomer    bool               `json:"is_buffet_customer"`    // 是否自助餐顾客, false-否 true-是
+	IsDelay             bool               `json:"is_delay"`              // 是否加钟, false-否 true-是
+	IsMust              bool               `json:"is_must"`               // 是否必点, false-否 true-是
+	GiftReason          string             `json:"gift_reason"`           // 赠品原因
+	Attributes          string             `json:"attributes"`            // 规格属性加料
+	ImageUrl            string             `json:"image_url"`             // 图片地址
+	CancelReason        string             `json:"refund_reason"`         // 退菜原因
 }
 
 // OrderInfo 订单信息响应

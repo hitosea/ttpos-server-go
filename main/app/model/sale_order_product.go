@@ -431,6 +431,13 @@ func (model *SaleOrderProduct) GetSalePrice() float64 {
 	return salePrice
 }
 
+// 获取商品总金额
+func (model *SaleOrderProduct) GetTotalPrice() float64 {
+	// 金额*数量
+	salePrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return salePrice
+}
+
 // 获取最终价格（折后价）
 func (model *SaleOrderProduct) GetPrice() float64 {
 	// 最终价格*数量
