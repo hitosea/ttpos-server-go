@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -809,6 +810,66 @@ func (model *SaleBill) SetAllDiscountCancel() bool {
 		isChange = saleOrder.SetAllDiscountCancel() || isChange
 	}
 	return isChange
+}
+
+// GetPayTypes 获取支付方式
+func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp.OrderInfoPayTypes {
+	payTypeNames := []string{}
+	payTypeMap := make(map[string]*resp.OrderInfoPayTypes)
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrderUuid > 0 && saleOrderUuid != saleOrder.Uuid {
+			continue
+		}
+		if saleOrder.IsFree == 1 {
+			// 免单处理
+			payTypeName := i18n.Translate(language, "免单")
+			key := fmt.Sprintf("%s_%d", payTypeName, 2)
+			if existingPayType, ok := payTypeMap[key]; ok {
+				existingPayType.PaymentAmount += saleOrder.PaymentAmount
+			} else {
+				if !slices.Contains(payTypeNames, payTypeName) {
+					payTypeNames = append(payTypeNames, payTypeName)
+				}
+				payType := resp.OrderInfoPayTypes{
+					Uuid:            0,
+					PaymentTypeName: payTypeName,
+					CurrencyUnit:    "",
+					PaymentAmount:   saleOrder.PaymentAmount,
+					Status:          2,
+					Source:          0,
+					SourceText:      "",
+				}
+				payTypeMap[key] = &payType
+			}
+		} else {
+			// 正常支付方式处理
+			for _, payment := range saleOrder.PaymentOrders {
+				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
+				if existingPayType, ok := payTypeMap[key]; ok {
+					existingPayType.PaymentAmount += payment.PaymentAmount
+				} else {
+					payType := resp.OrderInfoPayTypes{
+						Uuid:            payment.Uuid,
+						PaymentTypeName: payment.PaymentMethodName,
+						CurrencyUnit:    payment.CurrencyUnit,
+						PaymentAmount:   payment.PaymentAmount,
+						Status:          uint(payment.Status),
+						Source:          uint(payment.GetSource()),
+						SourceText:      payment.GetSourceText(language),
+					}
+					payTypeMap[key] = &payType
+					if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
+				}
+			}
+		}
+	}
+	var payTypes []resp.OrderInfoPayTypes
+	for _, payType := range payTypeMap {
+		payTypes = append(payTypes, *payType)
+	}
+	return payTypes
 }
 
 type Sauce struct {

@@ -2,11 +2,14 @@ package model
 
 import (
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -546,4 +549,24 @@ func (model *SaleOrder) GetMemberSurplusPoints() float64 {
 		// todo 未完成
 		return model.Member.Point
 	}
+}
+
+// 获取支付方式
+func (model *SaleOrder) GetPayTypeNames(language string) string {
+	payTypeNames := []string{}
+	if model.IsFree == 1 {
+		// 免单处理
+		payTypeName := i18n.Translate(language, "免单")
+		if !slices.Contains(payTypeNames, payTypeName) {
+			payTypeNames = append(payTypeNames, payTypeName)
+		}
+	} else {
+		// 正常支付方式处理
+		for _, payment := range model.PaymentOrders {
+			if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+			}
+		}
+	}
+	return strings.Join(payTypeNames, ",")
 }

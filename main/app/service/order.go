@@ -786,61 +786,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	// 组合信息
 	totalMemberNames := []string{}
 	totalMemberUuids := []string{}
-	payTypes := make([]resp.OrderInfoPayTypes, 0)
 	orderList := make([]resp.OrderInfo, 0)
 	for i, saleOrder := range saleBill.SaleOrders {
 		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
 			continue
-		}
-		payTypeMap := make(map[string]*resp.OrderInfoPayTypes) // key 为 "支付方式名称_状态"
-		payTypeNames := []string{}
-		if saleOrder.IsFree == 1 {
-			// 免单处理
-			payTypeName := i18n.Translate(ctx.GetLanguage(), "免单")
-			key := fmt.Sprintf("%s_%d", payTypeName, 2)
-			if existingPayType, ok := payTypeMap[key]; ok {
-				existingPayType.PaymentAmount += saleOrder.PaymentAmount
-			} else {
-				payType := resp.OrderInfoPayTypes{
-					Uuid:            0,
-					PaymentTypeName: payTypeName,
-					CurrencyUnit:    "",
-					PaymentAmount:   saleOrder.PaymentAmount,
-					Status:          2,
-					Source:          0,
-					SourceText:      "",
-				}
-				payTypeMap[key] = &payType
-				payTypeNames = append(payTypeNames, payTypeName)
-			}
-		} else {
-			// 正常支付方式处理
-			for _, payment := range saleOrder.PaymentOrders {
-				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
-				if existingPayType, ok := payTypeMap[key]; ok {
-					existingPayType.PaymentAmount += payment.PaymentAmount
-				} else {
-					payType := resp.OrderInfoPayTypes{
-						Uuid:            payment.Uuid,
-						PaymentTypeName: payment.PaymentMethodName,
-						CurrencyUnit:    payment.CurrencyUnit,
-						PaymentAmount:   payment.PaymentAmount,
-						Status:          uint(payment.Status),
-						Source:          uint(payment.GetSource()),
-						SourceText:      payment.GetSourceText(ctx.GetLanguage()),
-					}
-					payTypeMap[key] = &payType
-					if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
-						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
-					}
-				}
-			}
-		}
-
-		// 将 map 转换为切片
-		payTypes = make([]resp.OrderInfoPayTypes, 0, len(payTypeMap))
-		for _, payType := range payTypeMap {
-			payTypes = append(payTypes, *payType)
 		}
 		if saleOrder.GetMemberName() != "" && !slices.Contains(totalMemberNames, saleOrder.GetMemberName()) {
 			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
@@ -962,7 +911,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			OrderAmount:   saleOrder.Amount,
 			PaymentAmount: saleOrder.GetActualPaymentAmount(),
 			RefundAmount:  saleOrder.GetTotalRefundAmount(),
-			PayTypeName:   strings.Join(payTypeNames, ","),
+			PayTypeName:   saleOrder.GetPayTypeNames(ctx.GetLanguage()),
 			MemberName:    saleOrder.GetMemberName(),
 			MemberUuid:    saleOrder.ConsumerUuid,
 			Products:      products,
@@ -1013,7 +962,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			IsBuffet:      saleBill.IsBuffet == 1,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
-			PayTypes:      payTypes,
+			PayTypes:      saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
 			SaleOrders:    orderList,
 			Remark:        saleBill.Remark,
 		},
