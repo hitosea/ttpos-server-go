@@ -92,7 +92,6 @@ type OrderProduct struct {
 	IsDelay             bool               `json:"is_delay"`              // 是否加钟, false-否 true-是
 	IsMust              bool               `json:"is_must"`               // 是否必点, false-否 true-是
 	GiftReason          string             `json:"gift_reason"`           // 赠品原因
-	Attributes          string             `json:"attributes"`            // 规格属性加料
 	ImageUrl            string             `json:"image_url"`             // 图片地址
 	CancelReason        string             `json:"refund_reason"`         // 退菜原因
 }

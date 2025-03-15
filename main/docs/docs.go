@@ -14656,10 +14656,6 @@ const docTemplate = `{
         "resp.OrderProduct": {
             "type": "object",
             "properties": {
-                "attributes": {
-                    "description": "规格属性加料",
-                    "type": "string"
-                },
                 "gift_reason": {
                     "description": "赠品原因",
                     "type": "string"
@@ -14725,7 +14721,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sale_price": {
-                    "description": "销售价 (原价) (划线价格)",
+                    "description": "销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示",
                     "type": "number"
                 },
                 "status": {

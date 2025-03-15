@@ -902,6 +902,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					ImageUrl:            url,
+					// todo 退款金额 待处理
+					RefundAmount: 0,
 				})
 			}
 		}
