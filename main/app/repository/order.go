@@ -230,10 +230,6 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			if param.DiningMethod != -1 {
 				db = db.Where("dining_method = ?", param.DiningMethod)
 			}
-			//  账单状态
-			if param.Status != -1 {
-				db = db.Where("status = ?", uint(param.Status))
-			}
 			//  日期类型 -1-全都 1-今天 2-昨天 3-本周
 			if param.DateType >= 0 && param.DateType <= 3 {
 				now := time.Now()
@@ -318,6 +314,17 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		CommonRepo.WhereByCooking(),
 		CommonRepo.SortWithID("DESC"),
 		dbOption,
+		//
+		func() DBOption {
+			return func(db *gorm.DB) *gorm.DB {
+				//  账单状态
+				if param.Status != -1 {
+					db = db.Where("status = ?", uint(param.Status))
+				}
+				//
+				return db
+			}
+		}(),
 	)
 	if err != nil {
 		return nil, 0, dbOption, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
@@ -789,37 +796,8 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 
 // CancelOrder 取消订单
 func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
-	timeNow := uint(time.Now().Unix())
-	saleOrder := &model.SaleOrder{}
-	where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
-	//
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleOrderStatusPending).Update("status", constant.SaleOrderStatusCanceled).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		// 取消订单的时候，不删除销售订单
-		// err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		// if err != nil {
-		// 	return errors.WithMessage(err)
-		// }
-		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.ProductionOrder{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error // TODO: 有可能会有多个生产单).Error
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -829,7 +807,6 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
 				"status": constant.SaleBillStatusCanceled,
-				// "delete_time": timeNow, // 取消订单的时候，不删除销售账单
 				"reason": reason,
 			}).Error
 	})
@@ -853,9 +830,8 @@ func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string) error {
 
 // DeleteOrder 软删除订单
 func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error {
-	now := uint(time.Now().Unix())
 	tx := r.db.Begin()
-
+	now := uint(time.Now().Unix())
 	// 如果是删除全部订单或只剩最后一个订单,则同时删除主订单
 	if saleOrderUuid == 0 {
 		// 删除销售订单
