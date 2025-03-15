@@ -621,6 +621,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 	if err != nil {
 		return resp.OrderListPaginationResp{}, errors.WithMessage(err)
 	}
+
 	// 组合列表源数据
 	billList := make([]resp.BillLists, len(lists))
 	consumerUuids := []string{}
@@ -714,7 +715,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		//
 		billList[i] = resp.BillLists{
 			SaleBillUuid:  bill.Uuid,
-			SaleOrderUuid: bill.SaleOrders[0].Uuid,
+			SaleOrderUuid: 0,
 			BillType:      bill.BillType,
 			IsSplit:       len(bill.SaleOrders) > 1,
 			SerialNo:      bill.SerialNo,
