@@ -394,11 +394,14 @@
         pageParams.page = self.curPage;
         pageParams.list_rows = self.pageSize;
         languageStore().setPageParams(pageParams);
+        // 如果没有拆单, 或者查看主单详情, 则sale_order_uuid = 0;
+        // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
+        const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
         self.$router.push({
           path: '/' + this.app_id + '/store/order/detail',
           query: {
             sale_bill_uuid: row.sale_bill_uuid,
-            sale_order_uuid: row?.children?.length > 0 ? 0 :row.sale_order_uuid,
+            sale_order_uuid: saleOrderUuid,
           },
         });
       },
@@ -488,7 +491,7 @@
       /*打开取消*/
       cancelClick(item) {
         this.order_no = item.order_no;
-        this.order_id = item.order_id;
+        this.order_id = item.sale_bill_uuid;
         this.open_edit = true;
       },
       refundClick(item) {
@@ -504,8 +507,10 @@
         ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
           type: 'warning',
         }).then(() => {
+          const saleOrderUuid = item.is_split === undefined ? item.sale_order_uuid : 0;
           OrderApi.storedelete({
-            order_id: item.order_id,
+            sale_bill_uuid: item.sale_bill_uuid,
+            sale_order_uuid: saleOrderUuid,
           }).then((data) => {
             this.$ElMessage({
               message: $t('删除成功'),

@@ -71,7 +71,7 @@
           </el-col>
           <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('用餐方式：') }}</span> {{ $t('店内就餐') }}
+              <span class="gray9">{{ $t('用餐方式：') }}</span> {{ detail.dining_method == 0 ? $t('店内就餐') : $t('打包带走') }}
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.serial_no">
@@ -161,18 +161,18 @@
             <template #default="scope">
               <div class="product-info">
                 <div class="pic">
-                  <img v-if="scope.row.is_buffet" src="../../../assets/img/buffet.png" />
+                  <img v-if="scope.row.is_buffet_customer" src="../../../assets/img/buffet.png" />
                   <img v-else-if="scope.row.is_delay" src="../../../assets/img/clock.png" />
                   <img v-else v-img-url="scope.row.image_url" />
                 </div>
                 <div class="info">
                   <div class="name">
-                    <el-tag class="mr-8" type="danger" effect="light" :hit="true" size="large" v-if="scope.row.status == 2">{{ $t('退') }}</el-tag>
+                    <el-tag class="mr-8" type="danger" effect="light" :hit="true" size="large" v-if="scope.row.refund_reason">{{ $t('退') }}</el-tag>
                     <el-tag class="mr-8" color="#FF3300" effect="dark" :hit="true" size="large" v-if="scope.row.is_gift">{{ $t('赠') }}</el-tag>
                     {{ scope.row.locale_name[language] || '-' }}
                   </div>
-                  <div class="gray9" v-if="scope.row.product_attr != ''">
-                    {{ scope.row.attributes }}
+                  <div class="gray9" v-if="scope.row.locale_attribute_name[language]">
+                    {{ scope.row.locale_attribute_name[language] }}
                   </div>
                   <div class="price">
                     <span>
@@ -188,7 +188,7 @@
                   </div>
                   <div>
                     <p class="gray9" v-if="scope.row.is_gift > 0">{{ $t('赠送原因：') }}{{ scope.row.gift_reason || '-' }}</p>
-                    <p class="gray9" v-if="scope.row.status == 2">{{ $t('退菜原因：') }}{{ scope.row.refund_reason || '-' }}</p>
+                    <p class="gray9" v-if="scope.row.refund_reason">{{ $t('退菜原因：') }}{{ scope.row.refund_reason || '-' }}</p>
                   </div>
                 </div>
               </div>
@@ -203,21 +203,21 @@
             <template #default="scope">
               <div>
                 
-                <template v-if="scope.row.total_price != scope.row.total_sale_price">
-                  <span class="text-line-through" v-if="scope.row.total_sale_price">
+                <template v-if="scope.row.total_price != scope.row.sale_price">
+                  <span class="text-line-through" v-if="scope.row.sale_price">
                     <template v-if="currency.unit_position == '0'">
                       {{ currency.unit }}
                     </template>
-                    {{ this.$formatPrice(Number(scope.row.total_sale_price)) }}
+                    {{ this.$formatPrice(Number(scope.row.sale_price)) }}
                     <template v-if="currency.unit_position == '1'">
                       {{ currency.unit }}
                     </template>
                   </span>
-                  <span class="text-line-through" v-if="currency.is_open == 1 && scope.row.total_sale_price">
+                  <span class="text-line-through" v-if="currency.is_open == 1 && scope.row.sale_price">
                     <template v-if="currency.vices.vice_unit_position == '0'">
                       {{ currency.vices?.vice_unit }}
                     </template>
-                    {{ this.$formatPrice(Number(scope.row.total_sale_price) * Number(currency.vices?.unit_rate)) }}
+                    {{ this.$formatPrice(Number(scope.row.sale_price) * Number(currency.vices?.unit_rate)) }}
                     <template v-if="currency.vices.vice_unit_position == '1'">
                       {{ currency.vices?.vice_unit }}
                     </template>
@@ -243,8 +243,8 @@
                     {{ currency.vices?.vice_unit }}
                   </template>
                 </span>
-                <span class="tips" v-if="Number(scope.row.refund_money) > 0">
-                  （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_money) }}）
+                <span class="tips" v-if="Number(scope.row.refund_amount) > 0">
+                  （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_amount) }}）
                 </span>
               </div>
             </template>
@@ -437,7 +437,7 @@
               self.activities.push({
                 refund_type: item.refund_type,
                 pay_type: item.pay_type,
-                content: item.description,
+                content: item.remark,
                 timestamp:
                   item.create_time +
                   ' ' +
@@ -506,6 +506,7 @@
         }).then(() => {
           OrderApi.storedelete({
             sale_bill_uuid: item.sale_bill_uuid,
+            sale_order_uuid: item.is_split === 'undefined' ? item.sale_order_uuid : 0,
           }).then((data) => {
             this.$ElMessage({
               message: $t('删除成功'),

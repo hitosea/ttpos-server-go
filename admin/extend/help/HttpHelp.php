@@ -45,6 +45,11 @@ class HttpHelp {
         return self::request($url, 'post', $data, $header, $timeout);
     }
 
+    public static function deleteRequest($url,  $data = array(), $header = false, $timeout = 10)
+    {
+        return self::request($url, 'delete', $data, $header, $timeout);
+    }
+
     public static function fileRequest($url, $filePath, $header = false, $timeout = 10)
     {
         self::$status = null;
@@ -85,7 +90,7 @@ class HttpHelp {
         //请求方式
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
         //post请求
-        if ($method == 'POST') curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+        if (in_array($method, ['POST', 'DELETE'])) curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         //超时时间
         curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
         //设置header头
