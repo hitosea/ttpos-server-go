@@ -88,7 +88,7 @@ type IOrderSrv interface {
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                             // 给销售订单创建一个销售订单
 	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)     // 从一个销售订单移动商品到另一个销售订单
 	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                       // 确认必点商品
-	InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                     // 订单检查
+	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                            // 订单检查
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                             // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                       // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 取消使用会员优惠
@@ -3167,7 +3167,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
 	ctx.SetDB(db)
 	// 检查必选
-
 	if !ignoreMust {
 		// 查询到购物车信息
 		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
@@ -5411,7 +5410,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 }
 
 // InstantOrderCheck 订单检查
-func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)
 		defer s.lock.UnlockUuid(req.SaleBillUuid)
@@ -5434,7 +5433,11 @@ func (s *orderSrv) InstantOrderCheck(ctx context.Context, req req.InstantOrderCh
 	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, 0, unCookingSaleOrderProducts, saleOrderProductAll)
+	var deskUuid uint64
+	if saleBill.IsDeskSaleBill() {
+		deskUuid = saleBill.DeskUuid
+	}
+	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
 	if errCheck != nil {
 		return nil, errors.WithMessage(errCheck, "订单检查失败")
 	}

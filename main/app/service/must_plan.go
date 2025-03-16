@@ -239,11 +239,12 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			num := productPackageMap[productPackageUuid] // 该商品已点xx个
 			mustNum := productPackage.MustNum            // 该商品要求点的数量
 			result := mustNum - num
-			if result > 0 {
-				mustMap[productPackageUuid] = result
-			} else {
-				mustMap[productPackageUuid] = 0
+			// 如果已点数量大于要求点数量，则该商品还差0个. 注意：uint类型，不能用result < 0来判断
+			if mustNum < num {
+				result = 0
 			}
+			mustMap[productPackageUuid] = result
+
 		}
 
 		// 如果必点方案是可选商品

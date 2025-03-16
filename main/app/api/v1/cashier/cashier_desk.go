@@ -908,7 +908,7 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 	}
 	ctx.Log().Info("订单检查", zap.Any("params", params))
 	// 订单检查
-	checkRes, err := h.orderService.InstantOrderCheck(ctx, params)
+	checkRes, err := h.orderService.OrderCheck(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
