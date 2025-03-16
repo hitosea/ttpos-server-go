@@ -412,7 +412,8 @@ func (model *SaleOrderProduct) calcLastestProductPrice() float64 {
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.IsFlavor() {
 			flavorPrice = bom.ProductBom.Price
-			bom.SetPrice(flavorPrice) // 并更新规格价格
+			model.SetFlavorPrice(flavorPrice) // 并更新规格价格
+			bom.SetPrice(flavorPrice)         // 并更新规格价格
 		}
 	}
 	// 如果规格价格大于0，则使用规格价格

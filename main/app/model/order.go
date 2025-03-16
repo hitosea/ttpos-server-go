@@ -483,7 +483,9 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 				continue
 			}
 			_ = saleOrderProduct.BeforeCalc()
+			// fmt.Println("计算前", saleOrderProduct.Uuid, utils.ToJsonString(saleOrderProduct.BeforeCalc()))
 			_ = saleOrderProduct.CalcSaleOrderProduct(*setting, options...)
+			// fmt.Println("计算后", saleOrderProduct.Uuid, utils.ToJsonString(saleOrderProduct.CalcSaleOrderProduct(*setting, options...)))
 		}
 		// 计算自助餐顾客价格之和
 		for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {

@@ -102,6 +102,12 @@ func (model *SaleOrderProduct) SetTaxRate(taxRate float64) {
 	model.TaxRate = taxRate
 }
 
+// SetFlavorPrice 设置规格价格
+func (model *SaleOrderProduct) SetFlavorPrice(flavorPrice float64) {
+	defer model.SetUpdate() // 标记要更新model
+	model.FlavorPrice = flavorPrice
+}
+
 // GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
 func (model *SaleOrderProduct) GetCanReturnNum() uint {
 	amount := decimal.NewFromFloat(0)
