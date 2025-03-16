@@ -273,36 +273,12 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	if desk.SaleBillUuid == 0 {
 		return model.Desk{}, nil, errors.New("桌台已关闭")
 	}
-	billInfo, err := s.orderSrv.IsCellCancelOrder(ctx, desk.SaleBillUuid)
+	// 判断是否可立即关闭
+	productList, err := s.IsCellCloseInstant(ctx, desk.SaleBillUuid)
 	if err != nil {
-		return model.Desk{}, nil, errors.WithMessage(err)
+		return model.Desk{}, productList, errors.WithMessage(err)
 	}
-	if billInfo.IsPartialPay() {
-		return model.Desk{}, nil, errors.New("当前订单已被部分支付，不支持取消")
-	}
-	// 有商品已送厨
-	if productCooking := billInfo.GetSaleOrderProductCooking(); len(productCooking) > 0 {
-		productList := make([]resp.Product, 0, len(productCooking))
-		for _, product := range productCooking {
-			productList = append(productList, resp.Product{
-				Uuid:                product.Uuid,
-				LocaleName:          product.GetAttributeName(),
-				LocaleAttributeName: product.GetAttributeName(),
-				Num:                 uint(product.Num),
-				SalePrice:           product.SalePrice,
-				DiscountPrice:       product.Price,
-				Status:              int(product.Status),
-				Remark:              product.Remark,
-				IsMust:              product.IsMustProduct(),
-				IsGift:              product.IsGiftBool(),
-				IsBuffet:            product.IsBuffet == 1,
-				IsCancel:            product.IsCancelBool(),
-			})
-		}
-		return model.Desk{}, &resp.CartProductList{
-			List: productList,
-		}, errors.New("此单有商品已送厨，是否取消此笔交易？")
-	}
+	//
 	return desk, nil, nil
 }
 
