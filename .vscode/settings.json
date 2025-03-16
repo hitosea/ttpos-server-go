@@ -1,0 +1,26 @@
+{
+    "search.exclude": {
+      "**/.next": true,
+      "**/dist": true,
+      "**/node_modules": false,
+      "**/node_modules/**": true,
+      "**/vendor": true
+    },
+    "dart.previewFlutterUiGuides": true,
+    "todo-tree.general.statusBar": "total",
+    "todo-tree.general.tags": [
+      "BUG",
+      "HACK",
+      "FIXME",
+      "TODO",
+      "XXX",
+      "[ ]",
+      "[x]",
+      "NOTE",
+      "todo"
+    ],
+    "todo-tree.highlights.useColourScheme": true,
+    "todo-tree.tree.expanded": true,
+    "todo-tree.tree.groupedByTag": true,
+    "todo-tree.tree.showCountsInTree": true,
+  }
