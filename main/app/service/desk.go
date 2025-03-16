@@ -32,6 +32,7 @@ type IDeskSrv interface {
 	ChangeDesk(ctx context.Context, req req.ChangeDeskReq) (*resp.ShopCart, error)                                      // 切换桌台
 	MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) // 合并桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, *resp.CartProductList, error)                    // 判断桌台是否可以关闭
+	IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (*resp.CartProductList, error)                         // 判断订单是否可以关闭
 	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                                 // 平板获取桌台列表
 	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                                    // 平板端绑定桌台
 }
@@ -255,6 +256,11 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 
 // IsCellCloseDesk 判断桌台是否可关闭
 func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, *resp.CartProductList, error) {
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(deskUuid)
+		defer lock.NewSystemLock().UnlockUuid(deskUuid)
+		ctx.AddLock()
+	}
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	desk, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
@@ -267,7 +273,7 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 	if desk.SaleBillUuid == 0 {
 		return model.Desk{}, nil, errors.New("桌台已关闭")
 	}
-	billInfo, err := NewOrderSrv(s.dbm, nil, nil, nil).IsCellCancelOrder(ctx, desk.SaleBillUuid)
+	billInfo, err := s.orderSrv.IsCellCancelOrder(ctx, desk.SaleBillUuid)
 	if err != nil {
 		return model.Desk{}, nil, errors.WithMessage(err)
 	}
@@ -298,6 +304,41 @@ func (s *deskSrv) IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.D
 		}, errors.New("此单有商品已送厨，是否取消此笔交易？")
 	}
 	return desk, nil, nil
+}
+
+// IsCellCloseInstant 判断桌台是否可关闭
+func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (*resp.CartProductList, error) {
+	billInfo, err := s.orderSrv.IsCellCancelOrder(ctx, saleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if billInfo.IsPartialPay() {
+		return nil, errors.New("当前订单已被部分支付，不支持取消")
+	}
+	// 有商品已送厨
+	if productCooking := billInfo.GetSaleOrderProductCooking(); len(productCooking) > 0 {
+		productList := make([]resp.Product, 0, len(productCooking))
+		for _, product := range productCooking {
+			productList = append(productList, resp.Product{
+				Uuid:                product.Uuid,
+				LocaleName:          product.GetAttributeName(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 uint(product.Num),
+				SalePrice:           product.SalePrice,
+				DiscountPrice:       product.Price,
+				Status:              int(product.Status),
+				Remark:              product.Remark,
+				IsMust:              product.IsMustProduct(),
+				IsGift:              product.IsGiftBool(),
+				IsBuffet:            product.IsBuffet == 1,
+				IsCancel:            product.IsCancelBool(),
+			})
+		}
+		return &resp.CartProductList{
+			List: productList,
+		}, errors.New("此单有商品已送厨，是否取消此笔交易？")
+	}
+	return nil, nil
 }
 
 // CloseDesk 关闭桌台

@@ -286,7 +286,11 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 			return
 		}
 	} else if params.SaleBillUuid > 0 {
-		_, err = h.service.IsCellCancelOrder(ctx, params.SaleBillUuid)
+		productList, err = h.deskService.IsCellCloseInstant(ctx, params.SaleBillUuid)
+		if productList != nil {
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			return
+		}
 	} else {
 		err = errors.New("参数错误")
 	}
