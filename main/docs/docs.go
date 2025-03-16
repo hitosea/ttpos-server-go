@@ -6841,7 +6841,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PrinterData"
+                                            "$ref": "#/definitions/resp.SaleOrderInvoiceInfo"
                                         }
                                     }
                                 }
@@ -16712,6 +16712,23 @@ const docTemplate = `{
                 "zero_rule": {
                     "description": "订单抹零规则",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.SaleOrderInvoiceInfo": {
+            "type": "object",
+            "properties": {
+                "company_addr": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "company_phone": {
+                    "type": "string"
+                },
+                "company_tax_number": {
+                    "type": "string"
                 }
             }
         },

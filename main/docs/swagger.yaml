@@ -4409,6 +4409,17 @@ definitions:
         description: 订单抹零规则
         type: integer
     type: object
+  resp.SaleOrderInvoiceInfo:
+    properties:
+      company_addr:
+        type: string
+      company_name:
+        type: string
+      company_phone:
+        type: string
+      company_tax_number:
+        type: string
+    type: object
   resp.SearchMember:
     properties:
       nickname:
@@ -9288,7 +9299,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PrinterData'
+                  $ref: '#/definitions/resp.SaleOrderInvoiceInfo'
               type: object
       security:
       - JwtToken: []

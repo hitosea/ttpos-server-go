@@ -361,7 +361,7 @@ func (h *OrderHandler) OrderPrintInvoice(c *gin.Context) {
 // @Security JwtToken
 // @param sale_order_uuid query integer true "销售订单uuid"
 // @param sale_bill_uuid query integer true "销售账单uuid"
-// @Success 200 {object} dto.Response{data=resp.PrinterData} "发票信息"
+// @Success 200 {object} dto.Response{data=resp.SaleOrderInvoiceInfo} "发票信息"
 // @Router /cashier/order/invoice [get]
 func (h *OrderHandler) OrderInvoiceInfo(c *gin.Context) {
 	var invoiceReq req.OrderInvoiceInfoReq
