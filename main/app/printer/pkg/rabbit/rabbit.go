@@ -142,10 +142,3 @@ func replaceWithRule(rules []RuleItem, output string) string {
 
 	return output
 }
-
-// Zg2Uni 将Zawgyi字符串转换为Unicode
-// 注意: 原PHP代码中没有提供这个方法的实现，这里仅做占位
-func Zg2Uni(zawgyi string) string {
-	// TODO: 实现Zawgyi到Unicode的转换
-	return zawgyi
-}

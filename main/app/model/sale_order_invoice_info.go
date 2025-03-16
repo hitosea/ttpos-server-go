@@ -11,9 +11,6 @@ type SaleOrderInvoiceInfo struct {
 	CompanyAddr      string `gorm:"column:company_addr;type:varchar(255);comment:'公司地址'" json:"company_addr"`
 	CompanyTaxNumber string `gorm:"column:company_tax_number;type:varchar(100);comment:'公司税号'" json:"company_tax_number"`
 	CompanyPhone     string `gorm:"column:company_phone;type:varchar(50);comment:'公司电话'" json:"company_phone"`
-
-	// 关联模型
-	SaleOrder *SaleOrder `gorm:"foreignKey:SaleOrderUuid;references:Uuid" json:"-"`
 }
 
 // HasContent 检查是否有内容需要打印

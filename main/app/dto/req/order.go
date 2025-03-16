@@ -110,7 +110,13 @@ type OrderProductChangePriceReq struct {
 
 // OrderDiscountMethodReq 订单打折方式
 type OrderDiscountMethodReq struct {
-	DiscountMethod int `json:"discount_method"` // 打折类型 1=改价 2=打折, 3=抹零, 4=免单
+	DiscountMethod int     `json:"discount_method"` // 打折方式 1=改价 2=打折, 3=抹零, 4=免单
+	SaleBillUuid   uint64  `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid  uint64  `json:"sale_order_uuid"` // 销售订单UUID
+	Price          float64 `json:"price"`           // 改价
+	Discount       float64 `json:"discount"`        // 打折 - 0-100之间
+	DiscountType   int     `json:"discount_type"`   // 打折 - 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
+	ZeroRule       int     `json:"zero_rule"`       // 抹零规则
 }
 
 // OrderAmountChangeReq 订单改价

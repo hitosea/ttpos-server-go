@@ -12,27 +12,40 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// statementOrderImgTemplate 图片订单打印模板
-type statementOrderImgTemplate struct {
+// invoiceImgTemplate 图片订单打印模板
+type invoiceImgTemplate struct {
 	base *printerTemplate
 }
 
-// NewStatementOrderImgTemplate 创建新的图片订单打印模板
-func NewStatementOrderImgTemplate(
+// NewInvoiceImgTemplate 创建新的图片订单打印模板
+func NewInvoiceImgTemplate(
 	base *printerTemplate,
-) *statementOrderImgTemplate {
-	return &statementOrderImgTemplate{
+) *invoiceImgTemplate {
+	return &invoiceImgTemplate{
 		base: base,
 	}
 }
 
 // ImgPrint 图片打印
-func (t *statementOrderImgTemplate) GetPrintContent(
-	printType int,
+func (t *invoiceImgTemplate) GetPrintContent(
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {
+	temp = 2
+
+	/* *
+	 * 模版2
+	 */
+	if temp == 2 {
+		return (NewStatementOrderImgTemplate(t.base)).GetPrintContent(
+			constant.PrinterTemplateInvoice,
+			3,
+			saleBill,
+			saleOrder,
+		)
+	}
+
 	name := t.base.Translate("人")
 	// 店铺设置
 	company := t.base.StoreSetting.Company
@@ -64,17 +77,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if t.base.Lang == "my" {
 		img.SetImagePadding(3)
 	}
-	if temp != 3 {
-		img.SetAlignment(pkg.AlignLeft)
-		if printType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
-		} else {
-			img.AppendText(t.base.Translate("结账单"))
-		}
-		img.LineFeed(1, 50)
-	}
+	img.SetAlignment(pkg.AlignLeft)
+	img.AppendText(t.base.Translate("发票"))
+	img.LineFeed(1, 60)
 	img.SetAlignment(pkg.AlignCenter)
 	img.SetFontSize(26)
 	img.SetFontWeight(2)
@@ -142,14 +147,13 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			}
 			img.SetTextLineHeight(spacing)
 			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
-			img.LineFeed(1, 80)
 			img.RecoverDefaultTextLineHeight()
 		} else {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			img.SetFontSize(20)
-			img.LineFeed(1, 80)
+			img.LineFeed(1)
 		}
 		//
 		img.SetFontSize(20)
@@ -179,17 +183,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(2)
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
-		if printType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
-		} else {
-			img.AppendText(t.base.Translate("结账单"))
-		}
+		img.AppendText(t.base.Translate("发票"))
 		img.RecoverDefaultTextLineHeight()
 		img.SetFontSize(20)
 		img.SetFontWeight(1)
-		img.LineFeed(1, 60)
+		img.LineFeed(1)
 		// 公司名称
 		if company != "" {
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("公司名称"), company))
@@ -213,7 +211,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.LineFeed(1)
 		}
 		// 发票信息
-		if printType == constant.PrinterTemplateInvoice {
+		if temp == 3 {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo.HasContent() {
 				img.AppendSplitLine()
@@ -261,7 +259,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			}
 			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			img.RecoverDefaultTextLineHeight()
-			img.LineFeed(1, 60)
+			img.LineFeed(1)
 		} else {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
@@ -563,7 +561,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 打印支付二维码
-	// if saleOrder.PaymentOrders != nil && saleOrder.PaymentOrders[0].PaymentMethod.QrcodeFile.GetUrl() != nil && saleOrder.PaymentOrders[0].PayType.Source != 0 && saleOrder.PaymentOrders[0].PayType.Value > 0 {
+	// if saleOrder.PaymentOrders != nil && saleOrder.PaymentOrders[0].PayType != nil && saleOrder.PaymentOrders[0].PayType.Source != 0 && saleOrder.PaymentOrders[0].PayType.Value > 0 {
 	// 	payValue := saleOrder.PaymentOrders[0].PayType.Value
 	// 	paymentOrderId := saleOrder.PaymentOrders[0].Id
 	// 	payType := (new PayType([], t.Ctx.AppId)).Where("source", "<>", 0).Where("value", payValue).Find()
@@ -589,17 +587,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	// 	}
 	// }
 
-	// img.AppendSplitLine()
-	// img.LineFeed(1)
-	// img.SetAlignment(pkg.AlignCenter)
-	// img.SetTextLineHeight(35)
-	// img.AppendText(t.base.Translate("请用") + " " + "payType.Name" + " " + t.base.Translate("扫一扫支付"))
-	// img.LineFeed(1)
-	// img.AppendQrcode("logoAddr", 280, 0, false)
-
 	// 技术支持方
 	img.AppendSplitLine()
-	img.LineFeed(1, 50)
+	img.LineFeed(1)
 	img.SetAlignment(pkg.AlignCenter)
 	if t.base.Lang == "tr" {
 		img.AppendText("Ziyaretiniz için teşekkür ederiz! Bu mağaza")

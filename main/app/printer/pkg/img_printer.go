@@ -11,7 +11,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -19,6 +18,8 @@ import (
 	"strings"
 	"ttpos-server-go/app/printer/pkg/fonts"
 	"ttpos-server-go/app/printer/pkg/rabbit"
+
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/goki/freetype"
 	"github.com/goki/freetype/truetype"
@@ -706,14 +707,16 @@ func (i *ImgFont) AppendText(text string, opts ...AppendTextOption) *ImgFont {
 // AppendImg 添加图片
 func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeight int) *ImgFont {
 	// 读取图片文件
-	imgData, err := ioutil.ReadFile(imgPath)
+	imgData, err := os.ReadFile(imgPath)
 	if err != nil {
+		fmt.Println("读取图片文件失败:", err)
 		return i
 	}
 
 	// 解码图片
 	srcImg, _, err := image.Decode(bytes.NewReader(imgData))
 	if err != nil {
+		fmt.Println("解码图片失败:", err)
 		return i
 	}
 
@@ -821,24 +824,23 @@ func (i *ImgFont) AppendQrcode(data string, size int, margin int, isBase64 bool)
 		// 解码图片
 		qrImg, _, err = image.Decode(bytes.NewReader(decoded))
 		if err != nil {
+			fmt.Println("解码图片错误")
 			return i
 		}
 
 		// 调整总高度
 		i.TextTotalHeight = i.TextTotalHeight - (margin * 2)
 	} else {
-		// 由于没有qrcode库，我们使用更简单的方法
-		// 在这里创建一个空白图片作为占位符
-		qrImg = image.NewRGBA(image.Rect(0, 0, size, size))
-		// 在实际项目中应添加go-qrcode依赖并取消注释下面的代码
-		/*
-			qr, err := qrcode.New(data, qrcode.Medium)
-			if err != nil {
-				return i
-			}
-			qr.DisableBorder = false
-			qrImg = qr.Image(size)
-		*/
+		// 创建二维码
+		qr, err := qrcode.New(data, qrcode.Medium)
+		if err != nil {
+			fmt.Println("Error generating QR code:", err)
+			return i
+		}
+		// 设置二维码属性
+		qr.DisableBorder = false
+		// 生成指定大小的二维码图片
+		qrImg = qr.Image(size)
 	}
 
 	// 获取二维码尺寸
@@ -871,7 +873,7 @@ func (i *ImgFont) AppendQrcode(data string, size int, margin int, isBase64 bool)
 	)
 
 	// 更新文本总高度和最后一行已使用宽度
-	i.TextTotalHeight += height
+	i.TextTotalHeight += height - 40
 	i.TextLastLineUsedWidth += width
 
 	// 添加换行

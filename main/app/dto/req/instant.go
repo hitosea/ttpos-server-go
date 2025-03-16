@@ -171,6 +171,24 @@ type OrderPrintReq struct {
 	PayMethodUuid uint64 `json:"pay_method_uuid"` // 支付方式UUID, 可选 (打印码时用)
 }
 
+type OrderPrintInvoiceReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
+	PrintLang     string `json:"print_lang"`      // 打印语言, 可选
+	// 发票信息字段
+	CompanyName      string `json:"company_name"`       // 公司名称
+	CompanyAddr      string `json:"company_addr"`       // 公司地址
+	CompanyTaxNumber string `json:"company_tax_number"` // 公司税号
+	CompanyPhone     string `json:"company_phone"`      // 公司电话
+}
+
+func (r *OrderPrintInvoiceReq) Validate() error {
+	if r.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
+	}
+	return nil
+}
+
 type InstantOrderCheckReq struct {
 	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID, 必填

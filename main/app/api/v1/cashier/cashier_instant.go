@@ -1060,14 +1060,14 @@ func (h *InstantHandler) OrderMemberCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// OrderPrint 打印
-// @Summary 打印
-// @Description 打印
+// OrderPrint 打印小票
+// @Summary 打印小票
+// @Description 打印小票
 // @Tags 收银端.点餐
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderPrintReq true "打印"
+// @param data body req.OrderPrintReq true "参数"
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/instant/order/print [post]
 func (h *InstantHandler) OrderPrint(c *gin.Context) {
@@ -1078,6 +1078,31 @@ func (h *InstantHandler) OrderPrint(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	res, err := h.orderService.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderPrint 打印发票
+// @Summary 打印发票
+// @Description 打印发票
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintInvoiceReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/instant/order/print/invoice [post]
+func (h *InstantHandler) OrderPrintInvoice(c *gin.Context) {
+	var printReq req.OrderPrintInvoiceReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1167,6 +1192,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/instant/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 		privateApi.POST("/instant/order/print", wrapper.OrderPrint)                                              // 打印
+		privateApi.POST("/instant/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 		privateApi.POST("/instant/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
 	}
 }

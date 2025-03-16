@@ -45,8 +45,9 @@ type IOrderRepo interface {
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
 	HasShowOrder(deviceUuid uint64) (bool, error)                                                                             // 判断该设备是否有未挂单的点餐订单
-	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)
-	SetLock(saleBillUuid uint64, isLock bool) error
+	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                           // 获取销售账单记录
+	SetLock(saleBillUuid uint64, isLock bool) error                                                                           // 设置订单锁定状态
+	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) error                               // 设置订单发票信息
 }
 
 // orderRepo 订单仓库
@@ -1187,5 +1188,37 @@ func (r *orderRepo) SetLock(saleBillUuid uint64, isLock bool) error {
 	if err != nil {
 		return fmt.Errorf("SetLock: %v", err)
 	}
+	return nil
+}
+
+// SaveOrUpdateInvoiceInfo 保存或更新订单发票信息
+func (r *orderRepo) SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) error {
+	// 先查询是否存在发票信息
+	var count int64
+	err := r.db.Model(&model.SaleOrderInvoiceInfo{}).
+		Where("sale_order_uuid = ?", saleOrderUuid).
+		Count(&count).Error
+	if err != nil {
+		return fmt.Errorf("查询发票信息失败: %v", err)
+	}
+
+	// 不存在则创建，存在则更新
+	if count == 0 {
+		// 创建新记录
+		invoiceInfo.SaleOrderUuid = saleOrderUuid
+		err = r.db.Create(&invoiceInfo).Error
+		if err != nil {
+			return fmt.Errorf("创建发票信息失败: %v", err)
+		}
+	} else {
+		// 更新现有记录
+		err = r.db.Model(&model.SaleOrderInvoiceInfo{}).
+			Where("sale_order_uuid = ?", saleOrderUuid).
+			Updates(invoiceInfo).Error
+		if err != nil {
+			return fmt.Errorf("更新发票信息失败: %v", err)
+		}
+	}
+
 	return nil
 }

@@ -95,6 +95,7 @@ type IOrderSrv interface {
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                               // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error             // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
+	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                              // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
 }
@@ -5919,12 +5920,66 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
+	// saleOrder.PaymentOrder
+
 	// 打印
 	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
 		constant.PrinterTemplatePreBilling,
 		saleBill,
 		saleOrder.Uuid,
 		1,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 保存销售账单
+	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
+		return nil, errors.WithMessage(err, "设置锁单失败")
+	}
+
+	return printerData, nil
+}
+
+// OrderPrintInvoice 打印发票
+func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrintInvoiceReq) (*resp.PrinterData, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 获取销售账单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 设置发票信息
+	if request.CompanyName != "" {
+		// 创建发票信息对象
+		invoiceInfo := model.SaleOrderInvoiceInfo{
+			SaleOrderUuid:    saleOrder.Uuid,
+			CompanyName:      request.CompanyName,
+			CompanyAddr:      request.CompanyAddr,
+			CompanyTaxNumber: request.CompanyTaxNumber,
+			CompanyPhone:     request.CompanyPhone,
+		}
+		// 保存发票信息（不存在则创建，存在则更新）
+		err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
+		if err != nil {
+			return nil, errors.WithMessage(err, "保存发票信息失败")
+		}
+		// 更新内存中的发票信息
+		saleOrder.InvoiceInfo = &invoiceInfo
+	}
+
+	// 打印
+	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingInvoice(
+		saleBill,
+		saleOrder.Uuid,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

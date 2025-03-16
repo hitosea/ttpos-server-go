@@ -578,12 +578,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 
 	// 发票信息
 	if printType == constant.PrinterTemplateInvoice {
-		invoiceInfo := &model.SaleOrderInvoiceInfo{
-			CompanyName:      "",
-			CompanyAddr:      "",
-			CompanyTaxNumber: "",
-			CompanyPhone:     "",
-		}
+		invoiceInfo := saleOrder.InvoiceInfo
 		if invoiceInfo.HasContent() {
 			printer.SetLineSpacing(10)
 			printer.LineFeed()

@@ -359,7 +359,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderDiscountMethodReq true "打折参数"
+// @param data body req.OrderDiscountMethodReq true "打折参数，根据discount_method值(1:改价,2:打折,3:抹零)提供对应的额外字段"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/discount [post]
@@ -1310,14 +1310,14 @@ func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// OrderPrint 打印
-// @Summary 打印
-// @Description 打印
+// OrderPrint 打印小票
+// @Summary 桌台订单打印小票
+// @Description 桌台订单打印小票
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderPrintReq true "打印"
+// @param data body req.OrderPrintReq true "参数"
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/desk/order/print [post]
 func (h *DeskHandler) OrderPrint(c *gin.Context) {
@@ -1328,6 +1328,31 @@ func (h *DeskHandler) OrderPrint(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	res, err := h.orderService.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderPrint 打印发票
+// @Summary 桌台订单打印发票
+// @Description 桌台订单打印发票
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintInvoiceReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/desk/order/print/invoice [post]
+func (h *DeskHandler) OrderPrintInvoice(c *gin.Context) {
+	var printReq req.OrderPrintInvoiceReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderService.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1427,6 +1452,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
 		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印
+		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
 	}
 }

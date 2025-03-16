@@ -253,9 +253,27 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
 
+-- 销售订单发票信息表
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_invoice_info` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一ID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `company_name` VARCHAR(255) DEFAULT '' COMMENT '公司名称',
+    `company_addr` VARCHAR(255) DEFAULT '' COMMENT '公司地址',
+    `company_tax_number` VARCHAR(255) DEFAULT '' COMMENT '公司税号',
+    `company_phone` VARCHAR(255) DEFAULT '' COMMENT '公司电话',
+    `create_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单发票信息表';
+
+-- h5订单表
 CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID',

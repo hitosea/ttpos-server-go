@@ -3,6 +3,7 @@ package template
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	image "ttpos-server-go/pkg/Image"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
 )
@@ -260,4 +262,41 @@ func (p *printerTemplate) Amount(amount float64) string {
 		return integerPart + "." + decimalPart
 	}
 	return integerPart
+}
+
+// GetLogoAddr 获取logo地址
+func (p *printerTemplate) GetLogoAddr() string {
+	if p.StoreSetting == nil || p.StoreSetting.LogoURL == "" {
+		return ""
+	}
+
+	logoURL := p.StoreSetting.LogoURL
+
+	// 从 URL 中提取文件名
+	urlParts := strings.Split(logoURL, "/")
+	fileName := urlParts[len(urlParts)-1]
+
+	// 如果有扩展名，去掉扩展名
+	fileNameWithoutExt := strings.Split(fileName, ".")[0]
+
+	// 创建目录
+	outputDir := "./tmp/printer/shop/logo"
+	os.MkdirAll(outputDir, 0777)
+
+	// 输出文件路径
+	outputPath := fmt.Sprintf("%s/%s.png", outputDir, fileNameWithoutExt)
+
+	// 检查文件是否已经存在
+	if _, err := os.Stat(outputPath); err == nil {
+		// 文件已存在，直接返回
+		return outputPath
+	}
+
+	// 文件不存在，处理图像，确保是白底黑字
+	err := image.NewImageHelp().WhiteBackgroundWithBlackText(logoURL, outputPath)
+	if err != nil {
+		return ""
+	}
+
+	return outputPath
 }

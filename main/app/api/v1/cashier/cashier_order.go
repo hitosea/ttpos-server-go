@@ -302,14 +302,14 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// OrderPrint 打印
-// @Summary 打印
-// @Description 打印
+// OrderPrint 打印小票
+// @Summary 打印小票
+// @Description 打印小票
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderPrintReq true "打印"
+// @param data body req.OrderPrintReq true "参数"
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/order/print [post]
 func (h *OrderHandler) OrderPrint(c *gin.Context) {
@@ -320,6 +320,31 @@ func (h *OrderHandler) OrderPrint(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	res, err := h.service.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderPrint 打印发票
+// @Summary 打印发票
+// @Description 打印发票
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintInvoiceReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/order/print/invoice [post]
+func (h *OrderHandler) OrderPrintInvoice(c *gin.Context) {
+	var printReq req.OrderPrintInvoiceReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.service.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -348,15 +373,16 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/order/list", wrapper.GetCashierOrderList)
-		privateApi.GET("/order/info", wrapper.GetOrderInfo)
-		privateApi.POST("/order/cancel", wrapper.CancelOrder)
+		privateApi.GET("/order/list", wrapper.GetCashierOrderList)         // 获取订单列表
+		privateApi.GET("/order/info", wrapper.GetOrderInfo)                // 获取订单详情
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)              // 取消订单
 		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)           // 获取退款弹窗信息
 		privateApi.POST("/order/return", wrapper.ReturnOrder)              // 整单退款或部分退款
 		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo) // 获取反结账弹窗信息
 		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)    // 反结账
-		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
-		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
-		privateApi.POST("/order/print", wrapper.OrderPrint) // 打印
+		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)            // 删除订单
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)        // 判断订单是否可关闭
+		privateApi.POST("/order/print", wrapper.OrderPrint)                // 打印
+		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice) // 打印发票
 	}
 }

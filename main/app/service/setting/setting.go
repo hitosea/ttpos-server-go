@@ -124,11 +124,26 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 	for _, m := range settings {
 		keys = append(keys, m.Key)
 	}
-	for _, key := range []string{constant.SettingPrinter, constant.SettingStore, constant.SettingRecharge,
-		constant.SettingPoints, constant.SettingSysAdminConfig, constant.SettingSysConfig, constant.SettingBalance,
-		constant.SettingCurrency, constant.SettingTaxRate, constant.SettingServiceCharge, constant.SettingPayment,
-		constant.SettingBusiness, constant.SettingCashier, constant.SettingTablet, constant.SettingH5, constant.SettingKitchen,
-		constant.SettingAssistant, constant.SettingBuffet} {
+	for _, key := range []string{
+		constant.SettingPrinter,
+		constant.SettingStore,
+		constant.SettingRecharge,
+		constant.SettingPoints,
+		constant.SettingSysAdminConfig,
+		constant.SettingSysConfig,
+		constant.SettingBalance,
+		constant.SettingCurrency,
+		constant.SettingTaxRate,
+		constant.SettingServiceCharge,
+		constant.SettingPayment,
+		constant.SettingBusiness,
+		constant.SettingCashier,
+		constant.SettingTablet,
+		constant.SettingH5,
+		constant.SettingKitchen,
+		constant.SettingAssistant,
+		constant.SettingBuffet,
+	} {
 		if !slices.Contains(keys, key) {
 			settings = append(settings, model.Setting{
 				Key:    key,
@@ -540,6 +555,14 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		jsonMap["language"] = language
 	}
 
+	if logoUrl, ok := jsonMap["logoUrl"].(string); ok {
+		jsonMap["logo_url"] = logoUrl
+	}
+
+	if avatarUrl, ok := jsonMap["avatarUrl"].(string); ok {
+		jsonMap["avatar_url"] = avatarUrl
+	}
+
 	// 重新序列化为JSON
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
@@ -547,7 +570,6 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		return store, errors.New("重新序列化JSON失败 " + err.Error())
 	}
 
-	// 使用处理后的JSON解析
 	err = json.Unmarshal(modifiedJSON, &store)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
@@ -564,13 +586,13 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		return store, errors.New("合并商城设置失败")
 	}
 	ginContext := ctx.GetGin()
-	if defaultStore.LogoURL != "" && ginContext != nil {
-		defaultStore.LogoURL = utils.GetBaseURL(ginContext.Request) + defaultStore.LogoURL
+	if store.LogoURL != "" && ginContext != nil {
+		store.LogoURL = utils.GetBaseURL(ginContext.Request) + store.LogoURL
 	}
-	if defaultStore.AvatarURL != "" && ginContext != nil {
-		defaultStore.AvatarURL = utils.GetBaseURL(ginContext.Request) + defaultStore.AvatarURL
+	if store.AvatarURL != "" && ginContext != nil {
+		store.AvatarURL = utils.GetBaseURL(ginContext.Request) + store.AvatarURL
 	}
-	return defaultStore, nil
+	return store, nil
 }
 
 // GetPrinterSetting 获取打印机设置

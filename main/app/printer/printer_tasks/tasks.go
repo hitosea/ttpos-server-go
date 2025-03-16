@@ -32,7 +32,7 @@ func NewPrinterTask(dbm *database.DBManager, cache cache.Cache) *printerTask {
 func (t *printerTask) Execute() {
 	// 根据 APP 表实例化数据库连接
 	var companies []model.Company
-	if err := t.dbm.GetDB(0).Scopes(repository.NotDeleted).Debug().Find(&companies).Error; err != nil {
+	if err := t.dbm.GetDB(0).Scopes(repository.NotDeleted).Debug().Where("delete_time = 0").Find(&companies).Error; err != nil {
 		log.Fatalf("Error querying companies: %s", err)
 		return
 	}
