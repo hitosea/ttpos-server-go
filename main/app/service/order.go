@@ -565,6 +565,18 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 			return errUpdate
 		}
 
+		// 提交完订单后，重新查询并计算金额。 todo 改为sale_bill保存数据库前计算好金额。
+		{
+			// 获取销售账单信息
+			saleBill, err := repository.NewOrderRepo(tx).GetSaleBillAllInfo(saleBill.Uuid)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			// 计算销售账单金额
+			if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		return nil
 	}); err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
@@ -2475,10 +2487,19 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 		}
 		saleBill.DelayDuration = uint(remainingDelayDuration + totalDelayTime)
 
-		// 重新计算和保存
-		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
-			return err
+		// 提交完订单后，重新查询并计算金额。 todo 改为sale_bill保存数据库前计算好金额。
+		{
+			// 获取销售账单信息
+			saleBill, err := repository.NewOrderRepo(tx).GetSaleBillAllInfo(saleBill.Uuid)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			// 计算销售账单金额
+			if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
+
 		return nil
 	}); err != nil {
 		return nil, err
