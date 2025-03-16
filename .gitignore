@@ -31,7 +31,6 @@ bin/*
 *.cache
 
 # IDE 和编辑器文件
-.vscode/
 .idea/
 *.swp
 *.swo
