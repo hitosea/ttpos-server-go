@@ -867,7 +867,7 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 			}
 		}
 	}
-	var payTypes []resp.OrderInfoPayTypes
+	payTypes := make([]resp.OrderInfoPayTypes, 0)
 	for _, payType := range payTypeMap {
 		payTypes = append(payTypes, *payType)
 	}

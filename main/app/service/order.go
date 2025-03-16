@@ -740,9 +740,14 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			}
 		}
 		//
+		saleOrderUuid := uint64(0)
+		if !isSplit {
+			saleOrderUuid = bill.SaleOrders[0].Uuid
+		}
+		//
 		billList[i] = resp.BillLists{
 			SaleBillUuid:  bill.Uuid,
-			SaleOrderUuid: 0,
+			SaleOrderUuid: saleOrderUuid,
 			BillType:      bill.BillType,
 			IsSplit:       len(bill.SaleOrders) > 1,
 			SerialNo:      bill.SerialNo,
