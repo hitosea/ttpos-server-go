@@ -450,8 +450,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 退款金额
-	if saleOrder.GetReturnAmount() > 0 {
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(saleOrder.GetReturnAmount())))
+	if returnAmount := saleOrder.GetReturnAmount(); returnAmount > 0 {
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(returnAmount)))
 		printer.LineFeed(1)
 	}
 	// 支付手续费

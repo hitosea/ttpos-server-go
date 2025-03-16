@@ -11,6 +11,7 @@ type SaleOrderInvoiceInfo struct {
 	CompanyAddr      string `gorm:"column:company_addr;type:varchar(255);comment:'公司地址'" json:"company_addr"`
 	CompanyTaxNumber string `gorm:"column:company_tax_number;type:varchar(100);comment:'公司税号'" json:"company_tax_number"`
 	CompanyPhone     string `gorm:"column:company_phone;type:varchar(50);comment:'公司电话'" json:"company_phone"`
+	PrintNum         int    `gorm:"column:print_num;type:int(11);default:0;comment:'打印次数'" json:"print_num"`
 }
 
 // HasContent 检查是否有内容需要打印

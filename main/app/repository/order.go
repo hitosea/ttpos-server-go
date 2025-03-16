@@ -14,40 +14,40 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                              // 创建销售单
-	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                         // 创建销售账单设置
-	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                     // 获取销售单
-	GetInstantSaleBill() (*model.SaleBill, error)                                                                             // 获取待支付且未挂单的点餐订单
-	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
-	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
-	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
-	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
-	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
-	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                     // 获取桌台的销售账单详细信息
-	GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, error)                                                           // 获取点餐购物车信息
-	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
-	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)          // 根据销售订单商品uuid列表获取销售订单商品列表
-	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                     // 获取销售账单详细信息-丰富的-几乎包含所有的关联
-	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)     // 创建销售订单自助餐顾客类型
-	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                             // 删除销售订单自助餐顾客类型
-	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)     // 创建销售订单自助餐加钟
-	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                    // 更新销售订单自助餐加钟
-	CancelOrder(saleBillUuid uint64, reason string) error                                                                     // 取消订单
-	CancelDeskOrder(deskUuid uint64, reason string) error                                                                     // 取消桌台订单
-	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                              // 删除订单
-	IsPartiallyPaid(param any) bool                                                                                           // 判断是否存在部分支付
-	HideOrder(saleBillUuid uint64) error                                                                                      // 隐藏订单
-	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                          // 删除订单产品
-	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                            // 查询销售订单的所有bom
-	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error           // 修改订单商品价格
-	ChangePopulation(saleBillUuid uint64, population int) error                                                               // 修改订单人数
-	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error              // 修改订单商品备注
-	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                          // 获取销售账单所有信息
-	HasShowOrder(deviceUuid uint64) (bool, error)                                                                             // 判断该设备是否有未挂单的点餐订单
-	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                           // 获取销售账单记录
-	SetLock(saleBillUuid uint64, isLock bool) error                                                                           // 设置订单锁定状态
-	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) error                               // 设置订单发票信息
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                               // 创建销售单
+	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                          // 创建销售账单设置
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                      // 获取销售单
+	GetInstantSaleBill() (*model.SaleBill, error)                                                                              // 获取待支付且未挂单的点餐订单
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                            // 创建订单
+	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                    // 获取订单列表
+	GetOrderNum(opts ...DBOption) (int64, error)                                                                               // 获取订单数量
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, DBOption, error)  // 获取收银的订单列表
+	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                         // 获取销售账单详细信息
+	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                              // 获取桌台的销售账单详细信息
+	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                      // 获取桌台的销售账单详细信息
+	GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, error)                                                            // 获取点餐购物车信息
+	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)  // 获取销售账单详细信息-包含商品信息
+	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)           // 根据销售订单商品uuid列表获取销售订单商品列表
+	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)      // 创建销售订单自助餐顾客类型
+	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                              // 删除销售订单自助餐顾客类型
+	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)      // 创建销售订单自助餐加钟
+	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                     // 更新销售订单自助餐加钟
+	CancelOrder(saleBillUuid uint64, reason string) error                                                                      // 取消订单
+	CancelDeskOrder(deskUuid uint64, reason string) error                                                                      // 取消桌台订单
+	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
+	IsPartiallyPaid(param any) bool                                                                                            // 判断是否存在部分支付
+	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
+	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                           // 删除订单产品
+	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                             // 查询销售订单的所有bom
+	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error            // 修改订单商品价格
+	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error               // 修改订单商品备注
+	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                           // 获取销售账单所有信息
+	HasShowOrder(deviceUuid uint64) (bool, error)                                                                              // 判断该设备是否有未挂单的点餐订单
+	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                            // 获取销售账单记录
+	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
+	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
 }
 
 // orderRepo 订单仓库
@@ -1192,33 +1192,40 @@ func (r *orderRepo) SetLock(saleBillUuid uint64, isLock bool) error {
 }
 
 // SaveOrUpdateInvoiceInfo 保存或更新订单发票信息
-func (r *orderRepo) SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) error {
-	// 先查询是否存在发票信息
-	var count int64
+func (r *orderRepo) SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) {
+	// 直接尝试查询现有发票信息
+	var dbInvoiceInfo model.SaleOrderInvoiceInfo
+	result := r.db.Where("sale_order_uuid = ?", saleOrderUuid).First(&dbInvoiceInfo)
+
+	// 如果记录不存在，创建新记录
+	if result.Error != nil {
+		// 如果是记录不存在的错误
+		if result.Error == gorm.ErrRecordNotFound {
+			// 创建新记录
+			invoiceInfo.SaleOrderUuid = saleOrderUuid
+			invoiceInfo.PrintNum = 1
+			err := r.db.Create(&invoiceInfo).Error
+			if err != nil {
+				return nil, fmt.Errorf("创建发票信息失败: %v", err)
+			}
+			return &invoiceInfo, nil
+		} else {
+			// 其他查询错误
+			return nil, fmt.Errorf("查询发票信息失败: %v", result.Error)
+		}
+	}
+
+	// 记录存在，更新现有记录
+	// 打印次数加一
+	invoiceInfo.PrintNum = dbInvoiceInfo.PrintNum + 1
+
+	// 更新现有记录
 	err := r.db.Model(&model.SaleOrderInvoiceInfo{}).
 		Where("sale_order_uuid = ?", saleOrderUuid).
-		Count(&count).Error
+		Updates(invoiceInfo).Error
 	if err != nil {
-		return fmt.Errorf("查询发票信息失败: %v", err)
+		return nil, fmt.Errorf("更新发票信息失败: %v", err)
 	}
 
-	// 不存在则创建，存在则更新
-	if count == 0 {
-		// 创建新记录
-		invoiceInfo.SaleOrderUuid = saleOrderUuid
-		err = r.db.Create(&invoiceInfo).Error
-		if err != nil {
-			return fmt.Errorf("创建发票信息失败: %v", err)
-		}
-	} else {
-		// 更新现有记录
-		err = r.db.Model(&model.SaleOrderInvoiceInfo{}).
-			Where("sale_order_uuid = ?", saleOrderUuid).
-			Updates(invoiceInfo).Error
-		if err != nil {
-			return fmt.Errorf("更新发票信息失败: %v", err)
-		}
-	}
-
-	return nil
+	return &invoiceInfo, nil
 }

@@ -36,6 +36,7 @@ class CreateSaleOrderInvoiceInfoTable extends Migrator
                 ->addColumn('company_addr', 'string', ['limit' => 255, 'default' => '', 'comment' => '公司地址'])
                 ->addColumn('company_tax_number', 'string', ['limit' => 255, 'default' => '', 'comment' => '公司税号'])
                 ->addColumn('company_phone', 'string', ['limit' => 255, 'default' => '', 'comment' => '公司电话'])
+                ->addColumn('print_num', 'integer', ['signed' => false, 'default' => 0, 'comment' => '打印次数'])
                 ->addColumn('create_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
                 ->addColumn('update_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '删除时间'])

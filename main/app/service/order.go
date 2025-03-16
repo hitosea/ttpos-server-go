@@ -5968,12 +5968,12 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 			CompanyPhone:     request.CompanyPhone,
 		}
 		// 保存发票信息（不存在则创建，存在则更新）
-		err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
+		invoiceInfos, err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
 		if err != nil {
 			return nil, errors.WithMessage(err, "保存发票信息失败")
 		}
 		// 更新内存中的发票信息
-		saleOrder.InvoiceInfo = &invoiceInfo
+		saleOrder.InvoiceInfo = invoiceInfos
 	}
 
 	// 打印

@@ -30,7 +30,7 @@ class UpdateNumToWarehouseOutFormItem extends Migrator
     {
         $table = $this->table('warehouse_out_form_item');
         if (!$table->hasColumn('num')) {
-                $table->updateColumn('num', 'decimal', [
+                $table->addColumn('num', 'decimal', [
                     'null' => false,
                     'default' => 0,
                     'comment' => '出库数量',

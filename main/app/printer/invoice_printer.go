@@ -72,7 +72,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		DataType:        constant.PrinterLogDataTypeReturnDish,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  0,
+		FirstExecution:  1,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))

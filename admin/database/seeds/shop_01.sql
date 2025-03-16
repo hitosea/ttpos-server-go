@@ -266,6 +266,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_invoice_info` (
     `company_addr` VARCHAR(255) DEFAULT '' COMMENT '公司地址',
     `company_tax_number` VARCHAR(255) DEFAULT '' COMMENT '公司税号',
     `company_phone` VARCHAR(255) DEFAULT '' COMMENT '公司电话',
+    `print_num` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印次数',
     `create_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
