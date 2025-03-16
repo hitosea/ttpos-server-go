@@ -67,7 +67,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			finallyLoginTime = existsDevice.FinallyLoginTime
 		}
 		// 更新绑定
-		err := deviceRepo.UpdateDevice(existsDevice.Uuid, map[string]interface{}{
+		err := deviceRepo.UpdateDevice(existsDevice.Uuid, map[string]any{
 			"product_printer_uuid": productPrinterUuid,
 			"remark":               remark,
 			"brand":                addReq.Brand,

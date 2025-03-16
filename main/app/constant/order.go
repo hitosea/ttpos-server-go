@@ -39,8 +39,9 @@ const (
 
 const (
 	// 销售订单状态
-	SaleOrderStatusPending = 0 // 未结账
-	SaleOrderStatusFinish  = 1 // 已结账
+	SaleOrderStatusPending  = 0 // 未结账
+	SaleOrderStatusFinish   = 1 // 已结账
+	SaleOrderStatusCanceled = 2 // 已取消
 )
 
 const (

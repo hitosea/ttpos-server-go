@@ -29,8 +29,10 @@ class RenameProductUuidReturnOrderProduct extends Migrator
     public function change()
     {
         $table = $this->table('return_order_product');
-        $table->renameColumn('product_uuid', 'product_package_uuid')
+        if ($table->hasColumn('product_uuid')) {
+            $table->renameColumn('product_uuid', 'product_package_uuid')
             ->update();
+        }
     }
 }
 	

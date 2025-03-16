@@ -606,12 +606,14 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	staff := ctx.GetStaff()
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 
-	var dbOptions []repository.DBOption
+	var options, countOptions []repository.DBOption
 	if listReq.OrderNo != "" {
-		dbOptions = append(dbOptions, rechargeOrderRepo.WhereOrderNoLike(listReq.OrderNo))
+		orderNoOption := rechargeOrderRepo.WhereOrderNoLike(listReq.OrderNo)
+		options = append(options, orderNoOption)
+		countOptions = append(countOptions, orderNoOption)
 	}
 	if listReq.Status != -1 {
-		dbOptions = append(dbOptions, rechargeOrderRepo.WhereStatus(listReq.Status))
+		options = append(options, rechargeOrderRepo.WhereStatus(listReq.Status))
 	}
 
 	// -1=全都、 0=今天、 1=昨天、 2=本周
@@ -633,7 +635,9 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
 			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
 		}
-		dbOptions = append(dbOptions, rechargeOrderRepo.WhereCreateTimeBetween(startTime.Unix(), endTime.Unix()))
+		dateTypeOption := rechargeOrderRepo.WhereCreateTimeBetween(startTime.Unix(), endTime.Unix())
+		options = append(options, dateTypeOption)
+		countOptions = append(countOptions, dateTypeOption)
 	}
 
 	// 日期范围
@@ -654,15 +658,17 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			})
 		}
 
-		dbOptions = append(dbOptions, rechargeOrderRepo.WhereTimeBetween(repository.TimeQueryParams{
+		timeRangeOption := rechargeOrderRepo.WhereTimeBetween(repository.TimeQueryParams{
 			TimeRanges: timeRanges,
 			Operator:   "OR",
-		}))
+		})
+		options = append(options, timeRangeOption)
+		countOptions = append(countOptions, timeRangeOption)
 	}
 
 	// 关联查询
-	dbOptions = append(dbOptions, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod(), rechargeOrderRepo.WithStaff())
-	rechargeOrders, total, err := rechargeOrderRepo.PaginateGetRechargeOrder(listReq.PageNo, listReq.PageSize, dbOptions...)
+	options = append(options, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod(), rechargeOrderRepo.WithStaff())
+	rechargeOrders, total, err := rechargeOrderRepo.PaginateGetRechargeOrder(listReq.PageNo, listReq.PageSize, options...)
 
 	if err != nil {
 		return resp.RechargeOrderList{}, errors2.ErrInternal
@@ -710,7 +716,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 
 	// 获取数量
 	getOrderNum := func(status int) int64 {
-		num, _ := rechargeOrderRepo.GetOrderCount(rechargeOrderRepo.WhereStatus(status))
+		num, _ := rechargeOrderRepo.GetOrderCount(append(countOptions, rechargeOrderRepo.WhereStatus(status))...)
 		return num
 	}
 

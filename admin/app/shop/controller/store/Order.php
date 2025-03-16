@@ -5,9 +5,6 @@ namespace app\shop\controller\store;
 use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\model\order\OrderProductFree;
-use app\common\model\order\OrderOperationLog;
-use app\shop\model\order\Order as OrderModel;
 use app\common\enum\settings\DeliveryTypeEnum;
 
 /**
@@ -81,6 +78,7 @@ class Order extends Controller
         if (!$res) {
             return $this->renderError('请求失败');
         } 
+
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
@@ -89,42 +87,13 @@ class Order extends Controller
         $data = $result['data'];
         $data['detail']['create_time'] =  $data['detail']['create_time'] ? date('Y-m-d H:i:s',  $data['detail']['create_time']) : '';
         $data['detail']['finish_time'] =  $data['detail']['finish_time'] ? date('Y-m-d H:i:s',  $data['detail']['finish_time']) : '';
+
+        foreach ($data['operation_log']['list'] as &$item) {
+            $item['create_time'] = $item['create_time'] ? date('Y-m-d H:i:s', $item['create_time']) : '';
+        }
+
         // 
         return $this->renderSuccess('', $data);
-
-        // 订单详情
-        /** @var OrderModel $detail */
-        $detail = OrderModel::detailWithTrashed($order_id, null, ["'' as free_tag_text"]);
-        if (isset($detail['pay_time']) && $detail['pay_time'] > 0) {
-            $detail['pay_time'] = date('Y-m-d H:i:s', $detail['pay_time']);
-        }
-        if (isset($detail['delivery_time']) && $detail['delivery_time'] != '') {
-            $detail['delivery_time'] = date('Y-m-d H:i:s', $detail['delivery_time']);
-        }
-        //
-        if ($detail) {
-            $orderProductIds = array_column($detail['product']->toArray(), 'order_product_id');
-            $orderProductFrees = OrderProductFree::where('order_product_id', 'in', $orderProductIds)->select()->toArray();
-            foreach ($detail['product'] as &$orderProduct) {
-                $orderProduct->free_tag_text = $orderProduct->getFreeTagText($orderProductFrees);
-            }
-            // 是否显示退款按钮 1-显示 0-隐藏
-            [$detail['is_refund_button'], $detail['is_cancel_button']] = $detail->getButtonStatus($detail);
-            // 拆单主单支付方式去重
-            if ($detail['parent_id'] == 0 && count($detail['subOrder']) > 0) {
-                $payTypes = $detail['payType']->toArray();
-                $uniquePayTypes = [];
-                foreach ($payTypes as $payType) {
-                    $uniquePayTypes[$payType['value']] = $payType;
-                }
-                $detail['payType'] = new \think\Collection(array_values($uniquePayTypes));
-            }
-        }
-        // 操作日志
-        $operationOrderId = $detail['parent_id'] > 0 ? $detail['parent_id'] : $order_id;
-        $operationLog = OrderOperationLog::getLogList($operationOrderId);
-        //
-        return $this->renderSuccess('', compact('detail', 'operationLog'));
     }
 
     /**
@@ -135,7 +104,7 @@ class Order extends Controller
         // 搜索日期类型: '0'-全部 '1'-今天 '2'-昨天 '3'-本周
         $dateType = intval($data['time_type']) - 1;
         // 搜索订单类型: ''-全部 '10'-桌台 '20-点餐
-        $billType = intval(trim($data['order_source']) ?? -1);
+        $billType = intval(trim($data['order_source'] ?? 0) ?: -1);
         if ($billType == 10) {
             $billType = 0;
         }

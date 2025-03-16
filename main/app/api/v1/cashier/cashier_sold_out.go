@@ -141,7 +141,7 @@ func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/sold_out/list", wrapper.SoldOutList)             // 沽清售罄列表
 		privateApi.POST("/sold_out/add", wrapper.AddSoldOut)              // 添加沽清商品

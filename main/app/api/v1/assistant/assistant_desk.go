@@ -19,7 +19,8 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv service.IDeskSrv // 主服务
+	deskSrv  service.IDeskSrv
+	orderSrv service.IOrderSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -140,6 +141,179 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductAdd 向购物车添加商品
+// @Summary 向购物车添加商品
+// @Description 向购物车添加商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductAddReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/add [post]
+func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 添加商品。 若没有点餐账单则新建一个
+	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// ChangeDesk 处理切换桌台
+// @Summary 切换桌台
+// @Description 切换桌台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeDeskReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/change [post]
+func (h *DeskHandler) ChangeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeDeskReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	info, err := h.deskSrv.ChangeDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// CompleteDesk 处理清台
+// @Summary 清台
+// @Description 清台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeskInfoReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/complete [post]
+func (h *DeskHandler) CompleteDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskJsonUuidReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.deskSrv.CompleteDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// MergeDesk 处理合并桌台
+// @Summary 合并桌台
+// @Description 合并桌台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.MergeDeskReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/merge [post]
+func (h *DeskHandler) MergeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MergeDeskReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	info, deskMergeCheckResp, err := h.deskSrv.MergeDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderChangeBuffet 处理桌台订单调整自助餐
+// @Summary 桌台订单调整自助餐
+// @Description 桌台订单调整自助餐
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderChangeBuffetReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/buffet [post]
+func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangeBuffetReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderChangeBuffet(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderChangePopulation 处理桌台订单修改人数
+// @Summary 桌台订单修改人数
+// @Description 桌台订单修改人数
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderChangePopulationReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/population [post]
+func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangePopulationReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderChangePopulation(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -155,21 +329,23 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 创建处理程序
 	wrapper := DeskHandler{
-		deskSrv: service.NewDeskSrv(
-			dbm,        // 数据库管理器
-			localeSrv,  // 多语言服务
-			orderSrv,   // 订单服务
-			settingSrv, // 设置服务
-			deviceSrv,  // 设备服务
-		),
+		deskSrv:  service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
+		orderSrv: orderSrv,
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType) // 获取桌台的区域和类型
-		privateApi.GET("/desk/list", wrapper.GetDeskList)                     // 获取桌台列表
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                     // 获取桌台详情
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                // 创建桌台订单(开桌)
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)    // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                        // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                        // 获取桌台详情
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                   // 创建桌台订单(开桌)
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation) // 桌台订单修改人数
+		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)         // 桌台订单调整自助餐
+		privateApi.POST("/desk/change", wrapper.ChangeDesk)                      // 切换桌台（转台）
+		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                  // 完成桌台（清台）
+		privateApi.POST("/desk/merge", wrapper.MergeDesk)                        // 合并桌台
+
+		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd) // 向购物车添加商品
 	}
 }

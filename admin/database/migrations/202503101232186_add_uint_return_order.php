@@ -29,8 +29,10 @@ class AddUintReturnOrder extends Migrator
     public function change()
     {
         $table = $this->table('return_order');
-        $table->addColumn('unit', 'string', ['default' => '', 'comment' => '货币单位', 'null' => false])
+        if (!$table->hasColumn('unit')) {
+            $table->addColumn('unit', 'string', ['default' => '', 'comment' => '货币单位', 'null' => false])
             ->update();
+        }
     }
 }
 	

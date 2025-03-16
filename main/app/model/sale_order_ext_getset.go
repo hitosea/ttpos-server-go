@@ -29,6 +29,11 @@ func (model *SaleOrder) GetBuffetNames(language string) string {
 	return strings.Join(buffets, "+")
 }
 
+// 获取实际支付金额
+func (model *SaleOrder) GetActualPaymentAmount() float64 {
+	return model.PaymentAmount - model.GetTotalRefundAmount()
+}
+
 // 获取总的退款金额
 func (model *SaleOrder) GetTotalRefundAmount() float64 {
 	refundAmount := 0.0

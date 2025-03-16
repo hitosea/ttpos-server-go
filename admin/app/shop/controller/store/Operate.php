@@ -6,6 +6,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\order\OrderOperationLog;
 use app\shop\model\order\Order as OrderModel;
+use help\HttpHelp;
 
 /**
  * 订单操作
@@ -58,11 +59,24 @@ class Operate extends Controller
         if (mb_strlen($data['cancel_remark'] ?? '') > 50) {
             return $this->renderError('备注最长50个字符');
         }
-        $model = OrderModel::detail($order_id);
-        if ($model->delStay($order_id, $data['cancel_remark'])) {
-            return $this->renderSuccess('操作成功');
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/cancel', json_encode([
+            'sale_bill_uuid' => intval($data['order_id']),
+            'cancel_reason' => $data['cancel_remark'] ?? '',
+            'not_need_password' => true,
+        ]), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        return $this->renderError($model->getError() ?: '操作失败');
+        return $this->renderSuccess('操作成功');
     }
 
     /**
@@ -89,16 +103,26 @@ class Operate extends Controller
      * @Apidoc\Param("order_id", type="int", require=true, default="", desc="订单id")
      * @Apidoc\Returned()
      */
-    public function delete($order_id)
+    public function delete()
     {
-        $model = OrderModel::detail($order_id);
-        if (!$model) {
-            return $this->renderError('订单不存在');
+        $data = $this->postData();
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::deleteRequest('http://nginx/api/v1/shop/order/delete', json_encode([
+            'sale_bill_uuid' => intval($data['sale_bill_uuid']),
+            'sale_order_uuid' => intval($data['sale_order_uuid']),
+        ]), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
         }
-        if ($model->orderDelete()) {
-            return $this->renderSuccess('删除成功');
-        }
-        return $this->renderError($model->getError() ?: '删除失败');
+        return $this->renderSuccess('删除成功');
     }
 
     /**

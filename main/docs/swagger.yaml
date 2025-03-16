@@ -614,6 +614,9 @@ definitions:
       cancel_reason:
         description: 取消原因
         type: string
+      notNeedPassword:
+        description: 不需要验证高级密码。仅用后端使用
+        type: boolean
       password:
         description: 高级密码 后台开启的时候才传
         type: string
@@ -1082,6 +1085,9 @@ definitions:
     type: object
   req.UpdateSystemSetting:
     properties:
+      device_remark:
+        description: 机器备注
+        type: string
       dish_card_style:
         description: 菜品卡片样式 0-无图模式 1-图片模式
         enum:
@@ -1223,7 +1229,7 @@ definitions:
     properties:
       assistant:
         allOf:
-        - $ref: '#/definitions/setting.Assistant'
+        - $ref: '#/definitions/setting.AssistantResp'
         description: 点餐助手设置
       assistant_staff:
         allOf:
@@ -1249,25 +1255,21 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Currency'
         description: 货币设置
-      kitchen:
-        allOf:
-        - $ref: '#/definitions/setting.Kitchen'
-        description: 厨显端设置
       payment:
         allOf:
         - $ref: '#/definitions/setting.Payment'
         description: 支付设置
+      permissions:
+        description: 点餐助手权限
+        items:
+          type: string
+        type: array
     type: object
   resp.AssistantStaff:
     properties:
       device_id:
         description: 点餐助手设备ID
         type: string
-      permission:
-        description: 点餐助手权限
-        items:
-          type: string
-        type: array
       phone:
         description: 点餐助手员工手机号
         type: string
@@ -1546,7 +1548,7 @@ definitions:
         description: 门店业务设置
       cashier:
         allOf:
-        - $ref: '#/definitions/setting.Cashier'
+        - $ref: '#/definitions/setting.CashierResp'
         description: 收银机设置
       cashier_uuid:
         description: 收银员UUID
@@ -1580,7 +1582,7 @@ definitions:
         description: 打印设置
       tablet:
         allOf:
-        - $ref: '#/definitions/setting.Tablet'
+        - $ref: '#/definitions/setting.TabletResp'
         description: 平板端设置
       username:
         description: 登录账号
@@ -3334,21 +3336,31 @@ definitions:
     type: object
   resp.OrderProduct:
     properties:
-      attributes:
-        description: 规格属性加料
-        type: string
-      flavor_name:
-        description: 口味名称
-        type: string
       gift_reason:
         description: 赠品原因
         type: string
       image_url:
         description: 图片地址
         type: string
+      is_buffet:
+        description: 是否自助餐, false-否 true-是
+        type: boolean
+      is_buffet_customer:
+        description: 是否自助餐顾客, false-否 true-是
+        type: boolean
+      is_delay:
+        description: 是否加钟, false-否 true-是
+        type: boolean
       is_gift:
         description: 是否赠品, false-否 true-是
         type: boolean
+      is_must:
+        description: 是否必点, false-否 true-是
+        type: boolean
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 口味名称
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3357,7 +3369,7 @@ definitions:
         description: 数量
         type: integer
       price:
-        description: 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'
+        description: 单价
         type: number
       refund_amount:
         description: 退款金额
@@ -3369,19 +3381,13 @@ definitions:
         description: 备注
         type: string
       sale_price:
-        description: 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价
+        description: 销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示
         type: number
       status:
         description: 状态, 0-正常 1-退菜
         type: integer
-      tax_rate:
-        description: 税率,单位%.下单时单税率,结账时再重新核算
-        type: number
       total_price:
-        description: 应收金额(单商品)=最终单价+服务费+总税费
-        type: number
-      total_sale_price:
-        description: 销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'
+        description: 最终总价
         type: number
       uuid:
         description: 销售订单商品ID
@@ -4079,6 +4085,10 @@ definitions:
       amount:
         description: 实付金额
         type: number
+      cashier:
+        allOf:
+        - $ref: '#/definitions/resp.RechargeOrderCashier'
+        description: 收银员
       extra:
         allOf:
         - $ref: '#/definitions/resp.RechargeOrderItemExtra'
@@ -4089,6 +4099,9 @@ definitions:
       gift_point:
         description: 赠送积分
         type: number
+      member_uuid:
+        description: 会员uuid
+        type: integer
       order_no:
         description: 订单编号
         type: string
@@ -4102,6 +4115,9 @@ definitions:
         type: integer
       recharge_amount:
         description: 充值金额
+        type: number
+      refund_money:
+        description: 退款金额
         type: number
       status:
         description: 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
@@ -4484,7 +4500,7 @@ definitions:
         description: 货币单位
       kitchen:
         allOf:
-        - $ref: '#/definitions/setting.Kitchen'
+        - $ref: '#/definitions/setting.KitchenResp'
         description: 厨显端设置
       store:
         allOf:
@@ -4492,7 +4508,7 @@ definitions:
         description: 商家设置
       tablet:
         allOf:
-        - $ref: '#/definitions/setting.Tablet'
+        - $ref: '#/definitions/setting.TabletResp'
         description: 平板端设置
     type: object
   resp.TabletDeskItem:
@@ -4566,11 +4582,8 @@ definitions:
         description: 价格
         type: string
     type: object
-  setting.Assistant:
+  setting.AssistantResp:
     properties:
-      advanced_password:
-        description: 高级设置密码
-        type: string
       auto_lock_screen:
         description: 自动锁屏（秒），默认5分钟
         type: string
@@ -4601,9 +4614,6 @@ definitions:
         items:
           $ref: '#/definitions/dto.LanguageItem'
         type: array
-      lock_password:
-        description: 锁屏密码
-        type: string
       remain_color:
         description: 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
         items:
@@ -4820,6 +4830,73 @@ definitions:
         description: 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
         type: string
     type: object
+  setting.CashierResp:
+    properties:
+      auto_lock_screen:
+        description: 自动锁屏（秒），默认5分钟
+        type: string
+      auto_order_limit:
+        description: 自动接单金额上限
+        type: string
+      carousel:
+        description: 上传后的轮播内容url（图片 + 视频）
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
+      default_language:
+        description: 默认语言
+        type: string
+      is_auto_lock_screen:
+        description: 是否开启自动锁屏 0-关闭 1-开启
+        type: string
+      is_auto_order:
+        description: 是否自动接单
+        type: string
+      is_auto_send:
+        description: 收银结账自动送厨房 0-关闭 1-开启
+        type: string
+      is_auto_voice:
+        description: 是否开启自动接单语音播报
+        type: string
+      is_open_cashier_password:
+        description: 是否开启钱箱密码 0-关闭 1-开启
+        type: string
+      is_remain_color:
+        description: 是否开启剩余时长颜色 0-关闭 1-开启
+        type: string
+      is_show_assistant_sold_out:
+        description: 点餐助手是否显示售罄商品 0-不显示 1-显示
+        type: integer
+      is_show_scan_sold_out:
+        description: 扫码点餐是否显示售罄商品 0-不显示 1-显示
+        type: integer
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      menu_show_sold_out:
+        description: 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: string
+      order_method:
+        allOf:
+        - $ref: '#/definitions/setting.OrderMethodItem'
+        description: 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
+      remain_color:
+        description: 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+        items:
+          type: string
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 收银机服务器连接
+    type: object
   setting.CheckoutZeroingMethodItem:
     properties:
       key:
@@ -4865,11 +4942,8 @@ definitions:
       name:
         type: string
     type: object
-  setting.Kitchen:
+  setting.KitchenResp:
     properties:
-      advanced_password:
-        description: 高级设置密码
-        type: string
       default_language:
         description: 默认语言
         type: string
@@ -5070,11 +5144,8 @@ definitions:
         description: '抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元'
         type: string
     type: object
-  setting.Tablet:
+  setting.TabletResp:
     properties:
-      advanced_password:
-        description: 高级设置密码
-        type: string
       buffet_order_limit:
         allOf:
         - $ref: '#/definitions/setting.BuffetOrderLimit'
@@ -5308,6 +5379,54 @@ paths:
       summary: 检查更新
       tags:
       - 点餐助手端.基础信息
+  /assistant/desk/change:
+    post:
+      consumes:
+      - application/json
+      description: 切换桌台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 切换桌台
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/complete:
+    post:
+      consumes:
+      - application/json
+      description: 清台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 清台
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/info:
     get:
       consumes:
@@ -5341,7 +5460,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: is_buffet
+        name: isBuffet
         type: integer
       - description: 页码
         in: query
@@ -5374,6 +5493,30 @@ paths:
       summary: 获取桌台列表
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/merge:
+    post:
+      consumes:
+      - application/json
+      description: 合并桌台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MergeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 合并桌台
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/open:
     post:
       consumes:
@@ -5398,6 +5541,97 @@ paths:
       security:
       - JwtToken: []
       summary: 开台
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/buffet:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单调整自助餐
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderChangeBuffetReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单调整自助餐
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 向购物车添加商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/population:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单修改人数
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderChangePopulationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单修改人数
       tags:
       - 点餐助手端.桌台
   /assistant/desk/region_and_type:
@@ -5665,6 +5899,36 @@ paths:
       summary: 获取在线收银机
       tags:
       - 点餐助手端.基础信息
+  /assistant/order/must_plan_list:
+    get:
+      consumes:
+      - application/json
+      description: 必点方案列表
+      parameters:
+      - description: 销售账单Uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductMustPlanList'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 必点方案列表
+      tags:
+      - 点餐助手端.订单
   /assistant/payment_method/list:
     get:
       consumes:
@@ -6159,7 +6423,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: is_buffet
+        name: isBuffet
         type: integer
       - description: 页码
         in: query
@@ -6310,7 +6574,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -6341,6 +6605,10 @@ paths:
         in: query
         name: cancel_reason
         type: string
+      - description: 不需要验证高级密码。仅用后端使用
+        in: query
+        name: notNeedPassword
+        type: boolean
       - description: 高级密码 后台开启的时候才传
         in: query
         name: password
@@ -8874,11 +9142,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -8902,11 +9170,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -8926,27 +9194,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -8961,11 +9229,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -9022,11 +9290,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -9078,7 +9346,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -10295,11 +10563,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID 当查看子订单信息的时候才需要传
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -10323,11 +10591,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -10347,27 +10615,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式,-1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -10382,11 +10650,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -10406,6 +10674,168 @@ paths:
       summary: 获取订单列表
       tags:
       - 商家端.订单
+  /shop/recharge_order/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消充值订单
+      parameters:
+      - description: 取消充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderUuidReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 取消充值订单
+      tags:
+      - 商家端.充值订单
+  /shop/recharge_order/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取充值订单详情
+      parameters:
+      - description: 充值订单Uuid
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrderInfo'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取充值订单详情
+      tags:
+      - 商家端.充值订单
+  /shop/recharge_order/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取充值订单列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 订单编号
+        in: query
+        name: order_no
+        type: string
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+        in: query
+        name: date_type
+        type: integer
+      - description: 启用添加时间 false-不启用，true-启用
+        in: query
+        name: enable_create_time
+        type: boolean
+      - description: 启用支付时间 false-不启用，true-启用
+        in: query
+        name: enable_payment_time
+        type: boolean
+      - description: 查询开始时间戳
+        in: query
+        name: query_start_time
+        type: integer
+      - description: 查询结束时间戳
+        in: query
+        name: query_end_time
+        type: integer
+      - description: 充值订单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrderList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取充值订单列表
+      tags:
+      - 商家端.充值订单
+  /shop/recharge_order/refund:
+    get:
+      consumes:
+      - application/json
+      description: 获取充值订单退款信息
+      parameters:
+      - description: 充值订单Uuid
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RechargeOrderRefundInfo'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取充值订单退款信息
+      tags:
+      - 商家端.充值订单
+    post:
+      consumes:
+      - application/json
+      description: 充值订单退款
+      parameters:
+      - description: 退款充值订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RechargeOrderRefundReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 充值订单退款
+      tags:
+      - 商家端.充值订单
   /tablet/base:
     get:
       consumes:
@@ -10498,7 +10928,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 绑定/换绑桌台，调用此接口之后的所有接口，都需要传递x-desk-uuid请求头
+      description: 绑定/换绑桌台
       parameters:
       - description: 绑定/换绑桌台请求参数
         in: body
@@ -10635,6 +11065,41 @@ paths:
       summary: 退出登录
       tags:
       - 平板端.认证鉴权
+  /tablet/order/must_plan_list:
+    get:
+      consumes:
+      - application/json
+      description: 必点方案列表
+      parameters:
+      - description: 桌台Uuid
+        in: header
+        name: X-DESK-UUID
+        required: true
+        type: string
+      - description: 销售账单Uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductMustPlanList'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 必点方案列表
+      tags:
+      - 平板端.订单
   /tablet/product/category/list:
     get:
       consumes:

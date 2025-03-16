@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -64,6 +65,9 @@ type SaleBill struct {
 	FinishTime     int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 	HideBillTime   int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
 	ProductionTime int64 `gorm:"column:production_time;type:int(10);default:0;comment:首次送厨时间（时间戳）" json:"production_time"`
+
+	// 收银员名称
+	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
 
 	// 关联ID字段
 	ConsumerUuid       uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -207,7 +211,6 @@ func (model *SaleBill) SetReverseSettle() {
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			paymentOrder.Status = constant.PaymentOrderStatusRefund
-			fmt.Println("paymentOrder.Status", paymentOrder.Status)
 		}
 	}
 }
@@ -342,6 +345,23 @@ func (model *SaleBill) IsPartialPay() bool {
 		}
 	}
 	return false
+}
+
+// 获取已送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductCooking() []*SaleOrderProduct {
+	cookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() && !orderProduct.IsCancelBool() {
+				continue
+			}
+			if orderProduct.Status == constant.SaleOrderProductStatusCooking {
+				cookingSaleOrderProducts = append(cookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+			}
+		}
+	}
+	return cookingSaleOrderProducts
 }
 
 // 获取未送厨的销售订单商品
@@ -542,7 +562,9 @@ func (model *SaleBill) IsShowSaleBill() bool {
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for i, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
-			saleOrder.Index = i + 1
+			if len(model.SaleOrders) > 1 {
+				saleOrder.Index = i + 1
+			}
 			return saleOrder
 		}
 	}
@@ -665,7 +687,9 @@ func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
-	if operation != constant.OrderSettle && operation != constant.OrderUnlock && model.IsLockStatus() {
+	if operation != constant.OrderSettle &&
+		operation != constant.OrderUnlock &&
+		model.IsLockStatus() {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {
@@ -786,6 +810,66 @@ func (model *SaleBill) SetAllDiscountCancel() bool {
 		isChange = saleOrder.SetAllDiscountCancel() || isChange
 	}
 	return isChange
+}
+
+// GetPayTypes 获取支付方式
+func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp.OrderInfoPayTypes {
+	payTypeNames := []string{}
+	payTypeMap := make(map[string]*resp.OrderInfoPayTypes)
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrderUuid > 0 && saleOrderUuid != saleOrder.Uuid {
+			continue
+		}
+		if saleOrder.IsFree == 1 {
+			// 免单处理
+			payTypeName := i18n.Translate(language, "免单")
+			key := fmt.Sprintf("%s_%d", payTypeName, 2)
+			if existingPayType, ok := payTypeMap[key]; ok {
+				existingPayType.PaymentAmount += saleOrder.PaymentAmount
+			} else {
+				if !slices.Contains(payTypeNames, payTypeName) {
+					payTypeNames = append(payTypeNames, payTypeName)
+				}
+				payType := resp.OrderInfoPayTypes{
+					Uuid:            0,
+					PaymentTypeName: payTypeName,
+					CurrencyUnit:    "",
+					PaymentAmount:   saleOrder.PaymentAmount,
+					Status:          2,
+					Source:          0,
+					SourceText:      "",
+				}
+				payTypeMap[key] = &payType
+			}
+		} else {
+			// 正常支付方式处理
+			for _, payment := range saleOrder.PaymentOrders {
+				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
+				if existingPayType, ok := payTypeMap[key]; ok {
+					existingPayType.PaymentAmount += payment.PaymentAmount
+				} else {
+					payType := resp.OrderInfoPayTypes{
+						Uuid:            payment.Uuid,
+						PaymentTypeName: payment.PaymentMethodName,
+						CurrencyUnit:    payment.CurrencyUnit,
+						PaymentAmount:   payment.PaymentAmount,
+						Status:          uint(payment.Status),
+						Source:          uint(payment.GetSource()),
+						SourceText:      payment.GetSourceText(language),
+					}
+					payTypeMap[key] = &payType
+					if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
+				}
+			}
+		}
+	}
+	var payTypes []resp.OrderInfoPayTypes
+	for _, payType := range payTypeMap {
+		payTypes = append(payTypes, *payType)
+	}
+	return payTypes
 }
 
 type Sauce struct {

@@ -282,6 +282,84 @@
                 }
             }
         },
+        "/assistant/desk/change": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "切换桌台",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ChangeDeskReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/complete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "清台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "清台",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskInfoReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/info": {
             "get": {
                 "security": [
@@ -344,7 +422,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -378,6 +456,45 @@
                                 "$ref": "#/definitions/resp.DeskListWithPaginationResp"
                             }
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/merge": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "合并桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "合并桌台",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MergeDeskReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "404": {
                         "description": "未找到"
@@ -419,6 +536,163 @@
                         "description": "开台成功",
                         "schema": {
                             "$ref": "#/definitions/resp.CreateDeskOrderResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/buffet": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台订单调整自助餐",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "桌台订单调整自助餐",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderChangeBuffetReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/cart/product/add": {
+            "post": {
+                "description": "向购物车添加商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "向购物车添加商品",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/population": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台订单修改人数",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "桌台订单修改人数",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderChangePopulationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -869,6 +1143,58 @@
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/assistant/order/must_plan_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "必点方案列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.订单"
+                ],
+                "summary": "必点方案列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单Uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductMustPlanList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -1708,7 +2034,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -1957,7 +2283,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -2009,6 +2335,12 @@
                         "type": "string",
                         "description": "取消原因",
                         "name": "cancel_reason",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "不需要验证高级密码。仅用后端使用",
+                        "name": "notNeedPassword",
                         "in": "query"
                     },
                     {
@@ -6332,13 +6664,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -6377,13 +6709,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -6416,37 +6748,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -6467,13 +6799,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -6569,13 +6901,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -6663,7 +6995,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8702,13 +9034,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -8747,13 +9079,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8786,37 +9118,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -8837,13 +9169,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -8862,6 +9194,276 @@
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/recharge_order/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消充值订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.充值订单"
+                ],
+                "summary": "取消充值订单",
+                "parameters": [
+                    {
+                        "description": "取消充值订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RechargeOrderUuidReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/recharge_order/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取充值订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.充值订单"
+                ],
+                "summary": "获取充值订单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "充值订单Uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/recharge_order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取充值订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.充值订单"
+                ],
+                "summary": "获取充值订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "name": "date_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用添加时间 false-不启用，true-启用",
+                        "name": "enable_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用支付时间 false-不启用，true-启用",
+                        "name": "enable_payment_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "query_start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "充值订单状态, -1=全都、 0=待付款、1=已完成、2=已取消",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrderList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/recharge_order/refund": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取充值订单退款信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.充值订单"
+                ],
+                "summary": "获取充值订单退款信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "充值订单Uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrderRefundInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "充值订单退款",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.充值订单"
+                ],
+                "summary": "充值订单退款",
+                "parameters": [
+                    {
+                        "description": "退款充值订单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RechargeOrderRefundReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -9020,7 +9622,7 @@
                         "JwtToken": []
                     }
                 ],
-                "description": "绑定/换绑桌台，调用此接口之后的所有接口，都需要传递x-desk-uuid请求头",
+                "description": "绑定/换绑桌台",
                 "consumes": [
                     "application/json"
                 ],
@@ -9239,6 +9841,65 @@
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
+                    }
+                }
+            }
+        },
+        "/tablet/order/must_plan_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "必点方案列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.订单"
+                ],
+                "summary": "必点方案列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "桌台Uuid",
+                        "name": "X-DESK-UUID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单Uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductMustPlanList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -10267,6 +10928,10 @@
                     "description": "取消原因",
                     "type": "string"
                 },
+                "notNeedPassword": {
+                    "description": "不需要验证高级密码。仅用后端使用",
+                    "type": "boolean"
+                },
                 "password": {
                     "description": "高级密码 后台开启的时候才传",
                     "type": "string"
@@ -10935,6 +11600,10 @@
                 "menu_show_sold_out"
             ],
             "properties": {
+                "device_remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                },
                 "dish_card_style": {
                     "description": "菜品卡片样式 0-无图模式 1-图片模式",
                     "type": "string",
@@ -11126,7 +11795,7 @@
                     "description": "点餐助手设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Assistant"
+                            "$ref": "#/definitions/setting.AssistantResp"
                         }
                     ]
                 },
@@ -11178,14 +11847,6 @@
                         }
                     ]
                 },
-                "kitchen": {
-                    "description": "厨显端设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Kitchen"
-                        }
-                    ]
-                },
                 "payment": {
                     "description": "支付设置",
                     "allOf": [
@@ -11193,6 +11854,13 @@
                             "$ref": "#/definitions/setting.Payment"
                         }
                     ]
+                },
+                "permissions": {
+                    "description": "点餐助手权限",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -11202,13 +11870,6 @@
                 "device_id": {
                     "description": "点餐助手设备ID",
                     "type": "string"
-                },
-                "permission": {
-                    "description": "点餐助手权限",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "phone": {
                     "description": "点餐助手员工手机号",
@@ -11625,7 +12286,7 @@
                     "description": "收银机设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Cashier"
+                            "$ref": "#/definitions/setting.CashierResp"
                         }
                     ]
                 },
@@ -11684,7 +12345,7 @@
                     "description": "平板端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Tablet"
+                            "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
                 },
@@ -14259,14 +14920,6 @@
         "resp.OrderProduct": {
             "type": "object",
             "properties": {
-                "attributes": {
-                    "description": "规格属性加料",
-                    "type": "string"
-                },
-                "flavor_name": {
-                    "description": "口味名称",
-                    "type": "string"
-                },
                 "gift_reason": {
                     "description": "赠品原因",
                     "type": "string"
@@ -14275,9 +14928,33 @@
                     "description": "图片地址",
                     "type": "string"
                 },
+                "is_buffet": {
+                    "description": "是否自助餐, false-否 true-是",
+                    "type": "boolean"
+                },
+                "is_buffet_customer": {
+                    "description": "是否自助餐顾客, false-否 true-是",
+                    "type": "boolean"
+                },
+                "is_delay": {
+                    "description": "是否加钟, false-否 true-是",
+                    "type": "boolean"
+                },
                 "is_gift": {
                     "description": "是否赠品, false-否 true-是",
                     "type": "boolean"
+                },
+                "is_must": {
+                    "description": "是否必点, false-否 true-是",
+                    "type": "boolean"
+                },
+                "locale_attribute_name": {
+                    "description": "口味名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "locale_name": {
                     "description": "产品名称",
@@ -14292,7 +14969,7 @@
                     "type": "integer"
                 },
                 "price": {
-                    "description": "最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'",
+                    "description": "单价",
                     "type": "number"
                 },
                 "refund_amount": {
@@ -14308,23 +14985,15 @@
                     "type": "string"
                 },
                 "sale_price": {
-                    "description": "销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价",
+                    "description": "销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示",
                     "type": "number"
                 },
                 "status": {
                     "description": "状态, 0-正常 1-退菜",
                     "type": "integer"
                 },
-                "tax_rate": {
-                    "description": "税率,单位%.下单时单税率,结账时再重新核算",
-                    "type": "number"
-                },
                 "total_price": {
-                    "description": "应收金额(单商品)=最终单价+服务费+总税费",
-                    "type": "number"
-                },
-                "total_sale_price": {
-                    "description": "销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'",
+                    "description": "最终总价",
                     "type": "number"
                 },
                 "uuid": {
@@ -15361,6 +16030,14 @@
                     "description": "实付金额",
                     "type": "number"
                 },
+                "cashier": {
+                    "description": "收银员",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RechargeOrderCashier"
+                        }
+                    ]
+                },
                 "extra": {
                     "description": "通过当前数据控制按钮是否显示",
                     "allOf": [
@@ -15376,6 +16053,10 @@
                 "gift_point": {
                     "description": "赠送积分",
                     "type": "number"
+                },
+                "member_uuid": {
+                    "description": "会员uuid",
+                    "type": "integer"
                 },
                 "order_no": {
                     "description": "订单编号",
@@ -15394,6 +16075,10 @@
                 },
                 "recharge_amount": {
                     "description": "充值金额",
+                    "type": "number"
+                },
+                "refund_money": {
+                    "description": "退款金额",
                     "type": "number"
                 },
                 "status": {
@@ -15969,7 +16654,7 @@
                     "description": "厨显端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Kitchen"
+                            "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
                 },
@@ -15985,7 +16670,7 @@
                     "description": "平板端设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Tablet"
+                            "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
                 }
@@ -16093,13 +16778,9 @@
                 }
             }
         },
-        "setting.Assistant": {
+        "setting.AssistantResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "auto_lock_screen": {
                     "description": "自动锁屏（秒），默认5分钟",
                     "type": "string"
@@ -16140,10 +16821,6 @@
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
-                },
-                "lock_password": {
-                    "description": "锁屏密码",
-                    "type": "string"
                 },
                 "remain_color": {
                     "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
@@ -16454,6 +17131,103 @@
                 }
             }
         },
+        "setting.CashierResp": {
+            "type": "object",
+            "properties": {
+                "auto_lock_screen": {
+                    "description": "自动锁屏（秒），默认5分钟",
+                    "type": "string"
+                },
+                "auto_order_limit": {
+                    "description": "自动接单金额上限",
+                    "type": "string"
+                },
+                "carousel": {
+                    "description": "上传后的轮播内容url（图片 + 视频）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_auto_lock_screen": {
+                    "description": "是否开启自动锁屏 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_auto_order": {
+                    "description": "是否自动接单",
+                    "type": "string"
+                },
+                "is_auto_send": {
+                    "description": "收银结账自动送厨房 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_auto_voice": {
+                    "description": "是否开启自动接单语音播报",
+                    "type": "string"
+                },
+                "is_open_cashier_password": {
+                    "description": "是否开启钱箱密码 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_remain_color": {
+                    "description": "是否开启剩余时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_show_assistant_sold_out": {
+                    "description": "点餐助手是否显示售罄商品 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "is_show_scan_sold_out": {
+                    "description": "扫码点餐是否显示售罄商品 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "menu_show_sold_out": {
+                    "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "string"
+                },
+                "order_method": {
+                    "description": "用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.OrderMethodItem"
+                        }
+                    ]
+                },
+                "remain_color": {
+                    "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "server": {
+                    "description": "收银机服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                }
+            }
+        },
         "setting.CheckoutZeroingMethodItem": {
             "type": "object",
             "properties": {
@@ -16520,13 +17294,9 @@
                 }
             }
         },
-        "setting.Kitchen": {
+        "setting.KitchenResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "default_language": {
                     "description": "默认语言",
                     "type": "string"
@@ -16808,13 +17578,9 @@
                 }
             }
         },
-        "setting.Tablet": {
+        "setting.TabletResp": {
             "type": "object",
             "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
                 "buffet_order_limit": {
                     "description": "自助餐下单限制",
                     "allOf": [

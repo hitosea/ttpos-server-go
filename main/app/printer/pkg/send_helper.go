@@ -65,7 +65,7 @@ func ExecutePrinting(printerIP string, content string) error {
 	content = hex2bin(content)
 	// 替换特殊字符
 	content = strings.ReplaceAll(content, "ー", "-")
-	// 使用正则表达式分割文本，保留泰语、韩语和泰铢符号
+	// 使用正则表达式分割文本，保留泰语、韩语、泰铢符号
 	thaiHangulRegex := regexp.MustCompile(`([\p{Thai}\p{Hangul}฿]+)`)
 	segments := thaiHangulRegex.Split(content, -1)
 	matches := thaiHangulRegex.FindAllString(content, -1)
@@ -89,7 +89,7 @@ func ExecutePrinting(printerIP string, content string) error {
 		// 检查是否包含泰语字符或泰铢符号
 		isThai := containsThai(segment) || strings.Contains(segment, "฿")
 		isKorean := containsKorean(segment)
-		//
+		isTurkish := containsTurkish(segment)
 		if isThai {
 			// 泰语处理
 			// 切换到泰语字符集
@@ -112,6 +112,19 @@ func ExecutePrinting(printerIP string, content string) error {
 			}
 			// 转换为CP949编码（韩语字符集）
 			encoded, err := encodeTo(segment, "cp949")
+			if err != nil {
+				return err
+			}
+			conn.Write(encoded)
+		} else if isTurkish {
+			// 土耳其语处理
+			// 切换到土耳其语字符集
+			_, err = conn.Write([]byte{0x1B, 0x74, 0x02}) // ESC t 2 - 选择PC857编码（土耳其语字符集）
+			if err != nil {
+				return err
+			}
+			// 转换为ISO-8859-9编码（土耳其语字符集）
+			encoded, err := encodeTo(segment, "iso8859-9")
 			if err != nil {
 				return err
 			}
@@ -157,17 +170,33 @@ func containsKorean(s string) bool {
 	return false
 }
 
+// 检查字符串是否包含土耳其语特有字符
+func containsTurkish(s string) bool {
+	turkishChars := []rune{'ğ', 'ı', 'İ', 'ö', 'ş', 'ü', 'Ç', 'ç', 'Ğ', 'Ö', 'Ş', 'Ü'} // 土耳其语特有字符: ğ, ı, İ, ö, ş, ü, Ç, ç, Ğ, Ö, Ş, Ü
+	for _, r := range s {
+		for _, tc := range turkishChars {
+			if r == tc {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // 将字符串转换为指定编码
 func encodeTo(s string, encoding string) ([]byte, error) {
 	switch encoding {
-	case "cp874":
+	case "cp874": // 泰语
 		enc := charmap.Windows874.NewEncoder()
 		return enc.Bytes([]byte(s))
-	case "cp949":
+	case "cp949": // 韩语
 		enc := korean.EUCKR.NewEncoder()
 		return enc.Bytes([]byte(s))
-	case "gbk":
+	case "gbk": // 中文
 		enc := simplifiedchinese.GBK.NewEncoder()
+		return enc.Bytes([]byte(s))
+	case "iso8859-9", "latin5": // 土耳其语
+		enc := charmap.ISO8859_9.NewEncoder()
 		return enc.Bytes([]byte(s))
 	default:
 		return []byte(s), nil

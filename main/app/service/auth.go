@@ -2,12 +2,14 @@ package service
 
 import (
 	"fmt"
+	"github.com/jinzhu/copier"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	setting2 "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -120,7 +122,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	var loginResp resp.LoginResp
 	var token string
 	// 验证验证码
-	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-Sign"), loginReq.Code) {
+	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) {
 		return loginResp, errors.New("验证码错误")
 	}
 	var staff model.Staff
@@ -273,8 +275,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	companySetting := ctx.GetCompanySetting()
 	staff := ctx.GetStaff()
 	var (
-		source   = ctx.GetSource()
-		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
+		source             = ctx.GetSource()
+		deviceId           = ctx.GetGin().GetString(jwt.DeviceId)
+		cashierSettingResp setting2.CashierResp
+		tabletSettingResp  setting2.TabletResp
 	)
 	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
@@ -289,6 +293,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	copier.Copy(&cashierSettingResp, cashierSetting)
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
@@ -305,6 +310,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	copier.Copy(&tabletSettingResp, tabletSetting)
 	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
@@ -318,7 +324,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		CashierUuid:  staff.Uuid,
 		DeviceId:     deviceId,
 		DeviceRemark: deviceRemark,
-		Cashier:      cashierSetting,
+		Cashier:      cashierSettingResp,
 		Business:     businessSetting,
 		Buffet:       buffetSetting,
 		Currency:     currencySetting,
@@ -328,7 +334,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-		Tablet:  tabletSetting,
+		Tablet:  tabletSettingResp,
 		Payment: paymentSetting,
 		Printer: printerSetting,
 	}, nil
@@ -346,7 +352,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
-	permissions := make([]string, len(perms))
+	permissions := make([]string, 0, len(perms))
 	for _, perm := range perms {
 		permissions = append(permissions, perm.Path)
 	}
@@ -374,15 +380,17 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
+	var assistantSettingResp setting2.AssistantResp
+	err = copier.Copy(&assistantSettingResp, assistantSetting)
+	if err != nil {
+		panic(err)
+	}
 	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
-	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
-	if err != nil {
-		return assistantBase, errors.WithMessage(err)
-	}
 	return resp.AssistantBase{
+		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
 			RealName:     staff.RealName,
 			Username:     staff.Username,
@@ -390,22 +398,20 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			DeviceRemark: device.Remark,
 		},
 		AssistantStaff: resp.AssistantStaff{
-			Uuid:       assistantStaff.Uuid,
-			RealName:   assistantStaff.RealName,
-			Phone:      assistantStaff.Phone,
-			DeviceId:   assistantStaff.BindKey,
-			Permission: permissions,
+			Uuid:     assistantStaff.Uuid,
+			RealName: assistantStaff.RealName,
+			Phone:    assistantStaff.Phone,
+			DeviceId: assistantStaff.BindKey,
 		},
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-		Assistant: assistantSetting,
+		Assistant: assistantSettingResp,
 		Buffet:    buffetSetting,
 		Payment:   paymentSetting,
 		Business:  businessSetting,
-		Kitchen:   kitchenSetting,
 		Currency:  currencySetting,
 	}, nil
 }
@@ -428,14 +434,20 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
+	var (
+		tabletSettingResp  setting2.TabletResp
+		kitchenSettingResp setting2.KitchenResp
+	)
 	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
+	copier.Copy(&tabletSettingResp, tabletSetting)
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
+	copier.Copy(&kitchenSettingResp, kitchenSetting)
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
@@ -450,23 +462,27 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Cashier:  cashierSetting,
 		Buffet:   buffetSetting,
 		Currency: currencySetting,
-		Tablet:   tabletSetting,
-		Kitchen:  kitchenSetting,
+		Tablet:   tabletSettingResp,
+		Kitchen:  kitchenSettingResp,
 		Store:    storeSetting,
 	}, nil
 }
 
 // KitchenBase 获取收银端基本信息
 func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
-	var kitchenBase resp.KitchenBase
+	var (
+		kitchenBase        resp.KitchenBase
+		kitchenSettingResp setting2.KitchenResp
+	)
 	company := helper.GetCompany(ctx.GetGin())
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
 	}
+	copier.Copy(&kitchenSettingResp, kitchenSetting)
 	return resp.KitchenBase{
-		Kitchen: kitchenSetting,
+		Kitchen: kitchenSettingResp,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
@@ -651,6 +667,8 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 		DeviceId:  ctx.GetGin().GetString(jwt.DeviceId),
 		StaffUuid: ctx.GetGin().GetUint64(jwt.StaffUuid),
 	})
+	// ToDo 记得删除
+	fmt.Println("bind cashier token:", newToken)
 	if err != nil {
 		return newToken, errors.New("生成token失败")
 	}

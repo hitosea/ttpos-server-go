@@ -40,10 +40,10 @@ type OrderInfoReq struct {
 
 // OrderCancelReq 订单取消
 type OrderCancelReq struct {
-	SaleBillUuid    uint64 `json:"sale_bill_uuid"` // 销售账单UUID
-	CancelReason    string `json:"cancel_reason"`  // 取消原因
-	Password        string `form:"password"`       // 高级密码 后台开启的时候才传
-	NotNeedPassword bool   // 不需要验证高级密码。仅用后端使用
+	SaleBillUuid    uint64 `json:"sale_bill_uuid"`    // 销售账单UUID
+	CancelReason    string `json:"cancel_reason"`     // 取消原因
+	Password        string `form:"password"`          // 高级密码 后台开启的时候才传
+	NotNeedPassword bool   `json:"not_need_password"` // 不需要验证高级密码。仅用后端使用
 }
 
 // OrderReturnInfoReq 退款订单信息

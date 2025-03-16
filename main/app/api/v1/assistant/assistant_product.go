@@ -96,7 +96,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取产品列表
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取产品类别列表

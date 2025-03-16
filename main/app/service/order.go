@@ -41,7 +41,7 @@ import (
 type IOrderSrv interface {
 	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                 // 创建点餐订单
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                           // 创建桌台订单
-	GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error)                     // 获取订单列表
+	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                               // 获取订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                        // 获取订单详情
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                               // 删除订单
@@ -96,6 +96,7 @@ type IOrderSrv interface {
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error             // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
+	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
 }
 
 // orderSrv 订单服务结构
@@ -611,15 +612,16 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 }
 
 // GetCashierOrderList 获取订单列表
-func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
-	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
 	_ = copier.Copy(&reqs, req)
-	lists, total, err := orderRepo.GetCashierOrderListWithPagination(reqs)
+	lists, total, dbOption, err := orderRepo.GetCashierOrderListWithPagination(reqs)
 	if err != nil {
 		return resp.OrderListPaginationResp{}, errors.WithMessage(err)
 	}
+
 	// 组合列表源数据
 	billList := make([]resp.BillLists, len(lists))
 	consumerUuids := []string{}
@@ -627,6 +629,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		totalPayTypeNames := []string{}
 		isSplit := len(bill.SaleOrders) > 1 // 拆单
 		orderList := make([]resp.BillListsOrder, 0)
+		var paymentAmounts float64
 		//
 		billListsExtra := resp.BillListsExtra{
 			IsCellRefund:        false,
@@ -639,14 +642,24 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		// 拆单
 		if isSplit {
 			for k, order := range bill.SaleOrders {
-				payTypeNames := []string{}
-				for _, payment := range order.PaymentOrders {
-					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
-					payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+				if order.IsDelete() {
+					continue
 				}
+				// 获取支付方式
+				payTypeNames := []string{}
+				if order.IsFree == 1 {
+					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+					payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+				} else {
+					for _, payment := range order.PaymentOrders {
+						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
+				}
+
 				orderExtra := resp.BillListsExtra{
 					IsCellRefund:        false,
-					IsCellCancel:        order.Status == constant.SaleBillStatusPending,
+					IsCellCancel:        false,
 					IsCellReverseSettle: false,
 					IsCellPrint:         !isSplit && order.Status != constant.SaleBillStatusPending,
 					IsCellInvoice:       !isSplit && order.Status == constant.SaleBillStatusComplete,
@@ -657,9 +670,12 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 					orderExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
 					orderExtra.IsCellReverseSettle = true
 				}
+				//
+				paymentAmount := order.GetActualPaymentAmount()
+				paymentAmounts += paymentAmount
 				//
 				orderList = append(orderList, resp.BillListsOrder{
 					SaleBillUuid:  order.SaleBillUuid,
@@ -676,8 +692,8 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 					Status:        order.Status,
 					FinishTime:    order.FinishTime,
 					OrderAmount:   order.Amount,
-					PaymentAmount: order.PaymentAmount,
-					PayTypeName:   strings.Join(payTypeNames, ","),
+					PaymentAmount: paymentAmount,
+					PayTypeName:   strings.Join(utils.RemoveDuplicates(payTypeNames), ","),
 					Extra:         orderExtra,
 				})
 				//
@@ -692,16 +708,19 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 				if order.ConsumerUuid > 0 {
 					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
 				}
-				//
-				for _, payment := range order.PaymentOrders {
-					totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+				if order.IsFree == 1 {
+					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
+				} else {
+					for _, payment := range order.PaymentOrders {
+						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
+					}
 				}
 				// 不等于免单 && 未退款 && 完成
 				if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 					billListsExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && staff.Uuid == bill.CashierUuid && order.FinishTime > staff.CashierLoginTime {
+				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
 					billListsExtra.IsCellReverseSettle = true
 				}
 			}
@@ -709,7 +728,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 		//
 		billList[i] = resp.BillLists{
 			SaleBillUuid:  bill.Uuid,
-			SaleOrderUuid: bill.SaleOrders[0].Uuid,
+			SaleOrderUuid: 0,
 			BillType:      bill.BillType,
 			IsSplit:       len(bill.SaleOrders) > 1,
 			SerialNo:      bill.SerialNo,
@@ -717,9 +736,9 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			Status:        bill.Status,
 			FinishTime:    bill.FinishTime,
 			OrderAmount:   bill.Amount,
-			PaymentAmount: bill.PaymentAmount,
+			PaymentAmount: bill.GetPaymentAmount(),
 			ConsumerUuids: strings.Join(consumerUuids, ","),
-			PayTypeName:   strings.Join(totalPayTypeNames, ","),
+			PayTypeName:   strings.Join(utils.RemoveDuplicates(totalPayTypeNames), ","),
 			SaleOrders:    orderList,
 			Extra:         billListsExtra,
 		}
@@ -730,6 +749,7 @@ func (s *orderSrv) GetOrderLists(dbId uint64, staff model.Staff, source string, 
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
 			repository.CommonRepo.WhereByCooking(),
+			dbOption,
 		)
 		return num
 	}
@@ -755,108 +775,162 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 获取信息源
-	saleBill, err := orderRepo.GetSaleBillDetails(req.SaleBillUuid, req.SaleOrderUuid)
+	saleBill, err := orderRepo.GetSaleBillInfo(req.SaleBillUuid, 0)
 	if err != nil {
 		return resp.OrderInfosResp{}, errors.WithMessage(err)
 	}
-	isMain := req.SaleOrderUuid > 0         // 是否查询主单
+	isMain := req.SaleOrderUuid == 0        // 是否查询主单
 	isSplit := len(saleBill.SaleOrders) > 1 // 是否拆单
+	isCellCancel := isMain
 
 	// 组合信息
 	totalMemberNames := []string{}
 	totalMemberUuids := []string{}
-	payTypes := make([]resp.OrderInfoPayTypes, 0)
-	orderList := make([]resp.OrderInfo, len(saleBill.SaleOrders))
-	for i, order := range saleBill.SaleOrders {
-		payTypeNames := []string{}
-		if order.IsFree == 1 {
-			payTypes = append(payTypes, resp.OrderInfoPayTypes{
-				Uuid:            0,
-				PaymentTypeName: i18n.Translate(ctx.GetLanguage(), "免单"),
-				CurrencyUnit:    "",
-				PaymentAmount:   order.PaymentAmount,
-				Status:          2,
-				Source:          0,
-				SourceText:      "",
-			})
-			payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
-		} else {
-			for _, payment := range order.PaymentOrders {
-				payTypes = append(payTypes, resp.OrderInfoPayTypes{
-					Uuid:            payment.Uuid,
-					PaymentTypeName: payment.PaymentMethodName,
-					CurrencyUnit:    payment.CurrencyUnit,
-					PaymentAmount:   payment.PaymentAmount,
-					Status:          uint(payment.Status),
-					Source:          uint(payment.GetSource()),
-					SourceText:      payment.GetSourceText(ctx.GetLanguage()),
-				})
-				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
-			}
+	orderList := make([]resp.OrderInfo, 0)
+	for i, saleOrder := range saleBill.SaleOrders {
+		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
+			continue
 		}
-		if order.GetMemberName() != "" && !slices.Contains(totalMemberNames, order.GetMemberName()) {
-			totalMemberNames = append(totalMemberNames, order.GetMemberName())
+		if saleOrder.GetMemberName() != "" && !slices.Contains(totalMemberNames, saleOrder.GetMemberName()) {
+			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
 		}
-		if order.ConsumerUuid != 0 {
-			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+		if saleOrder.ConsumerUuid != 0 {
+			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(saleOrder.ConsumerUuid, 10))
 		}
 		//
-		products := make([]resp.OrderProduct, len(order.SaleOrderProducts))
-		for j, product := range order.SaleOrderProducts {
-			url := ""
-			if product.ImageFile != nil {
-				url = product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-			}
-			products[j] = resp.OrderProduct{
-				Uuid:           product.Uuid,
-				LocaleName:     product.MultiLanguageName.GetNames(),
-				FlavorName:     product.FlavorName,
-				Num:            product.Num,
-				Price:          product.Price,
-				SalePrice:      product.SalePrice,
-				TotalPrice:     decimal.NewFromFloat(product.TotalPrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
-				TotalSalePrice: decimal.NewFromFloat(product.SalePrice).Mul(decimal.NewFromInt(int64(product.Num))).InexactFloat64(),
-				TaxRate:        product.TaxRate,
-				Status:         product.Status,
-				Remark:         product.Remark,
-				IsGift:         product.IsGiftProduct(),
-				GiftReason:     product.GiftReason,
-				ImageUrl:       url,
-				Attributes:     product.GetAttributeNames(),
-				CancelReason:   product.CancelReason,
-				// todo 待完善
-				RefundAmount: 0,
+		products := make([]resp.OrderProduct, 0)
+
+		// 添加自助餐顾客
+		{
+			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
+				if orderBuffetCustomer.IsDelete() {
+					continue
+				}
+				// 自助餐顾客价格收费列表
+				products = append(products, resp.OrderProduct{
+					Uuid:       orderBuffetCustomer.Uuid,
+					LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+					LocaleAttributeName: dto.LocaleResponse{
+						ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					},
+					Price:            orderBuffetCustomer.Price,
+					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
+					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
+					Status:           1,
+					Remark:           "",
+					IsMust:           false,
+					IsGift:           false,
+					IsBuffetCustomer: true,
+				})
 			}
 		}
-		// todo - SerialNo 取值不对
-		orderList[i] = resp.OrderInfo{
-			SaleOrderUuid: order.Uuid,
+
+		// 添加加钟商品
+		{
+			for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+				if delayProduct.IsDelete() {
+					continue
+				}
+				products = append(products, resp.OrderProduct{
+					Uuid: delayProduct.Uuid,
+					LocaleName: dto.LocaleResponse{
+						ZH:   delayProduct.Name,
+						TH:   delayProduct.Name,
+						EN:   delayProduct.Name,
+						ZHTW: delayProduct.Name,
+						JA:   delayProduct.Name,
+						KO:   delayProduct.Name,
+						MY:   delayProduct.Name,
+						TR:   delayProduct.Name,
+					},
+					LocaleAttributeName: dto.LocaleResponse{},
+					Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+					Price:               delayProduct.Price,
+					SalePrice:           delayProduct.GetAmount(),
+					TotalPrice:          delayProduct.GetAmount(),
+					Status:              1,  // 添加后标记送厨状态，不可修改
+					Remark:              "", // 加钟商品没有备注
+					IsMust:              false,
+					IsGift:              false,
+					IsBuffet:            false,
+					IsDelay:             true,
+				})
+			}
+		}
+
+		// 添加正常商品
+		{
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsDelete() {
+					continue
+				}
+				imageUrl := ""
+				if saleOrderProduct.ImageFile != nil {
+					imageUrl = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}
+				products = append(products, resp.OrderProduct{
+					Uuid:                saleOrderProduct.Uuid,
+					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+					Price:               saleOrderProduct.Price,
+					Num:                 saleOrderProduct.Num,
+					SalePrice:           saleOrderProduct.GetSalePrice(),
+					TotalPrice:          saleOrderProduct.GetTotalPrice(),
+					Status:              saleOrderProduct.Status,
+					Remark:              saleOrderProduct.Remark,
+					IsMust:              saleOrderProduct.IsMustProduct(),
+					IsGift:              saleOrderProduct.IsGiftProduct(),
+					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
+					ImageUrl:            imageUrl,
+					CancelReason:        saleOrderProduct.CancelReason,
+					GiftReason:          saleOrderProduct.GiftReason,
+					// todo 退款金额 待处理
+					RefundAmount: 0,
+				})
+			}
+		}
+
+		//
+		orderList = append(orderList, resp.OrderInfo{
+			SaleOrderUuid: saleOrder.Uuid,
 			BillType:      saleBill.BillType,
 			DiningMethod:  saleBill.DiningMethod,
 			SerialNo:      saleBill.SerialNo + "-" + strconv.Itoa(i+1),
-			OrderNo:       order.OrderNo,
-			Status:        order.Status,
-			IsFree:        order.IsFree == 1,
-			FreeReason:    order.FreeReason,
-			OrderAmount:   order.Amount,
-			PaymentAmount: order.PaymentAmount - order.GetTotalRefundAmount(),
-			RefundAmount:  order.GetTotalRefundAmount(),
-			PayTypeName:   strings.Join(payTypeNames, ","),
-			MemberName:    order.GetMemberName(),
-			MemberUuid:    order.ConsumerUuid,
+			OrderNo:       saleOrder.OrderNo,
+			Status:        saleOrder.Status,
+			IsFree:        saleOrder.IsFree == 1,
+			FreeReason:    saleOrder.FreeReason,
+			OrderAmount:   saleOrder.Amount,
+			PaymentAmount: saleOrder.GetActualPaymentAmount(),
+			RefundAmount:  saleOrder.GetTotalRefundAmount(),
+			PayTypeName:   saleOrder.GetPayTypeNames(ctx.GetLanguage()),
+			MemberName:    saleOrder.GetMemberName(),
+			MemberUuid:    saleOrder.ConsumerUuid,
 			Products:      products,
+		})
+		//
+		if saleOrder.Status != constant.SaleBillStatusPending {
+			isCellCancel = false
 		}
 	}
 
 	// 处理额外信息
 	order := saleBill.SaleOrders[0]
 	orderExtra := resp.BillListsExtra{
-		IsCellRefund:        false, // todo 待完善
-		IsCellCancel:        false, // todo 待完善
+		IsCellRefund:        false,
+		IsCellCancel:        isCellCancel,
 		IsCellReverseSettle: saleBill.IsCellReverseSettle(),
-		IsCellPrint:         (!isSplit || !isMain) && order.Status != constant.SaleBillStatusPending,
+		IsCellPrint:         true,
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
-		IsCellInvoice:       false, // todo 待完善
+		IsCellInvoice:       false,
 	}
 	if (!isSplit || !isMain) && order.IsFree == 0 && saleBill.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 		orderExtra.IsCellRefund = true
@@ -888,7 +962,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			IsBuffet:      saleBill.IsBuffet == 1,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
-			PayTypes:      payTypes,
+			PayTypes:      saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
 			SaleOrders:    orderList,
 			Remark:        saleBill.Remark,
 		},
@@ -2125,6 +2199,12 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 点餐助手，拆单后不可以修改人数
+	if ctx.GetSource() == constant.SourceAssistant && billInfo.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	oldMealNum := billInfo.MealNum
 
 	// 判断订单状态
@@ -2194,7 +2274,10 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	if !saleBill.IsBuffetSaleBill() {
 		return nil, errors.New("当前订单不是自助餐类型，无法调整自助餐")
 	}
-	if len(saleBill.SaleOrders) > 1 {
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.New("当前订单已拆单，请前去收银机操作")
+	}
+	if saleBill.IsSplit() {
 		return nil, errors.New("当前订单已拆单，无法调整自助餐")
 	}
 	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateMealNum); err != nil {
@@ -2523,8 +2606,6 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 		return nil, errors.WithMessage(errUuid)
 	}
 	// 没有找到销售账单
-	fmt.Println(2222222222, "saleBillUuid", saleBillUuid)
-
 	if saleBillUuid == 0 {
 		ctx.Log().Info("没有找到销售账单", zap.String("deviceSn", deviceSn))
 		// 收银机点餐页面没有销售账单时，检查是否有自动加购的必点方案，如果有，则创建一个销售账单并自动加购商品
@@ -3954,8 +4035,6 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 
 	// 遍历得到要自动加购的商品
-	fmt.Println(utils.ToJsonString(mustPlanList))
-
 	for i, plan := range mustPlanList {
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
@@ -5668,7 +5747,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingStatementOrder(
+	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
 		constant.PrinterTemplatePreBilling,
 		saleBill,
 		saleOrder.Uuid,
@@ -5719,4 +5798,20 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	}
 
 	return nil
+}
+
+// GetMustPlanList 点餐助手、平板端获取必点商品方案列表
+func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error) {
+	saleBillRepo := repository.NewSaleBillRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
+	if err != nil {
+		return resp.ProductMustPlanList{}, errors.ErrInternal
+	}
+	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]uint), saleBill.DeskUuid)
+	if err != nil {
+		return resp.ProductMustPlanList{}, errors.WithMessage(err)
+	}
+	return resp.ProductMustPlanList{
+		List: list,
+	}, nil
 }

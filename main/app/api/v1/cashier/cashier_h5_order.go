@@ -130,7 +130,7 @@ func RegisterH5OrderHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		h5OrderSrv: service.NewH5OrderSrv(dbm),
 	}
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/h5_order/list", wrapper.GetH5OrderList)     // 获取h5订单列表
 		privateApi.GET("/h5_order/detail", wrapper.GetH5OrderDetail) // 获取h5订单详情

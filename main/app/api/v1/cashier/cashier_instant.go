@@ -1130,7 +1130,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.POST("/instant/order/create", wrapper.CreateInstantOrder)                                     // 创建点餐订单。 废弃，点餐点餐由系统自动创建
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                            // 取消点餐订单

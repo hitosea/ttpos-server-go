@@ -232,12 +232,12 @@ func (h *BaseHandler) EditAcceptOrderSetting(c *gin.Context) {
 // @Router /cashier/setting/edit_system [post]
 func (h *BaseHandler) EditSystemSetting(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var acceptOrderSetting req.UpdateAcceptOrderSetting
-	if err := c.ShouldBindJSON(&acceptOrderSetting); err != nil {
-		helper.HandleValidationError(c, err, acceptOrderSetting, req.UpdateAcceptOrderSettingMessage)
+	var systemSetting req.UpdateSystemSetting
+	if err := c.ShouldBindJSON(&systemSetting); err != nil {
+		helper.HandleValidationError(c, err, systemSetting, req.UpdateAcceptOrderSettingMessage)
 		return
 	}
-	err := h.settingSrv.EditAcceptOrderSetting(ctx, acceptOrderSetting)
+	err := h.settingSrv.EditSystemSetting(ctx, systemSetting)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -322,7 +322,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/base", wrapper.GetCashierBase)                              // 获取基础信息
 		privateApi.GET("/language", wrapper.GetLanguage)                             // 获取语言

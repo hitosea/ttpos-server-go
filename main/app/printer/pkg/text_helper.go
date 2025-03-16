@@ -15,26 +15,99 @@ import (
 // PrintTextHelper 提供文本处理和格式化功能用于打印
 type PrintTextHelper struct{}
 
+// countThaiGraphemeClusters 计算泰语字符串中的字素簇数量
+// 这个函数模拟PHP的grapheme_strlen函数的行为
+func (h *PrintTextHelper) countThaiGraphemeClusters(text string) int {
+	// 泰语元音和声调标记，这些通常与前面的辅音组合成一个字素簇
+	combiningMarks := map[rune]bool{
+		'่': true, // 声调符号
+		'้': true, // 声调符号
+		'๊': true, // 声调符号
+		'๋': true, // 声调符号
+		'ั': true, // 元音符号
+		'ิ': true, // 元音符号
+		'ี': true, // 元音符号
+		'ึ': true, // 元音符号
+		'ื': true, // 元音符号
+		'ุ': true, // 元音符号
+		'ู': true, // 元音符号
+		'ำ': true, // 元音符号组合
+		'็': true, // 其他符号
+	}
+
+	count := 0
+	skipNext := false
+	runes := []rune(text)
+	for i := 0; i < len(runes); i++ {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		count++
+		// 检查下一个字符是否是组合标记
+		if i+1 < len(runes) && combiningMarks[runes[i+1]] {
+			skipNext = true
+		}
+	}
+
+	return count
+}
+
 // GetTextWidth 获取文本宽度
 func (h *PrintTextHelper) GetTextWidth(text string) int {
-	// 泰语检测
-	thaiRegex := regexp.MustCompile(`[\p{Thai}฿]`)
+	// 泰语检测 - 对应PHP: preg_match_all('/[\p{Thai}฿]+/u', $text, $matches);
+	thaiRegex := regexp.MustCompile(`[\p{Thai}฿]+`)
 	if thaiRegex.MatchString(text) {
+		// 1. 提取所有泰语字符序列 - 对应PHP: $ttf = implode('', $matches[0]);
 		thaiMatches := thaiRegex.FindAllString(text, -1)
 		ttf := strings.Join(thaiMatches, "")
-		w := utf8.RuneCountInString(ttf)
-
+		// 2. 计算泰语字符的基本宽度 - 对应PHP: $w = grapheme_strlen($ttf);
+		// 使用自定义函数计算泰语字素簇数量，而不是简单的Unicode字符数
+		w := h.countThaiGraphemeClusters(ttf)
 		// 检查特殊字符
 		for _, r := range ttf {
 			if string(r) == "ำ" {
 				w++
 			}
 		}
+		// 3. 从原文本中移除泰语字符
+		textWithoutThai := thaiRegex.ReplaceAllString(text, "")
+		// 4. 转换为GBK并添加长度 - 对应PHP: $w += strlen(iconv("UTF-8", "GBK//IGNORE", $text));
+		if textWithoutThai != "" {
+			encoder := simplifiedchinese.GBK.NewEncoder()
+			gbkStr, _, err := transform.String(encoder, textWithoutThai)
+			if err != nil {
+				w += len(textWithoutThai)
+			} else {
+				w += len(gbkStr)
+			}
+		}
+		//
+		return w
+	}
 
-		// 转换为GBK计算长度
+	// 缅甸语检测
+	myanmarRegex := regexp.MustCompile(`[\p{Myanmar}]`)
+	if myanmarRegex.MatchString(text) {
+		// 1. 提取所有缅甸语字符
+		myanmarMatches := myanmarRegex.FindAllString(text, -1)
+		myanmar := strings.Join(myanmarMatches, "")
+
+		// 2. 计算缅甸语字符的基本宽度
+		w := utf8.RuneCountInString(myanmar)
+
+		// 3. 从原文本中移除缅甸语字符
+		textWithoutMyanmar := myanmarRegex.ReplaceAllString(text, "")
+
+		// 4. 转换为GBK并添加长度
 		encoder := simplifiedchinese.GBK.NewEncoder()
-		gbkStr, _, _ := transform.String(encoder, text)
-		w += len(gbkStr)
+		gbkStr, _, err := transform.String(encoder, textWithoutMyanmar)
+		if err == nil {
+			w += len(gbkStr)
+		} else {
+			w += len(textWithoutMyanmar)
+		}
+
 		return w
 	}
 

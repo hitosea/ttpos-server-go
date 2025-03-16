@@ -2,6 +2,7 @@ package context
 
 import (
 	"context"
+	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 
 	"go.uber.org/zap"
@@ -224,6 +225,9 @@ func (c *ContextImpl) SetDB(tx *gorm.DB) {
 
 // GetDB 获取gorm实例
 func (c *ContextImpl) GetDB() *gorm.DB {
+	if db, exists := c.GetGin().Get(jwt.DB); exists {
+		return db.(*gorm.DB)
+	}
 	return c.db
 }
 

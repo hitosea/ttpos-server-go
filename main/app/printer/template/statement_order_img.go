@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
-	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
-	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/context"
 
 	"github.com/shopspring/decimal"
 )
@@ -22,19 +19,15 @@ type statementOrderImgTemplate struct {
 
 // NewStatementOrderImgTemplate 创建新的图片订单打印模板
 func NewStatementOrderImgTemplate(
-	ctx context.Context,
-	setting *setting.Srv,
-	storeSetting *respSetting.Store,
-	printerSetting *respSetting.Printer,
-	currencySetting *respSetting.Currency,
+	base *printerTemplate,
 ) *statementOrderImgTemplate {
 	return &statementOrderImgTemplate{
-		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
+		base: base,
 	}
 }
 
 // ImgPrint 图片打印
-func (t *statementOrderImgTemplate) ImgPrint(
+func (t *statementOrderImgTemplate) GetPrintContent(
 	printType int,
 	temp int,
 	saleBill *model.SaleBill,
@@ -60,7 +53,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 
 	// 订单名称
 	orderName := fmt.Sprintf("%d", saleOrder.Index)
-	if orderName != "" {
+	if orderName != "" && saleOrder.Index > 0 {
 		orderName = "-" + orderName
 	}
 
@@ -122,7 +115,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: "saleOrder.CashierUuid", Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight},
 		)
 		if saleOrder.FinishTime > 0 {
 			img.PrintInColumns(
@@ -165,21 +158,21 @@ func (t *statementOrderImgTemplate) ImgPrint(
 			pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: saleOrder.OrderNo, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
-		// if saleOrder.CashierName != "" {
-		// 	img.PrintInColumns(
-		// 		pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-		// 		pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
-		// 	)
-		// }
+		if saleOrder.CashierName != "" {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: t.base.Translate("收银员"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
+				pkg.ColumnConfig{Text: saleOrder.CashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 2},
+			)
+		}
 		img.LineFeed(1)
 	} else if temp == 3 {
 		// 打印logo
-		// if t.base.setting != nil {
+		// if t.base.StoreSetting != nil {
 		// 	storeSetting := t.base.StoreSetting
 		// 	img.SetTextLineHeight(25)
-		// 	img.SetAlignment(ImgFont.AlignCenter)
+		// 	img.SetAlignment(pkg.AlignCenter)
 		// 	// whiteBackgroundWithBlackTextLogoPath := Supplier.GetWhiteBackgroundWithBlackTextLogoPath(saleOrder.AppId, "http://nginx"+ImgHelp.RemoveImageDomain(storeSetting["logoUrl"]))
-		// 	img.AppendImg(whiteBackgroundWithBlackTextLogoPath, 150, false, -25)
+		// 	img.AppendImg(storeSetting.LogoURL, 150, false, -25)
 		// 	img.LineFeed(1)
 		// }
 		//
@@ -222,25 +215,45 @@ func (t *statementOrderImgTemplate) ImgPrint(
 			img.LineFeed(1)
 		}
 		// 发票信息
-		// if saleOrder.Template == 3 && saleOrder.InvoiceInfo && (saleOrder.InvoiceInfo.CompanyName || saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) {
-		// 	img.AppendSplitLine(true, 40)
-		// 	if saleOrder.InvoiceInfo.CompanyName != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyName)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyAddr || saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyAddr != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyAddr)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyTaxNumber || saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyTaxNumber != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyTaxNumber)
-		// 		img.LineFeed(1, (saleOrder.InvoiceInfo.CompanyPhone) ? 50 : 40)
-		// 	}
-		// 	if saleOrder.InvoiceInfo.CompanyPhone != "" {
-		// 		img.AppendText(saleOrder.InvoiceInfo.CompanyPhone)
-		// 		img.LineFeed(1, 40)
-		// 	}
-		// }
+		if temp == 3 {
+			invoiceInfo := &model.SaleOrderInvoiceInfo{
+				CompanyName:      "",
+				CompanyAddr:      "",
+				CompanyTaxNumber: "",
+				CompanyPhone:     "",
+			}
+			if invoiceInfo.HasContent() {
+				img.AppendSplitLine()
+				if invoiceInfo.CompanyName != "" {
+					img.AppendText(invoiceInfo.CompanyName)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyAddr != "" || invoiceInfo.CompanyTaxNumber != "" || invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyAddr != "" {
+					img.AppendText(invoiceInfo.CompanyAddr)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyTaxNumber != "" || invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyTaxNumber != "" {
+					img.AppendText(invoiceInfo.CompanyTaxNumber)
+					lineFeedHeight := 40
+					if invoiceInfo.CompanyPhone != "" {
+						lineFeedHeight = 50
+					}
+					img.LineFeed(1, lineFeedHeight)
+				}
+				if invoiceInfo.CompanyPhone != "" {
+					img.AppendText(invoiceInfo.CompanyPhone)
+					img.LineFeed(1, 40)
+				}
+			}
+		}
 		//
 		img.AppendSplitLine()
 		img.RecoverDefaultTextLineHeight()
@@ -266,7 +279,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		img.SetFontWeight(1)
 		img.SetFontSize(20)
 		img.SetAlignment(pkg.AlignLeft)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), "saleOrder.CashierName"))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), saleOrder.CashierName))
 		img.LineFeed(1)
 		if payTime != "" {
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("时间"), payTime))
@@ -309,13 +322,13 @@ func (t *statementOrderImgTemplate) ImgPrint(
 			continue
 		}
 		productNum += orderBuffetCustomer.Num
-		buffetNameText := orderBuffetCustomer.Name
+		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
 		}
 		discountPrice := orderBuffetCustomer.GetDiscountPrice()
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: buffetNameText, Width: 320, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: buffetNameText, Width: 310, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
 		)
@@ -328,7 +341,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		productNum += delay.Num
 		discountPrice := delay.GetAmount()
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: delay.Name, Width: 320, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: delay.Name, Width: 310, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), saleBill.MealNum), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
 		)
@@ -351,7 +364,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		//
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: 320, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
@@ -436,12 +449,17 @@ func (t *statementOrderImgTemplate) ImgPrint(
 				cardDiscount = saleOrder.MemberCardDiscountRate
 			}
 		}
+		// 中文/繁体中文
+		unit := "%"
+		if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
+			unit = "折"
+		}
 		if gradeEquity != 100 && gradeEquity > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员折扣"), float64(gradeEquity/10)))
+			img.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员折扣"), float64(gradeEquity/10), unit))
 			img.LineFeed(1)
 		}
 		if cardDiscount != 100 && cardDiscount > 0 {
-			img.AppendText(fmt.Sprintf("%s: %.1f", t.base.Translate("会员卡折扣"), float64(cardDiscount/10)))
+			img.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员卡折扣"), float64(cardDiscount/10), unit))
 			img.LineFeed(1)
 		}
 	}
@@ -473,11 +491,15 @@ func (t *statementOrderImgTemplate) ImgPrint(
 	}
 
 	// 合计应收
+	finalPrice := saleOrder.FinalPrice
+	if payTime == "" {
+		finalPrice = saleOrder.GetAmount()
+	}
 	img.SetFontSize(26)
 	img.SetFontWeight(2)
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("合计应收"), Width: 280, Align: pkg.AlignLeft},
-		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(saleOrder.Amount), Width: 0, Align: pkg.AlignRight},
+		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(finalPrice), Width: 0, Align: pkg.AlignRight},
 	)
 	img.SetFontSize(20)
 	img.SetFontWeight(1)
@@ -531,7 +553,7 @@ func (t *statementOrderImgTemplate) ImgPrint(
 		}
 	}
 
-	// 会员积分
+	// 会员信息
 	if saleOrder.Member != nil {
 		img.AppendSplitLine()
 		img.LineFeed(1)

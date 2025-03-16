@@ -183,7 +183,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/language", wrapper.GetLanguage)                             // 获取语言
 		privateApi.GET("/online_cashiers", wrapper.GetOnlineCashiers)                // 获取在线的收银机

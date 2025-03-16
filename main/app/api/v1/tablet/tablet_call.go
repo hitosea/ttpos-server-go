@@ -58,7 +58,7 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.POST("/call", wrapper.Call) // 呼叫
 	}

@@ -597,6 +597,24 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
 		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
 	}
+	// 处理 KitchenPrintMethod
+	if kitchenPrintMethod, ok := jsonMap["kitchen_print_method"]; ok {
+		// 如果是float64（JSON中的数字类型），转换为字符串
+		if numVal, ok := kitchenPrintMethod.(float64); ok {
+			jsonMap["kitchen_print_method"] = fmt.Sprintf("%d", int(numVal))
+		} else if strVal, ok := kitchenPrintMethod.(string); ok {
+			jsonMap["kitchen_print_method"] = strVal
+		}
+	}
+	// 处理print_method
+	if printMethod, ok := jsonMap["print_method"]; ok {
+		// 如果是float64（JSON中的数字类型），转换为字符串
+		if numVal, ok := printMethod.(float64); ok {
+			jsonMap["print_method"] = fmt.Sprintf("%d", int(numVal))
+		} else if strVal, ok := printMethod.(string); ok {
+			jsonMap["print_method"] = strVal
+		}
+	}
 	// 处理language_list中的key
 	if languageList, ok := jsonMap["language_list"].([]interface{}); ok {
 		for i, item := range languageList {
@@ -675,7 +693,11 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			isCashierPrinter = true
 		}
 	}
-
+	//
+	if printerType == "[UNKNOWN]" {
+		printerType = ""
+	}
+	//
 	return setting.PrinterInfo{
 		PrinterType:      printerType,
 		PrinterUuid:      printerUuid, // 默认为0，如果是普通打印机，则为model.Printer的Uuid
@@ -1150,6 +1172,14 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 	tabletSetting.IsShowSoldOut = *systemSetting.IsShowSoldOut
 	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	if systemSetting.DeviceRemark != "" {
+		if err := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).UpdateDevice(ctx.GetDeviceUuid(), map[string]any{
+			"remark": systemSetting.DeviceRemark,
+		}); err != nil {
+			return errors2.ErrInternal
+		}
 	}
 	return nil
 }

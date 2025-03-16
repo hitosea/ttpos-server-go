@@ -4,12 +4,9 @@ package template
 import (
 	"fmt"
 
-	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
-	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/pkg/context"
 )
 
 // dishesImgTemplate 图片菜品打印模板
@@ -19,14 +16,10 @@ type dishesImgTemplate struct {
 
 // NewDishesImgTemplate 创建新的图片菜品打印模板
 func NewDishesImgTemplate(
-	ctx context.Context,
-	setting *setting.Srv,
-	storeSetting *respSetting.Store,
-	printerSetting *respSetting.Printer,
-	currencySetting *respSetting.Currency,
+	base *printerTemplate,
 ) *dishesImgTemplate {
 	return &dishesImgTemplate{
-		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
+		base: base,
 	}
 }
 

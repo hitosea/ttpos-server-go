@@ -42,7 +42,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 
 // BindDesk 绑定/换绑桌台
 // @Summary 绑定/换绑桌台
-// @Description 绑定/换绑桌台，调用此接口之后的所有接口，都需要传递x-desk-uuid请求头
+// @Description 绑定/换绑桌台
 // @Tags 平板端.桌台
 // @Accept json
 // @Produce json
@@ -149,7 +149,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取可绑定的桌台
 		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台

@@ -4,12 +4,9 @@ package template
 import (
 	"fmt"
 
-	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
-	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/pkg/context"
 )
 
 // dishesXprinterTemplate xprinter菜品打印模板
@@ -19,14 +16,10 @@ type dishesXprinterTemplate struct {
 
 // NewdishesXprinterTemplate 创建新的xprinter菜品打印模板
 func NewDishesXprinterTemplate(
-	ctx context.Context,
-	setting *setting.Srv,
-	storeSetting *respSetting.Store,
-	printerSetting *respSetting.Printer,
-	currencySetting *respSetting.Currency,
+	base *printerTemplate,
 ) *dishesXprinterTemplate {
 	return &dishesXprinterTemplate{
-		base: NewPrinterTemplate(ctx, setting, storeSetting, printerSetting, currencySetting, false),
+		base: base,
 	}
 }
 
@@ -350,7 +343,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 
 // OneDishOneOrder 一菜一单
 func (t *dishesXprinterTemplate) OneDishOneOrder(
-	templateID int,
+	tmp int,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
@@ -377,13 +370,12 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
-	printer.LineFeed()
 	printer.RestoreDefaultLineSpacing()
 
 	/**
 	 * 模版二
 	 */
-	if templateID == 2 {
+	if tmp == 2 {
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 2)
@@ -412,6 +404,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			[]int{490, pkg.AlignLeft, 0},
 			[]int{0, pkg.AlignRight, 0},
 		)
+		printer.SetPrintModes(false, false, false)
 
 		// 遍历订单中的产品
 		for _, product := range products {

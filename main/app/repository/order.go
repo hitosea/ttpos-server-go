@@ -21,7 +21,7 @@ type IOrderRepo interface {
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                           // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                   // 获取订单列表
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                              // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, error)           // 获取收银的订单列表
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                        // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                             // 获取桌台的销售账单详细信息
 	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                     // 获取桌台的销售账单详细信息
@@ -145,7 +145,6 @@ func (r *orderRepo) DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) erro
 // CreateSaleOrderBuffetDelayProduct 创建销售订单自助餐加钟
 func (r *orderRepo) CreateSaleOrderBuffetDelayProduct(obj model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error) {
 	obj.SetNil()
-	fmt.Println("CreateSaleOrderBuffetDelayProduct: ", utils.ToJsonString(obj))
 	err := r.db.Model(&model.SaleOrderBuffetDelayProduct{}).Create(&obj).Error
 	if err != nil {
 		return obj, errors.WithMessage(fmt.Errorf("CreateSaleOrderBuffetDelayProduct: %v", err))
@@ -211,7 +210,89 @@ type GetCashierOrderListWithPaginationType struct {
 }
 
 // GetCashierOrderListWithPagination 获取收银台订单列表
-func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) (lists []model.SaleBill, total int64, err error) {
+func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType) (
+	lists []model.SaleBill,
+	total int64,
+	dbOption DBOption,
+	err error,
+) {
+	// 额外条件
+	dbOption = func() DBOption {
+		return func(db *gorm.DB) *gorm.DB {
+			// 订单编号
+			if param.OrderNo != "" {
+				db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
+			}
+			// 账单类型
+			if param.BillType != -1 {
+				db = db.Where("bill_type = ?", param.BillType)
+			}
+			if param.DiningMethod != -1 {
+				db = db.Where("dining_method = ?", param.DiningMethod)
+			}
+			//  日期类型 -1-全都 1-今天 2-昨天 3-本周
+			if param.DateType >= 0 && param.DateType <= 3 {
+				now := time.Now()
+				var startTime, endTime time.Time
+				switch param.DateType {
+				case constant.OrderDateTypeToday: // 今天
+					startTime = now.Truncate(24 * time.Hour)
+					endTime = startTime.Add(24*time.Hour - time.Second)
+					fmt.Println("今天", startTime, endTime)
+				case constant.OrderDateTypeYesterday: // 昨天
+					startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
+					endTime = startTime.Add(24*time.Hour - time.Second)
+				case constant.OrderDateTypeWeek: // 本周
+					weekday := int(now.Weekday())
+					if weekday == 0 {
+						weekday = 7
+					}
+					startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
+					endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+				}
+				db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
+			}
+			// 日期范围
+			if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
+				timeFields := []string{}
+				if param.EnableCreateTime || !param.EnablePayTime {
+					timeFields = append(timeFields, "create_time")
+				}
+				if param.EnablePayTime {
+					timeFields = append(timeFields, "finish_time")
+				}
+				// 开始时间
+				endTime := uint(0)
+				if param.QueryEndTime != 0 {
+					endTime = param.QueryEndTime + 86399
+				}
+				//
+				query := ""
+				args := []interface{}{}
+				for i, field := range timeFields {
+					if i > 0 {
+						query += " OR "
+					}
+					if param.QueryStartTime > 0 && endTime > 0 {
+						query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
+						args = append(args, param.QueryStartTime, endTime)
+					} else if param.QueryStartTime > 0 {
+						query += fmt.Sprintf("(%s > ?)", field)
+						args = append(args, param.QueryStartTime)
+					} else if endTime > 0 {
+						query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
+						args = append(args, endTime)
+					}
+				}
+				if query != "" {
+					db = db.Where(query, args...)
+				}
+			}
+			//
+			return db
+		}
+	}()
+	//
 	lists, total, err = r.GetOrderListWithPagination(
 		param.PageNo,
 		param.PageSize,
@@ -232,81 +313,13 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
 		CommonRepo.SortWithID("DESC"),
-		// 额外条件
+		dbOption,
+		//
 		func() DBOption {
 			return func(db *gorm.DB) *gorm.DB {
-				// 订单编号
-				if param.OrderNo != "" {
-					db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
-				}
-				// 账单类型
-				if param.BillType != -1 {
-					db = db.Where("bill_type = ?", param.BillType)
-				}
-				if param.DiningMethod != -1 {
-					db = db.Where("dining_method = ?", param.DiningMethod)
-				}
 				//  账单状态
 				if param.Status != -1 {
 					db = db.Where("status = ?", uint(param.Status))
-				}
-				//  日期类型 -1-全都 1-今天 2-昨天 3-本周
-				if param.DateType >= 0 && param.DateType <= 3 {
-					now := time.Now()
-					var startTime, endTime time.Time
-					switch param.DateType {
-					case constant.OrderDateTypeToday: // 今天
-						startTime = now.Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-						fmt.Println("今天", startTime, endTime)
-					case constant.OrderDateTypeYesterday: // 昨天
-						startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-						endTime = startTime.Add(24*time.Hour - time.Second)
-					case constant.OrderDateTypeWeek: // 本周
-						weekday := int(now.Weekday())
-						if weekday == 0 {
-							weekday = 7
-						}
-						startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
-						endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
-					}
-					db = db.Where("create_time BETWEEN ? AND ?", startTime.Unix(), endTime.Unix())
-				}
-				// 日期范围
-				if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
-					timeFields := []string{}
-					if param.EnableCreateTime || !param.EnablePayTime {
-						timeFields = append(timeFields, "create_time")
-					}
-					if param.EnablePayTime {
-						timeFields = append(timeFields, "finish_time")
-					}
-					// 开始时间
-					endTime := uint(0)
-					if param.QueryEndTime != 0 {
-						endTime = param.QueryEndTime + 86399
-					}
-					//
-					query := ""
-					args := []interface{}{}
-					for i, field := range timeFields {
-						if i > 0 {
-							query += " OR "
-						}
-						if param.QueryStartTime > 0 && endTime > 0 {
-							query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
-							args = append(args, param.QueryStartTime, endTime)
-						} else if param.QueryStartTime > 0 {
-							query += fmt.Sprintf("(%s > ?)", field)
-							args = append(args, param.QueryStartTime)
-						} else if endTime > 0 {
-							query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
-							args = append(args, endTime)
-						}
-					}
-					if query != "" {
-						db = db.Where(query, args...)
-					}
 				}
 				//
 				return db
@@ -314,15 +327,18 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		}(),
 	)
 	if err != nil {
-		return nil, 0, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
+		return nil, 0, dbOption, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
 	}
-	return lists, total, nil
+	return lists, total, dbOption, nil
 }
 
 // GetSaleBillInfo 获取销售账单详细信息
 func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleBillSetting",
+			},
 			WithPreload{
 				Query: "SaleOrders",
 				Args: []interface{}{
@@ -336,7 +352,31 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				},
 			},
 			WithPreload{
-				Query: "SaleBillSetting",
+				Query: "SaleOrders.ReturnOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
 			},
 			WithPreload{
 				Query: "Desk",
@@ -756,37 +796,8 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 
 // CancelOrder 取消订单
 func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
-	timeNow := uint(time.Now().Unix())
-	saleOrder := &model.SaleOrder{}
-	where := "sale_order_uuid in (select uuid from " + saleOrder.TableName() + " where sale_bill_uuid = ?)"
-	//
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleBillStatusPending).Update("status", constant.SaleBillStatusCanceled).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		// 取消订单的时候，不删除销售订单
-		// err = tx.Model(&model.SaleOrderProduct{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		// if err != nil {
-		// 	return errors.WithMessage(err)
-		// }
-		err = tx.Model(&model.SaleOrderProductBom{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderBuffetCustomerType{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderDiscountStrategy{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.SaleOrderProductAttribute{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		err = tx.Model(&model.ProductionOrder{}).Where(where, saleBillUuid).Update("delete_time", timeNow).Error // TODO: 有可能会有多个生产单).Error
+		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleOrderStatusPending).Update("status", constant.SaleOrderStatusCanceled).Error
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -796,7 +807,6 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string) error {
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
 				"status": constant.SaleBillStatusCanceled,
-				// "delete_time": timeNow, // 取消订单的时候，不删除销售账单
 				"reason": reason,
 			}).Error
 	})
@@ -820,26 +830,28 @@ func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string) error {
 
 // DeleteOrder 软删除订单
 func (r *orderRepo) DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error {
-	now := uint(time.Now().Unix())
 	tx := r.db.Begin()
-
-	// 删除销售订单
-	if err := tx.Model(&model.SaleOrder{}).
-		Where("sale_bill_uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusPending).
-		Where(map[string]interface{}{"uuid": saleOrderUuid}).
-		Update("delete_time", now).Error; err != nil {
-		tx.Rollback()
-		return errors.WithMessage(err)
-	}
-
+	now := uint(time.Now().Unix())
 	// 如果是删除全部订单或只剩最后一个订单,则同时删除主订单
-	var count int64
-	if saleOrderUuid == 0 || tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ? AND delete_time = 0", saleBillUuid).Count(&count).Error == nil && count <= 1 {
-		if err := tx.Model(&model.SaleBill{}).
-			Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusCanceled).
+	if saleOrderUuid == 0 {
+		// 删除销售订单
+		if err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Update("delete_time", now).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("DeleteOrder: %v", err)
+		}
+		// 删除销售账单
+		if err := tx.Model(&model.SaleBill{}).Where("uuid = ? AND status = ?", saleBillUuid, constant.SaleBillStatusCanceled).Update("delete_time", now).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("DeleteOrder: %v", err)
+		}
+	} else {
+		// 删除销售订单
+		if err := tx.Model(&model.SaleOrder{}).
+			Where("sale_bill_uuid = ? AND status = ?", saleBillUuid, constant.SaleOrderStatusCanceled).
+			Where("uuid = ?", saleOrderUuid).
 			Update("delete_time", now).Error; err != nil {
 			tx.Rollback()
-			return errors.WithMessage(err)
+			return fmt.Errorf("DeleteOrder: %v", err)
 		}
 	}
 
@@ -994,6 +1006,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetDelayProducts",

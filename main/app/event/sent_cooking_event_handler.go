@@ -40,7 +40,7 @@ func sentCookingEventHandler() {
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
-				printer.NewPrinterRepo(payload.Ctx).PrintingDishes(
+				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					constant.PrinterProductTypeKitchen,
 					payload.SaleBillUuid,
 					products,

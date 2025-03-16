@@ -57,6 +57,8 @@ type ImgFont struct {
 	MySpecialFonts map[string]string
 	// 字体缓存
 	FontCache map[string]*truetype.Font
+	// 字符宽度缓存
+	CharWidthCache map[string]int
 }
 
 // 字体常量
@@ -84,6 +86,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		Direction:             0,
 		MySpecialFonts:        make(map[string]string),
 		FontCache:             make(map[string]*truetype.Font),
+		CharWidthCache:        make(map[string]int),
 	}
 
 	// 设置自定义宽度
@@ -191,12 +194,19 @@ func (i *ImgFont) GetFontPath(char string) string {
  */
 // GetFontWeight 获取字体宽度
 func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
-	fontPath := i.GetFontPath(char)
-
 	// 特殊字符'ြ'的处理
 	if char == "ြ" {
 		return 5
 	}
+
+	// 检查缓存
+	cacheKey := fmt.Sprintf("%s_%d_%s", i.GetFontPath(char), fontSize, char)
+	if width, ok := i.CharWidthCache[cacheKey]; ok {
+		return width
+	}
+
+	// 获取字体路径
+	fontPath := i.GetFontPath(char)
 
 	// 获取字体宽度
 	// 使用getCharWidth计算字符宽度
@@ -209,6 +219,8 @@ func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
 		}
 	}
 
+	// 存入缓存
+	i.CharWidthCache[cacheKey] = contextWidth
 	return contextWidth
 }
 
@@ -391,7 +403,7 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 
 		for _, char := range segments {
 			tmpStr += char
-			tmpw = float64(i.GetFontWeight(fontSize, tmpStr)) * i.TextSpacing
+			tmpw = i.GetTextWidth(fontSize, tmpStr)
 			if tmpw > canWidth {
 				break
 			}
@@ -427,7 +439,7 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 			continue
 		}
 
-		// 获取当前字符的宽度
+		// 获取当前字符的宽度 - 直接使用GetFontWeight，已经有缓存机制
 		charWidth := float64(i.GetFontWeight(fontSize, char)) * i.TextSpacing
 
 		// 非居左对齐的处理
@@ -435,12 +447,8 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 			// 获取当前到最后的所有字符
 			lastText := segments[key:]
 
-			// 计算最后一行的宽度
-			lastTextWidth := 0.0
-			for _, c := range lastText {
-				lastTextWidth += float64(i.GetFontWeight(fontSize, c))
-			}
-			lastTextWidth = lastTextWidth * i.TextSpacing
+			// 计算最后一行的宽度 - 使用优化的GetTextWidth函数
+			lastTextWidth := i.GetTextWidth(fontSize, strings.Join(lastText, ""))
 
 			// 文本居中处理
 			if (useWidth == 0 || isDeviation != 0) && i.Alignment == AlignCenter {
@@ -531,23 +539,54 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 	}
 }
 
-// drawText 使用freetype绘制文本
-func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int, textColor color.RGBA) {
-	var f *truetype.Font
-	var err error
-
-	// 使用嵌入的字体文件
-	fontBytes, err := fonts.GetFontData(fontPath)
-	if err != nil {
-		fmt.Println("获取嵌入字体文件失败:", err)
-		return
+// GetTextWidth 批量计算文本宽度
+func (i *ImgFont) GetTextWidth(fontSize int, text string) float64 {
+	if text == "" {
+		return 0
 	}
 
-	// 解析字体
-	f, err = freetype.ParseFont(fontBytes)
-	if err != nil {
-		fmt.Println("解析字体失败:", err)
-		return
+	// 检查缓存
+	cacheKey := fmt.Sprintf("text_%d_%s", fontSize, text)
+	if width, ok := i.CharWidthCache[cacheKey]; ok {
+		return float64(width) * i.TextSpacing
+	}
+
+	// 计算宽度
+	totalWidth := 0.0
+	for _, char := range i.GetFontArrays(text) {
+		totalWidth += float64(i.GetFontWeight(fontSize, char))
+	}
+
+	// 存入缓存 - 只缓存短文本
+	if len(text) <= 10 {
+		i.CharWidthCache[cacheKey] = int(totalWidth)
+	}
+
+	return totalWidth * i.TextSpacing
+}
+
+// drawText 使用freetype绘制文本
+func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int, textColor color.RGBA) {
+	// 从缓存获取字体
+	f, ok := i.FontCache[fontPath]
+	if !ok {
+		// 使用嵌入的字体文件
+		fontBytes, err := fonts.GetFontData(fontPath)
+		if err != nil {
+			fmt.Println("获取嵌入字体文件失败:", err)
+			return
+		}
+
+		// 解析字体
+		var parseErr error
+		f, parseErr = freetype.ParseFont(fontBytes)
+		if parseErr != nil {
+			fmt.Println("解析字体失败:", parseErr)
+			return
+		}
+
+		// 添加到缓存
+		i.FontCache[fontPath] = f
 	}
 
 	// 先绘制描边（黑色或深色）
@@ -566,11 +605,10 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
 	pt := freetype.Pt(x, y+fontSize)
-	_, err = ctx.DrawString(text, pt)
+	_, err := ctx.DrawString(text, pt)
 	if err != nil {
 		fmt.Println("绘制原始文本失败:", err)
 	}
-
 }
 
 // AppendPartingline 添加文本行
@@ -1243,37 +1281,73 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	height := bounds.Dy()
 	bw := (width-1)/8 + 1
 
-	// 初始化返回的字节数组
+	// 预分配足够的空间
 	rv := make([]byte, height*bw+4)
 
 	// 设置头部信息（宽度和高度）
-	// xL
-	rv[0] = byte(bw & 0xFF)
-	// xH
-	rv[1] = byte((bw >> 8) & 0xFF)
-	// yL
-	rv[2] = byte(height & 0xFF)
-	// yH
-	rv[3] = byte((height >> 8) & 0xFF)
+	rv[0] = byte(bw & 0xFF)            // xL
+	rv[1] = byte((bw >> 8) & 0xFF)     // xH
+	rv[2] = byte(height & 0xFF)        // yL
+	rv[3] = byte((height >> 8) & 0xFF) // yH
 
-	// 获取图像的像素数据
+	// 优化：预处理行索引和移位计算
+	rowOffsets := make([]int, height)
 	for i := 0; i < height; i++ {
-		for j := 0; j < width; j++ {
-			// 获取像素颜色
-			r, g, b, _ := bitmap.At(j+bounds.Min.X, i+bounds.Min.Y).RGBA()
+		rowOffsets[i] = i * width
+	}
 
-			// 转换为8位值
-			red := uint8(r >> 8)
-			green := uint8(g >> 8)
-			blue := uint8(b >> 8)
+	// 优化：预计算每个像素的移位量
+	shifts := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		shifts[i] = byte(7 - i)
+	}
 
-			// 转换为灰度值
-			gray := RGB2Gray(red, green, blue)
+	// 优化：使用类型断言加速常见图像类型的访问
+	switch img := bitmap.(type) {
+	case *image.RGBA:
+		// 直接访问 RGBA 图像的像素数据
+		pix := img.Pix
+		stride := img.Stride
+		for y := 0; y < height; y++ {
+			rowOffset := y * stride
+			for x := 0; x < width; x++ {
+				i := rowOffset + x*4
+				red := pix[i]
+				green := pix[i+1]
+				blue := pix[i+2]
 
-			// 设置相应位
-			index := (width*i+j)/8 + 4
-			shift := 7 - ((width*i + j) % 8)
-			rv[index] |= (gray << shift)
+				// 转换为灰度值
+				gray := RGB2Gray(red, green, blue)
+
+				// 设置相应位
+				pixelIndex := rowOffsets[y] + x
+				index := pixelIndex/8 + 4
+				shift := pixelIndex % 8
+				rv[index] |= (gray << shifts[shift])
+			}
+		}
+	default:
+		// 对于其他类型的图像，使用通用方法
+		for y := 0; y < height; y++ {
+			rowOffset := rowOffsets[y]
+			for x := 0; x < width; x++ {
+				// 获取像素颜色
+				r, g, b, _ := bitmap.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
+
+				// 转换为8位值
+				red := uint8(r >> 8)
+				green := uint8(g >> 8)
+				blue := uint8(b >> 8)
+
+				// 转换为灰度值
+				gray := RGB2Gray(red, green, blue)
+
+				// 设置相应位
+				pixelIndex := rowOffset + x
+				index := pixelIndex/8 + 4
+				shift := pixelIndex % 8
+				rv[index] |= (gray << shifts[shift])
+			}
 		}
 	}
 
@@ -1283,8 +1357,10 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 
 // RGB2Gray 将RGB转换为二值灰度值
 func RGB2Gray(red, green, blue uint8) byte {
-	// 计算加权灰度值
-	gray := float64(red)*0.299 + float64(green)*0.587 + float64(blue)*0.114
+	// 使用整数运算替代浮点运算，提高性能
+	// 使用标准的灰度转换权重：R:0.299, G:0.587, B:0.114
+	// 转换为整数计算: 30% R + 59% G + 11% B
+	gray := (30*uint32(red) + 59*uint32(green) + 11*uint32(blue)) / 100
 
 	// 如果上过阈值则为0，否则为1
 	if gray > 127 {

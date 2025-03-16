@@ -108,7 +108,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/base", wrapper.GetBase)                                     // 获取基本信息
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码

@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -33,9 +34,7 @@ type OrderHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/list [get]
 func (h *OrderHandler) GetShopOrderList(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	source := helper.GetSource(c)
-	staff := helper.GetStaff(c)
+	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	orderListReq := req.OrderListReq{}
 	if err := c.ShouldBindQuery(&orderListReq); err != nil {
@@ -43,7 +42,7 @@ func (h *OrderHandler) GetShopOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetOrderLists(companyUuid, staff, source, orderListReq)
+	res, err := h.service.GetOrderLists(ctx, orderListReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -162,8 +161,13 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	}
 	//
 	var err error
+	var productList *resp.CartProductList
 	if params.DeskUuid > 0 {
-		_, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
+		_, productList, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
+		if productList != nil {
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			return
+		}
 	} else if params.SaleBillUuid > 0 {
 		_, err = h.service.IsCellCancelOrder(ctx, params.SaleBillUuid)
 	} else {
@@ -192,18 +196,12 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		service: orderSrv,
-		deskService: service.NewDeskSrv( // 订单服务
-			dbm,
-			service.NewLocaleSrv(),
-			orderSrv,
-			settingSrv,
-			deviceSrv,
-		),
+		service:     orderSrv,
+		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/order/list", wrapper.GetShopOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)

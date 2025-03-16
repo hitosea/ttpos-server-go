@@ -43,6 +43,8 @@ const (
 	CodeOrderCheckProductLimitOut     = -205 // 商品超出限购
 	// 结账检查
 	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
+	// 关闭桌台检查
+	CodeOrderCheckProductCooking = -207 // 有商品已送厨
 )
 
 func ParseCodeOrderCheck(code int) string {
