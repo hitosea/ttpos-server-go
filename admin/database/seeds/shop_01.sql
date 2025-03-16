@@ -797,8 +797,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
 CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联材料ID',
-    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID或商品小料ID',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格bom的uuid。暂时废弃，使用related_uuid代替',
+    `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料的uuid',
     `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料用量,可小数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1022,7 +1024,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '库存交易表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '入库单表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1096,8 +1098,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `warehouse_out_form_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单uuid',
     `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM表uuid',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '材料uuid',
-    `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
+    `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '数量',
     `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,0-sales销售 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

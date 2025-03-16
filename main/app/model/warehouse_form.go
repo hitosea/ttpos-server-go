@@ -1,0 +1,144 @@
+package model
+
+import (
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/pkg/utils"
+)
+
+// WarehouseForm 入库单表 `ttpos_warehouse_form`
+type WarehouseForm struct {
+	BaseModel
+	FormNo string `gorm:"column:form_no;type:varchar(255);default:'';comment:编号"`
+	Scene  int    `gorm:"column:scene;type:tinyint(2);default:0;comment:交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库"`
+	Num    int    `gorm:"column:num;type:int(11);default:0;comment:数量"`
+	Remark string `gorm:"column:remark;type:varchar(255);default:'';comment:备注"`
+	Status int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-success已入库 1-canceled已撤销"`
+	// 关联uuid
+	ProductBomUuid    uint64 `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM表uuid"`
+	MaterialUuid      uint64 `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:材料uuid"`
+	PurchaseOrderUuid uint64 `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;default:0;comment:采购订单uuid"`
+	OperatorUuid      uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员uuid"`
+	// 时间相关
+	RevokeTime int `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
+}
+
+// WarehouseOutForm 出库单表 `ttpos_warehouse_out_form`
+type WarehouseOutForm struct {
+	BaseModel
+	FormNo     string `gorm:"column:form_no;type:varchar(255);default:'';comment:编号"`
+	Scene      int    `gorm:"column:scene;type:tinyint(2);default:0;comment:出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库"`
+	Remark     string `gorm:"column:remark;type:varchar(255);default:'';comment:备注"`
+	Status     int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-success已出库 1-canceled已撤销"`
+	RevokeTime int    `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
+
+	// 关联uuid
+	OperatorUuid        uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员uuid"`
+	AssociatedOrderUuid uint64 `gorm:"column:associated_order_uuid;type:bigint(20) unsigned;default:0;comment:关联订单uuid"`
+
+	// 关联模型
+	WarehouseOutFormItems []*WarehouseOutFormItem `gorm:"foreignKey:WarehouseOutFormUuid;references:Uuid"`
+}
+
+func (model *WarehouseOutForm) SetNil() {
+	model.WarehouseOutFormItems = nil
+}
+
+// WarehouseOutFormItem 出库单明细表 `ttpos_warehouse_out_form_item`
+type WarehouseOutFormItem struct {
+	BaseModel
+	Num    float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:数量"`
+	Scene  int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,0-销售出库 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除"`
+	Status int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示"`
+
+	// 关联uuid
+	WarehouseOutFormUuid uint64 `gorm:"column:warehouse_out_form_uuid;type:bigint(20) unsigned;default:0;comment:出库单uuid"`
+	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM表uuid, 规格商品或小料"`
+	MaterialUuid         uint64 `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:材料uuid，原材料"`
+	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
+	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
+	SaleBillUuid         uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
+}
+
+func (model *WarehouseOutFormItem) SetNil() {
+
+}
+
+// IsMaterial 是否是原材料
+func (w *WarehouseOutFormItem) IsMaterial() bool {
+	return w.MaterialUuid != 0
+}
+
+// IsProductBom 是否是规格商品或小料
+func (w *WarehouseOutFormItem) IsProductBom() bool {
+	return w.ProductBomUuid != 0
+}
+
+type Product struct {
+	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
+	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
+	Num                  int                    `json:"num"`                     // 数量
+	ProductBomMaterials  []*ProductBomMaterials `json:"product_bom_materials"`   // 规格商品或小料的材料
+}
+
+type ProductBomMaterials struct {
+	MaterialUuid uint64  `json:"material_uuid"`
+	Num          float64 `json:"num"`
+}
+
+type ProductList []*Product
+
+func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
+	materials := make([]*ProductBomMaterials, 0)
+	for _, product := range p {
+		materials = append(materials, product.ProductBomMaterials...)
+	}
+	return materials
+}
+
+// NewWarehouseOutForm 创建出库单.
+// 使用场景：
+// 1. 送厨时，下单减库存，创建出库单
+// 2. 结账时，判断订单的每个商品是否都已有对应的出库记录，如果没有，则创建出库单
+func NewWarehouseOutForm(list ProductList, isCheckout bool, saleOrderUuid uint64, saleBillUuid uint64) *WarehouseOutForm {
+	uuid, _ := utils.GetID()
+	form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
+	form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
+	form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
+
+	status := constant.WarehouseOutFormStatusPre
+	if isCheckout {
+		status = constant.WarehouseOutFormStatusSuccess
+	}
+
+	items := make([]*WarehouseOutFormItem, 0)
+	// 规格商品或小料出库记录
+	for _, item := range list {
+		items = append(items, &WarehouseOutFormItem{
+			WarehouseOutFormUuid: form.Uuid,
+			ProductBomUuid:       item.ProductBomUuid,
+			Num:                  float64(item.Num),
+			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
+			Status:               status,
+			SaleOrderUuid:        saleOrderUuid,
+			SaleOrderProductUuid: item.SaleOrderProductUuid,
+			SaleBillUuid:         saleBillUuid,
+		})
+	}
+
+	// 原材料出库记录
+	materials := list.GetProductBomMaterials()
+	for _, material := range materials {
+		items = append(items, &WarehouseOutFormItem{
+			WarehouseOutFormUuid: form.Uuid,
+			MaterialUuid:         material.MaterialUuid,
+			Num:                  material.Num,
+			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
+			Status:               status,
+			SaleOrderUuid:        saleOrderUuid,
+			SaleBillUuid:         saleBillUuid,
+		})
+	}
+	form.WarehouseOutFormItems = items
+	return form
+}

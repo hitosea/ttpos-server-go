@@ -1,6 +1,16 @@
 package constant
 
 const (
+	ProductPackageDeductStockTypePay     = 0 // 结账减库存，付款减库存
+	ProductPackageDeductStockTypeCooking = 1 // 下单减库存，送厨减库存
+)
+
+const (
+	ProductBomTypeSauce  = 0 // 小料
+	ProductBomTypeFlavor = 1 // 规格商品
+)
+
+const (
 	ProductStatusOnSale  = 1 // 上架
 	ProductStatusOffSale = 0 // 下架
 	ProductStatusSaleOut = 1 // 售罄、沽清

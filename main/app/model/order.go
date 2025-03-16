@@ -963,7 +963,11 @@ func (model *SaleOrderProductBom) CopyBom(saleOrderUuid uint64, saleOrderProduct
 }
 
 func (model *SaleOrderProductBom) IsFlavor() bool {
-	return model.IsFlavorBom == 1
+	return model.IsFlavorBom == constant.ProductBomTypeFlavor
+}
+
+func (model *SaleOrderProductBom) IsSauce() bool {
+	return model.IsFlavorBom == constant.ProductBomTypeSauce
 }
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting

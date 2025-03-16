@@ -22,7 +22,8 @@ type ProductSauce struct {
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:product_sauce_uuid;references:uuid"`       // 小料的组成材料
 }
 
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
@@ -129,6 +130,16 @@ type ProductPackage struct {
 	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid"`          // 图片
 }
 
+// IsCookingDeductStock 判断商品包是否是下单减库存
+func (model *ProductPackage) IsCookingDeductStock() bool {
+	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking
+}
+
+// IsPayDeductStock 判断商品包是否是结账减库存
+func (model *ProductPackage) IsPayDeductStock() bool {
+	return model.DeductStockType == constant.ProductPackageDeductStockTypePay
+}
+
 func (model *ProductPackage) GetSauceRequired() bool {
 	return model.SauceRequired == constant.ProductPackageSauceRequiredOn
 }
@@ -199,9 +210,25 @@ type ProductBom struct {
 	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:商品小料ID(仅小料使用);NOT NULL" json:"product_sauce_uuid"`
 	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 
-	ProductPackage ProductPackage `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
-	ProductFlavor  ProductFlavor  `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
-	ProductSauce   ProductSauce   `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
+	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
+	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
+	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`        // 规格商品的组成材料
+}
+
+// RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
+type RelatedMaterial struct {
+	BaseModel
+	MaterialUUID     uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
+	RelatedUuid      uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
+	ProductBomUuid   uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
+	ProductSauceUuid uint64  `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:'商品小料ID'"`
+	Num              float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+}
+
+// GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
+func (model *RelatedMaterial) GetDecreaseNum(productNum uint) float64 {
+	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromInt(int64(productNum))).InexactFloat64()
 }
 
 // IsStockShortage 判断库存是否不足

@@ -1005,6 +1005,12 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
 			},
 			WithPreload{
