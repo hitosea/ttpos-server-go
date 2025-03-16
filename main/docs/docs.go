@@ -6795,6 +6795,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/order/invoice": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取发票信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "获取发票信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "发票信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/order/is_cell_close": {
             "get": {
                 "security": [

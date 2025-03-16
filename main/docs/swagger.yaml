@@ -9262,6 +9262,39 @@ paths:
       summary: 获取订单详情
       tags:
       - 收银端.订单
+  /cashier/order/invoice:
+    get:
+      consumes:
+      - application/json
+      description: 获取发票信息
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 发票信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取发票信息
+      tags:
+      - 收银端.订单
   /cashier/order/is_cell_close:
     get:
       consumes:

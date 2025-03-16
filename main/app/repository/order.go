@@ -48,6 +48,7 @@ type IOrderRepo interface {
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                            // 获取销售账单记录
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
 	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
+	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                  // 获取订单发票信息
 }
 
 // orderRepo 订单仓库
@@ -1228,4 +1229,11 @@ func (r *orderRepo) SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo mo
 	}
 
 	return &invoiceInfo, nil
+}
+
+// GetInvoiceInfo 获取订单发票信息
+func (r *orderRepo) GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error) {
+	var invoiceInfo model.SaleOrderInvoiceInfo
+	result := r.db.Where("sale_order_uuid = ?", saleOrderUuid).First(&invoiceInfo)
+	return &invoiceInfo, result.Error
 }

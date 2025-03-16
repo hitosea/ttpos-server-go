@@ -352,6 +352,28 @@ func (h *OrderHandler) OrderPrintInvoice(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderInvoiceInfo 获取发票信息
+// @Summary 获取发票信息
+// @Description 获取发票信息
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "发票信息"
+// @Router /cashier/order/invoice [get]
+func (h *OrderHandler) OrderInvoiceInfo(c *gin.Context) {
+	var invoiceReq req.OrderInvoiceInfoReq
+	if err := c.ShouldBindQuery(&invoiceReq); err != nil {
+		helper.HandleValidationError(c, err, invoiceReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res := h.service.OrderPrintInvoiceInfo(ctx, invoiceReq)
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -384,5 +406,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)        // 判断订单是否可关闭
 		privateApi.POST("/order/print", wrapper.OrderPrint)                // 打印
 		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice) // 打印发票
+		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)         // 获取发票信息
 	}
 }

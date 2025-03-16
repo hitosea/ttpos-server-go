@@ -96,6 +96,7 @@ type IOrderSrv interface {
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error             // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                              // 图片打印
+	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                            // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
 }
@@ -5920,6 +5921,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
+	// todo 支付订单未完成
 	// saleOrder.PaymentOrder
 
 	// 打印
@@ -5985,12 +5987,22 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 		return nil, errors.WithMessage(err)
 	}
 
-	// 保存销售账单
-	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
-		return nil, errors.WithMessage(err, "设置锁单失败")
-	}
-
 	return printerData, nil
+}
+
+// OrderPrintInvoiceInfo 获取发票信息
+func (s *orderSrv) OrderPrintInvoiceInfo(ctx context.Context, request req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	invoiceInfo, err := repository.NewOrderRepo(db).GetInvoiceInfo(request.SaleOrderUuid)
+	if err != nil {
+		return resp.SaleOrderInvoiceInfo{}
+	}
+	return resp.SaleOrderInvoiceInfo{
+		CompanyName:      invoiceInfo.CompanyName,
+		CompanyAddr:      invoiceInfo.CompanyAddr,
+		CompanyTaxNumber: invoiceInfo.CompanyTaxNumber,
+		CompanyPhone:     invoiceInfo.CompanyPhone,
+	}
 }
 
 // OrderUnlock 订单解锁

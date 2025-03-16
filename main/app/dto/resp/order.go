@@ -206,3 +206,11 @@ type OrderReverseSettleDesk struct {
 	Uuid     uint64 `json:"uuid"`      // 桌台UUID
 	SerialNo string `json:"serial_no"` // 桌台编号
 }
+
+// 发票信息
+type SaleOrderInvoiceInfo struct {
+	CompanyName      string `json:"company_name"`
+	CompanyAddr      string `json:"company_addr"`
+	CompanyTaxNumber string `json:"company_tax_number"`
+	CompanyPhone     string `json:"company_phone"`
+}
