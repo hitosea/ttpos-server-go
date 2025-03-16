@@ -426,7 +426,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 	repo := NewSaleBillRepo(r.db)
 	saleBill, err := repo.GetSaleBill(
 		CommonRepo.WhereByUuid(saleBillUuid),
-		CommonRepo.WhereBySoftDelete(),
+		// CommonRepo.WhereBySoftDelete(), // 软删除的账单也查询出来，告诉前端该订单已经删除
 		CommonRepo.WhereByIsHide(false),
 	)
 	if err != nil {
