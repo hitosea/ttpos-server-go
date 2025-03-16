@@ -1,11 +1,10 @@
 package repository
 
 import (
+	"gorm.io/gorm"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-
-	"gorm.io/gorm"
 )
 
 type ISaleOrderProductRepo interface {

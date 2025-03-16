@@ -452,7 +452,7 @@ func (model *SaleBill) calcFreeAmount() float64 {
 }
 
 // 重新计算销售账单的金额
-func (model *SaleBill) CalcAll() {
+func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 	setting := model.SaleBillSetting
 	for i, _ := range model.SaleOrders {
 		saleOrder := model.SaleOrders[i]
@@ -463,7 +463,7 @@ func (model *SaleBill) CalcAll() {
 				continue
 			}
 			_ = saleOrderProduct.BeforeCalc()
-			_ = saleOrderProduct.CalcSaleOrderProduct(*setting)
+			_ = saleOrderProduct.CalcSaleOrderProduct(*setting, options...)
 		}
 		// 计算自助餐顾客价格之和
 		for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -836,14 +836,23 @@ func (model *SaleOrderProductAttribute) CopyAttribute(saleOrderUuid uint64, sale
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
-	Name                 string           `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
-	Price                float64          `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
-	IsFlavorBom          uint             `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
-	SaleOrderUuid        uint64           `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
-	SaleOrderProductUuid uint64           `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
-	ProductBomUuid       uint64           `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
-	ProductBom           ProductBom       `gorm:"foreignKey:product_bom_uuid;references:uuid"`
-	SaleOrderProduct     SaleOrderProduct `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+	Name        string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
+	Price       float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
+	IsFlavorBom uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
+
+	// 关联ID字段
+	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
+	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;not null;default:0;comment:'商品BOM ID'"`
+
+	// 关联对象
+	ProductBom       ProductBom       `gorm:"foreignKey:product_bom_uuid;references:uuid"`
+	SaleOrderProduct SaleOrderProduct `gorm:"foreignKey:sale_order_product_uuid;references:uuid"`
+}
+
+func (model *SaleOrderProductBom) SetPrice(price float64) {
+	defer model.SetUpdate() // 设置更新标记
+	model.Price = price
 }
 
 func (model *SaleOrderProductBom) SetNil() {

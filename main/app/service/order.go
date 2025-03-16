@@ -93,7 +93,7 @@ type IOrderSrv interface {
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                       // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                               // 使用会员优惠
-	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error                                                        // 计算并保存销售账单
+	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error             // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                            // 打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 }
@@ -3126,11 +3126,23 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	statusMap := make(map[int][]*model.SaleOrderProduct)
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	{
-		for _, saleOrderProduct := range unCookingSaleOrderProducts {
+		for _, saleOrderProduct := range saleOrderProductAll {
 			status, message := saleOrderProduct.CheckProduct()
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {
 				statusMap[status] = append(statusMap[status], saleOrderProduct)
+				// 如果商品价格变化，更新销售订单商品的价格。都是后台更新价格而未立即更新已选购商品的价格引起的
+				// 价格变化包括：
+				// 1. 商品规格价格变化
+				// 2. 商品小料价格变化
+				if status == constant.CodeOrderCheckProductPriceChanged {
+					shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					saleBill := shopCartInfo.SaleBill
+					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+				}
 			}
 		}
 	}
@@ -4727,9 +4739,9 @@ func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T
 	return toSaleOrderProductSignMap[sign] != nil
 }
 
-func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill) error {
+func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
 	// 计算订单商品、订单、账单
-	saleBill.CalcAll()
+	saleBill.CalcAll(options...)
 	// 保存到数据库
 	if db == nil {
 		db = s.dbm.GetDB(ctx.GetDbId())
@@ -4753,6 +4765,13 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 				// 保存订单商品。只有标记更新的商品才会更新
 				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 					return errors.WithMessage(err)
+				}
+				for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+					if saleOrderProductBom.GetUpdate() {
+						if err := repository.NewOrderProductBomRepo(db).UpdateSaleOrderProductBomRecord(*saleOrderProductBom); err != nil {
+							return errors.WithMessage(err)
+						}
+					}
 				}
 			}
 			// 保存自助餐顾客

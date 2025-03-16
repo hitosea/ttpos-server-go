@@ -6,11 +6,29 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting) SaleOrderProductCalc {
+type CalcOption struct {
+	IsLatestPrice bool
+}
+
+func WithLastestPrice() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.IsLatestPrice = true
+	}
+}
+
+func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	defer model.SetUpdate() // 标记该记录要更新
 	serviceFeeRate := setting.GetServiceFeeRate()
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
+
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+	if option.IsLatestPrice {
+		return model.calcLastestSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+	}
 	return model.calcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
 }
 
@@ -21,6 +39,35 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 	calc.SaucePrice = model.calcSaucePrice()
 	model.SaucePrice = calc.SaucePrice
 	calc.ProductPrice = model.calcProductPrice()
+	model.ProductPrice = calc.ProductPrice
+	calc.SalePrice = model.calcSalePrice()
+	model.SalePrice = calc.SalePrice
+	calc.Price = model.calcPrice()
+	model.Price = calc.Price
+	calc.MemberDiscountFee = model.calcMemberDiscountFee()
+	model.MemberDiscountFee = calc.MemberDiscountFee
+	calc.CustomDiscountFee = model.calcCustomDiscountFee()
+	model.CustomDiscountFee = calc.CustomDiscountFee
+	calc.DiscountFee = model.calcDiscountFee()
+	model.DiscountFee = calc.DiscountFee
+	calc.TaxFee = model.calcTaxFee(model.Price, taxFeeType)
+	model.TaxFee = calc.TaxFee
+	calc.ServiceFee = model.calcServiceFee(serviceFeeRate, taxFeeType)
+	model.ServiceFee = calc.ServiceFee
+	calc.ServiceTaxFee = model.calcServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)
+	model.ServiceTaxFee = calc.ServiceTaxFee
+	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
+	model.TotalPrice = calc.TotalPrice
+	return calc
+}
+
+// 计算销售订单商品的所有计算值字段。从后台获取最新的价格
+func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderProductCalc {
+	calc := SaleOrderProductCalc{}
+	// 开始计算
+	calc.SaucePrice = model.calcLastestSaucePrice() // 从后台获取最新的价格
+	model.SaucePrice = calc.SaucePrice
+	calc.ProductPrice = model.calcLastestProductPrice() // 从后台获取最新的价格
 	model.ProductPrice = calc.ProductPrice
 	calc.SalePrice = model.calcSalePrice()
 	model.SalePrice = calc.SalePrice
@@ -335,14 +382,41 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 	return saucePrice.InexactFloat64()
 }
 
+// 计算商品的最新小料价格。从后台设置的小料价格中获取最新的价格
+func (model *SaleOrderProduct) calcLastestSaucePrice() float64 {
+	saucePrice := decimal.NewFromFloat(0)
+	for _, bom := range model.SaleOrderProductBoms {
+		if !bom.IsFlavor() {
+			// 累加每个小料的价格
+			price := bom.ProductBom.Price
+			bom.SetPrice(price)
+			if price > 0 {
+				saucePrice = saucePrice.Add(decimal.NewFromFloat(price))
+			}
+		}
+	}
+	return saucePrice.InexactFloat64()
+}
+
 // 计算商品价格。某个规格商品价+小料价
 // 当商品没有改价时,ProductPrice= 某个规格商品价+小料价
 // 当商品改价时，ProductPrice= ProductPrice 。 改价后不会修改这个字段的值，只会修改salePrice的值
 func (model *SaleOrderProduct) calcProductPrice() float64 {
-	//if model.ChangePriceTime == constant.CustomPriceOn {
-	//	return model.ProductPrice
-	//}
-	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.calcSaucePrice()))
+	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.SaucePrice))
+	return productPrice.InexactFloat64()
+}
+
+// 计算商品的最新价格。从后台设置的商品规格价格和小料价格中获取最新的价格
+func (model *SaleOrderProduct) calcLastestProductPrice() float64 {
+	flavorPrice := model.FlavorPrice
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavor() {
+			flavorPrice = bom.ProductBom.Price
+			bom.SetPrice(flavorPrice) // 并更新规格价格
+		}
+	}
+	// 如果规格价格大于0，则使用规格价格
+	productPrice := decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(model.calcLastestSaucePrice()))
 	return productPrice.InexactFloat64()
 }
 

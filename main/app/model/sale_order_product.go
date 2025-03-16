@@ -257,7 +257,7 @@ func (model *SaleOrderProduct) saucePriceChanged(saucePrice float64) bool {
 	price := decimal.NewFromFloat(0)
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.ProductBom.IsSauce() {
-			price.Add(decimal.NewFromFloat(bom.ProductBom.Price))
+			price = price.Add(decimal.NewFromFloat(bom.ProductBom.Price))
 		}
 	}
 	return price.InexactFloat64() != saucePrice
