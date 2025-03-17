@@ -14,3 +14,9 @@ const (
 	WarehouseOutFormStatusPre     = iota // 预出库 0
 	WarehouseOutFormStatusSuccess        // 已出库 1
 )
+
+// WarehouseOutFormItemReduceStock 出库单明细是否减库存
+const (
+	WarehouseOutFormItemReduceStockNotProcessed = iota // 未减库存 0
+	WarehouseOutFormItemReduceStockSuccess             // 已减库存 1
+)

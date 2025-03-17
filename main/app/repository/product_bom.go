@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -12,6 +14,8 @@ type IProductBomRepo interface {
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
+	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 }
 
 type productBomRepoImpl struct {
@@ -78,4 +82,37 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 		return nil, errors.WithMessage(err)
 	}
 	return productBoms, nil
+}
+
+// UpdateProductBomStockNum 更新规格商品或小料的库存数量
+func (r *productBomRepoImpl) UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error {
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		if warehouseOutFormItem.IsProductBom() {
+			if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", warehouseOutFormItem.ProductBomUuid).Update("stock_num", warehouseOutFormItem.ProductBom.StockNum).Error; err != nil {
+				return err
+			}
+		} else if warehouseOutFormItem.IsMaterial() {
+			if err := r.db.Model(&model.Material{}).Where("uuid = ?", warehouseOutFormItem.MaterialUuid).Update("stock_num", warehouseOutFormItem.Material.StockNum).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) UpdateProductBoms(productBoms []*model.ProductBom) error {
+	if len(productBoms) == 0 {
+		return nil
+	}
+	list := make([]model.ProductBom, 0)
+	for _, productBom := range productBoms {
+		bom := *productBom
+		bom.SetNil()
+		list = append(list, bom)
+	}
+	fmt.Println("UpdateProductBoms list", utils.ToJsonString(list))
+	if err := r.db.Model(&model.ProductBom{}).Save(list).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

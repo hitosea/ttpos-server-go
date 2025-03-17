@@ -216,6 +216,13 @@ type ProductBom struct {
 	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`        // 规格商品的组成材料
 }
 
+func (model *ProductBom) SetNil() {
+	model.ProductPackage = ProductPackage{}
+	model.ProductFlavor = ProductFlavor{}
+	model.ProductSauce = ProductSauce{}
+	model.FlavorMaterials = nil
+}
+
 func (model *ProductBom) GetStockNum() float64 {
 	if model.IsSoldOut == constant.ProductStatusSaleOut {
 		return 0

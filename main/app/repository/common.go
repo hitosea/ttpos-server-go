@@ -46,6 +46,7 @@ type ICommonRepo interface {
 	WhereByBillType(billType uint) DBOption                         // 根据账单类型查询
 	WhereByNotStatus(status uint) DBOption                          // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
+	WhereByReduceStock(reduceStock uint) DBOption                   // 根据是否减库存查询
 	WhereByDeviceUuid(deviceUuid uint64) DBOption                   // 根据设备uuid查询
 	WhereByDeviceSn(deviceSn string) DBOption                       // 根据设备Sn查询
 	WhereByNoDisable() DBOption                                     // 根据没禁用查询
@@ -216,6 +217,13 @@ func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
 			return db.Where("hide_bill_time > 0")
 		}
 		return db.Where("hide_bill_time = 0")
+	}
+}
+
+// WhereByReduceStock 根据是否减库存查询
+func (r *commonRepo) WhereByReduceStock(reduceStock uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("reduce_stock = ?", reduceStock)
 	}
 }
 

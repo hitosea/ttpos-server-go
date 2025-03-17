@@ -45,5 +45,9 @@ func checkoutSaleOrderEventHandler() {
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:结账 %+v", payload), zap.Uint64("record", uuid))
 		})
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			ReduceStock(db, payload.SaleBillUuid)
+		})
 	})
 }

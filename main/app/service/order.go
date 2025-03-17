@@ -3470,17 +3470,19 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			Remark:          unCookingSaleOrderProduct.Remark,
 		})
 	}
-	s.bus.PublishSentCookingEvent(event.SentCookingPayload{
-		BasePayload: event.BasePayload{
-			Ctx:           ctx,
-			CompanyUuid:   ctx.GetCompanyUuid(),
-			Source:        ctx.GetSource(),
-			SaleBillUuid:  req.SaleBillUuid,
-			SaleOrderUuid: req.SaleOrderUuid,
-			OperatorUuid:  int64(ctx.GetStaffUuid()),
-		},
-		Products: products,
-	})
+	go func() {
+		s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			Products: products,
+		})
+	}()
 	return cartInfo, nil, nil
 }
 

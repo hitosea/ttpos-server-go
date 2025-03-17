@@ -47,9 +47,10 @@ func (model *WarehouseOutForm) SetNil() {
 // WarehouseOutFormItem 出库单明细表 `ttpos_warehouse_out_form_item`
 type WarehouseOutFormItem struct {
 	BaseModel
-	Num    float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:数量"`
-	Scene  int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,0-销售出库 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除"`
-	Status int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示"`
+	Num         float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:数量"`
+	Scene       int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,0-销售出库 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除"`
+	Status      int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示"`
+	ReduceStock int     `gorm:"column:reduce_stock;type:tinyint(1);default:0;comment:是否已经减库存,0-未减库存 1-已减库存。用于判断该出库记录是否已经将对应的货物减库存，若没减库存将在下次检查时减该货物的库存"`
 
 	// 关联uuid
 	WarehouseOutFormUuid uint64 `gorm:"column:warehouse_out_form_uuid;type:bigint(20) unsigned;default:0;comment:出库单uuid"`
@@ -58,6 +59,10 @@ type WarehouseOutFormItem struct {
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
 	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
 	SaleBillUuid         uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
+
+	// 关联模型
+	ProductBom *ProductBom `gorm:"foreignKey:ProductBomUuid;references:Uuid"` // 出库的规格商品或小料
+	Material   *Material   `gorm:"foreignKey:MaterialUuid;references:Uuid"`   // 出库的原材料
 }
 
 func (model *WarehouseOutFormItem) SetNil() {

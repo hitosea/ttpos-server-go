@@ -17,3 +17,7 @@ type Material struct {
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
+
+func (model *Material) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+}

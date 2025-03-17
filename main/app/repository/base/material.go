@@ -1,9 +1,11 @@
 package base
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -14,6 +16,7 @@ type IMaterialRepo interface {
 	UpdateMaterial(id uint, material model.Material) error
 	CreateMaterial(material model.Material) (uint64, error)
 	DeleteMaterial(id uint) error
+	UpdateMaterials(materials []*model.Material) error
 }
 
 // NewMaterialRepo 创建新的原料仓库
@@ -86,4 +89,21 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, erro
 // DeleteMaterial 删除原料
 func (r *MaterialRepoImpl) DeleteMaterial(id uint) error {
 	return r.db.Model(&model.Material{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
+	if len(materials) == 0 {
+		return nil
+	}
+	list := make([]model.Material, 0)
+	for _, material := range materials {
+		material := *material
+		material.SetNil()
+		list = append(list, material)
+	}
+	fmt.Println("UpdateMaterials list", utils.ToJsonString(list))
+	if err := r.db.Model(&model.Material{}).Save(list).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

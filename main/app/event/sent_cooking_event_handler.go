@@ -8,9 +8,11 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -47,6 +49,11 @@ func sentCookingEventHandler() {
 				)
 			}()
 		})
+		// 扣减库存
+		event.NewSystemBus().SubscribeSentCookingEvent(func(payload event.SentCookingPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			ReduceStock(db, payload.SaleBillUuid)
+		})
 	})
 }
 
@@ -68,4 +75,58 @@ func createSaleBillOperationRecord(db *gorm.DB, payload event.SentCookingPayload
 		return
 	}
 	logger.Logger.Info(fmt.Sprintf("操作记录:送厨 %+v", payload), zap.Uint64("record", uuid))
+}
+
+func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
+	// 加锁。防止多个送厨事件并发扣减库存
+	lock.NewSystemLock().LockUuid(saleBillUuid)
+	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+	// 扣减库存
+	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
+	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItemNotProcessed(saleBillUuid)
+	if err != nil {
+		logger.Logger.Error("SubscribeSentCookingEvent process, GetWarehouseOutFormItemNotProcessed failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+		return
+	}
+
+	ProductBoms := make(map[uint64]*model.ProductBom)
+	Materials := make(map[uint64]*model.Material)
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		warehouseOutFormItem.ReduceStock = constant.WarehouseOutFormItemReduceStockSuccess
+		if warehouseOutFormItem.IsProductBom() {
+			ProductBoms[warehouseOutFormItem.ProductBomUuid] = warehouseOutFormItem.ProductBom
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num
+		} else if warehouseOutFormItem.IsMaterial() {
+			Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
+			Materials[warehouseOutFormItem.MaterialUuid].StockNum -= warehouseOutFormItem.Num
+		}
+	}
+
+	ProductBomsList := make([]*model.ProductBom, 0)
+	MaterialsList := make([]*model.Material, 0)
+	for _, productBom := range ProductBoms {
+		ProductBomsList = append(ProductBomsList, productBom)
+	}
+	for _, material := range Materials {
+		MaterialsList = append(MaterialsList, material)
+	}
+	// 更新库存
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid); err != nil {
+			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+			return err
+		}
+		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(ProductBomsList); err != nil {
+			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateProductBomStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+			return err
+		}
+		if err := base.NewMaterialRepo(tx).UpdateMaterials(MaterialsList); err != nil {
+			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateMaterialStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+			return err
+		}
+		return nil
+	}); err != nil {
+		logger.Logger.Error("SubscribeSentCookingEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+		return
+	}
 }
