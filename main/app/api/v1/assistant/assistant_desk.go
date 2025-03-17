@@ -172,6 +172,166 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderCheck 订单检查
+// @Summary 订单检查
+// @Description 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
+// @Router /assistant/desk/order/check [get]
+func (h *DeskHandler) OrderCheck(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面订单检查接口请求")
+
+	params := req.InstantOrderCheckReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("订单检查", zap.Any("params", params))
+	// 订单检查
+	checkRes, err := h.orderSrv.OrderCheck(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
+		return
+	}
+	ctx.Log().Debug("订单检查成功")
+	// 返回结果
+	helper.Success(c, resp.OrderCheckRes{})
+}
+
+// OrderPaymentInfo 获取结账页面信息
+// @Summary 获取结账页面信息
+// @Description 获取结账页面信息
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query string true "销售账单UUID"
+// @param sale_order_uuid query string true "销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/payment/info [get]
+func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面结账页面信息接口请求")
+
+	params := &req.InstantOrderPaymentInfoReq{}
+	if err := params.Parse(c); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
+	// 获取销售订单的付款信息
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("获取结账页面信息成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentCreate 创建一个支付单
+// @Summary 创建一个支付单
+// @Description 创建一个支付单
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentCreateReq true "创建一个支付单参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /assistant/desk/order/payment/create [post]
+func (h *DeskHandler) OrderPaymentCreate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面创建一个支付单接口请求")
+
+	params := req.InstantOrderPaymentCreateReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
+	// 创建一个支付单
+	res, err := h.orderSrv.InstantOrderPaymentCreate(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("创建一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentCancel 撤销一个支付单
+// @Summary 撤销一个支付单
+// @Description 撤销一个支付单
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentCancelReq true "撤销一个支付单参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /assistant/desk/order/payment/cancel [post]
+func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面撤销一个支付单接口请求")
+
+	params := req.InstantOrderPaymentCancelReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
+	// 撤销一个支付单
+	res, err := h.orderSrv.InstantOrderPaymentCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("撤销一个支付单成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentFinish 完成销售订单的付款结账
+// @Summary 完成销售订单的付款结账
+// @Description 完成销售订单的付款结账
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
+// @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
+// @Router /assistant/desk/order/payment/finish [post]
+func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面销售订单的付款结账接口请求")
+
+	params := req.InstantOrderPaymentFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
+	// 桌台销售订单的付款结账
+	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("桌台销售订单的付款结账成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderCartProductAdd 向购物车添加商品
 // @Summary 向购物车添加商品
 // @Description 向购物车添加商品
@@ -861,13 +1021,15 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
-		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
-		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
 		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)                          // 修改购物车商品数量
 		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
-		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
-		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
+		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
+		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
+		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
+		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印小票
+		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台（清台）
 		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                     // 合并桌台
@@ -876,13 +1038,16 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                         // 桌台订单商品改价
 		privateApi.POST("/desk/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
+		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
+		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
+		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
 		privateApi.POST("/desk/order/cart/product/change_desk", wrapper.OrderCartProductChangeDesk)           // 转菜
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
-		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
-		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
-		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
-		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印小票
-		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
+		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
 	}
 }
