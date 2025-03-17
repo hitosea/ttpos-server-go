@@ -69,11 +69,11 @@ type WarehouseOutForm struct {
 	Scene      int    `gorm:"column:scene;type:tinyint(2);default:0;comment:出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库"`
 	Remark     string `gorm:"column:remark;type:varchar(255);default:'';comment:备注"`
 	Status     int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-success已出库 1-canceled已撤销"`
-	RevokeTime int    `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
+	RevokeTime int64  `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
 
 	// 关联uuid
 	OperatorUuid        uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员uuid"`
-	AssociatedOrderUuid uint64 `gorm:"column:associated_order_uuid;type:bigint(20) unsigned;default:0;comment:关联订单uuid"`
+	AssociatedOrderUuid uint64 `gorm:"column:associated_order_uuid;type:bigint(20) unsigned;default:0;comment:关联订单uuid"` // sale_bill_uuid
 
 	// 关联模型
 	WarehouseOutFormItems []*WarehouseOutFormItem `gorm:"foreignKey:WarehouseOutFormUuid;references:Uuid"`
@@ -83,14 +83,23 @@ func (model *WarehouseOutForm) SetNil() {
 	model.WarehouseOutFormItems = nil
 }
 
+// 撤销出库。使用场景：反结账时，撤销出库记录，将库存退还
+func (model *WarehouseOutForm) RevokeForm() {
+	model.Status = constant.WarehouseOutFormStatusCanceled
+	model.RevokeTime = time.Now().Unix()
+	for _, item := range model.WarehouseOutFormItems {
+		item.RevokeTime = time.Now().Unix()
+	}
+}
+
 // WarehouseOutFormItem 出库单明细表 `ttpos_warehouse_out_form_item`
 type WarehouseOutFormItem struct {
 	BaseModel
 	Num         float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:数量"`
 	Scene       int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,0-销售出库 1-adjust调整 2-loss损耗 3-lost丢失 4-delete删除"`
-	Status      int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示"`
+	Status      int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-预出库 1-已出库。预出库时，表示库存扣减但未在出库记录页面显示.已出库时才在出库记录页面显示."`
 	ReduceStock int     `gorm:"column:reduce_stock;type:tinyint(1);default:0;comment:是否已经减库存,0-未减库存 1-已减库存。用于判断该出库记录是否已经将对应的货物减库存，若没减库存将在下次检查时减该货物的库存"`
-
+	RevokeTime  int64   `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
 	// 关联uuid
 	WarehouseOutFormUuid uint64 `gorm:"column:warehouse_out_form_uuid;type:bigint(20) unsigned;default:0;comment:出库单uuid"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM表uuid, 规格商品或小料"`
@@ -121,13 +130,15 @@ func (model *WarehouseOutFormItem) IsProductBom() bool {
 type Product struct {
 	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
 	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
+	SaleOrderUuid        uint64                 `json:"sale_order_uuid"`         // 销售订单uuid
 	Num                  int                    `json:"num"`                     // 数量
 	ProductBomMaterials  []*ProductBomMaterials `json:"product_bom_materials"`   // 规格商品或小料的材料
 }
 
 type ProductBomMaterials struct {
-	MaterialUuid uint64  `json:"material_uuid"`
-	Num          float64 `json:"num"`
+	MaterialUuid  uint64  `json:"material_uuid"`
+	Num           float64 `json:"num"`
+	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单uuid
 }
 
 type ProductList []*Product
@@ -144,15 +155,16 @@ func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
 // 使用场景：
 // 1. 送厨时，下单减库存，创建出库单
 // 2. 结账时，判断订单的每个商品是否都已有对应的出库记录，如果没有，则创建出库单
-func NewWarehouseOutForm(list ProductList, isCheckout bool, saleOrderUuid uint64, saleBillUuid uint64) *WarehouseOutForm {
+func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64) *WarehouseOutForm {
 	uuid, _ := utils.GetID()
 	form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
 	form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
 	form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
+	form.AssociatedOrderUuid = saleBillUuid
 
-	status := constant.WarehouseOutFormStatusPre
+	status := constant.WarehouseOutFormItemStatusPre
 	if isCheckout {
-		status = constant.WarehouseOutFormStatusSuccess
+		status = constant.WarehouseOutFormItemStatusSuccess
 	}
 
 	items := make([]*WarehouseOutFormItem, 0)
@@ -164,7 +176,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleOrderUuid uint64
 			Num:                  float64(item.Num),
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,
-			SaleOrderUuid:        saleOrderUuid,
+			SaleOrderUuid:        item.SaleOrderUuid,
 			SaleOrderProductUuid: item.SaleOrderProductUuid,
 			SaleBillUuid:         saleBillUuid,
 		})
@@ -179,7 +191,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleOrderUuid uint64
 			Num:                  material.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,
-			SaleOrderUuid:        saleOrderUuid,
+			SaleOrderUuid:        material.SaleOrderUuid,
 			SaleBillUuid:         saleBillUuid,
 		})
 	}

@@ -11,8 +11,8 @@ const (
 
 // WarehouseOutFormStatus 出库单状态
 const (
-	WarehouseOutFormStatusPre     = iota // 预出库 0
-	WarehouseOutFormStatusSuccess        // 已出库 1
+	WarehouseOutFormItemStatusPre     = iota // 预出库 0
+	WarehouseOutFormItemStatusSuccess        // 已出库 1
 )
 
 // WarehouseOutFormItemReduceStock 出库单明细是否减库存
@@ -27,4 +27,10 @@ const (
 	WarehouseFormSceneAddStock        // 添加入库 1
 	WarehouseFormSceneAdjust          // 调整入库 2
 	WarehouseFormSceneReturn          // 退菜入库 3
+)
+
+// WarehouseOutFormStatus 出库单状态
+const (
+	WarehouseOutFormStatusSuccess  = iota // 已出库 0
+	WarehouseOutFormStatusCanceled        // 撤销 1
 )

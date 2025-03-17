@@ -32,6 +32,7 @@ type ICommonRepo interface {
 	WhereInUuids(uuids []uint64) DBOption                           // 根据UUID列表查询
 	WhereByDeskUuid(uuid uint64) DBOption                           // 根据桌台UUID查询
 	WhereBySaleBillUuid(uuid uint64) DBOption                       // 根据销售单UUID查询
+	WhereByAssociatedOrderUuid(uuid uint64) DBOption                // 根据关联订单UUID查询
 	WhereBySaleOrderUuid(uuid uint64) DBOption                      // 根据销售订单UUID查询
 	WhereByStatus(status uint) DBOption                             // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption               // 根据是否显示收银机查询
@@ -125,6 +126,13 @@ func (r *commonRepo) WhereByDeskUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereBySaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_bill_uuid = ?", uuid)
+	}
+}
+
+// WhereByAssociatedOrderUuid 根据关联订单UUID查询
+func (r *commonRepo) WhereByAssociatedOrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("associated_order_uuid = ?", uuid)
 	}
 }
 

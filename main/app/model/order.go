@@ -381,6 +381,18 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+// 获取订单中下单减库存的商品
+func (model *SaleBill) GetSaleOrderProductCookingSubStock() []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+	cookingSaleOrderProducts := model.GetSaleOrderProductCooking()
+	for _, saleOrderProduct := range cookingSaleOrderProducts {
+		if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
+			products = append(products, saleOrderProduct)
+		}
+	}
+	return products
+}
+
 // 获取已送厨和未送厨的销售订单商品
 func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 	saleOrderProducts := make([]*SaleOrderProduct, 0)
