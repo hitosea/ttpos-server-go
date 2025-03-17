@@ -13063,6 +13063,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cloud": {
+                    "description": "云端基础信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.CloudBasic"
+                        }
+                    ]
+                },
                 "company": {
                     "description": "商家信息",
                     "allOf": [
@@ -13525,6 +13533,14 @@ const docTemplate = `{
                 "cashier_uuid": {
                     "description": "收银员UUID",
                     "type": "integer"
+                },
+                "cloud": {
+                    "description": "云端基础信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.CloudBasic"
+                        }
+                    ]
                 },
                 "company": {
                     "description": "商家信息",
@@ -17879,11 +17895,11 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "cashier": {
-                    "description": "收银机设置",
+                "cloud": {
+                    "description": "云端基础信",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Cashier"
+                            "$ref": "#/definitions/setting.CloudBasic"
                         }
                     ]
                 },
@@ -17900,22 +17916,6 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/setting.Currency"
-                        }
-                    ]
-                },
-                "kitchen": {
-                    "description": "厨显端设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.KitchenResp"
-                        }
-                    ]
-                },
-                "store": {
-                    "description": "商家设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Store"
                         }
                     ]
                 },
@@ -18262,115 +18262,6 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Cashier": {
-            "type": "object",
-            "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
-                "auto_lock_screen": {
-                    "description": "自动锁屏（秒），默认5分钟",
-                    "type": "string"
-                },
-                "auto_order_limit": {
-                    "description": "自动接单金额上限",
-                    "type": "string"
-                },
-                "carousel": {
-                    "description": "上传后的轮播内容url（图片 + 视频）",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.CarouselItem"
-                    }
-                },
-                "cashier_password": {
-                    "description": "钱箱密码",
-                    "type": "string"
-                },
-                "default_language": {
-                    "description": "默认语言",
-                    "type": "string"
-                },
-                "is_auto_lock_screen": {
-                    "description": "是否开启自动锁屏 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_auto_order": {
-                    "description": "是否自动接单",
-                    "type": "string"
-                },
-                "is_auto_send": {
-                    "description": "收银结账自动送厨房 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_auto_voice": {
-                    "description": "是否开启自动接单语音播报",
-                    "type": "string"
-                },
-                "is_open_cashier_password": {
-                    "description": "是否开启钱箱密码 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_remain_color": {
-                    "description": "是否开启剩余时长颜色 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_show_assistant_sold_out": {
-                    "description": "点餐助手是否显示售罄商品 0-不显示 1-显示",
-                    "type": "integer"
-                },
-                "is_show_scan_sold_out": {
-                    "description": "扫码点餐是否显示售罄商品 0-不显示 1-显示",
-                    "type": "integer"
-                },
-                "language": {
-                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "lock_password": {
-                    "description": "锁屏密码",
-                    "type": "string"
-                },
-                "menu_show_sold_out": {
-                    "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
-                    "type": "string"
-                },
-                "order_method": {
-                    "description": "用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.OrderMethodItem"
-                        }
-                    ]
-                },
-                "remain_color": {
-                    "description": "剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "server": {
-                    "description": "收银机服务器连接",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Server"
-                        }
-                    ]
-                }
-            }
-        },
         "setting.CashierPrinterItem": {
             "type": "object",
             "properties": {
@@ -18492,6 +18383,35 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.CloudBasic": {
+            "type": "object",
+            "properties": {
+                "brand_logo": {
+                    "description": "品牌LOGO： (正方型)",
+                    "type": "string"
+                },
+                "brand_logo_long": {
+                    "description": "品牌LOGO： (长方型)",
+                    "type": "string"
+                },
+                "brand_name": {
+                    "description": "品牌名称",
+                    "type": "string"
+                },
+                "browser_logo": {
+                    "description": "浏览器title： （LOGO）",
+                    "type": "string"
+                },
+                "browser_title": {
+                    "description": "浏览器title： (品牌名称)",
+                    "type": "string"
+                },
+                "expiration_reminder": {
+                    "description": "准备到期提醒，根据填写的时间提醒商家剩余可用时间",
+                    "type": "integer"
+                }
+            }
+        },
         "setting.Currency": {
             "type": "object",
             "properties": {
@@ -18544,60 +18464,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                }
-            }
-        },
-        "setting.KitchenResp": {
-            "type": "object",
-            "properties": {
-                "default_language": {
-                    "description": "默认语言",
-                    "type": "string"
-                },
-                "is_call_service": {
-                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_come_dish": {
-                    "description": "是否开启来菜提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_open": {
-                    "description": "是否开启厨显功能 0关闭 1开启",
-                    "type": "string"
-                },
-                "is_wait_color": {
-                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "server": {
-                    "description": "厨显服务器连接",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Server"
-                        }
-                    ]
-                },
-                "wait_color": {
-                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 }
             }
         },
@@ -18760,77 +18626,6 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Store": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "地址",
-                    "type": "string"
-                },
-                "auth_language": {
-                    "description": "授权语言",
-                    "type": "string"
-                },
-                "avatar_url": {
-                    "description": "默认头像",
-                    "type": "string"
-                },
-                "chain_number": {
-                    "description": "连锁编号",
-                    "type": "string"
-                },
-                "company": {
-                    "description": "公司名称",
-                    "type": "string"
-                },
-                "ip_white_list": {
-                    "description": "ip白名单",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "系统语言",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "logo_url": {
-                    "description": "商城logo",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "商城名称",
-                    "type": "string"
-                },
-                "no_clear_table": {
-                    "description": "结账后不清台 0-清台 1-不清台",
-                    "type": "string"
-                },
-                "phone": {
-                    "description": "联系电话",
-                    "type": "string"
-                },
-                "tax_number": {
-                    "description": "税号",
-                    "type": "string"
-                },
-                "time_zone": {
-                    "description": "时区",
-                    "type": "string"
-                },
-                "time_zone_list": {
-                    "description": "时区列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.TimeZoneItem"
-                    }
-                },
-                "zeroing_method": {
-                    "description": "抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元",
-                    "type": "string"
-                }
-            }
-        },
         "setting.TabletResp": {
             "type": "object",
             "properties": {
@@ -18906,20 +18701,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
-                }
-            }
-        },
-        "setting.TimeZoneItem": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
                 }
             }
         },

@@ -149,6 +149,23 @@ func AddImageDomain(imageURL, baseURL string, addDomain bool) string {
 	return newURL.String()
 }
 
+func RemoveDomain(fileUrl string) string {
+	// 解析URL
+	parsedURL, err := url.Parse(fileUrl)
+	if err != nil {
+		return ""
+	}
+	// 构建新的URL，去掉域名和端口
+	newURL := parsedURL.Path
+	if parsedURL.RawQuery != "" {
+		newURL += "?" + parsedURL.RawQuery
+	}
+	if parsedURL.Fragment != "" {
+		newURL += "#" + parsedURL.Fragment
+	}
+	return newURL
+}
+
 // GetVersion 从指定路径读取version.json文件并返回版本号
 func GetVersion(filePath string) string {
 	// 读取version.json文件

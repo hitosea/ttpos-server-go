@@ -9,6 +9,7 @@ use app\admin\controller\Controller;
 use app\admin\validate\SettingValidate;
 use app\common\enum\settings\SettingEnum;
 use app\admin\model\settings\Setting as SettingModel;
+use think\facade\Cache;
 
 /**
  * 系统设置
@@ -43,6 +44,9 @@ class Service extends Controller
         $param['member_default_avatar'] = ImgHelp::removeImageDomain($param['member_default_avatar'] ?? '');
         $model = new SettingModel;
         if ($model->add($param)) {
+            if (Cache::has('__CLOUD__SYNCBASEINFO__')) {
+                Cache::delete('__CLOUD__SYNCBASEINFO__');
+            }
             return $this->renderSuccess('操作成功');
         }
         return $this->renderError($model->getError() ?: '操作失败');
