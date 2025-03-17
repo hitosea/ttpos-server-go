@@ -92,7 +92,7 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 						Uuid:       productBom.Uuid,
 						LocaleName: s.localeSrv.GetLocaleNames(productBom.ProductFlavor.MultiLanguageName),
 						Price:      productBom.Price,
-						StockNum:   int(productBom.StockNum),
+						StockNum:   int(productBom.GetStockNum()),
 						Barcode:    productBom.BarcodeValue,
 					})
 					if len(prices) == 0 {
@@ -109,7 +109,7 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 						Price:             productBom.Price,
 						IsDefaultSelected: productBom.IsDefaultSelect == 1,
-						StockNum:          int(productBom.StockNum),
+						StockNum:          int(productBom.GetStockNum()),
 					})
 				}
 			}

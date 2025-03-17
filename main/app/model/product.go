@@ -216,6 +216,13 @@ type ProductBom struct {
 	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`        // 规格商品的组成材料
 }
 
+func (model *ProductBom) GetStockNum() float64 {
+	if model.IsSoldOut == constant.ProductStatusSaleOut {
+		return 0
+	}
+	return model.StockNum
+}
+
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
 type RelatedMaterial struct {
 	BaseModel
@@ -233,7 +240,7 @@ func (model *RelatedMaterial) GetDecreaseNum(productNum uint) float64 {
 
 // IsStockShortage 判断库存是否不足
 func (model *ProductBom) IsStockShortage(productNum uint) bool {
-	return model.StockNum < float64(productNum)
+	return model.GetStockNum() < float64(productNum)
 }
 
 // IsPriceChanged 判断商品价格是否变动
@@ -243,7 +250,7 @@ func (model *ProductBom) IsPriceChanged(price float64) bool {
 
 // IsSoldOutStatus 判断是否标记沽清、或售罄无库存
 func (model *ProductBom) IsSoldOutStatus() bool {
-	return model.IsSoldOut == constant.ProductStatusSaleOut || model.StockNum <= 0
+	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum() <= 0
 }
 
 func (model *ProductBom) IsDefaultSelectBool() bool {
