@@ -1101,21 +1101,40 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	qrOrderRepo := repository.NewH5OrderRepo(tx)
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(tx)
 
-	// todo 未完成 - 退回商品库存
-	// 获取订单已送厨产品，退回商品库存
-	// productRepo := repository.NewOrderProductRepo(db)
-	// products, err := productRepo.GetProductList(
-	// 	repository.CommonRepo.WhereByStatus(1),
-	// 	productRepo.WhereSaleBillUuids([]uint64{req.SaleBillUuid}),
-	// )
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	return errors.WithMessage(err)
-	// }
-	// for _, po := range products {
-	// 	fmt.Println(po)
-	// 	// ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);
-	// }
+	// 退回商品库存
+	{
+		// 获取销售账单信息
+		saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		s.reverseSettleWarehouseForm(ctx, saleBill)
+		var warehouseForm *model.WarehouseForm
+		{
+			products := saleBill.GetSaleOrderProductCooking()
+			productList, err := s.getDecreaseStockList(ctx, products)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
+			fmt.Println("model.NewWarehouseForm(productList, saleBill.Uuid):", utils.ToJsonString(warehouseForm))
+		}
+		// 创建入库单
+		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
+			// 创建入库单
+			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormRecord(*warehouseForm); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 创建入库单记录
+			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 发布"加库存"事件
+		go func() {
+			event2.AddStock(db, saleBill.Uuid)
+		}()
+	}
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
@@ -1537,33 +1556,23 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 }
 
 func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *model.SaleBill) error {
-	fmt.Println("saleBill33333333333333333:")
 	db := ctx.GetDB()
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
-	fmt.Println("saleBill34444444444444444333:")
 
 	// 1.该账单的出库单撤销
 	var forms []*model.WarehouseOutForm
-	fmt.Println("saleBill35555555555555555333:")
-
 	{
-		fmt.Println("saleBill36666666666666666333:")
 		// 获取该账单的所有出库单
 		warehouseOutForms, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormsBySaleBillUuid(saleBill.Uuid)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		fmt.Println("saleBill37777777777777777333:")
 		for _, form := range warehouseOutForms {
 			form.RevokeForm()
 		}
-		fmt.Println("saleBill38888888888888888333:")
 		forms = warehouseOutForms
-		fmt.Println("saleBill39999999999999999333:")
 	}
-
-	fmt.Println("4444444444:")
 
 	// 2.该账单的商品归还库存，生成入库单
 	// 获取账单的所有商品，退菜的商品除外
@@ -1577,7 +1586,6 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 		warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
 		fmt.Println("model.NewWarehouseForm(productList, saleBill.Uuid):", utils.ToJsonString(warehouseForm))
 	}
-	fmt.Println("5555555555:")
 
 	// 3.构建出库单，将账单下单减库存的商品出库
 	var warehouseOutForm *model.WarehouseOutForm
