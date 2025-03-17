@@ -173,6 +173,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.WithMessage(err, "获取设备uuid失败")
 		}
 
+		// todo
 		// // 判断是否有待支付、未挂单的订单
 		// commonRepo := repository.NewCommonRepo()
 		// orderRepo := repository.NewOrderRepo(tx)

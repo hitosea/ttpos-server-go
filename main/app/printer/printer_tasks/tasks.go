@@ -37,6 +37,9 @@ func (t *printerTask) Execute() {
 		log.Fatalf("Error querying companies: %s", err)
 		return
 	}
+
+	// todo 需要加上判断当前是否需要开启本地云打印
+
 	// 每5个公司为一组进行处理
 	for i := 0; i < len(companies); i += 5 {
 		// 计算当前批次的结束索引

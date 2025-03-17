@@ -996,6 +996,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/check": {
+            "get": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/discount": {
             "post": {
                 "security": [
@@ -1265,6 +1316,208 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/cancel": {
+            "post": {
+                "description": "撤销一个支付单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "撤销一个支付单",
+                "parameters": [
+                    {
+                        "description": "撤销一个支付单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建一个支付单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "创建一个支付单",
+                "parameters": [
+                    {
+                        "description": "创建一个支付单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/finish": {
+            "post": {
+                "description": "完成销售订单的付款结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "完成销售订单的付款结账",
+                "parameters": [
+                    {
+                        "description": "完成销售订单的付款结账参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentFinishReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderFinishResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取结账页面信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取结账页面信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -8275,6 +8528,49 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.PaymentMethodList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/print_data": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "获取打印数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.PrinterData"
+                                            }
                                         }
                                     }
                                 }
@@ -16817,80 +17113,40 @@ const docTemplate = `{
         "resp.PrinterLogData": {
             "type": "object",
             "properties": {
-                "cashier_device_id": {
-                    "description": "收银机绑定的设备ID",
-                    "type": "string"
-                },
-                "copies": {
-                    "description": "打印机.份数 =\u003e 对应旧表print_times",
-                    "type": "integer"
-                },
                 "create_time": {
                     "description": "日志创建时间戳",
                     "type": "integer"
                 },
-                "data": {
-                    "description": "打印数据",
-                    "type": "string"
-                },
-                "data_type": {
+                "data_type_name": {
                     "description": "数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;",
-                    "type": "integer"
-                },
-                "first_execution": {
-                    "description": "是否首次执行打印 1-是 0-否;",
-                    "type": "integer"
-                },
-                "no": {
-                    "description": "桌台号或者呼叫号(如果有)",
                     "type": "string"
                 },
-                "num": {
-                    "description": "打印次数",
-                    "type": "integer"
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string"
                 },
-                "print_method": {
-                    "description": "打印方式 1文本打印, 2图片打印'",
-                    "type": "integer"
-                },
-                "printer_config": {
-                    "description": "打印机.配置",
+                "printer_name": {
+                    "description": "打印机名称",
                     "type": "string"
                 },
                 "printer_time": {
-                    "description": "打印时间",
-                    "type": "integer"
-                },
-                "printer_type": {
-                    "description": "打印机.类型",
-                    "type": "string"
-                },
-                "printer_uuid": {
-                    "description": "打印机uuid",
+                    "description": "最后打印时间",
                     "type": "integer"
                 },
                 "reason": {
                     "description": "原因",
                     "type": "string"
                 },
-                "related_type": {
-                    "description": "关联类型",
-                    "type": "integer"
+                "rule_name": {
+                    "description": "商品打印规则名称",
+                    "type": "string"
                 },
-                "related_uuid": {
-                    "description": "关联ID",
-                    "type": "integer"
+                "serial_no": {
+                    "description": "桌台号或者呼叫号(如果有)",
+                    "type": "string"
                 },
                 "status": {
                     "description": "状态(0结束,1进行中,2成功)",
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "类型:0系统默认队列,1云上服务下放",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }

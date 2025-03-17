@@ -20,6 +20,7 @@ type IPrinterLogRepo interface {
 	WhereUuid(uuid uint64) DBOption                  // uuid 查询条件
 	WhereCreatedBefore(days uint) DBOption           // n天前的数据
 	WherePrinterTime() DBOption                      // 打印时间查询条件
+	WherePrintMethod(printMethod int) DBOption       // 打印方式查询条件
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
 	GetPrintLogCount(opts ...DBOption) (int64, error)
@@ -134,6 +135,12 @@ func (r *printerLogRepo) WhereStatus(status uint8) DBOption {
 func (r *printerLogRepo) WhereType(typ uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("type = ?", typ)
+	}
+}
+
+func (r *printerLogRepo) WherePrintMethod(printMethod int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("print_method = ?", printMethod)
 	}
 }
 
