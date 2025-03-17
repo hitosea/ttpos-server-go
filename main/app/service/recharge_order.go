@@ -414,8 +414,11 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	}
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
-		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+	)
 	if order.Uuid == 0 || order.Status != constant.RechargeOrderStatusPending {
 		return confirmResp, errors.New("充值订单不存在")
 	}
@@ -513,12 +516,17 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 
 	// 打印充值单
 	go func() {
-		// _, err = s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
-		// 	RechargeOrder: order,
-		// 	IsQueue:       false,
-		// 	DeviceId:      ctx.GetDeviceSn(),
-		// 	PrintLang:     ctx.GetLanguage(),
-		// })
+		order := rechargeOrderRepo.GetRechargeOrder(
+			rechargeOrderRepo.WithMember(),
+			rechargeOrderRepo.WithStaff(),
+			rechargeOrderRepo.WithPaymentOrders(),
+			rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+			rechargeOrderRepo.WhereUuid(order.Uuid),
+		)
+		_, err := printer.NewPrinterRepo(ctx, ctx.GetLanguage()).PrintingRechargeOrder(order, 0)
+		if err != nil {
+			logger.Logger.Error("打印充值单失败", zap.Error(err))
+		}
 	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
