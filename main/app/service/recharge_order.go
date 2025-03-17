@@ -523,7 +523,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
 			rechargeOrderRepo.WhereUuid(order.Uuid),
 		)
-		_, err := printer.NewPrinterRepo(ctx, ctx.GetLanguage()).PrintingRechargeOrder(order, 0)
+		_, err := printer.NewPrinterRepo(ctx).PrintingRechargeOrder(order, 0)
 		if err != nil {
 			logger.Logger.Error("打印充值单失败", zap.Error(err))
 		}
