@@ -170,7 +170,7 @@ func (r *productionRepo) WhereProductPackageUuidIn(uuids []uint64) DBOption {
 // WhereProductFinishedTime 生产商品完成时间条件
 func (r *productionRepo) WhereProductFinishedTime(finishedTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("finished_time = ?", finishedTime)
+		return db.Where("finished_time > ?", finishedTime)
 	}
 }
 

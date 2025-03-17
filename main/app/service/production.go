@@ -133,7 +133,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
-	var groups []resp.ProductionGroup
+	groups := make([]resp.ProductionGroup, 0)
 	for _, paginatedProduct := range limitedProducts {
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0)
@@ -204,7 +204,7 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
-	products, err := productionRepo.GetProducts(statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
+	products, err := productionRepo.GetProducts(statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition(), productionRepo.WithSaleBill())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
