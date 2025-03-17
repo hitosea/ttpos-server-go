@@ -319,6 +319,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
+	if err != nil {
+		return cashierBase, errors.WithMessage(err)
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -334,9 +338,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-		Tablet:  tabletSettingResp,
-		Payment: paymentSetting,
-		Printer: printerSetting,
+		Tablet:     tabletSettingResp,
+		Payment:    paymentSetting,
+		Printer:    printerSetting,
+		CloudBasic: cloudBasicSetting,
 	}, nil
 }
 
@@ -389,6 +394,10 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
+	if err != nil {
+		return assistantBase, errors.WithMessage(err)
+	}
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
@@ -408,11 +417,12 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-		Assistant: assistantSettingResp,
-		Buffet:    buffetSetting,
-		Payment:   paymentSetting,
-		Business:  businessSetting,
-		Currency:  currencySetting,
+		Assistant:  assistantSettingResp,
+		Buffet:     buffetSetting,
+		Payment:    paymentSetting,
+		Business:   businessSetting,
+		Currency:   currencySetting,
+		CloudBasic: cloudBasicSetting,
 	}, nil
 }
 
@@ -422,10 +432,6 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
 
 	var tabletBase resp.TabletBase
-	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, nil)
-	if err != nil {
-		return tabletBase, errors.WithMessage(err)
-	}
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
@@ -448,23 +454,20 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		return tabletBase, errors.WithMessage(err)
 	}
 	copier.Copy(&kitchenSettingResp, kitchenSetting)
-	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
 	return resp.TabletBase{
+		Buffet: buffetSetting,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
-
-		Cashier:  cashierSetting,
-		Buffet:   buffetSetting,
-		Currency: currencySetting,
-		Tablet:   tabletSettingResp,
-		Kitchen:  kitchenSettingResp,
-		Store:    storeSetting,
+		Currency:   currencySetting,
+		Tablet:     tabletSettingResp,
+		CloudBasic: cloudBasicSetting,
 	}, nil
 }
 
@@ -481,6 +484,12 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		return kitchenBase, errors.WithMessage(err)
 	}
 	copier.Copy(&kitchenSettingResp, kitchenSetting)
+
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
+	if err != nil {
+		return kitchenBase, errors.WithMessage(err)
+	}
+
 	return resp.KitchenBase{
 		Kitchen: kitchenSettingResp,
 		Company: resp.Company{
@@ -488,6 +497,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
 		},
+		CloudBasic: cloudBasicSetting,
 	}, nil
 }
 

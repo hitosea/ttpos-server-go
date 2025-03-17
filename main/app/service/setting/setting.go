@@ -3,6 +3,7 @@ package setting
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nahid/gohttp"
 	"regexp"
 	"slices"
 	"strconv"
@@ -21,7 +22,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/nahid/gohttp"
+	//"github.com/nahid/gohttp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
@@ -42,6 +43,7 @@ type ISrv interface {
 	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                                      // 获取打印机设置
 	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error)                     // 获取打印机信息
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
+	GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error)                                                                 // 获取云端基础信息
 	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)                                  // 获取点餐助手设置
 	GetKitchenSetting(ctx context.Context, companySetting model.CompanySetting, languageList []dto.LanguageItem) (setting.Kitchen, error) // 获取厨显端设置
 	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                // 获取扫码H5设置
@@ -69,16 +71,18 @@ func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
 }
 
 type Srv struct {
-	dbm      *database.DBManager
-	cache    cache.Cache
-	cacheKey string
+	dbm           *database.DBManager
+	cache         cache.Cache
+	cacheKey      string
+	cloudCacheKey string
 }
 
 func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 	return &Srv{
-		dbm:      dbm,
-		cache:    cache,
-		cacheKey: "setting:company_id:%d",
+		dbm:           dbm,
+		cache:         cache,
+		cacheKey:      "setting:company_id:%d",
+		cloudCacheKey: "__CLOUD__SYNCBASEINFO__",
 	}
 }
 
@@ -515,23 +519,57 @@ func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, err
 }
 
 func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
+	defaultSetting := model.Setting{Key: key, Values: "{}"}
+	if key == constant.SettingCloudBasic { // 平台设置
+		if data, exists := s.cache.Get(s.cloudCacheKey); exists { // 从缓存读取
+			if dataValue, isString := data.(string); isString {
+				return model.Setting{Key: key, Values: dataValue}
+			}
+		} else { // 从远程获取
+			type Base struct {
+				Code int    `json:"code"`
+				Msg  string `json:"msg"`
+				Data struct {
+					Base struct {
+						BrandName          string `json:"brand_name"`
+						BrandLogo          string `json:"brand_logo"`
+						BrandLogoLong      string `json:"brand_logo_long"`
+						BrowserLogo        string `json:"browser_logo"`
+						BrowserTitle       string `json:"browser_title"`
+						ExpirationReminder int    `json:"expiration_reminder"`
+					} `json:"base"`
+				} `json:"data"`
+			}
+			res, err := gohttp.NewRequest().Post(viper.GetString("CLOUD_PLATFORM_HOST") + "/api/admin/setting.service/info")
+			if err != nil {
+				return defaultSetting
+			}
+			bodyBytes, _ := res.GetBodyAsByte()
+			var base Base
+			if err := json.Unmarshal(bodyBytes, &base); err != nil {
+				return defaultSetting
+			}
+			var basicCloudSetting setting.CloudBasic
+			copier.Copy(&basicCloudSetting, base.Data.Base)
+			dataBytes, _ := json.Marshal(basicCloudSetting)
+			s.cache.Set(s.cloudCacheKey, string(dataBytes), 0)
+			return model.Setting{Key: key, Values: string(dataBytes)}
+		}
+	}
+
 	allSettings, _ := s.fromCache(ctx)
 	for _, set := range allSettings {
 		if set.Key == key {
 			return set
 		}
 	}
-	return model.Setting{
-		Key:    key,
-		Values: "{}",
-	}
+	return defaultSetting
 }
 
 // GetStoreSetting 获取商家设置
 func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	var store setting.Store
 	st := s.getSettingByKey(ctx, constant.SettingStore)
-	ctx.Log().Info("", zap.String("st.Values", st.Values))
 
 	// 解析json字符串为map进行处理，处理language字段
 	jsonStr := st.Values
@@ -890,6 +928,26 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	}
 
 	return defaultCashier, nil
+}
+
+// GetCloudBasicSetting 获取云端基础信息
+func (s *Srv) GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error) {
+	var (
+		err        error
+		cloudBasic setting.CloudBasic
+	)
+	st := s.getSettingByKey(ctx, constant.SettingCloudBasic)
+	err = json.Unmarshal([]byte(st.Values), &cloudBasic)
+	if err != nil {
+		ctx.Log().Error("解析云端基础信息", zap.Error(err))
+		return cloudBasic, errors.New("解析云端基础信息失败")
+	}
+
+	cloudBasic.BrandLogo = utils.AddImageDomain(utils.RemoveDomain(cloudBasic.BrandLogo), utils.GetBaseURL(ctx.GetGin().Request), true)
+	cloudBasic.BrandLogoLong = utils.AddImageDomain(utils.RemoveDomain(cloudBasic.BrandLogoLong), utils.GetBaseURL(ctx.GetGin().Request), true)
+	cloudBasic.BrowserLogo = utils.AddImageDomain(utils.RemoveDomain(cloudBasic.BrowserLogo), utils.GetBaseURL(ctx.GetGin().Request), true)
+
+	return cloudBasic, nil
 }
 
 // GetAssistantSetting 获取点餐助手设置

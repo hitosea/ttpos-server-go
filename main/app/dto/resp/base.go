@@ -19,6 +19,7 @@ type CashierBase struct {
 	Tablet       setting.TabletResp  `json:"tablet"`        // 平板端设置
 	Payment      setting.Payment     `json:"payment"`       // 支付设置
 	Printer      setting.Printer     `json:"printer"`       // 打印设置
+	CloudBasic   setting.CloudBasic  `json:"cloud"`         // 云端基础信息
 }
 
 type AssistantStaff struct {
@@ -45,16 +46,15 @@ type AssistantBase struct {
 	Payment        setting.Payment       `json:"payment"`         // 支付设置
 	Business       setting.Business      `json:"business"`        // 门店业务设置
 	Currency       setting.Currency      `json:"currency"`        // 货币设置
+	CloudBasic     setting.CloudBasic    `json:"cloud"`           // 云端基础信息
 }
 
 type TabletBase struct {
-	Company  Company             `json:"company"`  // 商家信息
-	Cashier  setting.Cashier     `json:"cashier"`  // 收银机设置
-	Buffet   setting.Buffet      `json:"buffet"`   // 自助餐设置
-	Currency setting.Currency    `json:"currency"` // 货币单位
-	Tablet   setting.TabletResp  `json:"tablet"`   // 平板端设置
-	Kitchen  setting.KitchenResp `json:"kitchen"`  // 厨显端设置
-	Store    setting.Store       `json:"store"`    // 商家设置
+	Buffet     setting.Buffet     `json:"buffet"`   // 自助餐设置
+	Company    Company            `json:"company"`  // 商家信息
+	Currency   setting.Currency   `json:"currency"` // 货币单位
+	Tablet     setting.TabletResp `json:"tablet"`   // 平板端设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信
 }
 
 type TabletDeskItem struct {
@@ -67,8 +67,9 @@ type TabletDeskList struct {
 }
 
 type KitchenBase struct {
-	Kitchen setting.KitchenResp `json:"kitchen"` // 厨显端设置
-	Company Company             `json:"company"` // 商家信息
+	Kitchen    setting.KitchenResp `json:"kitchen"` // 厨显端设置
+	Company    Company             `json:"company"` // 商家信息
+	CloudBasic setting.CloudBasic  `json:"cloud"`   // 云端基础信息
 }
 
 type ProductPrinter struct {
