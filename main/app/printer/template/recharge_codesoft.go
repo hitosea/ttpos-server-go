@@ -7,23 +7,22 @@ import (
 	"ttpos-server-go/app/printer/pkg"
 )
 
-// rechargeXPrinterTemplate 图片订单打印模板
-type rechargeXPrinterTemplate struct {
+// rechargeCodesoftTemplate 图片订单打印模板
+type rechargeCodesoftTemplate struct {
 	base *printerTemplate
 }
 
-// NewRechargeXPrinterTemplate 创建新的图片订单打印模板
-func NewRechargeXPrinterTemplate(
+// NewRechargeCodesoftTemplate 创建新的图片订单打印模板
+func NewRechargeCodesoftTemplate(
 	base *printerTemplate,
-) *rechargeXPrinterTemplate {
-	return &rechargeXPrinterTemplate{
+) *rechargeCodesoftTemplate {
+	return &rechargeCodesoftTemplate{
 		base: base,
 	}
 }
 
-// GetPrintContent 图片打印
-func (t *rechargeXPrinterTemplate) GetPrintContent(
-	printerType string,
+// GetPrintContent 获取打印内容
+func (t *rechargeCodesoftTemplate) GetPrintContent(
 	order model.MemberRechargeOrder,
 ) string {
 	// 日历
@@ -39,13 +38,9 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	 */
 	width := 48
 	printer := pkg.NewPrinter(567)
+	printer.SetLineSpacing(35)
 	printer.SetAlignment(pkg.AlignLeft)
 	printer.AppendText(t.base.Translate("充值单"))
-	if printerType == constant.PrinterTypeXPrinterWifi {
-		printer.SetLineSpacing(40)
-	} else {
-		printer.SetLineSpacing(20)
-	}
 	printer.LineFeed(2)
 	printer.SetAlignment(pkg.AlignCenter)
 	printer.SetPrintModes(true, true, false)
@@ -54,17 +49,27 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	printer.LineFeed(1)
 	printer.SetPrintModes(false, false, false)
 	printer.SetCharacterSize(1, 1)
-	printer.LineFeed(2)
-	//
+	printer.LineFeed(1)
 	printer.SetLineSpacing(90)
 	printer.AppendText(t.base.PrintText(t.base.Translate("收银员"), "", cashierName, width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("时间"), "", payTime, width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("充值前"), "", t.base.GetPriceAndUnit(order.Balance), width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("本次充值"), "", t.base.GetPriceAndUnit(order.RechargeAmount), width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("赠送金额"), "", t.base.GetPriceAndUnit(order.GiftAmount), width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("赠送积分"), "", t.base.Amount(order.GiftPoint), width))
+	printer.LineFeed(1)
 	printer.AppendText(t.base.PrintText(t.base.Translate("充值后"), "", t.base.GetPriceAndUnit(order.BalanceRecharged), width))
-	printer.SetLineSpacing(70)
+	printer.LineFeed(1)
+	if t.base.CurrencyUnit == "$" && t.base.Lang == "en" {
+		printer.SetLineSpacing(70)
+	} else {
+		printer.SetLineSpacing(20)
+	}
 	// 退款
 	if order.RefundMoney > 0 {
 		printer.AppendText("------------------------------------------------")
@@ -72,17 +77,15 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款"), "", t.base.GetPriceAndUnit(order.RefundMoney), width))
 	}
 	// 合计應收：
+	printer.LineFeed(1)
 	printer.AppendText("------------------------------------------------\n")
 	printer.SetCharacterSize(2, 1)
 	printer.SetPrintModes(true, true, false)
 	printer.AppendText(t.base.PrintText(t.base.Translate("合计应收："), "", t.base.GetPriceAndUnit(order.GetReceivableAmount()), width))
 	printer.SetPrintModes(false, false, false)
 	printer.SetCharacterSize(1, 1)
-	if printerType == constant.PrinterTypeXPrinterWifi {
-		printer.SetLineSpacing(22)
-		printer.LineFeed(2)
-	}
 	printer.SetLineSpacing(70)
+	printer.LineFeed(1)
 	printer.AppendText("------------------------------------------------\n")
 	printer.SetLineSpacing(90)
 	// 支付方式
@@ -98,7 +101,7 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	printer.RestoreDefaultLineSpacing()
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
-	printer.LineFeed(7)
+	printer.LineFeed(6)
 	printer.CutPaper(true)
 
 	//
