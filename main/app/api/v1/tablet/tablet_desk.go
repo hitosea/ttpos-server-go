@@ -4,6 +4,7 @@ import (
 	"go.uber.org/zap"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
@@ -21,23 +22,34 @@ type DeskHandler struct {
 	orderSrv service.IOrderSrv
 }
 
-// GetDeskList 获取桌台列表
+// GetDeskList 处理获取桌台列表
 // @Summary 获取桌台列表
 // @Description 获取桌台列表
 // @Tags 平板端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.TabletDeskList}
+// @param data query req.DeskListReq true "列表参数"
+// @Success 200 {array} resp.DeskListWithPaginationResp "桌台列表"
+// @Failure 404 {object} nil "未找到"
 // @Router /tablet/desk/list [get]
 func (h *DeskHandler) GetDeskList(c *gin.Context) {
+	companyId := helper.GetCompanyUuid(c)
 	ctx := helper.GetContext(c)
-	list, err := h.deskSrv.GetTabletDeskList(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 绑定请求参数
+	var deskListReq req.DeskListReq
+	if err := c.ShouldBindQuery(&deskListReq); err != nil {
+		helper.HandleValidationError(c, err, deskListReq, dto.PageReqMessage)
 		return
 	}
-	helper.Success(c, list)
+	res, err := h.deskSrv.GetDeskList(ctx, companyId, deskListReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.ErrInternal)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
 }
 
 // BindDesk 绑定/换绑桌台
@@ -105,20 +117,12 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data query req.DeskInfoReq true "详情参数"
 // @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /tablet/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	// 绑定请求参数
-	var infoReq req.DeskInfoReq
-	if err := c.ShouldBindQuery(&infoReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
 	// 获取收银产品列表
-	res, err := h.deskSrv.GetDeskInfo(companyUuid, infoReq.Uuid)
+	res, err := h.deskSrv.GetDeskInfo(helper.GetCompanyUuid(c), helper.GetDeskUuid(c))
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -151,7 +155,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取可绑定的桌台
+		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取桌台列表
 		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台
 
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder) // 创建桌台订单(开桌)

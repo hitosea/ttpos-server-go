@@ -83,12 +83,13 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		return
 	}
 
-	// 桌台Uuid
-	deskUuid, _ := strconv.ParseUint(c.GetHeader("X-DESK-UUID"), 10, 64)
-
 	// 用户鉴权
-	ctx := context.NewContext(context.WithSource(claims.Source), context.WithCompanyUuid(claims.CompanyUuid))
-	company, companySetting, staff, err := authSrv.Auth(ctx, req.Authenticate{
+	ctx := context.NewContext(
+		context.WithSource(claims.Source),
+		context.WithCompanyUuid(claims.CompanyUuid),
+		context.WithDeviceUuid(claims.DeviceUuid),
+	)
+	company, companySetting, staff, desk, err := authSrv.Auth(ctx, req.Authenticate{
 		Source:      claims.Source,
 		DeviceId:    claims.DeviceId,
 		CompanyUuid: claims.CompanyUuid,
@@ -99,9 +100,6 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 			StaffUuid: claims.Assistant.StaffUuid,
 		},
 		TokenIssuedAt: claims.IssuedAt.Unix(),
-
-		DeviceUuid: claims.DeviceUuid, // 用于判断是否绑定桌台
-		DeskUuid:   deskUuid,          // 用于判断是否绑定桌台
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeAccessDenied, err)
@@ -126,6 +124,8 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	// 注入一个uuid
 
 	c.Set(jwt.RequestUuid, uuid.New().String()) // 桌台绑定的设备uuid
+
+	c.Set(jwt.DeskUuid, desk.Uuid) // 桌台Uuid，平板端绑定的桌台Uuid
 
 	c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid)) // 数据库连接
 }

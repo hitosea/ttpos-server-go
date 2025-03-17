@@ -15,7 +15,7 @@ import (
 type IDeskRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
-	GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]*model.Desk, error)
 	GetAvailableDeskList() ([]*model.Desk, error)                      // 获取所有空闲的桌台
@@ -30,8 +30,7 @@ type IDeskRepo interface {
 	CloseDesk(deskUuid uint64, reason string) error
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
-	WhereUnBind() DBOption
-	WhereIsNotDisable() DBOption
+	WhereIsDisable(isDisable int) DBOption
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -65,7 +64,7 @@ func (r *deskRepo) GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error
 }
 
 // GetClientDeskList 获取客户端桌台列表，排除逻辑删除的桌台，排除被禁用的桌台
-func (r *deskRepo) GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error) {
+func (r *deskRepo) GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error) {
 	var desks []model.Desk
 	var total int64
 
@@ -92,6 +91,10 @@ func (r *deskRepo) GetClientDeskList(status, isBuffet, pageNo, pageSize int) ([]
 		} else {
 			query = query.Where(fmt.Sprintf("%ssale_bill.is_buffet = ?", tablePrefix), 0)
 		}
+	}
+	// 平板端，筛选未绑定桌台的
+	if source == constant.SourceTablet {
+		query = query.Where(fmt.Sprintf("%sdesk.device_uuid = 0", tablePrefix))
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -242,17 +245,10 @@ func (r *deskRepo) WhereDeviceUuid(uuid uint64) DBOption {
 	}
 }
 
-// WhereIsBind 桌台绑定条件
-func (r *deskRepo) WhereUnBind() DBOption {
+// WhereIsDisable 开关开启，桌台未被禁用
+func (r *deskRepo) WhereIsDisable(isDisable int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("device_uuid = 0")
-	}
-}
-
-// WhereIsNotDisable 开关开启，桌台未被禁用
-func (r *deskRepo) WhereIsNotDisable() DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("is_disable = 0")
+		return db.Where("is_disable = ?", isDisable)
 	}
 }
 

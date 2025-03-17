@@ -67,6 +67,31 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 	helper.Success(c, updateInfo)
 }
 
+// EditSetting 修改设置
+// @Summary 修改设置
+// @Description 修改设置
+// @Tags 平板端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.EditSettingReq true "修改设置参数"
+// @Success 200 {object} dto.Response
+// @Router /tablet/setting [post]
+func (h *BaseHandler) EditSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.EditSettingReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.HandleValidationError(c, err, settingReq, req.UpdateAcceptOrderSettingMessage)
+		return
+	}
+	err := h.deskSrv.ChangeBindDesk(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // GetBase 基本信息
 // @Summary 基本信息
 // @Description 基本信息
@@ -113,5 +138,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/base", wrapper.GetBase)                                     // 获取基本信息
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
+		privateApi.POST("/setting", wrapper.EditSetting)                             // 修改设置(修改机器备注和换绑桌台)
 	}
 }

@@ -34,7 +34,4 @@ type Authenticate struct {
 	Assistant   Assistant
 
 	TokenIssuedAt int64
-
-	DeviceUuid uint64
-	DeskUuid   uint64
 }
