@@ -52,15 +52,15 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// BindDesk 绑定/换绑桌台
-// @Summary 绑定/换绑桌台
-// @Description 绑定/换绑桌台
+// BindDesk 绑定桌台
+// @Summary 绑定桌台
+// @Description 绑定桌台
 // @Tags 平板端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.BindDeskReq true "绑定/换绑桌台请求参数"
-// @Success 200 {object} dto.Response
+// @param data body req.BindDeskReq true "绑定桌台请求参数"
+// @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Router /tablet/desk/bind [post]
 func (h *DeskHandler) BindDesk(c *gin.Context) {
 	var bindDeskReq req.BindDeskReq
@@ -68,12 +68,12 @@ func (h *DeskHandler) BindDesk(c *gin.Context) {
 		helper.HandleValidationError(c, err, bindDeskReq, req.LoginRequestMessage)
 		return
 	}
-	err := h.deskSrv.BindDesk(helper.GetContext(c), bindDeskReq)
+	data, err := h.deskSrv.BindDesk(helper.GetContext(c), bindDeskReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "绑定桌台成功")
+	helper.Success(c, data, "绑定桌台成功")
 }
 
 // CreateDeskOrder 处理创建开台
