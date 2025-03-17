@@ -57,10 +57,9 @@ func (t *rechargeImgTemplate) GetPrintContent(
 		pkg.ColumnConfig{Text: t.base.Translate("时间"), Width: 350, Align: pkg.AlignLeft},
 		pkg.ColumnConfig{Text: payTime, Width: 0, Align: pkg.AlignRight},
 	)
-	// todo 暂时没有值
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("充值前"), Width: 350, Align: pkg.AlignLeft},
-		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(0), Width: 0, Align: pkg.AlignRight},
+		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(order.Balance), Width: 0, Align: pkg.AlignRight},
 	)
 	// 本次充值
 	img.PrintInColumns(
@@ -78,10 +77,9 @@ func (t *rechargeImgTemplate) GetPrintContent(
 		pkg.ColumnConfig{Text: t.base.Amount(order.GiftPoint), Width: 0, Align: pkg.AlignRight},
 	)
 	img.SetTextLineHeight(35)
-	// todo 暂时没有值
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("充值后"), Width: 350, Align: pkg.AlignLeft},
-		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(0), Width: 0, Align: pkg.AlignRight},
+		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(order.BalanceRecharged), Width: 0, Align: pkg.AlignRight},
 	)
 	// 退款
 	if order.RefundMoney > 0 {
@@ -120,7 +118,7 @@ func (t *rechargeImgTemplate) GetPrintContent(
 		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(order.ChargeDue), Width: 0, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: t.base.Amount(order.ChargeDue), Width: 0, Align: pkg.AlignRight},
 			)
 		}
 	}

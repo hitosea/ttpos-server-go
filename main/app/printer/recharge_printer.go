@@ -116,34 +116,28 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	}
 
 	// 图片打印
-	if p.printerSetting.PrintMethod == "1" {
-		return template.NewRechargeImgTemplate(base).GetPrintContent(
+	if p.printerSetting.PrintMethod == "2" {
+		return template.NewRechargeImgTemplate(base).GetPrintContent(order)
+	}
+
+	printerType = constant.PrinterTypeXPrinterLan
+
+	/* *
+	* Compax 收银打印机 80mm 自带
+	 */
+	// if printerType == constant.PrinterTypeCashierCompax {
+	// 	return template.NewRechargeCompaxTemplate(base).GetPrintContent(order)
+	// }
+
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(
+			printerType,
 			order,
 		)
 	}
-
-	// /* *
-	// * Compax 收银打印机 80mm 自带
-	//  */
-	// if printerType == constant.PrinterTypeCashierCompax {
-	// 	return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-	// 		printType,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
-
-	// /* *
-	//  * 芯烨打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-	// 	return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		printType,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
 
 	// /* *
 	// * 商米打印机
@@ -158,16 +152,11 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	// 	)
 	// }
 
-	// /* *
-	// * CODESOFT 打印机
-	//  */
+	/* *
+	* CODESOFT 打印机
+	 */
 	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-	// 	return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-	// 		printType,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
+	// 	return template.NewRechargeCodesoftTemplate(base).GetPrintContent(order)
 	// }
 
 	return ""
