@@ -2469,7 +2469,12 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 获取自助餐顾客
 	customerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&customerTypes, req.BuffetCustomerTypes)
-	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, customerTypes, saleBill.SaleBillSetting)
+	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(
+		buffetList,
+		req.BuffetUuids,
+		customerTypes,
+		saleBill.SaleBillSetting,
+	)
 
 	// 修改
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -2492,7 +2497,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 				saleBill.BuffetDuration = 0
 				saleBill.BuffetStartTime = time.Now().Unix()
 			} else {
-				// 重新计算开启时间*865 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
+				// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
 				if saleBill.BuffetIsTimeOut() {
 					saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
 				}

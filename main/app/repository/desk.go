@@ -92,6 +92,7 @@ func (r *deskRepo) GetClientDeskList(source string, status, isBuffet, pageNo, pa
 			query = query.Where(fmt.Sprintf("%ssale_bill.is_buffet = ?", tablePrefix), 0)
 		}
 	}
+
 	// 平板端，筛选未绑定桌台的
 	if source == constant.SourceTablet {
 		query = query.Where(fmt.Sprintf("%sdesk.device_uuid = 0", tablePrefix))
