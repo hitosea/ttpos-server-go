@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/freetype"
+	"github.com/golang/freetype/truetype"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -14,8 +15,6 @@ import (
 	"time"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/captcha/fonts"
-
-	"github.com/golang/freetype/truetype"
 )
 
 // Captcha 结构体用于存储验证码相关的状态
@@ -210,7 +209,12 @@ func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
 	// 为每个字符生成随机位置并绘制
 	for i, char := range chars {
 		xPos := charWidth*(i+1) - charWidth/2 + rand.Intn(8) - 4
-		yPos := height/2 + rand.Intn(8) - 4 + 15
+		// 调整 yPos 以使字符居中
+		yPos := height/2 + rand.Intn(8) - 8
+
+		// 计算字符的基线偏移
+		fontSize := c.PointToFixed(24) // 假设字体大小为 24
+		yPos += int(fontSize>>6) / 2   // 调整基线位置
 
 		pt := freetype.Pt(xPos, yPos)
 		_, err := c.DrawString(string(char), pt)
