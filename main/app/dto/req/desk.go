@@ -107,13 +107,15 @@ func (req *DeskOrderCreateReq) ValidateCreateDeskOrderReq() error {
 	return nil
 }
 
-// BindDeskReq 平板绑定/换绑桌台请求参数
+// BindDeskReq 平板绑定桌台请求参数
 type BindDeskReq struct {
-	DeviceId    string `json:"device_id" binding:"required"`
-	Brand       string `json:"brand"`
-	DeskUuid    uint64 `json:"desk_uuid" binding:"required"`
-	OldDeskUuid uint64 `json:"old_desk_uuid"`
-	Remark      string `json:"remark"`
+	DeskUuid uint64 `json:"desk_uuid" binding:"required"` // 桌台Uuid
+}
+
+// EditSettingReq 修改设置请求参数
+type EditSettingReq struct {
+	DeskUuid uint64 `json:"desk_uuid" binding:"required"` // 桌台Uuid
+	Remark   string `json:"remark"`                       // 机器备注
 }
 
 // ChangeDeskReq 切换桌台请求参数

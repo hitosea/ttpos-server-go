@@ -28,8 +28,7 @@ func NewStatementOrderCompaxTemplate(
 
 // GetPrintnrContent 获取打印内容
 func (t *statementOrderCompaxTemplate) GetPrintContent(
-	printerType string,
-	printType int,
+	printType int, //  来源 - 发票或其他
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -60,8 +59,11 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 
 	// 宽度
 	width := 48
-	// 左侧宽度
 	leftWidth := 28
+	currencyWidth := width
+	if t.base.CurrencyUnit == "¥" {
+		currencyWidth = width - 1
+	}
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
@@ -149,7 +151,6 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
-		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
 		} else if printType == constant.PrinterTemplatePreBilling {
@@ -245,7 +246,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			buffetNameText,
 			fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num),
 			t.base.GetPriceAndUnit(discountPrice),
-			width,
+			currencyWidth,
 			leftWidth,
 			centerWidth,
 			rightWidth,
@@ -266,7 +267,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			delay.Name,
 			fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), delay.Num),
 			t.base.GetPriceAndUnit(discountPrice),
-			width,
+			currencyWidth,
 			leftWidth,
 			centerWidth,
 			rightWidth,
@@ -296,7 +297,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			productName,
 			fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num),
 			t.base.GetPriceAndUnit(productTotalPrice),
-			width,
+			currencyWidth,
 			leftWidth,
 			centerWidth,
 			rightWidth,
@@ -319,10 +320,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
 			"",
 			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(totalProductPrice),
-			width,
-			leftWidth,
-			centerWidth,
-			rightWidth,
+			currencyWidth,
 		))
 		printer.LineFeed()
 	} else {
@@ -351,7 +349,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 
 	// 未免单 - 优惠折扣
-	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
+	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 {
@@ -415,7 +413,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 免单金额
-	if saleOrder.IsFree != 0 {
+	if saleOrder.IsFreeSaleOrder() {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
 		printer.LineFeed(1)
 	}
@@ -426,12 +424,9 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 
 	// 应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)
+	finalPrice := saleOrder.GetPrintReceivablePrice()
 	printer.AppendText(t.base.PrintText(t.base.Translate("合计应收"), "", t.base.GetPriceAndUnit(finalPrice), width, 34))
 	printer.SetAlignment(pkg.AlignLeft)
 	printer.SetPrintModes(false, false, false)
@@ -462,6 +457,16 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 
 	// 支付方式
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
+		if saleOrder.IsFreeSaleOrder() {
+			printer.LineFeed()
+			printer.SetLineSpacing(90)
+			printer.AppendText("------------------------------------------------\n")
+			printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", t.base.Translate("免单"), width, 20, 0, 28))
+			printer.LineFeed()
+			printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(0), width, 34))
+			printer.SetLineSpacing(30)
+			printer.LineFeed()
+		}
 		if len(saleOrder.PaymentOrders) > 0 {
 			printer.LineFeed()
 			printer.SetLineSpacing(90)
@@ -494,7 +499,6 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		if invoiceInfo.HasContent() {
 			printer.AppendText("------------------------------------------------\n")
 			printer.SetLineSpacing(48)
-			printer.LineFeed(1)
 			if invoiceInfo.CompanyName != "" {
 				printer.AppendText(t.base.Translate("公司名称") + ": " + invoiceInfo.CompanyName)
 				printer.LineFeed(1)
@@ -509,7 +513,6 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			}
 			if invoiceInfo.CompanyPhone != "" {
 				printer.AppendText(t.base.Translate("公司电话") + ": " + invoiceInfo.CompanyPhone)
-				printer.LineFeed(1)
 			}
 		}
 	}

@@ -292,19 +292,11 @@ definitions:
     type: object
   req.BindDeskReq:
     properties:
-      brand:
-        type: string
       desk_uuid:
+        description: 桌台Uuid
         type: integer
-      device_id:
-        type: string
-      old_desk_uuid:
-        type: integer
-      remark:
-        type: string
     required:
     - desk_uuid
-    - device_id
     type: object
   req.BuffetCustomerType:
     properties:
@@ -423,6 +415,17 @@ definitions:
       remark:
         description: '备注: 最小空字符串,最大50字符'
         type: string
+    type: object
+  req.EditSettingReq:
+    properties:
+      desk_uuid:
+        description: 桌台Uuid
+        type: integer
+      remark:
+        description: 机器备注
+        type: string
+    required:
+    - desk_uuid
     type: object
   req.InstantOrderFreeReq:
     properties:
@@ -4566,22 +4569,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.TabletResp'
         description: 平板端设置
-    type: object
-  resp.TabletDeskItem:
-    properties:
-      desk_no:
-        description: 桌台编号
-        type: string
-      uuid:
-        description: 桌台uuid
-        type: integer
-    type: object
-  resp.TabletDeskList:
-    properties:
-      list:
-        items:
-          $ref: '#/definitions/resp.TabletDeskItem'
-        type: array
     type: object
   resp.UnprocessedCallItem:
     properties:
@@ -11126,7 +11113,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 取消订单成功
+          description: 删除订单成功
         "404":
           description: 未找到
       security:
@@ -11251,6 +11238,62 @@ paths:
       security:
       - JwtToken: []
       summary: 获取订单列表
+      tags:
+      - 商家端.订单
+  /shop/order/return:
+    get:
+      consumes:
+      - application/json
+      description: 获取退款信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单UUID。退款都是针对子单进行退款
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderReturnInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取退款信息
+      tags:
+      - 商家端.订单
+    post:
+      consumes:
+      - application/json
+      description: 退款订单
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退款订单成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 退款订单
       tags:
       - 商家端.订单
   /shop/recharge_order/cancel:
@@ -11532,12 +11575,6 @@ paths:
       consumes:
       - application/json
       description: 获取桌台详情
-      parameters:
-      - description: 桌台uuid
-        in: query
-        name: uuid
-        required: true
-        type: integer
       produces:
       - application/json
       responses:
@@ -11557,18 +11594,37 @@ paths:
       consumes:
       - application/json
       description: 获取桌台列表
+      parameters:
+      - description: '是否是自助餐: -1=全都、0=否、1=是'
+        in: query
+        name: isBuffet
+        type: integer
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 桌台列表
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.TabletDeskList'
-              type: object
+            items:
+              $ref: '#/definitions/resp.DeskListWithPaginationResp'
+            type: array
+        "404":
+          description: 未找到
       security:
       - JwtToken: []
       summary: 获取桌台列表
@@ -11728,6 +11784,30 @@ paths:
       summary: 获取产品列表
       tags:
       - 平板端.产品
+  /tablet/setting:
+    post:
+      consumes:
+      - application/json
+      description: 修改设置
+      parameters:
+      - description: 修改设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改设置
+      tags:
+      - 平板端.设置
   /tablet/verify_advanced_password:
     post:
       consumes:

@@ -10179,7 +10179,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "取消订单成功"
+                        "description": "删除订单成功"
                     },
                     "404": {
                         "description": "未找到"
@@ -10366,6 +10366,100 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.OrderListPaginationResp"
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/shop/order/return": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取退款信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "获取退款信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID。退款都是针对子单进行退款",
+                        "name": "saleOrderUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderReturnInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "退款订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "退款订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "退款订单成功"
                     },
                     "404": {
                         "description": "未找到"
@@ -10847,15 +10941,6 @@ const docTemplate = `{
                     "平板端.桌台"
                 ],
                 "summary": "获取桌台详情",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "桌台uuid",
-                        "name": "uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "桌台详情",
@@ -10887,24 +10972,47 @@ const docTemplate = `{
                     "平板端.桌台"
                 ],
                 "summary": "获取桌台列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "是否是自助餐: -1=全都、0=否、1=是",
+                        "name": "isBuffet",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "桌台列表",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.TabletDeskList"
-                                        }
-                                    }
-                                }
-                            ]
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/resp.DeskListWithPaginationResp"
+                            }
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -11153,6 +11261,45 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/tablet/setting": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.设置"
+                ],
+                "summary": "修改设置",
+                "parameters": [
+                    {
+                        "description": "修改设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -11645,24 +11792,12 @@ const docTemplate = `{
         "req.BindDeskReq": {
             "type": "object",
             "required": [
-                "desk_uuid",
-                "device_id"
+                "desk_uuid"
             ],
             "properties": {
-                "brand": {
-                    "type": "string"
-                },
                 "desk_uuid": {
+                    "description": "桌台Uuid",
                     "type": "integer"
-                },
-                "device_id": {
-                    "type": "string"
-                },
-                "old_desk_uuid": {
-                    "type": "integer"
-                },
-                "remark": {
-                    "type": "string"
                 }
             }
         },
@@ -11829,6 +11964,22 @@ const docTemplate = `{
                 },
                 "remark": {
                     "description": "备注: 最小空字符串,最大50字符",
+                    "type": "string"
+                }
+            }
+        },
+        "req.EditSettingReq": {
+            "type": "object",
+            "required": [
+                "desk_uuid"
+            ],
+            "properties": {
+                "desk_uuid": {
+                    "description": "桌台Uuid",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "机器备注",
                     "type": "string"
                 }
             }
@@ -17926,30 +18077,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
-                }
-            }
-        },
-        "resp.TabletDeskItem": {
-            "type": "object",
-            "properties": {
-                "desk_no": {
-                    "description": "桌台编号",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "桌台uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.TabletDeskList": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.TabletDeskItem"
-                    }
                 }
             }
         },

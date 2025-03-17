@@ -2,6 +2,7 @@ package printer_tasks
 
 import (
 	"log"
+	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -81,19 +82,36 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 	for _, printerLog := range printerLogList {
 		num := printerLog.Num + 1
 		if printerLog.Printer != nil {
-			// 执行打印
-			err := pkg.PrintTicket(printerLog.Printer.GetConfigJson().IP, printerLog.DecompressData(), printerLog.PrintMethod)
-			if err == nil {
-				// 打印成功
-				printerLog.Reason = "打印成功"
-				printerLog.Status = 2
-			} else {
-				// 打印失败
-				printerLog.Reason = err.Error()
-				if num >= 5 {
-					printerLog.Status = 0
+			copies := printerLog.Printer.Copies
+			if copies == 0 {
+				copies = 1
+			}
+			content := printerLog.DecompressData()
+			configJson := printerLog.Printer.GetConfigJson()
+			for i := uint(0); i < copies; i++ {
+				// 执行打印
+				var err error
+				if slices.Contains([]string{
+					constant.PrinterTypeSunmiLan,
+					constant.PrinterTypeSunmiCloud,
+					constant.PrinterTypeCashierSunmi,
+				}, printerLog.Printer.PrinterType.Key) {
+					err = pkg.PrintSunmiTicket(configJson, content)
 				} else {
-					printerLog.Status = 1
+					err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)
+				}
+				if err == nil {
+					// 打印成功
+					printerLog.Reason = "打印成功"
+					printerLog.Status = 2
+				} else {
+					// 打印失败
+					printerLog.Reason = err.Error()
+					if num >= 5 {
+						printerLog.Status = 0
+					} else {
+						printerLog.Status = 1
+					}
 				}
 			}
 		} else {

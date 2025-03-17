@@ -165,7 +165,6 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
-		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
 		} else if printType == constant.PrinterTemplatePreBilling {
@@ -428,7 +427,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 
 	// 未免单 - 优惠折扣
-	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
+	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 {
@@ -492,7 +491,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 免单金额
-	if saleOrder.IsFree != 0 {
+	if saleOrder.IsFreeSaleOrder() {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
 		printer.LineFeed(1)
 	}
@@ -504,12 +503,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 
 	// 应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)
+	finalPrice := saleOrder.GetPrintReceivablePrice()
 	printer.AppendText(t.base.PrintText(t.base.Translate("合计应收"), "", t.base.GetPriceAndUnit(finalPrice), width, 34))
 	if printerType != PrinterTypeXPrinterLan {
 		printer.SetLineSpacing(30)
@@ -545,6 +541,14 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 
 	// 支付方式
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
+		if saleOrder.IsFreeSaleOrder() {
+			printer.LineFeed()
+			printer.SetLineSpacing(90)
+			printer.AppendText("------------------------------------------------\n")
+			printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", t.base.Translate("免单"), width, 20, 0, 28))
+			printer.LineFeed()
+			printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(0), width, 34))
+		}
 		if len(saleOrder.PaymentOrders) > 0 {
 			printer.LineFeed()
 			printer.SetLineSpacing(90)

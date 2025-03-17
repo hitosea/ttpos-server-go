@@ -322,6 +322,11 @@ func (model *SaleOrder) IsPartialPay() bool {
 	return len(model.PaymentOrders) > 1
 }
 
+// 判断销售订单是否已支付
+func (model *SaleOrder) IsPaid() bool {
+	return model.Status == constant.SaleOrderStatusFinish
+}
+
 type FinalAmount struct {
 	PaymentAmount        float64 // 已支付的金额
 	ChangeAmount         float64 // 找零金额

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -16,9 +17,6 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
-
-	"github.com/jinzhu/copier"
-	"gorm.io/gorm"
 )
 
 // IDeskSrv 定义收银服务接口
@@ -33,8 +31,8 @@ type IDeskSrv interface {
 	MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) // 合并桌台
 	IsCellCloseDesk(ctx context.Context, deskUuid uint64) (model.Desk, *resp.CartProductList, error)                    // 判断桌台是否可以关闭
 	IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (*resp.CartProductList, error)                         // 判断订单是否可以关闭
-	GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error)                                                 // 平板获取桌台列表
 	BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error                                                    // 平板端绑定桌台
+	ChangeBindDesk(ctx context.Context, changeBindDeskReq req.EditSettingReq) error                                     // 平板端换绑定桌台
 }
 
 // deskSrv 收银服务结构体
@@ -101,7 +99,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 // GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
-	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(req.Status, req.IsBuffet, req.PageNo, req.PageSize)
+	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(ctx.GetSource(), req.Status, req.IsBuffet, req.PageNo, req.PageSize)
 	if err != nil {
 		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
 	}
@@ -649,72 +647,87 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	return resp, &deskMergeCheckRes, nil
 }
 
-// GetTabletDeskList 平板获取桌台列表
-func (s *deskSrv) GetTabletDeskList(ctx context.Context) (resp.TabletDeskList, error) {
-	deskRepo := repository.NewDeskRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	desks, err := deskRepo.GetDesks(deskRepo.WhereIsNotDisable(), deskRepo.WhereUnBind())
-
-	if err != nil {
-		return resp.TabletDeskList{}, errors.WithMessage(err, "获取桌台列表失败")
-	}
-	list := make([]resp.TabletDeskItem, 0, len(desks))
-	for _, desk := range desks {
-		var item resp.TabletDeskItem
-		copier.Copy(&item, desk)
-		list = append(list, item)
-	}
-	return resp.TabletDeskList{
-		List: list,
-	}, nil
-}
-
-// BindDesk 平板获取桌台列表
+// BindDesk 平板绑定桌台
 func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) error {
 	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
-		DeviceId:         bindDeskReq.DeviceId,
-		Brand:            bindDeskReq.Brand,
+		DeviceId:         ctx.GetDeviceSn(),
 		Source:           constant.SourceTablet,
 		FinallyLoginUuid: ctx.GetStaffUuid(),
 		CompanyUuid:      ctx.GetCompanyUuid(),
-		Remark:           bindDeskReq.Remark,
 	})
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 当前设备已经绑定桌台
+	deskRepo := repository.NewDeskRepo(db)
+	desk, _ := deskRepo.GetDesk(deskRepo.WhereUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
+	if desk.Uuid != 0 {
+		return errors.WithMessage(errors.ErrInternal, "已绑定桌台")
+	}
+	// 桌台已被占用
+	desk, err = deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
+	if err != nil || desk.Uuid == 0 {
+		return errors.WithMessage(errors.ErrInternal, "桌台不存在")
+	}
+	if desk.DeviceUuid > 0 && desk.DeviceUuid != deviceUuid {
+		return errors.New("桌台已被占用")
+	}
+	// 绑定桌台
+	if err := deskRepo.UpdateDeskByMap(desk.Uuid, map[string]any{"device_uuid": deviceUuid}); err != nil {
+		return errors.WithMessage(errors.New("绑定桌台失败"))
+	}
+	return nil
+}
 
-	if bindDeskReq.DeskUuid != bindDeskReq.OldDeskUuid {
-		db := s.dbm.GetDB(ctx.GetCompanyUuid())
-		deskRepo := repository.NewDeskRepo(db)
-		desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid))
-		if desk.Uuid == 0 {
-			return errors.New("桌台不存在")
+// ChangeBindDesk 平板换绑定桌台
+func (s *deskSrv) ChangeBindDesk(ctx context.Context, changeBindDeskReq req.EditSettingReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	deviceUuid := ctx.GetDeviceUuid()
+	updateRemark := func(tx *gorm.DB, remark string) error {
+		if remark != "" {
+			return repository.NewDeviceRepo(tx).UpdateDevice(deviceUuid, map[string]any{"remark": remark})
 		}
-		if err != nil {
-			return errors.WithMessage(err, "桌台不存在")
+		return nil
+	}
+	// 当前设备未绑定桌台，不能换绑
+	deskRepo := repository.NewDeskRepo(db)
+	oldDesk, _ := deskRepo.GetDesk(deskRepo.WhereDeviceUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
+	if oldDesk.Uuid == 0 {
+		return errors.WithMessage(errors.ErrInternal, "未绑定桌台")
+	}
+	// 已绑定的桌台和传递桌台一样，不做操作
+	if oldDesk.Uuid == changeBindDeskReq.DeskUuid {
+		if err := updateRemark(db, changeBindDeskReq.Remark); err != nil {
+			return errors.WithMessage(errors.ErrInternal, "修改机器备注失败: "+err.Error())
 		}
-		if desk.DeviceUuid > 0 && desk.DeviceUuid != deviceUuid {
-			return errors.New("桌台已被占用")
+		return nil
+	}
+	// 新桌台已被占用
+	newDesk, err := deskRepo.GetDesk(deskRepo.WhereUuid(changeBindDeskReq.DeskUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
+	if err != nil || newDesk.Uuid == 0 {
+		return errors.WithMessage(errors.New("桌台不存在"))
+	}
+	if newDesk.DeviceUuid > 0 {
+		return errors.New("桌台已被占用")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := updateRemark(tx, changeBindDeskReq.Remark); err != nil {
+			return err
 		}
-		err = db.Transaction(func(tx *gorm.DB) error {
-			deskRepo = repository.NewDeskRepo(tx)
-			// 解绑旧的桌台（解绑当前设备绑定了非选定的其他桌台）
-			if err := deskRepo.UnbindDesk(bindDeskReq.DeskUuid, deviceUuid); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 绑定新的桌台
-			if err := deskRepo.UpdateDeskByMap(desk.Uuid, map[string]any{"device_uuid": deviceUuid}); err != nil {
-				return errors.WithMessage(err)
-			}
-			if bindDeskReq.OldDeskUuid != 0 { // 解绑旧桌台
-				if err := deskRepo.UpdateDeskByMap(bindDeskReq.OldDeskUuid, map[string]any{"device_uuid": 0}); err != nil {
-					return errors.WithMessage(err)
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return errors.WithMessage(err, "绑定桌台失败")
+		deskRepo = repository.NewDeskRepo(tx)
+		// 绑定桌台
+		if err := deskRepo.UpdateDeskByMap(newDesk.Uuid, map[string]any{"device_uuid": deviceUuid}); err != nil {
+			return err
 		}
+		// 解绑桌台
+		if err := deskRepo.UpdateDeskByMap(oldDesk.Uuid, map[string]any{"device_uuid": 0}); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(errors.ErrInternal, err.Error())
 	}
 	return nil
 }

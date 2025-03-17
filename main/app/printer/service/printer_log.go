@@ -48,6 +48,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	// 如果是商米云打印 - 就都队列打印
 	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
 		printerLogData.Type = constant.PrinterLogTypeDefault
+		printerLogData.FirstExecution = 0
 	}
 	// 打印机不存在
 	if printer.PrinterType == "" {

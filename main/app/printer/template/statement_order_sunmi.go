@@ -72,6 +72,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		} else {
 			printer.AppendText(t.base.Translate("结账单"))
 		}
+		printer.LineFeed(1)
 		if isOneself {
 			printer.SetLineSpacing(20)
 		} else {
@@ -396,7 +397,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 
 	// 未免单 - 优惠折扣
-	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
+	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 {
@@ -460,7 +461,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 免单金额
-	if saleOrder.IsFree != 0 && saleOrder.Amount > 0 {
+	if saleOrder.IsFreeSaleOrder() && saleOrder.Amount > 0 {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
 		printer.LineFeed(1)
 	}
@@ -478,17 +479,12 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		[]int{280, pkg.AlignLeft, 0},
 		[]int{0, pkg.AlignRight, 0},
 	)
-
 	// 应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)
 	printer.PrintInColumns(
 		t.base.Translate("合计应收"),
-		t.base.GetPriceAndUnit(finalPrice),
+		t.base.GetPriceAndUnit(saleOrder.GetPrintReceivablePrice()),
 	)
 	printer.SetPrintModes(false, false, false)
 	printer.SetLineSpacing(20)
@@ -501,7 +497,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
 		printer.LineFeed(2)
-		for key, percentage := range saleOrder.GetPercentageList() {
+		percentageList := saleOrder.GetPercentageList()
+		for key, percentage := range percentageList {
 			taxRate := percentage["TaxRate"]
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 			totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
@@ -516,7 +513,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 					t.base.Amount(totalPrice)+" ("+t.base.Amount(taxFee)+")",
 				)
 			}
-			if key != len(saleOrder.GetPercentageList())-1 {
+			if key != len(percentageList)-1 {
 				printer.LineFeed()
 			}
 		}
@@ -528,20 +525,27 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignLeft)
 	printer.SetLineSpacing(45)
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
-		if len(saleOrder.PaymentOrders) > 0 {
-			printer.LineFeed()
-			printer.SetLineSpacing(90)
-			printer.AppendText("------------------------------------------------\n")
-			printer.SetupColumns(
-				[]int{320, pkg.AlignLeft, 0},
-				[]int{0, pkg.AlignRight, 0},
+		printer.AppendText("------------------------------------------------\n")
+		printer.SetupColumns(
+			[]int{320, pkg.AlignLeft, 0},
+			[]int{0, pkg.AlignRight, 0},
+		)
+		if saleOrder.IsFreeSaleOrder() {
+			printer.PrintInColumns(
+				t.base.Translate("支付方式"),
+				t.base.Translate("免单"),
 			)
+			printer.PrintInColumns(
+				t.base.Translate("实收金额"),
+				t.base.GetPriceAndUnit(0),
+			)
+		}
+		if len(saleOrder.PaymentOrders) > 0 {
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.PrintInColumns(
 					t.base.Translate("支付方式"),
 					paymentOrder.PaymentMethodName,
 				)
-				printer.LineFeed()
 				printer.PrintInColumns(
 					t.base.Translate("实收金额"),
 					t.base.GetPriceAndUnit(paymentOrder.Amount),

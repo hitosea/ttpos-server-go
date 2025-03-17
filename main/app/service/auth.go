@@ -26,16 +26,16 @@ import (
 )
 
 type IAuthSrv interface {
-	Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)                                     // 登录
-	Logout(ctx context.Context) error                                                                             // 退出登录
-	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                    // 收银端基本信息
-	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                // 点餐助手端基本信息
-	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                      // 平板端基本信息
-	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                    // 厨显端基本信息
-	Auth(ctx context.Context, authReq req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) // 鉴权
-	AuthDesk(ctx context.Context, qrcodeToken string) error                                                       // 鉴权桌台
-	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                               // 点餐助手绑定收银机
-	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                  // 获取在线收银机
+	Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)                                              // 登录
+	Logout(ctx context.Context) error                                                                                      // 退出登录
+	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                             // 收银端基本信息
+	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                         // 点餐助手端基本信息
+	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                               // 平板端基本信息
+	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                             // 厨显端基本信息
+	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
+	AuthDesk(ctx context.Context, qrcodeToken string) error                                                                // 鉴权桌台
+	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                                        // 点餐助手绑定收银机
+	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
 }
 
 func NewAuthSrv(
@@ -502,25 +502,26 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 }
 
 // Auth 鉴权
-func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, error) {
+func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) {
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
 		staff          model.Staff
+		desk           model.Desk
 		db             = s.dbm.GetDB(auth.CompanyUuid)
 	)
 
 	staffRepo := repository.NewStaffRepo(db)
 	staff = staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
-		return company, companySetting, staff, errors.New("用户不存在")
+		return company, companySetting, staff, desk, errors.New("用户不存在")
 	}
 	// 修改密码后，token失效
 	if staff.PasswordChangeTime > auth.TokenIssuedAt {
-		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenInvalid, "无效的token")
+		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "无效的token")
 	}
 	if staff.DeleteTime != 0 {
-		return company, companySetting, staff, errors.New("用户被删除")
+		return company, companySetting, staff, desk, errors.New("用户被删除")
 	}
 	if staff.Company != nil {
 		company = *staff.Company
@@ -529,13 +530,13 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		}
 	}
 	if company.Uuid == 0 || companySetting.Uuid == 0 {
-		return company, companySetting, staff, errors.New("未找到绑定的商家，请确认登录信息")
+		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if company.IsExpired() {
-		return company, companySetting, staff, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if company.IsException() {
-		return company, companySetting, staff, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
+		return company, companySetting, staff, desk, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
 	}
 	// 验证设备是否绑定
 	deviceId := auth.DeviceId
@@ -543,20 +544,19 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		deviceId = auth.Assistant.DeviceId
 	}
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
-		return company, companySetting, staff, apperrors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
+		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
-
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
 		{
 			// 检查收银是否开启
 			if !s.isCashierOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, errors.New("收银用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.New("收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
 			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
 			if err != nil {
-				return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
+				return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// ToDo 记得开放
 			//if !slices.Contains(permissions, urlPath) {
@@ -569,31 +569,31 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				deviceRepo := repository.NewDeviceRepo(db)
 				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
 				if cashierDevice.Uuid == 0 {
-					return company, companySetting, staff, errors.New("收银员设备已解绑，请重新绑定")
+					return company, companySetting, staff, desk, errors.New("收银员设备已解绑，请重新绑定")
 				}
 				if cashierDevice.FinallyLoginUuid == 0 || auth.Assistant.StaffUuid == 0 {
-					return company, companySetting, staff, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
+					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
 				}
 			}
 			// 检查桌台功能是否开启
 			if !s.isTableOpen(ctx) {
-				return company, companySetting, staff, errors.New("桌台用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.New("桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
 		if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
 			deskRepo := repository.NewDeskRepo(db)
-			_, err := deskRepo.GetDesk(deskRepo.WhereUuid(auth.DeskUuid), deskRepo.WhereDeviceUuid(auth.DeviceUuid))
+			var err error
+			desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
 			if err != nil {
-				return company, companySetting, staff, errors.New("桌台未绑定")
+				return company, companySetting, staff, desk, errors.New("桌台未绑定")
 			}
 		}
 		if companySetting.IsOpenTablet != 1 {
-			return company, companySetting, staff, errors.New("当前未开启平板点餐功能，请联系销售代表")
+			return company, companySetting, staff, desk, errors.New("当前未开启平板点餐功能，请联系销售代表")
 		}
 	}
-
-	return company, companySetting, staff, nil
+	return company, companySetting, staff, desk, nil
 }
 
 func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
