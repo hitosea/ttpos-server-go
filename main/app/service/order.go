@@ -4647,14 +4647,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleOrderUuid, req.SaleBillUuid)
 	fmt.Println("finish model.NewWarehouseOutForm(decreaseStockList): ", utils.ToJsonString(warehouseOutForm))
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 创建出库单
-		fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord")
-		if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-			return errors.WithMessage(err)
-		}
-		// 创建出库单记录
-		if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-			return errors.WithMessage(err)
+		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
+			// 创建出库单
+			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord")
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 创建出库单记录
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		// 更新该销售订单的所有出库单记录为已出库
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
