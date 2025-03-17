@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -123,7 +124,11 @@ func (p *Printers) httpPost(path string, body map[string]interface{}) (map[strin
 	req.Header.Set("Source", "openapi")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	// 创建一个自定义的Transport，强制使用HTTP/1.1
+	transport := &http.Transport{
+		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	}
+	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -931,7 +936,7 @@ func (p *Printers) DiffuseDither(srcData []byte, width, height int) {
 			}
 			b1++
 
-			// 移动掩码
+			// 移动或重置掩码
 			if mask == 1 {
 				q++
 				mask = 0x80

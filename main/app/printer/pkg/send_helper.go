@@ -2,31 +2,115 @@ package pkg
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"regexp"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
 	"unicode"
 
+	"github.com/google/uuid"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/korean"
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
-// PrintTicket 打印
-func PrintTicket(printerIP string, content string, printMethod int) error {
-	if printMethod == constant.Yes {
-		return ExecutePrinting(printerIP, content)
+// PrintSunmiTicket 商米打印
+func PrintSunmiTicket(config model.PrinterConfigJson, content string) error {
+	printer := NewPrinter(567, config.APP_ID, config.APP_KEY)
+	// 云打印
+	if config.SN != "" && config.APP_ID != "" && config.APP_KEY != "" {
+		printer.orderData = content
+		res, err := printer.PushContent(config.SN, fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(uniqid()))[:8]), 1, 1, "", 1)
+		if err != nil {
+			fmt.Println("请求错误", err)
+			return fmt.Errorf("请求错误")
+		}
+
+		// 获取code
+		var code int
+		switch v := res["code"].(type) {
+		case int:
+			code = v
+		case float64:
+			code = int(v)
+		default:
+			if v != nil {
+				fmt.Sscanf(fmt.Sprintf("%v", v), "%d", &code)
+			}
+		}
+
+		resJSON, _ := json.Marshal(res)
+
+		// 判断code
+		switch code {
+		case 1, 100001:
+			return nil
+		case 20000:
+			return fmt.Errorf("网关校验缺少必要参数")
+		case 20001:
+			return fmt.Errorf("请求超过有效期")
+		case 30000:
+			return fmt.Errorf("开发者身份验证失败（APPID无效；访问IP不在配置的IP白名单列表）")
+		case 30001:
+			return fmt.Errorf("用户缺少相关权限（能力未关联）")
+		case 40000:
+			return fmt.Errorf("签名验证失败")
+		case 50000:
+			return fmt.Errorf("服务器异常")
+		case 50001:
+			return fmt.Errorf("网关异常")
+		case 10071400:
+			return fmt.Errorf("参数错误，请注意参数类型是否错误")
+		case 10071500:
+			return fmt.Errorf("服务器错误")
+		case 10071701:
+			return fmt.Errorf("未知设备，需要检查SN号是否错误")
+		case 10071702:
+			return fmt.Errorf("设备已绑定")
+		case 10071703:
+			return fmt.Errorf("设备绑定异常")
+		case 10071704:
+			return fmt.Errorf("该SN号设备不属于本渠道，需要联系销售绑定到贵司渠道下")
+		case 10071705:
+			return fmt.Errorf("订单已推送，需要确认订单号是否重复")
+		case 10071706:
+			return fmt.Errorf("订单未知")
+		case 10071707:
+			return fmt.Errorf("没有设备或不是此通道")
+		default:
+			return fmt.Errorf("异常错误: %s", string(resJSON))
+		}
+	} else if config.IP != "" && config.SN != "" {
+		// 局域网打印
+		url := "http://" + config.IP + "/cgi-bin/print.cgi?sn=" + config.SN + "&copies=1"
+		_, err := printer.httpPost(url, map[string]interface{}{
+			"content": content,
+		})
+		if err != nil {
+			return fmt.Errorf("打印失败")
+		}
+		return nil
 	}
-	return ExecuteImgPrinting(printerIP, content)
+	//
+	return fmt.Errorf("打印配置不全")
+}
+
+// PrintTicket 打印
+func PrintTicket(printerIP string, port string, content string, printMethod int) error {
+	if printMethod == constant.Yes {
+		return ExecutePrinting(printerIP, port, content)
+	}
+	return ExecuteImgPrinting(printerIP, port, content)
 }
 
 // 图片打印
-func ExecuteImgPrinting(printerIP string, content string) error {
+func ExecuteImgPrinting(printerIP string, port string, content string) error {
 	// 连接打印机（TCP连接，端口9100是标准打印机端口）
-	conn, err := net.DialTimeout("tcp", printerIP+":9100", 3*time.Second)
+	conn, err := net.DialTimeout("tcp", printerIP+":"+port, 3*time.Second)
 	if err != nil {
 		return fmt.Errorf("连接打印机出错: %v", err)
 	}
@@ -53,9 +137,9 @@ func ExecuteImgPrinting(printerIP string, content string) error {
 
 // ExecutePrinting 连接打印机并发送打印内容
 // 支持多种语言（泰语、韩语、中文等）的字符编码处理
-func ExecutePrinting(printerIP string, content string) error {
+func ExecutePrinting(printerIP string, port string, content string) error {
 	// 连接打印机（TCP连接，端口9100是标准打印机端口）
-	conn, err := net.DialTimeout("tcp", printerIP+":9100", 3*time.Second)
+	conn, err := net.DialTimeout("tcp", printerIP+":"+port, 3*time.Second)
 	if err != nil {
 		return fmt.Errorf("连接打印机出错: %v", err)
 	}
@@ -218,4 +302,9 @@ func hex2bin(hexStr string) string {
 
 	// 返回解码后的字符串
 	return string(decoded)
+}
+
+// 生成唯一ID，模拟PHP的uniqid函数
+func uniqid() string {
+	return strings.Replace(uuid.New().String(), "-", "", -1)
 }

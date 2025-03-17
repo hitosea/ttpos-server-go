@@ -53,10 +53,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	payTime := t.base.FormatUnixTimeDefault(saleBill.FinishTime)
 
 	// 合计应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
+	finalPrice := saleOrder.GetPrintReceivablePrice()
 
 	//  创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -76,8 +73,10 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	img.AppendText(t.base.Translate("发票"))
 	img.SetFontSize(20)
 	img.LineFeed(1)
-	img.AppendText(payTime)
-	img.LineFeed(1)
+	if payTime != "" {
+		img.AppendText(payTime)
+		img.LineFeed(1)
+	}
 	if t.base.Lang == "ja" {
 		img.SetAlignment(pkg.AlignRight)
 		img.AppendText(t.base.Translate("先生/小姐"))
@@ -160,17 +159,24 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	img.AppendSplitLine()
 	img.LineFeed(1, 40)
 	img.LineFeed(1, 5)
-	// todo 没有包含免单的，没有确定是否需要处理找零的
-	for key, paymentOrder := range saleOrder.PaymentOrders {
+	if saleOrder.IsFreeSaleOrder() {
 		img.SetTextLineHeight(40)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20},
+			pkg.ColumnConfig{Text: t.base.Translate("免单"), Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(0), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20},
 		)
-		if key < len(saleOrder.PaymentOrders)-1 {
-			img.LineFeed(1, 10)
+	} else {
+		for key, paymentOrder := range saleOrder.PaymentOrders {
+			img.SetTextLineHeight(40)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20},
+			)
+			if key < len(saleOrder.PaymentOrders)-1 {
+				img.LineFeed(1, 10)
+			}
+			img.SetTextLineHeight(50)
 		}
-		img.SetTextLineHeight(50)
 	}
 
 	// 发票信息

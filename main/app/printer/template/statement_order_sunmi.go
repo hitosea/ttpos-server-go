@@ -64,7 +64,6 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
 	if temp != 3 {
-		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
 		} else if printType == constant.PrinterTemplatePreBilling {
@@ -396,7 +395,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 
 	// 未免单 - 优惠折扣
-	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
+	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 {
@@ -460,7 +459,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 免单金额
-	if saleOrder.IsFree != 0 && saleOrder.Amount > 0 {
+	if saleOrder.IsFreeSaleOrder() && saleOrder.Amount > 0 {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
 		printer.LineFeed(1)
 	}
@@ -480,15 +479,11 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	)
 
 	// 应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)
 	printer.PrintInColumns(
 		t.base.Translate("合计应收"),
-		t.base.GetPriceAndUnit(finalPrice),
+		t.base.GetPriceAndUnit(saleOrder.GetPrintReceivablePrice()),
 	)
 	printer.SetPrintModes(false, false, false)
 	printer.SetLineSpacing(20)
@@ -528,14 +523,25 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignLeft)
 	printer.SetLineSpacing(45)
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
-		if len(saleOrder.PaymentOrders) > 0 {
-			printer.LineFeed()
-			printer.SetLineSpacing(90)
-			printer.AppendText("------------------------------------------------\n")
-			printer.SetupColumns(
-				[]int{320, pkg.AlignLeft, 0},
-				[]int{0, pkg.AlignRight, 0},
+		printer.SetupColumns(
+			[]int{320, pkg.AlignLeft, 0},
+			[]int{0, pkg.AlignRight, 0},
+		)
+		printer.LineFeed()
+		printer.SetLineSpacing(90)
+		printer.AppendText("------------------------------------------------\n")
+		if saleOrder.IsFreeSaleOrder() {
+			printer.PrintInColumns(
+				t.base.Translate("支付方式"),
+				t.base.Translate("免单"),
 			)
+			printer.LineFeed()
+			printer.PrintInColumns(
+				t.base.Translate("实收金额"),
+				t.base.GetPriceAndUnit(0),
+			)
+		}
+		if len(saleOrder.PaymentOrders) > 0 {
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.PrintInColumns(
 					t.base.Translate("支付方式"),

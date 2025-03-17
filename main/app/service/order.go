@@ -5963,6 +5963,16 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.New("销售订单不存在")
 	}
 
+	// 更新用户
+	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	saleOrder.CashierName = ctx.GetStaff().RealName
+	if saleOrder.CashierName == "" {
+		saleOrder.CashierName = ctx.GetStaff().Username
+	}
+	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	// todo 支付订单未完成
 	// saleOrder.PaymentOrder
 
@@ -5999,6 +6009,16 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
+	}
+
+	// 更新用户
+	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	saleOrder.CashierName = ctx.GetStaff().RealName
+	if saleOrder.CashierName == "" {
+		saleOrder.CashierName = ctx.GetStaff().Username
+	}
+	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	// 设置发票信息

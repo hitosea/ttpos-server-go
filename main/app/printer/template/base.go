@@ -83,6 +83,9 @@ func NewPrinterTemplate(
 		if template.CurrencySetting != nil && template.PrinterSetting.MonetaryUnitOpen != "0" {
 			template.CurrencyUnit = template.CurrencySetting.PrintUnit
 		}
+		if template.CurrencyUnit == "￥" {
+			template.CurrencyUnit = "\xC2\xA5"
+		}
 	}
 	// 设置语言 - 使用简化逻辑，后续可接入i18n包
 	if len(opts) > 0 && opts[0] != "" {

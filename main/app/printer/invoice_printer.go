@@ -55,7 +55,12 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingInvoiceContent(settingPrinterInfo.PrinterType, saleBill, saleOrder)
+	printContent := p.getPrintingInvoiceContent(
+		settingPrinterInfo.PrinterType,
+		saleBill,
+		saleOrder,
+		settingPrinterInfo.IsCashierPrinter,
+	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -100,6 +105,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	printerType string,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
+	isCashierPrinter bool,
 ) string {
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateInvoice))
@@ -114,6 +120,8 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		false,
 		p.Lang,
 	)
+
+	printerType = constant.PrinterTypeSunmiLan
 
 	// 商米打印机
 	if slices.Contains([]string{
@@ -133,57 +141,56 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		)
 	}
 
-	// /* *
-	// * Compax 收银打印机 80mm 自带
-	//  */
-	// if printerType == constant.PrinterTypeCashierCompax {
-	// 	return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		printType,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	* Compax 收银打印机 80mm 自带
+	 */
+	if printerType == constant.PrinterTypeCashierCompax {
+		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
+			tmp,
+			saleBill,
+			saleOrder,
+			isCashierPrinter,
+		)
+	}
 
-	// /* *
-	//  * 芯烨打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-	// 	return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		printType,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			saleBill,
+			saleOrder,
+			isCashierPrinter,
+		)
+	}
 
-	// /* *
-	// * 商米打印机
-	//  */
-	// if base.IsSunMi {
-	// 	return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		printType,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	* 商米打印机
+	 */
+	if base.IsSunMi {
+		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			saleBill,
+			saleOrder,
+			isCashierPrinter,
+		)
+	}
 
-	// /* *
-	// * CODESOFT 打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-	// 	return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		printType,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	* CODESOFT 打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			saleBill,
+			saleOrder,
+			isCashierPrinter,
+		)
+	}
 
 	return ""
 }

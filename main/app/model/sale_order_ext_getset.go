@@ -80,6 +80,20 @@ func (model *SaleOrder) GetAmount() float64 {
 	return model.Amount
 }
 
+// 打印 - 获取打印单的最终应收金额
+func (model *SaleOrder) GetPrintReceivablePrice() float64 {
+	finalPrice := model.FinalPrice
+	// 未结账时，需要计算最终应收金额
+	if model.Status != constant.SaleOrderStatusFinish {
+		finalPrice, _ = model.calcFinallyAmount()
+	}
+	// 如果是免单，返回0
+	if model.IsFreeSaleOrder() {
+		return 0
+	}
+	return finalPrice
+}
+
 // 根据sign获取销售订单商品
 func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct {
 	for _, saleOrderProduct := range model.SaleOrderProducts {

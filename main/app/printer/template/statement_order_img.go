@@ -470,7 +470,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("支付手续费"), t.base.GetPriceAndUnit(saleOrder.PaymentCommissionFee)))
 		img.LineFeed(1)
 	}
-	if saleOrder.IsFree != 0 {
+	if saleOrder.IsFreeSaleOrder() {
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
 		img.LineFeed(1)
 	}
@@ -484,12 +484,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 合计应收
-	finalPrice := saleOrder.FinalPrice
-	if payTime == "" {
-		finalPrice = saleOrder.GetAmount()
-	}
 	img.SetFontSize(26)
 	img.SetFontWeight(2)
+	finalPrice := saleOrder.GetPrintReceivablePrice()
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("合计应收"), Width: 280, Align: pkg.AlignLeft},
 		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(finalPrice), Width: 0, Align: pkg.AlignRight},
@@ -524,24 +521,36 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 
 	// 支付方式
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
-		if len(saleOrder.PaymentOrders) > 0 {
+		if saleOrder.IsFreeSaleOrder() {
 			img.AppendSplitLine()
 			img.LineFeed(1)
-		}
-		for _, paymentOrder := range saleOrder.PaymentOrders {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 0, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: t.base.Translate("免单"), Width: 0, Align: pkg.AlignRight},
 			)
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(0), Width: 0, Align: pkg.AlignRight},
 			)
-			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+		}
+		if len(saleOrder.PaymentOrders) > 0 {
+			img.AppendSplitLine()
+			img.LineFeed(1)
+			for _, paymentOrder := range saleOrder.PaymentOrders {
 				img.PrintInColumns(
-					pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: t.base.Amount(saleOrder.ChangeAmount), Width: 0, Align: pkg.AlignRight},
+					pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
+					pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 0, Align: pkg.AlignRight},
 				)
+				img.PrintInColumns(
+					pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
+					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight},
+				)
+				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+					img.PrintInColumns(
+						pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
+						pkg.ColumnConfig{Text: t.base.Amount(saleOrder.ChangeAmount), Width: 0, Align: pkg.AlignRight},
+					)
+				}
 			}
 		}
 	}

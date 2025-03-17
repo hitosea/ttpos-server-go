@@ -142,7 +142,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
 		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-			printerType,
 			printType,
 			tmp,
 			saleBill,
@@ -181,7 +180,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
 		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-			printerType,
 			printType,
 			tmp,
 			saleBill,
