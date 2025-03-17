@@ -155,17 +155,50 @@ class Operate extends Controller
      */
     public function orderRefund($order_id = 0)
     {
-        $params = $this->postData();
-        $model = OrderModel::detail($order_id, ['payType', 'refundType', 'mergeList']);
+        $data = $this->postData();
+        $requeustData = [
+            'sale_bill_uuid' => intval($data['sale_bill_uuid']),
+            'sale_order_uuid' => intval($data['sale_order_uuid']),
+        ];
+        $requeustHeader = [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ];
+
         if ($this->request->isGet()) {
-            $pay_list = $model->payTypeCellRefundMoneys();
-            $product_list = $model->getOrderProductList();
-            return $this->renderSuccess('', compact('pay_list', 'product_list'));
+            $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/return', $requeustData, $requeustHeader);
+            if (!$res) {
+                return $this->renderError('请求失败');
+            }
+            $result = json_decode($res, true);
+            if (($result['code'] ?? -1) != 0) {
+                return $this->renderError($result['message'] ?? '请求失败');
+            }
+            return $this->renderSuccess('', $result['data']);
         }
-        if ($model?->orderRefund($params)) {
-            return $this->renderSuccess('操作成功');
+
+        // 退部分商品
+        $requeustData['products'] = [];
+
+        $refundProduct = $data['refund_product'] ?? [];
+        foreach ($refundProduct as $item) {
+            $requeustData['products'][] = [
+                'sale_order_product_uuid' => intval($item['order_product_id']),
+                'num' => intval($item['refund_num']),
+            ];
         }
-        return $this->renderError($model?->getError() ?: '操作失败', $model->getErrorData(), $model->getErrorCode());
+
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/return', json_encode($requeustData), $requeustHeader);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+
+        return $this->renderSuccess('操作成功');
     }
 
     /**
