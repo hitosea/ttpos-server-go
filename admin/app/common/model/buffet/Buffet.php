@@ -142,6 +142,12 @@ class Buffet extends BaseModel
     {
         $isDeletable = 1;
         foreach ($data['saleOrderBuffetCustomerType'] as $customerType) {
+            if (!isset($customerType['saleOrder'])) {
+                continue;
+            }
+            if (!isset($customerType['saleOrder']['saleBill'])) {
+                continue;
+            }
             if ($customerType['saleOrder']['saleBill']['status'] == SaleBill::SALE_BILL_STATUS_PENNING) {
                 $isDeletable = 0;
                 break;
