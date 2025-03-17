@@ -158,12 +158,10 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
-	printerLogSrv := service.NewPrinterLogSrv(dbm, settingSrv)
-	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
 	memberSrv := service.NewMemberSrv(dbm)
-	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
+	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
 	// 初始化处理器
 	wrapper := RechargeOrderHandler{
 		rechargeOrderSrv: rechargeOrderSrv,

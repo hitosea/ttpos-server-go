@@ -15,11 +15,11 @@ import (
 )
 
 /**
- * 打印发票
+ * 会员充值订单打印
  */
-func (p *PrinterRepoImpl) PrintingInvoice(
-	saleBill *model.SaleBill,
-	saleOrderUuid uint64,
+func (p *PrinterRepoImpl) PrintingRechargeOrder(
+	order model.MemberRechargeOrder,
+	FirstExecution int,
 ) (*resp.PrinterData, error) {
 	// todo 设备id没对
 
@@ -39,12 +39,6 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
-	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
-	}
-
 	// 打印方式
 	printMethod := constant.PrinterLogPrintMethodText
 	if p.printerSetting.PrintMethod == "2" {
@@ -55,12 +49,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingInvoiceContent(
-		settingPrinterInfo.PrinterType,
-		saleBill,
-		saleOrder,
-		settingPrinterInfo.IsCashierPrinter,
-	)
+	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, order)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -70,14 +59,14 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		PrinterType: settingPrinterInfo.PrinterType,
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
-		RelatedType:     1,
-		RelatedUuid:     saleBill.Uuid,
+		RelatedType:     2,
+		RelatedUuid:     order.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
-		DataType:        constant.PrinterLogDataTypeInvoice,
+		DataType:        constant.PrinterLogDataTypeRecharge,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  1,
+		FirstExecution:  FirstExecution,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -100,15 +89,11 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	}, nil
 }
 
-// 构建发票打印的内容
-func (p *PrinterRepoImpl) getPrintingInvoiceContent(
+// 构建订单打印的内容
+func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	printerType string,
-	saleBill *model.SaleBill,
-	saleOrder *model.SaleOrder,
-	isCashierPrinter bool,
+	order model.MemberRechargeOrder,
 ) string {
-	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateInvoice))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -132,35 +117,23 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
-		return template.NewInvoiceImgTemplate(base).GetPrintContent(
-			tmp,
-			saleBill,
-			saleOrder,
-		)
+		return template.NewRechargeImgTemplate(base).GetPrintContent(order)
 	}
 
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
-		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
-			tmp,
-			saleBill,
-			saleOrder,
-			isCashierPrinter,
-		)
+		return template.NewRechargeCompaxTemplate(base).GetPrintContent(order)
 	}
 
 	/* *
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
+		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(
 			printerType,
-			tmp,
-			saleBill,
-			saleOrder,
-			isCashierPrinter,
+			order,
 		)
 	}
 
@@ -168,12 +141,9 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* 商米打印机
 	 */
 	if base.IsSunMi {
-		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
+		return template.NewRechargeSunmiTemplate(base).GetPrintContent(
 			printerType,
-			tmp,
-			saleBill,
-			saleOrder,
-			isCashierPrinter,
+			order,
 		)
 	}
 
@@ -181,13 +151,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* CODESOFT 打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
-			printerType,
-			tmp,
-			saleBill,
-			saleOrder,
-			isCashierPrinter,
-		)
+		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(order)
 	}
 
 	return ""

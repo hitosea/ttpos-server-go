@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -34,7 +35,7 @@ type IRechargeOrderSrv interface {
 	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)          // 充值订单添加支付方式
 	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) // 充值订单撤销支付方式
 	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
-	PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (resp.PrinterLogData, error)                    // 打印充值订单
+	PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error)                      // 打印充值订单
 	GetRechargeOrderList(ctx context.Context, listReq req.RechargeOrderListReq) (resp.RechargeOrderList, error)                       // 充值订单列表
 	GetRechargeOrderInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderInfo, error)                                            // 获取充值订单详情
 	CancelRechargeOrder(ctx context.Context, uuid uint64) error                                                                       // 取消充值订单
@@ -50,22 +51,20 @@ type rechargeOrderSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	settingSrv       setting.ISrv
 	cashBoxSrv       ICashBoxSrv
-	rechargePrintSrv IRechargePrintSrv
 	memberSrv        IMemberSrv
 }
 
-func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, rechargePrintSrv IRechargePrintSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
-	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
+func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
+	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
 }
 
-func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, rechargePrintSrv IRechargePrintSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
+func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
 		cache:            cache,
 		paymentMethodSrv: paymentMethodSrv,
 		settingSrv:       settingSrv,
 		cashBoxSrv:       cashBoxSrv,
-		rechargePrintSrv: rechargePrintSrv,
 		memberSrv:        memberSrv,
 	}
 }
@@ -415,8 +414,11 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	}
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
-		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+	)
 	if order.Uuid == 0 || order.Status != constant.RechargeOrderStatusPending {
 		return confirmResp, errors.New("充值订单不存在")
 	}
@@ -435,10 +437,12 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	chargeDue := s.getChargeDue(order.PaymentOrders)
 	// 更新充值订单
 	updates := map[string]any{
-		"amount":       s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
-		"status":       constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
-		"payment_time": time.Now().Unix(),
-		"charge_due":   chargeDue, // 找零
+		"amount":            s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
+		"status":            constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
+		"payment_time":      time.Now().Unix(),
+		"charge_due":        chargeDue,                                                                                    // 找零
+		"balance":           utils.DecimalAdd(member.Balance, member.GiftBalance),                                         // 充值前会员余额
+		"balance_recharged": utils.DecimalAdd(member.Balance, member.GiftBalance, order.RechargeAmount, order.GiftAmount), // 充值后会员余额
 	}
 
 	var memberPointsChanged bool
@@ -514,17 +518,23 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 
 	// 打印充值单
 	go func() {
-		_, err = s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
-			RechargeOrder: order,
-			IsQueue:       false,
-			DeviceId:      ctx.GetDeviceSn(),
-			PrintLang:     ctx.GetLanguage(),
-		})
+		order := rechargeOrderRepo.GetRechargeOrder(
+			rechargeOrderRepo.WithMember(),
+			rechargeOrderRepo.WithStaff(),
+			rechargeOrderRepo.WithPaymentOrders(),
+			rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+			rechargeOrderRepo.WhereUuid(order.Uuid),
+		)
+		_, err := printer.NewPrinterRepo(ctx).PrintingRechargeOrder(order, 0)
+		if err != nil {
+			logger.Logger.Error("打印充值单失败", zap.Error(err))
+		}
 	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
 }
 
+// 确认充值订单
 func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUuid uint64) resp.ConfirmRechargeOrder {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(rechargeOrderUuid),
@@ -542,26 +552,30 @@ func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, recharge
 	}
 }
 
-func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (resp.PrinterLogData, error) {
-	var res resp.PrinterLogData
+// 打印充值订单
+func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(printRechargeOrderReq.RechargeOrderUuid))
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WithMember(),
+		rechargeOrderRepo.WithStaff(),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+		rechargeOrderRepo.WhereUuid(printRechargeOrderReq.RechargeOrderUuid),
+	)
 	if order.Uuid == 0 {
-		return res, errors.New("充值订单不存在")
+		return nil, errors.New("充值订单不存在")
 	}
+	//
 	printLang := printRechargeOrderReq.PrintLang
-	if printLang == "" {
-		printLang = ctx.GetLanguage()
-	}
-	printerData, err := s.rechargePrintSrv.PrintTicket(ctx, PrinterTicketReq{
-		RechargeOrder: order,
-		IsQueue:       false,
-		DeviceId:      ctx.GetDeviceSn(),
-		PrintLang:     printLang,
-	})
+	// 打印
+	printerData, err := printer.NewPrinterRepo(ctx, printLang).PrintingRechargeOrder(
+		order,
+		1,
+	)
 	if err != nil {
-		return res, errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
+
 	return printerData, nil
 }
 

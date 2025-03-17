@@ -75,7 +75,7 @@ func (h *BaseHandler) CheckUpdate(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.EditSettingReq true "修改设置参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} resp.DeskInfoResp "桌台详情"
 // @Router /tablet/setting [post]
 func (h *BaseHandler) EditSetting(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -84,12 +84,12 @@ func (h *BaseHandler) EditSetting(c *gin.Context) {
 		helper.HandleValidationError(c, err, settingReq, req.UpdateAcceptOrderSettingMessage)
 		return
 	}
-	err := h.deskSrv.ChangeBindDesk(ctx, settingReq)
+	data, err := h.deskSrv.ChangeBindDesk(ctx, settingReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, data)
 }
 
 // GetBase 基本信息

@@ -71,7 +71,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		RelatedUuid:     saleBill.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
-		DataType:        constant.PrinterLogDataTypeReturnDish,
+		DataType:        printType,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  FirstExecution,
@@ -99,8 +99,8 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
-	printerType string,
-	printType int,
+	printerType string, // 打印机类型
+	printType int, // 打印类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单 8-充值单 9-退菜单
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {

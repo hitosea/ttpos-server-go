@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/freetype"
+	"github.com/golang/freetype/truetype"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -14,8 +15,6 @@ import (
 	"time"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/captcha/fonts"
-
-	"github.com/golang/freetype/truetype"
 )
 
 // Captcha 结构体用于存储验证码相关的状态
@@ -113,8 +112,8 @@ func (cap *Captcha) generateMathQuestion() (string, string) {
 
 // 生成验证码图片并返回 Base64 URL
 func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
-	width := 200 // 减小宽度
-	height := 50 // 减小高度
+	width := 96  // 减小宽度
+	height := 40 // 减小高度
 
 	// 创建一个新的 RGBA 图片
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
@@ -130,7 +129,7 @@ func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
 	bgContext := freetype.NewContext()
 	bgContext.SetDPI(72)
 	bgContext.SetFont(cap.font)
-	bgContext.SetFontSize(14) // 减小背景字体大小
+	bgContext.SetFontSize(12) // 减小背景字体大小
 	bgContext.SetClip(img.Bounds())
 	bgContext.SetDst(img)
 
@@ -179,7 +178,7 @@ func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
 	c := freetype.NewContext()
 	c.SetDPI(72)
 	c.SetFont(cap.font)
-	c.SetFontSize(28)
+	c.SetFontSize(24)
 	c.SetClip(img.Bounds())
 	c.SetDst(img)
 
@@ -210,7 +209,12 @@ func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
 	// 为每个字符生成随机位置并绘制
 	for i, char := range chars {
 		xPos := charWidth*(i+1) - charWidth/2 + rand.Intn(8) - 4
-		yPos := height/2 + rand.Intn(8) - 4 + 15
+		// 调整 yPos 以使字符居中
+		yPos := height/2 + rand.Intn(8) - 8
+
+		// 计算字符的基线偏移
+		fontSize := c.PointToFixed(24) // 假设字体大小为 24
+		yPos += int(fontSize>>6) / 2   // 调整基线位置
 
 		pt := freetype.Pt(xPos, yPos)
 		_, err := c.DrawString(string(char), pt)
@@ -222,7 +226,7 @@ func (cap *Captcha) generateCaptchaBase64(text string) (string, error) {
 	// 使用 JPEG 编码（使用较高质量以保持文字清晰度）
 	var buf bytes.Buffer
 	err := jpeg.Encode(&buf, img, &jpeg.Options{
-		Quality: 60, // 60%的质量
+		Quality: 80, // 80%的质量
 	})
 	if err != nil {
 		return "", errors.New("failed to generate captcha")

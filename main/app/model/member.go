@@ -171,25 +171,35 @@ type MemberPointLog struct {
 // MemberRechargeOrder 会员充值订单表 `ttpos_member_recharge_order`
 type MemberRechargeOrder struct {
 	BaseModel
-	OrderNo        string  `gorm:"column:order_no;type:varchar(255);comment:充值订单编号;NOT NULL" json:"order_no"`
-	DutyNo         string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
-	Status         int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消;NOT NULL" json:"status"`
-	Amount         float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
-	RefundMoney    float64 `gorm:"column:refund_money;type:decimal(12,2);default:0.00;comment:退款金额，不大于amount;NOT NULL" json:"refund_money"`
-	ChargeDue      float64 `gorm:"column:charge_due;type:decimal(12,2);default:0;comment:找零;NOT NULL" json:"charge_due"`
-	RechargeAmount float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0;comment:充值金额;NOT NULL" json:"recharge_amount"`
-	RefundAmount   float64 `gorm:"column:refund_amount;type:decimal(12,2);default:0;comment:退款充值金额，不大于recharge_amount;NOT NULL" json:"refund_amount"`
-	GiftAmount     float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠送金额;NOT NULL" json:"gift_amount"`
-	GiftPoint      float64 `gorm:"column:gift_point;type:decimal(12,2);default:0;comment:赠送积分;NOT NULL" json:"gift_point"`
-	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`
-	StaffUuid      uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;comment:员工ID;NOT NULL" json:"staff_uuid"`
-	PaymentTime    int64   `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
+	OrderNo          string  `gorm:"column:order_no;type:varchar(255);comment:充值订单编号;NOT NULL" json:"order_no"`
+	DutyNo           string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	Status           int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消;NOT NULL" json:"status"`
+	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
+	RefundMoney      float64 `gorm:"column:refund_money;type:decimal(12,2);default:0.00;comment:退款金额，不大于amount;NOT NULL" json:"refund_money"`
+	ChargeDue        float64 `gorm:"column:charge_due;type:decimal(12,2);default:0.00;comment:找零;NOT NULL" json:"charge_due"`
+	RechargeAmount   float64 `gorm:"column:recharge_amount;type:decimal(12,2);default:0.00;comment:充值金额;NOT NULL" json:"recharge_amount"`
+	RefundAmount     float64 `gorm:"column:refund_amount;type:decimal(12,2);default:0.00;comment:退款充值金额，不大于recharge_amount" json:"refund_amount"`
+	GiftAmount       float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0.00;comment:赠送金额;NOT NULL" json:"gift_amount"`
+	GiftPoint        float64 `gorm:"column:gift_point;type:decimal(12,2);default:0.00;comment:赠送积分;NOT NULL" json:"gift_point"`
+	MemberUuid       uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;comment:会员ID;NOT NULL" json:"member_uuid"`
+	StaffUuid        uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;comment:员工ID;NOT NULL" json:"staff_uuid"`
+	PaymentTime      int64   `gorm:"column:payment_time;type:int(10) unsigned;default:0;comment:支付时间(时间戳);NOT NULL" json:"payment_time"`
+	Balance          float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:充值前会员余额" json:"balance"`
+	BalanceRecharged float64 `gorm:"column:balance_recharged;type:decimal(12,2);default:0.00;comment:充值后会员余额" json:"balance_recharged"`
 
 	PaymentOrders              []PaymentOrder                    `gorm:"foreignKey:RelatedUuid;references:Uuid"`       // 一个会员充值订单关联多个支付订单
 	Member                     *Member                           `gorm:"foreignKey:MemberUuid;references:Uuid"`        // 关联会员
 	Staff                      *Staff                            `gorm:"foreignKey:StaffUuid;references:Uuid"`         // 关联操作员工
 	ReturnOrders               []ReturnOrder                     `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`  // 关联多个退货单
 	RechargeOrderOperationLogs []MemberRechargeOrderOperationLog `gorm:"foreignKey:RechargeOrderUuid;references:Uuid"` // 一个充值订单关联多个操作日志
+}
+
+// 获取应收金额 = 应收金额 - 减去退款
+func (model *MemberRechargeOrder) GetReceivableAmount() float64 {
+	payAmount := decimal.NewFromFloat(0)
+	payAmount = payAmount.Add(decimal.NewFromFloat(model.Amount))
+	payAmount = payAmount.Sub(decimal.NewFromFloat(model.RefundAmount))
+	return payAmount.InexactFloat64()
 }
 
 // MemberRechargeOrderOperationLog 会员充值订单操作记录表 `ttpos_member_recharge_order_operation_log`
