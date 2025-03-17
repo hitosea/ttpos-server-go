@@ -210,7 +210,7 @@
     <!--处理-->
     <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="order_id" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
     <!--处理-->
-    <refund v-if="open_refund" :open_edit="open_refund" :order_id="order_id" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"> </refund>
+    <refund v-if="open_refund" :open_edit="open_refund" :order_id="order_id" :sub_order_id="sub_order_id" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"> </refund>
   </div>
 </template>
 
@@ -277,6 +277,7 @@
         /*当前编辑的对象*/
         order_no: 0,
         order_id: 0,
+        sub_order_id: 0,
         pay_price: 0,
         token,
         app_id: app_id,
@@ -496,8 +497,9 @@
       },
       refundClick(item) {
         this.order_no = item.order_no;
-        this.order_id = item.order_id;
-        this.pay_price = (Number(item.pay_price) - Number(item.refund_money)).toFixed(2);
+        this.order_id = item.sale_bill_uuid;
+        this.sub_order_id = item.sale_order_uuid;
+        this.pay_price = 0;
 
         this.open_refund = true;
       },

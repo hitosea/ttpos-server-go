@@ -303,7 +303,7 @@
     </div>
     <!--处理-->
     <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="sale_bill_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
-    <refund v-if="open_refund" :open_edit="open_refund" :order_no="order_no" :order_id="sale_bill_uuid" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"></refund>
+    <refund v-if="open_refund" :open_edit="open_refund" :order_no="order_no" :order_id="sale_bill_uuid" :sub_order_id="sale_order_uuid" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"></refund>
     <refundAgain v-if="open_refundAgain" :open_edit="open_refundAgain" :refundOrder="refundOrder" @closeDialog="closerefundAgainDialogFunc($event)"> </refundAgain>
   </div>
 </template>
@@ -469,7 +469,8 @@
       refundClick(item) {
         this.order_no = item.order_no;
         this.sale_bill_uuid = item.sale_bill_uuid;
-        this.pay_price = (Number(item.pay_price) - Number(item.refund_money)).toFixed(2);
+        this.sale_order_uuid = item.sale_orders[0].sale_order_uuid;
+        this.pay_price = 0;
         this.open_refund = true;
       },
 

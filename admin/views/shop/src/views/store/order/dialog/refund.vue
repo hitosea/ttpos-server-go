@@ -41,14 +41,14 @@
         </el-table-column>
         <el-table-column :label="$t('可退数量')">
           <template #default="scope">
-            {{ Number(scope.row.total_num) - Number(scope.row.refund_num) }}
+            {{ Number(scope.row.total_num) }}
           </template>
         </el-table-column>
         <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
           <template #default="scope">
             <el-input-number
               :min="0"
-              :max="Number(scope.row.total_num) - Number(scope.row.refund_num)"
+              :max="Number(scope.row.total_num)"
               :placeholder="$t('请输入')"
               v-model.number="scope.row.refund_num_updata"
             ></el-input-number>
@@ -61,7 +61,7 @@
                 <span v-if="currency.unit_position == '0'">
                   {{ currency.unit }}
                 </span>
-                {{ this.$formatPrice(Number(scope.row.refund_num_updata) * (Number(scope.row.total_price) / Number(scope.row.total_num))) }}
+                {{ this.$formatPrice(Number(scope.row.refund_num_updata) * (Number(scope.row.price))) }}
                 <span v-if="currency.unit_position == '1'">
                   {{ currency.unit }}
                 </span>
@@ -71,7 +71,7 @@
                 <span v-if="currency.unit_position == '0'">
                   {{ currency.unit }}
                 </span>
-                {{ this.$formatPrice(Number(scope.row.total_price) - Number(scope.row.refund_money) < 0 ? 0 : Number(scope.row.total_price) - Number(scope.row.refund_money)) }}
+                {{ this.$formatPrice(Number(scope.row.total_price)) }}
                 <span v-if="currency.unit_position == '1'">
                   {{ currency.unit }}
                 </span>
@@ -84,13 +84,13 @@
       <div class="refund-total">
         <p class="refund-total-title">{{ $t('支付记录（原路退款会按照以下顺序退回）') }}</p>
         <p class="refund-total-text" v-for="(item, index) in pay_list" :key="index">
-          <span>{{ item.name }}</span>
+          <span>{{ item.payment_method_name }}</span>
           <b>
-            <span>{{ item.price }}</span>
+            <span>{{ item.payment_amount }}</span>
             <span>
               (
               {{ $t('剩余可退') }}
-              <span class="span">{{ item.cell_refund_money }}</span>
+              <span class="span">{{ item.can_return_amount }}</span>
               )
             </span>
           </b>
@@ -140,6 +140,7 @@
 <script>
   import { useUserStore } from '@/store';
   const { currency } = useUserStore();
+  import { languageStore } from '@/store/model/language';
   import OrderApi from '@/api/order.js';
   import draggable from 'vuedraggable';
   export default {
@@ -157,11 +158,13 @@
         form: {
           refund_type: '1', //退款类型
           order_id: '', //订单id
+          sub_order_id: '', // 子单id
           pay_price: '', //支付金额
         },
         tableData: [], //表格数据
         pay_list: [], //支付记录（原路退款会按照以下顺序退回）
         currency: currency, //货币
+        language: '',
         bankForm: {
           bank_code: '',
           account_no: '',
@@ -193,12 +196,14 @@
         ],
       };
     },
-    props: ['open_edit', 'order_id', 'pay_price'], //父组件传递的参数
+    props: ['open_edit', 'order_id', 'sub_order_id', 'pay_price'], //父组件传递的参数
     created() {
       this.dialogVisible = this.open_edit;
       this.form.order_id = this.order_id;
+      this.form.sub_order_id = this.sub_order_id;
       this.form.pay_price = this.$priceTwo(this.pay_price);
-      this.getData();
+      this.language =  languageStore()?.getLanguageKey().language.value
+      // this.getData();
       this.getStoreRefundInfo();
     },
     methods: {
@@ -206,7 +211,8 @@
       submit() {
         let self = this;
         let form = {
-          order_id: this.form.order_id,
+          sale_bill_uuid: this.form.order_id,
+          sale_order_uuid: this.form.sub_order_id,
           refund_type: this.form.refund_type,
           refund_product: [],
           refund_buffet: [],
@@ -325,10 +331,26 @@
       getStoreRefundInfo() {
         let self = this;
         self.loading = true;
-        OrderApi.getStoreRefund({ order_id: this.form.order_id }, true)
+        OrderApi.getStoreRefund({ 
+          sale_bill_uuid: this.form.order_id,
+          sale_order_uuid: this.sub_order_id,
+        }, true)
           .then((data) => {
             self.loading = false;
-            self.pay_list = data.data.pay_list;
+            self.form.pay_price = this.$priceTwo(data.data.can_return_amount);
+            self.pay_list = data.data.payment_records;
+            (data.data.products || []).map((item) => {
+              this.tableData.push({
+                type: 3,
+                product_name_text: item.locale_name[self.language], //名称
+                product_attr: item.locale_attribute_name[self.language], //规格
+                total_num: item.num, // 可退数量
+                total_price: item.can_return_amount, // 可退金额
+                price: item.price, // 商品单价
+                id: item.sale_order_product_uuid, //id
+                refund_num_updata: 0, //提交退款的数量
+              });
+            });
           })
           .catch((error) => {
             self.loading = false;

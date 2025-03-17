@@ -1,10 +1,13 @@
 package assistant
 
 import (
+	"bytes"
+	"io"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
@@ -19,8 +22,9 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv  service.IDeskSrv
-	orderSrv service.IOrderSrv
+	deskSrv   service.IDeskSrv
+	orderSrv  service.IOrderSrv
+	memberSrv service.IMemberSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -66,7 +70,6 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		helper.HandleValidationError(c, err, deskListReq, dto.PageReqMessage)
 		return
 	}
-	// 获取收银产品列表
 	res, err := h.deskSrv.GetDeskList(ctx, companyId, deskListReq)
 	// 处理错误
 	if err != nil {
@@ -96,7 +99,6 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 		helper.HandleValidationError(c, err, deskInfoReq, nil)
 		return
 	}
-	// 获取收银产品列表
 	res, err := h.deskSrv.GetDeskInfo(companyId, deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
@@ -141,6 +143,35 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderProductRemark 处理桌台订单商品备注
+// @Summary 桌台订单商品备注
+// @Description 桌台订单商品备注
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/product/remark [post]
+func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderProductRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderCartProductAdd 向购物车添加商品
 // @Summary 向购物车添加商品
 // @Description 向购物车添加商品
@@ -165,6 +196,72 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductNum 修改购物车商品数量
+// @Summary 修改购物车某个商品的数量
+// @Description 修改购物车商品数量
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductNumReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/num [post]
+func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面修改购物车商品数量接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductNumReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 修改购物车商品数量
+	res, err := h.orderSrv.OrderCartProductNum(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("修改商品数量成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductCooking 送厨购物车商品
+// @Summary 送厨购物车商品
+// @Description 送厨购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductCookingReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/cooking [post]
+func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductCookingReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
+	// 送厨购物车商品
+	res, checkRes, err := h.orderSrv.InstantOrderCartProductCooking(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
+		return
+	}
+	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -256,6 +353,430 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderDiscount 处理桌台订单打折
+// @Summary 桌台订单打折
+// @Description 桌台订单打折
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderDiscountMethodReq true "打折参数，根据discount_method值(1:改价,2:打折,3:抹零)提供对应的额外字段"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/discount [post]
+func (h *DeskHandler) OrderDiscount(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	bodyBytes, _ := io.ReadAll(c.Request.Body) // Body只能读取一次，之后想再次从body中读取数据需要重新往body中写入数据
+	// 绑定请求参数
+	params := req.OrderDiscountMethodReq{}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+	// 从body中读取数据
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
+
+	var shopCart *resp.ShopCart
+	var err error
+	// 改价
+	if params.DiscountMethod == 1 {
+		amountChangeReq := req.OrderAmountChangeReq{}
+		if err := c.ShouldBindJSON(&amountChangeReq); err != nil {
+			helper.HandleValidationError(c, err, amountChangeReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderSrv.OrderAmountChange(ctx, amountChangeReq)
+	}
+	// 打折
+	if params.DiscountMethod == 2 {
+		discountReq := req.OrderDiscountReq{}
+		if err := c.ShouldBindJSON(&discountReq); err != nil {
+			helper.HandleValidationError(c, err, discountReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderSrv.OrderDiscount(ctx, discountReq)
+	}
+	// 抹零
+	if params.DiscountMethod == 3 {
+		zeroRuleReq := req.OrderZeroRuleReq{}
+		if err := c.ShouldBindJSON(&zeroRuleReq); err != nil {
+			helper.HandleValidationError(c, err, zeroRuleReq, req.OrderReqMessage)
+			return
+		}
+		shopCart, err = h.orderSrv.OrderZeroRule(ctx, zeroRuleReq)
+	}
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, shopCart)
+}
+
+// OrderDiscountCancel 处理桌台订单取消打折
+// @Summary 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+// @Description 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderDiscountCancelReq true "取消优惠折扣参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/discount/cancel [post]
+func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderDiscountCancelReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderDiscountCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info, "操作成功")
+}
+
+// OrderProductChangePrice 处理桌台订单商品改价
+// @Summary 桌台订单商品改价
+// @Description 桌台订单商品改价
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductChangePriceReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/product/price [post]
+func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderProductChangePriceReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderProductChangePrice(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderCartProductReturning 退菜购物车商品
+// @Summary 退菜购物车商品
+// @Description 退菜购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/returning [post]
+func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductReturningReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderSrv.InstantOrderCartProductReturning(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductCancelReturning 取消退菜购物车商品
+// @Summary 取消退菜购物车商品
+// @Description 取消退菜购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/cancel_returning [post]
+func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProduct{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderSrv.InstantOrderCartProductCancelReturning(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductChangeDesk 转菜购物车商品
+// @Summary 转菜购物车商品
+// @Description 转菜购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductChangeDeskReq true "转菜购物车商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/change_desk [post]
+func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductChangeDeskReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 转菜购物车商品
+	res, err := h.orderSrv.InstantOrderCartProductChangeDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("转菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductGiving 赠菜购物车商品
+// @Summary 赠菜购物车商品
+// @Description 赠菜购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductGivingReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/giving [post]
+func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductGivingReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderSrv.InstantOrderCartProductGiving(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductCancelGiving 取消赠菜购物车商品
+// @Summary 取消赠菜购物车商品
+// @Description 取消赠菜购物车商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProduct true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product/cancel_giving [post]
+func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProduct{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 退菜购物车商品
+	res, err := h.orderSrv.InstantOrderCartProductCancelGiving(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetMemberDiscount 获取订单会员优惠
+// @Summary 获取订单会员优惠
+// @Description 获取订单会员优惠
+// @Tags 点餐助手端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @param member_uuid query integer true "会员Uuid"
+// @Success 200 {object} dto.Response{data=resp.MemberDiscountResp}
+// @Router /assistant/desk/order/member/discount [get]
+func (h *DeskHandler) GetMemberDiscount(c *gin.Context) {
+	var discountReq req.GetMemberDiscountReq
+	if err := c.ShouldBindQuery(&discountReq); err != nil {
+		helper.HandleValidationError(c, err, discountReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.Log().Info("获取会员优惠", zap.Any("params", discountReq))
+	order, err := h.memberSrv.GetMemberDiscount(ctx, discountReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, order)
+}
+
+// OrderUseMember 确认使用会员优惠并验证密码
+// @Summary 确认使用会员优惠并验证密码
+// @Description 确认使用会员优惠并验证密码
+// @Tags 点餐助手端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CheckMemberPasswordReq true "确认使用会员优惠并验证密码"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /assistant/desk/order/member/confirm [post]
+func (h *DeskHandler) OrderUseMember(c *gin.Context) {
+	var passwordReq req.CheckMemberPasswordReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderMemberCancel 不使用此会员
+// @Summary 不使用此会员
+// @Description 不使用此会员
+// @Tags 点餐助手端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderMemberCancelReq true "不使用此会员"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Router /assistant/desk/order/member/cancel [delete]
+func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
+	var passwordReq req.OrderMemberCancelReq
+	if err := c.ShouldBindJSON(&passwordReq); err != nil {
+		helper.HandleValidationError(c, err, passwordReq, req.CheckMemberPasswordMessage)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderMemberCancel(ctx, passwordReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderPrint 打印小票
+// @Summary 桌台订单打印小票
+// @Description 桌台订单打印小票
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /assistant/desk/order/print [post]
+func (h *DeskHandler) OrderPrint(c *gin.Context) {
+	var printReq req.OrderPrintReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderPrintInvoice 打印发票
+// @Summary 桌台订单打印发票
+// @Description 桌台订单打印发票
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintInvoiceReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /assistant/desk/order/print/invoice [post]
+func (h *DeskHandler) OrderPrintInvoice(c *gin.Context) {
+	var printReq req.OrderPrintInvoiceReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// OrderProductDelete 处理删除桌台订单商品
+// @Summary 删除桌台订单商品
+// @Description 删除桌台订单商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductDeleteReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/product/delete [delete]
+func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	staff := helper.GetStaff(c)
+	source := helper.GetSource(c)
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderProductDeleteReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	shopCart, err := h.orderSrv.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, shopCart)
+}
+
 // OrderChangeBuffet 处理桌台订单调整自助餐
 // @Summary 桌台订单调整自助餐
 // @Description 桌台订单调整自助餐
@@ -314,7 +835,6 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -329,23 +849,40 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 创建处理程序
 	wrapper := DeskHandler{
-		deskSrv:  service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
-		orderSrv: orderSrv,
+		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
+		orderSrv:  orderSrv,
+		memberSrv: service.NewMemberSrv(dbm),
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)    // 获取桌台的区域和类型
-		privateApi.GET("/desk/list", wrapper.GetDeskList)                        // 获取桌台列表
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                        // 获取桌台详情
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                   // 创建桌台订单(开桌)
-		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation) // 桌台订单修改人数
-		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)         // 桌台订单调整自助餐
-		privateApi.POST("/desk/change", wrapper.ChangeDesk)                      // 切换桌台（转台）
-		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                  // 完成桌台（清台）
-		privateApi.POST("/desk/merge", wrapper.MergeDesk)                        // 合并桌台
-
-		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd) // 向购物车添加商品
+		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                                 // 获取桌台的区域和类型
+		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
+		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
+		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
+		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)                          // 修改购物车商品数量
+		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
+		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
+		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
+		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                   // 切换桌台（转台）
+		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台（清台）
+		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                     // 合并桌台
+		privateApi.POST("/desk/order/discount", wrapper.OrderDiscount)                                        // 桌台订单打折
+		privateApi.POST("/desk/order/discount/cancel", wrapper.OrderDiscountCancel)                           // 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+		privateApi.POST("/desk/order/product/price", wrapper.OrderProductChangePrice)                         // 桌台订单商品改价
+		privateApi.POST("/desk/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
+		privateApi.POST("/desk/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
+		privateApi.POST("/desk/order/cart/product/change_desk", wrapper.OrderCartProductChangeDesk)           // 转菜
+		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
+		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
+		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
+		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
+		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
+		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印小票
+		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 	}
 }

@@ -119,7 +119,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderDeleteReq true "详情参数"
-// @Success 200 {object} nil "取消订单成功"
+// @Success 200 {object} nil "删除订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /shop/order/delete [delete]
 func (h *OrderHandler) DeleteOrder(c *gin.Context) {
@@ -186,6 +186,64 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReturnOrderInfo 获取退款信息
+// @Summary 获取退款信息
+// @Description 获取退款信息
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderReturnInfoReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/return [get]
+func (h *OrderHandler) ReturnOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReturnInfoReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	res, err := h.service.GetReturnOrderInfo(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// ReturnOrder 处理退款订单
+// @Summary 退款订单
+// @Description 退款订单
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/return [post]
+func (h *OrderHandler) ReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	err := h.service.ReturnOrder(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -209,8 +267,10 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	{
 		privateApi.GET("/order/list", wrapper.GetShopOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
-		privateApi.POST("/order/cancel", wrapper.CancelOrder)
-		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
+		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)
+		privateApi.POST("/order/return", wrapper.ReturnOrder)
+		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 	}
 }
