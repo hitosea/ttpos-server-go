@@ -123,7 +123,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				pkg.ColumnConfig{Text: t.base.FormatUnixTimeDefault(saleOrder.FinishTime), Width: 0, Align: pkg.AlignRight},
 			)
 		}
-		img.LineFeed(1)
+		img.LineFeed(1, 16)
 	} else if temp == 2 {
 		img.AppendText(t.base.Translate("非常感谢您今天的到来，我们期待您的再次光临"))
 		img.LineFeed(1, 60)

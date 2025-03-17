@@ -2408,7 +2408,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		return nil, errors.WithMessage(err)
 	}
 
-	// 添加操作日志
+	// todo 添加操作日志
 	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
 	// 	    Source:        ctx.GetSource(),
 	// 	    Remark:        "修改桌台就餐人数",
@@ -5968,12 +5968,15 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		return nil, errors.WithMessage(err)
 	}
 
-	// todo 支付订单未完成
-	// saleOrder.PaymentOrder
+	// 判断是否已支付
+	printType := constant.PrinterTemplatePreBilling
+	if saleOrder.IsPaid() {
+		printType = constant.PrinterTemplateBilling
+	}
 
 	// 打印
 	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
-		constant.PrinterTemplatePreBilling,
+		printType,
 		saleBill,
 		saleOrder.Uuid,
 		1,
