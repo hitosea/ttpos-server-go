@@ -131,7 +131,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 				Uuid:       productBom.Uuid,
 				LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Price:      productBom.Price,
-				StockNum:   int(productBom.StockNum),
+				StockNum:   int(productBom.GetStockNum()),
 			}
 			flavorList = append(flavorList, flavor)
 		}
@@ -141,7 +141,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 				LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 				Price:             productBom.Price,
 				IsDefaultSelected: productBom.IsDefaultSelectBool(),
-				StockNum:          int(productBom.StockNum),
+				StockNum:          int(productBom.GetStockNum()),
 			}
 			sauceList = append(sauceList, sauce)
 		}
