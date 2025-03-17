@@ -10891,7 +10891,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "绑定/换绑桌台",
+                "description": "绑定桌台",
                 "consumes": [
                     "application/json"
                 ],
@@ -10901,10 +10901,10 @@ const docTemplate = `{
                 "tags": [
                     "平板端.桌台"
                 ],
-                "summary": "绑定/换绑桌台",
+                "summary": "绑定桌台",
                 "parameters": [
                     {
-                        "description": "绑定/换绑桌台请求参数",
+                        "description": "绑定桌台请求参数",
                         "name": "data",
                         "in": "body",
                         "required": true,

@@ -433,10 +433,12 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	chargeDue := s.getChargeDue(order.PaymentOrders)
 	// 更新充值订单
 	updates := map[string]any{
-		"amount":       s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
-		"status":       constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
-		"payment_time": time.Now().Unix(),
-		"charge_due":   chargeDue, // 找零
+		"amount":            s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
+		"status":            constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
+		"payment_time":      time.Now().Unix(),
+		"charge_due":        chargeDue,                                                                                    // 找零
+		"balance":           utils.DecimalAdd(member.Balance, member.GiftBalance),                                         // 充值前会员余额
+		"balance_recharged": utils.DecimalAdd(member.Balance, member.GiftBalance, order.RechargeAmount, order.GiftAmount), // 充值后会员余额
 	}
 
 	var memberPointsChanged bool

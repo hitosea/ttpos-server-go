@@ -11550,9 +11550,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 绑定/换绑桌台
+      description: 绑定桌台
       parameters:
-      - description: 绑定/换绑桌台请求参数
+      - description: 绑定桌台请求参数
         in: body
         name: data
         required: true
@@ -11567,7 +11567,7 @@ paths:
             $ref: '#/definitions/resp.DeskInfoResp'
       security:
       - JwtToken: []
-      summary: 绑定/换绑桌台
+      summary: 绑定桌台
       tags:
       - 平板端.桌台
   /tablet/desk/info:
