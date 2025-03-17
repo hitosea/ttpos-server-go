@@ -8,11 +8,19 @@ import (
 
 type CalcOption struct {
 	IsLatestPrice bool
+	IsCooking     bool // 只计算已送厨的
+
 }
 
 func WithLastestPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.IsLatestPrice = true
+	}
+}
+
+func WithCooking() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.IsCooking = true
 	}
 }
 
