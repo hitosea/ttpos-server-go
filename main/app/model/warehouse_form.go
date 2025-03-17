@@ -10,7 +10,7 @@ import (
 type WarehouseForm struct {
 	BaseModel
 	FormNo string `gorm:"column:form_no;type:varchar(255);default:'';comment:编号"`
-	Scene  int    `gorm:"column:scene;type:tinyint(2);default:0;comment:交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库"`
+	Scene  int    `gorm:"column:scene;type:tinyint(2);default:0;comment:交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库 3-退菜入库"`
 	Num    int    `gorm:"column:num;type:int(11);default:0;comment:数量"`
 	Remark string `gorm:"column:remark;type:varchar(255);default:'';comment:备注"`
 	Status int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-success已入库 1-canceled已撤销"`
@@ -21,6 +21,45 @@ type WarehouseForm struct {
 	OperatorUuid      uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员uuid"`
 	// 时间相关
 	RevokeTime int `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
+
+	// 关联模型
+	WarehouseFormItems []*WarehouseFormItem `gorm:"foreignKey:WarehouseFormUuid;references:Uuid"`
+}
+
+func (model *WarehouseForm) SetNil() {
+	model.WarehouseFormItems = nil
+}
+
+// WarehouseFormItem 入库单明细表 `ttpos_warehouse_form_item`
+type WarehouseFormItem struct {
+	BaseModel
+	Num                  float64 `gorm:"column:num;type:decimal(12,4);not null;default:0;comment:入库数量"`
+	Scene                int     `gorm:"column:scene;type:tinyint(2);not null;default:0;comment:场景,0-采购 1-添加入库 2-调整入库 3-退菜入库,这个场景不显示在入库记录页面"`
+	AddStock             int     `gorm:"column:add_stock;type:tinyint(1);not null;default:0;comment:是否已经加库存,0-未加库存 1-已加库存。用于判断该入库记录是否已经将对应的货物加库存，若没加库存将在下次检查时加该货物的库存"`
+	MaterialUuid         uint64  `gorm:"column:material_uuid;type:bigint unsigned;not null;default:0;comment:材料uuid"`
+	ProductBomUuid       uint64  `gorm:"column:product_bom_uuid;type:bigint unsigned;not null;default:0;comment:商品BOM表uuid"`
+	WarehouseFormUuid    uint64  `gorm:"column:warehouse_form_uuid;type:bigint unsigned;not null;default:0;comment:入库单uuid"`
+	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;type:bigint unsigned;not null;default:0;comment:销售订单商品uuid,用于退菜入库"`
+	SaleBillUuid         uint64  `gorm:"column:sale_bill_uuid;type:bigint unsigned;not null;default:0;comment:销售账单uuid,用于退菜入库"`
+
+	// 关联模型
+	ProductBom *ProductBom `gorm:"foreignKey:ProductBomUuid;references:Uuid"`
+	Material   *Material   `gorm:"foreignKey:MaterialUuid;references:Uuid"`
+}
+
+func (model *WarehouseFormItem) SetNil() {
+	model.ProductBom = nil
+	model.Material = nil
+}
+
+// IsMaterial 是否是原材料
+func (model *WarehouseFormItem) IsMaterial() bool {
+	return model.MaterialUuid != 0
+}
+
+// IsProductBom 是否是规格商品或小料
+func (model *WarehouseFormItem) IsProductBom() bool {
+	return model.ProductBomUuid != 0
 }
 
 // WarehouseOutForm 出库单表 `ttpos_warehouse_out_form`
@@ -70,13 +109,13 @@ func (model *WarehouseOutFormItem) SetNil() {
 }
 
 // IsMaterial 是否是原材料
-func (w *WarehouseOutFormItem) IsMaterial() bool {
-	return w.MaterialUuid != 0
+func (model *WarehouseOutFormItem) IsMaterial() bool {
+	return model.MaterialUuid != 0
 }
 
 // IsProductBom 是否是规格商品或小料
-func (w *WarehouseOutFormItem) IsProductBom() bool {
-	return w.ProductBomUuid != 0
+func (model *WarehouseOutFormItem) IsProductBom() bool {
+	return model.ProductBomUuid != 0
 }
 
 type Product struct {
@@ -145,5 +184,44 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleOrderUuid uint64
 		})
 	}
 	form.WarehouseOutFormItems = items
+	return form
+}
+
+// NewWarehouseForm 创建入库单.
+// 使用场景：
+// 1. 退菜时，创建入库单
+func NewWarehouseForm(list ProductList, saleBillUuid uint64) *WarehouseForm {
+	uuid, _ := utils.GetID()
+	form := &WarehouseForm{BaseModel: BaseModel{Uuid: uuid}}
+	form.FormNo = "RK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
+	form.Scene = constant.WarehouseFormSceneReturn           // 退菜入库
+
+	items := make([]*WarehouseFormItem, 0)
+	// 规格商品或小料出库记录
+	for _, item := range list {
+		items = append(items, &WarehouseFormItem{
+			Num:                  float64(item.Num),
+			Scene:                constant.WarehouseFormSceneReturn, // 退菜入库
+			AddStock:             constant.WarehouseOutFormItemReduceStockNotProcessed,
+			ProductBomUuid:       item.ProductBomUuid,
+			WarehouseFormUuid:    form.Uuid,
+			SaleOrderProductUuid: item.SaleOrderProductUuid,
+			SaleBillUuid:         saleBillUuid,
+		})
+	}
+
+	// 原材料出库记录
+	materials := list.GetProductBomMaterials()
+	for _, material := range materials {
+		items = append(items, &WarehouseFormItem{
+			Num:               material.Num,
+			Scene:             constant.WarehouseFormSceneReturn, // 退菜入库
+			AddStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
+			MaterialUuid:      material.MaterialUuid,
+			WarehouseFormUuid: form.Uuid,
+			SaleBillUuid:      saleBillUuid,
+		})
+	}
+	form.WarehouseFormItems = items
 	return form
 }

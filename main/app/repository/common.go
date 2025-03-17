@@ -47,6 +47,7 @@ type ICommonRepo interface {
 	WhereByNotStatus(status uint) DBOption                          // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                             // 根据是否隐藏查询
 	WhereByReduceStock(reduceStock uint) DBOption                   // 根据是否减库存查询
+	WhereByAddStock(addStock uint) DBOption                         // 根据是否加库存查询
 	WhereByDeviceUuid(deviceUuid uint64) DBOption                   // 根据设备uuid查询
 	WhereByDeviceSn(deviceSn string) DBOption                       // 根据设备Sn查询
 	WhereByNoDisable() DBOption                                     // 根据没禁用查询
@@ -224,6 +225,13 @@ func (r *commonRepo) WhereByIsHide(isHide bool) DBOption {
 func (r *commonRepo) WhereByReduceStock(reduceStock uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("reduce_stock = ?", reduceStock)
+	}
+}
+
+// WhereByAddStock 根据是否加库存查询
+func (r *commonRepo) WhereByAddStock(addStock uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("add_stock = ?", addStock)
 	}
 }
 

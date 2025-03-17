@@ -11,14 +11,19 @@ import (
 type IWarehouseFormRepo interface {
 	GetWarehouseForm(opts ...DBOption) (*model.WarehouseForm, error)                                    // 获取入库单
 	GetWarehouseOutFormItem(opts ...DBOption) ([]*model.WarehouseOutFormItem, error)                    // 获取出库单明细
+	GetWarehouseFormItem(opts ...DBOption) ([]*model.WarehouseFormItem, error)                          // 获取入库单明细
 	GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) // 获取该销售订单的所有出库单记录
 	GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)   // 获取该销售账单的所有出库单记录
 	GetWarehouseOutFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)     // 获取该销售账单的所有未减库存的出库单记录
+	GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error)           // 获取该销售账单的所有未加库存的入库单记录
 	CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                                      // 创建出库单记录
+	CreateWarehouseFormRecord(obj model.WarehouseForm) error                                            // 创建入库单记录
 	CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                              // 创建出库单记录
 	CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error                         // 批量创建出库单明细记录
+	CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error                               // 批量创建入库单明细记录
 	UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error                                 // 更新该销售订单的所有出库单记录为已出库
 	UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error                             // 更新该销售账单的所有出库单记录为已扣减库存
+	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error                                   // 更新该销售账单的所有入库单记录为已加库存
 }
 
 type warehouseFormRepoImpl struct {
@@ -55,10 +60,26 @@ func (r *warehouseFormRepoImpl) GetWarehouseOutFormItem(opts ...DBOption) ([]*mo
 
 	result := db.Model(&model.WarehouseOutFormItem{}).Find(&warehouseOutFormItems)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, errors.WithMessage(result.Error)
 	}
 
 	return warehouseOutFormItems, nil
+}
+
+func (r *warehouseFormRepoImpl) GetWarehouseFormItem(opts ...DBOption) ([]*model.WarehouseFormItem, error) {
+	var warehouseFormItems []*model.WarehouseFormItem
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Model(&model.WarehouseFormItem{}).Find(&warehouseFormItems)
+	if result.Error != nil {
+		return nil, errors.WithMessage(result.Error)
+	}
+
+	return warehouseFormItems, nil
 }
 
 func (r *warehouseFormRepoImpl) GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) {
@@ -103,9 +124,35 @@ func (r *warehouseFormRepoImpl) GetWarehouseOutFormItemNotProcessed(saleBillUuid
 	return warehouseOutFormItems, nil
 }
 
+// GetWarehouseFormItemNotProcessed 获取销售账单的所有未加库存的入库单记录
+func (r *warehouseFormRepoImpl) GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error) {
+	warehouseFormItems, err := r.GetWarehouseFormItem(
+		CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+		CommonRepo.WhereByAddStock(constant.WarehouseOutFormItemReduceStockNotProcessed),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductBom",
+			},
+			WithPreload{
+				Query: "Material",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return warehouseFormItems, nil
+}
+
 func (r *warehouseFormRepoImpl) CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error {
 	obj.SetNil()
 	return r.db.Model(&model.WarehouseOutForm{}).Create(&obj).Error
+}
+
+func (r *warehouseFormRepoImpl) CreateWarehouseFormRecord(obj model.WarehouseForm) error {
+	obj.SetNil()
+	return r.db.Model(&model.WarehouseForm{}).Create(&obj).Error
 }
 
 func (r *warehouseFormRepoImpl) CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error {
@@ -124,6 +171,17 @@ func (r *warehouseFormRepoImpl) CreateWarehouseOutFormItemRecords(list []*model.
 	return r.db.Model(&model.WarehouseOutFormItem{}).Create(items).Error
 }
 
+func (r *warehouseFormRepoImpl) CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error {
+	items := make([]model.WarehouseFormItem, 0)
+	for _, item := range list {
+		items = append(items, *item)
+	}
+	for index, _ := range items {
+		items[index].SetNil()
+	}
+	return r.db.Model(&model.WarehouseFormItem{}).Create(items).Error
+}
+
 // UpdateWarehouseOutFormItemRecordsStatus 更新该销售订单的所有出库单记录为已出库
 func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error {
 	return r.db.Model(&model.WarehouseOutFormItem{}).Where("sale_order_uuid = ? AND delete_time = ?", saleOrderUuid, constant.NotDeleted).Update("status", constant.WarehouseOutFormStatusSuccess).Error
@@ -132,4 +190,9 @@ func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsStatus(saleOrde
 // UpdateWarehouseOutFormItemRecordsReduceStock 更新该销售账单的所有出库单记录为已扣减库存
 func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error {
 	return r.db.Model(&model.WarehouseOutFormItem{}).Where("sale_bill_uuid = ? AND delete_time = ?", saleBillUuid, constant.NotDeleted).Update("reduce_stock", constant.WarehouseOutFormItemReduceStockSuccess).Error
+}
+
+// UpdateWarehouseFormItemRecordsAddStock 更新该销售账单的所有入库单记录为已加库存
+func (r *warehouseFormRepoImpl) UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error {
+	return r.db.Model(&model.WarehouseFormItem{}).Where("sale_bill_uuid = ? AND delete_time = ?", saleBillUuid, constant.NotDeleted).Update("add_stock", constant.WarehouseOutFormItemReduceStockSuccess).Error
 }

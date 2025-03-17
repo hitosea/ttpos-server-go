@@ -3573,9 +3573,11 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	// 构建订单商品退菜原因列表
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
+	var returnSaleOrderProduct *model.SaleOrderProduct
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
 		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+		returnSaleOrderProduct = saleOrderProduct
 	} else {
 		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
 		// 1. 修改原商品的数量
@@ -3591,14 +3593,25 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		if sameSignSaleOrderProduct != nil {
 			// 有相同签名的商品。将两个商品合并，数量相加
 			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
+			returnSaleOrderProduct = sameSignSaleOrderProduct
 		} else {
 			// 没有相同签名的商品。将新建的商品添加到销售订单商品列表中
 			// CalcAndSaveSaleBill 方法会检查到newSaleOrderProduct没有主键ID，会创建新记录。所以不用另外创建该订单商品，否则会重复创建
 			saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSaleOrderProduct)
+			returnSaleOrderProduct = newSaleOrderProduct
 		}
 	}
 
-	//
+	// 如果退菜商品是下单减库存的商品，则需要创建入库单
+	var warehouseForm *model.WarehouseForm
+	if returnSaleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
+		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{returnSaleOrderProduct})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		warehouseForm = model.NewWarehouseForm(productList, req.SaleBillUuid)
+	}
+
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 创建退菜记录
@@ -3611,6 +3624,18 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
+		}
+
+		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
+			// 创建入库单
+			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord")
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord(*warehouseForm); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 创建入库单记录
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		return nil
 	}); errUpdateDB != nil {
@@ -3633,7 +3658,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
 			ProductAttr:     saleOrderProduct.GetAttributeName(),
 			ProductAttrList: saleOrderProduct.GetAttributeNameList(),
-			TotalNum:        saleOrderProduct.Num,
+			TotalNum:        req.Num,
 			IsBuffet:        saleOrderProduct.IsBuffet == 1,
 			Remark:          saleOrderProduct.Remark,
 			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),

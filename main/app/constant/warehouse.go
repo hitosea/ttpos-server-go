@@ -20,3 +20,11 @@ const (
 	WarehouseOutFormItemReduceStockNotProcessed = iota // 未减库存 0
 	WarehouseOutFormItemReduceStockSuccess             // 已减库存 1
 )
+
+// WarehouseFormScene 入库单场景
+const (
+	WarehouseFormScenePurchase = iota // 采购入库 0
+	WarehouseFormSceneAddStock        // 添加入库 1
+	WarehouseFormSceneAdjust          // 调整入库 2
+	WarehouseFormSceneReturn          // 退菜入库 3
+)

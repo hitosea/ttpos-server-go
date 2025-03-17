@@ -17,7 +17,7 @@ type CancelSaleOrderProductPayload struct {
 	ProductName     dto.LocaleResponse   `json:"product_name"`     // 商品名称
 	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性
 	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
-	TotalNum        uint                 `json:"total_num"`        // 总数量
+	TotalNum        uint                 `json:"total_num"`        // 总数量。退菜的数量
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
 	Remark          string               `json:"remark"`           // 备注
 	Reason          dto.LocaleResponse   `json:"reason"`           // 退菜原因

@@ -8,14 +8,17 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var once_cancel_sale_order_product_event_handler sync.Once
@@ -62,6 +65,56 @@ func cancelSaleOrderProductEventHandler() {
 					[]printer_model.OrderProduct{products},
 				)
 			}()
+		})
+		event.NewSystemBus().SubscribeCancelSaleOrderProductEvent(func(payload event.CancelSaleOrderProductPayload) {
+			fmt.Println("SubscribeCancelSaleOrderProductEvent payload", utils.ToJsonString(payload))
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			// 加锁。防止多个送厨事件并发扣减库存
+			lock.NewSystemLock().LockUuid(payload.SaleBillUuid)
+			defer lock.NewSystemLock().UnlockUuid(payload.SaleBillUuid)
+
+			warehouseFormRepo := repository.NewWarehouseFormRepo(db)
+			warehouseFormItems, err := warehouseFormRepo.GetWarehouseFormItemNotProcessed(payload.SaleBillUuid)
+			if err != nil {
+				logger.Logger.Info("SubscribeCancelSaleOrderProductEvent process, GetWarehouseFormItemNotProcessed failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+				return
+			}
+			fmt.Println("warehouseFormItems", utils.ToJsonString(warehouseFormItems))
+			productBoms := make(map[uint64]*model.ProductBom)
+			materials := make(map[uint64]*model.Material)
+			for _, warehouseFormItem := range warehouseFormItems {
+				if warehouseFormItem.IsProductBom() {
+					productBoms[warehouseFormItem.ProductBomUuid] = warehouseFormItem.ProductBom
+					productBoms[warehouseFormItem.ProductBomUuid].StockNum += warehouseFormItem.Num
+				} else if warehouseFormItem.IsMaterial() {
+					materials[warehouseFormItem.MaterialUuid] = warehouseFormItem.Material
+					materials[warehouseFormItem.MaterialUuid].StockNum += warehouseFormItem.Num
+				}
+			}
+			productBomsList := make([]*model.ProductBom, 0)
+			materialsList := make([]*model.Material, 0)
+			for _, productBom := range productBoms {
+				productBomsList = append(productBomsList, productBom)
+			}
+			for _, material := range materials {
+				materialsList = append(materialsList, material)
+			}
+			// 更新库存
+			if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+				if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseFormItemRecordsAddStock(payload.SaleBillUuid); err != nil {
+					return err
+				}
+				if err := repository.NewProductBomRepo(tx).UpdateProductBoms(productBomsList); err != nil {
+					return err
+				}
+				if err := base.NewMaterialRepo(db).UpdateMaterials(materialsList); err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
+				logger.Logger.Info("SubscribeCancelSaleOrderProductEvent process, Transaction failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+				return
+			}
 		})
 	})
 }

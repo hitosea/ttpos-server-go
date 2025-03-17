@@ -1045,6 +1045,25 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '入库单表';
 
+
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form_item` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '入库单明细uuid',
+    `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '入库数量',
+    `scene` TINYINT(2) NOT NULL DEFAULT 0 COMMENT '场景,0-采购 1-添加入库 2-调整入库 3-退菜入库,这个场景不显示在入库记录页面',
+    `add_stock` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已经加库存,0-未加库存 1-已加库存。用于判断该入库记录是否已经将对应的货物加库存，若没加库存将在下次检查时加该货物的库存',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '材料uuid',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM表uuid',
+    `warehouse_form_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '入库单uuid',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品uuid,用于退菜入库',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid,用于退菜入库',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '入库单明细表';
+
+
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单ID',
