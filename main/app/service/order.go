@@ -2442,17 +2442,17 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	}
 
 	// 系统级验证
-	// companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
-	// if buffetErr != nil {
-	// 	return nil, buffetErr
-	// }
-	// if buffetSetting.IsAddClock != "1" {
-	// 	return nil, errors.New("未开启加钟")
-	// }
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if buffetErr != nil {
+		return nil, buffetErr
+	}
+	if buffetSetting.IsAddClock != "1" {
+		return nil, errors.New("未开启加钟")
+	}
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -2499,7 +2499,10 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 			if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetDelayProduct(delayProduct); err != nil {
 				return err
 			}
+			//
 			totalDelayTime += delay.DelayTime * 60
+			//
+			saleBill.AddSaleOrderBuffetDelayProduct(saleOrder.Uuid, delayProduct)
 		}
 
 		// 加钟剩余时长是否为0，为真时等于当前系统时间，为否时保持不动
@@ -2509,17 +2512,9 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 		}
 		saleBill.DelayDuration = uint(remainingDelayDuration + totalDelayTime)
 
-		// 提交完订单后，重新查询并计算金额。 todo 改为sale_bill保存数据库前计算好金额。
-		{
-			// 获取销售账单信息
-			saleBill, err := repository.NewOrderRepo(tx).GetSaleBillAllInfo(saleBill.Uuid)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			// 计算销售账单金额
-			if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
-				return errors.WithMessage(err)
-			}
+		// 计算销售账单金额
+		if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+			return errors.WithMessage(err)
 		}
 
 		return nil

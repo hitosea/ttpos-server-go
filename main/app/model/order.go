@@ -682,6 +682,32 @@ func (model *SaleBill) GetRemainingDelayDuration() int64 {
 	return duration
 }
 
+// AddSaleOrderBuffetDelayProduct 将自助餐加钟产品添加到销售账单的对应销售订单中
+func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, delayProduct SaleOrderBuffetDelayProduct) {
+	// 查找对应的销售订单
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.Uuid == saleOrderUuid {
+			// 将delayProduct添加到销售订单的SaleOrderBuffetDelayProducts列表中
+			if saleOrder.SaleOrderBuffetDelayProducts == nil {
+				saleOrder.SaleOrderBuffetDelayProducts = make([]*SaleOrderBuffetDelayProduct, 0)
+			}
+			// 创建一个新的指针，指向delayProduct的副本
+			delayProductPtr := &SaleOrderBuffetDelayProduct{
+				BaseModel:       delayProduct.BaseModel,
+				Name:            delayProduct.Name,
+				Num:             delayProduct.Num,
+				Sign:            delayProduct.Sign,
+				Price:           delayProduct.Price,
+				DelayTime:       delayProduct.DelayTime,
+				SaleOrderUuid:   delayProduct.SaleOrderUuid,
+				BuffetDelayUuid: delayProduct.BuffetDelayUuid,
+			}
+			saleOrder.SaleOrderBuffetDelayProducts = append(saleOrder.SaleOrderBuffetDelayProducts, delayProductPtr)
+			break
+		}
+	}
+}
+
 // 获取总的剩余时长
 func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
