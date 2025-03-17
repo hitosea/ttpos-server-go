@@ -139,7 +139,7 @@ func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.Pr
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_order_uuid").Order("finished_time desc").Find(&productionOrderProducts).Error
+	err := db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_bill_uuid").Order("finished_time desc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -149,7 +149,7 @@ func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.Pr
 // WhereProductHistoryCondition 历史上菜条件
 func (r *productionRepo) WhereProductHistoryCondition() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("sale_order_id in (?)", r.db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_order_uuid").Order("finished_time desc"))
+		return db.Where("sale_bill_uuid in (?)", r.db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_bill_uuid").Order("finished_time desc"))
 	}
 }
 

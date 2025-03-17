@@ -18,6 +18,7 @@ type ProductionItem struct {
 	Num                   uint               `json:"num"`                     // 送厨商品数量
 	CreateTime            int64              `json:"create_time"`             // 送厨时间
 	ProductAttributeNames string             `json:"product_attribute_names"` // 商品属性
+	Remark                string             `json:"remark"`                  // 备注
 }
 
 // ProductionListWithPagination 商品列表响应

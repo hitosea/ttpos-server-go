@@ -201,12 +201,12 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 	finishedTimeOption := productionRepo.WhereProductFinishedTime(time.Now().Add(-1 * time.Hour * 24).Unix())
 	limitProducts, err := productionRepo.GetLimitedHistoryProducts(statusOption, finishedTimeOption)
 	if err != nil {
-		return resp.ProductionHistory{}, errors.ErrInternal
+		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
 	products, err := productionRepo.GetProducts(statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
 	if err != nil {
-		return resp.ProductionHistory{}, errors.ErrInternal
+		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
 	return resp.ProductionHistory{
