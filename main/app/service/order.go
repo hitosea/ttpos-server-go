@@ -5995,8 +5995,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 
 	// 判断是否已支付
 	printType := constant.PrinterTemplatePreBilling
+	firstExecution := 1
 	if saleOrder.IsPaid() {
 		printType = constant.PrinterTemplateBilling
+		firstExecution = 0
 	}
 
 	// 打印
@@ -6004,7 +6006,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		printType,
 		saleBill,
 		saleOrder.Uuid,
-		1,
+		firstExecution,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

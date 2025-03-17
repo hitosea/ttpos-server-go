@@ -101,7 +101,7 @@ func (h *RechargeOrderHandler) CancelRechargeOrder(c *gin.Context) {
 	helper.Success(c, gin.H{}, "操作成功")
 }
 
-// PrintTicket 充值订单-打印小票
+// Print 充值订单-打印小票
 // @Summary 充值订单-打印小票
 // @Description 充值订单-打印小票
 // @Tags 收银端.充值订单
@@ -109,8 +109,8 @@ func (h *RechargeOrderHandler) CancelRechargeOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.PrintRechargeOrderReq true "充值订单打印小票参数"
-// @Success 200 {object} dto.Response{data=resp.PrinterLogData}
-// @Router /cashier/recharge_order/print_ticket [post]
+// @Success 200 {object} dto.Response{data=resp.PrinterData}
+// @Router /cashier/recharge_order/print [post]
 func (h *RechargeOrderHandler) PrintTicket(c *gin.Context) {
 	var printRechargeOrderReq req.PrintRechargeOrderReq
 	if err := c.ShouldBindJSON(&printRechargeOrderReq); err != nil {
@@ -231,12 +231,10 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
-	printerLogSrv := service.NewPrinterLogSrv(dbm, settingSrv)
-	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
 	memberSrv := service.NewMemberSrv(dbm)
-	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
+	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
 	// 初始化处理器
 	wrapper := RechargeOrderHandler{
 		rechargeOrderSrv: rechargeOrderSrv,
@@ -248,7 +246,7 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.GET("/recharge_order/list", wrapper.GetRechargeOrderList)
 		privateApi.GET("/recharge_order/info", wrapper.GetRechargeOrderInfo)
 		privateApi.POST("/recharge_order/cancel", wrapper.CancelRechargeOrder)
-		privateApi.POST("/recharge_order/print_ticket", wrapper.PrintTicket)
+		privateApi.POST("/recharge_order/print", wrapper.PrintTicket)
 		privateApi.GET("/recharge_order/refund", wrapper.GetRechargeOrderRefundInfo)
 		privateApi.POST("/recharge_order/refund", wrapper.RechargeOrderRefund)
 		privateApi.GET("/recharge_order/check_reverse_settle", wrapper.CheckRechargeOrderReverseSettle)

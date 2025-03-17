@@ -25,6 +25,7 @@ type PPrinterRepo interface {
 	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
 	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int) (*resp.PrinterData, error)
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
+	PrintingRechargeOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int) (*resp.PrinterData, error)
 }
 
 type PrinterRepoImpl struct {

@@ -1,0 +1,116 @@
+<?php
+
+namespace app\common\template\recharge;
+
+use help\DateHelp;
+use app\common\library\helper;
+use app\common\template\BaseTemplate;
+use app\common\enum\settings\SettingEnum;
+use app\common\enum\order\OrderPayTypeEnum;
+use app\common\enum\settings\PrinterTypeEnum;
+use app\common\model\order\UserRechargeOrder;
+use app\common\library\printer\party\SunmiCloudPrinter;
+
+/**
+ * 商米 充值单模版
+ */
+class SunmiRechargeTemplate extends BaseTemplate
+{
+    /**
+     * 生成模版
+     */
+    public function create(UserRechargeOrder $order, $printType)
+    {
+        $settingStore = $this->setting[SettingEnum::STORE]['values'];
+        $shopName = $settingStore['name'] ?? '';
+
+        // 余额日志
+        $balanceLog = $order->balanceLog()->where('scene', 10)->find();
+
+        // 是否自己打印
+        $isOneself = $printType != PrinterTypeEnum::SUNMI_LAN && $printType != PrinterTypeEnum::SUNMI_CLOUD;
+
+        // 日历
+        $payTime = date('Y/m/d H:i:s', strtotime($order['update_time']));
+        if ($this->defaultCalendar == '3') {
+            $payTime = DateHelp::changeBuddhistCalendar($payTime);
+        }
+        /* *
+        * 打印模版
+        */
+        $printer = new SunmiCloudPrinter(567);
+        $printer->setLineSpacing(20);
+        $printer->setAlignment(SunmiCloudPrinter::ALIGN_LEFT);
+        $printer->appendText(__("充值单"));
+        $printer->lineFeed(2);
+        $printer->setAlignment(SunmiCloudPrinter::ALIGN_CENTER);
+        $printer->setPrintModes(true, true, false);
+        $printer->setCharacterSize(2, 2);
+        $printer->appendText("{$shopName}");
+        $printer->setLineSpacing(30);
+        $printer->lineFeed(1);
+        // 
+        $printer->setLineSpacing(45);
+        $printer->setPrintModes(false, false, false);
+        $printer->setCharacterSize(1, 1);
+        $printer->lineFeed(1);
+        // 会员积分
+        $printer->setupColumns(
+            [320, SunmiCloudPrinter::ALIGN_LEFT, 0],
+            [0, SunmiCloudPrinter::ALIGN_RIGHT, 0],
+        );
+        $printer->printInColumns(__("收银员"), $order->cashier?->real_name ?: $order->cashier?->user_name ?: '');
+        $printer->printInColumns(__("时间"), $payTime);
+        $printer->printInColumns(__("充值前"), $this->getPriceAndUnit($balanceLog?->before_money ?: 0));
+        $printer->printInColumns(__("本次充值"), $this->getPriceAndUnit($order['recharge_money']));
+        $printer->printInColumns(__("赠送金额"), $this->getPriceAndUnit($order['gift_money']));
+        $printer->printInColumns(__("赠送积分"), helper::amountPermillage($order['gift_point']) . '');
+        $printer->printInColumns(__("充值后"),  $this->getPriceAndUnit($balanceLog?->after_money ?: 0));
+        // 
+        $printer->setLineSpacing(35);
+        // 退款
+        if ($order['refund_money'] && $order['refund_money'] > 0) {
+            $printer->appendText("------------------------------------------------");
+            $printer->lineFeed(1);
+            $printer->printInColumns(__("退款"),  $this->getPriceAndUnit($order['refund_money']));
+        }
+        // 合计應收：
+        $printer->appendText("------------------------------------------------");
+        $printer->lineFeed(1);
+        $printer->setPrintModes(true, false, false);
+        $printer->setCharacterSize(2, 1);
+        $printer->setLineSpacing(60);
+        $printer->setupColumns(
+            [380, SunmiCloudPrinter::ALIGN_LEFT, 0],
+            [0, SunmiCloudPrinter::ALIGN_RIGHT, 0],
+        );
+        $printer->printInColumns(__("合计应收："), $this->getPriceAndUnit($order['actual_price']));
+        $printer->setCharacterSize(1, 1);
+        $printer->setPrintModes(false, false, false);
+        // 支付方式
+        $printer->setupColumns(
+            [320, SunmiCloudPrinter::ALIGN_LEFT, 0],
+            [0, SunmiCloudPrinter::ALIGN_RIGHT, 0],
+        );
+        $printer->appendText("------------------------------------------------");
+        $printer->setLineSpacing($isOneself ? 20 : 40);
+        $printer->lineFeed(1);
+        $printer->setLineSpacing(45);
+        $payTypes = $order->payType()->select()->append(['pay_type'])->toArray();
+        foreach ($payTypes as $payType) {
+            $printer->printInColumns(__("支付方式"),  $payType['pay_type']['text']);
+            $printer->printInColumns(__("实收金额"),  $this->getPriceAndUnit($payType['price']));
+            if ($order->is_merge != 1 && $payType['pay_type']['value'] == OrderPayTypeEnum::CASH) {
+                $printer->printInColumns(__("找零"),  helper::amountPermillage($order['change_due']) . '');
+            }
+        }
+        // Print and exit page mode
+        $printer->restoreDefaultLineSpacing();
+        $printer->lineFeed();
+        $printer->printAndExitPageMode();
+        $printer->lineFeed(5);
+        $printer->cutPaper(false);
+        // 
+        return $printer->orderData;
+    }
+}

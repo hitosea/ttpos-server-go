@@ -1,7 +1,6 @@
 package assistant
 
 import (
-	"go.uber.org/zap"
 	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -12,6 +11,8 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -158,10 +159,8 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	printerLogSrv := service.NewPrinterLogSrv(dbm, settingSrv)
-	rechargePrintSrv := service.NewRechargePrinterSrv(dbm, settingSrv, printerLogSrv)
 	memberSrv := service.NewMemberSrv(dbm)
-	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, rechargePrintSrv, memberSrv)
+	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv:        memberSrv,

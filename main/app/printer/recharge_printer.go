@@ -15,11 +15,13 @@ import (
 )
 
 /**
- * 打印发票
+ * 会员充值订单打印
  */
-func (p *PrinterRepoImpl) PrintingInvoice(
+func (p *PrinterRepoImpl) PrintingRechargeOrder(
+	printType int,
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
+	FirstExecution int,
 ) (*resp.PrinterData, error) {
 	// todo 设备id没对
 
@@ -55,12 +57,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingInvoiceContent(
-		settingPrinterInfo.PrinterType,
-		saleBill,
-		saleOrder,
-		settingPrinterInfo.IsCashierPrinter,
-	)
+	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -70,14 +67,14 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		PrinterType: settingPrinterInfo.PrinterType,
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
-		RelatedType:     1,
+		RelatedType:     2,
 		RelatedUuid:     saleBill.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
-		DataType:        constant.PrinterLogDataTypeInvoice,
+		DataType:        constant.PrinterLogDataTypeRecharge,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  1,
+		FirstExecution:  FirstExecution,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -100,15 +97,15 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	}, nil
 }
 
-// 构建发票打印的内容
-func (p *PrinterRepoImpl) getPrintingInvoiceContent(
+// 构建订单打印的内容
+func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	printerType string,
+	printType int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
-	isCashierPrinter bool,
 ) string {
 	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateInvoice))
+	tmp := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -132,7 +129,8 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
-		return template.NewInvoiceImgTemplate(base).GetPrintContent(
+		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
+			printType,
 			tmp,
 			saleBill,
 			saleOrder,
@@ -143,11 +141,11 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* Compax 收银打印机 80mm 自带
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
-		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
+		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
+			printType,
 			tmp,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
@@ -155,12 +153,12 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
+		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
 			printerType,
+			printType,
 			tmp,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
@@ -168,12 +166,12 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* 商米打印机
 	 */
 	if base.IsSunMi {
-		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
+		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
 			printerType,
+			printType,
 			tmp,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
@@ -181,12 +179,11 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* CODESOFT 打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
-			printerType,
+		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
+			printType,
 			tmp,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
