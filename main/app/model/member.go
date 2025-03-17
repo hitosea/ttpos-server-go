@@ -192,6 +192,14 @@ type MemberRechargeOrder struct {
 	RechargeOrderOperationLogs []MemberRechargeOrderOperationLog `gorm:"foreignKey:RechargeOrderUuid;references:Uuid"` // 一个充值订单关联多个操作日志
 }
 
+// 获取应收金额 = 应收金额 - 减去退款
+func (model *MemberRechargeOrder) GetReceivableAmount() float64 {
+	payAmount := decimal.NewFromFloat(0)
+	payAmount = payAmount.Add(decimal.NewFromFloat(model.Amount))
+	payAmount = payAmount.Sub(decimal.NewFromFloat(model.RefundAmount))
+	return payAmount.InexactFloat64()
+}
+
 // MemberRechargeOrderOperationLog 会员充值订单操作记录表 `ttpos_member_recharge_order_operation_log`
 type MemberRechargeOrderOperationLog struct {
 	BaseModel

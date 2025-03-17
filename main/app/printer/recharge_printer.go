@@ -18,9 +18,7 @@ import (
  * 会员充值订单打印
  */
 func (p *PrinterRepoImpl) PrintingRechargeOrder(
-	printType int,
-	saleBill *model.SaleBill,
-	saleOrderUuid uint64,
+	order model.MemberRechargeOrder,
 	FirstExecution int,
 ) (*resp.PrinterData, error) {
 	// todo 设备id没对
@@ -41,12 +39,6 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
-	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
-	}
-
 	// 打印方式
 	printMethod := constant.PrinterLogPrintMethodText
 	if p.printerSetting.PrintMethod == "2" {
@@ -57,7 +49,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
+	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, order)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -68,7 +60,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
 		RelatedType:     2,
-		RelatedUuid:     saleBill.Uuid,
+		RelatedUuid:     order.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
 		DataType:        constant.PrinterLogDataTypeRecharge,
@@ -100,12 +92,8 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	printerType string,
-	printType int,
-	saleBill *model.SaleBill,
-	saleOrder *model.SaleOrder,
+	order model.MemberRechargeOrder,
 ) string {
-	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -128,64 +116,59 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	}
 
 	// 图片打印
-	if p.printerSetting.PrintMethod == "2" {
-		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
-			printType,
-			tmp,
-			saleBill,
-			saleOrder,
+	if p.printerSetting.PrintMethod == "1" {
+		return template.NewRechargeImgTemplate(base).GetPrintContent(
+			order,
 		)
 	}
 
-	/* *
-	* Compax 收银打印机 80mm 自带
-	 */
-	if printerType == constant.PrinterTypeCashierCompax {
-		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-			printType,
-			tmp,
-			saleBill,
-			saleOrder,
-		)
-	}
+	// /* *
+	// * Compax 收银打印机 80mm 自带
+	//  */
+	// if printerType == constant.PrinterTypeCashierCompax {
+	// 	return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
+	// 		printType,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
 
-	/* *
-	 * 芯烨打印机
-	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
-			printerType,
-			printType,
-			tmp,
-			saleBill,
-			saleOrder,
-		)
-	}
+	// /* *
+	//  * 芯烨打印机
+	//  */
+	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+	// 	return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
+	// 		printerType,
+	// 		printType,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
 
-	/* *
-	* 商米打印机
-	 */
-	if base.IsSunMi {
-		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
-			printerType,
-			printType,
-			tmp,
-			saleBill,
-			saleOrder,
-		)
-	}
+	// /* *
+	// * 商米打印机
+	//  */
+	// if base.IsSunMi {
+	// 	return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
+	// 		printerType,
+	// 		printType,
+	// 		tmp,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
 
-	/* *
-	* CODESOFT 打印机
-	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-			printType,
-			tmp,
-			saleBill,
-			saleOrder,
-		)
-	}
+	// /* *
+	// * CODESOFT 打印机
+	//  */
+	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+	// 	return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
+	// 		printType,
+	// 		tmp,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
 
 	return ""
 }

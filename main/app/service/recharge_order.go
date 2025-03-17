@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -523,6 +524,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
 }
 
+// 确认充值订单
 func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, rechargeOrderUuid uint64) resp.ConfirmRechargeOrder {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(rechargeOrderUuid),
@@ -540,29 +542,31 @@ func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, recharge
 	}
 }
 
+// 打印充值订单
 func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WithMember(),
+		rechargeOrderRepo.WithStaff(),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
 		rechargeOrderRepo.WhereUuid(printRechargeOrderReq.RechargeOrderUuid),
 	)
 	if order.Uuid == 0 {
 		return nil, errors.New("充值订单不存在")
 	}
-	return nil, nil
 	//
-	// printLang := printRechargeOrderReq.PrintLang
-	// // 打印
-	// printerData, err := printer.NewPrinterRepo(ctx, printLang).PrintingRechargeOrder(
-	// 	constant.PrinterTemplateRecharge,
-	// 	saleBill,
-	// 	saleOrder.Uuid,
-	// 	firstExecution,
-	// )
-	// if err != nil {
-	// 	return nil, errors.WithMessage(err)
-	// }
-	//
-	// return printerData, nil
+	printLang := printRechargeOrderReq.PrintLang
+	// 打印
+	printerData, err := printer.NewPrinterRepo(ctx, printLang).PrintingRechargeOrder(
+		order,
+		1,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return printerData, nil
 }
 
 // 生成充值订单编号
