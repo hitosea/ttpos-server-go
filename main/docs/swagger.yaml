@@ -5630,6 +5630,35 @@ paths:
       summary: 桌台订单调整自助餐
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/cart/cooking:
+    post:
+      consumes:
+      - application/json
+      description: 送厨购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductCookingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 送厨购物车商品
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/cart/product/add:
     post:
       consumes:
@@ -5659,6 +5688,338 @@ paths:
       summary: 向购物车添加商品
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/cancel_giving:
+    post:
+      consumes:
+      - application/json
+      description: 取消赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消赠菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/cancel_returning:
+    post:
+      consumes:
+      - application/json
+      description: 取消退菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 取消退菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/change_desk:
+    post:
+      consumes:
+      - application/json
+      description: 转菜购物车商品
+      parameters:
+      - description: 转菜购物车商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductChangeDeskReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 转菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/giving:
+    post:
+      consumes:
+      - application/json
+      description: 赠菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductGivingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 赠菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/num:
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品数量
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductNumReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 修改购物车某个商品的数量
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/returning:
+    post:
+      consumes:
+      - application/json
+      description: 退菜购物车商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 退菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/discount:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单打折
+      parameters:
+      - description: 打折参数，根据discount_method值(1:改价,2:打折,3:抹零)提供对应的额外字段
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDiscountMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单打折
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/discount/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+      parameters:
+      - description: 取消优惠折扣参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderDiscountCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 取消桌台订单所有优惠折扣，包括改价、打折、抹零
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/member/cancel:
+    delete:
+      consumes:
+      - application/json
+      description: 不使用此会员
+      parameters:
+      - description: 不使用此会员
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderMemberCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 不使用此会员
+      tags:
+      - 点餐助手端.桌台.结账
+  /assistant/desk/order/member/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 确认使用会员优惠并验证密码
+      parameters:
+      - description: 确认使用会员优惠并验证密码
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckMemberPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 确认使用会员优惠并验证密码
+      tags:
+      - 点餐助手端.桌台.结账
+  /assistant/desk/order/member/discount:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单会员优惠
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 会员Uuid
+        in: query
+        name: member_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.MemberDiscountResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取订单会员优惠
+      tags:
+      - 点餐助手端.桌台.结账
   /assistant/desk/order/population:
     post:
       consumes:
@@ -5690,6 +6051,157 @@ paths:
       summary: 桌台订单修改人数
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单打印小票
+      parameters:
+      - description: 参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 桌台订单打印小票
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/print/invoice:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单打印发票
+      parameters:
+      - description: 参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintInvoiceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 桌台订单打印发票
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/product/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除桌台订单商品
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 删除桌台订单商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/product/price:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单商品改价
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductChangePriceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单商品改价
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/product/remark:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单商品备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单商品备注
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/region_and_type:
     get:
       consumes:
@@ -5709,6 +6221,28 @@ paths:
       summary: 获取桌台的区域和类型
       tags:
       - 点餐助手端.桌台
+  /assistant/free_or_gift_reason:
+    get:
+      consumes:
+      - application/json
+      description: 获取免单/赠菜原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取免单/赠菜原因
+      tags:
+      - 点餐助手端.基础信息
   /assistant/language:
     get:
       consumes:
@@ -6061,6 +6595,28 @@ paths:
       summary: 获取产品列表
       tags:
       - 点餐助手端.产品
+  /assistant/return_reason:
+    get:
+      consumes:
+      - application/json
+      description: 获取退菜原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ReturnFoodReasonResps'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取退菜原因
+      tags:
+      - 点餐助手端.基础信息
   /assistant/verify_advanced_password:
     post:
       consumes:

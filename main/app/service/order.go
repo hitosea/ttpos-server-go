@@ -1873,6 +1873,10 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -1960,6 +1964,10 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 		return nil, errSaleBill
 	}
 
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -2023,6 +2031,10 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
+	}
+
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 
 	// 判断订单状态
@@ -2093,6 +2105,9 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 		return nil, errSaleBill
 	}
 
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -2574,6 +2589,9 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+	if ctx.GetSource() == constant.SourceAssistant && billInfo.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 
 	// 判断订单状态
@@ -3520,6 +3538,10 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	}
 	saleOrder, saleOrderProduct := saleBill.GetSaleOrderAndProduct(req.SaleOrderUuid, req.SaleOrderProductUuid)
 
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	// 校验是否合规
 	switch {
 	case saleOrder == nil:
@@ -3638,6 +3660,9 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	if err != nil {
 		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -3721,6 +3746,9 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "销售账单不存在")
+	}
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderChangeTable, req.SaleOrderUuid); err != nil {
@@ -3830,6 +3858,11 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 	if err != nil {
 		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
+
+	if ctx.GetSource() == constant.SourceAssistant && saleBill.IsSplit() {
+		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
+	}
+
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)

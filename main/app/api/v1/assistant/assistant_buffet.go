@@ -30,7 +30,6 @@ type BuffetHandler struct {
 // @Router /assistant/buffet/list [get]
 func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
-	// 获取收银产品列表
 	res, err := h.Service.GetBuffetList(companyUuid)
 	// 处理错误
 	if err != nil {
@@ -41,7 +40,6 @@ func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// RegisterBuffetHandlers 注册收银产品路由
 func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

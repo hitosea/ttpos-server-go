@@ -163,6 +163,44 @@ func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {
 	helper.Success(c, h.paymentMethodSrv.GetList(helper.GetContext(c), paymentListReq.Type))
 }
 
+// GetReturnReason 获取退菜原因
+// @Summary 获取退菜原因
+// @Description 获取退菜原因
+// @Tags 点餐助手端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResps}
+// @Router /assistant/return_reason [get]
+func (h *BaseHandler) GetReturnReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	respSetting, err := h.otherSrv.GetReturnFoodReasonList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, respSetting)
+}
+
+// GetFreeOrGiftReason 获取免单/赠菜原因
+// @Summary 获取免单/赠菜原因
+// @Description 获取免单/赠菜原因
+// @Tags 点餐助手端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResps}
+// @Router /assistant/free_or_gift_reason [get]
+func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	respSetting, err := h.otherSrv.GetGiftOrFreeReasonList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, respSetting)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -191,7 +229,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
 		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
 		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
-
-		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList) // 获取支付方式列表
+		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList)         // 获取支付方式列表
+		privateApi.GET("/return_reason", wrapper.GetReturnReason)                    // 获取退菜原因
+		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)          // 获取退菜原因
 	}
 }

@@ -40,7 +40,6 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 		return
 	}
 
-	// 获取收银产品列表
 	res, err := h.productService.GetProductList(helper.GetContext(c), req)
 
 	// 处理错误
@@ -87,7 +86,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
-	// 创建收银产品处理程序
 	wrapper := ProductHandler{
 		productService: service.NewProductSrv(
 			dbm,                    // 数据库管理器

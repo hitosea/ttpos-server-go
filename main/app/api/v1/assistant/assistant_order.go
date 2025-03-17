@@ -15,8 +15,8 @@ import (
 )
 
 type OrderHandler struct {
-	orderSrv    service.IOrderSrv // 订单服务
-	deskService service.IDeskSrv  // 桌台服务
+	orderSrv service.IOrderSrv // 订单服务
+	deskSrv  service.IDeskSrv  // 桌台服务
 }
 
 // GetMustPlanList 必点方案列表
@@ -47,7 +47,6 @@ func (h *OrderHandler) GetMustPlanList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -61,8 +60,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		orderSrv:    orderSrv,
-		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
+		orderSrv: orderSrv,
+		deskSrv:  service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
 	}
 
 	// 需要认证
