@@ -1,6 +1,7 @@
 package printer_tasks
 
 import (
+	"fmt"
 	"log"
 	"slices"
 	"time"
@@ -31,14 +32,18 @@ func NewPrinterTask(dbm *database.DBManager, cache cache.Cache) *printerTask {
 
 // 执行任务
 func (t *printerTask) Execute() {
-	// 根据 APP 表实例化数据库连接
+	// 根据 APP 表实例化数据库连接，并左关联 CompanySetting
+	prefix := config.Database.TablePrefix
 	var companies []model.Company
-	if err := t.dbm.GetDB(0).Scopes(repository.NotDeleted).Debug().Where("delete_time = 0").Find(&companies).Error; err != nil {
-		log.Fatalf("Error querying companies: %s", err)
+	if err := t.dbm.GetDB(0).
+		Joins(fmt.Sprintf("LEFT JOIN %scompany_setting ON %scompany.uuid = %scompany_setting.company_uuid", prefix, prefix, prefix)).
+		Where(fmt.Sprintf("%scompany.delete_time = 0", prefix)).
+		Where(fmt.Sprintf("%scompany_setting.is_open_local_print = 0", prefix)).
+		Select(fmt.Sprintf("%scompany.uuid, %scompany.name, %scompany_setting.is_open_local_print", prefix, prefix, prefix)). // 选择需要的字段
+		Find(&companies).Error; err != nil {
+		log.Fatalf("Error querying companies with settings: %s", err)
 		return
 	}
-
-	// todo 需要加上判断当前是否需要开启本地云打印
 
 	// 每5个公司为一组进行处理
 	for i := 0; i < len(companies); i += 5 {
@@ -72,6 +77,7 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 				db.Where("print_method = ?", 2)
 				db.Where("first_execution = ?", 0)
 				db.Where("type = ?", constant.Yes)
+				db.Limit(5)
 			}
 			return db
 		},
