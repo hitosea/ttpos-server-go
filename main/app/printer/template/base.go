@@ -298,6 +298,7 @@ func (p *printerTemplate) GetLogoAddr() string {
 	// 文件不存在，处理图像，确保是白底黑字
 	err := image.NewImageHelp().WhiteBackgroundWithBlackText(logoURL, outputPath)
 	if err != nil {
+		fmt.Println("处理图像失败:", err)
 		return ""
 	}
 

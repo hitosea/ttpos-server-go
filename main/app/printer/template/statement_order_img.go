@@ -169,6 +169,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	} else if temp == 3 {
 		// 打印logo
 		if logoAddr := t.base.GetLogoAddr(); logoAddr != "" {
+			fmt.Println(logoAddr)
 			img.SetTextLineHeight(25)
 			img.SetAlignment(pkg.AlignCenter)
 			img.AppendImg(logoAddr, 150, false, 0)
@@ -268,6 +269,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			img.RecoverDefaultTextLineHeight()
 			img.LineFeed(1)
+			img.LineFeed(1, 12)
 		}
 		img.SetFontWeight(1)
 		img.SetFontSize(20)
