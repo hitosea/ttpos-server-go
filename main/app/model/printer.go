@@ -1,11 +1,11 @@
 package model
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 )
@@ -96,56 +96,53 @@ func (model *PrinterLog) CompressData() string {
 	if data == "" {
 		return data
 	}
-	var result strings.Builder
-	zeroCount := 0
-	for i := 0; i < len(data); i++ {
-		if data[i] == '0' {
-			zeroCount++
-			// 检查后面是否还有字符
-			if i == len(data)-1 || data[i+1] != '0' {
-				if zeroCount >= 10 {
-					result.WriteString(fmt.Sprintf("-zero%d-", zeroCount))
-				} else {
-					result.WriteString(strings.Repeat("0", zeroCount))
-				}
-				zeroCount = 0
-			}
-		} else {
-			if zeroCount > 0 {
-				if zeroCount >= 10 {
-					result.WriteString(fmt.Sprintf("-zero%d-", zeroCount))
-				} else {
-					result.WriteString(strings.Repeat("0", zeroCount))
-				}
-				zeroCount = 0
-			}
-			result.WriteByte(data[i])
-		}
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression) // 或使用gzip.DefaultCompression
+	if err != nil {
+		return ""
 	}
-	return result.String()
+	_, err = zw.Write([]byte(data))
+	if err != nil {
+		return ""
+	}
+	if err := zw.Close(); err != nil {
+		return ""
+	}
+	// 将压缩后的二进制数据转换为Base64编码的字符串
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	return "GZIP:" + encoded
+
 }
 
 // 还原压缩的数据
 func (model *PrinterLog) DecompressData() string {
-	data := model.Data
-	if data == "" {
-		return data
+	if model.Data == "" {
+		return ""
 	}
-	// 使用正则表达式匹配 "-zeroX-" 格式的字符串，其中X是数字
-	re := regexp.MustCompile(`-zero(\d+)-`)
-	result := re.ReplaceAllStringFunc(data, func(match string) string {
-		// 提取数字部分
-		numStr := re.FindStringSubmatch(match)[1]
-		// 转换为数字
-		num, err := strconv.Atoi(numStr)
-		if err != nil {
-			return match
-		}
-		// 返回对应数量的0
-		return strings.Repeat("0", num)
-	})
-
-	return result
+	// 检查数据是否是压缩过的
+	if !strings.HasPrefix(model.Data, "GZIP:") {
+		return model.Data // 如果不是压缩过的数据，直接返回
+	}
+	// 提取Base64编码的部分
+	encoded := strings.TrimPrefix(model.Data, "GZIP:")
+	// 解码Base64
+	compressed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return model.Data // 如果解码失败，返回原始数据
+	}
+	// 解压数据
+	zr, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		return model.Data
+	}
+	defer zr.Close()
+	//
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return model.Data
+	}
+	return buf.String()
 }
 
 // 是否收银打印机
