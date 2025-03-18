@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -267,6 +268,37 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetOrderCartProductUnCooked 查询未下单商品
+// @Summary 查询未下单商品
+// @Description 查询未下单商品
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/cart/product/uncooked/list [get]
+func (h *H5Handler) GetOrderCartProductUnCooked(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if saleBillUuid == 0 || saleOrderUuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
+		return
+	}
+	res, err := h.orderService.GetUnSendKitchen(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterH5Handlers 注册扫码h5路由
 func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -297,13 +329,14 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	// 需要认证
 	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
-		privateApi.GET("/base/info", wrapper.BaseInfo)                           // 获取桌码基础信息
-		privateApi.GET("/buffet/list", wrapper.GetBuffetList)                    // 获取自助餐套餐列表
-		privateApi.POST("/desk/open", wrapper.OpenDesk)                          // 开台
-		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取收银产品类别列表
-		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取收银产品列表
-		privateApi.POST("/call", wrapper.Call)                                   // 发起呼叫
-		privateApi.POST("/remark", wrapper.OrderProductRemark)                   // 给商品添加备注
-		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)  // 向购物车添加商品
+		privateApi.GET("/base/info", wrapper.BaseInfo)                                           // 获取桌码基础信息
+		privateApi.GET("/buffet/list", wrapper.GetBuffetList)                                    // 获取自助餐套餐列表
+		privateApi.POST("/desk/open", wrapper.OpenDesk)                                          // 开台
+		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)                 // 获取收银产品类别列表
+		privateApi.GET("/product/list", wrapper.GetProductList)                                  // 获取收银产品列表
+		privateApi.POST("/call", wrapper.Call)                                                   // 发起呼叫
+		privateApi.POST("/remark", wrapper.OrderProductRemark)                                   // 给商品添加备注
+		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                  // 向购物车添加商品
+		privateApi.GET("/order/cart/product/uncooked/list", wrapper.GetOrderCartProductUnCooked) // 查询购物车未下单商品列表
 	}
 }

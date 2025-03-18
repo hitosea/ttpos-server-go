@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -59,6 +60,8 @@ type ICommonRepo interface {
 	WhereBySign(sign string) DBOption                               // 根据签名查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
+	FilterSaleOrderProduct() DBOption                               // 只查询常规的购物车商品
+	FilterSaleOrderProductH5Unordered() DBOption                    // 只查询H5未下单的购物车商品
 	SortWithID(order string) DBOption                               // 根据ID排序
 	SortWithCreateTime(order string) DBOption                       // 根据创建时间排序
 	SortWithSort(order string) DBOption                             // 根据Order By排序
@@ -300,6 +303,27 @@ func (r *commonRepo) WhereLikeByName(name string) DBOption {
 func (r *commonRepo) WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+// FilterSaleOrderProduct 只查询常规的购物车商品
+func (r *commonRepo) FilterSaleOrderProduct() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
+	}
+}
+
+// FilterSaleOrderProductH5Unordered 只查询H5未下单的购物车商品
+func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		product := model.SaleOrderProduct{
+			BaseModel: model.BaseModel{
+				DeleteTime: constant.NotDeleted,
+			},
+			IsAcceptOrder: constant.OrderProductIsAcceptOrderUnAccept,
+			H5OrderUuid:   constant.OptionalUuid, // 没有H5订单时，H5OrderUuid为0，表示该商品未下单
+		}
+		return db.Where(product)
 	}
 }
 

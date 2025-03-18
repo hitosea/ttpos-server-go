@@ -25,7 +25,7 @@ type IOrderRepo interface {
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                         // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                              // 获取桌台的销售账单详细信息
 	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                      // 获取桌台的销售账单详细信息
-	GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, error)                                                            // 获取点餐购物车信息
+	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                           // 获取点餐购物车信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)  // 获取销售账单详细信息-包含商品信息
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)           // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
@@ -422,8 +422,30 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 	return info, nil
 }
 
+type OrderCartInfoOption struct {
+	UnorderedH5Product bool // 是否查询H5未下单的商品
+}
+type OrderCartInfoOptionFunc func(option *OrderCartInfoOption)
+
+func WithUnorderedH5Product() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.UnorderedH5Product = true
+	}
+}
+
 // GetOrderCartInfo 获取购物车信息
-func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, error) {
+func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error) {
+	option := &OrderCartInfoOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	// 只查询常规的购物车商品
+	filterProduct := CommonRepo.DBOption(CommonRepo.FilterSaleOrderProduct())
+	if option.UnorderedH5Product {
+		// 只查询H5未下单的商品
+		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductH5Unordered())
+	}
 
 	repo := NewSaleBillRepo(r.db)
 	saleBill, err := repo.GetSaleBill(
@@ -558,11 +580,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64) (*ro.ShopCartRepo, err
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts",
-							Args: []interface{}{
-								func(db *gorm.DB) *gorm.DB {
-									return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
-								},
-							},
+							Args:  []any{filterProduct},
 						},
 					),
 					CommonRepo.Preload(

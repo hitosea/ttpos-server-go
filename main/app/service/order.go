@@ -70,7 +70,7 @@ type IOrderSrv interface {
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                               // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                     // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                     // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                          // 获取购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)              // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                      // 向购物车添加商品
 	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                // 获取销售账单uuid和销售订单uuid
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
@@ -102,7 +102,7 @@ type IOrderSrv interface {
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                            // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
-	GetUnSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.UnSendKitchen, error)                                                       // 未送厨商品列表
+	GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error)           // 未送厨商品列表
 	GetSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.SendKitchen, error)                                                           // 已送厨商品列表
 }
 
@@ -2815,13 +2815,13 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 }
 
 // GetOrderCartInfo 获取点餐购物车信息
-func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error) {
+func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
 
-	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid)
+	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
@@ -6312,12 +6312,12 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 }
 
 // GetUnSendKitchen 未送厨商品列表
-func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.UnSendKitchen, error) {
+func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error) {
 	res := resp.UnSendKitchen{
 		List:          make([]resp.Product, 0),
 		ProductAmount: 0,
 	}
-	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
