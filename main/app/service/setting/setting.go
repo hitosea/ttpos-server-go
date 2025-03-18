@@ -746,17 +746,25 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			}
 			copies = printer.Copies
 			printerConfig = utils.ToJson(printer.GetConfigJson())
-			printerType = printer.PrinterType.Key
+			if printer.PrinterType != nil {
+				printerType = printer.PrinterType.Key
+			}
 		} else if printerId != "0" { // 收银机内置的打印机
-			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			printerType = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceId))
 			cashierBindKey = printerId
 			isCashierPrinter = true
+			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceId))
+			if slices.Contains(constant.SunmiAllPrints, brand) {
+				// 商米打印机
+				printerType = constant.PrinterTypeCashierSunmi
+			} else if slices.Contains([]string{constant.BrandA11510P}, brand) {
+				// compax打印机
+				printerType = constant.PrinterTypeCashierCompax
+			} else {
+				// 未知打印机
+				printerType = ""
+			}
 		}
-	}
-	//
-	if printerType == "[UNKNOWN]" {
-		printerType = ""
 	}
 	//
 	return setting.PrinterInfo{

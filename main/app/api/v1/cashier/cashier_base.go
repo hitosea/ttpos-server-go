@@ -369,6 +369,69 @@ func (h *BaseHandler) GetShiftInfo(c *gin.Context) {
 // 	helper.Success(c, gin.H{}, "交班成功")
 // }
 
+// GetReport 获取报备信息
+// @Summary 获取报备信息
+// @Description 获取报备信息
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CashierReportResp}
+// @Router /cashier/report [get]
+func (h *BaseHandler) GetReport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	report, err := h.staffShiftSrv.GetCashierReport(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, report)
+}
+
+// SubmitReport 提交报备信息
+// @Summary 提交报备信息
+// @Description 提交报备信息
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.CashierReportReq true "提交报备信息"
+// @Success 200 {object} dto.Response{data=resp.CashierReportResp}
+// @Router /cashier/report [post]
+func (h *BaseHandler) SubmitReport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var reportReq req.CashierReportReq
+	if err := c.ShouldBindJSON(&reportReq); err != nil {
+		helper.HandleValidationError(c, err, reportReq, nil)
+		return
+	}
+	err := h.staffShiftSrv.SubmitCashierReport(ctx, reportReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// GetOpenCashBoxPrinterConfig 获取打开钱箱的打印机配置
+// @Summary 获取打开钱箱的打印机配置
+// @Description 获取打开钱箱的打印机配置
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.PrinterData}
+// @Router /cashier/open_cash_box_printer_config [get]
+func (h *BaseHandler) GetOpenCashBoxPrinterConfig(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	resp, err := h.printerLogSrv.GetStaticOpenCashBoxPrinterConfig(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -394,17 +457,20 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/base", wrapper.GetCashierBase)                              // 获取基础信息
-		privateApi.GET("/language", wrapper.GetLanguage)                             // 获取语言
-		privateApi.GET("/ad", wrapper.GetAd)                                         // 收银机副屏广告
-		privateApi.POST("/verify_cash_box_password", wrapper.VerifyCashBoxPassword)  // 验证钱箱密码
-		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
-		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)         // 验证锁屏密码
-		privateApi.GET("/check_update", wrapper.CheckUpdate)                         // 检查更新
-		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList)         // 获取支付方式列表
-		privateApi.GET("/return_reason", wrapper.GetReturnReason)                    // 获取退菜原因
-		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)          // 获取退菜原因
-		privateApi.GET("/print_data", wrapper.GetPrintData)                          // 获取打印数据
+		privateApi.GET("/base", wrapper.GetCashierBase)                                      // 获取基础信息
+		privateApi.GET("/language", wrapper.GetLanguage)                                     // 获取语言
+		privateApi.GET("/ad", wrapper.GetAd)                                                 // 收银机副屏广告
+		privateApi.POST("/verify_cash_box_password", wrapper.VerifyCashBoxPassword)          // 验证钱箱密码
+		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword)         // 验证高级密码
+		privateApi.POST("/verify_lock_password", wrapper.VerifyLockPassword)                 // 验证锁屏密码
+		privateApi.GET("/check_update", wrapper.CheckUpdate)                                 // 检查更新
+		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList)                 // 获取支付方式列表
+		privateApi.GET("/return_reason", wrapper.GetReturnReason)                            // 获取退菜原因
+		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)                  // 获取退菜原因
+		privateApi.GET("/print_data", wrapper.GetPrintData)                                  // 获取打印数据
+		privateApi.GET("/report", wrapper.GetReport)                                         // 获取报备信息
+		privateApi.POST("/report", wrapper.SubmitReport)                                     // 提交报备信息
+		privateApi.GET("/open_cash_box_printer_config", wrapper.GetOpenCashBoxPrinterConfig) // 获取打开钱箱的打印机配置
 
 		// 保存接单设置
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置

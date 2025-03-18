@@ -206,7 +206,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		// 发票信息
 		if printType == constant.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
-			if invoiceInfo.HasContent() {
+			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				printer.SetLineSpacing(48)
 				printer.AppendText("------------------------------------------------\n")
 				if !t.base.IsThText(invoiceInfo.CompanyName) {

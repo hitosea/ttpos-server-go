@@ -59,7 +59,7 @@ func (r *StatisticsRepo) CountShiftRechargeRefundAmount(shiftNo string) model.St
 	var result model.StatisticsShiftRechargeRefundAmount
 
 	r.db.Model(&model.MemberRechargeOrder{}).
-		Select("duty_no AS shift_no, SUM(refund_amount) AS refund_amount, SUM(refund_tax_amount) AS refund_tax_amount").
+		Select("duty_no AS shift_no, SUM(refund_amount) AS refund_amount").
 		Where("duty_no = ?", shiftNo).
 		Where("delete_time = 0").
 		Find(&result)
@@ -81,8 +81,8 @@ func (r *StatisticsRepo) CountShiftPaymentMethodAmount(shiftNo string) []model.S
 
 	subQuery := db.Raw(
 		"(SELECT "+saleOrderTable+".uuid AS uuid FROM "+saleBillTable+
-			" LEFT JOIN "+saleOrderTable+" ON "+saleBillTable+".uuid = "+saleOrderTable+".sale_bill_uuid "+
-			"WHERE "+saleBillTable+".duty_no = ? AND "+saleBillTable+".delete_time = 0 AND "+saleOrderTable+".status = ? AND "+saleOrderTable+".delete_time = 0) UNION ALL "+
+			" LEFT JOIN "+saleOrderTable+" ON "+saleBillTable+".uuid = "+saleOrderTable+".sale_bill_uuid AND "+saleOrderTable+".delete_time = 0 "+
+			"WHERE "+saleBillTable+".duty_no = ? AND "+saleBillTable+".delete_time = 0 AND "+saleOrderTable+".status = ?) UNION ALL "+
 			"(SELECT uuid FROM "+prefix+"member_recharge_order "+
 			"WHERE duty_no = ? AND status = 1 AND delete_time = 0)",
 		shiftNo,
@@ -97,12 +97,11 @@ func (r *StatisticsRepo) CountShiftPaymentMethodAmount(shiftNo string) []model.S
 				"SUM("+paymentOrderTable+".amount) AS pay_amount, "+
 				"SUM("+returnOrderAmountTable+".amount) AS refund_amount",
 		).
-		Joins("LEFT JOIN "+paymentMethodTable+" ON "+paymentOrderTable+".payment_method_uuid = "+paymentMethodTable+".uuid").
-		Joins("LEFT JOIN "+returnOrderAmountTable+" ON "+paymentOrderTable+".uuid = "+returnOrderAmountTable+".payment_order_uuid").
+		Joins("LEFT JOIN "+paymentMethodTable+" ON "+paymentOrderTable+".payment_method_uuid = "+paymentMethodTable+".uuid AND "+paymentMethodTable+".delete_time = 0").
+		Joins("LEFT JOIN "+returnOrderAmountTable+" ON "+paymentOrderTable+".uuid = "+returnOrderAmountTable+".payment_order_uuid AND "+returnOrderAmountTable+".delete_time = 0").
 		Where(paymentOrderTable+".related_uuid IN (?)", subQuery).
 		Where(paymentOrderTable+".status = ?", constant.PaymentOrderStatusPaid).
 		Where(paymentOrderTable + ".delete_time = 0").
-		Where(returnOrderAmountTable + ".delete_time = 0").
 		Group(paymentOrderTable + ".payment_method_uuid").
 		Find(&list)
 

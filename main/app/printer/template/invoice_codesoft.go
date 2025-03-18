@@ -178,7 +178,7 @@ func (t *invoiceCodesoftTemplate) GetPrintContent(
 
 	// 发票信息
 	invoiceInfo := saleOrder.InvoiceInfo
-	if invoiceInfo.HasContent() {
+	if invoiceInfo != nil && invoiceInfo.HasContent() {
 		printer.AppendText("------------------------------------------------\n")
 		printer.LineFeed()
 		printer.AppendText(lineSpacing)

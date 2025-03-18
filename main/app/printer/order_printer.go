@@ -88,12 +88,13 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 	// 打印
 	return &resp.PrinterData{
-		Data:          printerLogData.Data,
-		PrintMethod:   printMethod,
-		Uuid:          printerLogData.Uuid,
-		Copies:        settingPrinterInfo.Copies,
-		PrinterType:   settingPrinterInfo.PrinterType,
-		PrinterConfig: settingPrinterInfo.PrinterConfig,
+		Data:             printerLogData.Data,
+		PrintMethod:      printMethod,
+		Uuid:             printerLogData.Uuid,
+		Copies:           settingPrinterInfo.Copies,
+		PrinterType:      settingPrinterInfo.PrinterType,
+		PrinterConfig:    settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 	}, nil
 }
 

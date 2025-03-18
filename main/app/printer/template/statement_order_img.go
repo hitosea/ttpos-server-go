@@ -216,7 +216,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		// 发票信息
 		if printType == constant.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
-			if invoiceInfo.HasContent() {
+			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				img.AppendSplitLine()
 				if invoiceInfo.CompanyName != "" {
 					img.AppendText(invoiceInfo.CompanyName)

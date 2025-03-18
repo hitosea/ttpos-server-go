@@ -583,7 +583,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	// 发票信息
 	if printType == constant.PrinterTemplateInvoice {
 		invoiceInfo := saleOrder.InvoiceInfo
-		if invoiceInfo.HasContent() {
+		if invoiceInfo != nil && invoiceInfo.HasContent() {
 			printer.SetLineSpacing(10)
 			printer.LineFeed()
 			printer.AppendText("------------------------------------------------\n")

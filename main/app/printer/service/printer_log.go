@@ -2,6 +2,8 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -11,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -30,6 +33,7 @@ type IPrinterLogSrv interface {
 	GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error)                                     // 获取打印列表
 	GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error)                                                                       // 获取打印数据
 	PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error)                                                    // 打印
+	GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (*resp.PrinterData, error)                                                        // 获取静态打印机配置
 }
 
 type printerLogSrv struct {
@@ -51,30 +55,22 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 // GetPrinterBase 获取打印数据
 func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	// 创建商品打印机仓库
-	productPrinterRepo := repository.NewProductPrinterRepo(db)
-	// 获取商品打印机列表
-	productPrinters, err := productPrinterRepo.GetProductPrinters(
-		productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen),
-		repository.CommonRepo.WhereBySoftDelete(),
-	)
-	//
+	// 获取打印机列表
+	printerLists, err := base.NewPrinterRepo(db).GetPrinterList()
 	if err != nil {
-		logger.Logger.Error("获取商品打印机列表失败", zap.Error(err))
+		logger.Logger.Error("获取打印机列表失败", zap.Error(err))
 		return nil, err
 	}
-
-	//
-	printerList := make([]resp.PrinterBase, 0, len(productPrinters))
-	for _, product := range productPrinters {
+	printerList := make([]resp.PrinterBase, 0, len(printerLists))
+	for _, printer := range printerLists {
 		printerList = append(printerList, resp.PrinterBase{
-			Uuid: product.Uuid,
-			Name: product.Name,
+			Uuid: printer.Uuid,
+			Name: printer.Name,
 		})
 	}
 	//
 	language := ctx.GetLanguage()
-	printerTypes := make([]resp.PrinterBase, 0, len(productPrinters))
+	printerTypes := make([]resp.PrinterBase, 0)
 	printerTypes = append(printerTypes, resp.PrinterBase{
 		Uuid: constant.PrinterTemplateHandoverSheet,
 		Name: i18n.Translate(language, "交班单"),
@@ -277,7 +273,12 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 				}
 			}(),
 			PrinterTime: log.PrinterTime,
-			Reason:      log.Reason,
+			Reason: func() string {
+				if log.Status == 0 {
+					return log.Reason
+				}
+				return ""
+			}(),
 		})
 	}
 
@@ -325,20 +326,20 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 				}
 				return string(configJson)
 			}(),
+			// IsCashierPrinter: log.Printer.IsCashierPrinter,
 		})
 	}
 
 	return &resp.PrinterDataList{List: printerDataList}, nil
 }
 
-// PrinterPrint 打印
+// PrinterPrint 根据打印日志ID进行打印
 func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error) {
 	// 获取打印日志仓库
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	printerLog := printerLogRepo.GetPrinterLog(
 		printerLogRepo.WhereUuid(req.Uuid),
 		printerLogRepo.WithPrinter(),
-		printerLogRepo.WithPrinterPrinterType(),
 	)
 	if printerLog.PrinterUuid > 0 && printerLog.Printer == nil && printerLog.Printer.IsDelete() {
 		return nil, errors.New("打印失败，打印机已不存在")
@@ -356,12 +357,18 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			data = data[:dataLen-10]
 		}
 	}
+
+	if printerLog.PrinterType == "" {
+		return nil, errors.New("打印失败，打印机类型为空")
+	}
+
 	return &resp.PrinterData{
-		Uuid:        req.Uuid,
-		Data:        data,
-		PrintMethod: printerLog.PrintMethod,
-		Copies:      printerLog.Printer.Copies,
-		PrinterType: printerLog.Printer.PrinterType.Key,
+		Uuid:             req.Uuid,
+		Data:             data,
+		PrintMethod:      printerLog.PrintMethod,
+		Copies:           printerLog.Printer.Copies,
+		PrinterType:      printerLog.PrinterType,
+		IsCashierPrinter: printerLog.IsCashierPrinter(),
 		PrinterConfig: func() string {
 			configJson, err := json.Marshal(printerLog.Printer.GetConfigJson())
 			if err != nil {
@@ -380,17 +387,21 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLogData.Status = constant.PrinterLogStatusInProgress
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()
+
 	// 如果是商米云打印 - 就都队列打印
 	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
 		printerLogData.Type = constant.PrinterLogTypeDefault
 		printerLogData.FirstExecution = 0
 	}
+
 	// 打印机不存在
 	if printer.PrinterType == "" {
 		printerLogData.Status = constant.PrinterLogStatusEnd
 		printerLogData.Reason = "打印机不存在"
 	}
+
 	// 保存数据
+	printerLogData.PrinterType = printer.PrinterType
 	printerLogData.PrinterTime = time.Now().Unix()
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
@@ -410,4 +421,46 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	}()
 
 	return printerLog, nil
+}
+
+// PrinterPrint 获取静态打开钱箱配置
+func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (*resp.PrinterData, error) {
+	// 获取打印设置
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+		fmt.Println("获取打印机设置失败", zap.Error(err))
+	}
+
+	// 获取打印设置
+	settingPrinterInfo, err := s.settingSrv.GetPrinterInfo(ctx, printerSetting, ctx.GetDeviceSn())
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印设置失败")
+	}
+
+	data := "1014010001"
+	// 商米打印机
+	if slices.Contains([]string{
+		constant.PrinterTypeSunmiLan,
+		constant.PrinterTypeSunmiCloud,
+		constant.PrinterTypeCashierSunmi,
+	}, settingPrinterInfo.PrinterType) {
+		data = "1014010001"
+	}
+
+	// 如果是收银打印机 - 不用返回
+	if settingPrinterInfo.IsCashierPrinter {
+		return &resp.PrinterData{}, nil
+	}
+
+	//
+	return &resp.PrinterData{
+		Uuid:             0,
+		Data:             data,
+		PrintMethod:      1,
+		Copies:           settingPrinterInfo.Copies,
+		PrinterType:      settingPrinterInfo.PrinterType,
+		PrinterConfig:    settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+	}, nil
 }

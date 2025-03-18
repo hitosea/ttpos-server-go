@@ -182,7 +182,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	// 发票信息
 	img.SetAlignment(pkg.AlignLeft)
 	invoiceInfo := saleOrder.InvoiceInfo
-	if invoiceInfo.HasContent() {
+	if invoiceInfo != nil && invoiceInfo.HasContent() {
 		img.AppendSplitLine()
 		img.AppendText(t.base.Translate("发票信息"))
 		img.LineFeed(1)

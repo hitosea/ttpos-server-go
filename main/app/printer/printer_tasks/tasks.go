@@ -69,7 +69,6 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 	printerLogRepo := repository.NewPrinterLogRepo(t.dbm.GetDB(companyUuid))
 	printerLogList, err := printerLogRepo.GetPrinterLogList(
 		printerLogRepo.WithPrinter(),
-		printerLogRepo.WithPrinterPrinterType(),
 		printerLogRepo.WhereStatus(1),
 		printerLogRepo.WherePrinterTime(),
 		printerLogRepo.WhereLimit(5),
@@ -104,7 +103,7 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 					constant.PrinterTypeSunmiLan,
 					constant.PrinterTypeSunmiCloud,
 					constant.PrinterTypeCashierSunmi,
-				}, printerLog.Printer.PrinterType.Key) {
+				}, printerLog.PrinterType) {
 					err = pkg.PrintSunmiTicket(configJson, content)
 				} else {
 					err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)

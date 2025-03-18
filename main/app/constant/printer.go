@@ -39,17 +39,18 @@ const (
 
 // 打印类型
 const (
-	PrinterTypeFeiEYun       = "FEI_E_YUN"      // 飞鹅打印机
-	PrinterTypeFeiEYunTag    = "FEI_E_YUN_TAG"  // 飞鹅标签打印机
-	PrinterTypePrintCenter   = "PRINT_CENTER"   // 365云打印
-	PrinterTypeSunmiLan      = "SUNMI_LAN"      // 商米 局域网内打印
-	PrinterTypeSunmiCloud    = "SUNMI_CLOUD"    // 商米 云打印
-	PrinterTypeXPrinterLan   = "XPRINTER_LAN"   // 芯烨-有线
-	PrinterTypeXPrinterWifi  = "XPRINTER_WIFI"  // 芯烨-WIFI
+	PrinterTypeFeiEYun      = "FEI_E_YUN"     // 飞鹅打印机
+	PrinterTypeFeiEYunTag   = "FEI_E_YUN_TAG" // 飞鹅标签打印机
+	PrinterTypePrintCenter  = "PRINT_CENTER"  // 365云打印
+	PrinterTypeSunmiLan     = "SUNMI_LAN"     // 商米 局域网内打印
+	PrinterTypeSunmiCloud   = "SUNMI_CLOUD"   // 商米 云打印
+	PrinterTypeXPrinterLan  = "XPRINTER_LAN"  // 芯烨-有线
+	PrinterTypeXPrinterWifi = "XPRINTER_WIFI" // 芯烨-WIFI
+	PrinterTypeCodesoftLan  = "CODESOFT_LAN"  // Codesoft（网口）80mm
+	PrinterTypeCodesoftWifi = "CODESOFT_WIFI" // Codesoft（WIFI）80mm
+	//
 	PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
 	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
-	PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
-	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  // Codesoft（WIFI）80mm
 )
 
 // 打印类型

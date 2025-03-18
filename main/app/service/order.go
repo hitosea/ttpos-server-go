@@ -6175,17 +6175,17 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 }
 
 // OrderPrintInvoice 打印发票
-func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrintInvoiceReq) (*resp.PrinterData, error) {
+func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取账单信息
-	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 
 	// 获取销售账单信息
-	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
@@ -6201,14 +6201,14 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 	}
 
 	// 设置发票信息
-	if request.CompanyName != "" {
+	if req.CompanyName != "" {
 		// 创建发票信息对象
 		invoiceInfo := model.SaleOrderInvoiceInfo{
 			SaleOrderUuid:    saleOrder.Uuid,
-			CompanyName:      request.CompanyName,
-			CompanyAddr:      request.CompanyAddr,
-			CompanyTaxNumber: request.CompanyTaxNumber,
-			CompanyPhone:     request.CompanyPhone,
+			CompanyName:      req.CompanyName,
+			CompanyAddr:      req.CompanyAddr,
+			CompanyTaxNumber: req.CompanyTaxNumber,
+			CompanyPhone:     req.CompanyPhone,
 		}
 		// 保存发票信息（不存在则创建，存在则更新）
 		invoiceInfos, err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
@@ -6217,10 +6217,17 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 		}
 		// 更新内存中的发票信息
 		saleOrder.InvoiceInfo = invoiceInfos
+	} else {
+		invoiceInfo, err := repository.NewOrderRepo(db).GetInvoiceInfo(saleOrder.Uuid)
+		if err != nil {
+			saleOrder.InvoiceInfo = &model.SaleOrderInvoiceInfo{}
+		} else {
+			saleOrder.InvoiceInfo = invoiceInfo
+		}
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingInvoice(
+	printerData, err := printer.NewPrinterRepo(ctx, req.PrintLang).PrintingInvoice(
 		saleBill,
 		saleOrder.Uuid,
 	)
@@ -6232,9 +6239,9 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, request req.OrderPrint
 }
 
 // OrderPrintInvoiceInfo 获取发票信息
-func (s *orderSrv) OrderPrintInvoiceInfo(ctx context.Context, request req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo {
+func (s *orderSrv) OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	invoiceInfo, err := repository.NewOrderRepo(db).GetInvoiceInfo(request.SaleOrderUuid)
+	invoiceInfo, err := repository.NewOrderRepo(db).GetInvoiceInfo(req.SaleOrderUuid)
 	if err != nil {
 		return resp.SaleOrderInvoiceInfo{}
 	}

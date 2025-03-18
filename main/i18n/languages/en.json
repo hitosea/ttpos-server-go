@@ -2014,5 +2014,9 @@
   "验证码错误": "Verification code is incorrect",
   "骑手中心": "Rider Center",
   "高峰时间": "Peak hour",
-  "默认语言不能为空": "Default language cannot be empty"
+  "默认语言不能为空": "Default language cannot be empty",
+  "当前班次不存在": "Current shift does not exist",
+  "当前班次已交班": "Current shift has been handed over",
+  "取出金额不能小于0": "The withdrawal amount cannot be less than 0",
+  "遗留现金不能小于0": "The remaining cash cannot be less than 0"
 }

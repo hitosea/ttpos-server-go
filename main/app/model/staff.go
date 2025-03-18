@@ -83,3 +83,8 @@ type StaffOperationLog struct {
 func (model *StaffShiftLog) IsHandedOver() bool {
 	return model.Status == constant.StaffHandedOver
 }
+
+// IsReported 是否已经报备
+func (model *StaffShiftLog) IsReported() bool {
+	return model.ExceptionRemark != ""
+}
