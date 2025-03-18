@@ -1292,7 +1292,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.CashierStaff'
         description: 收银机员工
-      cloud_basic:
+      cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
         description: 云端基础信息
@@ -1598,7 +1598,7 @@ definitions:
       cashier_uuid:
         description: 收银员UUID
         type: integer
-      cloud_basic:
+      cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
         description: 云端基础信息
@@ -2975,6 +2975,33 @@ definitions:
       selected_num:
         description: 已选数量。已选择xx份
         type: integer
+    type: object
+  resp.KitchenBase:
+    properties:
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cloud:
+        allOf:
+        - $ref: '#/definitions/setting.CloudBasic'
+        description: 云端基础信息
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      kitchen:
+        allOf:
+        - $ref: '#/definitions/setting.KitchenResp'
+        description: 厨显端设置
     type: object
   resp.Language:
     properties:
@@ -4522,7 +4549,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Business'
         description: 门店业务设置
-      cloud_basic:
+      cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
         description: 云端基础信
@@ -4882,6 +4909,43 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  setting.KitchenResp:
+    properties:
+      default_language:
+        description: 默认语言
+        type: string
+      is_call_service:
+        description: 是否开启顾客呼叫提醒 0-关闭 1-开启
+        type: string
+      is_come_dish:
+        description: 是否开启来菜提醒 0-关闭 1-开启
+        type: string
+      is_open:
+        description: 是否开启厨显功能 0关闭 1开启
+        type: string
+      is_wait_color:
+        description: 是否开启等待时长颜色 0-关闭 1-开启
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 厨显服务器连接
+      wait_color:
+        description: 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
+        items:
+          type: string
+        type: array
     type: object
   setting.OrderLimit:
     properties:
@@ -10712,7 +10776,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.AssistantBase'
+                  $ref: '#/definitions/resp.KitchenBase'
               type: object
       security:
       - JwtToken: []

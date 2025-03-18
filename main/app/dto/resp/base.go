@@ -12,12 +12,12 @@ type CashierBase struct {
 	DeviceRemark string        `json:"device_remark"` // 设备备注
 	Permissions  []*Permission `json:"permissions"`   // 页面权限
 
-	Buffet     setting.Buffet      `json:"buffet"`      // 自助餐设置
-	CloudBasic setting.CloudBasic  `json:"cloud_basic"` // 云端基础信息
-	Company    Company             `json:"company"`     // 商家信息
-	Currency   setting.Currency    `json:"currency"`    // 货币单位
-	Business   setting.Business    `json:"business"`    // 门店业务设置
-	Cashier    setting.CashierResp `json:"cashier"`     // 收银机设置
+	Buffet     setting.Buffet      `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic  `json:"cloud"`    // 云端基础信息
+	Company    Company             `json:"company"`  // 商家信息
+	Currency   setting.Currency    `json:"currency"` // 货币单位
+	Business   setting.Business    `json:"business"` // 门店业务设置
+	Cashier    setting.CashierResp `json:"cashier"`  // 收银机设置
 }
 
 type AssistantStaff struct {
@@ -39,21 +39,21 @@ type AssistantBase struct {
 	CashierStaff   CashierStaff   `json:"cashier_staff"`   // 收银机员工
 	AssistantStaff AssistantStaff `json:"assistant_staff"` // 点餐助手员工
 
-	Buffet     setting.Buffet        `json:"buffet"`      // 自助餐设置
-	CloudBasic setting.CloudBasic    `json:"cloud_basic"` // 云端基础信息
-	Company    Company               `json:"company"`     // 商家信息
-	Currency   setting.Currency      `json:"currency"`    // 货币设置
-	Business   setting.Business      `json:"business"`    // 门店业务设置
-	Assistant  setting.AssistantResp `json:"assistant"`   // 点餐助手设置
+	Buffet     setting.Buffet        `json:"buffet"`    // 自助餐设置
+	CloudBasic setting.CloudBasic    `json:"cloud"`     // 云端基础信息
+	Company    Company               `json:"company"`   // 商家信息
+	Currency   setting.Currency      `json:"currency"`  // 货币设置
+	Business   setting.Business      `json:"business"`  // 门店业务设置
+	Assistant  setting.AssistantResp `json:"assistant"` // 点餐助手设置
 }
 
 type TabletBase struct {
-	Buffet     setting.Buffet     `json:"buffet"`      // 自助餐设置
-	CloudBasic setting.CloudBasic `json:"cloud_basic"` // 云端基础信
-	Company    Company            `json:"company"`     // 商家信息
-	Currency   setting.Currency   `json:"currency"`    // 货币单位
-	Business   setting.Business   `json:"business"`    // 门店业务设置
-	Tablet     setting.TabletResp `json:"tablet"`      // 平板端设置
+	Buffet     setting.Buffet     `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信
+	Company    Company            `json:"company"`  // 商家信息
+	Currency   setting.Currency   `json:"currency"` // 货币单位
+	Business   setting.Business   `json:"business"` // 门店业务设置
+	Tablet     setting.TabletResp `json:"tablet"`   // 平板端设置
 }
 
 type TabletDeskItem struct {
@@ -66,12 +66,12 @@ type TabletDeskList struct {
 }
 
 type KitchenBase struct {
-	Buffet     setting.Buffet      `json:"buffet"`      // 自助餐设置
-	CloudBasic setting.CloudBasic  `json:"cloud_basic"` // 云端基础信息
-	Company    Company             `json:"company"`     // 商家信息
-	Currency   setting.Currency    `json:"currency"`    // 货币单位
-	Business   setting.Business    `json:"business"`    // 门店业务设置
-	Kitchen    setting.KitchenResp `json:"kitchen"`     // 厨显端设置
+	Buffet     setting.Buffet      `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic  `json:"cloud"`    // 云端基础信息
+	Company    Company             `json:"company"`  // 商家信息
+	Currency   setting.Currency    `json:"currency"` // 货币单位
+	Business   setting.Business    `json:"business"` // 门店业务设置
+	Kitchen    setting.KitchenResp `json:"kitchen"`  // 厨显端设置
 }
 
 type ProductPrinter struct {
