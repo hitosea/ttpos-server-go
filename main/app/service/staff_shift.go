@@ -8,7 +8,9 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -19,6 +21,7 @@ import (
 )
 
 type IStaffShiftSrv interface {
+	GetCashierReport(ctx context.Context) (*resp.CashierReportResp, error)
 	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
 	GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error) // 获取交班信息
 	// SubmitShift(ctx context.Context, req req.SubmitShiftReq) error // 提交交班
@@ -190,4 +193,21 @@ func (s *staffShiftSrv) CountShiftPaymentMethodIncome(db *gorm.DB, shiftNo strin
 	})
 
 	return paymentMethodIncomeList, cashAmount.InexactFloat64()
+}
+
+// GetCashierReport 获取报备信息
+func (s *staffShiftSrv) GetCashierReport(ctx context.Context) (*resp.CashierReportResp, error) {
+
+	// 获取打印机配置
+	settingSrv := setting.NewSrv(s.dbm, s.cache)
+	printerData, err := printerService.NewPrinterLogSrv(s.dbm, settingSrv).GetStaticOpenCashBoxPrinterConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	return &resp.CashierReportResp{
+		PreviousShiftCash: 0,
+		PrinterData:       *printerData,
+	}, nil
 }

@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"ttpos-server-go/app/constant"
 )
 
 // Printer 打印机信息表 ttpos_printer
@@ -79,6 +81,7 @@ type PrinterLog struct {
 	FirstExecution     int    `gorm:"column:first_execution;type:tinyint(2);default:0;comment:是否首次执行打印 1-是 0-否;NOT NULL" json:"first_execution"`
 	ReadDeviceId       string `gorm:"column:read_device_id;type:varchar(255);comment:读取设备id;NOT NULL" json:"read_device_id"`
 	ProductPrinterUuid uint64 `gorm:"column:product_printer_uuid;type:bigint(20) unsigned;default:0;comment:商品打印UUID;NOT NULL" json:"product_printer_uuid"`
+	PrinterType        string `gorm:"column:printer_type;type:varchar(50);default:'';comment:打印机类型;NOT NULL" json:"printer_type"`
 
 	Printer             *Printer             `gorm:"foreignKey:PrinterUuid;references:Uuid"`        // 关联 printer
 	SaleBill            *SaleBill            `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
@@ -143,6 +146,24 @@ func (model *PrinterLog) DecompressData() string {
 	})
 
 	return result
+}
+
+// 是否收银打印机
+func (model *PrinterLog) IsCashierPrinter() bool {
+	return slices.Contains([]string{
+		constant.PrinterTypeCashierCompax,
+		constant.PrinterTypeCashierSunmi,
+	}, model.PrinterType) || !slices.Contains([]string{
+		constant.PrinterTypeFeiEYun,
+		constant.PrinterTypeFeiEYunTag,
+		constant.PrinterTypePrintCenter,
+		constant.PrinterTypeSunmiLan,
+		constant.PrinterTypeSunmiCloud,
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCodesoftLan,
+		constant.PrinterTypeCodesoftWifi,
+	}, model.PrinterType)
 }
 
 // PrinterReadLog 打印读取日志表 ttpos_printer_read_log

@@ -369,6 +369,25 @@ func (h *BaseHandler) GetShiftInfo(c *gin.Context) {
 // 	helper.Success(c, gin.H{}, "交班成功")
 // }
 
+// GetReport 获取报备信息
+// @Summary 获取报备信息
+// @Description 获取报备信息
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CashierReportResp}
+// @Router /cashier/report [get]
+func (h *BaseHandler) GetReport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	report, err := h.staffShiftSrv.GetCashierReport(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, report)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -405,6 +424,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/return_reason", wrapper.GetReturnReason)                    // 获取退菜原因
 		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)          // 获取退菜原因
 		privateApi.GET("/print_data", wrapper.GetPrintData)                          // 获取打印数据
+		privateApi.GET("/report", wrapper.GetReport)                                 // 获取报备信息
 
 		// 保存接单设置
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置

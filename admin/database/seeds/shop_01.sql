@@ -1268,6 +1268,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型:0系统默认队列,1云上服务下放',
     `data_type` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
     `print_method` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
+    `printer_type` VARCHAR(50) DEFAULT '' COMMENT '打印机类型',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '打印次数',
     `status` TINYINT(2) NOT NULL DEFAULT 1 COMMENT '状态(0结束,1进行中,2成功)',
     `reason` VARCHAR(255) DEFAULT '' COMMENT '原因',

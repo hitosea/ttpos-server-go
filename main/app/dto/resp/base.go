@@ -138,8 +138,8 @@ type LoginResp struct {
 }
 
 type CashierLoginResp struct {
-	Token        string `json:"token"`           // token
-	IsFirstLogin bool   `json:" is_first_login"` // 是否首次登录
+	Token        string `json:"token"`          // token
+	IsFirstLogin bool   `json:"is_first_login"` // 是否首次登录
 }
 
 type AcceptOrderSetting struct {
@@ -186,4 +186,9 @@ type PaymentMethodIncomeList struct {
 type PaymentMethodIncome struct {
 	Name   string  `json:"name"`   // 支付方式名称
 	Amount float64 `json:"amount"` // 收入金额
+}
+
+type CashierReportResp struct {
+	PreviousShiftCash float64     `json:"previous_shift_cash"` // 上一班遗留备用金
+	PrinterData       PrinterData `json:"printer_data"`        // 打印数据
 }
