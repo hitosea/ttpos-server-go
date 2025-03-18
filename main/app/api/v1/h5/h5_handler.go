@@ -180,7 +180,6 @@ func (h *H5Handler) Call(c *gin.Context) {
 		helper.HandleValidationError(c, err, callReq, nil)
 		return
 	}
-	callReq.DeskUuid = ctx.GetDeskUuid() // 设置桌台uuid
 	err := h.callSrv.Call(ctx, callReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

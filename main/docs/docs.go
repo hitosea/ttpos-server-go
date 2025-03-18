@@ -11564,6 +11564,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/tablet/desk/order/get_send_kitchen": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取已送厨商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.桌台"
+                ],
+                "summary": "获取已送厨商品",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SendKitchen"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/tablet/login": {
             "post": {
                 "description": "登录",
@@ -12296,8 +12345,7 @@ const docTemplate = `{
         "req.CallReq": {
             "type": "object",
             "required": [
-                "call_type",
-                "desk_uuid"
+                "call_type"
             ],
             "properties": {
                 "call_type": {
@@ -12307,10 +12355,6 @@ const docTemplate = `{
                         1,
                         2
                     ]
-                },
-                "desk_uuid": {
-                    "description": "桌台ID",
-                    "type": "integer"
                 }
             }
         },

@@ -297,12 +297,8 @@ definitions:
         - 1
         - 2
         type: integer
-      desk_uuid:
-        description: 桌台ID
-        type: integer
     required:
     - call_type
-    - desk_uuid
     type: object
   req.CancelSoldOutReq:
     properties:
@@ -11174,6 +11170,34 @@ paths:
       security:
       - JwtToken: []
       summary: 开台
+      tags:
+      - 平板端.桌台
+  /tablet/desk/order/get_send_kitchen:
+    get:
+      consumes:
+      - application/json
+      description: 获取已送厨商品
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SendKitchen'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取已送厨商品
       tags:
       - 平板端.桌台
   /tablet/login:
