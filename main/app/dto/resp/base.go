@@ -18,6 +18,7 @@ type CashierBase struct {
 	Currency   setting.Currency    `json:"currency"` // 货币单位
 	Business   setting.Business    `json:"business"` // 门店业务设置
 	Cashier    setting.CashierResp `json:"cashier"`  // 收银机设置
+	Printer    setting.Printer     `json:"printer"`  // 打印机设置
 }
 
 type AssistantStaff struct {
@@ -45,6 +46,7 @@ type AssistantBase struct {
 	Currency   setting.Currency      `json:"currency"`  // 货币设置
 	Business   setting.Business      `json:"business"`  // 门店业务设置
 	Assistant  setting.AssistantResp `json:"assistant"` // 点餐助手设置
+	Printer    setting.Printer       `json:"printer"`   // 打印机设置
 }
 
 type TabletBase struct {
