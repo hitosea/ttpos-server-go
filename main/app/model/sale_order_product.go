@@ -41,8 +41,8 @@ type SaleOrderProduct struct {
 
 	// 折扣相关字段
 	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
-	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`              // 快照设置相关，不受后台改变，结账时检查
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`            // 与sale_order的member_discount_rate一致
+	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`          // 快照设置相关，不受后台改变，结账时检查
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`             // 与sale_order的member_discount_rate一致
 	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"` // 与sale_order的member_card_discount_rate一致
 	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`           // 与sale_order的custom_discount_rate一致
 
@@ -84,6 +84,9 @@ type SaleOrderProduct struct {
 	// 扫码订单相关
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
+
+	// 送厨时间
+	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
@@ -195,8 +198,9 @@ func (model *SaleOrderProduct) SetFields(updateProduct SaleOrderProduct, special
 func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 	model.Status = constant.SaleOrderProductStatusCooking
 	model.ProductionOrderUuid = productionOrderUuid
-	model.Sign = model.GenerateProductSign() // 更新签名
-	model.SetUpdate()                        // 标记该model需要更新
+	model.Sign = model.GenerateProductSign()  // 更新签名
+	model.SendKitchenTime = time.Now().Unix() // 送厨时间
+	model.SetUpdate()                         // 标记该model需要更新
 }
 
 // 产品是否已经下架

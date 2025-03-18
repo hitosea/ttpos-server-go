@@ -230,6 +230,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品',
     `is_h5_order_product` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为扫码订单商品, 0-否 1-是',
     `is_accept_order` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单',
+
+    `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
+
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
