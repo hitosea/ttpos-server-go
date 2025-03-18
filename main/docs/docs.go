@@ -996,6 +996,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/check": {
+            "get": {
+                "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "订单检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售订单uuid",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单uuid",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCheckRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/discount": {
             "post": {
                 "security": [
@@ -1265,6 +1316,208 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/cancel": {
+            "post": {
+                "description": "撤销一个支付单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "撤销一个支付单",
+                "parameters": [
+                    {
+                        "description": "撤销一个支付单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建一个支付单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "创建一个支付单",
+                "parameters": [
+                    {
+                        "description": "创建一个支付单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/finish": {
+            "post": {
+                "description": "完成销售订单的付款结账",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "完成销售订单的付款结账",
+                "parameters": [
+                    {
+                        "description": "完成销售订单的付款结账参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentFinishReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderFinishResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/payment/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取结账页面信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取结账页面信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -9206,8 +9459,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/h5/index.php/scan/base.base/getInfo": {
-            "post": {
+        "/h5/base/info": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
@@ -9228,7 +9481,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/resp.GetBaseInfoResponse"
+                            "$ref": "#/definitions/resp.H5BaseInfo"
                         }
                     }
                 }
@@ -14115,626 +14368,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.GetBaseInfoResponse": {
-            "type": "object",
-            "properties": {
-                "baseInfo": {
-                    "type": "object",
-                    "properties": {
-                        "buffet": {
-                            "type": "object",
-                            "properties": {
-                                "add_clock": {
-                                    "description": "添加时钟",
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "is_add_clock": {
-                                    "description": "是否添加时钟",
-                                    "type": "string"
-                                },
-                                "is_buffet_discount": {
-                                    "description": "是否自助餐折扣",
-                                    "type": "string"
-                                },
-                                "is_buy_continue": {
-                                    "description": "是否继续购买",
-                                    "type": "string"
-                                },
-                                "is_open": {
-                                    "description": "是否开启自助餐",
-                                    "type": "string"
-                                },
-                                "is_remain_continue": {
-                                    "description": "是否继续剩余",
-                                    "type": "string"
-                                },
-                                "remain_continue_notice_time": {
-                                    "description": "继续剩余通知时间",
-                                    "type": "string"
-                                },
-                                "remain_continue_time": {
-                                    "description": "继续剩余时间",
-                                    "type": "string"
-                                },
-                                "tablet_end_time": {
-                                    "description": "桌台结束时间",
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "cloud_basic": {
-                            "type": "object",
-                            "properties": {
-                                "base": {
-                                    "type": "object",
-                                    "properties": {
-                                        "auth_code_bind_validity_period": {
-                                            "description": "授权码绑定有效期",
-                                            "type": "string"
-                                        },
-                                        "brand_logo": {
-                                            "description": "品牌logo",
-                                            "type": "string"
-                                        },
-                                        "brand_logo_long": {
-                                            "description": "品牌logo长",
-                                            "type": "string"
-                                        },
-                                        "brand_name": {
-                                            "description": "品牌名称",
-                                            "type": "string"
-                                        },
-                                        "browser_logo": {
-                                            "description": "浏览器logo",
-                                            "type": "string"
-                                        },
-                                        "browser_title": {
-                                            "description": "浏览器标题",
-                                            "type": "string"
-                                        },
-                                        "expiration_reminder": {
-                                            "description": "过期提醒",
-                                            "type": "integer"
-                                        },
-                                        "member_default_avatar": {
-                                            "description": "会员默认头像",
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "currency": {
-                            "description": "货币信息",
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/resp.H5Currency"
-                                }
-                            ]
-                        },
-                        "h5": {
-                            "$ref": "#/definitions/resp.H5H5"
-                        },
-                        "is_accept_scan_order": {
-                            "description": "是否接受扫码订单",
-                            "type": "integer"
-                        },
-                        "is_cloud_deploy": {
-                            "description": "是否云部署",
-                            "type": "boolean"
-                        },
-                        "kitchen": {
-                            "type": "object",
-                            "properties": {
-                                "is_open": {
-                                    "description": "是否开启厨房",
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "license_remaining_days": {
-                            "description": "许可证剩余天数",
-                            "type": "integer"
-                        },
-                        "logo": {
-                            "description": "商家logo",
-                            "type": "string"
-                        },
-                        "name": {
-                            "type": "string"
-                        },
-                        "shop": {
-                            "$ref": "#/definitions/resp.H5Shop"
-                        }
-                    }
-                },
-                "orderInfo": {
-                    "type": "object",
-                    "properties": {
-                        "is_buffet": {
-                            "description": "是否自助餐",
-                            "type": "integer"
-                        }
-                    }
-                },
-                "tableInfo": {
-                    "description": "桌台信息",
-                    "type": "object",
-                    "properties": {
-                        "app_id": {
-                            "type": "integer"
-                        },
-                        "area_id": {
-                            "type": "integer"
-                        },
-                        "area_name": {
-                            "type": "string"
-                        },
-                        "bind_info": {
-                            "type": "string"
-                        },
-                        "create_time": {
-                            "type": "string"
-                        },
-                        "is_bind": {
-                            "type": "integer"
-                        },
-                        "max_num": {
-                            "type": "integer"
-                        },
-                        "min_num": {
-                            "type": "integer"
-                        },
-                        "qrcode_value": {
-                            "type": "string"
-                        },
-                        "shop_supplier_id": {
-                            "type": "integer"
-                        },
-                        "sort": {
-                            "type": "integer"
-                        },
-                        "status": {
-                            "type": "integer"
-                        },
-                        "switch_status": {
-                            "type": "integer"
-                        },
-                        "table_id": {
-                            "type": "integer"
-                        },
-                        "table_no": {
-                            "type": "string"
-                        },
-                        "type_id": {
-                            "type": "integer"
-                        },
-                        "type_name": {
-                            "type": "string"
-                        },
-                        "underwayOrder": {
-                            "type": "object",
-                            "properties": {
-                                "actual_price": {
-                                    "type": "integer"
-                                },
-                                "actual_receive_price": {
-                                    "type": "string"
-                                },
-                                "app_id": {
-                                    "type": "integer"
-                                },
-                                "auto_close": {
-                                    "type": "integer"
-                                },
-                                "bag_price": {
-                                    "type": "string"
-                                },
-                                "balance": {
-                                    "type": "string"
-                                },
-                                "buffet_expired_time": {
-                                    "type": "integer"
-                                },
-                                "buffet_remaining_time": {
-                                    "type": "integer"
-                                },
-                                "buffet_start_time": {
-                                    "type": "integer"
-                                },
-                                "buyer_remark": {
-                                    "type": "string"
-                                },
-                                "call_no": {
-                                    "type": "string"
-                                },
-                                "cancel_remark": {
-                                    "type": "string"
-                                },
-                                "cashier_id": {
-                                    "type": "integer"
-                                },
-                                "change_due": {
-                                    "type": "string"
-                                },
-                                "checkout_diff_money": {
-                                    "type": "string"
-                                },
-                                "checkout_discount_type": {
-                                    "type": "integer"
-                                },
-                                "close_time": {
-                                    "type": "integer"
-                                },
-                                "consumption_tax_money": {
-                                    "type": "string"
-                                },
-                                "consumption_tax_type": {
-                                    "type": "integer"
-                                },
-                                "coupon_id": {
-                                    "type": "integer"
-                                },
-                                "coupon_id_sys": {
-                                    "type": "integer"
-                                },
-                                "coupon_money": {
-                                    "type": "string"
-                                },
-                                "coupon_money_sys": {
-                                    "type": "string"
-                                },
-                                "create_time": {
-                                    "type": "string"
-                                },
-                                "delete_time": {
-                                    "type": "integer"
-                                },
-                                "deliver_source": {
-                                    "type": "integer"
-                                },
-                                "deliver_status": {
-                                    "type": "integer"
-                                },
-                                "deliver_text": {
-                                    "type": "string"
-                                },
-                                "delivery_status": {
-                                    "type": "object",
-                                    "properties": {
-                                        "text": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "delivery_time": {
-                                    "type": "integer"
-                                },
-                                "delivery_type": {
-                                    "type": "object",
-                                    "properties": {
-                                        "text": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "device_id": {
-                                    "type": "string"
-                                },
-                                "discount_change_price": {
-                                    "type": "string"
-                                },
-                                "discount_method": {
-                                    "type": "integer"
-                                },
-                                "discount_money": {
-                                    "type": "string"
-                                },
-                                "discount_ratio": {
-                                    "type": "integer"
-                                },
-                                "driver_id": {
-                                    "type": "integer"
-                                },
-                                "eat_type": {
-                                    "type": "integer"
-                                },
-                                "elapsed_time": {
-                                    "type": "integer"
-                                },
-                                "extra_times": {
-                                    "type": "integer"
-                                },
-                                "finance_id": {
-                                    "type": "integer"
-                                },
-                                "free_pay_price": {
-                                    "type": "string"
-                                },
-                                "free_remark": {
-                                    "type": "string"
-                                },
-                                "is_buffet": {
-                                    "type": "integer"
-                                },
-                                "is_change_price": {
-                                    "type": "integer"
-                                },
-                                "is_delete": {
-                                    "type": "integer"
-                                },
-                                "is_free": {
-                                    "type": "integer"
-                                },
-                                "is_lock": {
-                                    "type": "integer"
-                                },
-                                "is_merge": {
-                                    "type": "integer"
-                                },
-                                "is_must_notice": {
-                                    "type": "integer"
-                                },
-                                "is_settled": {
-                                    "type": "integer"
-                                },
-                                "is_stay": {
-                                    "type": "integer"
-                                },
-                                "last_buffet_time_limit": {
-                                    "type": "integer"
-                                },
-                                "lock_elapsed_time": {
-                                    "type": "integer"
-                                },
-                                "lock_time": {
-                                    "type": "integer"
-                                },
-                                "meal_num": {
-                                    "type": "integer"
-                                },
-                                "mealtime": {
-                                    "type": "string"
-                                },
-                                "merge_id": {
-                                    "type": "string"
-                                },
-                                "merge_parent_id": {
-                                    "type": "integer"
-                                },
-                                "online_money": {
-                                    "type": "string"
-                                },
-                                "order_id": {
-                                    "type": "integer"
-                                },
-                                "order_name": {
-                                    "type": "string"
-                                },
-                                "order_no": {
-                                    "type": "string"
-                                },
-                                "order_price": {
-                                    "type": "string"
-                                },
-                                "order_source": {
-                                    "type": "integer"
-                                },
-                                "order_source_text": {
-                                    "type": "string"
-                                },
-                                "order_status": {
-                                    "type": "object",
-                                    "properties": {
-                                        "text": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "order_type": {
-                                    "type": "integer"
-                                },
-                                "order_type_text": {
-                                    "type": "string"
-                                },
-                                "original_consumption_tax_money": {
-                                    "type": "string"
-                                },
-                                "original_price": {
-                                    "type": "string"
-                                },
-                                "parent_id": {
-                                    "type": "integer"
-                                },
-                                "pay_end_time": {
-                                    "type": "integer"
-                                },
-                                "pay_fee_money": {
-                                    "type": "string"
-                                },
-                                "pay_price": {
-                                    "type": "string"
-                                },
-                                "pay_source": {
-                                    "type": "string"
-                                },
-                                "pay_status": {
-                                    "type": "object",
-                                    "properties": {
-                                        "text": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "pay_time": {
-                                    "type": "integer"
-                                },
-                                "pay_time_text": {
-                                    "type": "string"
-                                },
-                                "pay_type": {
-                                    "type": "integer"
-                                },
-                                "points_bonus": {
-                                    "type": "string"
-                                },
-                                "points_money": {
-                                    "type": "string"
-                                },
-                                "points_num": {
-                                    "type": "integer"
-                                },
-                                "print_num": {
-                                    "type": "integer"
-                                },
-                                "receipt_status": {
-                                    "type": "object",
-                                    "properties": {
-                                        "text": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "receipt_time": {
-                                    "type": "integer"
-                                },
-                                "refund_consumption_tax": {
-                                    "type": "string"
-                                },
-                                "refund_money": {
-                                    "type": "string"
-                                },
-                                "room_id": {
-                                    "type": "integer"
-                                },
-                                "service_money": {
-                                    "type": "string"
-                                },
-                                "service_type": {
-                                    "type": "integer"
-                                },
-                                "setting_service_money": {
-                                    "type": "string"
-                                },
-                                "settle_device_id": {
-                                    "type": "string"
-                                },
-                                "settle_type": {
-                                    "type": "integer"
-                                },
-                                "shop_supplier_id": {
-                                    "type": "integer"
-                                },
-                                "small_auto": {
-                                    "type": "integer"
-                                },
-                                "small_diff_money": {
-                                    "type": "string"
-                                },
-                                "small_discount_type": {
-                                    "type": "integer"
-                                },
-                                "state_text": {
-                                    "type": "string"
-                                },
-                                "stay_time": {
-                                    "type": "integer"
-                                },
-                                "supplier_money": {
-                                    "type": "string"
-                                },
-                                "surplus_balance": {
-                                    "type": "string"
-                                },
-                                "sys_money": {
-                                    "type": "string"
-                                },
-                                "table_id": {
-                                    "type": "integer"
-                                },
-                                "table_no": {
-                                    "type": "string"
-                                },
-                                "table_remark": {
-                                    "type": "string"
-                                },
-                                "take_fee": {
-                                    "type": "string"
-                                },
-                                "total_price": {
-                                    "type": "string"
-                                },
-                                "total_product_consumption_tax": {
-                                    "type": "string"
-                                },
-                                "total_product_price": {
-                                    "type": "string"
-                                },
-                                "total_product_service_consumption_tax": {
-                                    "type": "string"
-                                },
-                                "total_product_service_fee": {
-                                    "type": "string"
-                                },
-                                "trade_no": {
-                                    "type": "string"
-                                },
-                                "transaction_id": {
-                                    "type": "string"
-                                },
-                                "update_price": {
-                                    "type": "object",
-                                    "properties": {
-                                        "symbol": {
-                                            "type": "string"
-                                        },
-                                        "value": {
-                                            "type": "integer"
-                                        }
-                                    }
-                                },
-                                "update_time": {
-                                    "type": "string"
-                                },
-                                "user_discount_money": {
-                                    "type": "string"
-                                },
-                                "user_id": {
-                                    "type": "integer"
-                                },
-                                "virtual_auto": {
-                                    "type": "integer"
-                                },
-                                "virtual_content": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "update_time": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "resp.GiftOrFreeOrderReasonResp": {
             "type": "object",
             "properties": {
@@ -14754,6 +14387,59 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResp"
                     }
+                }
+            }
+        },
+        "resp.H5BaseInfo": {
+            "type": "object",
+            "properties": {
+                "buffet": {
+                    "description": "自助餐设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Buffet"
+                        }
+                    ]
+                },
+                "cloud": {
+                    "description": "云端基础信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.CloudBasic"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
+                "currency": {
+                    "description": "货币设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Currency"
+                        }
+                    ]
+                },
+                "desk": {
+                    "description": "桌台信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Desk"
+                        }
+                    ]
+                },
+                "h5": {
+                    "description": "扫码H5设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.H5"
+                        }
+                    ]
                 }
             }
         },
@@ -14926,139 +14612,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.H5Currency": {
-            "type": "object",
-            "properties": {
-                "is_open": {
-                    "description": "是否启用",
-                    "type": "string"
-                },
-                "unit": {
-                    "description": "单位",
-                    "type": "string"
-                },
-                "unit_position": {
-                    "description": "单位位置",
-                    "type": "string"
-                },
-                "vices": {
-                    "type": "object",
-                    "properties": {
-                        "unit_rate": {
-                            "description": "单位换算率",
-                            "type": "string"
-                        },
-                        "vice_unit": {
-                            "description": "辅币单位",
-                            "type": "string"
-                        },
-                        "vice_unit_position": {
-                            "description": "辅币单位位置",
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "resp.H5H5": {
-            "type": "object",
-            "properties": {
-                "buffet_order_limit": {
-                    "description": "自助餐订单限制",
-                    "type": "object",
-                    "properties": {
-                        "is_limit_num": {
-                            "description": "是否限制数量",
-                            "type": "string"
-                        },
-                        "is_limit_time": {
-                            "description": "是否限制时间",
-                            "type": "string"
-                        },
-                        "limit_num": {
-                            "description": "限制数量",
-                            "type": "string"
-                        },
-                        "limit_time": {
-                            "description": "限制时间",
-                            "type": "string"
-                        }
-                    }
-                },
-                "default_language": {
-                    "description": "默认语言",
-                    "type": "string"
-                },
-                "is_buffet_order_limit": {
-                    "description": "是否自助餐订单限制",
-                    "type": "string"
-                },
-                "is_call_service": {
-                    "description": "是否呼叫服务",
-                    "type": "string"
-                },
-                "is_customer_order": {
-                    "description": "是否顾客订单",
-                    "type": "string"
-                },
-                "is_order_limit": {
-                    "description": "是否订单限制",
-                    "type": "string"
-                },
-                "is_show_scan_sold_out": {
-                    "description": "是否显示扫码售罄",
-                    "type": "integer"
-                },
-                "is_show_sold_out": {
-                    "description": "是否显示售罄",
-                    "type": "string"
-                },
-                "is_voice_remind": {
-                    "description": "是否语音提醒",
-                    "type": "string"
-                },
-                "kitchen_language": {
-                    "description": "厨房语言",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "语言",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Language"
-                    }
-                },
-                "order_limit": {
-                    "description": "订单限制",
-                    "type": "object",
-                    "properties": {
-                        "is_limit_num": {
-                            "description": "是否限制数量",
-                            "type": "string"
-                        },
-                        "is_limit_time": {
-                            "description": "是否限制时间",
-                            "type": "string"
-                        },
-                        "limit_num": {
-                            "description": "限制数量",
-                            "type": "string"
-                        },
-                        "limit_time": {
-                            "description": "限制时间",
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "resp.H5OrderDetail": {
             "type": "object",
             "properties": {
@@ -15209,314 +14762,6 @@ const docTemplate = `{
                 "data": {},
                 "msg": {
                     "type": "string"
-                }
-            }
-        },
-        "resp.H5Shop": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "地址",
-                    "type": "string"
-                },
-                "app_id": {
-                    "description": "应用ID",
-                    "type": "integer"
-                },
-                "assistant_limit": {
-                    "description": "助手限额",
-                    "type": "integer"
-                },
-                "auto_close": {
-                    "description": "自动关闭",
-                    "type": "integer"
-                },
-                "bag_price": {
-                    "description": "包装价格",
-                    "type": "string"
-                },
-                "bag_type": {
-                    "description": "包装类型",
-                    "type": "integer"
-                },
-                "business_id": {
-                    "description": "商家ID",
-                    "type": "integer"
-                },
-                "cash_limit": {
-                    "description": "现金限额",
-                    "type": "integer"
-                },
-                "cash_money": {
-                    "description": "现金金额",
-                    "type": "string"
-                },
-                "category_set": {
-                    "description": "分类设置",
-                    "type": "integer"
-                },
-                "chain_number": {
-                    "description": "连锁编号",
-                    "type": "string"
-                },
-                "city_id": {
-                    "description": "城市ID",
-                    "type": "integer"
-                },
-                "close_time": {
-                    "description": "关闭时间",
-                    "type": "integer"
-                },
-                "create_time": {
-                    "description": "创建时间",
-                    "type": "string"
-                },
-                "delivery_distance": {
-                    "description": "配送距离",
-                    "type": "integer"
-                },
-                "delivery_set": {
-                    "description": "配送设置",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "delivery_time": {
-                    "description": "配送时间",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "deploy_mode": {
-                    "description": "部署模式",
-                    "type": "integer"
-                },
-                "deposit_money": {
-                    "description": "押金金额",
-                    "type": "string"
-                },
-                "description": {
-                    "description": "描述",
-                    "type": "string"
-                },
-                "fav_count": {
-                    "description": "收藏数量",
-                    "type": "integer"
-                },
-                "freeze_money": {
-                    "description": "冻结金额",
-                    "type": "string"
-                },
-                "is_accept_scan_order": {
-                    "description": "是否接受扫码订单",
-                    "type": "integer"
-                },
-                "is_delete": {
-                    "description": "是否删除",
-                    "type": "integer"
-                },
-                "is_main": {
-                    "description": "是否主店",
-                    "type": "integer"
-                },
-                "is_open_assistant": {
-                    "description": "是否开启助手",
-                    "type": "integer"
-                },
-                "is_open_buffet": {
-                    "description": "是否开启自助餐",
-                    "type": "integer"
-                },
-                "is_open_kitchen_kds": {
-                    "description": "是否开启厨房KDS",
-                    "type": "integer"
-                },
-                "is_open_local_print": {
-                    "description": "是否开启本地打印",
-                    "type": "integer"
-                },
-                "is_open_member": {
-                    "description": "是否开启会员",
-                    "type": "integer"
-                },
-                "is_open_scan": {
-                    "description": "是否开启扫码",
-                    "type": "integer"
-                },
-                "is_open_tablet": {
-                    "description": "是否开启桌台",
-                    "type": "integer"
-                },
-                "is_recycle": {
-                    "description": "是否回收",
-                    "type": "integer"
-                },
-                "kitchen_limit": {
-                    "description": "厨房限额",
-                    "type": "integer"
-                },
-                "languages": {
-                    "description": "语言",
-                    "type": "string"
-                },
-                "latitude": {
-                    "description": "纬度",
-                    "type": "string"
-                },
-                "level": {
-                    "description": "商家等级",
-                    "type": "integer"
-                },
-                "link_name": {
-                    "description": "联系人名称",
-                    "type": "string"
-                },
-                "link_phone": {
-                    "description": "联系人电话",
-                    "type": "string"
-                },
-                "logo": {
-                    "description": "商家logo",
-                    "type": "string"
-                },
-                "longitude": {
-                    "description": "经度",
-                    "type": "string"
-                },
-                "mac_addr": {
-                    "description": "设备mac地址",
-                    "type": "string"
-                },
-                "min_money": {
-                    "description": "最小金额",
-                    "type": "string"
-                },
-                "money": {
-                    "description": "金额",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "商家名称",
-                    "type": "string"
-                },
-                "parent_id": {
-                    "description": "父级ID",
-                    "type": "integer"
-                },
-                "pick_time": {
-                    "description": "自提时间",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "printer_limit": {
-                    "description": "打印机限额",
-                    "type": "integer"
-                },
-                "province_id": {
-                    "description": "省份ID",
-                    "type": "integer"
-                },
-                "real_name": {
-                    "description": "商家真实名称",
-                    "type": "string"
-                },
-                "region_id": {
-                    "description": "区域ID",
-                    "type": "integer"
-                },
-                "reserve": {
-                    "description": "预定",
-                    "type": "integer"
-                },
-                "sale_stock": {
-                    "description": "销售库存",
-                    "type": "integer"
-                },
-                "serial_number": {
-                    "description": "设备序列号",
-                    "type": "string"
-                },
-                "service_money": {
-                    "description": "服务金额",
-                    "type": "string"
-                },
-                "service_type": {
-                    "description": "服务类型",
-                    "type": "integer"
-                },
-                "settle_type": {
-                    "description": "结算方式",
-                    "type": "integer"
-                },
-                "shipping_fee": {
-                    "description": "运费",
-                    "type": "string"
-                },
-                "shop_supplier_id": {
-                    "description": "商家ID",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "状态",
-                    "type": "integer"
-                },
-                "store_set": {
-                    "description": "店铺设置",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "store_time": {
-                    "description": "店铺营业时间",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "store_type": {
-                    "description": "店铺类型",
-                    "type": "integer"
-                },
-                "storebag_price": {
-                    "description": "店铺包装价格",
-                    "type": "string"
-                },
-                "storebag_type": {
-                    "description": "店铺包装类型",
-                    "type": "integer"
-                },
-                "table_limit": {
-                    "description": "桌台限额",
-                    "type": "integer"
-                },
-                "tablet_limit": {
-                    "description": "桌台限额",
-                    "type": "integer"
-                },
-                "timezone": {
-                    "description": "时区",
-                    "type": "string"
-                },
-                "total_gift": {
-                    "description": "总赠菜",
-                    "type": "integer"
-                },
-                "total_money": {
-                    "description": "总金额",
-                    "type": "string"
-                },
-                "update_time": {
-                    "description": "更新时间",
-                    "type": "string"
-                },
-                "user_id": {
-                    "description": "用户ID",
-                    "type": "integer"
                 }
             }
         },
@@ -15736,27 +14981,6 @@ const docTemplate = `{
                 "selected_num": {
                     "description": "已选数量。已选择xx份",
                     "type": "integer"
-                }
-            }
-        },
-        "resp.Language": {
-            "type": "object",
-            "properties": {
-                "i": {
-                    "description": "语言索引",
-                    "type": "string"
-                },
-                "index": {
-                    "description": "语言索引",
-                    "type": "string"
-                },
-                "key": {
-                    "description": "语言键",
-                    "type": "string"
-                },
-                "value": {
-                    "description": "语言值",
-                    "type": "string"
                 }
             }
         },
@@ -18234,7 +17458,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_buffet_discount": {
-                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启",
+                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启 todo ？？在哪里设置的？？",
                     "type": "string"
                 },
                 "is_buy_continue": {
@@ -18288,7 +17512,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "checkout_zeroing_method": {
-                    "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-抹元",
+                    "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义",
                     "type": "string"
                 },
                 "checkout_zeroing_method_list": {
@@ -18591,6 +17815,69 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "setting.H5": {
+            "type": "object",
+            "properties": {
+                "buffet_order_limit": {
+                    "description": "自助餐下单限制",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.BuffetOrderLimit"
+                        }
+                    ]
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_buffet_order_limit": {
+                    "description": "是否开启自助餐下单限制 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_call_service": {
+                    "description": "是否开启呼叫服务员 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_customer_order": {
+                    "description": "是否开启顾客自助下单（顾客可开桌） 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_order_limit": {
+                    "description": "是否开启非自助餐下单限制 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_show_scan_sold_out": {
+                    "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄），不使用 is_show_sold_out",
+                    "type": "integer"
+                },
+                "is_voice_remind": {
+                    "description": "是否开启声音提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "order_limit": {
+                    "description": "非自助餐下单限制",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.OrderLimit"
+                        }
+                    ]
                 }
             }
         },

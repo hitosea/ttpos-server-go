@@ -1,5 +1,7 @@
 package resp
 
+import "ttpos-server-go/app/dto/resp/setting"
+
 type H5Response struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
@@ -117,6 +119,16 @@ type H5 struct {
 	KitchenLanguage   string     `json:"kitchen_language"`      // 厨房语言
 	LanguageList      []Language `json:"language_list"`         // 语言列表
 }
+
+type H5BaseInfo struct {
+	Desk       Desk               `json:"desk"`     // 桌台信息
+	Company    Company            `json:"company"`  // 商家信息
+	H5         setting.H5         `json:"h5"`       // 扫码H5设置
+	Buffet     setting.Buffet     `json:"buffet"`   // 自助餐设置
+	Currency   setting.Currency   `json:"currency"` // 货币设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
+}
+
 type GetBaseInfoResponse struct {
 	TableInfo struct {
 		TableID        uint64 `json:"table_id"`
@@ -321,7 +333,7 @@ type GetBaseInfoResponse struct {
 
 // 商家信息
 type Shop struct {
-	CompanyUuid       uint64 `json:"shop_supplier_id"`     // 商家ID
+	Uuid              uint64 `json:"uuid"`                 // 商家ID
 	Name              string `json:"name"`                 // 商家名称
 	RealName          string `json:"real_name"`            // 商家真实名称
 	LinkName          string `json:"link_name"`            // 联系人名称

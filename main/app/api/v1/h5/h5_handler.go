@@ -3,7 +3,7 @@ package h5
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -22,27 +22,26 @@ type H5Handler struct {
 	buffetSrv service.IBuffetSrv
 }
 
-// GetBaseInfo 获取桌码基础信息
+// BaseInfo 获取桌码基础信息
 // @Summary 桌码基础信息
 // @Description 获取桌码基础信息，整个h5应用需要的基础信息
 // @Tags 扫码点餐
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} resp.GetBaseInfoResponse{}
-// @Router /h5/index.php/scan/base.base/getInfo [post]
-func (h H5Handler) GetBaseInfo(c *gin.Context) {
+// @Success 200 {object} resp.H5BaseInfo{}
+// @Router /h5/base/info [get]
+func (h H5Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
 	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
-	info, err := h.service.GetCompanyInfo(ctx, deskUuid)
+	info, err := h.service.GetBaseInfo(ctx, deskUuid)
 	if err != nil {
 		ctx.Log().Info("获取桌台基本信息失败", zap.String("error", err.Error()))
-		helper.H5Fail(c, 500, "获取信息失败")
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-
-	helper.H5Success(c, info)
+	helper.Success(c, info)
 }
 
 // GetBaseInfo 获取自助餐套餐列表
@@ -55,14 +54,14 @@ func (h H5Handler) GetBaseInfo(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
 // @Router /h5/index.php/scan/order.Order/buffetList [post]
 func (h *H5Handler) GetBuffetList(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var deskUuid uint64
-	list, err := h.service.GetBuffetList(ctx, deskUuid)
-	if err != nil {
-		helper.H5Fail(c, 500, "获取信息失败")
-		return
-	}
-	helper.H5Success(c, list)
+	// ctx := helper.GetContext(c)
+	// var deskUuid uint64
+	// list, err := h.service.GetBuffetList(ctx, deskUuid)
+	// if err != nil {
+	// 	helper.H5Fail(c, 500, "获取信息失败")
+	// 	return
+	// }
+	// helper.H5Success(c, list)
 }
 
 // GetOpenDesk 开台
@@ -76,22 +75,22 @@ func (h *H5Handler) GetBuffetList(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5BuffetList}
 // @Router /h5/index.php/scan/order.Order/setTable [post]
 func (h *H5Handler) GetOpenDesk(c *gin.Context) {
-	ctx := helper.GetContext(c)
+	// ctx := helper.GetContext(c)
 
-	var deskUuid uint64
-	// 绑定请求参数
-	params := req.OpenDeskRequest{}
-	if err := c.ShouldBind(&params); err != nil {
-		helper.H5Fail(c, 500, "参数错误")
-		return
-	}
+	// var deskUuid uint64
+	// // 绑定请求参数
+	// params := req.OpenDeskRequest{}
+	// if err := c.ShouldBind(&params); err != nil {
+	// 	helper.H5Fail(c, 500, "参数错误")
+	// 	return
+	// }
 
-	err := h.service.OpenH5Desk(ctx, deskUuid, req.OpenDeskRequest{})
-	if err != nil {
-		helper.H5Fail(c, 500, "获取信息失败")
-		return
-	}
-	helper.H5SuccessWithMsg(c, "开台成功")
+	// err := h.service.OpenH5Desk(ctx, deskUuid, req.OpenDeskRequest{})
+	// if err != nil {
+	// 	helper.H5Fail(c, 500, "获取信息失败")
+	// 	return
+	// }
+	// helper.H5SuccessWithMsg(c, "开台成功")
 }
 
 // RemarkProduct 给商品添加备注
@@ -105,18 +104,18 @@ func (h *H5Handler) GetOpenDesk(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{}
 // @Router /h5/index.php/scan/order.Order/remark [post]
 func (h *H5Handler) RemarkProduct(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	params := req.AddProductRemarkRequest{}
-	if err := c.ShouldBind(&params); err != nil {
-		helper.H5Fail(c, 500, constant.RemarkFail)
-		return
-	}
-	err := h.service.RemarkProduct(ctx, params.Remark, params.SaleOrderProductUuid)
-	if err != nil {
-		helper.H5Fail(c, 500, constant.RemarkFail)
-		return
-	}
-	helper.H5SuccessWithMsg(c, constant.RemarkSuccess)
+	// ctx := helper.GetContext(c)
+	// params := req.AddProductRemarkRequest{}
+	// if err := c.ShouldBind(&params); err != nil {
+	// 	helper.H5Fail(c, 500, constant.RemarkFail)
+	// 	return
+	// }
+	// err := h.service.RemarkProduct(ctx, params.Remark, params.SaleOrderProductUuid)
+	// if err != nil {
+	// 	helper.H5Fail(c, 500, constant.RemarkFail)
+	// 	return
+	// }
+	// helper.H5SuccessWithMsg(c, constant.RemarkSuccess)
 }
 
 // GetOpenDesk 获取商品分类
@@ -129,13 +128,13 @@ func (h *H5Handler) RemarkProduct(c *gin.Context) {
 // @Success 200 {object} resp.H5Response{data=resp.H5CategoryList}
 // @Router /h5/index.php/scan/product.category/index [post]
 func (h *H5Handler) GetCategoryList(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	list, err := h.service.GetCategoryList(ctx)
-	if err != nil {
-		helper.H5Fail(c, 500, "获取信息失败")
-		return
-	}
-	helper.H5Success(c, list)
+	// ctx := helper.GetContext(c)
+	// list, err := h.service.GetCategoryList(ctx)
+	// if err != nil {
+	// 	helper.H5Fail(c, 500, "获取信息失败")
+	// 	return
+	// }
+	// helper.H5Success(c, list)
 }
 
 // RegisterH5Handlers 注册扫码h5路由
@@ -164,7 +163,8 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	// 需要认证
 	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
-		privateApi.POST("/index.php/scan/base.base/getInfo", wrapper.GetBaseInfo)
+		privateApi.GET("/base/info", wrapper.BaseInfo)
+		// privateApi.POST("/index.php/scan/base.base/getInfo", wrapper.BaseInfo)
 		privateApi.POST("/index.php/scan/order.Order/buffetList", wrapper.GetBuffetList)
 		privateApi.POST("/index.php/scan/order.Order/setTable", wrapper.GetOpenDesk)
 	}

@@ -5,7 +5,7 @@ import "ttpos-server-go/app/dto"
 // H5 扫码H5设置
 type H5 struct {
 	IsCallService      string             `json:"is_call_service"`       // 是否开启呼叫服务员 0-关闭 1-开启
-	IsCustomerOrder    string             `json:"is_customer_order"`     // 是否开启顾客自助下单 0-关闭 1-开启
+	IsCustomerOrder    string             `json:"is_customer_order"`     // 是否开启顾客自助下单（顾客可开桌） 0-关闭 1-开启
 	IsVoiceRemind      string             `json:"is_voice_remind"`       // 是否开启声音提醒 0-关闭 1-开启
 	IsShowScanSoldOut  int                `json:"is_show_scan_sold_out"` // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄），不使用 is_show_sold_out
 	IsBuffetOrderLimit string             `json:"is_buffet_order_limit"` // 是否开启自助餐下单限制 0-关闭 1-开启

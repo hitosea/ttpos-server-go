@@ -5,15 +5,23 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
-type DeskToken struct {
+type deskToken struct {
 	CompanyUuid    float64 `json:"a"`
 	DeskUuid       string  `json:"t"`
 	DeskTokenValue string  `json:"q"`
 }
 
+type DeskToken struct {
+	CompanyUuid    uint64 `json:"company_uuid"`
+	DeskUuid       uint64 `json:"desk_uuid"`
+	DeskTokenValue string `json:"desk_token_value"`
+}
+
+// DecodeDeskToken 解码桌台token
 func DecodeDeskToken(token string) (*DeskToken, error) {
 	// Base64 decode the token
 	decodedToken, err := base64.StdEncoding.DecodeString(token)
@@ -43,12 +51,24 @@ func DecodeDeskToken(token string) (*DeskToken, error) {
 	if newHashString == hash {
 		// Decode the JSON string into a map
 		//var result map[string]interface{}
-		var result DeskToken
+		var result deskToken
 
 		if err := json.Unmarshal(dataBytes, &result); err != nil {
 			return nil, fmt.Errorf("failed to decode JSON data: %v", err)
 		}
-		return &result, nil
+		companyUuid, err := strconv.ParseUint(fmt.Sprintf("%d", uint64(result.CompanyUuid)), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse company uuid: %v", err)
+		}
+		deskUuid, err := strconv.ParseUint(result.DeskUuid, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse desk uuid: %v", err)
+		}
+		return &DeskToken{
+			CompanyUuid:    companyUuid,
+			DeskUuid:       deskUuid,
+			DeskTokenValue: result.DeskTokenValue,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("hash does not match, token may have been tampered with")

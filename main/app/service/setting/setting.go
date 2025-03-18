@@ -3,7 +3,6 @@ package setting
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nahid/gohttp"
 	"regexp"
 	"slices"
 	"strconv"
@@ -21,6 +20,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/nahid/gohttp"
 
 	//"github.com/nahid/gohttp"
 

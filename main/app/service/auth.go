@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/jinzhu/copier"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -13,6 +12,8 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
+
+	"github.com/jinzhu/copier"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -33,7 +34,7 @@ type IAuthSrv interface {
 	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                               // 平板端基本信息
 	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                             // 厨显端基本信息
 	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
-	AuthDesk(ctx context.Context, qrcodeToken string) error                                                                // 鉴权桌台
+	AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权桌台
 	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                                        // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
 }
@@ -596,29 +597,29 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	return company, companySetting, staff, desk, nil
 }
 
-func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) error {
+func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	deskUuid := ctx.GetDeskUuid()
 	db := s.dbm.GetDB(companyUuid)
-	company, err := repository.NewCompanyRepo(db).GetCompanyInfo(ctx)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
 	if err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 	if company.IsDelete() {
-		return errors.New("商家已经删除")
+		return nil, errors.New("商家已经删除")
 	}
 
 	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
 	if err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 	if deskInfo.IsDelete() {
-		return errors.New("桌台已经删除")
+		return nil, errors.New("桌台已经删除")
 	}
 	if deskInfo.QrcodeToken != qrcodeToken {
-		return errors.New("二维码已失效，请联系商家")
+		return nil, errors.New("二维码已失效，请联系商家")
 	}
-	return nil
+	return company, nil
 }
 
 // 检查收银是否开启

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -39,13 +38,13 @@ func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc
 		deskTokenHeader := c.GetHeader("Token") // 桌台二维码的token
 
 		if deskTokenHeader == "" {
-			helper.H5Fail(c, 0, "二维码已失效，请联系商家")
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
 			return
 		}
 		token, err := auth.DecodeDeskToken(deskTokenHeader)
 		if err != nil {
-			helper.H5Fail(c, 0, "二维码已失效，请联系商家")
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
 			return
 		}
@@ -131,26 +130,21 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 }
 
 func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv, dbm *database.DBManager) {
-	deskUuid, err := strconv.Atoi(token.DeskUuid)
-	if err != nil {
-		helper.H5Fail(c, constant.CodeParamError, "二维码已失效，请联系商家")
-		c.Abort()
-		return
-	}
-	ctx := context.NewContext(context.WithDeskUuid(uint64(deskUuid)), context.WithCompanyUuid(uint64(token.CompanyUuid)))
+	ctx := context.NewContext(context.WithDeskUuid(token.DeskUuid), context.WithCompanyUuid(token.CompanyUuid))
 
 	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
-	err = authSrv.AuthDesk(ctx, token.DeskTokenValue)
+	company, err := authSrv.AuthDesk(ctx, token.DeskTokenValue)
 	if err != nil {
-		helper.H5Fail(c, constant.CodeParamError, "二维码已失效，请联系商家")
+		helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 		c.Abort()
 		return
 	}
 	// 将用户信息存储到上下文
-	c.Set(jwt.Source, "H5")
-	c.Set(jwt.CompanyUuid, ctx.GetCompanyUuid()) // 商家Uuid
-	c.Set(jwt.DeskUuid, ctx.GetDeskUuid())       // 桌台Uuid
-
-	c.Set(jwt.DB, dbm.GetDB(ctx.GetCompanyUuid())) // 数据库连接
-	fmt.Println(fmt.Sprintf("deskUuid: %d, companyUuid: %d", ctx.GetDeskUuid(), ctx.GetCompanyUuid()))
+	c.Set(jwt.Source, jwt.SourceH5)
+	c.Set(jwt.CompanyUuid, token.CompanyUuid)          // 商家Uuid
+	c.Set(jwt.DeskUuid, token.DeskUuid)                // 桌台Uuid
+	c.Set(jwt.Company, *company)                       // 商家信息
+	c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
+	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
+	fmt.Println(fmt.Sprintf("ParseDeskToken deskUuid: %d, companyUuid: %d", token.DeskUuid, token.CompanyUuid))
 }

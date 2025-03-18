@@ -7,7 +7,7 @@ type Business struct {
 	ZeroingMethodList         []ZeroingMethodItem         `json:"zeroing_method_list"`          // 优惠折扣自动抹零方式列表
 	CheckoutZeroingMethodList []CheckoutZeroingMethodItem `json:"checkout_zeroing_method_list"` // 结账自动抹零方式列表
 	ZeroingMethod             string                      `json:"zeroing_method"`               // 优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数
-	CheckoutZeroingMethod     string                      `json:"checkout_zeroing_method"`      // 结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-抹元
+	CheckoutZeroingMethod     string                      `json:"checkout_zeroing_method"`      // 结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义
 	GiftMethodList            []GiftMethodItem            `json:"gift_method_list"`             // 赠菜计算方式列表
 	GiftMethod                string                      `json:"gift_method"`                  // 赠菜计算方式
 	FreeMethodList            []FreeMethodItem            `json:"free_method_list"`             // 免单计算方式列表
