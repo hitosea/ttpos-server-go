@@ -281,3 +281,8 @@ func (req OrderChangeBuffetClockReq) Validate() error {
 type OrderChangeBuffetProductListReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID
 }
+
+// GetProductListReq 获取桌台的(未)送厨商品列表
+type GetProductListReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}
