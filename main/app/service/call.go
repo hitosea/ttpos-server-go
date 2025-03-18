@@ -93,8 +93,9 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 		if printerLog.SaleBill != nil || printerLog.SaleOrder != nil {
 			if printerLog.SaleBill != nil {
 				deskNo = printerLog.SaleBill.SerialNo
+			} else if printerLog.SaleOrder != nil {
+				deskNo = printerLog.SaleOrder.SaleBill.SerialNo
 			}
-			deskNo = printerLog.SaleOrder.SaleBill.SerialNo
 		}
 		var item resp.AbnormalPrintItem
 		copier.Copy(&item, printerLog)
