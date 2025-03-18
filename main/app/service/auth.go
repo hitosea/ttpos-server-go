@@ -310,6 +310,10 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return cashierBase, errors.WithMessage(err)
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -327,6 +331,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
 		CloudBasic: cloudBasicSetting,
+		Printer:    printerSetting,
 	}, nil
 }
 
@@ -376,6 +381,10 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return assistantBase, errors.WithMessage(err)
+	}
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
@@ -401,6 +410,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Currency:  currencySetting,
 		Business:  businessSetting,
 		Assistant: assistantSettingResp,
+		Printer:   printerSetting,
 	}, nil
 }
 
