@@ -450,6 +450,11 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		data = "1014010001"
 	}
 
+	// 如果是收银打印机 - 不用返回
+	if settingPrinterInfo.IsCashierPrinter {
+		return &resp.PrinterData{}, nil
+	}
+
 	//
 	return &resp.PrinterData{
 		Uuid:             0,

@@ -39,3 +39,7 @@ type SubmitShiftReq struct {
 	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额: 0 - 当前钱箱现金总计
 	LeaveCash    float64 `json:"leave_cash"`    // 遗留现金: 0 - 当前钱箱现金总计
 }
+
+type CashierReportReq struct {
+	ExceptionRemark string `json:"exception_remark"` // 异常备注
+}

@@ -24,6 +24,7 @@ import (
 
 type IStaffShiftSrv interface {
 	GetCashierReport(ctx context.Context) (*resp.CashierReportResp, error)
+	SubmitCashierReport(ctx context.Context, req req.CashierReportReq) error
 	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
 	GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error)     // 获取交班信息
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) error // 提交交班
@@ -199,6 +200,19 @@ func (s *staffShiftSrv) CountShiftPaymentMethodIncome(db *gorm.DB, shiftNo strin
 
 // GetCashierReport 获取报备信息
 func (s *staffShiftSrv) GetCashierReport(ctx context.Context) (*resp.CashierReportResp, error) {
+	staff := ctx.GetStaff()
+	db := s.dbm.GetDB(staff.CompanyUuid)
+	// 查询交班记录
+	log, err := repository.NewShiftLogRepo(db).GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.New("当前班次不存在")
+	}
+	if log.IsHandedOver() {
+		return nil, errors.New("当前班次已交班")
+	}
 
 	// 获取打印机配置
 	settingSrv := setting.NewSrv(s.dbm, s.cache)
@@ -207,9 +221,42 @@ func (s *staffShiftSrv) GetCashierReport(ctx context.Context) (*resp.CashierRepo
 		return nil, err
 	}
 
-	// TODO
+	//
 	return &resp.CashierReportResp{
-		PreviousShiftCash: 0,
+		PreviousShiftCash: log.PreviousShiftCash,
 		PrinterData:       *printerData,
 	}, nil
+}
+
+// SubmitCashierReport 提交报备信息
+func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.CashierReportReq) error {
+	staff := ctx.GetStaff()
+	db := s.dbm.GetDB(staff.CompanyUuid)
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 查询交班记录
+	log, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return errors.New("当前班次错误，请退出重新登录")
+	}
+	if log.IsHandedOver() {
+		return errors.New("当前班次已交班")
+	}
+	// todo 是否已报备 暂时不拦截
+	// if log.IsReported() {
+	// 	return errors.New("当前班次已经报备")
+	// }
+
+	// 更新交班记录
+	_, err = shiftLogRepo.Update(log, map[string]interface{}{
+		"exception_remark": req.ExceptionRemark,
+	})
+	if err != nil {
+		return errors.New("更新交班记录失败")
+	}
+
+	return nil
 }
