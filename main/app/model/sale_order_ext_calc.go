@@ -26,6 +26,7 @@ func (model *SaleOrder) CalcCookingAndOrderSaleOrder(setting SaleBillSetting) *C
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
 	products := model.CookingOrderProductList()
+	products = append(products, model.H5OrderProductList()...)
 	return model.calcCookingSaleOrder(products, serviceFeeType, setting.ServiceFeeValue, taxFeeType)
 }
 
