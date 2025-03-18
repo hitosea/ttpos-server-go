@@ -279,7 +279,6 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		source             = ctx.GetSource()
 		deviceId           = ctx.GetGin().GetString(jwt.DeviceId)
 		cashierSettingResp setting2.CashierResp
-		tabletSettingResp  setting2.TabletResp
 	)
 	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
@@ -307,11 +306,6 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
-	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
-	if err != nil {
-		return cashierBase, errors.WithMessage(err)
-	}
-	copier.CopyWithOption(&tabletSettingResp, tabletSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
