@@ -33,30 +33,34 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 		defaultLanguage = languageList[0].Name
 	}
 	return setting.Cashier{
-		Carousel:   []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
-		IsAutoSend: "0",                      // 收银结账自动送厨房 0-关闭 1-开启
-		OrderMethod: setting.OrderMethodItem{
-			IsCashierOrder: "1",
-			IsTableOrder:   "1",
-		}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
-		Server:                 setting.Server{IP: ip, Port: port}, // 收银机服务器连接
-		IsRemainColor:          "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
-		RemainColor:            []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
-		AdvancedPassword:       "666888",                           // 高级设置密码
-		IsOpenCashierPassword:  "1",                                // 是否开启钱箱密码 0-关闭 1-开启
-		CashierPassword:        "666888",                           // 钱箱密码
-		LockPassword:           "666888",                           // 锁屏密码
-		IsAutoLockScreen:       "1",                                // 是否开启自动锁屏 0-关闭 1-开启
-		AutoLockScreen:         "300",                              // 自动锁屏（秒），默认5分钟
-		IsShowScanSoldOut:      1,                                  // 扫码点餐是否显示售罄商品 0-不显示 1-显示
-		IsShowAssistantSoldOut: 1,                                  // 点餐助手是否显示售罄商品 0-不显示 1-显示
-		LanguageList:           languageList,                       // 语言列表
-		Language:               []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-		DefaultLanguage:        defaultLanguage,                    // 默认语言
-		IsAutoOrder:            "0",                                // 是否自动接单
-		AutoOrderLimit:         "1000",                             // 自动接单金额上限
-		IsAutoVoice:            "0",                                // 是否开启自动接单语音播报
-		MenuShowSoldOut:        "1",                                // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+		CashierResp: setting.CashierResp{
+			Carousel:   []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
+			IsAutoSend: "0",                      // 收银结账自动送厨房 0-关闭 1-开启
+			OrderMethod: setting.OrderMethodItem{
+				IsCashierOrder: "1",
+				IsTableOrder:   "1",
+			}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
+			Server:        setting.Server{IP: ip, Port: port}, // 收银机服务器连接
+			IsRemainColor: "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
+			RemainColor:   []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+
+			IsOpenCashierPassword: "1", // 是否开启钱箱密码 0-关闭 1-开启
+
+			IsAutoLockScreen:       "1",                       // 是否开启自动锁屏 0-关闭 1-开启
+			AutoLockScreen:         "300",                     // 自动锁屏（秒），默认5分钟
+			IsShowScanSoldOut:      1,                         // 扫码点餐是否显示售罄商品 0-不显示 1-显示
+			IsShowAssistantSoldOut: 1,                         // 点餐助手是否显示售罄商品 0-不显示 1-显示
+			LanguageList:           languageList,              // 语言列表
+			Language:               []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:        defaultLanguage,           // 默认语言
+			IsAutoOrder:            "0",                       // 是否自动接单
+			AutoOrderLimit:         "1000",                    // 自动接单金额上限
+			IsAutoVoice:            "0",                       // 是否开启自动接单语音播报
+			MenuShowSoldOut:        "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+		},
+		AdvancedPassword: "666888", // 高级设置密码
+		CashierPassword:  "666888", // 钱箱密码
+		LockPassword:     "666888", // 锁屏密码
 	}
 }
 
@@ -69,29 +73,31 @@ func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
 	}
 	// DefaultTabletSetting 平板端设置
 	return setting.Tablet{
-		Carousel:           []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
-		IsCallService:      "1",                      // 是否开启呼叫服务员 0-关闭 1-开启
-		IsCustomerOrder:    "1",                      // 是否开启顾客自助下单 0-关闭 1-开启
-		IsVoiceRemind:      "1",                      // 是否开启声音提醒 0-关闭 1-开启
-		IsBuffetOrderLimit: "0",                      // 是否开启自助餐下单限制 0-关闭 1-开启
-		BuffetOrderLimit: setting.BuffetOrderLimit{
-			IsLimitTime: "1", // 是否开启时间限制 0-关闭 1-开启
-			LimitTime:   "0", // 时间限制（分钟）
-			IsLimitNum:  "1", // 是否开启数量限制 0-关闭 1-开启
-			LimitNum:    "0", // 数量限制
+		TabletResp: setting.TabletResp{
+			Carousel:           []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
+			IsCallService:      "1",                      // 是否开启呼叫服务员 0-关闭 1-开启
+			IsCustomerOrder:    "1",                      // 是否开启顾客自助下单 0-关闭 1-开启
+			IsVoiceRemind:      "1",                      // 是否开启声音提醒 0-关闭 1-开启
+			IsBuffetOrderLimit: "0",                      // 是否开启自助餐下单限制 0-关闭 1-开启
+			BuffetOrderLimit: setting.BuffetOrderLimit{
+				IsLimitTime: "1", // 是否开启时间限制 0-关闭 1-开启
+				LimitTime:   "0", // 时间限制（分钟）
+				IsLimitNum:  "1", // 是否开启数量限制 0-关闭 1-开启
+				LimitNum:    "0", // 数量限制
+			},
+			IsOrderLimit: "0", // 是否开启非自助餐下单限制 0-关闭 1-开启
+			OrderLimit: setting.OrderLimit{
+				IsLimitTime: "1", // 是否开启时间限制 0-关闭 1-开启
+				LimitTime:   "0", // 时间限制（分钟）
+				IsLimitNum:  "1", // 是否开启数量限制 0-关闭 1-开启
+				LimitNum:    "0", // 数量限制
+			},
+			Server:          setting.Server{IP: ip, Port: port}, // 平板服务器连接
+			LanguageList:    languageList,                       // 语言列表
+			Language:        []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage: defaultLanguage,                    // 默认语言
 		},
-		IsOrderLimit: "0", // 是否开启非自助餐下单限制 0-关闭 1-开启
-		OrderLimit: setting.OrderLimit{
-			IsLimitTime: "1", // 是否开启时间限制 0-关闭 1-开启
-			LimitTime:   "0", // 时间限制（分钟）
-			IsLimitNum:  "1", // 是否开启数量限制 0-关闭 1-开启
-			LimitNum:    "0", // 数量限制
-		},
-		Server:           setting.Server{IP: ip, Port: port}, // 平板服务器连接
-		AdvancedPassword: "666888",                           // 高级设置密码
-		LanguageList:     languageList,                       // 语言列表
-		Language:         []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-		DefaultLanguage:  defaultLanguage,                    // 默认语言
+		AdvancedPassword: "666888", // 高级设置密码
 	}
 }
 
@@ -134,16 +140,18 @@ func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen
 		defaultLanguage = languageList[0].Name
 	}
 	return setting.Kitchen{
-		IsOpen:           "1",                                // 是否开启厨显功能 0关闭 1开启
-		IsComeDish:       "1",                                // 是否开启来菜提醒 0-关闭 1-开启
-		IsCallService:    "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
-		Server:           setting.Server{IP: ip, Port: port}, // 厨显服务器连接
-		AdvancedPassword: "666888",                           // 高级设置密码
-		IsWaitColor:      "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
-		WaitColor:        []string{},                         // 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
-		LanguageList:     languageList,                       // 语言列表
-		Language:         []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-		DefaultLanguage:  defaultLanguage,                    // 默认语言
+		KitchenResp: setting.KitchenResp{
+			IsOpen:          "1",                                // 是否开启厨显功能 0关闭 1开启
+			IsComeDish:      "1",                                // 是否开启来菜提醒 0-关闭 1-开启
+			IsCallService:   "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
+			Server:          setting.Server{IP: ip, Port: port}, // 厨显服务器连接
+			IsWaitColor:     "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
+			WaitColor:       []string{},                         // 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
+			LanguageList:    languageList,                       // 语言列表
+			Language:        []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage: defaultLanguage,                    // 默认语言
+		},
+		AdvancedPassword: "666888", // 高级设置密码
 	}
 }
 
@@ -233,24 +241,26 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 }
 
 // 默认点餐助手设置
-func (s *Srv) getDefaultAssistant(language string, languageList []dto.LanguageItem) setting.Assistant {
+func (s *Srv) getDefaultAssistant(languageList []dto.LanguageItem) setting.Assistant {
 	var defaultLanguage = i18n.LanguageEN
 	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
 	}
 	return setting.Assistant{
-		Server:           setting.Server{IP: ip, Port: port}, // 服务器连接
-		IsRemainColor:    "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
-		RemainColor:      []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
-		AdvancedPassword: "666888",                           // 高级设置密码
-		LockPassword:     "666888",                           // 锁屏密码
-		DefaultMode:      "0",                                // 默认模式 0-服务员模式 1-顾客模式
-		IsAutoLockScreen: "1",                                // 是否开启自动锁屏 0-关闭 1-开启
-		AutoLockScreen:   "300",                              // 自动锁屏（秒），默认5分钟
-		LanguageList:     languageList,                       // 语言列表
-		Language:         []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-		DefaultLanguage:  defaultLanguage,                    // 默认语言
+		AssistantResp: setting.AssistantResp{
+			Server:           setting.Server{IP: ip, Port: port}, // 服务器连接
+			IsRemainColor:    "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
+			RemainColor:      []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+			DefaultMode:      "0",                                // 默认模式 0-服务员模式 1-顾客模式
+			IsAutoLockScreen: "1",                                // 是否开启自动锁屏 0-关闭 1-开启
+			AutoLockScreen:   "300",                              // 自动锁屏（秒），默认5分钟
+			LanguageList:     languageList,                       // 语言列表
+			Language:         []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:  defaultLanguage,                    // 默认语言
+		},
+		AdvancedPassword: "666888", // 高级设置密码
+		LockPassword:     "666888", // 锁屏密码
 	}
 }
 

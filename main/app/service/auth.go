@@ -310,7 +310,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
-	copier.Copy(&tabletSettingResp, tabletSetting)
+	copier.CopyWithOption(&tabletSettingResp, tabletSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
@@ -376,10 +376,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		return assistantBase, errors.WithMessage(err)
 	}
 	var assistantSettingResp setting2.AssistantResp
-	err = copier.Copy(&assistantSettingResp, assistantSetting)
-	if err != nil {
-		panic(err)
-	}
+	copier.CopyWithOption(&assistantSettingResp, assistantSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
@@ -439,7 +436,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
-	copier.Copy(&kitchenSettingResp, kitchenSetting)
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
@@ -475,7 +472,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
 	}
-	copier.Copy(&kitchenSettingResp, kitchenSetting)
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
