@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // Staff 员工表 ttpos_staff
 type Staff struct {
 	BaseModel
@@ -75,4 +77,9 @@ type StaffOperationLog struct {
 	Ip           string `gorm:"column:ip;type:varchar(255);comment:操作IP;NOT NULL" json:"ip"`
 	Source       string `gorm:"column:source;type:varchar(255);comment:操作来源;NOT NULL" json:"source"`
 	Agent        string `gorm:"column:agent;type:varchar(255);comment:操作用户代理;NOT NULL" json:"agent"`
+}
+
+// IsHandedOver 是否已交班
+func (model *StaffShiftLog) IsHandedOver() bool {
+	return model.Status == constant.StaffHandedOver
 }

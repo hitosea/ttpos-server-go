@@ -33,3 +33,9 @@ type KitchenBindReq struct {
 	ProductPrinterUuid uint64 `json:"product_printer_uuid"` // 商品打印Uuid
 	Remark             string `json:"remark"`               // 备注
 }
+
+// SubmitShiftReq 提交交班
+type SubmitShiftReq struct {
+	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额: 0 - 当前钱箱现金总计
+	LeaveCash    float64 `json:"leave_cash"`    // 遗留现金: 0 - 当前钱箱现金总计
+}
