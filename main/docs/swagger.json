@@ -422,7 +422,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -600,6 +600,11 @@
         },
         "/assistant/desk/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -649,6 +654,11 @@
         },
         "/assistant/desk/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -698,6 +708,11 @@
         },
         "/assistant/desk/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -747,6 +762,11 @@
         },
         "/assistant/desk/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -796,6 +816,11 @@
         },
         "/assistant/desk/order/cart/product/change_desk": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "转菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -845,6 +870,11 @@
         },
         "/assistant/desk/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -894,6 +924,11 @@
         },
         "/assistant/desk/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -943,6 +978,11 @@
         },
         "/assistant/desk/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -992,6 +1032,11 @@
         },
         "/assistant/desk/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -1414,6 +1459,11 @@
         },
         "/assistant/desk/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -1511,6 +1561,11 @@
         },
         "/assistant/desk/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -3333,7 +3388,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -3582,7 +3637,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -3667,6 +3722,11 @@
         },
         "/cashier/desk/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -3716,6 +3776,11 @@
         },
         "/cashier/desk/order/cart/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "查询桌台购物车信息",
                 "consumes": [
                     "application/json"
@@ -3763,6 +3828,11 @@
         },
         "/cashier/desk/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -3812,6 +3882,11 @@
         },
         "/cashier/desk/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3861,6 +3936,11 @@
         },
         "/cashier/desk/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3910,6 +3990,11 @@
         },
         "/cashier/desk/order/cart/product/change_desk": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "转菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3959,6 +4044,11 @@
         },
         "/cashier/desk/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -4008,6 +4098,11 @@
         },
         "/cashier/desk/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -4057,6 +4152,11 @@
         },
         "/cashier/desk/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -4106,6 +4206,11 @@
         },
         "/cashier/desk/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -4265,6 +4370,11 @@
         },
         "/cashier/desk/order/free": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "免单",
                 "consumes": [
                     "application/json"
@@ -4476,6 +4586,11 @@
         },
         "/cashier/desk/order/must_plan/confirm": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "确认必点商品",
                 "consumes": [
                     "application/json"
@@ -4510,6 +4625,11 @@
         },
         "/cashier/desk/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -4607,6 +4727,11 @@
         },
         "/cashier/desk/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -4712,6 +4837,11 @@
         },
         "/cashier/desk/order/payment/zero_rule": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "设置结账抹零规则",
                 "consumes": [
                     "application/json"
@@ -5127,6 +5257,11 @@
         },
         "/cashier/desk/order/sale_order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除一个销售订单(删除拆单)",
                 "consumes": [
                     "application/json"
@@ -5173,6 +5308,11 @@
         },
         "/cashier/desk/order/sale_order/delete_all": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除所有子销售订单(撤销拆单)",
                 "consumes": [
                     "application/json"
@@ -5219,6 +5359,11 @@
         },
         "/cashier/desk/order/sale_order/move_product": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "从一个销售订单移动商品到另一个销售订单",
                 "consumes": [
                     "application/json"
@@ -5604,6 +5749,11 @@
         },
         "/cashier/instant/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -5696,6 +5846,11 @@
         },
         "/cashier/instant/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -5745,6 +5900,11 @@
         },
         "/cashier/instant/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5794,6 +5954,11 @@
         },
         "/cashier/instant/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5843,6 +6008,11 @@
         },
         "/cashier/instant/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5892,6 +6062,11 @@
         },
         "/cashier/instant/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -5941,6 +6116,11 @@
         },
         "/cashier/instant/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5990,6 +6170,11 @@
         },
         "/cashier/instant/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -6149,6 +6334,11 @@
         },
         "/cashier/instant/order/free": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "免单",
                 "consumes": [
                     "application/json"
@@ -6457,6 +6647,11 @@
         },
         "/cashier/instant/order/must_plan/confirm": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "确认必点商品",
                 "consumes": [
                     "application/json"
@@ -6491,6 +6686,11 @@
         },
         "/cashier/instant/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -6588,6 +6788,11 @@
         },
         "/cashier/instant/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -6693,6 +6898,11 @@
         },
         "/cashier/instant/order/payment/zero_rule": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "设置结账抹零规则",
                 "consumes": [
                     "application/json"
@@ -7039,6 +7249,11 @@
         },
         "/cashier/instant/order/sale_order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除一个销售订单(删除拆单)",
                 "consumes": [
                     "application/json"
@@ -7085,6 +7300,11 @@
         },
         "/cashier/instant/order/sale_order/delete_all": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除所有子销售订单(撤销拆单)",
                 "consumes": [
                     "application/json"
@@ -7131,6 +7351,11 @@
         },
         "/cashier/instant/order/sale_order/move_product": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "从一个销售订单移动商品到另一个销售订单",
                 "consumes": [
                     "application/json"
@@ -8065,13 +8290,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -8166,13 +8391,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8205,37 +8430,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -8256,13 +8481,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -8409,13 +8634,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -8503,7 +8728,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8710,7 +8935,7 @@
                     {
                         "type": "integer",
                         "description": "数据类型 (打印类型), -1=全都、.....",
-                        "name": "data_type",
+                        "name": "dataType",
                         "in": "query"
                     },
                     {
@@ -8731,19 +8956,19 @@
                     {
                         "type": "integer",
                         "description": "打印机UUID",
-                        "name": "printer_uuid",
+                        "name": "printerUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -10847,13 +11072,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -10892,13 +11117,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -10931,37 +11156,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -10982,13 +11207,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -11033,13 +11258,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -11614,7 +11839,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -13790,6 +14015,10 @@
                 "product_amount": {
                     "description": "商品金额(折后价)",
                     "type": "number"
+                },
+                "product_num": {
+                    "description": "总数量，用于点餐助手、平板端、h5",
+                    "type": "integer"
                 },
                 "product_origin_amount": {
                     "description": "商品金额(原价)",
@@ -16403,10 +16632,6 @@
                         }
                     ]
                 },
-                "create_time": {
-                    "description": "送厨时间",
-                    "type": "integer"
-                },
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
                     "type": "number"
@@ -16453,6 +16678,14 @@
                 },
                 "remark": {
                     "description": "备注",
+                    "type": "string"
+                },
+                "send_kitchen_time": {
+                    "description": "送厨时间",
+                    "type": "integer"
+                },
+                "sign": {
+                    "description": "签名，用于合并商品",
                     "type": "string"
                 },
                 "status": {

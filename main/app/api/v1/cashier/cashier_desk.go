@@ -593,6 +593,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Param sale_bill_uuid path string true "账单ID"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -624,6 +625,7 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProductAddReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -652,6 +654,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProductNumReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -683,6 +686,7 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProductCookingReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -718,6 +722,7 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProduct true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -747,6 +752,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProduct true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -776,6 +782,7 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProductChangeDeskReq true "转菜购物车商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -805,6 +812,7 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProductGivingReq true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -834,6 +842,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.OrderCartProduct true "商品参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
@@ -863,6 +872,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
 // @Success 200 {object} dto.Response{}
 // @Router /cashier/desk/order/must_plan/confirm [post]
@@ -893,6 +903,7 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param sale_order_uuid query integer true "销售订单uuid"
 // @param sale_bill_uuid query integer true "销售账单uuid"
 // @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
@@ -993,6 +1004,7 @@ func (h *DeskHandler) OrderPaymentCreate(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderPaymentCancelReq true "撤销一个支付单参数"
 // @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
 // @Router /cashier/desk/order/payment/cancel [post]
@@ -1023,6 +1035,7 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderPaymentFinishReq true "完成销售订单的付款结账参数"
 // @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
 // @Router /cashier/desk/order/payment/finish [post]
@@ -1053,6 +1066,7 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderFreeReq true "免单参数"
 // @Success 200 {object} dto.Response{data=resp.OrderFinishResp}
 // @Router /cashier/desk/order/free [post]
@@ -1083,6 +1097,7 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderPaymentZeroRuleReq true "设置结账抹零规则参数"
 // @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
 // @Router /cashier/desk/order/payment/zero_rule [post]
@@ -1148,6 +1163,7 @@ func (h *DeskHandler) OrderSaleOrderCreate(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderSaleOrderMoveProductReq true "从一个销售订单移动商品到另一个销售订单参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Router /cashier/desk/order/sale_order/move_product [post]
@@ -1178,6 +1194,7 @@ func (h *DeskHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderSaleOrderDeleteReq true "删除一个销售订单(删除拆单)参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Router /cashier/desk/order/sale_order/delete [delete]
@@ -1208,6 +1225,7 @@ func (h *DeskHandler) OrderSaleOrderDelete(c *gin.Context) {
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body req.InstantOrderSaleOrderDeleteAllReq true "删除所有子销售订单(撤销拆单)参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Router /cashier/desk/order/sale_order/delete_all [delete]

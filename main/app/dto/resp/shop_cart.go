@@ -66,6 +66,7 @@ type AmountInfo struct {
 	DiscountAmount        float64 `json:"discount_amount"`        // 优惠折扣金额(整单打折优惠金额+订单抹零金额)
 	MemberDiscountAmount  float64 `json:"member_discount_amount"` // 会员优惠折扣金额
 	Amount                float64 `json:"amount"`                 // 总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）
+	ProductNum            uint    `json:"product_num"`            // 总数量，用于点餐助手、平板端、h5
 }
 
 // BuffetInfo 自助餐信息
@@ -112,7 +113,8 @@ type Product struct {
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
-	CreateTime          int64              `json:"create_time"`           // 送厨时间
+	SendKitchenTime     int64              `json:"send_kitchen_time"`     // 送厨时间
+	Sign                string             `json:"sign"`                  // 签名，用于合并商品
 }
 
 type AboutBuffet struct {
