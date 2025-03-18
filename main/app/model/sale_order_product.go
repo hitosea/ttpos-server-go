@@ -125,6 +125,16 @@ func (model *SaleOrderProduct) GetCanReturnNum() uint {
 	return model.Num - uint(amount.InexactFloat64())
 }
 
+// GetReturnPrice 获取销售订单商品的已退金额。订单商品金额 - 可退货金额
+func (model *SaleOrderProduct) GetReturnPrice() float64 {
+	return decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
+}
+
+// GetCanReturnPrice 获取销售订单商品的可退货金额. 可退货金额=订单商品金额-已退货金额
+func (model *SaleOrderProduct) GetCanReturnPrice() float64 {
+	return decimal.NewFromFloat(model.Price).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
+}
+
 func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
 	// 默认0是本台的商品。不为0的商品是从其他桌台并台过来的商品
 	return model.DeskUuid == 0
@@ -509,14 +519,17 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
+
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		} else {
 			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+			fmt.Println(utils.ToJsonString(saleOrderProductBom.ProductBom.ProductSauce))
 			sauceNames = append(sauceNames, sauceName)
 		}
 	}
+
 	// 获取商品属性
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNames()
