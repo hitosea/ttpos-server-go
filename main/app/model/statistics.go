@@ -11,9 +11,8 @@ type StatisticsShiftSaleRefundAmount struct {
 
 // StatisticsShiftRechargeRefundAmount 当班充值订单退款金额
 type StatisticsShiftRechargeRefundAmount struct {
-	ShiftNo         string          `json:"shift_no"`
-	RefundAmount    sql.NullFloat64 `json:"refund_amount"`
-	RefundTaxAmount sql.NullFloat64 `json:"refund_tax_amount"`
+	ShiftNo      string          `json:"shift_no"`
+	RefundAmount sql.NullFloat64 `json:"refund_amount"`
 }
 
 // StatisticsPaymentMethodAmount 支付方式累计收入

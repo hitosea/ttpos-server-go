@@ -2014,5 +2014,9 @@
   "验证码错误": "Doğrulama kodu hatalı",
   "骑手中心": "Sürücü Merkezi",
   "高峰时间": "Peak zamanı",
-  "默认语言不能为空": "Varsayılan dil boş olamaz"
+  "默认语言不能为空": "Varsayılan dil boş olamaz",
+  "当前班次不存在": "Mevcut sınıf mevcut değil",
+  "当前班次已交班": "Mevcut sınıf teslim edildi",
+  "取出金额不能小于0": "Çekim tutarı 0'dan az olamaz",
+  "遗留现金不能小于0": "Kalan nakit 0'dan az olamaz"
 }
