@@ -2492,14 +2492,17 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 		// 如果改了套餐信息，需要处理时间 和调整商品是否自助餐
 		if len(addBuffetIds) != 0 || len(removeBuffetIds) != 0 {
+			newStartTime := time.Now().Unix()
 			// 维护套餐时长和加钟时长
 			if maxTimeLimit == -1 {
 				saleBill.BuffetDuration = 0
-				saleBill.BuffetStartTime = time.Now().Unix()
+				saleBill.BuffetStartTime = newStartTime
+				saleBill.DelayDuration = uint(saleBill.GetRemainingDelayDuration())
+				saleBill.DelayStartTime = newStartTime
 			} else {
 				// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
 				if saleBill.BuffetIsTimeOut() {
-					saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
+					saleBill.BuffetStartTime = newStartTime - int64(saleBill.BuffetDuration)
 				}
 				// 永远等于最大时间限制 + 总加钟时间
 				saleBill.BuffetDuration = uint(int64(maxTimeLimit))
