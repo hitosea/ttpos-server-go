@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -79,19 +78,14 @@ func (r *warehouseFormRepoImpl) GetWarehouseOutForms(opts ...DBOption) ([]*model
 		db = opt(db)
 	}
 
-	fmt.Println("saleBillUuid:qqqqqq11111111")
 	result := db.Model(&model.WarehouseOutForm{}).Find(&warehouseOutForms)
-	fmt.Println("saleBillUuid:qqqqqq22222222")
 	if result.Error != nil {
 		return nil, errors.WithMessage(result.Error)
 	}
-	fmt.Println("saleBillUuid:qqqqqq33333333")
 	return warehouseOutForms, nil
 }
 
 func (r *warehouseFormRepoImpl) GetWarehouseOutFormsBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutForm, error) {
-	fmt.Println("saleBillUuid:", saleBillUuid)
-	fmt.Println("saleBillUuid:sssssss11111111")
 	warehouseOutForms, err := r.GetWarehouseOutForms(
 		CommonRepo.WhereByAssociatedOrderUuid(saleBillUuid),
 		CommonRepo.WhereBySoftDelete(),
@@ -101,11 +95,9 @@ func (r *warehouseFormRepoImpl) GetWarehouseOutFormsBySaleBillUuid(saleBillUuid 
 			},
 		),
 	)
-	fmt.Println("saleBillUuid:sssssss22222222")
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("saleBillUuid:sssssss33333333")
 	return warehouseOutForms, nil
 }
 

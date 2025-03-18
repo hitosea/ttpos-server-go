@@ -1126,7 +1126,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 				return errors.WithMessage(err)
 			}
 			warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
-			fmt.Println("model.NewWarehouseForm(productList, saleBill.Uuid):", utils.ToJsonString(warehouseForm))
 		}
 		// 创建入库单
 		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
@@ -1593,7 +1592,6 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 			return errors.WithMessage(err)
 		}
 		warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
-		fmt.Println("model.NewWarehouseForm(productList, saleBill.Uuid):", utils.ToJsonString(warehouseForm))
 	}
 
 	// 3.构建出库单，将账单下单减库存的商品出库
@@ -1607,7 +1605,6 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 		warehouseOutForm = model.NewWarehouseOutForm(productList, false, saleBill.Uuid)
 	}
 
-	fmt.Println("6666666666:")
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 撤销出库单
 		for _, form := range forms {
@@ -1621,7 +1618,6 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 				}
 			}
 		}
-		fmt.Println("7777777777:")
 
 		// 创建入库单
 		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
@@ -3584,14 +3580,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果出库单明细不为空，则创建出库单
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 			// 创建出库单
-			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord")
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -3783,7 +3777,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
 			// 创建入库单
-			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord")
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord(*warehouseForm); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -4704,15 +4697,12 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("warehouseOutFormItems len: ", len(warehouseOutFormItems))
 	productMap := make(map[uint64]*model.SaleOrderProduct)
 	for _, saleOrderProduct := range allSaleOrderProducts {
 		productMap[saleOrderProduct.Uuid] = saleOrderProduct
 	}
 	for _, warehouseOutFormItem := range warehouseOutFormItems {
-		fmt.Println("warehouseOutFormItem: ", warehouseOutFormItem)
 		if _, ok := productMap[warehouseOutFormItem.SaleOrderProductUuid]; ok {
-			fmt.Println("ok := productMap[warehouseOutFormItem.SaleOrderProductUuid]; warehouseOutFormItem.SaleOrderProductUuid: ", warehouseOutFormItem.SaleOrderProductUuid)
 			delete(productMap, warehouseOutFormItem.SaleOrderProductUuid)
 		}
 	}
@@ -6315,7 +6305,6 @@ func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid u
 	// 重新计算商品金额。商品金额=商品列表中各个商品的金额之和
 	productAmount := decimal.NewFromFloat(0)
 	for _, product := range res.Products.List {
-		fmt.Println("GetUnOrderedH5ProductList product", product.GetPrice())
 		productAmount = productAmount.Add(decimal.NewFromFloat(product.GetPrice()))
 	}
 	res.AmountInfo.ProductAmount = productAmount.InexactFloat64()
