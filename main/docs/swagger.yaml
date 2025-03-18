@@ -1863,6 +1863,21 @@ definitions:
           $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
         type: array
     type: object
+  resp.GroupList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SendKitchenProductGroup'
+        type: array
+    type: object
+  resp.GroupProducts:
+    properties:
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.Product'
+        type: array
+    type: object
   resp.H5BaseInfo:
     properties:
       buffet:
@@ -2762,6 +2777,22 @@ definitions:
           $ref: '#/definitions/resp.PaymentMethodAmount'
         type: array
     type: object
+  resp.PaymentMethodIncome:
+    properties:
+      amount:
+        description: 收入金额
+        type: number
+      name:
+        description: 支付方式名称
+        type: string
+    type: object
+  resp.PaymentMethodIncomeList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PaymentMethodIncome'
+        type: array
+    type: object
   resp.PaymentMethodItem:
     properties:
       code:
@@ -2995,9 +3026,6 @@ definitions:
       send_kitchen_time:
         description: 送厨时间
         type: integer
-      sign:
-        description: 签名，用于合并商品
-        type: string
       status:
         description: '0: 未送厨 1:已送厨'
         type: integer
@@ -3599,21 +3627,40 @@ definitions:
     properties:
       amount_info:
         $ref: '#/definitions/resp.AmountInfo'
-      list:
-        items:
-          $ref: '#/definitions/resp.SendKitchenProductGroup'
-        type: array
+      groups:
+        $ref: '#/definitions/resp.GroupList'
     type: object
   resp.SendKitchenProductGroup:
     properties:
-      list:
-        description: 商品列表
-        items:
-          $ref: '#/definitions/resp.Product'
-        type: array
+      products:
+        allOf:
+        - $ref: '#/definitions/resp.GroupProducts'
+        description: 组商品列表
       send_kitchen_time:
-        description: 送厨时间
+        description: 送厨时间. “17:20:01 下单”
         type: integer
+    type: object
+  resp.ShiftInfo:
+    properties:
+      current_cash_total:
+        description: 当前钱箱现金总计
+        type: number
+      deposit_cash:
+        description: 中途存入现金
+        type: number
+      payment_method_income:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodIncomeList'
+        description: 支付方式收入
+      previous_shift_cash:
+        description: 上一班遗留备用金
+        type: number
+      refund_amount:
+        description: 退款金额
+        type: number
+      withdraw_cash:
+        description: 中途取出现金
+        type: number
     type: object
   resp.ShopCart:
     properties:
@@ -3649,6 +3696,15 @@ definitions:
       takeout:
         description: 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
         type: boolean
+    type: object
+  resp.SimpleAmountInfo:
+    properties:
+      product_amount:
+        description: 商品金额(折后价)
+        type: number
+      product_num:
+        description: 总数量，用于点餐助手、h5
+        type: integer
     type: object
   resp.SoldOut:
     properties:
@@ -3738,14 +3794,14 @@ definitions:
     type: object
   resp.UnSendKitchen:
     properties:
-      product_amount:
-        description: 商品金额(折后价)
-        type: number
-      product_list:
+      amount_info:
+        allOf:
+        - $ref: '#/definitions/resp.SimpleAmountInfo'
+        description: 金额信息
+      products:
+        allOf:
+        - $ref: '#/definitions/resp.CartProductList'
         description: 商品列表
-        items:
-          $ref: '#/definitions/resp.Product'
-        type: array
     type: object
   resp.UnprocessedCallItem:
     properties:
@@ -10019,6 +10075,28 @@ paths:
       summary: 修改系统设置
       tags:
       - 收银端.设置
+  /cashier/shift:
+    get:
+      consumes:
+      - application/json
+      description: 获取交班信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShiftInfo'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取交班信息
+      tags:
+      - 收银端.交班
   /cashier/sold_out/add:
     post:
       consumes:

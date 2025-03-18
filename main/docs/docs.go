@@ -9684,6 +9684,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/shift": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取交班信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.交班"
+                ],
+                "summary": "获取交班信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShiftInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/sold_out/add": {
             "post": {
                 "security": [
@@ -15037,6 +15077,29 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GroupList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SendKitchenProductGroup"
+                    }
+                }
+            }
+        },
+        "resp.GroupProducts": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Product"
+                    }
+                }
+            }
+        },
         "resp.H5BaseInfo": {
             "type": "object",
             "properties": {
@@ -16402,6 +16465,30 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PaymentMethodIncome": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "收入金额",
+                    "type": "number"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.PaymentMethodIncomeList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodIncome"
+                    }
+                }
+            }
+        },
         "resp.PaymentMethodItem": {
             "type": "object",
             "properties": {
@@ -16732,10 +16819,6 @@ const docTemplate = `{
                 "send_kitchen_time": {
                     "description": "送厨时间",
                     "type": "integer"
-                },
-                "sign": {
-                    "description": "签名，用于合并商品",
-                    "type": "string"
                 },
                 "status": {
                     "description": "0: 未送厨 1:已送厨",
@@ -17647,27 +17730,58 @@ const docTemplate = `{
                 "amount_info": {
                     "$ref": "#/definitions/resp.AmountInfo"
                 },
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.SendKitchenProductGroup"
-                    }
+                "groups": {
+                    "$ref": "#/definitions/resp.GroupList"
                 }
             }
         },
         "resp.SendKitchenProductGroup": {
             "type": "object",
             "properties": {
-                "list": {
-                    "description": "商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Product"
-                    }
+                "products": {
+                    "description": "组商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.GroupProducts"
+                        }
+                    ]
                 },
                 "send_kitchen_time": {
-                    "description": "送厨时间",
+                    "description": "送厨时间. “17:20:01 下单”",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ShiftInfo": {
+            "type": "object",
+            "properties": {
+                "current_cash_total": {
+                    "description": "当前钱箱现金总计",
+                    "type": "number"
+                },
+                "deposit_cash": {
+                    "description": "中途存入现金",
+                    "type": "number"
+                },
+                "payment_method_income": {
+                    "description": "支付方式收入",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodIncomeList"
+                        }
+                    ]
+                },
+                "previous_shift_cash": {
+                    "description": "上一班遗留备用金",
+                    "type": "number"
+                },
+                "refund_amount": {
+                    "description": "退款金额",
+                    "type": "number"
+                },
+                "withdraw_cash": {
+                    "description": "中途取出现金",
+                    "type": "number"
                 }
             }
         },
@@ -17724,6 +17838,19 @@ const docTemplate = `{
                 "takeout": {
                     "description": "是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.SimpleAmountInfo": {
+            "type": "object",
+            "properties": {
+                "product_amount": {
+                    "description": "商品金额(折后价)",
+                    "type": "number"
+                },
+                "product_num": {
+                    "description": "总数量，用于点餐助手、h5",
+                    "type": "integer"
                 }
             }
         },
@@ -17871,16 +17998,21 @@ const docTemplate = `{
         "resp.UnSendKitchen": {
             "type": "object",
             "properties": {
-                "product_amount": {
-                    "description": "商品金额(折后价)",
-                    "type": "number"
+                "amount_info": {
+                    "description": "金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.SimpleAmountInfo"
+                        }
+                    ]
                 },
-                "product_list": {
+                "products": {
                     "description": "商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.Product"
-                    }
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CartProductList"
+                        }
+                    ]
                 }
             }
         },
