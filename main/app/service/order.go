@@ -961,7 +961,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
 		IsCellInvoice:       false,
 	}
-	if (!isSplit || !isMain) && order.IsFree == 0 && saleBill.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
+	if (!isSplit || !isMain) && order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 		orderExtra.IsCellRefund = true
 	}
 
