@@ -188,7 +188,7 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 
 	// 发票信息
 	invoiceInfo := saleOrder.InvoiceInfo
-	if invoiceInfo.HasContent() {
+	if invoiceInfo != nil && invoiceInfo.HasContent() {
 		printer.SetLineSpacing(10)
 		printer.LineFeed()
 		printer.AppendText("------------------------------------------------\n")
