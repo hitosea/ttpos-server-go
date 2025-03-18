@@ -21,8 +21,21 @@ type ShopCart struct {
 
 // H5CartSendProduct 扫码h5购物车已下单品
 type H5CartSendProduct struct {
-	Products   CartProductList  `json:"products"`    // 商品列表
+	Groups     H5GroupList      `json:"groups"`      // 商品列表
 	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
+}
+
+type H5GroupList struct {
+	List []H5Group `json:"list"`
+}
+
+type H5Group struct {
+	SendKitchenProductGroup
+	AcceptTime int64 `json:"accept_time"` // 接单时间. “17:20:01 接单”。值为0时不显示
+}
+
+type H5Product struct {
+	Product
 }
 
 // UnSendKitchen 未送厨商品
@@ -31,11 +44,7 @@ type UnSendKitchen struct {
 	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
 }
 
-// type CartProductList struct {
-// 	List []Product `json:"list"`
-// }
-
-// SendKitchen 未送厨商品
+// SendKitchen 已送厨商品
 type SendKitchen struct {
 	Groups     GroupList  `json:"groups"`
 	AmountInfo AmountInfo `json:"amount_info"`
@@ -46,11 +55,11 @@ type GroupList struct {
 }
 
 type SendKitchenProductGroup struct {
-	SendKitchenTime int64         `json:"send_kitchen_time"` // 送厨时间. “17:20:01 下单”
-	Products        GroupProducts `json:"products"`          // 组商品列表
+	SendKitchenTime int64            `json:"send_kitchen_time"` // 送厨时间. “17:20:01 下单”
+	Products        GroupProductList `json:"products"`          // 组商品列表
 }
 
-type GroupProducts struct {
+type GroupProductList struct {
 	List []Product `json:"list"` // 商品列表
 }
 
@@ -134,16 +143,17 @@ type Product struct {
 	Num                 uint               `json:"num"`                   // 数量
 	SalePrice           float64            `json:"price"`                 // 原价
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
-	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨
+	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
 	Remark              string             `json:"remark"`                // 备注
 	IsMust              bool               `json:"is_must"`               // 是否必点
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
-	SendKitchenTime     int64              `json:"send_kitchen_time"`     // 送厨时间
 	// 后端使用，前端不返回
-	Sign string `json:"-"` // 签名，用于合并商品
+	SendKitchenTime int64  `json:"-"` // 送厨时间
+	AcceptTime      int64  `json:"-"` // 接单时间
+	Sign            string `json:"-"` // 签名，用于合并商品
 }
 
 // GetPrice 获取商品价格(折后价)

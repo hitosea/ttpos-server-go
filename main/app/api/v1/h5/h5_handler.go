@@ -301,6 +301,37 @@ func (h *H5Handler) GetOrderCartProductUnCooked(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetOrderCartProductCooked 查询已送厨商品
+// @Summary 查询已送厨商品
+// @Description 查询已送厨商品
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/cart/product/cooked/list [get]
+func (h *H5Handler) GetOrderCartProductCooked(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if saleBillUuid == 0 || saleOrderUuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
+		return
+	}
+	res, err := h.orderService.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterH5Handlers 注册扫码h5路由
 func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务

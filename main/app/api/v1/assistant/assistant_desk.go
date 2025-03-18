@@ -10,7 +10,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
-	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -995,7 +994,7 @@ func (h *DeskHandler) GetUnSendKitchen(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	info, err := h.orderSrv.GetUnSendKitchen(ctx, params.SaleBillUuid, repository.WithUnorderedH5Product())
+	info, err := h.orderSrv.GetUnSendKitchen(ctx, params.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

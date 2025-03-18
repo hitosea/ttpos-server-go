@@ -217,27 +217,9 @@ func (model *SaleOrder) GetMemberName() string {
 }
 
 // CalcGiftAmount 计算赠菜金额. 赠菜金额=销售订单赠菜商品.总最终单价之和
-func (model *SaleOrder) CalcGiftAmount(options ...func(option *CalcOption)) float64 {
-	option := &CalcOption{}
-	for _, optionFunc := range options {
-		optionFunc(option)
-	}
+func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 	amount := float64(0)
-	for _, saleOrderProduct := range model.SaleOrderProducts {
-		// 不是赠菜的商品不计入
-		if !saleOrderProduct.IsGiftBool() {
-			continue
-		}
-		// 删除的商品不计、退菜的商品不计入。 未送厨的商品也要计入
-		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() {
-			continue
-		}
-		if option.IsCooking {
-			// 未送厨的商品不计入
-			if !saleOrderProduct.IsCookingProduct() {
-				continue
-			}
-		}
+	for _, saleOrderProduct := range products {
 		// 商品的最终金额
 		giftFee := saleOrderProduct.GetPrice()
 		// 累计各个赠品的最终金额

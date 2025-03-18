@@ -64,6 +64,7 @@ type ICommonRepo interface {
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	FilterSaleOrderProduct() DBOption                               // 只查询常规的购物车商品
 	FilterSaleOrderProductH5Unordered() DBOption                    // 只查询H5未下单的购物车商品
+	FilterSaleOrderProductH5Ordered() DBOption                      // 只查询H5已下单的购物车商品
 	SortWithID(order string) DBOption                               // 根据ID排序
 	SortWithCreateTime(order string) DBOption                       // 根据创建时间排序
 	SortWithSort(order string) DBOption                             // 根据Order By排序
@@ -326,6 +327,14 @@ func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
 			H5OrderUuid:   constant.OptionalUuid, // 没有H5订单时，H5OrderUuid为0，表示该商品未下单
 		}
 		return db.Where(product)
+	}
+}
+
+// FilterSaleOrderProductH5Ordered 只查询H5已下单的购物车商品.包括已送厨商品和已下单未接单的商品
+func (r *commonRepo) FilterSaleOrderProductH5Ordered() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking).
+			Where("NOT (delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?)", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept)
 	}
 }
 

@@ -8,9 +8,14 @@ import (
 
 type CalcOption struct {
 	IsLatestPrice bool
-	IsCooking     bool // 只计算已送厨的
-
+	CookingStatus int // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
 }
+
+const (
+	CookingStatusAll       = iota // 0-包括已送厨和未送厨
+	CookingStatusCooking          // 1-已送厨的
+	CookingStatusUnCooking        // 2-未送厨的
+)
 
 func WithLastestPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
@@ -20,7 +25,19 @@ func WithLastestPrice() func(option *CalcOption) {
 
 func WithCooking() func(option *CalcOption) {
 	return func(option *CalcOption) {
-		option.IsCooking = true
+		option.CookingStatus = CookingStatusCooking
+	}
+}
+
+func WithUnCooking() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.CookingStatus = CookingStatusUnCooking
+	}
+}
+
+func WithAll() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.CookingStatus = CookingStatusAll
 	}
 }
 
