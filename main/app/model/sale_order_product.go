@@ -130,15 +130,15 @@ func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
 	return model.DeskUuid == 0
 }
 
-// 是否为已送厨的商品
+// 是否为已送厨的商品。 状态为已送厨且生产订单ID不为0、且为已接单
 func (model *SaleOrderProduct) IsCookingProduct() bool {
 	// 状态为已送厨且生产订单ID不为0
-	return model.Status == constant.SaleOrderProductStatusCooking && model.ProductionOrderUuid != 0
+	return model.Status == constant.SaleOrderProductStatusCooking && model.ProductionOrderUuid != 0 && model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
 }
 
-// 是否为未送厨的商品
+// 是否为未送厨的商品。 状态为未送厨且生产订单ID为0、且为已接单
 func (model *SaleOrderProduct) IsUnCookingProduct() bool {
-	return !model.IsCookingProduct()
+	return model.Status == constant.SaleOrderProductStatusNormal && model.ProductionOrderUuid == 0 && model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
 }
 
 // 设置该商品为自助餐商品
@@ -418,6 +418,16 @@ func (model *SaleOrderProduct) DeleteProduct() {
 
 func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
+}
+
+// 是否是H5下单商品。 未接单且有h5订单uuid
+func (model *SaleOrderProduct) IsH5OrderProductBool() bool {
+	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid != 0
+}
+
+// 是否时h5购物车的商品，h5未下单的商品。未接单且无h5订单uuid
+func (model *SaleOrderProduct) IsH5CartProduct() bool {
+	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
 func (model *SaleOrderProduct) IsGiftBool() bool {

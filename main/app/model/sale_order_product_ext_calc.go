@@ -9,12 +9,18 @@ import (
 type CalcOption struct {
 	IsLatestPrice bool
 	CookingStatus int // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
+	H5OrderStatus int // 0-包括已下单和未下单 1-已接单的 2-未接单的
 }
 
 const (
 	CookingStatusAll       = iota // 0-包括已送厨和未送厨
 	CookingStatusCooking          // 1-已送厨的
 	CookingStatusUnCooking        // 2-未送厨的
+)
+
+const (
+	H5OrderStatusUnAccepted = iota // 0-未接单的
+	H5OrderStatusAccepted          // 1-已接单的
 )
 
 func WithLastestPrice() func(option *CalcOption) {
@@ -32,6 +38,18 @@ func WithCooking() func(option *CalcOption) {
 func WithUnCooking() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusUnCooking
+	}
+}
+
+func WithH5Order() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.H5OrderStatus = H5OrderStatusAccepted
+	}
+}
+
+func WithH5Cart() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.H5OrderStatus = H5OrderStatusUnAccepted
 	}
 }
 
