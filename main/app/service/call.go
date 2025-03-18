@@ -26,7 +26,7 @@ type ICallSrv interface {
 	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
 	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
 	GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error)                                                 // 获取未处理消息数量
-	Call(ctx context.Context, callReq req.CallReq) error                                                             // 平板端呼叫
+	Call(ctx context.Context, callReq req.CallReq) error                                                             // 发起呼叫
 }
 
 // callSrv 呼叫服务结构体
@@ -135,13 +135,12 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 // Call 平板端呼叫
 func (s *callSrv) Call(ctx context.Context, callReq req.CallReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	callRepo := repository.NewCallRepo(db)
 	deskRepo := repository.NewDeskRepo(db)
-	desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(callReq.DeskUuid))
+	desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(ctx.GetDeskUuid()))
 	if err != nil {
-		return errors.ErrInternal
+		return errors.New("桌台不存在")
 	}
-	if err := callRepo.CreateCall(model.CustomerCall{
+	if err := repository.NewCallRepo(db).CreateCall(model.CustomerCall{
 		DeskUuid: desk.Uuid,
 		DeskNo:   desk.DeskNo,
 		CallType: callReq.CallType,

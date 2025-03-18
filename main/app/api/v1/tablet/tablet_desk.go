@@ -132,6 +132,34 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetSendKitchen 获取已送厨商品
+// @Summary 获取已送厨商品
+// @Description 获取已送厨商品
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.SendKitchen}
+// @Router /tablet/desk/order/get_send_kitchen [get]
+func (h *DeskHandler) GetSendKitchen(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.GetSendKitchen(ctx, params.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -158,9 +186,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取桌台列表
 		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台
 
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder) // 创建桌台订单(开桌)
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)      // 获取桌台详情
-		privateApi.GET("/desk/place_order", nil)               // todo 桌台下单(送厨)
-		privateApi.GET("/desk/production_list", nil)           // todo 桌台已下单商品
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                 // 创建桌台订单(开桌)
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                      // 获取桌台详情
+		privateApi.GET("/desk/place_order", nil)                               // todo 加购并送厨
+		privateApi.GET("/desk/order/get_send_kitchen", wrapper.GetSendKitchen) // 获取已送厨商品
 	}
 }

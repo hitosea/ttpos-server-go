@@ -107,13 +107,9 @@ func NewAuthSrvImpl(
 			"/api/v1/tablet/logout",
 			"/api/v1/tablet/check_update",
 			"/api/v1/tablet/verify_advanced_password",
-			"/api/v1/tablet/call",
 			"/api/v1/tablet/product/category/list",
 			"/api/v1/tablet/product/list",
 			"/api/v1/tablet/buffet/list",
-
-			//'/table/table/openPing',
-			//'/table/table/getInfo',
 		},
 	}
 }
