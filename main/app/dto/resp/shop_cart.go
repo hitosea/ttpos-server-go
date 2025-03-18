@@ -15,6 +15,23 @@ type ShopCart struct {
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 }
 
+// UnSendKitchen 未送厨商品
+type UnSendKitchen struct {
+	List          []Product `json:"product_list"`   // 商品列表
+	ProductAmount float64   `json:"product_amount"` // 商品金额(折后价)
+}
+
+// SendKitchen 未送厨商品
+type SendKitchen struct {
+	List       []SendKitchenProductGroup `json:"list"`
+	AmountInfo AmountInfo                `json:"amount_info"`
+}
+
+type SendKitchenProductGroup struct {
+	SendKitchenTime int64     `json:"send_kitchen_time"` // 送厨时间
+	List            []Product `json:"list"`              // 商品列表
+}
+
 // 送厨接口响应：商品 XXX 已下架，请选择其他商品
 // 送厨接口响应：规格 商品名称 已下架，请选择其他规格
 // 送厨接口响应：以下商品库存不足，请删除后再下单 -商品名稱1（规格大份）-商品名稱2（规格小份）
@@ -95,6 +112,7 @@ type Product struct {
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
+	CreateTime          int64              `json:"create_time"`           // 送厨时间
 }
 
 type AboutBuffet struct {

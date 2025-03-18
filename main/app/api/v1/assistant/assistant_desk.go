@@ -966,6 +966,60 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// GetUnSendKitchen 获取未送厨商品
+// @Summary 获取未送厨商品
+// @Description 获取未送厨商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
+// @Router /assistant/desk/order/get_un_send_kitchen [get]
+func (h *DeskHandler) GetUnSendKitchen(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.GetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	info, err := h.orderSrv.GetUnSendKitchen(ctx, params.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// GetSendKitchen 获取已送厨商品
+// @Summary 获取已送厨商品
+// @Description 获取已送厨商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.SendKitchen}
+// @Router /assistant/desk/order/get_send_kitchen [get]
+func (h *DeskHandler) GetSendKitchen(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.GetSendKitchen(ctx, params.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderChangePopulation 处理桌台订单修改人数
 // @Summary 桌台订单修改人数
 // @Description 桌台订单修改人数
@@ -1049,5 +1103,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
+		privateApi.GET("/desk/order/get_un_send_kitchen", wrapper.GetUnSendKitchen)                           // 获取未送厨商品
+		privateApi.GET("/desk/order/get_send_kitchen", wrapper.GetSendKitchen)                                // 获取已送厨商品
 	}
 }
