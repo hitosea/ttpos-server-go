@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -54,30 +55,22 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 // GetPrinterBase 获取打印数据
 func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	// 创建商品打印机仓库
-	productPrinterRepo := repository.NewProductPrinterRepo(db)
-	// 获取商品打印机列表
-	productPrinters, err := productPrinterRepo.GetProductPrinters(
-		productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen),
-		repository.CommonRepo.WhereBySoftDelete(),
-	)
-	//
+	// 获取打印机列表
+	printerLists, err := base.NewPrinterRepo(db).GetPrinterList()
 	if err != nil {
-		logger.Logger.Error("获取商品打印机列表失败", zap.Error(err))
+		logger.Logger.Error("获取打印机列表失败", zap.Error(err))
 		return nil, err
 	}
-
-	//
-	printerList := make([]resp.PrinterBase, 0, len(productPrinters))
-	for _, product := range productPrinters {
+	printerList := make([]resp.PrinterBase, 0, len(printerLists))
+	for _, printer := range printerLists {
 		printerList = append(printerList, resp.PrinterBase{
-			Uuid: product.Uuid,
-			Name: product.Name,
+			Uuid: printer.Uuid,
+			Name: printer.Name,
 		})
 	}
 	//
 	language := ctx.GetLanguage()
-	printerTypes := make([]resp.PrinterBase, 0, len(productPrinters))
+	printerTypes := make([]resp.PrinterBase, 0)
 	printerTypes = append(printerTypes, resp.PrinterBase{
 		Uuid: constant.PrinterTemplateHandoverSheet,
 		Name: i18n.Translate(language, "交班单"),
@@ -280,7 +273,12 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 				}
 			}(),
 			PrinterTime: log.PrinterTime,
-			Reason:      log.Reason,
+			Reason: func() string {
+				if log.Status == 0 {
+					return log.Reason
+				}
+				return ""
+			}(),
 		})
 	}
 
