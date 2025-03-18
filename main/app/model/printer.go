@@ -77,6 +77,7 @@ type PrinterLog struct {
 	Reason          string `gorm:"column:reason;type:varchar(255);comment:原因" json:"reason"`
 	PrinterTime     int64  `gorm:"column:printer_time;type:int(11);default:0;comment:打印时间;NOT NULL" json:"printer_time"`
 	FirstExecution  int    `gorm:"column:first_execution;type:tinyint(2);default:0;comment:是否首次执行打印 1-是 0-否;NOT NULL" json:"first_execution"`
+	ReadDeviceId    string `gorm:"column:read_device_id;type:varchar(255);comment:读取设备id;NOT NULL" json:"read_device_id"`
 
 	Printer  *Printer  `gorm:"foreignKey:PrinterUuid;references:Uuid"` // 关联 printer
 	SaleBill *SaleBill `gorm:"foreignKey:RelatedUuid;references:Uuid"` // 关联 sale_order

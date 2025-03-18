@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddTimeToWarehouseOutFormItem extends Migrator
+class AddReadDeviceIdToPrinterLog extends Migrator
 {
     /**
      * Change Method.
@@ -28,15 +28,9 @@ class AddTimeToWarehouseOutFormItem extends Migrator
      */
     public function change()
     { 
-        $table = $this->table('warehouse_out_form_item');
-        if (!$table->hasColumn('revoke_time')) {
-            $table->addColumn('revoke_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '撤销时间(时间戳)', 'after' => 'reduce_stock'])->update();
+        $table = $this->table('printer_log');
+        if (!$table->hasColumn('read_device_id')) {
+            $table->addColumn('read_device_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '读取设备id', 'after' => 'first_execution'])->update();
         }
-
-        $table = $this->table('warehouse_form_item');
-        if (!$table->hasColumn('scene')) {
-            $table->addColumn('scene', 'tinyinteger', ['signed' => false, 'default' => 0, 'comment' => '场景,0-采购 1-添加入库 2-调整入库 3-退菜入库、反结账入库,这个场景不显示在入库记录页面', 'after' => 'num'])->update();
-        }
-        $table->update();
     }
 }

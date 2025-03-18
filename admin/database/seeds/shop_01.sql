@@ -1257,6 +1257,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印日志ID',
     `printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机id',
     `cashier_device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银机绑定的id',
+    `read_device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '读取设备id',
     `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单、充值订单id',
     `data` longtext COMMENT '打印数据',

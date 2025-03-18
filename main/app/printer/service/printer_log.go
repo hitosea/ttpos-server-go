@@ -16,7 +16,6 @@ import (
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // IPrinterLogSrv 定义打印日志服务接口
@@ -98,26 +97,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 
 	// 获取打印日志
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
-	printerLogList, _, err := printerLogRepo.PaginateGet(
-		1,
-		5,
-		printerLogRepo.WithPrinter(),
-		printerLogRepo.WithPrinterPrinterType(),
-		printerLogRepo.WhereType(1),
-		printerLogRepo.WhereStatus(0),
-		printerLogRepo.WherePrintMethod(2),
-		printerLogRepo.WhereFirstExecution(0),
-		func(db *gorm.DB) *gorm.DB {
-			// 相同设备的
-			db.Where("(cashier_device_id = ? OR cashier_device_id = '')", ctx.GetDeviceSn())
-			// 0次或1次
-			db.Where("(num in (0, 1))")
-			// 1天内
-			db.Where("(create_time > UNIX_TIMESTAMP() - 86400)")
-			//
-			return db
-		},
-	)
+	printerLogList, err := printerLogRepo.GetPrinterData(ctx.GetDeviceSn())
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

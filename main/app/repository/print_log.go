@@ -4,7 +4,9 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -14,6 +16,7 @@ type IPrinterLogRepo interface {
 	WithSaleBill() DBOption           // 关联销售账单
 	WithSaleBillDesk() DBOption       // 关联销售账单.桌台
 
+	WhereLimit(limit int) DBOption                   // 限制查询数量
 	WhereStatus(status uint8) DBOption               // 状态查询条件
 	WhereType(typ uint8) DBOption                    // 类型查询条件
 	WhereFirstExecution(firstExecution int) DBOption // 是否首次执行
@@ -27,6 +30,9 @@ type IPrinterLogRepo interface {
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
 	GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error)
+	GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error)
+
+	//
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
 
@@ -103,6 +109,54 @@ func (r *printerLogRepo) GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog
 	return printerLog, nil
 }
 
+// GetPrinterData 获取打印数据
+func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error) {
+	printerLogList, err := r.GetPrinterLogList(
+		r.WithPrinter(),
+		r.WithPrinterPrinterType(),
+		r.WhereType(1),
+		r.WhereStatus(0),
+		r.WhereLimit(5),
+		r.WhereFirstExecution(0),
+		func(db *gorm.DB) *gorm.DB {
+			// 相同设备的
+			db.Where("(cashier_device_id = ? OR cashier_device_id = '')", deviceSn)
+			// 0次或1次
+			db.Where("(num in (0, 1))")
+			// 1天内
+			db.Where("(create_time > UNIX_TIMESTAMP() - 86400)")
+			// 未读
+			db.Where("read_device_id = ''")
+			//
+			return db
+		},
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 标记已读
+	if len(printerLogList) > 0 {
+		// 提取打印日志ID列表
+		var logIds []uint
+		for _, log := range printerLogList {
+			logIds = append(logIds, log.ID)
+		}
+		// 更新打印日志为已读
+		err = r.UpdateByWhere(
+			map[string]any{"read_device_id": deviceSn},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("id in (?)", logIds)
+			},
+		)
+		if err != nil {
+			logger.Logger.Error("更新打印日志失败", zap.Error(err))
+		}
+	}
+
+	return printerLogList, nil
+}
+
 func (r *printerLogRepo) WithPrinter() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Printer")
@@ -129,6 +183,12 @@ func (r *printerLogRepo) WithSaleBillDesk() DBOption {
 func (r *printerLogRepo) WhereStatus(status uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+func (r *printerLogRepo) WhereLimit(limit int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Limit(limit)
 	}
 }
 

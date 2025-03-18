@@ -3569,7 +3569,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
-	fmt.Println("model.NewWarehouseOutForm(decreaseStockList): ", utils.ToJsonString(warehouseOutForm))
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果出库单明细不为空，则创建出库单
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -4843,7 +4842,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid)
-	fmt.Println("finish model.NewWarehouseOutForm(decreaseStockList): ", utils.ToJsonString(warehouseOutForm))
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 			// 创建出库单
