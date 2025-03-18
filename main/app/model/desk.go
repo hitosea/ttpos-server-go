@@ -151,21 +151,11 @@ func (model *Desk) getTime() int64 {
 	if model.SaleBill == nil {
 		return 0
 	}
-	// 从开台到现在经过的时间，单位秒
-	passedTime := time.Now().Unix() - model.SaleBill.CreateTime
 	// 如果是自助餐，计算剩余时间; 非自助餐，显示已用时间
 	if model.getIsBuffet() {
-		if model.SaleBill.BuffetDuration == 0 {
-			return -1
-		}
-		// 计算剩余时间, 剩余时间=自助餐可用时长-经过时间
-		seconds := int64(model.SaleBill.BuffetDuration) - passedTime
-		if seconds < 0 {
-			return 0
-		}
-		return seconds
+		return model.SaleBill.GetTotalRemainingSeconds()
 	} else {
-		return passedTime
+		return time.Now().Unix() - model.SaleBill.CreateTime
 	}
 }
 

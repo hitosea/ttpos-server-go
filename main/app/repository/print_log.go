@@ -147,7 +147,9 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 		}
 		// 更新打印日志为已读
 		err = r.UpdateByWhere(
-			map[string]any{"read_device_id": deviceSn},
+			map[string]any{
+				"read_device_id": deviceSn,
+			},
 			func(db *gorm.DB) *gorm.DB {
 				return db.Where("id in (?)", logIds)
 			},
