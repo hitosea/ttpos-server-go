@@ -1,6 +1,7 @@
 package h5
 
 import (
+	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -250,6 +251,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	fmt.Println("saleBillUuid", saleBillUuid, "saleOrderUuid", saleOrderUuid)
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
@@ -290,7 +292,7 @@ func (h *H5Handler) GetOrderCartProductUnCooked(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	res, err := h.orderService.GetUnSendKitchen(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

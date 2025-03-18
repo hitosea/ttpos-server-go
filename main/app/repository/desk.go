@@ -140,10 +140,7 @@ func (r *deskRepo) GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uin
 		CommonRepo.WhereByStatus(constant.DeskStatusOpen), // 只查询开台的桌台.只有开台的桌台才有账单和子单
 		CommonRepo.Preload(
 			WithPreload{
-				Query: "SaleBill",
-			},
-			WithPreload{
-				Query: "SaleOrders",
+				Query: "SaleBill.SaleOrders",
 			},
 		),
 	)

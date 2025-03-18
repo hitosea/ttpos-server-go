@@ -102,6 +102,7 @@ type IOrderSrv interface {
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                            // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                  // 订单解锁
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                  // 必点方案列表
+	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnSendKitchen, error) // 获取扫码h5购物车未下单商品列表
 	GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error)           // 未送厨商品列表
 	GetSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.SendKitchen, error)                                                           // 已送厨商品列表
 }
@@ -2873,7 +2874,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						BuffetUuid:       orderBuffetCustomer.BuffetPackageUuid,
 					},
 					SendKitchenTime: orderBuffetCustomer.CreateTime,
-					Sign:            cryptor.Md5String(strconv.FormatUint(orderBuffetCustomer.Uuid, 10)),
+					Sign:            cryptor.Md5String(orderBuffetCustomer.GetSign()),
 				}
 				productList = append(productList, product)
 			}
@@ -2912,7 +2913,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						IsDelay:    true, // 标记该商品是加钟商品
 					},
 					SendKitchenTime: delayProduct.CreateTime,
-					Sign:            cryptor.Md5String(strconv.FormatUint(delayProduct.Uuid, 10)),
+					Sign:            cryptor.Md5String(delayProduct.GetSign()),
 				}
 				productList = append(productList, product)
 			}
@@ -6314,11 +6315,28 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 	}, nil
 }
 
+// GetUnOrderedH5ProductList 获取扫码h5购物车未下单商品列表
+func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnSendKitchen, error) {
+	res, err := s.GetUnSendKitchen(ctx, saleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 重新计算商品金额。商品金额=商品列表中各个商品的金额之和
+	productAmount := decimal.NewFromFloat(0)
+	for _, product := range res.List {
+		fmt.Println("GetUnOrderedH5ProductList product", product.GetPrice())
+		productAmount = productAmount.Add(decimal.NewFromFloat(product.GetPrice()))
+	}
+	res.AmountInfo.ProductAmount = productAmount.InexactFloat64()
+
+	return &res, nil
+}
+
 // GetUnSendKitchen 未送厨商品列表
 func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error) {
 	res := resp.UnSendKitchen{
-		List:          make([]resp.Product, 0),
-		ProductAmount: 0,
+		List:       make([]resp.Product, 0),
+		AmountInfo: resp.SimpleAmountInfo{},
 	}
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 	if err != nil {
@@ -6340,6 +6358,7 @@ func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, op
 				}
 				if !exists {
 					res.List = append(res.List, product)
+					res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
 				}
 			}
 		}
@@ -6352,7 +6371,7 @@ func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, op
 		return res, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
 	}
 	for _, order := range saleBill.SaleOrders {
-		res.ProductAmount = utils.DecimalAdd(res.ProductAmount, order.GetUnCookingProductAmount())
+		res.AmountInfo.ProductAmount = utils.DecimalAdd(res.AmountInfo.ProductAmount, order.GetUnCookingProductAmount())
 	}
 	return res, nil
 }

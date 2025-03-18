@@ -1,6 +1,10 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+
+	"github.com/shopspring/decimal"
+)
 
 // 桌台购物车
 type ShopCart struct {
@@ -15,10 +19,16 @@ type ShopCart struct {
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 }
 
-// UnSendKitchen 未送厨商品
-type UnSendKitchen struct {
+// H5CartSendProduct 扫码h5购物车已下单品
+type H5CartSendProduct struct {
 	List          []Product `json:"product_list"`   // 商品列表
 	ProductAmount float64   `json:"product_amount"` // 商品金额(折后价)
+}
+
+// UnSendKitchen 未送厨商品
+type UnSendKitchen struct {
+	List       []Product        `json:"list"`        // 商品列表
+	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
 }
 
 // SendKitchen 未送厨商品
@@ -69,6 +79,12 @@ type AmountInfo struct {
 	ProductNum            uint    `json:"product_num"`            // 总数量，用于点餐助手、平板端、h5
 }
 
+// SimpleAmountInfo 简单金额信息。 用于h5购物车、点餐助手
+type SimpleAmountInfo struct {
+	ProductAmount float64 `json:"product_amount"` // 商品金额(折后价)
+	ProductNum    uint    `json:"product_num"`    // 总数量，用于点餐助手、h5
+}
+
 // BuffetInfo 自助餐信息
 type BuffetInfo struct {
 	RemainingSeconds int64              `json:"remaining_seconds"` // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
@@ -114,7 +130,13 @@ type Product struct {
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	SendKitchenTime     int64              `json:"send_kitchen_time"`     // 送厨时间
-	Sign                string             `json:"sign"`                  // 签名，用于合并商品
+	// 后端使用，前端不返回
+	Sign string `json:"-"` // 签名，用于合并商品
+}
+
+// GetPrice 获取商品价格(折后价)
+func (p *Product) GetPrice() float64 {
+	return decimal.NewFromFloat(p.DiscountPrice).Mul(decimal.NewFromInt(int64(p.Num))).Round(2).InexactFloat64()
 }
 
 type AboutBuffet struct {
