@@ -260,15 +260,6 @@ definitions:
     - level_uuid
     - phone
     type: object
-  req.AddProductRemarkRequest:
-    properties:
-      order_product_id:
-        description: 商品ID
-        type: integer
-      remark:
-        description: 备注
-        type: string
-    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -1278,6 +1269,10 @@ definitions:
         items:
           type: string
         type: array
+      printer:
+        allOf:
+        - $ref: '#/definitions/setting.Printer'
+        description: 打印机设置
     type: object
   resp.AssistantStaff:
     properties:
@@ -1590,6 +1585,10 @@ definitions:
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
+      printer:
+        allOf:
+        - $ref: '#/definitions/setting.Printer'
+        description: 打印机设置
       username:
         description: 登录账号
         type: string
@@ -1978,14 +1977,6 @@ definitions:
       unhandled_count:
         description: 未处理的接单数量
         type: integer
-    type: object
-  resp.H5Response:
-    properties:
-      code:
-        type: integer
-      data: {}
-      msg:
-        type: string
     type: object
   resp.InstantHideOrderListResp:
     properties:
@@ -3896,6 +3887,13 @@ definitions:
           $ref: '#/definitions/setting.ZeroingMethodItem'
         type: array
     type: object
+  setting.CalendarItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
   setting.CarouselItem:
     properties:
       file_path:
@@ -3905,6 +3903,15 @@ definitions:
       sort:
         type: string
       type:
+        type: string
+    type: object
+  setting.CashierPrinterItem:
+    properties:
+      key:
+        description: 收银机设备ID
+        type: string
+      printer_id:
+        description: 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
         type: string
     type: object
   setting.CashierResp:
@@ -4141,6 +4148,74 @@ definitions:
         type: string
       is_table_order:
         description: 桌台用餐
+        type: string
+    type: object
+  setting.PrintItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+  setting.Printer:
+    properties:
+      buffet_sign_open:
+        description: 自助餐标识设置（默认开启）
+        type: string
+      calendar_list:
+        description: 日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+        items:
+          $ref: '#/definitions/setting.CalendarItem'
+        type: array
+      cashier_open:
+        description: 是否开启打印
+        type: string
+      cashier_printer:
+        description: 打印机列表
+        items:
+          $ref: '#/definitions/setting.CashierPrinterItem'
+        type: array
+      cashier_printer_id:
+        description: 打印机id
+        type: string
+      consumption_tax:
+        description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
+        type: string
+      default_calendar:
+        description: 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
+        type: string
+      default_language:
+        description: 打印语言（收银）
+        type: string
+      kitchen_language:
+        description: 打印语言（送厨）
+        type: string
+      kitchen_print_method:
+        description: 打印方式（送厨） 1-文本打印 2-图片打印
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      language_method:
+        description: 语言方式（收银） 1-单语言 2-多语言
+        type: string
+      monetary_unit_open:
+        description: 货币单位（默认开启）
+        type: string
+      print_list:
+        description: 打印方式列表 （1-文本打印 2-图片打印 ）
+        items:
+          $ref: '#/definitions/setting.PrintItem'
+        type: array
+      print_method:
+        description: 打印方式（收银） 1-文本打印 2-图片打印
         type: string
     type: object
   setting.Server:
@@ -9899,28 +9974,33 @@ paths:
       summary: 开台
       tags:
       - 扫码点餐
-  /h5/index.php/scan/order.Order/remark:
+  /h5/order/cart/product/add:
     post:
       consumes:
       - application/json
-      description: 给商品添加备注
+      description: 向购物车添加商品
       parameters:
-      - description: 添加备注参数
+      - description: 商品参数
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.AddProductRemarkRequest'
+          $ref: '#/definitions/req.OrderCartProductAddReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/resp.H5Response'
-      security:
-      - JwtToken: []
-      summary: 添加备注
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      summary: 向购物车添加商品
       tags:
       - 扫码点餐
   /h5/product/category/list:

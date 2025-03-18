@@ -18,9 +18,10 @@ type IDeskRepo interface {
 	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]*model.Desk, error)
-	GetAvailableDeskList() ([]*model.Desk, error)                      // 获取所有空闲的桌台
-	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error) //
-	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                // 通过uuid获取桌台的记录信息
+	GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uint64, error) // 获取桌台的账单uuid和第一子单的uuid
+	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
+	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)       //
+	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                      // 通过uuid获取桌台的记录信息
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	UpdateDeskRecord(desk model.Desk) error
 	UpdateDeskByMap(deskUuid uint64, vars map[string]any) error // 更新桌台
@@ -129,6 +130,33 @@ func (r *deskRepo) GetDesks(opts ...DBOption) ([]*model.Desk, error) {
 	}
 	err := db.Order("sort desc").Find(&desks).Error
 	return desks, errors.WithMessage(err)
+}
+
+// GetSaleBillUuidAndSaleOrderUuid 获取桌台的账单uuid和第一子单的uuid
+func (r *deskRepo) GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uint64, error) {
+	var desk model.Desk
+	desk, err := r.GetDesk(
+		CommonRepo.WhereByUuid(deskUuid),
+		CommonRepo.WhereByStatus(constant.DeskStatusOpen), // 只查询开台的桌台.只有开台的桌台才有账单和子单
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleBill",
+			},
+			WithPreload{
+				Query: "SaleOrders",
+			},
+		),
+	)
+	if err != nil {
+		return 0, 0, errors.WithMessage(err)
+	}
+	if desk.SaleBill == nil {
+		return 0, 0, errors.WithMessage(errors.New("桌台没有账单"))
+	}
+	if len(desk.SaleBill.SaleOrders) == 0 {
+		return 0, 0, errors.WithMessage(errors.New("桌台没有子单"))
+	}
+	return desk.SaleBill.Uuid, desk.SaleBill.SaleOrders[0].Uuid, nil
 }
 
 // GetAvailableDeskList 获取所有空闲的桌台

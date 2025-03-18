@@ -9636,14 +9636,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/h5/index.php/scan/order.Order/remark": {
+        "/h5/order/cart/product/add": {
             "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "给商品添加备注",
+                "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
                 ],
@@ -9653,15 +9648,15 @@ const docTemplate = `{
                 "tags": [
                     "扫码点餐"
                 ],
-                "summary": "添加备注",
+                "summary": "向购物车添加商品",
                 "parameters": [
                     {
-                        "description": "添加备注参数",
+                        "description": "商品参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.AddProductRemarkRequest"
+                            "$ref": "#/definitions/req.OrderCartProductAddReq"
                         }
                     }
                 ],
@@ -9669,8 +9664,23 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/resp.H5Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -12142,19 +12152,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.AddProductRemarkRequest": {
-            "type": "object",
-            "properties": {
-                "order_product_id": {
-                    "description": "商品ID",
-                    "type": "integer"
-                },
-                "remark": {
-                    "description": "备注",
-                    "type": "string"
-                }
-            }
-        },
         "req.AddSoldOutReq": {
             "type": "object",
             "required": [
@@ -13597,6 +13594,14 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "printer": {
+                    "description": "打印机设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Printer"
+                        }
+                    ]
                 }
             }
         },
@@ -14068,6 +14073,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.Permission"
                     }
+                },
+                "printer": {
+                    "description": "打印机设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Printer"
+                        }
+                    ]
                 },
                 "username": {
                     "description": "登录账号",
@@ -14653,18 +14666,6 @@ const docTemplate = `{
                 "unhandled_count": {
                     "description": "未处理的接单数量",
                     "type": "integer"
-                }
-            }
-        },
-        "resp.H5Response": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "msg": {
-                    "type": "string"
                 }
             }
         },
@@ -17521,6 +17522,17 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.CalendarItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "setting.CarouselItem": {
             "type": "object",
             "properties": {
@@ -17534,6 +17546,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "setting.CashierPrinterItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "收银机设备ID",
+                    "type": "string"
+                },
+                "printer_id": {
+                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符",
                     "type": "string"
                 }
             }
@@ -17877,6 +17902,101 @@ const docTemplate = `{
                 },
                 "is_table_order": {
                     "description": "桌台用餐",
+                    "type": "string"
+                }
+            }
+        },
+        "setting.PrintItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "setting.Printer": {
+            "type": "object",
+            "properties": {
+                "buffet_sign_open": {
+                    "description": "自助餐标识设置（默认开启）",
+                    "type": "string"
+                },
+                "calendar_list": {
+                    "description": "日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CalendarItem"
+                    }
+                },
+                "cashier_open": {
+                    "description": "是否开启打印",
+                    "type": "string"
+                },
+                "cashier_printer": {
+                    "description": "打印机列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CashierPrinterItem"
+                    }
+                },
+                "cashier_printer_id": {
+                    "description": "打印机id",
+                    "type": "string"
+                },
+                "consumption_tax": {
+                    "description": "消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示",
+                    "type": "string"
+                },
+                "default_calendar": {
+                    "description": "日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "打印语言（收银）",
+                    "type": "string"
+                },
+                "kitchen_language": {
+                    "description": "打印语言（送厨）",
+                    "type": "string"
+                },
+                "kitchen_print_method": {
+                    "description": "打印方式（送厨） 1-文本打印 2-图片打印",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "language_method": {
+                    "description": "语言方式（收银） 1-单语言 2-多语言",
+                    "type": "string"
+                },
+                "monetary_unit_open": {
+                    "description": "货币单位（默认开启）",
+                    "type": "string"
+                },
+                "print_list": {
+                    "description": "打印方式列表 （1-文本打印 2-图片打印 ）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.PrintItem"
+                    }
+                },
+                "print_method": {
+                    "description": "打印方式（收银） 1-文本打印 2-图片打印",
                     "type": "string"
                 }
             }

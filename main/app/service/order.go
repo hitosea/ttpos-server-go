@@ -71,6 +71,7 @@ type IOrderSrv interface {
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                     // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64) (*resp.ShopCart, error)                                                          // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                      // 向购物车添加商品
+	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                // 获取销售账单uuid和销售订单uuid
 	OrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
 	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                             // 修改购物车商品数量
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)  // 送厨购物车商品
@@ -3011,6 +3012,20 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64) (*
 		}
 	}
 	return shopCartInfo, nil
+}
+
+// GetSaleBillUuidAndSaleOrderUuid 获取销售账单uuid和销售订单uuid
+func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	// 获取桌台信息
+	saleBillUuid, saleOrderUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidAndSaleOrderUuid(deskUuid)
+	if err != nil {
+		return 0, 0, errors.WithMessage(err)
+	}
+
+	return saleBillUuid, saleOrderUuid, nil
 }
 
 // 点餐页面，往购物车添加商品。

@@ -92,6 +92,7 @@ func (h *H5Handler) OpenDesk(c *gin.Context) {
 	}
 	// 获取桌台uuid
 	params.DeskUuid = ctx.GetDeskUuid()
+	// todo 判断门店设置扫码H5能否开台
 	// 创建桌台订单
 	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
 	// 处理错误
@@ -103,31 +104,6 @@ func (h *H5Handler) OpenDesk(c *gin.Context) {
 
 	// 返回结果
 	helper.Success(c, res)
-}
-
-// RemarkProduct 给商品添加备注
-// @Summary 添加备注
-// @Description 给商品添加备注
-// @Tags 扫码点餐
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.AddProductRemarkRequest true "添加备注参数"
-// @Success 200 {object} resp.H5Response{}
-// @Router /h5/index.php/scan/order.Order/remark [post]
-func (h *H5Handler) RemarkProduct(c *gin.Context) {
-	// ctx := helper.GetContext(c)
-	// params := req.AddProductRemarkRequest{}
-	// if err := c.ShouldBind(&params); err != nil {
-	// 	helper.H5Fail(c, 500, constant.RemarkFail)
-	// 	return
-	// }
-	// err := h.service.RemarkProduct(ctx, params.Remark, params.SaleOrderProductUuid)
-	// if err != nil {
-	// 	helper.H5Fail(c, 500, constant.RemarkFail)
-	// 	return
-	// }
-	// helper.H5SuccessWithMsg(c, constant.RemarkSuccess)
 }
 
 // GetProductCategoryList 获取收银产品类别列表
@@ -198,12 +174,14 @@ func (h *H5Handler) GetProductList(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /h5/call [post]
 func (h *H5Handler) Call(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var callReq req.CallReq
 	if err := c.ShouldBindJSON(&callReq); err != nil {
 		helper.HandleValidationError(c, err, callReq, nil)
 		return
 	}
-	err := h.callSrv.Call(helper.GetContext(c), callReq)
+	callReq.DeskUuid = ctx.GetDeskUuid() // 设置桌台uuid
+	err := h.callSrv.Call(ctx, callReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -230,7 +208,15 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	//
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 都是加购到第一个子单中
+	params.SaleOrderUuid = saleOrderUuid
+	params.SaleBillUuid = saleBillUuid
 	info, err := h.orderService.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -238,6 +224,43 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, info)
+}
+
+// OrderCartProductAdd 向购物车添加商品
+// @Summary 向购物车添加商品
+// @Description 向购物车添加商品
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @param data body req.OrderCartProductAddReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/cart/product/add [post]
+func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 都是加购到第一个子单中
+	params.SaleOrderUuid = saleOrderUuid
+	params.SaleBillUuid = saleBillUuid
+	// 添加商品。 若没有点餐账单则新建一个
+	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
 }
 
 // RegisterH5Handlers 注册扫码h5路由
@@ -276,6 +299,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取收银产品类别列表
 		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取收银产品列表
 		privateApi.POST("/call", wrapper.Call)                                   // 发起呼叫
-		privateApi.POST("/remark", wrapper.RemarkProduct)                        // 给商品添加备注
+		privateApi.POST("/remark", wrapper.OrderProductRemark)                   // 给商品添加备注
+		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)  // 向购物车添加商品
 	}
 }
