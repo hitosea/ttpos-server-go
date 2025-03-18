@@ -4832,20 +4832,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts) len: ", len(withoutWarehouseOutFormSaleOrderProducts))
-
 	// 获取减库存的清单信息
 	decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid)
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 			// 创建出库单
-			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord")
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -4889,6 +4885,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
+			SaleBill:    saleBill,
 			OrderPrice:  saleOrderAmount,
 			PayPrice:    saleOrderPaymentAmount,
 			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）

@@ -3,6 +3,7 @@ package image
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -39,6 +40,7 @@ func (h *ImageHelp) WhiteBackgroundWithBlackText(imgPath, imgSavePath string) er
 	}
 
 	if err != nil {
+		fmt.Println("读取图像失败:", err, imgPath)
 		return err
 	}
 
