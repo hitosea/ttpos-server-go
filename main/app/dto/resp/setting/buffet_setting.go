@@ -9,6 +9,7 @@ type Buffet struct {
 	RemainContinueNoticeTime string         `json:"remain_continue_notice_time"` // 剩余xx分提醒不可继续点餐
 	IsBuyContinue            string         `json:"is_buy_continue"`             // 非自助餐商品到时是否能继续选购 0-关闭 1-开启
 	IsAddClock               string         `json:"is_add_clock"`                // 是否开启加钟 0-关闭 1-开启
+	IsBuffetDiscount         string         `json:"is_buffet_discount"`          // 是否开启自助餐优惠折扣 0-关闭 1-开启 // todo 干嘛用的？ 如果要删掉的话要跟前端沟通，否则删掉后收银端数据解析错误
 	AddClock                 []AddClockItem `json:"add_clock"`                   // 名称 - 加钟时间（分）- 价格
 }
 
