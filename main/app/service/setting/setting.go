@@ -1250,7 +1250,7 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 	if err != nil {
 		return errors.WithMessage(err)
 	}
-	tabletSetting.IsShowSoldOut = *systemSetting.IsShowSoldOut
+	tabletSetting.IsShowSoldOut = strconv.Itoa(*systemSetting.IsShowSoldOut)
 	if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1294,6 +1294,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 	}
 
 	menuShowSoldOut, _ := strconv.Atoi(cashierSetting.MenuShowSoldOut)
+	isShowSoldOut, _ := strconv.Atoi(tabletSetting.IsShowSoldOut)
 
 	return resp.CashierBaseSetting{
 		AcceptOrder: resp.AcceptOrderSetting{
@@ -1306,7 +1307,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
 			MenuShowSoldOut:        menuShowSoldOut,
 			DishCardStyle:          businessSetting.DishCardStyle,
-			IsShowSoldOut:          tabletSetting.IsShowSoldOut,
+			IsShowSoldOut:          isShowSoldOut,
 			DefaultLanguage:        cashierSetting.DefaultLanguage,
 			SecondLanguage:         cashierSetting.DefaultLanguage,
 			DeviceId:               ctx.GetDeviceSn(),

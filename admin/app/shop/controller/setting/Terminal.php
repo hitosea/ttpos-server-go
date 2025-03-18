@@ -312,9 +312,9 @@ class Terminal extends Controller
             'is_voice_remind' => $data['is_voice_remind'] ?? 0, // 是否开启声音提醒
             'is_show_sold_out' => $data['is_show_sold_out'] ?? 0, // 是否显示售罄商品
             'is_buffet_order_limit' => $is_buffet_order_limit, // 是否开启自助餐下单限制 0-关闭 1-开启
-            'buffet_order_limit' => $is_buffet_order_limit ? $data['buffet_order_limit'] : [], // 自助餐下单限制
+            'buffet_order_limit' => $is_buffet_order_limit ? $data['buffet_order_limit'] : json_decode("{}"), // 自助餐下单限制
             'is_order_limit' => $is_order_limit, // 是否开启非自助餐下单限制 0-关闭 1-开启
-            'order_limit' =>  $is_order_limit ? $data['order_limit'] : [], // 非自助餐下单限制
+            'order_limit' =>  $is_order_limit ? $data['order_limit'] : json_decode("{}"), // 非自助餐下单限制
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
         ];
@@ -444,9 +444,9 @@ class Terminal extends Controller
             'is_voice_remind' => $data['is_voice_remind'] ?? 0, // 是否开启声音提醒
             'is_show_sold_out' => $data['is_show_sold_out'] ?? 0, // 是否显示售罄商品
             'is_buffet_order_limit' => $is_buffet_order_limit, // 是否开启自助餐下单限制 0-关闭 1-开启
-            'buffet_order_limit' => $is_buffet_order_limit ? $data['buffet_order_limit'] : [], // 自助餐下单限制
+            'buffet_order_limit' => $is_buffet_order_limit ? $data['buffet_order_limit'] : json_decode("{}"), // 自助餐下单限制
             'is_order_limit' => $is_order_limit, // 是否开启非自助餐下单限制 0-关闭 1-开启
-            'order_limit' =>  $is_order_limit ? $data['order_limit'] : [], // 非自助餐下单限制
+            'order_limit' =>  $is_order_limit ? $data['order_limit'] : json_decode("{}"), // 非自助餐下单限制
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
         ];
