@@ -388,7 +388,7 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 			// 语言 不需要合并
 			tmp.Language = nil
 
-			err = copier.CopyWithOption(&tmp, cashier, copier.Option{IgnoreEmpty: true})
+			err = copier.CopyWithOption(&tmp, cashier, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 			if err != nil {
 				ctx.Log().Error("合并各端-收银机设置失败", zap.Error(err))
 				return nil, errors.New("合并各端-收银机设置失败")
@@ -410,7 +410,7 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 			tmp := s.getDefaultTablet(languageList)
 			// 语言 不需要合并
 			tmp.Language = nil
-			err = copier.CopyWithOption(&tmp, tablet, copier.Option{IgnoreEmpty: true})
+			err = copier.CopyWithOption(&tmp, tablet, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 			if err != nil {
 				ctx.Log().Error("合并各端-平板端设置失败", zap.Error(err))
 				return nil, errors.New("合并各端-平板端设置失败")
@@ -443,7 +443,7 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 			// 语言 不需要合并
 			tmp.Language = nil
 
-			err = copier.CopyWithOption(&tmp, kitchen, copier.Option{IgnoreEmpty: true})
+			err = copier.CopyWithOption(&tmp, kitchen, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 			if err != nil {
 				ctx.Log().Error("合并各端-厨显设置失败", zap.Error(err))
 				return nil, errors.New("合并各端-厨显设置失败")
@@ -465,8 +465,8 @@ func (s *Srv) getAll(ctx context.Context, language string, languageList []dto.La
 			if len(assistant.LanguageList) == 0 {
 				assistant.LanguageList = nil
 			}
-			tmp := s.getDefaultAssistant(language, languageList)
-			err = copier.CopyWithOption(&tmp, assistant, copier.Option{IgnoreEmpty: true})
+			tmp := s.getDefaultAssistant(languageList)
+			err = copier.CopyWithOption(&tmp, assistant, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 			if err != nil {
 				ctx.Log().Error("合并各端-点餐助手设置失败", zap.Error(err))
 				return nil, errors.New("合并各端-点餐助手设置失败")
@@ -840,7 +840,7 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 	defaultTablet := s.getDefaultTablet(languageList)
 	// 语言 不需要合并
 	defaultTablet.Language = nil
-	err = copier.CopyWithOption(&defaultTablet, tablet, copier.Option{IgnoreEmpty: true})
+	err = copier.CopyWithOption(&defaultTablet, tablet, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	if err != nil {
 		ctx.Log().Error("合并各端-平板端设置失败", zap.Error(err))
 		return tablet, errors.New("合并各端-平板端设置失败")
@@ -922,7 +922,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	// 语言 不需要合并
 	defaultCashier.Language = nil
 
-	err = copier.CopyWithOption(&defaultCashier, cashier, copier.Option{IgnoreEmpty: true})
+	err = copier.CopyWithOption(&defaultCashier, cashier, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	if err != nil {
 		ctx.Log().Error("合并各端-收银机设置失败", zap.Error(err))
 		return cashier, errors.New("合并各端-收银机设置失败")
@@ -972,8 +972,8 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	if len(assistant.LanguageList) == 0 {
 		assistant.LanguageList = nil
 	}
-	defaultAssistant := s.getDefaultAssistant(ctx.GetLanguage(), languageList)
-	err = copier.CopyWithOption(&defaultAssistant, assistant, copier.Option{IgnoreEmpty: true})
+	defaultAssistant := s.getDefaultAssistant(languageList)
+	err = copier.CopyWithOption(&defaultAssistant, assistant, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	if err != nil {
 		ctx.Log().Error("合并各端-点餐助手设置失败", zap.Error(err))
 		return assistant, errors.New("合并各端-点餐助手设置失败")
@@ -1017,7 +1017,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	// 语言 不需要合并
 	defaultKitchen.Language = nil
 
-	err = copier.CopyWithOption(&defaultKitchen, kitchen, copier.Option{IgnoreEmpty: true})
+	err = copier.CopyWithOption(&defaultKitchen, kitchen, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	if err != nil {
 		ctx.Log().Error("合并各端-厨显设置失败", zap.Error(err))
 		return kitchen, errors.New("合并各端-厨显设置失败")

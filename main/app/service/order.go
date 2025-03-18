@@ -173,6 +173,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.WithMessage(err, "获取设备uuid失败")
 		}
 
+		// todo
 		// // 判断是否有待支付、未挂单的订单
 		// commonRepo := repository.NewCommonRepo()
 		// orderRepo := repository.NewOrderRepo(tx)
@@ -2468,7 +2469,12 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 获取自助餐顾客
 	customerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&customerTypes, req.BuffetCustomerTypes)
-	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, customerTypes, saleBill.SaleBillSetting)
+	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(
+		buffetList,
+		req.BuffetUuids,
+		customerTypes,
+		saleBill.SaleBillSetting,
+	)
 
 	// 修改
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -2486,14 +2492,17 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 		// 如果改了套餐信息，需要处理时间 和调整商品是否自助餐
 		if len(addBuffetIds) != 0 || len(removeBuffetIds) != 0 {
+			newStartTime := time.Now().Unix()
 			// 维护套餐时长和加钟时长
 			if maxTimeLimit == -1 {
 				saleBill.BuffetDuration = 0
-				saleBill.BuffetStartTime = time.Now().Unix()
+				saleBill.BuffetStartTime = newStartTime
+				saleBill.DelayDuration = uint(saleBill.GetRemainingDelayDuration())
+				saleBill.DelayStartTime = newStartTime
 			} else {
-				// 重新计算开启时间*865 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
+				// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
 				if saleBill.BuffetIsTimeOut() {
-					saleBill.BuffetStartTime = time.Now().Unix() - int64(saleBill.BuffetDuration)
+					saleBill.BuffetStartTime = newStartTime - int64(saleBill.BuffetDuration)
 				}
 				// 永远等于最大时间限制 + 总加钟时间
 				saleBill.BuffetDuration = uint(int64(maxTimeLimit))
@@ -3560,7 +3569,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
-	fmt.Println("model.NewWarehouseOutForm(decreaseStockList): ", utils.ToJsonString(warehouseOutForm))
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 如果出库单明细不为空，则创建出库单
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -4824,21 +4832,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts) len: ", len(withoutWarehouseOutFormSaleOrderProducts))
-
 	// 获取减库存的清单信息
 	decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("s.GetProductDecreaseStockList: ", utils.ToJsonString(decreaseStockList))
 	// 构建出库单
 	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid)
-	fmt.Println("finish model.NewWarehouseOutForm(decreaseStockList): ", utils.ToJsonString(warehouseOutForm))
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 			// 创建出库单
-			fmt.Println("repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord")
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -4882,6 +4885,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
+			SaleBill:    saleBill,
 			OrderPrice:  saleOrderAmount,
 			PayPrice:    saleOrderPaymentAmount,
 			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）

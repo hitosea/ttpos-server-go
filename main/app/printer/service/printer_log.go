@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -10,6 +11,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/jinzhu/copier"
@@ -19,6 +21,8 @@ import (
 // IPrinterLogSrv 定义打印日志服务接口
 type IPrinterLogSrv interface {
 	AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) // 添加打印日志
+	GetPrinterList(ctx context.Context) ([]resp.PrinterLogData, error)                                                                       // 获取打印列表
+	GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error)                                                                       // 获取打印数据
 }
 
 type printerLogSrv struct {
@@ -35,6 +39,89 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 		dbm:        dbm,
 		settingSrv: settingSrv,
 	}
+}
+
+// GetPrinterList 获取打印列表
+func (s *printerLogSrv) GetPrinterList(ctx context.Context) ([]resp.PrinterLogData, error) {
+	// // 获取打印日志
+	// printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	// printerLogList, _, err := printerLogRepo.PaginateGet(
+	// 	1,
+	// 	5,
+	// 	printerLogRepo.WithPrinter(),
+	// 	printerLogRepo.WithPrinterPrinterType(),
+	// 	printerLogRepo.WithSaleBill(),
+	// 	printerLogRepo.WithSaleBillDesk(),
+	// 	printerLogRepo.WhereStatus(1),
+	// 	printerLogRepo.WherePrinterTime(),
+	// 	func(db *gorm.DB) *gorm.DB {
+	// 		db.Where("print_method = ?", 2)
+	// 		db.Where("first_execution = ?", 0)
+	// 		db.Where("type = ?", constant.Yes)
+	// 		return db
+	// 	},
+	// )
+	// if err != nil {
+	// 	return nil, errors.WithMessage(err)
+	// }
+
+	// // 转换为响应数据
+	// results := make([]resp.PrinterLogData, 0, len(printerLogList))
+	// for _, log := range printerLogList {
+	// 	results = append(results, resp.PrinterLogData{
+	// 		Id:          log.Id,
+	// 		Data:        log.Data,
+	// 		Reason:      log.Reason,
+	// 		PrinterId:   log.PrinterUuid,
+	// 		OrderId:     log.RelatedUuid,
+	// 		CreateTime:  log.CreateTime,
+	// 		PrintMethod: log.PrintMethod,
+	// 	})
+	// }
+
+	// return results, nil
+
+	return nil, nil
+}
+
+// GetPrinterData 获取打印数据
+func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error) {
+	companyUuid := ctx.GetCompanyUuid()
+
+	//禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(companyUuid)
+		defer lock.NewSystemLock().UnlockUuid(companyUuid)
+		ctx.AddLock()
+	}
+
+	// 获取打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
+	printerLogList, err := printerLogRepo.GetPrinterData(ctx.GetDeviceSn())
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 转换为响应数据
+	printerDataList := make([]resp.PrinterData, 0, len(printerLogList))
+	for _, log := range printerLogList {
+		printerDataList = append(printerDataList, resp.PrinterData{
+			Uuid:        log.Uuid,
+			Data:        log.Data,
+			PrintMethod: log.PrintMethod,
+			Copies:      log.Printer.Copies,
+			PrinterType: log.Printer.PrinterType.Key,
+			PrinterConfig: func() string {
+				configJson, err := json.Marshal(log.Printer.GetConfigJson())
+				if err != nil {
+					return ""
+				}
+				return string(configJson)
+			}(),
+		})
+	}
+
+	return &resp.PrinterDataList{List: printerDataList}, nil
 }
 
 // AddLog 添加打印日志

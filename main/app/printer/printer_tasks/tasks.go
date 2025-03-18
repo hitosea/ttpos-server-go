@@ -1,6 +1,7 @@
 package printer_tasks
 
 import (
+	"fmt"
 	"log"
 	"slices"
 	"time"
@@ -31,12 +32,19 @@ func NewPrinterTask(dbm *database.DBManager, cache cache.Cache) *printerTask {
 
 // 执行任务
 func (t *printerTask) Execute() {
-	// 根据 APP 表实例化数据库连接
+	// 根据 APP 表实例化数据库连接，并左关联 CompanySetting
+	prefix := config.Database.TablePrefix
 	var companies []model.Company
-	if err := t.dbm.GetDB(0).Scopes(repository.NotDeleted).Debug().Where("delete_time = 0").Find(&companies).Error; err != nil {
-		log.Fatalf("Error querying companies: %s", err)
+	if err := t.dbm.GetDB(0).
+		Joins(fmt.Sprintf("LEFT JOIN %scompany_setting ON %scompany.uuid = %scompany_setting.company_uuid", prefix, prefix, prefix)).
+		Where(fmt.Sprintf("%scompany.delete_time = 0", prefix)).
+		Where(fmt.Sprintf("%scompany_setting.is_open_local_print = 0", prefix)).
+		Select(fmt.Sprintf("%scompany.uuid, %scompany.name, %scompany_setting.is_open_local_print", prefix, prefix, prefix)). // 选择需要的字段
+		Find(&companies).Error; err != nil {
+		log.Fatalf("Error querying companies with settings: %s", err)
 		return
 	}
+
 	// 每5个公司为一组进行处理
 	for i := 0; i < len(companies); i += 5 {
 		// 计算当前批次的结束索引
@@ -64,6 +72,7 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 		printerLogRepo.WithPrinterPrinterType(),
 		printerLogRepo.WhereStatus(1),
 		printerLogRepo.WherePrinterTime(),
+		printerLogRepo.WhereLimit(5),
 		func(db *gorm.DB) *gorm.DB {
 			if config.Server.Mode != constant.ServerModeDebug {
 				db.Where("print_method = ?", 2)

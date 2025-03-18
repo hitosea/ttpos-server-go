@@ -76,11 +76,11 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		} else {
 			printer.AppendText(t.base.Translate("结账单"))
 		}
-		printer.LineFeed(1)
+		printer.LineFeed(2)
 	}
 
 	printer.SetAlignment(pkg.AlignCenter)
-	printer.SetPrintModes(true, true, false)
+	printer.SetPrintModes(false, false, false)
 	printer.SetCharacterSize(2, 1)
 	printer.SetLineSpacing(30)
 	printer.AppendText(t.base.StoreSetting.Name + "\n")
@@ -139,6 +139,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
+		printer.LineFeed()
 		//
 		printer.SetPrintModes(false, false, false)
 		printer.SetAlignment(pkg.AlignLeft)
@@ -205,12 +206,12 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			printer.LineFeed()
 		}
 		printer.AppendText(t.base.Translate("订单号") + ": " + saleOrder.OrderNo)
-		printer.LineFeed()
 	}
 	//
 	leftWidth = 25
 	centerWidth := 16
 	rightWidth := 16
+	printer.LineFeed()
 	if temp == 3 {
 		printer.AppendText("------------------------------------------------")
 	} else {
@@ -223,9 +224,10 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		} else {
 			hLeftWidth = leftWidth
 		}
+		printer.SetLineSpacing(35)
 		printer.AppendText(t.base.PrintText(t.base.Translate("商品"), t.base.Translate("单价")+"|"+t.base.Translate("数量"), t.base.Translate("小计"), width, hLeftWidth))
 		printer.SetPrintModes(false, false, false)
-		printer.AppendText("\n------------------------------------------------\n")
+		printer.AppendText("------------------------------------------------")
 	}
 	// 赠品金额 / 商品数量
 	freeMoney := float64(0)
@@ -278,7 +280,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 商品列表
-	for _, item := range saleOrder.SaleOrderProducts {
+	for key, item := range saleOrder.SaleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
 			continue
 		}
@@ -303,8 +305,10 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			rightWidth,
 		))
 		printer.LineFeed()
-		printer.SetLineSpacing(10)
-		printer.LineFeed()
+		if key != len(saleOrder.SaleOrderProducts)-1 {
+			printer.SetLineSpacing(10)
+			printer.LineFeed(3)
+		}
 		printer.SetLineSpacing(35)
 	}
 
@@ -457,20 +461,13 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 
 	// 支付方式
 	if saleOrder.Status == constant.SaleOrderStatusFinish {
+		printer.AppendText("------------------------------------------------\n")
 		if saleOrder.IsFreeSaleOrder() {
-			printer.LineFeed()
-			printer.SetLineSpacing(90)
-			printer.AppendText("------------------------------------------------\n")
 			printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", t.base.Translate("免单"), width, 20, 0, 28))
 			printer.LineFeed()
 			printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(0), width, 34))
-			printer.SetLineSpacing(30)
-			printer.LineFeed()
 		}
 		if len(saleOrder.PaymentOrders) > 0 {
-			printer.LineFeed()
-			printer.SetLineSpacing(90)
-			printer.AppendText("------------------------------------------------\n")
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethodName, width, 20, 0, 28))
 				printer.LineFeed()

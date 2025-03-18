@@ -311,15 +311,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
-	copier.Copy(&tabletSettingResp, tabletSetting)
-	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
-	if err != nil {
-		return cashierBase, errors.WithMessage(err)
-	}
-	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
-	if err != nil {
-		return cashierBase, errors.WithMessage(err)
-	}
+	copier.CopyWithOption(&tabletSettingResp, tabletSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
@@ -338,10 +330,8 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
+			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		Tablet:     tabletSettingResp,
-		Payment:    paymentSetting,
-		Printer:    printerSetting,
 		CloudBasic: cloudBasicSetting,
 	}, nil
 }
@@ -387,14 +377,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		return assistantBase, errors.WithMessage(err)
 	}
 	var assistantSettingResp setting2.AssistantResp
-	err = copier.Copy(&assistantSettingResp, assistantSetting)
-	if err != nil {
-		panic(err)
-	}
-	paymentSetting, err := s.settingSrv.GetPaymentSetting(ctx, companySetting)
-	if err != nil {
-		return assistantBase, errors.WithMessage(err)
-	}
+	copier.CopyWithOption(&assistantSettingResp, assistantSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
@@ -413,17 +396,17 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			Phone:    assistantStaff.Phone,
 			DeviceId: assistantStaff.BindKey,
 		},
+		Buffet:     buffetSetting,
+		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
+			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		Assistant:  assistantSettingResp,
-		Buffet:     buffetSetting,
-		Payment:    paymentSetting,
-		Business:   businessSetting,
-		Currency:   currencySetting,
-		CloudBasic: cloudBasicSetting,
+		Currency:  currencySetting,
+		Business:  businessSetting,
+		Assistant: assistantSettingResp,
 	}, nil
 }
 
@@ -454,21 +437,27 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
-	copier.Copy(&kitchenSettingResp, kitchenSetting)
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return tabletBase, errors.WithMessage(err)
+	}
 	return resp.TabletBase{
-		Buffet: buffetSetting,
+		Buffet:     buffetSetting,
+		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
+			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		Currency:   currencySetting,
-		Tablet:     tabletSettingResp,
-		CloudBasic: cloudBasicSetting,
+		Currency: currencySetting,
+		Business: businessSetting,
+		Tablet:   tabletSettingResp,
 	}, nil
 }
 
@@ -484,21 +473,35 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
 	}
-	copier.Copy(&kitchenSettingResp, kitchenSetting)
-
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
 	}
-
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return kitchenBase, errors.WithMessage(err)
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if err != nil {
+		return kitchenBase, errors.WithMessage(err)
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return kitchenBase, errors.WithMessage(err)
+	}
 	return resp.KitchenBase{
-		Kitchen: kitchenSettingResp,
+		Buffet:     buffetSetting,
+		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
 			TimeZone: companySetting.Timezone,
+			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		CloudBasic: cloudBasicSetting,
+		Currency: currencySetting,
+		Business: businessSetting,
+		Kitchen:  kitchenSettingResp,
 	}, nil
 }
 

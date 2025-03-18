@@ -1,6 +1,7 @@
 package event
 
 import (
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/eventbus"
 	"ttpos-server-go/pkg/utils"
 )
@@ -11,6 +12,7 @@ const EventCheckoutSaleOrder EventName = "Event_Checkout_Sale_Order"
 // CheckoutSaleOrderPayload 每个事件有一个数据结构
 type CheckoutSaleOrderPayload struct {
 	BasePayload
+	SaleBill    *model.SaleBill
 	OrderPrice  float64   `json:"order_price"`  // 订单应付金额
 	PayPrice    float64   `json:"pay_price"`    // 最终应付金额。最终应付金额=订单应付金额+手续费（手续费=每笔付款单的手续费之和）
 	ActualPrice float64   `json:"actual_price"` // 最终实付金额。最终实付金额=最终应付金额+找零金额。如果没有找零，则最终实付金额=最终应付金额。最终实付金额=每笔付款单的付款金额之和（含手续费）

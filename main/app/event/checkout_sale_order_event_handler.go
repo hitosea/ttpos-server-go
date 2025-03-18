@@ -5,6 +5,7 @@ import (
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
@@ -26,6 +27,20 @@ func init() {
 // checkoutSaleOrderEventHandler "结账"事件处理器
 func checkoutSaleOrderEventHandler() {
 	once_checkout_sale_order_event_handler.Do(func() {
+		// 打印
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
+				constant.PrinterTemplateBilling,
+				payload.SaleBill,
+				payload.SaleOrderUuid,
+				0,
+			)
+			if err != nil {
+				logger.Logger.Error("SubscribeCheckoutZeroSaleOrderEvent process, PrintStatementOrder failed", zap.Any("payload", payload), zap.Error(err))
+				return
+			}
+		})
+		// 创建操作记录
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
@@ -45,6 +60,7 @@ func checkoutSaleOrderEventHandler() {
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:结账 %+v", payload), zap.Uint64("record", uuid))
 		})
+		// 扣减库存
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			ReduceStock(db, payload.SaleBillUuid)

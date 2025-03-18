@@ -722,6 +722,9 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 
 // 获取总的剩余时长
 func (model *SaleBill) GetTotalRemainingSeconds() int64 {
+	if model.BuffetDuration == 0 {
+		return -1
+	}
 	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
 }
 

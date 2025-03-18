@@ -30,7 +30,7 @@ type BaseHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.AssistantBase}
+// @Success 200 {object} dto.Response{data=resp.KitchenBase}
 // @Router /kitchen/base [get]
 func (h *BaseHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
