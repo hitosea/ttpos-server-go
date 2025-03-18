@@ -749,7 +749,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 		}
 		//
 		saleOrderUuid := uint64(0)
-		if !isSplit {
+		if !isSplit && len(bill.SaleOrders) > 0 {
 			saleOrderUuid = bill.SaleOrders[0].Uuid
 		}
 		//
@@ -919,8 +919,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					ImageUrl:            imageUrl,
 					CancelReason:        saleOrderProduct.CancelReason,
 					GiftReason:          saleOrderProduct.GiftReason,
-					// todo 退款金额 待处理
-					RefundAmount: 0,
+					RefundAmount:        saleOrderProduct.GetReturnPrice(),
 				})
 			}
 		}
@@ -950,7 +949,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	}
 
 	// 处理额外信息
-	order := saleBill.SaleOrders[0]
+	var order *model.SaleOrder
+	if len(saleBill.SaleOrders) > 0 {
+		order = saleBill.SaleOrders[0]
+	}
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund:        false,
 		IsCellCancel:        isCellCancel,
@@ -1366,7 +1368,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
 			Price:                saleOrderProduct.Price,
-			CanReturnAmount:      decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.GetCanReturnNum()))).Round(2).InexactFloat64(),
+			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
 			CurrencyUnit:         currencyUnit,
 		})
 	}
