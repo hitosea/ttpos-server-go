@@ -135,6 +135,7 @@ func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleB
 	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize,
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
