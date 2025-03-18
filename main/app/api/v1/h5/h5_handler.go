@@ -253,6 +253,11 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
+	if params.SaleOrderUuid == 0 || params.SaleBillUuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
+		return
+	}
+	params.SetIsH5Product() // 设置为H5商品
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {

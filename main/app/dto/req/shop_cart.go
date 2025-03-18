@@ -14,6 +14,17 @@ type OrderCartProductAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`     // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 规格ID
+
+	// 后端内部使用的参数
+	isH5Product bool `json:"-"` // 是否是H5商品
+}
+
+func (req *OrderCartProductAddReq) SetIsH5Product() {
+	req.isH5Product = true
+}
+
+func (req *OrderCartProductAddReq) IsH5Product() bool {
+	return req.isH5Product
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

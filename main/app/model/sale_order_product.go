@@ -41,8 +41,8 @@ type SaleOrderProduct struct {
 
 	// 折扣相关字段
 	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
-	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`          // 快照设置相关，不受后台改变，结账时检查
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`             // 与sale_order的member_discount_rate一致
+	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`              // 快照设置相关，不受后台改变，结账时检查
+	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`            // 与sale_order的member_discount_rate一致
 	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"` // 与sale_order的member_card_discount_rate一致
 	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`           // 与sale_order的custom_discount_rate一致
 
@@ -599,6 +599,7 @@ type DefaultSaleOrderProduct struct {
 	Sauces                 []Sauce
 	Flavor                 Flavor
 	Attribute              []Attribute
+	IsAcceptOrder          uint // 是否接单
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
@@ -642,7 +643,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		FlavorName:                 def.Flavor.Name,
 		Num:                        1,
 		Status:                     constant.OrderProductStatusUnSending,
-		IsAcceptOrder:              1,
+		IsAcceptOrder:              def.IsAcceptOrder,
 		FlavorPrice:                def.Flavor.Price,
 		OpenMemberDiscount:         def.OpenMemberDiscount,
 		MemberDiscountRate:         def.MemberDiscountRate,

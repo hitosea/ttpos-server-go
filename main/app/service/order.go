@@ -3061,7 +3061,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.Order
 	return shopCart, nil
 }
 
-func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool, saleBillUuid, saleOrderUuid, deskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool, isH5Product bool, saleBillUuid, saleOrderUuid, deskUuid uint64, flavorProductBomUuid uint64, sauceProductBomUuidList []uint64, productPackageAttributeUuidList []uint64, diningMethod uint, memberDiscountRate, memberCardDiscountRate, customDiscountRate float64) (*model.SaleOrderProduct, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取商品包信息
@@ -3125,6 +3125,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool,
 		attributes = append(attributes, attribute)
 	}
 
+	isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
+	if isH5Product {
+		isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
+	}
 	saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 		Name:                   productPackage.Name,
 		OpenMemberDiscount:     productPackage.OpenDiscount,
@@ -3144,7 +3148,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, isDeskSaleBill bool,
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: flavorProductBomUuid,
 		},
-		Attribute: attributes,
+		Attribute:     attributes,
+		IsAcceptOrder: uint(isAcceptOrder),
 	})
 	// 设置必点信息
 	var mustPlanUuid uint64
@@ -3202,7 +3207,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, req req.OrderCartPro
 		return nil, errors.New("销售订单不存在")
 	}
 	// 录入订单商品数据
-	saleOrderProduct, err := s.newSaleOrderProduct(ctx, saleBill.IsDeskSaleBill(), req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
+	saleOrderProduct, err := s.newSaleOrderProduct(ctx, saleBill.IsDeskSaleBill(), req.IsH5Product(), req.SaleBillUuid, req.SaleOrderUuid, saleBill.DeskUuid, req.FlavorUuid, req.SauceUuidList, req.AttributeUuidList, saleBill.DiningMethod, saleOrder.MemberDiscountRate, saleOrder.MemberCardDiscountRate, saleOrder.CustomDiscountRate)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
