@@ -145,12 +145,12 @@ func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, e
 
 	// 判断是否有待支付、未挂单的订单
 	orderRepo := repository.NewOrderRepo(db)
-	order, err := orderRepo.GetInstantSaleBill()
+	saleBill, err := orderRepo.GetInstantSaleBill()
 	if err != nil && !strings.Contains(err.Error(), "record not found") {
 		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
 	}
-	if order != nil && device.Uuid == order.DeviceUuid {
-		return order, true, nil
+	if saleBill != nil && device.Uuid == saleBill.DeviceUuid {
+		return saleBill, true, nil
 	}
 	return nil, false, nil
 }
@@ -3026,6 +3026,15 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error) {
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if req.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		_, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return nil, err
+		}
+		if hasInstantOrder {
+			return nil, errors.New("参数错误")
+		}
+		//
 		order, err := s.CreateInstantOrder(ctx)
 		if err != nil {
 			ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
