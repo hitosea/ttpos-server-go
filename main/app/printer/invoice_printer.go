@@ -71,7 +71,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
 		RelatedType:     1,
-		RelatedUuid:     saleBill.Uuid,
+		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
 		DataType:        constant.PrinterLogDataTypeInvoice,

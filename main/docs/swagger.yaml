@@ -968,6 +968,12 @@ definitions:
     required:
     - uuid
     type: object
+  req.PrinterPrintReq:
+    properties:
+      uuid:
+        description: 打印日志uuid
+        type: integer
+    type: object
   req.ProcessedCallReq:
     properties:
       uuid:
@@ -2845,6 +2851,28 @@ definitions:
       uuid:
         type: integer
     type: object
+  resp.PrinterBase:
+    properties:
+      name:
+        description: 打印机名称
+        type: string
+      uuid:
+        description: 打印日志Uuid
+        type: integer
+    type: object
+  resp.PrinterBaseResp:
+    properties:
+      printer_list:
+        description: 打印机列表
+        items:
+          $ref: '#/definitions/resp.PrinterBase'
+        type: array
+      printer_type_list:
+        description: 打印类型列表
+        items:
+          $ref: '#/definitions/resp.PrinterBase'
+        type: array
+    type: object
   resp.PrinterData:
     properties:
       copies:
@@ -2875,6 +2903,18 @@ definitions:
           $ref: '#/definitions/resp.PrinterData'
         type: array
     type: object
+  resp.PrinterListPaginationResp:
+    properties:
+      list:
+        description: 打印数据列表
+        items:
+          $ref: '#/definitions/resp.PrinterLogData'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: Meta信息
+    type: object
   resp.PrinterLogData:
     properties:
       create_time:
@@ -2899,10 +2939,16 @@ definitions:
         description: 商品打印规则名称
         type: string
       serial_no:
-        description: 桌台号或者呼叫号(如果有)
+        description: 桌台号或者序号(如果有)
         type: string
       status:
         description: 状态(0结束,1进行中,2成功)
+        type: integer
+      status_text:
+        description: 状态文本
+        type: string
+      uuid:
+        description: 打印日志Uuid
         type: integer
     type: object
   resp.Product:
@@ -9424,6 +9470,102 @@ paths:
       summary: 获取打印数据
       tags:
       - 收银端.基础信息
+  /cashier/printer/base:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印列表-查询条件
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据列表
+          schema:
+            $ref: '#/definitions/resp.PrinterBaseResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取打印列表-查询条件
+      tags:
+      - 收银端.打印记录
+  /cashier/printer/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印列表
+      parameters:
+      - description: 数据类型 (打印类型), -1=全都、.....
+        in: query
+        name: data_type
+        type: integer
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 打印机UUID
+        in: query
+        name: printer_uuid
+        type: integer
+      - description: 查询结束时间戳
+        in: query
+        name: query_end_time
+        type: integer
+      - description: 查询开始时间戳
+        in: query
+        name: query_start_time
+        type: integer
+      - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据列表
+          schema:
+            $ref: '#/definitions/resp.PrinterListPaginationResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取打印列表
+      tags:
+      - 收银端.打印记录
+  /cashier/printer/print:
+    post:
+      consumes:
+      - application/json
+      description: 打印
+      parameters:
+      - description: 打印参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            $ref: '#/definitions/resp.PrinterData'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打印
+      tags:
+      - 收银端.打印记录
   /cashier/product/category/list:
     get:
       consumes:

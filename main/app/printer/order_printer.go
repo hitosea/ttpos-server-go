@@ -68,7 +68,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
 		RelatedType:     1,
-		RelatedUuid:     saleBill.Uuid,
+		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: p.ctx.GetDeviceSn(),
 		DataType:        printType,

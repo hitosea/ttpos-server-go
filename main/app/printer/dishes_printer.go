@@ -103,15 +103,16 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						PrinterConfig: printerItem.Printer.ConfigJson,
 						PrintCopies:   printerItem.Printer.Copies,
 					}, model.PrinterLog{
-						PrintMethod:     printMethod,
-						RelatedType:     0,
-						RelatedUuid:     saleBillUuid,
-						PrinterUuid:     printerItem.PrinterUuid,
-						CashierDeviceId: "",
-						DataType:        constant.PrinterLogDataTypeReturnDish,
-						Data:            data,
-						Type:            1,
-						FirstExecution:  0,
+						PrintMethod:        printMethod,
+						RelatedType:        0,
+						RelatedUuid:        saleBillUuid,
+						PrinterUuid:        printerItem.PrinterUuid,
+						CashierDeviceId:    "",
+						DataType:           constant.PrinterLogDataTypeReturnDish,
+						Data:               data,
+						Type:               1,
+						FirstExecution:     0,
+						ProductPrinterUuid: productPrinter.Uuid,
 					}, "")
 					if err != nil {
 						logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -132,15 +133,16 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							PrinterConfig: printerItem.Printer.ConfigJson,
 							PrintCopies:   printerItem.Printer.Copies,
 						}, model.PrinterLog{
-							PrintMethod:     printMethod,
-							RelatedType:     0,
-							RelatedUuid:     saleBillUuid,
-							PrinterUuid:     printerItem.PrinterUuid,
-							CashierDeviceId: "",
-							DataType:        constant.PrinterLogDataTypeOneDishOneMenu,
-							Data:            data,
-							Type:            1,
-							FirstExecution:  0,
+							PrintMethod:        printMethod,
+							RelatedType:        0,
+							RelatedUuid:        saleBillUuid,
+							PrinterUuid:        printerItem.PrinterUuid,
+							CashierDeviceId:    "",
+							DataType:           constant.PrinterLogDataTypeOneDishOneMenu,
+							Data:               data,
+							Type:               1,
+							FirstExecution:     0,
+							ProductPrinterUuid: productPrinter.Uuid,
 						}, "")
 						if err != nil {
 							logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -158,15 +160,16 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 					PrinterType: printerType,
 				}, model.PrinterLog{
-					PrintMethod:     printMethod,
-					RelatedType:     0,
-					RelatedUuid:     saleBillUuid,
-					PrinterUuid:     printerItem.PrinterUuid,
-					CashierDeviceId: "",
-					DataType:        constant.PrinterLogDataTypeEntireOrder,
-					Data:            data,
-					Type:            1,
-					FirstExecution:  0,
+					PrintMethod:        printMethod,
+					RelatedType:        0,
+					RelatedUuid:        saleBillUuid,
+					PrinterUuid:        printerItem.PrinterUuid,
+					CashierDeviceId:    "",
+					DataType:           constant.PrinterLogDataTypeEntireOrder,
+					Data:               data,
+					Type:               1,
+					FirstExecution:     0,
+					ProductPrinterUuid: productPrinter.Uuid,
 				}, "")
 				if err != nil {
 					logger.Logger.Error("添加打印日志失败", zap.Error(err))

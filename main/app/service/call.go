@@ -74,9 +74,15 @@ func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.Unproce
 func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error) {
 	var res resp.AbnormalPrintList
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
-	printerLogs, total, err := printerLogRepo.PaginateGet(listReq.PageNo, listReq.PageSize,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd), printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
-		printerLogRepo.WithPrinter(), printerLogRepo.WithSaleBill(), printerLogRepo.WithSaleBillDesk())
+	printerLogs, total, err := printerLogRepo.PaginateGet(
+		listReq.PageNo,
+		listReq.PageSize,
+		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithSaleOrder(),
+		printerLogRepo.WithSaleBill(),
+	)
 	if err != nil {
 		return res, errors.WithMessage(err, "获取呼叫列表失败")
 	}
@@ -86,8 +92,11 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 		if printerLog.Printer != nil {
 			printerName = printerLog.Printer.Name
 		}
-		if printerLog.SaleBill != nil {
-			deskNo = printerLog.SaleBill.Desk.DeskNo
+		if printerLog.SaleBill != nil || printerLog.SaleOrder != nil {
+			if printerLog.SaleBill != nil {
+				deskNo = printerLog.SaleBill.SerialNo
+			}
+			deskNo = printerLog.SaleOrder.SaleBill.SerialNo
 		}
 		var item resp.AbnormalPrintItem
 		copier.Copy(&item, printerLog)

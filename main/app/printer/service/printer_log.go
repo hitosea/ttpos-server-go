@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
@@ -16,13 +19,16 @@ import (
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // IPrinterLogSrv 定义打印日志服务接口
 type IPrinterLogSrv interface {
 	AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) // 添加打印日志
-	GetPrinterList(ctx context.Context) ([]resp.PrinterLogData, error)                                                                       // 获取打印列表
+	GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error)                                                                       // 获取基础数据
+	GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error)                                     // 获取打印列表
 	GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error)                                                                       // 获取打印数据
+	PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error)                                                    // 打印
 }
 
 type printerLogSrv struct {
@@ -41,47 +47,247 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 	}
 }
 
+// GetPrinterBase 获取打印数据
+func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 创建商品打印机仓库
+	productPrinterRepo := repository.NewProductPrinterRepo(db)
+	// 获取商品打印机列表
+	productPrinters, err := productPrinterRepo.GetProductPrinters(
+		productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	//
+	if err != nil {
+		logger.Logger.Error("获取商品打印机列表失败", zap.Error(err))
+		return nil, err
+	}
+
+	//
+	printerList := make([]resp.PrinterBase, 0, len(productPrinters))
+	for _, product := range productPrinters {
+		printerList = append(printerList, resp.PrinterBase{
+			Uuid: product.Uuid,
+			Name: product.Name,
+		})
+	}
+	//
+	language := ctx.GetLanguage()
+	printerTypes := make([]resp.PrinterBase, 0, len(productPrinters))
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateHandoverSheet,
+		Name: i18n.Translate(language, "交班单"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateBilling,
+		Name: i18n.Translate(language, "结账单"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplatePreBilling,
+		Name: i18n.Translate(language, "预结账单"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateOneDishOneMenu,
+		Name: i18n.Translate(language, "一菜一单"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateBusiness,
+		Name: i18n.Translate(language, "营业数据"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateEntireOrder,
+		Name: i18n.Translate(language, "整单打印"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateInvoice,
+		Name: i18n.Translate(language, "打印发票"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateRecharge,
+		Name: i18n.Translate(language, "充值单"),
+	})
+	printerTypes = append(printerTypes, resp.PrinterBase{
+		Uuid: constant.PrinterTemplateReturnDish,
+		Name: i18n.Translate(language, "退菜单"),
+	})
+	//
+	return &resp.PrinterBaseResp{
+		PrinterList:  printerList,
+		PrinterTypes: printerTypes,
+	}, nil
+}
+
 // GetPrinterList 获取打印列表
-func (s *printerLogSrv) GetPrinterList(ctx context.Context) ([]resp.PrinterLogData, error) {
-	// // 获取打印日志
-	// printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	// printerLogList, _, err := printerLogRepo.PaginateGet(
-	// 	1,
-	// 	5,
-	// 	printerLogRepo.WithPrinter(),
-	// 	printerLogRepo.WithPrinterPrinterType(),
-	// 	printerLogRepo.WithSaleBill(),
-	// 	printerLogRepo.WithSaleBillDesk(),
-	// 	printerLogRepo.WhereStatus(1),
-	// 	printerLogRepo.WherePrinterTime(),
-	// 	func(db *gorm.DB) *gorm.DB {
-	// 		db.Where("print_method = ?", 2)
-	// 		db.Where("first_execution = ?", 0)
-	// 		db.Where("type = ?", constant.Yes)
-	// 		return db
-	// 	},
-	// )
-	// if err != nil {
-	// 	return nil, errors.WithMessage(err)
-	// }
+func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error) {
+	// 获取打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 
-	// // 转换为响应数据
-	// results := make([]resp.PrinterLogData, 0, len(printerLogList))
-	// for _, log := range printerLogList {
-	// 	results = append(results, resp.PrinterLogData{
-	// 		Id:          log.Id,
-	// 		Data:        log.Data,
-	// 		Reason:      log.Reason,
-	// 		PrinterId:   log.PrinterUuid,
-	// 		OrderId:     log.RelatedUuid,
-	// 		CreateTime:  log.CreateTime,
-	// 		PrintMethod: log.PrintMethod,
-	// 	})
-	// }
+	// 准备查询选项
+	queryOpts := []repository.DBOption{
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithPrinterPrinterType(),
+		printerLogRepo.WithSaleOrder(),
+		printerLogRepo.WithSaleBill(),
+		printerLogRepo.WithProductPrinter(),
+		printerLogRepo.WithMemberRechargeOrder(),
+		printerLogRepo.WhereType(constant.Yes),
+	}
 
-	// return results, nil
+	// 添加时间范围查询
+	if req.QueryStartTime > 0 || req.QueryEndTime > 0 {
+		queryOpts = append(queryOpts, printerLogRepo.WhereTimeRange(req.QueryStartTime, req.QueryEndTime))
+	}
 
-	return nil, nil
+	// 添加状态查询
+	if req.Status != -1 {
+		// 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
+		// 补打成功： Status = 2 && num > 0
+		// 补打失败： Status = 0 && num > 0
+		switch req.Status {
+		case 0: // 失败
+			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", 0)
+			})
+		case 1: // 成功
+			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", 2)
+			})
+		case 2: // 补打成功
+			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ? AND num > 0", 2)
+			})
+		case 3: // 补打失败
+			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ? AND num > 0", 0)
+			})
+		}
+	}
+
+	// 添加打印机查询
+	if req.PrinterUuid > 0 {
+		queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("printer_uuid = ?", req.PrinterUuid)
+		})
+	}
+
+	// 添加数据类型查询
+	if req.DataType != -1 {
+		queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("data_type = ?", req.DataType)
+		})
+	}
+
+	// 添加排序
+	queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+		return db.Order("create_time desc")
+	})
+
+	// 只查询某些字段
+	queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+		return db.Select("uuid, product_printer_uuid, related_uuid, data_type, printer_time, print_method, first_execution,  status, num, printer_uuid, reason, create_time")
+	})
+
+	// 执行查询
+	printerLogList, total, err := printerLogRepo.PaginateGet(
+		req.PageNo,
+		req.PageSize,
+		queryOpts...,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 转换为响应数据
+	language := ctx.GetLanguage()
+	results := make([]resp.PrinterLogData, 0, len(printerLogList))
+	for _, log := range printerLogList {
+		results = append(results, resp.PrinterLogData{
+			Uuid: log.Uuid,
+			RuleName: func() string {
+				if log.ProductPrinter == nil {
+					return ""
+				}
+				return log.ProductPrinter.Name
+			}(),
+			SerialNo: func() string {
+				if log.SaleBill == nil && log.SaleOrder == nil {
+					return ""
+				}
+				if log.SaleBill != nil {
+					return log.SaleBill.SerialNo
+				}
+				return log.SaleOrder.SaleBill.SerialNo
+			}(),
+			OrderNo: func() string {
+				if log.SaleOrder == nil && log.SaleBill == nil && log.MemberRechargeOrder == nil {
+					return ""
+				}
+				if log.MemberRechargeOrder != nil {
+					return log.MemberRechargeOrder.OrderNo
+				}
+				if log.SaleBill != nil {
+					return log.SaleBill.OrderNo
+				}
+				return log.SaleOrder.OrderNo
+			}(),
+			DataTypeName: func() string {
+				switch log.DataType {
+				case constant.PrinterTemplateHandoverSheet:
+					return i18n.Translate(language, "交班单")
+				case constant.PrinterTemplateBilling:
+					return i18n.Translate(language, "结账单")
+				case constant.PrinterTemplatePreBilling:
+					return i18n.Translate(language, "预结账单")
+				case constant.PrinterTemplateOneDishOneMenu:
+					return i18n.Translate(language, "一菜一单")
+				case constant.PrinterTemplateBusiness:
+					return i18n.Translate(language, "营业数据")
+				case constant.PrinterTemplateEntireOrder:
+					return i18n.Translate(language, "整单打印")
+				case constant.PrinterTemplateInvoice:
+					return i18n.Translate(language, "打印发票")
+				case constant.PrinterTemplateRecharge:
+					return i18n.Translate(language, "充值单")
+				case constant.PrinterTemplateReturnDish:
+					return i18n.Translate(language, "退菜单")
+				default:
+					return ""
+				}
+			}(),
+			PrinterName: log.Printer.Name,
+			CreateTime:  log.CreateTime,
+			Status:      log.Status,
+			StatusText: func() string {
+				switch log.Status {
+				case 0:
+					if log.Num > 0 {
+						return i18n.Translate(language, "补打失败")
+					}
+					return i18n.Translate(language, "失败")
+				case 1:
+					return i18n.Translate(language, "进行中")
+				case 2:
+					if log.Num > 0 {
+						return i18n.Translate(language, "补打成功")
+					}
+					return i18n.Translate(language, "成功")
+				default:
+					return ""
+				}
+			}(),
+			PrinterTime: log.PrinterTime,
+			Reason:      log.Reason,
+		})
+	}
+
+	return &resp.PrinterListPaginationResp{
+		List: results,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
 }
 
 // GetPrinterData 获取打印数据
@@ -122,6 +328,38 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 	}
 
 	return &resp.PrinterDataList{List: printerDataList}, nil
+}
+
+// PrinterPrint 打印
+func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error) {
+	// 获取打印日志仓库
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	printerLog := printerLogRepo.GetPrinterLog(
+		printerLogRepo.WhereUuid(req.Uuid),
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithPrinterPrinterType(),
+	)
+	if printerLog.PrinterUuid > 0 && printerLog.Printer == nil && printerLog.Printer.IsDelete() {
+		return nil, errors.New("打印失败，打印机已不存在")
+	}
+	if printerLog.Data == "" {
+		return nil, errors.New("打印失败，打印数据为空")
+	}
+	//
+	return &resp.PrinterData{
+		Uuid:        req.Uuid,
+		Data:        printerLog.Data,
+		PrintMethod: printerLog.PrintMethod,
+		Copies:      printerLog.Printer.Copies,
+		PrinterType: printerLog.Printer.PrinterType.Key,
+		PrinterConfig: func() string {
+			configJson, err := json.Marshal(printerLog.Printer.GetConfigJson())
+			if err != nil {
+				return ""
+			}
+			return string(configJson)
+		}(),
+	}, nil
 }
 
 // AddLog 添加打印日志

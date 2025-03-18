@@ -8669,6 +8669,157 @@
                 }
             }
         },
+        "/cashier/printer/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印列表-查询条件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "获取打印列表-查询条件",
+                "responses": {
+                    "200": {
+                        "description": "打印数据列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterBaseResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/printer/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "获取打印列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "数据类型 (打印类型), -1=全都、.....",
+                        "name": "data_type",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "打印机UUID",
+                        "name": "printer_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "query_start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterListPaginationResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/printer/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterData"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/product/category/list": {
             "get": {
                 "security": [
@@ -13296,6 +13447,15 @@
                 }
             }
         },
+        "req.PrinterPrintReq": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "打印日志uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProcessedCallReq": {
             "type": "object",
             "required": [
@@ -16102,6 +16262,38 @@
                 }
             }
         },
+        "resp.PrinterBase": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "打印机名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrinterBaseResp": {
+            "type": "object",
+            "properties": {
+                "printer_list": {
+                    "description": "打印机列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterBase"
+                    }
+                },
+                "printer_type_list": {
+                    "description": "打印类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterBase"
+                    }
+                }
+            }
+        },
         "resp.PrinterData": {
             "type": "object",
             "properties": {
@@ -16143,6 +16335,26 @@
                 }
             }
         },
+        "resp.PrinterListPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "打印数据列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterLogData"
+                    }
+                },
+                "meta": {
+                    "description": "Meta信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.PrinterLogData": {
             "type": "object",
             "properties": {
@@ -16175,11 +16387,19 @@
                     "type": "string"
                 },
                 "serial_no": {
-                    "description": "桌台号或者呼叫号(如果有)",
+                    "description": "桌台号或者序号(如果有)",
                     "type": "string"
                 },
                 "status": {
                     "description": "状态(0结束,1进行中,2成功)",
+                    "type": "integer"
+                },
+                "status_text": {
+                    "description": "状态文本",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
