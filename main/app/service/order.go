@@ -2497,23 +2497,8 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 		// 如果改了套餐信息，需要处理时间 和调整商品是否自助餐
 		if len(addBuffetIds) != 0 || len(removeBuffetIds) != 0 {
-			newStartTime := time.Now().Unix()
-			// 维护套餐时长和加钟时长
-			if maxTimeLimit == -1 {
-				saleBill.BuffetDuration = 0
-				saleBill.BuffetStartTime = newStartTime
-				saleBill.DelayDuration = uint(saleBill.GetRemainingDelayDuration())
-				saleBill.DelayStartTime = newStartTime
-			} else {
-				// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
-				if saleBill.BuffetIsTimeOut() {
-					saleBill.BuffetStartTime = newStartTime - int64(saleBill.BuffetDuration)
-				}
-				// 永远等于最大时间限制 + 总加钟时间
-				saleBill.BuffetDuration = uint(int64(maxTimeLimit))
-				// 重新计算加钟的启动时长
-				saleBill.DelayStartTime = saleBill.GetBuffetEndTime()
-			}
+			// 设置自助餐的开启时间和时长
+			saleBill.SetBuffetStartTimeAndDuration(maxTimeLimit)
 			// 更新商品为自助餐商品
 			buffetProductUuids := []uint64{}
 			for _, buffet := range buffetList {
@@ -2651,12 +2636,8 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 			saleBill.AddSaleOrderBuffetDelayProduct(saleOrder.Uuid, delayProduct)
 		}
 
-		// 加钟剩余时长是否为0，为真时等于当前系统时间，为否时保持不动
-		remainingDelayDuration := saleBill.GetRemainingDelayDuration()
-		if remainingDelayDuration == 0 {
-			saleBill.DelayStartTime = time.Now().Unix()
-		}
-		saleBill.DelayDuration = uint(remainingDelayDuration + totalDelayTime)
+		// 设置加钟时长
+		saleBill.SetBuffetDelayStartTimeAndDuration(int(totalDelayTime))
 
 		// 计算销售账单金额
 		if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {

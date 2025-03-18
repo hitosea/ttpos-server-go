@@ -694,6 +694,46 @@ func (model *SaleBill) GetRemainingDelayDuration() int64 {
 	return duration
 }
 
+// 获取总的剩余时长
+func (model *SaleBill) GetTotalRemainingSeconds() int64 {
+	if model.BuffetDuration == 0 {
+		return -1
+	}
+	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
+}
+
+// 设置自助餐开启时间
+func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
+	newStartTime := time.Now().Unix()
+	// 维护套餐时长和加钟时长
+	if maxTimeLimit == -1 {
+		model.BuffetDuration = 0
+		model.BuffetStartTime = newStartTime
+		model.DelayDuration = uint(model.GetRemainingDelayDuration())
+		model.DelayStartTime = newStartTime
+	} else {
+		// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
+		if model.BuffetIsTimeOut() || model.BuffetDuration == 0 {
+			model.BuffetStartTime = newStartTime - int64(model.BuffetDuration)
+		}
+		// 永远等于最大时间限制 + 总加钟时间
+		model.BuffetDuration = uint(int64(maxTimeLimit))
+		// 重新计算加钟的启动时长
+		model.DelayStartTime = model.GetBuffetEndTime()
+	}
+}
+
+// 设置自助餐加钟时间
+func (model *SaleBill) SetBuffetDelayStartTimeAndDuration(delayTime int) {
+	remainingDelayDuration := model.GetRemainingDelayDuration()
+	if remainingDelayDuration == 0 {
+		model.DelayStartTime = time.Now().Unix()
+		model.DelayDuration = uint(delayTime)
+	} else {
+		model.DelayDuration = model.DelayDuration + uint(delayTime)
+	}
+}
+
 // AddSaleOrderBuffetDelayProduct 将自助餐加钟产品添加到销售账单的对应销售订单中
 func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, delayProduct SaleOrderBuffetDelayProduct) {
 	// 查找对应的销售订单
@@ -718,14 +758,6 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 			break
 		}
 	}
-}
-
-// 获取总的剩余时长
-func (model *SaleBill) GetTotalRemainingSeconds() int64 {
-	if model.BuffetDuration == 0 {
-		return -1
-	}
-	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
 }
 
 // ValidateOrderStatus 判断订单是否可操作
@@ -913,21 +945,6 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 		payTypes = append(payTypes, *payType)
 	}
 	return payTypes
-}
-
-type Sauce struct {
-	Name           string
-	Price          float64
-	ProductBomUuid uint64
-}
-type Flavor struct {
-	Name           string
-	Price          float64
-	ProductBomUuid uint64
-}
-type Attribute struct {
-	Name                 string
-	ProductAttributeUuid uint64
 }
 
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
@@ -1173,4 +1190,19 @@ type SaleOrderProductReason struct {
 
 func (model *SaleOrderProductReason) SetNil() {
 	model.MultiLanguageName = nil
+}
+
+type Sauce struct {
+	Name           string
+	Price          float64
+	ProductBomUuid uint64
+}
+type Flavor struct {
+	Name           string
+	Price          float64
+	ProductBomUuid uint64
+}
+type Attribute struct {
+	Name                 string
+	ProductAttributeUuid uint64
 }

@@ -166,3 +166,24 @@ type CashierBaseSetting struct {
 	AcceptOrder AcceptOrderSetting `json:"accept_order"` // 接单设置
 	System      SystemSetting      `json:"system"`       // 系统设置
 }
+
+// ShiftInfo 交班信息
+type ShiftInfo struct {
+	PreviousShiftCash   float64                 `json:"previous_shift_cash"`   // 上一班遗留备用金
+	WithdrawCash        float64                 `json:"withdraw_cash"`         // 中途取出现金
+	DepositCash         float64                 `json:"deposit_cash"`          // 中途存入现金
+	CurrentCashTotal    float64                 `json:"current_cash_total"`    // 当前钱箱现金总计
+	RefundAmount        float64                 `json:"refund_amount"`         // 退款金额
+	PaymentMethodIncome PaymentMethodIncomeList `json:"payment_method_income"` // 支付方式收入
+}
+
+// PaymentMethodIncomeList 支付方式收入列表
+type PaymentMethodIncomeList struct {
+	List []PaymentMethodIncome
+}
+
+// PaymentMethodIncome 支付方式收入详情
+type PaymentMethodIncome struct {
+	Name   string  `json:"name"`   // 支付方式名称
+	Amount float64 `json:"amount"` // 收入金额
+}

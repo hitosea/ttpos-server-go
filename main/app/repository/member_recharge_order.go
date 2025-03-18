@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"strings"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IMemberRechargeOrderRepo interface {

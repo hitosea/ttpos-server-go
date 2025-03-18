@@ -1071,6 +1071,7 @@ func (s *rechargeOrderSrv) getPaymentRecords(paymentOrders []model.PaymentOrder,
 			}
 		}
 		paymentRecords = append(paymentRecords, resp.RefundRechargeOrderPaymentRecord{
+			PaymentOrderUuid:  paymentOrder.Uuid,
 			PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
 			PaymentMethodCode: paymentOrder.PaymentMethod.Code,
 			PaymentName:       paymentOrder.PaymentMethodName,
@@ -1158,11 +1159,15 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	var returnOrderAmounts []model.ReturnOrderAmount
 	var refundCashMoney float64
 	for _, record := range paymentRecords {
+		if record.RefundableAmount == 0 {
+			continue
+		}
 		// 遍历所有支付方式，如果小于扣款金额，则继续扣款，否则跳过
 		if record.RefundableAmount < refundMoney {
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
 				PaymentMethodUuid: record.PaymentMethodUuid,
 				Amount:            record.RefundableAmount,
+				PaymentOrderUuid:  record.PaymentOrderUuid,
 			})
 			refundMoney = utils.DecimalSub(refundMoney, record.RefundableAmount)
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
@@ -1172,6 +1177,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
 				PaymentMethodUuid: record.PaymentMethodUuid,
 				Amount:            refundMoney,
+				PaymentOrderUuid:  record.PaymentOrderUuid,
 			})
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
 				refundCashMoney = refundMoney

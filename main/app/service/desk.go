@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -17,6 +16,8 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 // IDeskSrv 定义收银服务接口
@@ -99,7 +100,13 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 // GetDeskList 获取收银机点餐页面产品类别列表
 func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error) {
 	// 获取列表
-	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(ctx.GetSource(), req.Status, req.IsBuffet, req.PageNo, req.PageSize)
+	desks, total, err := repository.NewDeskRepo(s.dbm.GetDB(dbId)).GetClientDeskList(
+		ctx.GetSource(),
+		req.Status,
+		req.IsBuffet,
+		req.PageNo,
+		req.PageSize,
+	)
 	if err != nil {
 		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
 	}

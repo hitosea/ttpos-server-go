@@ -58,6 +58,8 @@ type ICommonRepo interface {
 	WhereByProductPackageUuid(productPackUuid uint64) DBOption      // 根据产品套餐UUID查询
 	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption     // 根据产品口味UUID查询
 	WhereBySign(sign string) DBOption                               // 根据签名查询
+	WhereByStaffUuid(staffUuid uint64) DBOption                     // 根据员工UUID查询
+	WhereByShiftNo(shiftNo string) DBOption                         // 根据交班编号查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	FilterSaleOrderProduct() DBOption                               // 只查询常规的购物车商品
@@ -381,6 +383,20 @@ func (r *commonRepo) WhereBySaleOrderUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereBySign(sign string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sign = ?", sign)
+	}
+}
+
+// 根据员工UUID查询
+func (r *commonRepo) WhereByStaffUuid(staffUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("staff_uuid = ?", staffUuid)
+	}
+}
+
+// 根据交班编号查询
+func (r *commonRepo) WhereByShiftNo(shiftNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("shift_no = ?", shiftNo)
 	}
 }
 

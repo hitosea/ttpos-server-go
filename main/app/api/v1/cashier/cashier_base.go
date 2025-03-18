@@ -23,6 +23,7 @@ type BaseHandler struct {
 	paymentMethodSrv service.IPaymentMethodSrv
 	otherSrv         service.IOtherSrv
 	printerLogSrv    printerService.IPrinterLogSrv
+	staffShiftSrv    service.IStaffShiftSrv
 }
 
 // GetCashierBase 基本信息
@@ -323,6 +324,51 @@ func (h *BaseHandler) GetPrintData(c *gin.Context) {
 	helper.Success(c, respSetting)
 }
 
+// GetShiftInfo 获取交班信息
+// @Summary 获取交班信息
+// @Description 获取交班信息
+// @Tags 收银端.交班
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ShiftInfo}
+// @Router /cashier/shift [get]
+func (h *BaseHandler) GetShiftInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.staffShiftSrv.GetShiftInfo(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, info)
+}
+
+// SubmitShift 提交交班
+// @Summary 提交交班
+// @Description 提交交班
+// @Tags 收银端.交班
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SubmitShiftReq true "提交交班参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/shift [post]
+// func (h *BaseHandler) SubmitShift(c *gin.Context) {
+// 	ctx := helper.GetContext(c)
+// 	var submitReq req.SubmitShiftReq
+// 	if err := c.ShouldBindJSON(&submitReq); err != nil {
+// 		helper.HandleValidationError(c, err, submitReq, nil)
+// 		return
+// 	}
+
+// 	err := h.staffShiftSrv.SubmitShift(ctx, submitReq)
+// 	if err != nil {
+// 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+// 		return
+// 	}
+// 	helper.Success(c, gin.H{}, "交班成功")
+// }
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -342,6 +388,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		paymentMethodSrv: paymentMethodSrv,
 		otherSrv:         otherSrv,
 		printerLogSrv:    printerLogSrv,
+		staffShiftSrv:    staffShiftSrv,
 	}
 
 	// 需要认证
@@ -363,5 +410,9 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置
 		privateApi.POST("/setting/edit_system", wrapper.EditSystemSetting)            // 修改系统设置
 		privateApi.GET("/setting", wrapper.GetSetting)                                // 获取设置
+
+		// 交班
+		privateApi.GET("/shift", wrapper.GetShiftInfo) // 获取交班信息
+		// privateApi.POST("/shift", wrapper.SubmitShift) // 提交交班
 	}
 }

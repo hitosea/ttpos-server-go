@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -345,10 +346,19 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 	if printerLog.Data == "" {
 		return nil, errors.New("打印失败，打印数据为空")
 	}
-	//
+	// 去除开箱指令
+	data := printerLog.Data
+	dataLen := len(data)
+	if dataLen >= 10 {
+		if strings.HasSuffix(data, "1b700019fa") {
+			data = data[:dataLen-10]
+		} else if strings.HasSuffix(data, "1014010001") {
+			data = data[:dataLen-10]
+		}
+	}
 	return &resp.PrinterData{
 		Uuid:        req.Uuid,
-		Data:        printerLog.Data,
+		Data:        data,
 		PrintMethod: printerLog.PrintMethod,
 		Copies:      printerLog.Printer.Copies,
 		PrinterType: printerLog.Printer.PrinterType.Key,
