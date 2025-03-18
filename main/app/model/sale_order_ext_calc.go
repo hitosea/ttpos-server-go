@@ -432,6 +432,19 @@ func (model *SaleOrder) GetCookingProductTaxFee() float64 {
 
 // 计算已送厨的订单商品金额（折后价）。已送厨的订单商品金额（折后价）= 订单商品Price之和
 func (model *SaleOrder) calcCookingProductAmount() float64 {
+	// 订单商品Price之和。折后价
+	sumOrderProductPrice := model.calcSumCookingOrderProductPrice()
+	// 自助餐顾客价格Price之和。折后价
+	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
+	// 自助餐加钟商品价格之和
+	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
+	return decimal.NewFromFloat(sumOrderProductPrice).Add(
+		decimal.NewFromFloat(sumCustomerPrice)).Add(
+		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
+}
+
+// 计算已送厨的订单商品金额（折后价）。已送厨的订单商品金额（折后价）= 订单商品Price之和
+func (model *SaleOrder) calcSumCookingOrderProductPrice() float64 {
 	sumPrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range model.SaleOrderProducts {
 		// 已经移动到其他订单的商品不计
