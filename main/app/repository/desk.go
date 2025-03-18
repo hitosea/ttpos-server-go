@@ -175,7 +175,7 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 		db = opt(db)
 	}
 
-	result := db.Preload("SaleBill", "status = ?", constant.SaleBillStatusPending).First(&desk)
+	result := db.Preload("SaleBill").First(&desk)
 	if result.Error != nil {
 		return desk, result.Error
 	}

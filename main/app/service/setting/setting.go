@@ -749,7 +749,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			if printer.PrinterType != nil {
 				printerType = printer.PrinterType.Key
 			}
-		} else if printerId != "0" { // 收银机内置的打印机
+		} else if printerId != "0" && printerId != "" { // 收银机内置的打印机
 			cashierBindKey = printerId
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
