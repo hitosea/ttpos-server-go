@@ -298,18 +298,6 @@ definitions:
     required:
     - desk_uuid
     type: object
-  req.BuffetCustomerType:
-    properties:
-      customer_type_id:
-        description: 自助餐顾客类型ID
-        type: integer
-      name_text:
-        description: 自助餐顾客类型名称
-        type: string
-      num:
-        description: 顾客数量
-        type: integer
-    type: object
   req.CallReq:
     properties:
       call_type:
@@ -591,25 +579,6 @@ definitions:
         type: integer
       uuid:
         description: 销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid
-        type: integer
-    type: object
-  req.OpenDeskRequest:
-    properties:
-      buffet_customer_type:
-        description: 自助餐顾客类型
-        items:
-          $ref: '#/definitions/req.BuffetCustomerType'
-        type: array
-      buffet_ids:
-        description: 自助餐ID
-        items:
-          type: integer
-        type: array
-      is_buffet:
-        description: 是否是餐桌
-        type: integer
-      meal_num:
-        description: 顾客数量
         type: integer
     type: object
   req.OrderCancelReq:
@@ -1304,10 +1273,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Currency'
         description: 货币设置
-      payment:
-        allOf:
-        - $ref: '#/definitions/setting.Payment'
-        description: 支付设置
       permissions:
         description: 点餐助手权限
         items:
@@ -1620,23 +1585,11 @@ definitions:
       device_remark:
         description: 设备备注
         type: string
-      payment:
-        allOf:
-        - $ref: '#/definitions/setting.Payment'
-        description: 支付设置
       permissions:
         description: 页面权限
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
-      printer:
-        allOf:
-        - $ref: '#/definitions/setting.Printer'
-        description: 打印设置
-      tablet:
-        allOf:
-        - $ref: '#/definitions/setting.TabletResp'
-        description: 平板端设置
       username:
         description: 登录账号
         type: string
@@ -1678,6 +1631,9 @@ definitions:
     type: object
   resp.Company:
     properties:
+      logo:
+        description: 商家logo
+        type: string
       name:
         description: 商家名称
         type: string
@@ -1930,117 +1886,6 @@ definitions:
         - $ref: '#/definitions/setting.H5'
         description: 扫码H5设置
     type: object
-  resp.H5Buffet:
-    properties:
-      app_id:
-        type: integer
-      buffetCustomerType:
-        items:
-          $ref: '#/definitions/resp.H5BuffetCustomerType'
-        type: array
-      buffetTaxes:
-        items:
-          properties:
-            app_id:
-              type: integer
-            buffet_id:
-              type: integer
-            buffet_tax_type:
-              type: integer
-            create_time:
-              type: string
-            id:
-              type: integer
-            tax_category_id:
-              type: integer
-            tax_rate:
-              type: integer
-            update_time:
-              type: string
-          type: object
-        type: array
-      buy_limit_status:
-        type: integer
-      create_time:
-        type: string
-      delete_time:
-        type: integer
-      id:
-        type: integer
-      is_comb:
-        type: integer
-      is_remain_continue:
-        type: integer
-      name:
-        type: string
-      name_text:
-        type: string
-      price:
-        type: string
-      remain_continue_notice_time:
-        type: integer
-      remain_continue_time:
-        type: integer
-      sale_num:
-        type: integer
-      shop_supplier_id:
-        type: integer
-      sort:
-        type: integer
-      status:
-        type: integer
-      time_limit:
-        type: integer
-      update_time:
-        type: string
-    type: object
-  resp.H5BuffetCustomerType:
-    properties:
-      app_id:
-        type: integer
-      buffet_id:
-        type: integer
-      create_time:
-        type: string
-      customer_type_id:
-        type: integer
-      id:
-        type: integer
-      name_text:
-        type: string
-      price:
-        type: string
-      shop_supplier_id:
-        type: integer
-      update_time:
-        type: string
-    type: object
-  resp.H5Category:
-    properties:
-      category_id:
-        type: integer
-      is_special:
-        type: integer
-      name:
-        type: string
-      name_text:
-        type: string
-      parent_id:
-        type: integer
-      path_name_text:
-        type: string
-      product_count:
-        type: string
-      product_num:
-        type: integer
-    type: object
-  resp.H5CategoryList:
-    properties:
-      list:
-        items:
-          $ref: '#/definitions/resp.H5Category'
-        type: array
-    type: object
   resp.H5OrderDetail:
     properties:
       cashier:
@@ -2275,6 +2120,33 @@ definitions:
       selected_num:
         description: 已选数量。已选择xx份
         type: integer
+    type: object
+  resp.KitchenBase:
+    properties:
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.Buffet'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cloud:
+        allOf:
+        - $ref: '#/definitions/setting.CloudBasic'
+        description: 云端基础信息
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      kitchen:
+        allOf:
+        - $ref: '#/definitions/setting.KitchenResp'
+        description: 厨显端设置
     type: object
   resp.LanguageResp:
     properties:
@@ -3008,64 +2880,42 @@ definitions:
         description: 打印日志Uuid
         type: integer
     type: object
+  resp.PrinterDataList:
+    properties:
+      list:
+        description: 打印数据列表
+        items:
+          $ref: '#/definitions/resp.PrinterData'
+        type: array
+    type: object
   resp.PrinterLogData:
     properties:
-      cashier_device_id:
-        description: 收银机绑定的设备ID
-        type: string
-      copies:
-        description: 打印机.份数 => 对应旧表print_times
-        type: integer
       create_time:
         description: 日志创建时间戳
         type: integer
-      data:
-        description: 打印数据
-        type: string
-      data_type:
+      data_type_name:
         description: 数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;
-        type: integer
-      first_execution:
-        description: 是否首次执行打印 1-是 0-否;
-        type: integer
-      "no":
-        description: 桌台号或者呼叫号(如果有)
         type: string
-      num:
-        description: 打印次数
-        type: integer
-      print_method:
-        description: 打印方式 1文本打印, 2图片打印'
-        type: integer
-      printer_config:
-        description: 打印机.配置
+      order_no:
+        description: 订单号
+        type: string
+      printer_name:
+        description: 打印机名称
         type: string
       printer_time:
-        description: 打印时间
-        type: integer
-      printer_type:
-        description: 打印机.类型
-        type: string
-      printer_uuid:
-        description: 打印机uuid
+        description: 最后打印时间
         type: integer
       reason:
         description: 原因
         type: string
-      related_type:
-        description: 关联类型
-        type: integer
-      related_uuid:
-        description: 关联ID
-        type: integer
+      rule_name:
+        description: 商品打印规则名称
+        type: string
+      serial_no:
+        description: 桌台号或者呼叫号(如果有)
+        type: string
       status:
         description: 状态(0结束,1进行中,2成功)
-        type: integer
-      type:
-        description: 类型:0系统默认队列,1云上服务下放
-        type: integer
-      uuid:
-        description: 打印日志Uuid
         type: integer
     type: object
   resp.Product:
@@ -3825,6 +3675,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Buffet'
         description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
       cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
@@ -3950,7 +3804,7 @@ definitions:
         description: 是否开启加钟 0-关闭 1-开启
         type: string
       is_buffet_discount:
-        description: 是否开启自助餐优惠折扣 0-关闭 1-开启 todo ？？在哪里设置的？？
+        description: 是否开启自助餐优惠折扣 0-关闭 1-开启 // todo 干嘛用的？ 如果要删掉的话要跟前端沟通，否则删掉后收银端数据解析错误
         type: string
       is_buy_continue:
         description: 非自助餐商品到时是否能继续选购 0-关闭 1-开启
@@ -4042,13 +3896,6 @@ definitions:
           $ref: '#/definitions/setting.ZeroingMethodItem'
         type: array
     type: object
-  setting.CalendarItem:
-    properties:
-      key:
-        type: string
-      name:
-        type: string
-    type: object
   setting.CarouselItem:
     properties:
       file_path:
@@ -4058,15 +3905,6 @@ definitions:
       sort:
         type: string
       type:
-        type: string
-    type: object
-  setting.CashierPrinterItem:
-    properties:
-      key:
-        description: 收银机设备ID
-        type: string
-      printer_id:
-        description: 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
         type: string
     type: object
   setting.CashierResp:
@@ -4244,6 +4082,43 @@ definitions:
         - $ref: '#/definitions/setting.OrderLimit'
         description: 非自助餐下单限制
     type: object
+  setting.KitchenResp:
+    properties:
+      default_language:
+        description: 默认语言
+        type: string
+      is_call_service:
+        description: 是否开启顾客呼叫提醒 0-关闭 1-开启
+        type: string
+      is_come_dish:
+        description: 是否开启来菜提醒 0-关闭 1-开启
+        type: string
+      is_open:
+        description: 是否开启厨显功能 0关闭 1开启
+        type: string
+      is_wait_color:
+        description: 是否开启等待时长颜色 0-关闭 1-开启
+        type: string
+      language:
+        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      server:
+        allOf:
+        - $ref: '#/definitions/setting.Server'
+        description: 厨显服务器连接
+      wait_color:
+        description: 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
+        items:
+          type: string
+        type: array
+    type: object
   setting.OrderLimit:
     properties:
       is_limit_num:
@@ -4266,86 +4141,6 @@ definitions:
         type: string
       is_table_order:
         description: 桌台用餐
-        type: string
-    type: object
-  setting.Payment:
-    properties:
-      is_balance:
-        description: 是否开启余额支付 0-关闭 1-开启
-        type: string
-      is_cash:
-        description: 是否开启现金支付 0-关闭 1-开启
-        type: string
-      is_other:
-        description: 是否开启其他方式支付 0-关闭 1-开启
-        type: string
-    type: object
-  setting.PrintItem:
-    properties:
-      key:
-        type: string
-      name:
-        type: string
-    type: object
-  setting.Printer:
-    properties:
-      buffet_sign_open:
-        description: 自助餐标识设置（默认开启）
-        type: string
-      calendar_list:
-        description: 日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
-        items:
-          $ref: '#/definitions/setting.CalendarItem'
-        type: array
-      cashier_open:
-        description: 是否开启打印
-        type: string
-      cashier_printer:
-        description: 打印机列表
-        items:
-          $ref: '#/definitions/setting.CashierPrinterItem'
-        type: array
-      cashier_printer_id:
-        description: 打印机id
-        type: string
-      consumption_tax:
-        description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
-        type: string
-      default_calendar:
-        description: 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
-        type: string
-      default_language:
-        description: 打印语言（收银）
-        type: string
-      kitchen_language:
-        description: 打印语言（送厨）
-        type: string
-      kitchen_print_method:
-        description: 打印方式（送厨） 1-文本打印 2-图片打印
-        type: string
-      language:
-        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-        items:
-          type: string
-        type: array
-      language_list:
-        description: 语言列表
-        items:
-          $ref: '#/definitions/dto.LanguageItem'
-        type: array
-      language_method:
-        description: 语言方式（收银） 1-单语言 2-多语言
-        type: string
-      monetary_unit_open:
-        description: 货币单位（默认开启）
-        type: string
-      print_list:
-        description: 打印方式列表 （1-文本打印 2-图片打印 ）
-        items:
-          $ref: '#/definitions/setting.PrintItem'
-        type: array
-      print_method:
-        description: 打印方式（收银） 1-文本打印 2-图片打印
         type: string
     type: object
   setting.Server:
@@ -4385,7 +4180,7 @@ definitions:
         type: string
       is_show_sold_out:
         description: 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
-        type: integer
+        type: string
       is_voice_remind:
         description: 是否开启声音提醒 0-关闭 1-开启
         type: string
@@ -9446,6 +9241,28 @@ paths:
       summary: 获取支付方式列表
       tags:
       - 收银端.支付方式
+  /cashier/print_data:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterDataList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印数据
+      tags:
+      - 收银端.基础信息
   /cashier/product/category/list:
     get:
       consumes:
@@ -10015,8 +9832,8 @@ paths:
       summary: 桌码基础信息
       tags:
       - 扫码点餐
-  /h5/index.php/scan/order.Order/buffetList:
-    post:
+  /h5/buffet/list:
+    get:
       consumes:
       - application/json
       description: 获取自助餐套餐列表
@@ -10024,19 +9841,62 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 自助餐列表
           schema:
-            allOf:
-            - $ref: '#/definitions/resp.H5Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/resp.H5Buffet'
-                  type: array
-              type: object
+            $ref: '#/definitions/resp.BuffetListPaginationResp'
       security:
       - JwtToken: []
       summary: 自助餐套餐信息
+      tags:
+      - 扫码点餐
+  /h5/call:
+    post:
+      consumes:
+      - application/json
+      description: 发起呼叫
+      parameters:
+      - description: 呼叫请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CallReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 发起呼叫
+      tags:
+      - 扫码点餐
+  /h5/desk/open:
+    post:
+      consumes:
+      - application/json
+      description: 开台
+      parameters:
+      - description: 开台参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskOrderCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 开台成功
+          schema:
+            $ref: '#/definitions/resp.CreateDeskOrderResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 开台
       tags:
       - 扫码点餐
   /h5/index.php/scan/order.Order/remark:
@@ -10063,18 +9923,67 @@ paths:
       summary: 添加备注
       tags:
       - 扫码点餐
-  /h5/index.php/scan/order.Order/setTable:
+  /h5/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取收银产品类别列表
+      tags:
+      - 扫码点餐
+  /h5/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取收银产品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取收银产品列表
+      tags:
+      - 扫码点餐
+  /h5/remark:
     post:
       consumes:
       - application/json
-      description: 开台
+      description: 桌台订单商品备注
       parameters:
-      - description: 创建扫码桌台订单参数
+      - description: 详情参数
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.OpenDeskRequest'
+          $ref: '#/definitions/req.OrderProductRemarkReq'
       produces:
       - application/json
       responses:
@@ -10082,38 +9991,16 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/resp.H5Response'
+            - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/resp.H5Buffet'
-                  type: array
+                  $ref: '#/definitions/resp.ShopCart'
               type: object
+        "404":
+          description: 未找到
       security:
       - JwtToken: []
-      summary: 开台
-      tags:
-      - 扫码点餐
-  /h5/index.php/scan/product.category/index:
-    post:
-      consumes:
-      - application/json
-      description: 获取商品分类
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/resp.H5Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.H5CategoryList'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取商品分类
+      summary: 桌台订单商品备注
       tags:
       - 扫码点餐
   /kitchen/base:
@@ -10131,7 +10018,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.AssistantBase'
+                  $ref: '#/definitions/resp.KitchenBase'
               type: object
       security:
       - JwtToken: []

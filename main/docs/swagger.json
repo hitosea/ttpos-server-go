@@ -8531,6 +8531,46 @@
                 }
             }
         },
+        "/cashier/print_data": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "获取打印数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterDataList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/product/category/list": {
             "get": {
                 "security": [
@@ -9481,8 +9521,8 @@
                 }
             }
         },
-        "/h5/index.php/scan/order.Order/buffetList": {
-            "post": {
+        "/h5/buffet/list": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
@@ -9501,25 +9541,91 @@
                 "summary": "自助餐套餐信息",
                 "responses": {
                     "200": {
+                        "description": "自助餐列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.BuffetListPaginationResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/h5/call": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "发起呼叫",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "发起呼叫",
+                "parameters": [
+                    {
+                        "description": "呼叫请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CallReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/resp.H5Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/resp.H5Buffet"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
+                    }
+                }
+            }
+        },
+        "/h5/desk/open": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "开台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "开台",
+                "parameters": [
+                    {
+                        "description": "开台参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskOrderCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "开台成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.CreateDeskOrderResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -9563,14 +9669,14 @@
                 }
             }
         },
-        "/h5/index.php/scan/order.Order/setTable": {
-            "post": {
+        "/h5/product/category/list": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "开台",
+                "description": "获取收银产品类别列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -9580,51 +9686,28 @@
                 "tags": [
                     "扫码点餐"
                 ],
-                "summary": "开台",
-                "parameters": [
-                    {
-                        "description": "创建扫码桌台订单参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OpenDeskRequest"
-                        }
-                    }
-                ],
+                "summary": "获取收银产品类别列表",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/resp.H5Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/resp.H5Buffet"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
         },
-        "/h5/index.php/scan/product.category/index": {
-            "post": {
+        "/h5/product/list": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "获取商品分类",
+                "description": "获取收银产品列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -9634,25 +9717,86 @@
                 "tags": [
                     "扫码点餐"
                 ],
-                "summary": "获取商品分类",
+                "summary": "获取收银产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductListWithPaginationResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/h5/remark": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台订单商品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "桌台订单商品备注",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductRemarkReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/resp.H5Response"
+                                    "$ref": "#/definitions/dto.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.H5CategoryList"
+                                            "$ref": "#/definitions/resp.ShopCart"
                                         }
                                     }
                                 }
                             ]
                         }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -9687,7 +9831,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.AssistantBase"
+                                            "$ref": "#/definitions/resp.KitchenBase"
                                         }
                                     }
                                 }
@@ -12048,23 +12192,6 @@
                 }
             }
         },
-        "req.BuffetCustomerType": {
-            "type": "object",
-            "properties": {
-                "customer_type_id": {
-                    "description": "自助餐顾客类型ID",
-                    "type": "integer"
-                },
-                "name_text": {
-                    "description": "自助餐顾客类型名称",
-                    "type": "string"
-                },
-                "num": {
-                    "description": "顾客数量",
-                    "type": "integer"
-                }
-            }
-        },
         "req.CallReq": {
             "type": "object",
             "required": [
@@ -12463,33 +12590,6 @@
                 },
                 "uuid": {
                     "description": "销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.OpenDeskRequest": {
-            "type": "object",
-            "properties": {
-                "buffet_customer_type": {
-                    "description": "自助餐顾客类型",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.BuffetCustomerType"
-                    }
-                },
-                "buffet_ids": {
-                    "description": "自助餐ID",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "is_buffet": {
-                    "description": "是否是餐桌",
-                    "type": "integer"
-                },
-                "meal_num": {
-                    "description": "顾客数量",
                     "type": "integer"
                 }
             }
@@ -13485,14 +13585,6 @@
                         }
                     ]
                 },
-                "payment": {
-                    "description": "支付设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Payment"
-                        }
-                    ]
-                },
                 "permissions": {
                     "description": "点餐助手权限",
                     "type": "array",
@@ -13964,36 +14056,12 @@
                     "description": "设备备注",
                     "type": "string"
                 },
-                "payment": {
-                    "description": "支付设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Payment"
-                        }
-                    ]
-                },
                 "permissions": {
                     "description": "页面权限",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.Permission"
                     }
-                },
-                "printer": {
-                    "description": "打印设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Printer"
-                        }
-                    ]
-                },
-                "tablet": {
-                    "description": "平板端设置",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.TabletResp"
-                        }
-                    ]
                 },
                 "username": {
                     "description": "登录账号",
@@ -14059,6 +14127,10 @@
         "resp.Company": {
             "type": "object",
             "properties": {
+                "logo": {
+                    "description": "商家logo",
+                    "type": "string"
+                },
                 "name": {
                     "description": "商家名称",
                     "type": "string"
@@ -14437,175 +14509,6 @@
                 }
             }
         },
-        "resp.H5Buffet": {
-            "type": "object",
-            "properties": {
-                "app_id": {
-                    "type": "integer"
-                },
-                "buffetCustomerType": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.H5BuffetCustomerType"
-                    }
-                },
-                "buffetTaxes": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "app_id": {
-                                "type": "integer"
-                            },
-                            "buffet_id": {
-                                "type": "integer"
-                            },
-                            "buffet_tax_type": {
-                                "type": "integer"
-                            },
-                            "create_time": {
-                                "type": "string"
-                            },
-                            "id": {
-                                "type": "integer"
-                            },
-                            "tax_category_id": {
-                                "type": "integer"
-                            },
-                            "tax_rate": {
-                                "type": "integer"
-                            },
-                            "update_time": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "buy_limit_status": {
-                    "type": "integer"
-                },
-                "create_time": {
-                    "type": "string"
-                },
-                "delete_time": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_comb": {
-                    "type": "integer"
-                },
-                "is_remain_continue": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "name_text": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "string"
-                },
-                "remain_continue_notice_time": {
-                    "type": "integer"
-                },
-                "remain_continue_time": {
-                    "type": "integer"
-                },
-                "sale_num": {
-                    "type": "integer"
-                },
-                "shop_supplier_id": {
-                    "type": "integer"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "time_limit": {
-                    "type": "integer"
-                },
-                "update_time": {
-                    "type": "string"
-                }
-            }
-        },
-        "resp.H5BuffetCustomerType": {
-            "type": "object",
-            "properties": {
-                "app_id": {
-                    "type": "integer"
-                },
-                "buffet_id": {
-                    "type": "integer"
-                },
-                "create_time": {
-                    "type": "string"
-                },
-                "customer_type_id": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name_text": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "string"
-                },
-                "shop_supplier_id": {
-                    "type": "integer"
-                },
-                "update_time": {
-                    "type": "string"
-                }
-            }
-        },
-        "resp.H5Category": {
-            "type": "object",
-            "properties": {
-                "category_id": {
-                    "type": "integer"
-                },
-                "is_special": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "name_text": {
-                    "type": "string"
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "path_name_text": {
-                    "type": "string"
-                },
-                "product_count": {
-                    "type": "string"
-                },
-                "product_num": {
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.H5CategoryList": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.H5Category"
-                    }
-                }
-            }
-        },
         "resp.H5OrderDetail": {
             "type": "object",
             "properties": {
@@ -14975,6 +14878,59 @@
                 "selected_num": {
                     "description": "已选数量。已选择xx份",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.KitchenBase": {
+            "type": "object",
+            "properties": {
+                "buffet": {
+                    "description": "自助餐设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Buffet"
+                        }
+                    ]
+                },
+                "business": {
+                    "description": "门店业务设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Business"
+                        }
+                    ]
+                },
+                "cloud": {
+                    "description": "云端基础信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.CloudBasic"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
+                "currency": {
+                    "description": "货币单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Currency"
+                        }
+                    ]
+                },
+                "kitchen": {
+                    "description": "厨显端设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.KitchenResp"
+                        }
+                    ]
                 }
             }
         },
@@ -16032,83 +15988,55 @@
                 }
             }
         },
+        "resp.PrinterDataList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "打印数据列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterData"
+                    }
+                }
+            }
+        },
         "resp.PrinterLogData": {
             "type": "object",
             "properties": {
-                "cashier_device_id": {
-                    "description": "收银机绑定的设备ID",
-                    "type": "string"
-                },
-                "copies": {
-                    "description": "打印机.份数 =\u003e 对应旧表print_times",
-                    "type": "integer"
-                },
                 "create_time": {
                     "description": "日志创建时间戳",
                     "type": "integer"
                 },
-                "data": {
-                    "description": "打印数据",
-                    "type": "string"
-                },
-                "data_type": {
+                "data_type_name": {
                     "description": "数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;",
-                    "type": "integer"
-                },
-                "first_execution": {
-                    "description": "是否首次执行打印 1-是 0-否;",
-                    "type": "integer"
-                },
-                "no": {
-                    "description": "桌台号或者呼叫号(如果有)",
                     "type": "string"
                 },
-                "num": {
-                    "description": "打印次数",
-                    "type": "integer"
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string"
                 },
-                "print_method": {
-                    "description": "打印方式 1文本打印, 2图片打印'",
-                    "type": "integer"
-                },
-                "printer_config": {
-                    "description": "打印机.配置",
+                "printer_name": {
+                    "description": "打印机名称",
                     "type": "string"
                 },
                 "printer_time": {
-                    "description": "打印时间",
-                    "type": "integer"
-                },
-                "printer_type": {
-                    "description": "打印机.类型",
-                    "type": "string"
-                },
-                "printer_uuid": {
-                    "description": "打印机uuid",
+                    "description": "最后打印时间",
                     "type": "integer"
                 },
                 "reason": {
                     "description": "原因",
                     "type": "string"
                 },
-                "related_type": {
-                    "description": "关联类型",
-                    "type": "integer"
+                "rule_name": {
+                    "description": "商品打印规则名称",
+                    "type": "string"
                 },
-                "related_uuid": {
-                    "description": "关联ID",
-                    "type": "integer"
+                "serial_no": {
+                    "description": "桌台号或者呼叫号(如果有)",
+                    "type": "string"
                 },
                 "status": {
                     "description": "状态(0结束,1进行中,2成功)",
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "类型:0系统默认队列,1云上服务下放",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -17264,6 +17192,14 @@
                         }
                     ]
                 },
+                "business": {
+                    "description": "门店业务设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Business"
+                        }
+                    ]
+                },
                 "cloud": {
                     "description": "云端基础信",
                     "allOf": [
@@ -17452,7 +17388,7 @@
                     "type": "string"
                 },
                 "is_buffet_discount": {
-                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启 todo ？？在哪里设置的？？",
+                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启 // todo 干嘛用的？ 如果要删掉的话要跟前端沟通，否则删掉后收银端数据解析错误",
                     "type": "string"
                 },
                 "is_buy_continue": {
@@ -17579,17 +17515,6 @@
                 }
             }
         },
-        "setting.CalendarItem": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "setting.CarouselItem": {
             "type": "object",
             "properties": {
@@ -17603,19 +17528,6 @@
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "setting.CashierPrinterItem": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "description": "收银机设备ID",
-                    "type": "string"
-                },
-                "printer_id": {
-                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符",
                     "type": "string"
                 }
             }
@@ -17875,6 +17787,60 @@
                 }
             }
         },
+        "setting.KitchenResp": {
+            "type": "object",
+            "properties": {
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_call_service": {
+                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_come_dish": {
+                    "description": "是否开启来菜提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_open": {
+                    "description": "是否开启厨显功能 0关闭 1开启",
+                    "type": "string"
+                },
+                "is_wait_color": {
+                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "server": {
+                    "description": "厨显服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                },
+                "wait_color": {
+                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "setting.OrderLimit": {
             "type": "object",
             "properties": {
@@ -17905,118 +17871,6 @@
                 },
                 "is_table_order": {
                     "description": "桌台用餐",
-                    "type": "string"
-                }
-            }
-        },
-        "setting.Payment": {
-            "type": "object",
-            "properties": {
-                "is_balance": {
-                    "description": "是否开启余额支付 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_cash": {
-                    "description": "是否开启现金支付 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_other": {
-                    "description": "是否开启其他方式支付 0-关闭 1-开启",
-                    "type": "string"
-                }
-            }
-        },
-        "setting.PrintItem": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "setting.Printer": {
-            "type": "object",
-            "properties": {
-                "buffet_sign_open": {
-                    "description": "自助餐标识设置（默认开启）",
-                    "type": "string"
-                },
-                "calendar_list": {
-                    "description": "日历列表 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.CalendarItem"
-                    }
-                },
-                "cashier_open": {
-                    "description": "是否开启打印",
-                    "type": "string"
-                },
-                "cashier_printer": {
-                    "description": "打印机列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.CashierPrinterItem"
-                    }
-                },
-                "cashier_printer_id": {
-                    "description": "打印机id",
-                    "type": "string"
-                },
-                "consumption_tax": {
-                    "description": "消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示",
-                    "type": "string"
-                },
-                "default_calendar": {
-                    "description": "日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）",
-                    "type": "string"
-                },
-                "default_language": {
-                    "description": "打印语言（收银）",
-                    "type": "string"
-                },
-                "kitchen_language": {
-                    "description": "打印语言（送厨）",
-                    "type": "string"
-                },
-                "kitchen_print_method": {
-                    "description": "打印方式（送厨） 1-文本打印 2-图片打印",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "language_method": {
-                    "description": "语言方式（收银） 1-单语言 2-多语言",
-                    "type": "string"
-                },
-                "monetary_unit_open": {
-                    "description": "货币单位（默认开启）",
-                    "type": "string"
-                },
-                "print_list": {
-                    "description": "打印方式列表 （1-文本打印 2-图片打印 ）",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.PrintItem"
-                    }
-                },
-                "print_method": {
-                    "description": "打印方式（收银） 1-文本打印 2-图片打印",
                     "type": "string"
                 }
             }
@@ -18074,7 +17928,7 @@
                 },
                 "is_show_sold_out": {
                     "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
-                    "type": "integer"
+                    "type": "string"
                 },
                 "is_voice_remind": {
                     "description": "是否开启声音提醒 0-关闭 1-开启",
