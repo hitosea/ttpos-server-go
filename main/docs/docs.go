@@ -606,6 +606,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -655,6 +660,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -704,6 +714,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -753,6 +768,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -802,6 +822,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/change_desk": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "转菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -851,6 +876,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -900,6 +930,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -949,6 +984,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -998,6 +1038,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -1420,6 +1465,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -1517,6 +1567,11 @@ const docTemplate = `{
         },
         "/assistant/desk/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -3000,32 +3055,20 @@ const docTemplate = `{
                 "summary": "重新打印",
                 "parameters": [
                     {
-                        "description": "重新打印参数",
+                        "description": "打印参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.PrinterLogReq"
+                            "$ref": "#/definitions/req.PrinterPrintReq"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "打印数据",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ReprintResp"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/resp.PrinterData"
                         }
                     }
                 }
@@ -3685,6 +3728,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -3734,6 +3782,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "查询桌台购物车信息",
                 "consumes": [
                     "application/json"
@@ -3781,6 +3834,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -3830,6 +3888,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3879,6 +3942,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3928,6 +3996,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/change_desk": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "转菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -3977,6 +4050,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -4026,6 +4104,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -4075,6 +4158,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -4124,6 +4212,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -4283,6 +4376,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/free": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "免单",
                 "consumes": [
                     "application/json"
@@ -4494,6 +4592,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/must_plan/confirm": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "确认必点商品",
                 "consumes": [
                     "application/json"
@@ -4528,6 +4631,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -4625,6 +4733,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -4730,6 +4843,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/payment/zero_rule": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "设置结账抹零规则",
                 "consumes": [
                     "application/json"
@@ -5145,6 +5263,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/sale_order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除一个销售订单(删除拆单)",
                 "consumes": [
                     "application/json"
@@ -5191,6 +5314,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/sale_order/delete_all": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除所有子销售订单(撤销拆单)",
                 "consumes": [
                     "application/json"
@@ -5237,6 +5365,11 @@ const docTemplate = `{
         },
         "/cashier/desk/order/sale_order/move_product": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "从一个销售订单移动商品到另一个销售订单",
                 "consumes": [
                     "application/json"
@@ -5622,6 +5755,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/cooking": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "送厨购物车商品",
                 "consumes": [
                     "application/json"
@@ -5714,6 +5852,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "向购物车添加商品",
                 "consumes": [
                     "application/json"
@@ -5763,6 +5906,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/cancel_giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5812,6 +5960,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/cancel_returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "取消退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5861,6 +6014,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/giving": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "赠菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -5910,6 +6068,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/num": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改购物车商品数量",
                 "consumes": [
                     "application/json"
@@ -5959,6 +6122,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/cart/product/returning": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "退菜购物车商品",
                 "consumes": [
                     "application/json"
@@ -6008,6 +6176,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/check": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "订单检查。场景：1、点击结账按钮时，检查订单是否可以结账",
                 "consumes": [
                     "application/json"
@@ -6167,6 +6340,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/free": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "免单",
                 "consumes": [
                     "application/json"
@@ -6475,6 +6653,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/must_plan/confirm": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "确认必点商品",
                 "consumes": [
                     "application/json"
@@ -6509,6 +6692,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/payment/cancel": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "撤销一个支付单",
                 "consumes": [
                     "application/json"
@@ -6606,6 +6794,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/payment/finish": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "完成销售订单的付款结账",
                 "consumes": [
                     "application/json"
@@ -6711,6 +6904,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/payment/zero_rule": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "设置结账抹零规则",
                 "consumes": [
                     "application/json"
@@ -7057,6 +7255,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/sale_order/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除一个销售订单(删除拆单)",
                 "consumes": [
                     "application/json"
@@ -7103,6 +7306,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/sale_order/delete_all": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除所有子销售订单(撤销拆单)",
                 "consumes": [
                     "application/json"
@@ -7149,6 +7357,11 @@ const docTemplate = `{
         },
         "/cashier/instant/order/sale_order/move_product": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "从一个销售订单移动商品到另一个销售订单",
                 "consumes": [
                     "application/json"
@@ -8671,6 +8884,157 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/cashier/printer/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印列表-查询条件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "获取打印列表-查询条件",
+                "responses": {
+                    "200": {
+                        "description": "打印数据列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterBaseResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/printer/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "获取打印列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "数据类型 (打印类型), -1=全都、.....",
+                        "name": "dataType",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "打印机UUID",
+                        "name": "printerUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "queryEndTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "queryStartTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterListPaginationResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/printer/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PrinterData"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -13302,6 +13666,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.PrinterPrintReq": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "打印日志uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProcessedCallReq": {
             "type": "object",
             "required": [
@@ -13648,6 +14021,10 @@ const docTemplate = `{
                 "product_amount": {
                     "description": "商品金额(折后价)",
                     "type": "number"
+                },
+                "product_num": {
+                    "description": "总数量，用于点餐助手、平板端、h5",
+                    "type": "integer"
                 },
                 "product_origin_amount": {
                     "description": "商品金额(原价)",
@@ -16108,6 +16485,38 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PrinterBase": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "打印机名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrinterBaseResp": {
+            "type": "object",
+            "properties": {
+                "printer_list": {
+                    "description": "打印机列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterBase"
+                    }
+                },
+                "printer_type_list": {
+                    "description": "打印类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterBase"
+                    }
+                }
+            }
+        },
         "resp.PrinterData": {
             "type": "object",
             "properties": {
@@ -16149,6 +16558,26 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PrinterListPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "打印数据列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrinterLogData"
+                    }
+                },
+                "meta": {
+                    "description": "Meta信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.PrinterLogData": {
             "type": "object",
             "properties": {
@@ -16181,11 +16610,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "serial_no": {
-                    "description": "桌台号或者呼叫号(如果有)",
+                    "description": "桌台号或者序号(如果有)",
                     "type": "string"
                 },
                 "status": {
                     "description": "状态(0结束,1进行中,2成功)",
+                    "type": "integer"
+                },
+                "status_text": {
+                    "description": "状态文本",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "打印日志Uuid",
                     "type": "integer"
                 }
             }
@@ -16200,10 +16637,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.AboutBuffet"
                         }
                     ]
-                },
-                "create_time": {
-                    "description": "送厨时间",
-                    "type": "integer"
                 },
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
@@ -16251,6 +16684,14 @@ const docTemplate = `{
                 },
                 "remark": {
                     "description": "备注",
+                    "type": "string"
+                },
+                "send_kitchen_time": {
+                    "description": "送厨时间",
+                    "type": "integer"
+                },
+                "sign": {
+                    "description": "签名，用于合并商品",
                     "type": "string"
                 },
                 "status": {
@@ -17021,39 +17462,6 @@ const docTemplate = `{
                 "refundable_amount": {
                     "description": "剩余可退款金额",
                     "type": "number"
-                }
-            }
-        },
-        "resp.ReprintResp": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "string"
-                },
-                "print_method": {
-                    "description": "打印方式 1文本打印, 2图片打印",
-                    "type": "integer"
-                },
-                "print_times": {
-                    "type": "integer"
-                },
-                "printer_config": {
-                    "type": "string"
-                },
-                "printer_log_uuid": {
-                    "type": "integer"
-                },
-                "printer_name": {
-                    "type": "string"
-                },
-                "printer_time": {
-                    "type": "integer"
-                },
-                "printer_type": {
-                    "type": "string"
-                },
-                "printer_uuid": {
-                    "type": "integer"
                 }
             }
         },

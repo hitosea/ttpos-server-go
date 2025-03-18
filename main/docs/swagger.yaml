@@ -968,6 +968,12 @@ definitions:
     required:
     - uuid
     type: object
+  req.PrinterPrintReq:
+    properties:
+      uuid:
+        description: 打印日志uuid
+        type: integer
+    type: object
   req.ProcessedCallReq:
     properties:
       uuid:
@@ -1216,6 +1222,9 @@ definitions:
       product_amount:
         description: 商品金额(折后价)
         type: number
+      product_num:
+        description: 总数量，用于点餐助手、平板端、h5
+        type: integer
       product_origin_amount:
         description: 商品金额(原价)
         type: number
@@ -2845,6 +2854,28 @@ definitions:
       uuid:
         type: integer
     type: object
+  resp.PrinterBase:
+    properties:
+      name:
+        description: 打印机名称
+        type: string
+      uuid:
+        description: 打印日志Uuid
+        type: integer
+    type: object
+  resp.PrinterBaseResp:
+    properties:
+      printer_list:
+        description: 打印机列表
+        items:
+          $ref: '#/definitions/resp.PrinterBase'
+        type: array
+      printer_type_list:
+        description: 打印类型列表
+        items:
+          $ref: '#/definitions/resp.PrinterBase'
+        type: array
+    type: object
   resp.PrinterData:
     properties:
       copies:
@@ -2875,6 +2906,18 @@ definitions:
           $ref: '#/definitions/resp.PrinterData'
         type: array
     type: object
+  resp.PrinterListPaginationResp:
+    properties:
+      list:
+        description: 打印数据列表
+        items:
+          $ref: '#/definitions/resp.PrinterLogData'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: Meta信息
+    type: object
   resp.PrinterLogData:
     properties:
       create_time:
@@ -2899,10 +2942,16 @@ definitions:
         description: 商品打印规则名称
         type: string
       serial_no:
-        description: 桌台号或者呼叫号(如果有)
+        description: 桌台号或者序号(如果有)
         type: string
       status:
         description: 状态(0结束,1进行中,2成功)
+        type: integer
+      status_text:
+        description: 状态文本
+        type: string
+      uuid:
+        description: 打印日志Uuid
         type: integer
     type: object
   resp.Product:
@@ -2911,9 +2960,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.AboutBuffet'
         description: 自助餐信息
-      create_time:
-        description: 送厨时间
-        type: integer
       discount_price:
         description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
         type: number
@@ -2945,6 +2991,12 @@ definitions:
         type: number
       remark:
         description: 备注
+        type: string
+      send_kitchen_time:
+        description: 送厨时间
+        type: integer
+      sign:
+        description: 签名，用于合并商品
         type: string
       status:
         description: '0: 未送厨 1:已送厨'
@@ -3451,28 +3503,6 @@ definitions:
       refundable_amount:
         description: 剩余可退款金额
         type: number
-    type: object
-  resp.ReprintResp:
-    properties:
-      data:
-        type: string
-      print_method:
-        description: 打印方式 1文本打印, 2图片打印
-        type: integer
-      print_times:
-        type: integer
-      printer_config:
-        type: string
-      printer_log_uuid:
-        type: integer
-      printer_name:
-        type: string
-      printer_time:
-        type: integer
-      printer_type:
-        type: string
-      printer_uuid:
-        type: integer
     type: object
   resp.ReturnFoodReasonResp:
     properties:
@@ -4704,6 +4734,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 送厨购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4733,6 +4765,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 向购物车添加商品
       tags:
       - 点餐助手端.桌台
@@ -4762,6 +4796,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消赠菜购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4791,6 +4827,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消退菜购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4820,6 +4858,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 转菜购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4849,6 +4889,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 赠菜购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4878,6 +4920,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 修改购物车某个商品的数量
       tags:
       - 点餐助手端.桌台
@@ -4907,6 +4951,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 退菜购物车商品
       tags:
       - 点餐助手端.桌台
@@ -4938,6 +4984,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderCheckRes'
               type: object
+      security:
+      - JwtToken: []
       summary: 订单检查
       tags:
       - 点餐助手端.桌台
@@ -5179,6 +5227,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 撤销一个支付单
       tags:
       - 点餐助手端.桌台
@@ -5235,6 +5285,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderFinishResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 完成销售订单的付款结账
       tags:
       - 点餐助手端.桌台
@@ -6077,24 +6129,19 @@ paths:
       - application/json
       description: 重新打印
       parameters:
-      - description: 重新打印参数
+      - description: 打印参数
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.PrinterLogReq'
+          $ref: '#/definitions/req.PrinterPrintReq'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 打印数据
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.ReprintResp'
-              type: object
+            $ref: '#/definitions/resp.PrinterData'
       security:
       - JwtToken: []
       summary: 重新打印
@@ -6520,6 +6567,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 送厨购物车商品
       tags:
       - 收银端.桌台
@@ -6548,6 +6597,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 查询桌台购物车信息
       tags:
       - 收银端.桌台
@@ -6577,6 +6628,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 向购物车添加商品
       tags:
       - 收银端.桌台
@@ -6606,6 +6659,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消赠菜购物车商品
       tags:
       - 收银端.桌台
@@ -6635,6 +6690,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消退菜购物车商品
       tags:
       - 收银端.桌台
@@ -6664,6 +6721,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 转菜购物车商品
       tags:
       - 收银端.桌台
@@ -6693,6 +6752,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 赠菜购物车商品
       tags:
       - 收银端.桌台
@@ -6722,6 +6783,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 修改购物车某个商品的数量
       tags:
       - 收银端.桌台
@@ -6751,6 +6814,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 退菜购物车商品
       tags:
       - 收银端.桌台
@@ -6782,6 +6847,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderCheckRes'
               type: object
+      security:
+      - JwtToken: []
       summary: 订单检查
       tags:
       - 收银端.桌台
@@ -6871,6 +6938,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderFinishResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 免单
       tags:
       - 收银端.桌台
@@ -6989,6 +7058,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 确认必点商品
       tags:
       - 收银端.桌台
@@ -7016,6 +7087,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 撤销一个支付单
       tags:
       - 收银端.桌台
@@ -7072,6 +7145,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderFinishResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 完成销售订单的付款结账
       tags:
       - 收银端.桌台
@@ -7134,6 +7209,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 设置结账抹零规则
       tags:
       - 收银端.桌台
@@ -7372,6 +7449,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 删除一个销售订单(删除拆单)
       tags:
       - 收银端.桌台
@@ -7399,6 +7478,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 删除所有子销售订单(撤销拆单)
       tags:
       - 收银端.桌台
@@ -7426,6 +7507,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 从一个销售订单移动商品到另一个销售订单
       tags:
       - 收银端.桌台
@@ -7658,6 +7741,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 送厨购物车商品
       tags:
       - 收银端.点餐
@@ -7711,6 +7796,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 向购物车添加商品
       tags:
       - 收银端.点餐
@@ -7740,6 +7827,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消赠菜购物车商品
       tags:
       - 收银端.点餐
@@ -7769,6 +7858,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 取消退菜购物车商品
       tags:
       - 收银端.点餐
@@ -7798,6 +7889,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 赠菜购物车商品
       tags:
       - 收银端.点餐
@@ -7827,6 +7920,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 修改购物车某个商品的数量
       tags:
       - 收银端.点餐
@@ -7856,6 +7951,8 @@ paths:
               type: object
         "404":
           description: 未找到
+      security:
+      - JwtToken: []
       summary: 退菜购物车商品
       tags:
       - 收银端.点餐
@@ -7887,6 +7984,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderCheckRes'
               type: object
+      security:
+      - JwtToken: []
       summary: 订单检查
       tags:
       - 收银端.点餐
@@ -7976,6 +8075,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderFinishResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 免单
       tags:
       - 收银端.点餐
@@ -8153,6 +8254,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
       summary: 确认必点商品
       tags:
       - 收银端.点餐
@@ -8180,6 +8283,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 撤销一个支付单
       tags:
       - 收银端.点餐
@@ -8236,6 +8341,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.OrderFinishResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 完成销售订单的付款结账
       tags:
       - 收银端.点餐
@@ -8298,6 +8405,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
               type: object
+      security:
+      - JwtToken: []
       summary: 设置结账抹零规则
       tags:
       - 收银端.点餐
@@ -8498,6 +8607,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 删除一个销售订单(删除拆单)
       tags:
       - 收银端.点餐
@@ -8525,6 +8636,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 删除所有子销售订单(撤销拆单)
       tags:
       - 收银端.点餐
@@ -8552,6 +8665,8 @@ paths:
                 data:
                   $ref: '#/definitions/resp.ShopCart'
               type: object
+      security:
+      - JwtToken: []
       summary: 从一个销售订单移动商品到另一个销售订单
       tags:
       - 收银端.点餐
@@ -9424,6 +9539,102 @@ paths:
       summary: 获取打印数据
       tags:
       - 收银端.基础信息
+  /cashier/printer/base:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印列表-查询条件
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据列表
+          schema:
+            $ref: '#/definitions/resp.PrinterBaseResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取打印列表-查询条件
+      tags:
+      - 收银端.打印记录
+  /cashier/printer/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印列表
+      parameters:
+      - description: 数据类型 (打印类型), -1=全都、.....
+        in: query
+        name: dataType
+        type: integer
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 打印机UUID
+        in: query
+        name: printerUuid
+        type: integer
+      - description: 查询结束时间戳
+        in: query
+        name: queryEndTime
+        type: integer
+      - description: 查询开始时间戳
+        in: query
+        name: queryStartTime
+        type: integer
+      - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据列表
+          schema:
+            $ref: '#/definitions/resp.PrinterListPaginationResp'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取打印列表
+      tags:
+      - 收银端.打印记录
+  /cashier/printer/print:
+    post:
+      consumes:
+      - application/json
+      description: 打印
+      parameters:
+      - description: 打印参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            $ref: '#/definitions/resp.PrinterData'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打印
+      tags:
+      - 收银端.打印记录
   /cashier/product/category/list:
     get:
       consumes:

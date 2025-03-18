@@ -1,5 +1,7 @@
 package resp
 
+import "ttpos-server-go/app/dto"
+
 type PrinterData struct {
 	Uuid          uint64 `json:"uuid"`           // 打印日志Uuid
 	Data          string `json:"data"`           // 打印数据
@@ -14,19 +16,36 @@ type PrinterDataList struct {
 }
 
 type PrinterLogData struct {
-	SerialNo     string `json:"serial_no"`      // 桌台号或者呼叫号(如果有)
+	Uuid         uint64 `json:"uuid"`           // 打印日志Uuid
+	SerialNo     string `json:"serial_no"`      // 桌台号或者序号(如果有)
 	OrderNo      string `json:"order_no"`       // 订单号
 	PrinterName  string `json:"printer_name"`   // 打印机名称
 	RuleName     string `json:"rule_name"`      // 商品打印规则名称
 	DataTypeName string `json:"data_type_name"` // 数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单;
 	CreateTime   int64  `json:"create_time"`    // 日志创建时间戳
 	Status       int    `json:"status"`         // 状态(0结束,1进行中,2成功)
+	StatusText   string `json:"status_text"`    // 状态文本
 	PrinterTime  int64  `json:"printer_time"`   // 最后打印时间
 	Reason       string `json:"reason"`         // 原因
+}
+
+type PrinterListPaginationResp struct {
+	List []PrinterLogData `json:"list"` // 打印数据列表
+	Meta dto.PageResponse `json:"meta"` // Meta信息
 }
 
 type PrinterInfo struct {
 	PrinterType   string // 打印机类型
 	PrinterConfig string // 打印机设置
 	PrintCopies   uint   // 打印次数
+}
+
+type PrinterBase struct {
+	Uuid uint64 `json:"uuid"` // 打印日志Uuid
+	Name string `json:"name"` // 打印机名称
+}
+
+type PrinterBaseResp struct {
+	PrinterList  []PrinterBase `json:"printer_list"`      // 打印机列表
+	PrinterTypes []PrinterBase `json:"printer_type_list"` // 打印类型列表
 }

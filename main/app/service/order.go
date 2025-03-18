@@ -2872,7 +2872,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						CustomerTypeUuid: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
 						BuffetUuid:       orderBuffetCustomer.BuffetPackageUuid,
 					},
-					CreateTime: orderBuffetCustomer.CreateTime,
+					SendKitchenTime: orderBuffetCustomer.CreateTime,
+					Sign:            cryptor.Md5String(strconv.FormatUint(orderBuffetCustomer.Uuid, 10)),
 				}
 				productList = append(productList, product)
 			}
@@ -2910,7 +2911,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						IsCustomer: false,
 						IsDelay:    true, // 标记该商品是加钟商品
 					},
-					CreateTime: delayProduct.CreateTime,
+					SendKitchenTime: delayProduct.CreateTime,
+					Sign:            cryptor.Md5String(strconv.FormatUint(delayProduct.Uuid, 10)),
 				}
 				productList = append(productList, product)
 			}
@@ -2939,7 +2941,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					IsCancel:            saleOrderProduct.IsCancelProduct(),
-					CreateTime:          sendKitchenTime,
+					SendKitchenTime:     sendKitchenTime,
+					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 				}
 				productList = append(productList, product)
 			}
@@ -6323,13 +6326,26 @@ func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, op
 	}
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			if product.Status == constant.SaleOrderProductStatusNormal {
-				res.List = append(res.List, product)
+			// 未送厨，且不是赠菜
+			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
+				var exists bool
+				for i, p := range res.List {
+					if product.Sign == p.Sign {
+						exists = true
+						res.List[i].DiscountPrice = utils.DecimalAdd(res.List[i].DiscountPrice, product.DiscountPrice)
+						res.List[i].Num = res.List[i].Num + product.Num
+						res.List[i].SalePrice = utils.DecimalAdd(res.List[i].SalePrice, product.SalePrice)
+						break
+					}
+				}
+				if !exists {
+					res.List = append(res.List, product)
+				}
 			}
 		}
 	}
 	sort.Slice(res.List, func(i, j int) bool {
-		return res.List[i].CreateTime < res.List[j].CreateTime
+		return res.List[i].SendKitchenTime < res.List[j].SendKitchenTime
 	})
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
@@ -6347,11 +6363,13 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 	if err != nil {
 		return resp.SendKitchen{}, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
+	var productNum uint
 	productGroup := make(map[int64][]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
 			if product.Status == constant.SaleOrderProductStatusCooking {
-				productGroup[product.CreateTime] = append(productGroup[product.CreateTime], product)
+				productNum = productNum + product.Num
+				productGroup[product.SendKitchenTime] = append(productGroup[product.SendKitchenTime], product)
 			}
 		}
 	}
@@ -6380,6 +6398,7 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 		amount.MemberDiscountAmount = utils.DecimalAdd(amount.MemberDiscountAmount, calc.MemberDiscountFee)
 		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
 	}
+	amount.ProductNum = productNum
 	return resp.SendKitchen{
 		List:       groups,
 		AmountInfo: amount,

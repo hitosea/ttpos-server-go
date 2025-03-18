@@ -16,8 +16,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg/fonts"
 	"ttpos-server-go/app/printer/pkg/rabbit"
+	"ttpos-server-go/config"
 
 	qrcode "github.com/skip2/go-qrcode"
 
@@ -1153,7 +1155,9 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 // Save 保存图像并返回打印数据
 func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox bool) string {
 	// todo 测试
-	imageSrc = "./dishes_img.png"
+	if config.Server.Mode == constant.ServerModeDebug && imageSrc == "" {
+		imageSrc = "./tmp/printer/dishes_img.png"
+	}
 	//
 	var data []string
 	maxHeight := 2200

@@ -15,7 +15,6 @@ import (
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // ICallSrv 定义呼叫服务接口
@@ -24,7 +23,6 @@ type ICallSrv interface {
 	GetAbnormalPrintList(companyUuid uint64, soldOutReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error)    // 异常打印列表
 	Processed(companyUuid uint64, callUuid uint64) error                                                             // 呼叫已处理
 	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
-	Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error)                                    // 重新打印
 	GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error)                                                 // 获取未处理消息数量
 	Call(ctx context.Context, callReq req.CallReq) error                                                             // 发起呼叫
 }
@@ -74,9 +72,15 @@ func (s *callSrv) GetUnprocessedCallList(companyUuid uint64, listReq req.Unproce
 func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalPrintListReq) (resp.AbnormalPrintList, error) {
 	var res resp.AbnormalPrintList
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
-	printerLogs, total, err := printerLogRepo.PaginateGet(listReq.PageNo, listReq.PageSize,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd), printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
-		printerLogRepo.WithPrinter(), printerLogRepo.WithSaleBill(), printerLogRepo.WithSaleBillDesk())
+	printerLogs, total, err := printerLogRepo.PaginateGet(
+		listReq.PageNo,
+		listReq.PageSize,
+		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithSaleOrder(),
+		printerLogRepo.WithSaleBill(),
+	)
 	if err != nil {
 		return res, errors.WithMessage(err, "获取呼叫列表失败")
 	}
@@ -86,8 +90,11 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 		if printerLog.Printer != nil {
 			printerName = printerLog.Printer.Name
 		}
-		if printerLog.SaleBill != nil {
-			deskNo = printerLog.SaleBill.Desk.DeskNo
+		if printerLog.SaleBill != nil || printerLog.SaleOrder != nil {
+			if printerLog.SaleBill != nil {
+				deskNo = printerLog.SaleBill.SerialNo
+			}
+			deskNo = printerLog.SaleOrder.SaleBill.SerialNo
 		}
 		var item resp.AbnormalPrintItem
 		copier.Copy(&item, printerLog)
@@ -159,60 +166,6 @@ func (s *callSrv) Processed(companyUuid uint64, callUuid uint64) error {
 		return errors.WithMessage(err, "处理呼叫失败")
 	}
 	return nil
-}
-
-// Reprint 重新打印
-func (s *callSrv) Reprint(ctx context.Context, printerLogUuid uint64) (resp.ReprintResp, error) {
-	var res resp.ReprintResp
-	companyUuid := ctx.GetCompanyUuid()
-	deviceId := ctx.GetDeviceSn()
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
-	printerLog := printerLogRepo.GetPrinterLog(printerLogRepo.WhereUuid(printerLogUuid),
-		printerLogRepo.WithPrinter(), printerLogRepo.WithPrinterPrinterType())
-	if printerLog.PrinterUuid > 0 && printerLog.Printer == nil && printerLog.Printer.IsDelete() {
-		return res, errors.New("打印失败，打印机已不存在")
-	}
-	if printerLog.Data == "" {
-		return res, errors.New("打印失败，打印机已不存在")
-	}
-	if printerLog.PrinterUuid > 0 && printerLog.Type == constant.PrinterLogTypeDefault {
-		// todo 调用打印接口，实例化驱动对象传参 打印内容，打印机类型，打印机配置，打印份数
-	} else if printerLog.Type == constant.PrinterLogTypeCloud && printerLog.CashierDeviceId != "" && printerLog.CashierDeviceId != deviceId {
-		err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
-			if err := repository.NewPrinterReadLogRepo(tx).
-				Update(deviceId, map[string]any{"delete_time": time.Now().Unix()}); err != nil {
-				return errors.WithMessage(err)
-			}
-			if err := repository.NewPrinterLogRepo(tx).Update(printerLogUuid, map[string]any{"status": constant.PrinterLogStatusInProgress}); err != nil {
-				return errors.WithMessage(err)
-			}
-			return nil
-		})
-		if err != nil {
-			return res, errors.WithMessage(err, "打印失败")
-		}
-		res = resp.ReprintResp{PrinterLogUuid: printerLogUuid}
-	} else {
-		var printerName, printerType, printerConfig string
-		if printerLog.Printer != nil {
-			printerName = printerLog.Printer.Name
-			if printerLog.Printer.PrinterType != nil {
-				printerType = printerLog.Printer.PrinterType.Name
-			}
-			printerConfig = printerLog.Printer.ConfigJson
-		}
-		res = resp.ReprintResp{
-			Data:          printerLog.Data,
-			PrintMethod:   printerLog.PrintMethod,
-			PrinterUuid:   printerLog.PrinterUuid,
-			PrinterTime:   time.Now().Unix(),
-			PrinterName:   printerName,
-			PrinterType:   printerType,
-			PrinterConfig: printerConfig,
-			PrintTimes:    1,
-		}
-	}
-	return res, nil
 }
 
 // DeletePrint 删除打印

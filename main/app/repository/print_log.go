@@ -11,10 +11,12 @@ import (
 )
 
 type IPrinterLogRepo interface {
-	WithPrinter() DBOption            // 关联打印机
-	WithPrinterPrinterType() DBOption // 关联打印机.打印机类型
-	WithSaleBill() DBOption           // 关联销售账单
-	WithSaleBillDesk() DBOption       // 关联销售账单.桌台
+	WithPrinter() DBOption             // 关联打印机
+	WithPrinterPrinterType() DBOption  // 关联打印机.打印机类型
+	WithSaleBill() DBOption            // 关联销售单
+	WithSaleOrder() DBOption           // 关联销售账单
+	WithProductPrinter() DBOption      // 关联销售账单.商品打印
+	WithMemberRechargeOrder() DBOption // 关联充值订单
 
 	WhereLimit(limit int) DBOption                   // 限制查询数量
 	WhereStatus(status uint8) DBOption               // 状态查询条件
@@ -24,6 +26,7 @@ type IPrinterLogRepo interface {
 	WhereCreatedBefore(days uint) DBOption           // n天前的数据
 	WherePrinterTime() DBOption                      // 打印时间查询条件
 	WherePrintMethod(printMethod int) DBOption       // 打印方式查询条件
+	WhereTimeRange(startTime, endTime uint) DBOption // 时间范围查询条件
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
 	GetPrintLogCount(opts ...DBOption) (int64, error)
@@ -162,21 +165,32 @@ func (r *printerLogRepo) WithPrinter() DBOption {
 		return db.Preload("Printer")
 	}
 }
+func (r *printerLogRepo) WithMemberRechargeOrder() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MemberRechargeOrder")
+	}
+}
 func (r *printerLogRepo) WithPrinterPrinterType() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Printer.PrinterType")
 	}
 }
-
 func (r *printerLogRepo) WithSaleBill() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleBill")
 	}
 }
 
-func (r *printerLogRepo) WithSaleBillDesk() DBOption {
+// WithSaleOrder 关联销售账单
+func (r *printerLogRepo) WithSaleOrder() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("SaleBill.Desk")
+		return db.Preload("SaleOrder.SaleBill")
+	}
+}
+
+func (r *printerLogRepo) WithProductPrinter() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPrinter")
 	}
 }
 
@@ -219,6 +233,19 @@ func (r *printerLogRepo) WhereFirstExecution(firstExecution int) DBOption {
 func (r *printerLogRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereTimeRange 创建时间范围查询条件
+func (r *printerLogRepo) WhereTimeRange(startTime, endTime uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if startTime > 0 {
+			db = db.Where("create_time >= ?", startTime)
+		}
+		if endTime > 0 {
+			db = db.Where("create_time <= ?", endTime)
+		}
+		return db
 	}
 }
 

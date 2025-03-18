@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -17,7 +18,8 @@ import (
 
 // CallHandler 呼叫相关控制器
 type CallHandler struct {
-	callSrv service.ICallSrv
+	callSrv       service.ICallSrv
+	printerLogSrv printerService.IPrinterLogSrv
 }
 
 // GetAbnormalPrintList 异常打印列表
@@ -141,21 +143,22 @@ func (h *CallHandler) DeletePrint(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.PrinterLogReq true "重新打印参数"
-// @Success 200 {object} dto.Response{data=resp.ReprintResp}
+// @param data body req.PrinterPrintReq true "打印参数"
+// @Success 200 {object} resp.PrinterData "打印数据"
 // @Router /cashier/call/reprint [post]
 func (h *CallHandler) Reprint(c *gin.Context) {
-	var printerLogReq req.PrinterLogReq
-	if err := c.ShouldBindJSON(&printerLogReq); err != nil {
-		helper.HandleValidationError(c, err, printerLogReq, nil)
+	req := req.PrinterPrintReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-	res, err := h.callSrv.Reprint(helper.GetContext(c), printerLogReq.Uuid)
+	ctx := helper.GetContext(c)
+	resp, err := h.printerLogSrv.PrinterPrint(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res, "成功")
+	helper.Success(c, resp)
 }
 
 func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -166,10 +169,12 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	printerLogSrv := printerService.NewPrinterLogSrv(dbm, settingSrv)
 
 	// 初始化处理器
 	wrapper := CallHandler{
-		callSrv: service.NewCallSrv(dbm),
+		callSrv:       service.NewCallSrv(dbm),
+		printerLogSrv: printerLogSrv,
 	}
 
 	// 需要认证
