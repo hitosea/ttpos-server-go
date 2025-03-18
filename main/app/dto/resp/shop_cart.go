@@ -21,25 +21,37 @@ type ShopCart struct {
 
 // H5CartSendProduct 扫码h5购物车已下单品
 type H5CartSendProduct struct {
-	List          []Product `json:"product_list"`   // 商品列表
-	ProductAmount float64   `json:"product_amount"` // 商品金额(折后价)
+	Products   CartProductList  `json:"products"`    // 商品列表
+	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
 }
 
 // UnSendKitchen 未送厨商品
 type UnSendKitchen struct {
-	List       []Product        `json:"list"`        // 商品列表
+	Products   CartProductList  `json:"products"`    // 商品列表
 	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
 }
 
+// type CartProductList struct {
+// 	List []Product `json:"list"`
+// }
+
 // SendKitchen 未送厨商品
 type SendKitchen struct {
-	List       []SendKitchenProductGroup `json:"list"`
-	AmountInfo AmountInfo                `json:"amount_info"`
+	Groups     GroupList  `json:"groups"`
+	AmountInfo AmountInfo `json:"amount_info"`
+}
+
+type GroupList struct {
+	List []SendKitchenProductGroup `json:"list"`
 }
 
 type SendKitchenProductGroup struct {
-	SendKitchenTime int64     `json:"send_kitchen_time"` // 送厨时间
-	List            []Product `json:"list"`              // 商品列表
+	SendKitchenTime int64         `json:"send_kitchen_time"` // 送厨时间. “17:20:01 下单”
+	Products        GroupProducts `json:"products"`          // 组商品列表
+}
+
+type GroupProducts struct {
+	List []Product `json:"list"` // 商品列表
 }
 
 // 送厨接口响应：商品 XXX 已下架，请选择其他商品

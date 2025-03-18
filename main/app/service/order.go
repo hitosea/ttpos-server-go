@@ -6304,7 +6304,7 @@ func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid u
 	}
 	// 重新计算商品金额。商品金额=商品列表中各个商品的金额之和
 	productAmount := decimal.NewFromFloat(0)
-	for _, product := range res.List {
+	for _, product := range res.Products.List {
 		fmt.Println("GetUnOrderedH5ProductList product", product.GetPrice())
 		productAmount = productAmount.Add(decimal.NewFromFloat(product.GetPrice()))
 	}
@@ -6316,7 +6316,7 @@ func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid u
 // GetUnSendKitchen 未送厨商品列表
 func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error) {
 	res := resp.UnSendKitchen{
-		List:       make([]resp.Product, 0),
+		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
 		AmountInfo: resp.SimpleAmountInfo{},
 	}
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
@@ -6328,24 +6328,24 @@ func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, op
 			// 未送厨，且不是赠菜
 			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
 				var exists bool
-				for i, p := range res.List {
+				for i, p := range res.Products.List {
 					if product.Sign == p.Sign {
 						exists = true
-						res.List[i].DiscountPrice = utils.DecimalAdd(res.List[i].DiscountPrice, product.DiscountPrice)
-						res.List[i].Num = res.List[i].Num + product.Num
-						res.List[i].SalePrice = utils.DecimalAdd(res.List[i].SalePrice, product.SalePrice)
+						res.Products.List[i].DiscountPrice = utils.DecimalAdd(res.Products.List[i].DiscountPrice, product.DiscountPrice)
+						res.Products.List[i].Num = res.Products.List[i].Num + product.Num
+						res.Products.List[i].SalePrice = utils.DecimalAdd(res.Products.List[i].SalePrice, product.SalePrice)
 						break
 					}
 				}
 				if !exists {
-					res.List = append(res.List, product)
+					res.Products.List = append(res.Products.List, product)
 					res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
 				}
 			}
 		}
 	}
-	sort.Slice(res.List, func(i, j int) bool {
-		return res.List[i].SendKitchenTime < res.List[j].SendKitchenTime
+	sort.Slice(res.Products.List, func(i, j int) bool {
+		return res.Products.List[i].SendKitchenTime < res.Products.List[j].SendKitchenTime
 	})
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
@@ -6377,7 +6377,9 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 	for sendKitchenTime, products := range productGroup {
 		groups = append(groups, resp.SendKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
-			List:            products,
+			Products: resp.GroupProducts{
+				List: products,
+			},
 		})
 	}
 	sort.Slice(groups, func(i, j int) bool {
@@ -6400,7 +6402,7 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 	}
 	amount.ProductNum = productNum
 	return resp.SendKitchen{
-		List:       groups,
+		Groups:     resp.GroupList{List: groups},
 		AmountInfo: amount,
 	}, nil
 }
