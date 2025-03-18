@@ -90,6 +90,7 @@ type RefundRechargeOrderMemberInfo struct {
 }
 
 type RefundRechargeOrderPaymentRecord struct {
+	PaymentOrderUuid  uint64  `json:"-"`                 // 支付订单Uuid
 	PaymentMethodUuid uint64  `json:"-"`                 // 支付方式Uuid
 	PaymentMethodCode int     `json:"-"`                 // 支付方式代号
 	PaymentName       string  `json:"payment_name"`      // 支付方式名称
