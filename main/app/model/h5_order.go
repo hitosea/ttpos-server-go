@@ -1,12 +1,20 @@
 package model
 
-// H5Order 扫码订单表 `ttpos_qrcode_order`
+import (
+	"time"
+	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
+)
+
+// H5Order 扫码订单表 `ttpos_h5_order`
 type H5Order struct {
 	BaseModel
-	DeskUuid  uint64 `gorm:"column:desk_uuid;not null;default:0;comment:'桌台uuid'"`                   // 桌台uuid
-	DeskNo    string `gorm:"column:desk_no;type:varchar(255);not null;default:'';comment:'桌台编号'"`    // 桌台编号
-	Status    uint   `gorm:"column:status;not null;default:0;comment:'状态, 0-未下单 1-未接单 2-已接单 3-已拒单'"` // 状态
-	OrderTime int64  `gorm:"column:order_time;not null;default:0;comment:'下单时间(时间戳)'"`               // 下单时间
+	DeskUuid      uint64 `gorm:"column:desk_uuid;not null;default:0;comment:'桌台uuid'"`                   // 桌台uuid
+	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单uuid'"`           // 销售订单uuid
+	DeskNo        string `gorm:"column:desk_no;type:varchar(255);not null;default:'';comment:'桌台编号'"`    // 桌台编号
+	Status        uint   `gorm:"column:status;not null;default:0;comment:'状态, 0-未下单 1-未接单 2-已接单 3-已拒单'"` // 状态
+	OrderTime     int64  `gorm:"column:order_time;not null;default:0;comment:'下单时间(时间戳)'"`               // 下单时间
 
 	// 拒单或接单信息
 	StaffUuid  uint64 `gorm:"column:staff_uuid;not null;default:0;comment:'接单或拒单员工ID'"`     // 接单或拒单员工ID
@@ -22,6 +30,7 @@ type H5Order struct {
 
 	// 关联对象
 	H5OrderProducts   []*H5OrderProduct   `gorm:"foreignKey:h5_order_uuid;references:uuid"`
+	SaleOrder         *SaleOrder          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleOrderProducts []*SaleOrderProduct `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	Desk              *Desk               `gorm:"foreignKey:DeskUuid;references:uuid"`
 	Staff             *Staff              `gorm:"foreignKey:StaffUuid;references:uuid"`
@@ -29,10 +38,46 @@ type H5Order struct {
 
 // 设置为空
 func (o *H5Order) SetNil() {
+	o.SaleOrder = nil
 	o.H5OrderProducts = nil
 	o.SaleOrderProducts = nil
 	o.Desk = nil
 	o.Staff = nil
+}
+
+// 拒单
+func (model *H5Order) Reject(staffUuid uint64, lang string) {
+	model.Status = constant.H5OrderStatusRejected
+	model.HandleTime = time.Now().Unix()
+	model.StaffUuid = staffUuid
+	// 快照信息
+	model.IsBuffet = model.SaleOrder.SaleBill.IsBuffet
+	model.MemberDiscountRate = model.SaleOrder.MemberDiscountRate
+	model.MemberCardDiscountRate = model.SaleOrder.MemberCardDiscountRate
+	model.CustomDiscountRate = model.SaleOrder.CustomDiscountRate
+	// 设置订单商品的快照信息
+	for _, h5OrderProduct := range model.H5OrderProducts {
+		h5OrderProduct.Reject(lang)
+	}
+	// 根据订单商品快照信息计算订单总价
+	model.ProductTotalPrice = model.CalcProductTotalPrice()
+	model.TotalAmount = model.ProductTotalPrice
+}
+
+// 计算商品总价. 商品总价=各个商品的最终单价*最终商品数量之和
+func (model *H5Order) CalcProductTotalPrice() float64 {
+	totalPrice := decimal.NewFromFloat(0)
+	for _, h5OrderProduct := range model.H5OrderProducts {
+		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
+	}
+	return totalPrice.InexactFloat64()
+}
+
+// 删除销售订单商品
+func (model *H5Order) DeleteSaleOrderProduct() {
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		saleOrderProduct.DeleteTime = time.Now().Unix()
+	}
 }
 
 // H5OrderProduct represents the ttpos_h5_order_product table in the database
@@ -60,4 +105,14 @@ type H5OrderProduct struct {
 func (o *H5OrderProduct) SetNil() {
 	o.SaleOrderProduct = nil
 	o.H5Order = nil
+}
+
+// 拒单
+func (model *H5OrderProduct) Reject(lang string) {
+	model.Name = model.SaleOrderProduct.MultiLanguageName.GetNameByLang(lang)
+	model.Price = model.SaleOrderProduct.Price
+	model.SalePrice = model.SaleOrderProduct.SalePrice
+	model.Num = model.SaleOrderProduct.Num
+	model.AttributeText = model.SaleOrderProduct.GetAttributeNamesByLang(lang)
+	model.Remark = model.SaleOrderProduct.Remark
 }

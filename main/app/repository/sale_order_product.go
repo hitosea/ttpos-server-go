@@ -1,10 +1,12 @@
 package repository
 
 import (
-	"gorm.io/gorm"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type ISaleOrderProductRepo interface {
@@ -18,6 +20,7 @@ type ISaleOrderProductRepo interface {
 	UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error
 	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
 	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
+	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error // 批量删除销售订单商品。delete_time赋值为当前时间
 }
 
 type saleOrderProductRepo struct {
@@ -174,4 +177,14 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductReasons(saleOrderUuid uint6
 	default:
 		return nil
 	}
+}
+
+// 批量删除销售订单商品。delete_time赋值为当前时间
+func (r *saleOrderProductRepo) DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error {
+	uuids := make([]uint64, 0)
+	for _, model := range models {
+		uuids = append(uuids, model.Uuid)
+	}
+	now := time.Now().Unix()
+	return r.db.Model(&model.SaleOrderProduct{}).Where("uuid in (?)", uuids).Update("delete_time", now).Error
 }

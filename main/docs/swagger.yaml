@@ -1070,6 +1070,12 @@ definitions:
     - member_uuid
     - recharge_amount
     type: object
+  req.RejectH5OrderReq:
+    properties:
+      h5_order_uuid:
+        description: h5订单ID
+        type: integer
+    type: object
   req.SoldOutItem:
     properties:
       is_sold_out:
@@ -7801,11 +7807,12 @@ paths:
       - application/json
       description: 拒单
       parameters:
-      - description: h5订单uuid
-        in: query
-        name: order_uuid
+      - description: 拒单参数
+        in: body
+        name: data
         required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/req.RejectH5OrderReq'
       produces:
       - application/json
       responses:

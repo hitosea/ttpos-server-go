@@ -5697,11 +5697,13 @@ const docTemplate = `{
                 "summary": "拒单",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "h5订单uuid",
-                        "name": "order_uuid",
-                        "in": "query",
-                        "required": true
+                        "description": "拒单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RejectH5OrderReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -14207,6 +14209,15 @@ const docTemplate = `{
                 },
                 "recharge_order_uuid": {
                     "description": "进行中的充值订单，如果没有进行中的充值订单，传递0",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.RejectH5OrderReq": {
+            "type": "object",
+            "properties": {
+                "h5_order_uuid": {
+                    "description": "h5订单ID",
                     "type": "integer"
                 }
             }

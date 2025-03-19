@@ -69,3 +69,8 @@ type OrderCartProductChangeDeskReq struct {
 	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 	DeskUuid             uint64 `json:"desk_uuid"`               // 目标桌台ID
 }
+
+// RejectH5OrderReq 拒单请求参数
+type RejectH5OrderReq struct {
+	H5OrderUuid uint64 `json:"h5_order_uuid"` // h5订单ID
+}

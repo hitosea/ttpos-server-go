@@ -20,8 +20,8 @@ import (
 // IH5OrderSrv 定义接单服务接口
 type IH5OrderSrv interface {
 	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (resp.H5OrderList, error) // 获取h5订单列表
-	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (resp.H5OrderDetailResp, error)              // 获取h5订单详情
-	RejectH5Order(ctx context.Context, orderUuid uint64) error                                          // 拒单
+	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)             // 获取h5订单详情
+	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                        // 拒单
 	AcceptH5Order(ctx context.Context, orderUuid uint64) error                                          // 接单
 }
 
@@ -115,13 +115,13 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 	return listResp, nil
 }
 
-func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (resp.H5OrderDetailResp, error) {
+func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*resp.H5OrderDetailResp, error) {
 	h5OrderRepo := repository.NewH5OrderRepo(s.dbm.GetDB(companyUuid))
-	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
+	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(h5OrderUuid), h5OrderRepo.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
 		h5OrderRepo.WithH5OrderProducts(), h5OrderRepo.WithH5OrderProductSaleOrderProduct(), h5OrderRepo.WithH5OrderProductSaleOrderProductMultiLanguageName(),
 		h5OrderRepo.WithSaleOrderProducts(), h5OrderRepo.WithSaleOrderProductsMultiLanguageName(), h5OrderRepo.WithCashier())
 	if err != nil {
-		return resp.H5OrderDetailResp{}, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 	}
 	newProducts := make([]resp.ProductItem, 0)
 	acceptedProducts := make([]resp.ProductItem, 0)
@@ -144,7 +144,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 			products, err := h5OrderRepo.GetH5OrderProducts(h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
 				h5OrderRepo.WithSaleOrderProduct222(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithH5Order())
 			if err != nil {
-				return resp.H5OrderDetailResp{}, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+				return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 			}
 			for _, product := range products {
 				if product.H5Order.Status == constant.H5OrderStatusAccepted {
@@ -173,7 +173,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 		cashier = order.Staff.RealName
 	}
 
-	return resp.H5OrderDetailResp{
+	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
 				OrderUuid:  order.Uuid,
@@ -198,10 +198,11 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 	}, nil
 }
 
-func (s *h5OrderSrv) RejectH5Order(ctx context.Context, orderUuid uint64) error {
+func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
-	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WithSaleOrderProducts())
+	// 获取h5订单
+	order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
 		return apperrors.ErrInternal
 	}
@@ -209,36 +210,35 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, orderUuid uint64) error 
 	if order.Status != constant.H5OrderStatusOrder {
 		return errors.New("当前状态不可操作")
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
-		h5OrderRepo = repository.NewH5OrderRepo(tx)
-		err := h5OrderRepo.UpdateH5Order(orderUuid, map[string]any{
-			"status":      constant.H5OrderStatusRejected, // 标记拒单
-			"staff_uuid":  ctx.GetStaffUuid(),
-			"handle_time": time.Now().Unix(),
-		})
-		if err != nil {
-			return apperrors.ErrInternal
+
+	// 拒单,保证h5订单的商品快照信息
+	order.Reject(ctx.GetStaffUuid(), ctx.GetLanguage())
+	// 删除销售订单商品
+	order.DeleteSaleOrderProduct()
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新h5订单
+		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*order); err != nil {
+			return errors.WithMessage(err, "更新h5订单失败")
 		}
-		for _, product := range order.SaleOrderProducts {
-			_, err := h5OrderRepo.CreateH5OrderProduct(model.H5OrderProduct{
-				Name:                 product.Name,
-				Price:                product.Price,
-				SalePrice:            product.SalePrice,
-				Num:                  product.Num,
-				AttributeText:        product.GetAttributeNames(),
-				Remark:               product.Remark,
-				SaleOrderProductUuid: product.Uuid,
-				H5OrderUuid:          orderUuid,
-				SaleBillUuid:         product.SaleBillUuid,
-			})
-			if err != nil {
-				return apperrors.ErrInternal
+		// 更新h5订单商品列表
+		for _, h5OrderProduct := range order.H5OrderProducts {
+			// 更新h5订单商品
+			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+				return errors.WithMessage(err, "更新h5订单商品失败")
 			}
 		}
+		// 删除销售订单商品.将该h5订单的商品删除
+		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductList(order.SaleOrderProducts); err != nil {
+			return errors.WithMessage(err, "删除销售订单商品失败")
+		}
+
 		// ToDo 增加订单操作日志
 		return nil
-	})
-	return errors.WithMessage(err)
+	}); err != nil {
+		return errors.WithMessage(err, "拒单失败")
+	}
+	return nil
 }
 
 func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, orderUuid uint64) error {

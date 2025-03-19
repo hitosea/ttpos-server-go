@@ -971,11 +971,12 @@ func (model *SaleBill) NewH5Order() *H5Order {
 		BaseModel: BaseModel{
 			Uuid: h5OrderUuid,
 		},
-		DeskUuid:        model.DeskUuid,              // 桌台uuid
-		DeskNo:          model.Desk.DeskNo,           // 桌台编号
-		Status:          constant.H5OrderStatusOrder, // 状态，已下单
-		OrderTime:       time.Now().Unix(),           // 下单时间
-		H5OrderProducts: h5OrderProductList,          // 订单商品
+		DeskUuid:        model.DeskUuid,                   // 桌台uuid
+		SaleOrderUuid:   h5OrderProducts[0].SaleOrderUuid, // 销售订单uuid
+		DeskNo:          model.Desk.DeskNo,                // 桌台编号
+		Status:          constant.H5OrderStatusOrder,      // 状态，已下单
+		OrderTime:       time.Now().Unix(),                // 下单时间
+		H5OrderProducts: h5OrderProductList,               // 订单商品
 	}
 }
 

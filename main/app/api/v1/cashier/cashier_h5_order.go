@@ -77,16 +77,19 @@ func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param order_uuid query int true "h5订单uuid"
+// @param data body req.RejectH5OrderReq true "拒单参数"
 // @Success 200 {object} dto.Response
 // @Router /cashier/h5_order/reject [post]
 func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
-	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err, "参数错误"))
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.RejectH5OrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
 	}
 
-	err = h.h5OrderSrv.RejectH5Order(helper.GetContext(c), orderUuid)
+	err := h.h5OrderSrv.RejectH5Order(ctx, params.H5OrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

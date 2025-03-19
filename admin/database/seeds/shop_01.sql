@@ -295,6 +295,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `staff_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单或拒单员工ID',
     `handle_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '接单或拒单时间(时间戳)',
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '下单时间(时间戳)',
+    -- 关联uuid
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单uuid',
+    
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)，扫码下单时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

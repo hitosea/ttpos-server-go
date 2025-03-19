@@ -6340,13 +6340,13 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	productGroup := make(map[int64][]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			if product.Status == constant.SaleOrderProductStatusCooking {
-				productNum = productNum + product.Num
-				productGroup[product.SendKitchenTime] = append(productGroup[product.SendKitchenTime], product)
-			}
+			// if product.Status == constant.SaleOrderProductStatusCooking {
+			productNum = productNum + product.Num
+			productGroup[product.SendKitchenTime] = append(productGroup[product.SendKitchenTime], product)
+			// }
 		}
 	}
-	var groups []resp.H5Group
+	groups := make([]resp.H5Group, 0)
 	for sendKitchenTime, products := range productGroup {
 		groups = append(groups, resp.H5Group{
 			SentKitchenProductGroup: resp.SentKitchenProductGroup{

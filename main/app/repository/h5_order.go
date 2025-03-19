@@ -11,11 +11,13 @@ import (
 // IH5OrderRepo 接单
 type IH5OrderRepo interface {
 	PaginateGetH5Order(pageNo, pageSize int, opts ...DBOption) ([]model.H5Order, int64, error)
-	GetH5Order(opts ...DBOption) (model.H5Order, error)
+	GetH5Order(opts ...DBOption) (*model.H5Order, error)
 	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
 	GetH5OrderCount(opts ...DBOption) (int64, error)
 	Update(data map[string]interface{}, opts ...DBOption) error // 更新订单商品
 	UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error
+	UpdateH5OrderRecord(obj model.H5Order) error // 更新接单记录
+	UpdateH5OrderProductRecord(obj model.H5OrderProduct) error
 
 	CreateH5Order(qrcodeOrder model.H5Order) (uint64, error)
 	DeleteH5Order(qrcodeOrderUuid uint64) error
@@ -38,7 +40,8 @@ type IH5OrderRepo interface {
 
 	// 扫码订单商品相关
 
-	GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error)                     // 扫码订单商品
+	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                    // 扫码订单商品
+	GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, error)                             // 扫码订单详情
 	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
@@ -77,15 +80,46 @@ func (r *H5OrderRepoImpl) PaginateGetH5Order(pageNo, pageSize int, opts ...DBOpt
 	return qrcodeOrders, total, errors.WithMessage(err)
 }
 
-// GetH5Order 获取接单详情
-func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (model.H5Order, error) {
+// GetH5Order 获取接单
+func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (*model.H5Order, error) {
 	var h5Order model.H5Order
 	db := r.db.Model(&model.H5Order{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
 	err := db.First(&h5Order).Error
-	return h5Order, errors.WithMessage(err)
+	return &h5Order, errors.WithMessage(err)
+}
+
+// GetH5OrderDetail 获取接单详情
+func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, error) {
+	h5Order, err := r.GetH5Order(
+		CommonRepo.WhereByUuid(h5OrderUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct",
+			},
+			WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrder.SaleBill",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return h5Order, nil
 }
 
 // GetH5OrderUuids 获取h5订单uuid
@@ -133,6 +167,24 @@ func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]
 	return nil
 }
 
+// UpdateH5OrderRecord 更新接单记录
+func (r *H5OrderRepoImpl) UpdateH5OrderRecord(obj model.H5Order) error {
+	obj.SetNil()
+	if obj.NoPrimaryKey() {
+		return errors.New("主键不能为空")
+	}
+	return r.db.Model(&model.H5Order{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
+}
+
+// UpdateH5OrderProductRecord 更新扫码订单商品记录
+func (r *H5OrderRepoImpl) UpdateH5OrderProductRecord(obj model.H5OrderProduct) error {
+	obj.SetNil()
+	if obj.NoPrimaryKey() {
+		return errors.New("主键不能为空")
+	}
+	return r.db.Model(&model.H5OrderProduct{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(&obj).Error
+}
+
 // CreateH5Order 创建接单
 func (r *H5OrderRepoImpl) CreateH5Order(obj model.H5Order) (uint64, error) {
 	obj.SetNil()
@@ -159,8 +211,8 @@ func (r *H5OrderRepoImpl) Reject(DeskUuid uint64) error {
 		}).Error
 }
 
-func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error) {
-	var products []model.H5OrderProduct
+func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error) {
+	var products []*model.H5OrderProduct
 	db := r.db.Model(&model.H5OrderProduct{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
