@@ -114,6 +114,57 @@ func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, 
 			WithPreload{
 				Query: "SaleOrder.SaleBill",
 			},
+			// =================start 为了送厨检查 =================
+			WithPreload{
+				Query: "SaleOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.CancelReasons",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.ProductPackage",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.ProductPackage.DineTax",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.ProductPackage.TakeoutTax",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.ProductPackage.ProductCategory",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductAttributes",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductPackage",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials",
+			},
+			// =================end 为了送厨检查 =================
 		),
 	)
 	if err != nil {

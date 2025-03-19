@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // H5OrderHandler 接单相关控制器
@@ -115,9 +116,14 @@ func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	err := h.h5OrderSrv.AcceptH5Order(ctx, params.H5OrderUuid)
+	checkRes, err := h.h5OrderSrv.AcceptH5Order(ctx, params.H5OrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
 	}
 	helper.Success(c, gin.H{})

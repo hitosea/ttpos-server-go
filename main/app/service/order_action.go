@@ -24,6 +24,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
+	if len(unCookingSaleOrderProducts) == 0 {
+		return nil, errors.New("没有未送厨的商品")
+	}
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	// 送厨相关
