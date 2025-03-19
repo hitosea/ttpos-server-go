@@ -3,7 +3,6 @@ package repository
 import (
 	"fmt"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -319,14 +318,7 @@ func (r *commonRepo) FilterSaleOrderProduct() DBOption {
 // FilterSaleOrderProductH5Unordered 只查询H5未下单的购物车商品
 func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		product := model.SaleOrderProduct{
-			BaseModel: model.BaseModel{
-				DeleteTime: constant.NotDeleted,
-			},
-			IsAcceptOrder: constant.OrderProductIsAcceptOrderUnAccept,
-			H5OrderUuid:   constant.OptionalUuid, // 没有H5订单时，H5OrderUuid为0，表示该商品未下单
-		}
-		return db.Where(product)
+		return db.Where("delete_time = ? AND is_accept_order = ? AND h5_order_uuid = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderUnAccept, constant.OptionalUuid)
 	}
 }
 

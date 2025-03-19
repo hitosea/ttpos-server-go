@@ -2806,6 +2806,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
+	// fmt.Println("GetOrderCartInfo 获取购物车信息shopCart.SaleBill.SaleOrders", utils.ToJsonString(shopCart.SaleBill.SaleOrders))
 	if shopCart.SaleBill.IsEndStatus() {
 		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
@@ -2963,6 +2964,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		saleOrderList = append(saleOrderList, order)
 	}
+	fmt.Println("GetOrderCartInfo 获取购物车信息saleOrderList", utils.ToJsonString(saleOrderList))
 
 	// 获取必点方案列表
 	mustPlan, errPlanMust := s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
@@ -6410,6 +6412,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, op
 					}
 				}
 				if !exists {
+					fmt.Println("GetUnsentKitchen 未送厨商品列表1111", utils.ToJsonString(product))
 					res.Products.List = append(res.Products.List, product)
 					res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
 				}

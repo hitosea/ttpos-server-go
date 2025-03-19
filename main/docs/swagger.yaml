@@ -10469,6 +10469,37 @@ paths:
       summary: 向购物车添加商品
       tags:
       - 扫码点餐
+  /h5/order/cart/product/num:
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品数量
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductNumReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnsentKitchen'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车某个商品的数量
+      tags:
+      - 扫码点餐
   /h5/order/cart/product/ordered/list:
     get:
       consumes:

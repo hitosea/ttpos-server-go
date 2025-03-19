@@ -234,7 +234,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.OrderCartProductAddReq true "商品参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/add [post]
 func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
@@ -261,7 +261,12 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	}
 	params.SetIsH5Product() // 设置为H5商品
 	// 添加商品。 若没有点餐账单则新建一个
-	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
+	_, err = h.orderService.InstantOrderCartProductAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -292,6 +297,8 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
+	ctx.Log().Debug("查询未下单商品", zap.Any("saleBillUuid", saleBillUuid), zap.Any("saleOrderUuid", saleOrderUuid))
+	fmt.Println("GetOrderCartProductUnordered 查询未下单商品", saleBillUuid, saleOrderUuid)
 	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -324,6 +331,54 @@ func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
 		return
 	}
 	res, err := h.orderService.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductNum 修改购物车商品数量
+// @Summary 修改购物车某个商品的数量
+// @Description 修改购物车商品数量
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductNumReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/cart/product/num [post]
+func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面修改购物车商品数量接口请求")
+	// 绑定请求参数
+	params := req.OrderCartProductNumReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if saleBillUuid == 0 || saleOrderUuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
+		return
+	}
+	params.SaleOrderUuid = saleOrderUuid
+	params.SaleBillUuid = saleBillUuid
+	ctx.Log().Debug("扫码点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 修改购物车商品数量
+	_, err = h.orderService.OrderCartProductNum(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -372,5 +427,8 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                    // 向购物车添加商品
 		privateApi.GET("/order/cart/product/unordered/list", wrapper.GetOrderCartProductUnordered) // 查询购物车未下单商品列表
 		privateApi.GET("/order/cart/product/ordered/list", wrapper.GetOrderCartProductOrdered)     // 查询购物车已下单商品列表
+		privateApi.POST("/order/cart/product/num", wrapper.OrderCartProductNum)                    // 修改购物车商品数量
+
+		// privateApi.POST("/order/cart/confirm", wrapper.ConfirmOrder)                               // 确认下单
 	}
 }

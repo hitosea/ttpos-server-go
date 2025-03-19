@@ -461,6 +461,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 	filterProduct := CommonRepo.DBOption(CommonRepo.FilterSaleOrderProduct())
 	if option.UnorderedH5Product == UnorderedH5Product {
 		// 只查询H5未下单的商品
+		fmt.Println("GetOrderCartInfo 只查询H5未下单的商品")
 		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductH5Unordered())
 	} else if option.UnorderedH5Product == OrderedH5Product {
 		// 只查询H5已下单的商品
