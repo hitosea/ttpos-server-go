@@ -947,6 +947,52 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 	return payTypes
 }
 
+// NewH5Order 创建h5订单
+func (model *SaleBill) NewH5Order() *H5Order {
+	h5OrderUuid, _ := utils.GetID()
+	// 获取未下单的h5订单商品
+	h5OrderProducts := model.GetUnOrderH5OrderProduct()
+	h5OrderProductList := make([]*H5OrderProduct, 0)
+	for _, h5OrderProduct := range h5OrderProducts {
+		h5OrderProductList = append(h5OrderProductList, &H5OrderProduct{
+			SaleOrderProductUuid: h5OrderProduct.Uuid, // 销售订单商品uuid
+			H5OrderUuid:          h5OrderUuid,         // 扫码订单uuid
+			SaleBillUuid:         model.Uuid,          // 销售账单uuid
+		})
+	}
+
+	// 创建h5订单
+	return &H5Order{
+		BaseModel: BaseModel{
+			Uuid: h5OrderUuid,
+		},
+		DeskUuid:        model.DeskUuid,              // 桌台uuid
+		DeskNo:          model.Desk.DeskNo,           // 桌台编号
+		Status:          constant.H5OrderStatusOrder, // 状态，已下单
+		OrderTime:       time.Now().Unix(),           // 下单时间
+		H5OrderProducts: h5OrderProductList,          // 订单商品
+	}
+}
+
+// 将销售订单商品列表中的“未下单h5商品”变为“h5已下单商品”
+func (model *SaleBill) SetH5OrderProduct(h5OrderUuid uint64) {
+	// 获取未下单的h5订单商品
+	h5OrderProducts := model.GetUnOrderH5OrderProduct()
+	// 遍历销售订单商品列表
+	for _, saleOrderProduct := range h5OrderProducts {
+		saleOrderProduct.SetH5OrderProduct(h5OrderUuid) // 将未下单的h5订单商品变为已下单的h5订单商品
+	}
+}
+
+// 获取未下单的h5订单商品
+func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
+	// 获取第一个销售订单
+	saleOrder := model.SaleOrders[0]
+	// 获取未下单的h5订单商品
+	h5OrderProducts := saleOrder.H5OrderProductList()
+	return h5OrderProducts
+}
+
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
 	BaseModel

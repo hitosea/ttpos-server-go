@@ -29,6 +29,7 @@ type IH5OrderRepo interface {
 
 	WithDesk() DBOption                                            // 关联桌台
 	WithSaleOrderProducts() DBOption                               // 关联销售订单商品
+	WithSaleOrderProductsMultiLanguageName() DBOption              // 关联销售订单商品关联多语言
 	WithSaleOrderProductMultiLanguageName() DBOption               // 关联销售订单商品关联多语言
 	WithH5OrderProducts() DBOption                                 // 关联扫码订单商品
 	WithH5OrderProductSaleOrderProduct() DBOption                  // 关联扫码订单商品关联销售订单商品
@@ -37,13 +38,13 @@ type IH5OrderRepo interface {
 
 	// 扫码订单商品相关
 
-	GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error)                    // 扫码订单商品
-	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (model.H5OrderProduct, error) // 快照销售订单商品
+	GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderProduct, error)                     // 扫码订单商品
+	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
 
-	WithSaleOrderProduct() DBOption // 关联销售订单商品
-	WithH5Order() DBOption          // 关联扫码订单
+	WithSaleOrderProduct222() DBOption // 关联销售订单商品
+	WithH5Order() DBOption             // 关联扫码订单
 }
 
 func NewH5OrderRepo(db *gorm.DB) IH5OrderRepo {
@@ -133,12 +134,13 @@ func (r *H5OrderRepoImpl) UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]
 }
 
 // CreateH5Order 创建接单
-func (r *H5OrderRepoImpl) CreateH5Order(qrcodeOrder model.H5Order) (uint64, error) {
-	// 创建桌台
-	if err := r.db.Create(&qrcodeOrder).Error; err != nil {
+func (r *H5OrderRepoImpl) CreateH5Order(obj model.H5Order) (uint64, error) {
+	obj.SetNil()
+	err := r.db.Model(&model.H5Order{}).Create(&obj).Error
+	if err != nil {
 		return 0, errors.WithMessage(err)
 	}
-	return qrcodeOrder.Uuid, nil
+	return obj.Uuid, nil
 }
 
 // DeleteH5Order 软删除接单
@@ -167,9 +169,13 @@ func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]model.H5OrderP
 	return products, errors.WithMessage(err)
 }
 
-func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (model.H5OrderProduct, error) {
+func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) {
+	h5OrderProduct.SetNil()
 	err := r.db.Model(&model.H5OrderProduct{}).Create(&h5OrderProduct).Error
-	return h5OrderProduct, errors.WithMessage(err)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &h5OrderProduct, nil
 }
 
 func (r *H5OrderRepoImpl) WhereStatus(status []uint) DBOption {
@@ -208,7 +214,7 @@ func (r *H5OrderRepoImpl) WhereSaleBillUuid(uuid uint64) DBOption {
 	}
 }
 
-func (r *H5OrderRepoImpl) WithSaleOrderProduct() DBOption {
+func (r *H5OrderRepoImpl) WithSaleOrderProduct222() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct")
 	}
@@ -231,9 +237,15 @@ func (r *H5OrderRepoImpl) WithSaleOrderProducts() DBOption {
 	}
 }
 
-func (r *H5OrderRepoImpl) WithSaleOrderProductMultiLanguageName() DBOption {
+func (r *H5OrderRepoImpl) WithSaleOrderProductsMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProducts.MultiLanguageName")
+	}
+}
+
+func (r *H5OrderRepoImpl) WithSaleOrderProductMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleOrderProduct.MultiLanguageName")
 	}
 }
 
@@ -257,6 +269,6 @@ func (r *H5OrderRepoImpl) WithH5OrderProductSaleOrderProductMultiLanguageName() 
 
 func (r *H5OrderRepoImpl) WithCashier() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Cashier")
+		return db.Preload("Staff")
 	}
 }

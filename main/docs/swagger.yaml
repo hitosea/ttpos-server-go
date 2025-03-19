@@ -1930,6 +1930,37 @@ definitions:
         - $ref: '#/definitions/setting.H5'
         description: 扫码H5设置
     type: object
+  resp.H5CartSendProduct:
+    properties:
+      amount_info:
+        allOf:
+        - $ref: '#/definitions/resp.SimpleAmountInfo'
+        description: 金额信息
+      groups:
+        allOf:
+        - $ref: '#/definitions/resp.H5GroupList'
+        description: 商品列表
+    type: object
+  resp.H5Group:
+    properties:
+      accept_time:
+        description: 接单时间. “17:20:01 接单”。值为0时不显示
+        type: integer
+      products:
+        allOf:
+        - $ref: '#/definitions/resp.GroupProductList'
+        description: 组商品列表
+      send_kitchen_time:
+        description: 送厨时间. “17:20:01 下单”
+        type: integer
+    type: object
+  resp.H5GroupList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.H5Group'
+        type: array
+    type: object
   resp.H5OrderDetail:
     properties:
       cashier:
@@ -10489,6 +10520,30 @@ paths:
       summary: 开台
       tags:
       - 扫码点餐
+  /h5/order/cart/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 确认下单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.H5CartSendProduct'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 确认下单
+      tags:
+      - 扫码点餐
   /h5/order/cart/product/add:
     post:
       consumes:
@@ -10511,7 +10566,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ShopCart'
+                  $ref: '#/definitions/resp.UnsentKitchen'
               type: object
         "404":
           description: 未找到
@@ -10564,7 +10619,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.UnsentKitchen'
+                  $ref: '#/definitions/resp.H5CartSendProduct'
               type: object
         "404":
           description: 未找到

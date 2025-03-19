@@ -119,9 +119,9 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 	h5OrderRepo := repository.NewH5OrderRepo(s.dbm.GetDB(companyUuid))
 	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
 		h5OrderRepo.WithH5OrderProducts(), h5OrderRepo.WithH5OrderProductSaleOrderProduct(), h5OrderRepo.WithH5OrderProductSaleOrderProductMultiLanguageName(),
-		h5OrderRepo.WithSaleOrderProducts(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithCashier())
+		h5OrderRepo.WithSaleOrderProducts(), h5OrderRepo.WithSaleOrderProductsMultiLanguageName(), h5OrderRepo.WithCashier())
 	if err != nil {
-		return resp.H5OrderDetailResp{}, apperrors.ErrInternal
+		return resp.H5OrderDetailResp{}, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 	}
 	newProducts := make([]resp.ProductItem, 0)
 	acceptedProducts := make([]resp.ProductItem, 0)
@@ -142,9 +142,9 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (res
 		// 获取同一个销售账单，已接单的，h5订单商品
 		if saleBillUuid > 0 {
 			products, err := h5OrderRepo.GetH5OrderProducts(h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
-				h5OrderRepo.WithSaleOrderProduct(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithH5Order())
+				h5OrderRepo.WithSaleOrderProduct222(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithH5Order())
 			if err != nil {
-				return resp.H5OrderDetailResp{}, apperrors.ErrInternal
+				return resp.H5OrderDetailResp{}, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 			}
 			for _, product := range products {
 				if product.H5Order.Status == constant.H5OrderStatusAccepted {

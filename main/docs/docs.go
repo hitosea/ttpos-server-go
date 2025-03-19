@@ -10316,6 +10316,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/h5/order/cart/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "确认下单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "确认下单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.H5CartSendProduct"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/order/cart/product/add": {
             "post": {
                 "description": "向购物车添加商品",
@@ -10352,7 +10395,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
+                                            "$ref": "#/definitions/resp.UnsentKitchen"
                                         }
                                     }
                                 }
@@ -10449,7 +10492,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.UnsentKitchen"
+                                            "$ref": "#/definitions/resp.H5CartSendProduct"
                                         }
                                     }
                                 }
@@ -15464,6 +15507,59 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.H5"
                         }
                     ]
+                }
+            }
+        },
+        "resp.H5CartSendProduct": {
+            "type": "object",
+            "properties": {
+                "amount_info": {
+                    "description": "金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.SimpleAmountInfo"
+                        }
+                    ]
+                },
+                "groups": {
+                    "description": "商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.H5GroupList"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.H5Group": {
+            "type": "object",
+            "properties": {
+                "accept_time": {
+                    "description": "接单时间. “17:20:01 接单”。值为0时不显示",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "组商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.GroupProductList"
+                        }
+                    ]
+                },
+                "send_kitchen_time": {
+                    "description": "送厨时间. “17:20:01 下单”",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.H5GroupList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.H5Group"
+                    }
                 }
             }
         },

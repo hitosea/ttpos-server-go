@@ -100,6 +100,12 @@ type SaleOrderProduct struct {
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 }
 
+// 将未下单的h5订单商品变为已下单的h5订单商品
+func (model *SaleOrderProduct) SetH5OrderProduct(h5OrderUuid uint64) {
+	model.H5OrderUuid = h5OrderUuid
+	// model.H5OrderProductUuid = h5OrderProductUuid
+}
+
 // SetTaxRate 设置税率. 这个方法的定位是只能用这个方法设置商品的税率，不能用其他方式设置商品的税率
 func (model *SaleOrderProduct) SetTaxRate(taxRate float64) {
 	defer model.SetUpdate() // 标记要更新model

@@ -104,6 +104,7 @@ type IOrderSrv interface {
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                    // 必点方案列表
 	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)   // 获取扫码h5购物车未下单商品列表
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) // 获取扫码h5购物车已下单商品列表
+	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                           // 下单扫码h5订单
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 }
@@ -6385,6 +6386,51 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 			ProductNum:    amount.ProductNum,
 		},
 	}, nil
+}
+
+// ConfirmH5Order 下单扫码h5订单
+func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询销售账单失败")
+	}
+	if err := saleBill.ValidateOrderStatus(constant.OrderH5Confirm, saleOrderUuid); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	h5Order := saleBill.NewH5Order()
+	// 获取未下单的h5订单商品
+	h5OrderProducts := saleBill.GetUnOrderH5OrderProduct()
+	// 将未下单的h5订单商品变为已下单的h5订单商品
+	for _, h5OrderProduct := range h5OrderProducts {
+		h5OrderProduct.SetH5OrderProduct(h5Order.Uuid)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 创建h5订单
+		if _, err := repository.NewH5OrderRepo(tx).CreateH5Order(*h5Order); err != nil {
+			return errors.WithMessage(err, "保存h5订单失败")
+		}
+		// 创建h5订单商品
+		for _, h5OrderProduct := range h5Order.H5OrderProducts {
+			h5OrderProduct.H5OrderUuid = h5Order.Uuid
+			if _, err := repository.NewH5OrderRepo(tx).CreateH5OrderProduct(*h5OrderProduct); err != nil {
+				return errors.WithMessage(err, "保存h5订单商品失败")
+			}
+		}
+		// 更新销售订单商品，将未下单商品改为已下单商品。记录上saleOrderProduct的h5OrderUuid
+		for _, saleOrderProduct := range h5OrderProducts {
+			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+				return errors.WithMessage(err, "更新销售订单商品失败")
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "下单扫码h5订单失败")
+	}
+	return nil
 }
 
 // GetUnSendKitchen 未送厨商品列表
