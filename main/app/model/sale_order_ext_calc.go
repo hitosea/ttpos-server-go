@@ -15,9 +15,10 @@ func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting) *Calc {
 
 // 计算已送厨商品的订单金额
 func (model *SaleOrder) CalcCookingSaleOrder(setting SaleBillSetting) *Calc {
-	return model.CalcSaleOrderByProductList(model.CookingOrderProductList(), setting)
+	return model.CalcSaleOrderByProductList(model.GetCookingOrderProductList(), setting)
 }
 
+// 计算指定商品列表的订单金额
 func (model *SaleOrder) CalcSaleOrderByProductList(products []*SaleOrderProduct, setting SaleBillSetting) *Calc {
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
@@ -28,8 +29,8 @@ func (model *SaleOrder) CalcSaleOrderByProductList(products []*SaleOrderProduct,
 func (model *SaleOrder) CalcCookingAndOrderSaleOrder(setting SaleBillSetting) *Calc {
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	products := model.CookingOrderProductList()
-	products = append(products, model.H5OrderProductList()...)
+	products := model.GetCookingOrderProductList()
+	products = append(products, model.GetH5OrderProductList()...)
 	return model.calcCookingSaleOrder(products, serviceFeeType, setting.ServiceFeeValue, taxFeeType)
 }
 
@@ -112,6 +113,7 @@ func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
 
 }
 
+// 设置销售订单结账抹零金额
 func (model *SaleOrder) SetCheckOutZeroFee() {
 	model.ZeroCheckoutFee = model.CalcCheckOutZeroFee()
 }
@@ -150,34 +152,10 @@ func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
 	}
 }
 
-type Calc struct {
-	ProductOriginalAmount float64 `json:"product_original_amount"` // 订单商品金额（折前价）
-	ProductAmount         float64 `json:"product_amount"`          // 订单商品金额（折后价）
-	ServiceFee            float64 `json:"service_fee"`             // 订单服务费
-	TaxFee                float64 `json:"tax_fee"`                 // 订单消费税
-	CustomDiscountFee     float64 `json:"custom_discount_fee"`     // 订单优惠折扣
-	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 订单会员折扣
-	Amount                float64 `json:"amount"`                  // 订单应付金额
-	ZeroFee               float64 `json:"zero_fee"`                // 订单优惠折扣抹零金额
-}
-
-func (model *SaleOrder) BeforeCalc() Calc {
-	return Calc{
-		ProductOriginalAmount: model.ProductOriginalAmount,
-		ProductAmount:         model.ProductAmount,
-		ServiceFee:            model.ServiceFee,
-		TaxFee:                model.TaxFee,
-		CustomDiscountFee:     model.CustomDiscountFee,
-		MemberDiscountFee:     model.MemberDiscountFee,
-		Amount:                model.Amount,
-		ZeroFee:               model.ZeroFee,
-	}
-}
-
 // 重新计算销售订单的金额
 func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
 	calc := Calc{}
-	products := model.UnCookingAndCookingOrderProductList()
+	products := model.GetUnCookingAndCookingOrderProductList()
 	calc.ProductOriginalAmount = model.calcProductOriginalAmount(products)
 	model.ProductOriginalAmount = calc.ProductOriginalAmount
 	calc.ProductAmount = model.calcProductAmount(products)
@@ -403,26 +381,6 @@ func (model *SaleOrder) calcProductAmount(products []*SaleOrderProduct) float64 
 		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
 }
 
-// 获取未送厨的订单商品金额（折后价）
-func (model *SaleOrder) GetUnCookingProductAmount() float64 {
-	return model.calcProductAmount(model.UnCookingOrderProductList())
-}
-
-// 获取已送厨的订单商品金额（折后价）
-func (model *SaleOrder) GetCookingProductAmount() float64 {
-	return model.calcProductAmount(model.CookingOrderProductList())
-}
-
-// 获取已送厨商品的订单服务费
-func (model *SaleOrder) GetCookingProductServiceFee(serviceFeeType int, serviceFeeValue float64) float64 {
-	return model.calcServiceFee(model.CookingOrderProductList(), serviceFeeType, serviceFeeValue)
-}
-
-// 获取已送厨商品的订单消费税
-func (model *SaleOrder) GetCookingProductTaxFee() float64 {
-	return model.calcTaxFee(model.CookingOrderProductList())
-}
-
 // 计算已送厨的订单商品金额（折后价）。已送厨的订单商品金额（折后价）= 订单商品Price之和
 func (model *SaleOrder) calcSumCookingOrderProductPrice(products []*SaleOrderProduct) float64 {
 	return model.calcSumOrderProduct(products)
@@ -441,7 +399,7 @@ func (model *SaleOrder) calcSumOrderProduct(saleOrderProducts []*SaleOrderProduc
 
 // 计算已送厨的订单商品金额（折后价）。已送厨的订单商品金额（折后价）= 订单商品Price之和
 func (model *SaleOrder) calcUnCookingProductAmount() float64 {
-	products := model.UnCookingAndCookingOrderProductList()
+	products := model.GetUnCookingAndCookingOrderProductList()
 	sumPrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
 		// 已经移动到其他订单的商品不计
@@ -476,18 +434,6 @@ func (model *SaleOrder) calcTaxFee(products []*SaleOrderProduct) float64 {
 	}
 	return taxFee.InexactFloat64()
 }
-
-// 计算已送厨商品的消费税金额。已送厨商品的消费税金额=已送厨订单商品TaxFee之和 + 已送厨订单商品ServiceTaxFee之和
-// func (model *SaleOrder) calcCookingProductTaxFee(products []*SaleOrderProduct) float64 {
-// 	taxFee := decimal.NewFromFloat(0)
-// 	for _, orderProduct := range products {
-// 		taxFee = taxFee.Add(
-// 			decimal.NewFromFloat(orderProduct.TaxFee)).Add(
-// 			decimal.NewFromFloat(orderProduct.ServiceTaxFee))
-
-// 	}
-// 	return taxFee.InexactFloat64()
-// }
 
 // 计算销售订单的原商品消费税金额。 销售订单的原商品消费税金额= 销售订单的各个商品的原商品消费税金额之和。
 func (model *SaleOrder) calcOriginProductTaxFee(taxFeeType int) float64 {
@@ -568,16 +514,6 @@ func (model *SaleOrder) calcMemberDiscountFee(products []*SaleOrderProduct) floa
 	}
 	return memberDiscountFee.Round(2).InexactFloat64()
 }
-
-// 计算已送厨商品的会员折扣金额。已送厨商品的会员折扣金额=已送厨订单商品会员折扣金额之和
-// func (model *SaleOrder) calcCookingProductMemberDiscountFee(products []*SaleOrderProduct) float64 {
-// 	memberDiscountFee := decimal.NewFromFloat(0)
-// 	for _, orderProduct := range products {
-// 		memberDiscountFee = memberDiscountFee.Add(
-// 			decimal.NewFromFloat(orderProduct.MemberDiscountFee))
-// 	}
-// 	return memberDiscountFee.Round(2).InexactFloat64()
-// }
 
 // 计算销售订单服务费消费税金额。销售订单服务费消费税金额=订单商品服务费消费税金额之和
 func (model *SaleOrder) calcServiceTaxFee() float64 {
@@ -691,6 +627,18 @@ func (model *SaleOrder) calcZeroFee(amount float64) float64 {
 	}
 }
 
+// CalcGiftAmount 计算赠菜金额. 赠菜金额=销售订单赠菜商品.总最终单价之和
+func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
+	amount := float64(0)
+	for _, saleOrderProduct := range products {
+		// 商品的最终金额
+		giftFee := saleOrderProduct.GetPrice()
+		// 累计各个赠品的最终金额
+		amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
+	}
+	return amount
+}
+
 // 计算订单服务费。
 // 当服务费关闭时，订单服务费为0
 // 当服务费为固定费用时，订单服务费为固定费用
@@ -715,92 +663,26 @@ func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeT
 	return 0
 }
 
-// 获取已送厨的订单商品列表
-func (model *SaleOrder) CookingOrderProductList() []*SaleOrderProduct {
-	return model.AllOrderProductList(WithCooking())
-}
-
-// 获取未送厨的订单商品列表
-func (model *SaleOrder) UnCookingOrderProductList() []*SaleOrderProduct {
-	return model.AllOrderProductList(WithUnCooking())
-}
-
-// 获取全部商品，包括已送厨和未送厨
-func (model *SaleOrder) UnCookingAndCookingOrderProductList() []*SaleOrderProduct {
-	return model.AllOrderProductList(WithAll())
-}
-
-// 获取h5已下单的商品
-func (model *SaleOrder) H5OrderProductList() []*SaleOrderProduct {
-	return model.AllOrderProductList(WithH5Order())
-}
-
-// 获取h5购物车的商品
-func (model *SaleOrder) H5CartProductList() []*SaleOrderProduct {
-	return model.AllOrderProductList(WithH5Cart())
-}
-
-// 获取全部商品，包括已送厨和未送厨
-func (model *SaleOrder) AllOrderProductList(options ...func(option *CalcOption)) []*SaleOrderProduct {
-	option := &CalcOption{}
-	for _, optionFunc := range options {
-		optionFunc(option)
+func (model *SaleOrder) BeforeCalc() Calc {
+	return Calc{
+		ProductOriginalAmount: model.ProductOriginalAmount,
+		ProductAmount:         model.ProductAmount,
+		ServiceFee:            model.ServiceFee,
+		TaxFee:                model.TaxFee,
+		CustomDiscountFee:     model.CustomDiscountFee,
+		MemberDiscountFee:     model.MemberDiscountFee,
+		Amount:                model.Amount,
+		ZeroFee:               model.ZeroFee,
 	}
+}
 
-	products := make([]*SaleOrderProduct, 0)
-	for _, orderProduct := range model.SaleOrderProducts {
-		// 已经移动到其他订单的商品不计
-		if orderProduct.SaleOrderUuid != model.Uuid {
-			continue
-		}
-
-		// 删除的商品不计入
-		if orderProduct.IsDelete() {
-			continue
-		}
-
-		// 赠菜？计入
-		// 退菜？退了不计入
-		if orderProduct.IsCancelBool() {
-			continue
-		}
-
-		if option.H5OrderStatus == H5OrderStatusAccepted {
-			// H5下单的商品计入
-			if orderProduct.IsH5OrderProductBool() {
-				products = append(products, orderProduct)
-				continue
-			}
-		}
-
-		if option.H5OrderStatus == H5OrderStatusUnAccepted {
-			// H5购物车的商品计入
-			if orderProduct.IsH5CartProduct() {
-				products = append(products, orderProduct)
-				continue
-			}
-		}
-
-		if option.CookingStatus == CookingStatusCooking {
-			// 已送厨的商品计入
-			if orderProduct.IsCookingProduct() {
-				products = append(products, orderProduct)
-				continue
-			}
-		}
-
-		if option.CookingStatus == CookingStatusUnCooking {
-			// 未送厨的商品计入
-			if orderProduct.IsUnCookingProduct() {
-				products = append(products, orderProduct)
-				continue
-			}
-		}
-
-		if option.CookingStatus == CookingStatusAll {
-			// 已送厨和未送厨的商品计入
-			products = append(products, orderProduct)
-		}
-	}
-	return products
+type Calc struct {
+	ProductOriginalAmount float64 `json:"product_original_amount"` // 订单商品金额（折前价）
+	ProductAmount         float64 `json:"product_amount"`          // 订单商品金额（折后价）
+	ServiceFee            float64 `json:"service_fee"`             // 订单服务费
+	TaxFee                float64 `json:"tax_fee"`                 // 订单消费税
+	CustomDiscountFee     float64 `json:"custom_discount_fee"`     // 订单优惠折扣
+	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 订单会员折扣
+	Amount                float64 `json:"amount"`                  // 订单应付金额
+	ZeroFee               float64 `json:"zero_fee"`                // 订单优惠折扣抹零金额
 }

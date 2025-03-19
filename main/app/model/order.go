@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
@@ -995,7 +996,7 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 获取第一个销售订单
 	saleOrder := model.SaleOrders[0]
 	// 获取未下单的h5订单商品
-	h5OrderProducts := saleOrder.H5OrderProductList()
+	h5OrderProducts := saleOrder.GetH5OrderProductList()
 	return h5OrderProducts
 }
 

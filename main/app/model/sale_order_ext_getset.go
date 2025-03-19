@@ -1,9 +1,18 @@
 package model
 
 import (
+	"fmt"
+	"slices"
+	"sort"
 	"strings"
+	"time"
+
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
+
+	"github.com/shopspring/decimal"
 )
 
 type DiscountInfo struct {
@@ -120,6 +129,367 @@ func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct
 		}
 	}
 	return nil
+}
+
+// 获取未送厨的订单商品金额（折后价）
+func (model *SaleOrder) GetUnCookingProductAmount() float64 {
+	return model.calcProductAmount(model.GetUnCookingOrderProductList())
+}
+
+// 获取已送厨的订单商品金额（折后价）
+func (model *SaleOrder) GetCookingProductAmount() float64 {
+	return model.calcProductAmount(model.GetCookingOrderProductList())
+}
+
+// 获取已送厨商品的订单服务费
+func (model *SaleOrder) GetCookingProductServiceFee(serviceFeeType int, serviceFeeValue float64) float64 {
+	return model.calcServiceFee(model.GetCookingOrderProductList(), serviceFeeType, serviceFeeValue)
+}
+
+// 获取已送厨商品的订单消费税
+func (model *SaleOrder) GetCookingProductTaxFee() float64 {
+	return model.calcTaxFee(model.GetCookingOrderProductList())
+}
+
+// 获取已送厨的订单商品列表
+func (model *SaleOrder) GetCookingOrderProductList() []*SaleOrderProduct {
+	return model.GetAllOrderProductList(WithCooking())
+}
+
+// 获取未送厨的订单商品列表
+func (model *SaleOrder) GetUnCookingOrderProductList() []*SaleOrderProduct {
+	return model.GetAllOrderProductList(WithUnCooking())
+}
+
+// 获取全部商品，包括已送厨和未送厨
+func (model *SaleOrder) GetUnCookingAndCookingOrderProductList() []*SaleOrderProduct {
+	return model.GetAllOrderProductList(WithAll())
+}
+
+// 获取h5已下单的商品
+func (model *SaleOrder) GetH5OrderProductList() []*SaleOrderProduct {
+	return model.GetAllOrderProductList(WithH5Order())
+}
+
+// 获取h5购物车的商品
+func (model *SaleOrder) GetH5CartProductList() []*SaleOrderProduct {
+	return model.GetAllOrderProductList(WithH5Cart())
+}
+
+// 获取全部商品，包括已送厨和未送厨
+func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOption)) []*SaleOrderProduct {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	products := make([]*SaleOrderProduct, 0)
+	for _, orderProduct := range model.SaleOrderProducts {
+		// 已经移动到其他订单的商品不计
+		if orderProduct.SaleOrderUuid != model.Uuid {
+			continue
+		}
+
+		// 删除的商品不计入
+		if orderProduct.IsDelete() {
+			continue
+		}
+
+		// 赠菜？计入
+		// 退菜？退了不计入
+		if orderProduct.IsCancelBool() {
+			continue
+		}
+
+		if option.H5OrderStatus == H5OrderStatusAccepted {
+			// H5下单的商品计入
+			if orderProduct.IsH5OrderProductBool() {
+				products = append(products, orderProduct)
+				continue
+			}
+		}
+
+		if option.H5OrderStatus == H5OrderStatusUnAccepted {
+			// H5购物车的商品计入
+			if orderProduct.IsH5CartProduct() {
+				products = append(products, orderProduct)
+				continue
+			}
+		}
+
+		if option.CookingStatus == CookingStatusCooking {
+			// 已送厨的商品计入
+			if orderProduct.IsCookingProduct() {
+				products = append(products, orderProduct)
+				continue
+			}
+		}
+
+		if option.CookingStatus == CookingStatusUnCooking {
+			// 未送厨的商品计入
+			if orderProduct.IsUnCookingProduct() {
+				products = append(products, orderProduct)
+				continue
+			}
+		}
+
+		if option.CookingStatus == CookingStatusAll {
+			// 已送厨和未送厨的商品计入
+			products = append(products, orderProduct)
+		}
+	}
+	return products
+}
+
+// 获取销售订单的每个付款单的可退款金额。
+// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
+func (model *SaleOrder) GetPaymentOrderCanReturnAmount() ([]resp.OrderReturnPaymentRecord, string) {
+	paymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
+	currencyUnit := ""
+	for _, paymentOrder := range model.PaymentOrders {
+		paymentRecords = append(paymentRecords, resp.OrderReturnPaymentRecord{
+			PaymentOrderUuid:  paymentOrder.Uuid,
+			PaymentMethodName: paymentOrder.PaymentMethodName,
+			PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
+			CurrencyUnit:      paymentOrder.CurrencyUnit,
+			PaymentAmount:     paymentOrder.Amount,
+			CanReturnAmount:   paymentOrder.GetCanReturnAmount(), // 可退款金额=支付金额-已退款金额
+			PaymentMethodCode: paymentOrder.PaymentMethod.Code,
+		})
+		currencyUnit = paymentOrder.CurrencyUnit
+	}
+	// 排序。code越小，越靠前
+	sort.Slice(paymentRecords, func(i, j int) bool {
+		return paymentRecords[i].PaymentMethodCode < paymentRecords[j].PaymentMethodCode
+	})
+	return paymentRecords, currencyUnit
+}
+
+// GetReturnAmount 获取销售订单的退款金额. 退款金额=所有退货单的退款金额之和
+func (model *SaleOrder) GetReturnAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrder := range model.ReturnOrders {
+		amount = amount.Add(decimal.NewFromFloat(returnOrder.RefundAmount))
+	}
+	return amount.InexactFloat64()
+}
+
+// GetCanReturnAmount 获取销售订单的可退款金额. 可退款金额=订单最终应收金额-已退款金额
+func (model *SaleOrder) GetCanReturnAmount() float64 {
+	return decimal.NewFromFloat(model.PaymentAmount).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+}
+
+// GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+func (model *SaleOrder) GetOriginAmount() float64 {
+	//原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+	return decimal.NewFromFloat(model.Amount).Add(decimal.NewFromFloat(model.MemberDiscountFee)).Add(decimal.NewFromFloat(model.CustomDiscountFee)).Round(2).InexactFloat64()
+}
+
+// GetMemberDiscountAmount 获取订单的会员折扣后应收金额。 会员折扣后应收金额=原订单应收金额-会员折扣金额
+func (model *SaleOrder) GetMemberDiscountAmount() float64 {
+	//会员折扣后应收金额=现应收金额+会员折扣金额
+	return decimal.NewFromFloat(model.GetOriginAmount()).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
+}
+
+// GetMemberName 获取订单的会员名称
+func (model *SaleOrder) GetMemberName() string {
+	if model.Member == nil {
+		return ""
+	}
+	return model.Member.Nickname
+}
+
+func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
+	buffetList []*BuffetPackage,
+	buffetUuids []uint64,
+	buffetCustomerTypes []BuffetUuidMapBuffetCustomerTypes,
+	saleBillSetting *SaleBillSetting,
+) ([]*SaleOrderBuffetCustomerType, []uint64, uint, int) {
+	buffetUuidMap := make(map[uint64]map[uint64]*struct {
+		BaseModel
+		BuffetPackageUuid  uint64
+		CustomerTypeUuid   uint64
+		Price              float64
+		BuffetCustomerType struct{}
+	})
+	buffetMap := make(map[uint64]*BuffetPackage)
+	//
+	for _, buffet := range buffetList {
+		for index, _ := range buffet.BuffetCustomerTypePrices {
+			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
+			if buffetUuidMap[buffet.Uuid] == nil {
+				buffetUuidMap[buffet.Uuid] = make(map[uint64]*struct {
+					BaseModel
+					BuffetPackageUuid  uint64
+					CustomerTypeUuid   uint64
+					Price              float64
+					BuffetCustomerType struct{}
+				})
+			}
+			// 使用匿名结构体
+			priceStruct := &struct {
+				BaseModel
+				BuffetPackageUuid  uint64
+				CustomerTypeUuid   uint64
+				Price              float64
+				BuffetCustomerType struct{}
+			}{
+				BaseModel:         customerTypePrice.BaseModel,
+				BuffetPackageUuid: customerTypePrice.BuffetPackageUuid,
+				CustomerTypeUuid:  customerTypePrice.CustomerTypeUuid,
+				Price:             customerTypePrice.Price,
+			}
+			buffetUuidMap[buffet.Uuid][customerTypePrice.CustomerTypeUuid] = priceStruct
+		}
+		buffetMap[buffet.Uuid] = buffet
+	}
+	// 使用map来跟踪已经添加的buffetUuid，实现去重
+	newBuffetUuidMap2 := make(map[uint64]bool)
+	newBuffetUuids := make([]uint64, 0)
+	mealNum := uint(0)
+	maxTimeLimit := int(0)
+	saleOrderBuffetCustomerTypes := make([]*SaleOrderBuffetCustomerType, 0)
+	// 创建一个map来跟踪已处理的CustomerType
+	processedCustomerTypes := make(map[uint64]bool)
+	//
+	for _, buffetUuid := range buffetUuids {
+		buffetPackage := buffetMap[buffetUuid]
+		for _, CustomerType := range buffetCustomerTypes {
+			num := *CustomerType.MealNum
+			if num == 0 {
+				continue
+			}
+			m := buffetUuidMap[buffetUuid]
+			if m[CustomerType.Uuid] == nil {
+				continue
+			}
+
+			customerTypePrice := m[CustomerType.Uuid]
+			// 使用匿名结构体的字段
+			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
+			taxRate := buffetPackage.GeTaxRate()
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
+			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
+			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
+			if !newBuffetUuidMap2[buffetUuid] {
+				newBuffetUuids = append(newBuffetUuids, buffetUuid)
+				newBuffetUuidMap2[buffetUuid] = true
+				// 取得最大的可用餐时长
+				if maxTimeLimit != -1 {
+					if buffetPackage.IsLimitTime == 0 {
+						maxTimeLimit = -1
+					} else {
+						maxTimeLimit = max(maxTimeLimit, int(buffetPackage.LimitTime)*60)
+					}
+				}
+			}
+			//
+			// 只有当这个CustomerType未被处理过时，才累加mealNum
+			if !processedCustomerTypes[CustomerType.Uuid] {
+				mealNum += num
+				processedCustomerTypes[CustomerType.Uuid] = true
+			}
+		}
+	}
+	//
+	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit
+}
+
+// GetPercentageList 获取当前订单的百分比对象列表
+func (model *SaleOrder) GetPercentageList() []map[string]string {
+	// 创建 map 来存储不同税率的税费和商品总价
+	taxRateMap := make(map[string]float64)
+	totalPriceMap := make(map[string]float64)
+
+	// 自助餐顾客类型
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 获取税率
+		taxRate := fmt.Sprintf("%.0f", orderBuffetCustomer.TaxRate*100)
+		// 累加相同税率的税费和总价
+		taxRateMap[taxRate] += orderBuffetCustomer.TaxFee
+		totalPriceMap[taxRate] += orderBuffetCustomer.Price
+	}
+
+	// 商品列表
+	for _, item := range model.SaleOrderProducts {
+		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
+			continue
+		}
+		// 获取税率
+		taxRate := fmt.Sprintf("%.0f", item.TaxRate*100)
+		// 累加相同税率的税费和总价
+		taxRateMap[taxRate] += item.TaxFee
+		totalPriceMap[taxRate] += item.GetPrice()
+	}
+
+	// 将 map 转换为数组
+	result := make([]map[string]string, 0, len(taxRateMap))
+	for taxRate, taxFee := range taxRateMap {
+		if taxFee > 0 {
+			result = append(result, map[string]string{
+				"TaxRate":    taxRate,
+				"TaxFee":     fmt.Sprintf("%.2f", taxFee),
+				"TotalPrice": fmt.Sprintf("%.2f", totalPriceMap[taxRate]),
+			})
+		}
+	}
+
+	return result
+}
+
+// 获取会员余额
+func (model *SaleOrder) GetMemberSurplusBalance() float64 {
+	if model.Member == nil {
+		return 0
+	}
+	if model.Status == constant.SaleOrderStatusFinish {
+		// todo 未完成
+		return 0
+	}
+	return model.Member.GetBalanceAll()
+}
+
+// 获取会员积分
+func (model *SaleOrder) GetMemberSurplusPoints() float64 {
+	if model.IsFree != 0 {
+		return 0
+	} else {
+		// todo 未完成
+		return model.Member.Point
+	}
+}
+
+// 获取支付方式
+func (model *SaleOrder) GetPayTypeNames(language string) string {
+	payTypeNames := []string{}
+	if model.IsFree == 1 {
+		// 免单处理
+		payTypeName := i18n.Translate(language, "免单")
+		if !slices.Contains(payTypeNames, payTypeName) {
+			payTypeNames = append(payTypeNames, payTypeName)
+		}
+	} else {
+		// 正常支付方式处理
+		for _, payment := range model.PaymentOrders {
+			if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+				payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+			}
+		}
+	}
+	return strings.Join(payTypeNames, ",")
+}
+
+// GetSaleOrderBuffetDelayTimeTotal 总加钟时间
+func (model *SaleOrder) GetSaleOrderBuffetDelayTimeTotal() int64 {
+	delayTime := int64(0)
+	for _, saleOrderProduct := range model.SaleOrderBuffetDelayProducts {
+		// 商品的加钟时间
+		delayTime += saleOrderProduct.DelayTime
+	}
+	return delayTime
 }
 
 // 设置为空。为了更新数据库数据时，不更新关联对象
@@ -273,12 +643,6 @@ func (model *SaleOrder) SetCheckoutZeroRuleCancel() {
 	}
 }
 
-// HasCheckoutZeroRule 判断订单是否存在结账抹零
-func (model *SaleOrder) HasCheckoutZeroRule() bool {
-	// 如果订单的结账抹零规则不为实款实收，则表示订单存在结账抹零
-	return model.ZeroCheckoutRule != constant.SaleBillSettingCheckoutZeroingMethodNone
-}
-
 // 取消整单折扣
 func (model *SaleOrder) SetAllDiscountCancel() bool {
 	isChange := false
@@ -288,10 +652,58 @@ func (model *SaleOrder) SetAllDiscountCancel() bool {
 	return isChange
 }
 
+func (model *SaleOrder) SetCheckoutZeroingMethod(zeroRule int) {
+	model.ZeroCheckoutRule = uint8(zeroRule)
+}
+
+// 设置初始时销售订单的服务费。
+// 当关闭服务费费时，订单服务费=0
+// 当开启服务费按固定服务费收费时， 订单服务费=固定金额
+// 当开启服务费按比例收取服务费时，订单服务费=各个订单商品的服务费之和。初始时订单服务费=0，在添加商品后再重建计算
+func (model *SaleOrder) SetInitServiceFee(setting SaleBillSetting) float64 {
+	// 当开启服务费按固定服务费收费时， 订单服务费=固定金额
+	if setting.GetServiceFeeType() == constant.SaleBillSettingServiceFeeTypeFixed {
+		return setting.ServiceFeeValue
+	}
+	// 其他情况，初始化时服务费都是0
+	return 0
+}
+
+func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
+	// 修改状态
+	model.Status = constant.SaleOrderStatusFinish
+	model.FinishTime = time.Now().Unix()
+	// 更新订单结算后要计算的金额字段
+	model.PaymentAmount = final.PaymentAmount
+	model.ChangeAmount = final.ChangeAmount
+	model.ZeroCheckoutFee = final.ZeroCheckoutFee
+	model.FinalPrice = final.FinalPrice
+	model.PaymentCommissionFee = final.PaymentCommissionFee
+	model.GiftAmount = final.GiftAmount
+
+}
+
+// SetFreeOrder 设置免单
+func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProductReason) {
+	defer model.SetUpdate() // 标记更新
+	model.IsFree = constant.SaleOrderIsFreeYes
+	model.FreeReason = reason
+	model.FreeReasons = freeReasons
+	// 订单状态
+	model.Status = constant.SaleOrderStatusFinish
+	model.FinishTime = time.Now().Unix()
+}
+
 // 是否存在折扣
 func (model *SaleOrder) IsDiscount() bool {
 	// custom_amount == -1 是没有进行订单改价
 	// custom_discount_rate = 1 是没有折扣
 	// zero_rule = 0 是没有去零
 	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || model.ZeroRule != 0
+}
+
+// HasCheckoutZeroRule 判断订单是否存在结账抹零
+func (model *SaleOrder) HasCheckoutZeroRule() bool {
+	// 如果订单的结账抹零规则不为实款实收，则表示订单存在结账抹零
+	return model.ZeroCheckoutRule != constant.SaleBillSettingCheckoutZeroingMethodNone
 }
