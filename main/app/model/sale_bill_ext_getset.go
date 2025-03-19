@@ -1,0 +1,491 @@
+package model
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/i18n"
+
+	"github.com/shopspring/decimal"
+)
+
+func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
+	buffetProductList := resp.BuffetProductList{}
+	buffetProductList.List = make([]resp.BuffetProduct, 0)
+	// 去重的列表
+	list := make([]resp.BuffetProduct, 0)
+	if model.BuffetPackage1 != nil {
+		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage1.GetBuffetProductList().List...)
+	}
+	if model.BuffetPackage2 != nil {
+
+		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage2.GetBuffetProductList().List...)
+	}
+	// 去重
+	buffetProductMap := make(map[uint64]bool)
+	for _, buffetProduct := range buffetProductList.List {
+		if !buffetProductMap[buffetProduct.Uuid] {
+			buffetProductMap[buffetProduct.Uuid] = true
+			list = append(list, buffetProduct)
+		}
+	}
+	buffetProductList.List = list
+	return buffetProductList
+}
+
+// 获取支付方式名称列表. 获取所有子单的付款单用到的支付方式，不重复
+func (model *SaleBill) GetPaymentMethodNameList() []string {
+	payMethods := make(map[string]bool)
+	for _, saleOrder := range model.SaleOrders {
+		for _, paymentOrder := range saleOrder.PaymentOrders {
+			payMethods[paymentOrder.PaymentMethodName] = true
+		}
+	}
+	payMethodList := make([]string, 0)
+	for payMethod := range payMethods {
+		payMethodList = append(payMethodList, payMethod)
+	}
+	return payMethodList
+}
+
+// 获取已送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductCooking() []*SaleOrderProduct {
+	cookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() && !orderProduct.IsCancelBool() {
+				continue
+			}
+			if orderProduct.Status == constant.SaleOrderProductStatusCooking {
+				cookingSaleOrderProducts = append(cookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+			}
+		}
+	}
+	return cookingSaleOrderProducts
+}
+
+// 获取未送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
+	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+				continue
+			}
+			if orderProduct.Status == constant.SaleOrderProductStatusNormal {
+				unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
+			}
+		}
+	}
+	return unCookingSaleOrderProducts
+}
+
+// 获取订单中下单减库存的商品
+func (model *SaleBill) GetSaleOrderProductCookingSubStock() []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+	cookingSaleOrderProducts := model.GetSaleOrderProductCooking()
+	for _, saleOrderProduct := range cookingSaleOrderProducts {
+		if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
+			products = append(products, saleOrderProduct)
+		}
+	}
+	return products
+}
+
+// 获取已送厨和未送厨的销售订单商品
+func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
+	saleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+				continue
+			}
+			saleOrderProducts = append(saleOrderProducts, saleOrder.SaleOrderProducts[i])
+		}
+	}
+	return saleOrderProducts
+}
+
+// 获取销售账单的取单列表item卡片的信息
+func (model *SaleBill) GetHideSaleBillCardInfo() {
+
+}
+
+// 返回新的销售账单
+func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
+	for i, saleOrder := range model.SaleOrders {
+		if saleOrderUuid == saleOrder.Uuid {
+			if len(model.SaleOrders) > 1 {
+				saleOrder.Index = i + 1
+			}
+			return saleOrder
+		}
+	}
+	return nil
+}
+
+// 返回第一个销售订单
+func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
+	return model.SaleOrders[0]
+}
+
+// 获取销售账单的销售订单和销售订单商品
+func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderProductUuid uint64) (*SaleOrder, *SaleOrderProduct) {
+	// 获取销售订单
+	saleOrder := model.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return nil, nil
+	}
+	// 获取销售订单商品
+	saleOrderProduct, _, err := saleOrder.GetSaleOrderProduct(saleOrderProductUuid)
+	if err != nil {
+		return saleOrder, nil
+	}
+	return saleOrder, saleOrderProduct
+}
+
+// 获取自助餐名称
+func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
+	name1 := dto.LocaleResponse{}
+	name2 := dto.LocaleResponse{}
+	if model.BuffetPackage1 != nil {
+		name1 = model.BuffetPackage1.MultiLanguageName.GetNames()
+	}
+	if model.BuffetPackage2 != nil {
+		name2 = model.BuffetPackage2.MultiLanguageName.GetNames()
+	}
+	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
+		name = dto.LocaleResponse{
+			ZH:   fmt.Sprintf("%s+%s", name1.ZH, name2.ZH),
+			TH:   fmt.Sprintf("%s+%s", name1.TH, name2.TH),
+			EN:   fmt.Sprintf("%s+%s", name1.EN, name2.EN),
+			ZHTW: fmt.Sprintf("%s+%s", name1.ZHTW, name2.ZHTW),
+			JA:   fmt.Sprintf("%s+%s", name1.JA, name2.JA),
+			KO:   fmt.Sprintf("%s+%s", name1.KO, name2.KO),
+			MY:   fmt.Sprintf("%s+%s", name1.MY, name2.MY),
+			TR:   fmt.Sprintf("%s+%s", name1.TR, name2.TR),
+		}
+		return
+	}
+	// 只有一个自助餐时都是只填在BuffetPackage1
+	if model.BuffetPackage1 != nil {
+		name = dto.LocaleResponse{
+			ZH:   fmt.Sprintf("%s", name1.ZH),
+			TH:   fmt.Sprintf("%s", name1.TH),
+			EN:   fmt.Sprintf("%s", name1.EN),
+			ZHTW: fmt.Sprintf("%s", name1.ZHTW),
+			JA:   fmt.Sprintf("%s", name1.JA),
+			KO:   fmt.Sprintf("%s", name1.KO),
+			MY:   fmt.Sprintf("%s", name1.MY),
+			TR:   fmt.Sprintf("%s", name1.TR),
+		}
+		return
+	}
+	return name
+}
+
+// 自助餐还剩余多少秒
+func (model *SaleBill) GetBuffetRemainingSeconds() int64 {
+	if model.BuffetDuration == 0 {
+		return -1
+	}
+	remainingTime := model.GetBuffetEndTime() - time.Now().Unix()
+	if remainingTime < 0 {
+		return 0
+	}
+	return remainingTime
+}
+
+// 获取加钟剩余时长
+func (model *SaleBill) GetRemainingDelayDuration() int64 {
+	useDuration := time.Now().Unix() - model.DelayStartTime
+	if useDuration <= 0 {
+		useDuration = 0
+	}
+	duration := int64(model.DelayDuration) - useDuration
+	if duration < 0 {
+		return 0
+	}
+	return duration
+}
+
+// 获取总的剩余时长
+func (model *SaleBill) GetTotalRemainingSeconds() int64 {
+	if model.BuffetDuration == 0 {
+		return -1
+	}
+	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
+}
+
+// 获取自助餐结束时间
+func (model *SaleBill) GetBuffetEndTime() int64 {
+	endTime := model.BuffetStartTime + int64(model.BuffetDuration)
+	return endTime
+}
+
+// 获取总的退款金额
+func (model *SaleBill) GetTotalRefundAmount() float64 {
+	refundAmount := 0.0
+	for _, saleOrder := range model.SaleOrders {
+		for _, refundOrder := range saleOrder.ReturnOrders {
+			refundAmount += refundOrder.RefundAmount
+		}
+	}
+	return refundAmount
+}
+
+// GetAmount 获取账单的付款金额。订单金额=amount-退款金额
+func (model *SaleBill) GetPaymentAmount() float64 {
+	// 退款金额
+	refundAmount := model.GetTotalRefundAmount()
+	//订单金额=amount-退款金额
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
+}
+
+// 获取所有自助餐名称
+func (model *SaleBill) GetBuffetNames(language string) string {
+	buffets := make([]string, 0)
+	for _, order := range model.SaleOrders {
+		for _, buffet := range order.SaleOrderBuffetCustomerTypes {
+			name := buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language)
+			if !slices.Contains(buffets, name) {
+				buffets = append(buffets, name)
+			}
+		}
+	}
+	return strings.Join(buffets, "+")
+}
+
+// GetPayTypes 获取支付方式
+func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp.OrderInfoPayTypes {
+	payTypeNames := []string{}
+	payTypeMap := make(map[string]*resp.OrderInfoPayTypes)
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrderUuid > 0 && saleOrderUuid != saleOrder.Uuid {
+			continue
+		}
+		if saleOrder.IsFree == 1 {
+			// 免单处理
+			payTypeName := i18n.Translate(language, "免单")
+			key := fmt.Sprintf("%s_%d", payTypeName, 2)
+			if existingPayType, ok := payTypeMap[key]; ok {
+				existingPayType.PaymentAmount += saleOrder.PaymentAmount
+			} else {
+				if !slices.Contains(payTypeNames, payTypeName) {
+					payTypeNames = append(payTypeNames, payTypeName)
+				}
+				payType := resp.OrderInfoPayTypes{
+					Uuid:            0,
+					PaymentTypeName: payTypeName,
+					CurrencyUnit:    "",
+					PaymentAmount:   saleOrder.PaymentAmount,
+					Status:          2,
+					Source:          0,
+					SourceText:      "",
+				}
+				payTypeMap[key] = &payType
+			}
+		} else {
+			// 正常支付方式处理
+			for _, payment := range saleOrder.PaymentOrders {
+				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
+				if existingPayType, ok := payTypeMap[key]; ok {
+					existingPayType.PaymentAmount += payment.PaymentAmount
+				} else {
+					payType := resp.OrderInfoPayTypes{
+						Uuid:            payment.Uuid,
+						PaymentTypeName: payment.PaymentMethodName,
+						CurrencyUnit:    payment.CurrencyUnit,
+						PaymentAmount:   payment.PaymentAmount,
+						Status:          uint(payment.Status),
+						Source:          uint(payment.GetSource()),
+						SourceText:      payment.GetSourceText(language),
+					}
+					payTypeMap[key] = &payType
+					if !slices.Contains(payTypeNames, payment.PaymentMethodName) {
+						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
+					}
+				}
+			}
+		}
+	}
+	payTypes := make([]resp.OrderInfoPayTypes, 0)
+	for _, payType := range payTypeMap {
+		payTypes = append(payTypes, *payType)
+	}
+	return payTypes
+}
+
+// 获取未下单的h5订单商品
+func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
+	// 获取第一个销售订单
+	saleOrder := model.SaleOrders[0]
+	// 获取未下单的h5订单商品
+	h5OrderProducts := saleOrder.GetH5OrderProductList()
+	return h5OrderProducts
+}
+
+func (model *SaleBill) SetNil() {
+	model.SaleOrders = nil
+	model.H5OrderProducts = nil
+	model.SaleBillSetting = nil
+	model.Cashier = Staff{}
+	model.Desk = nil
+	model.BuffetPackage1 = nil
+	model.BuffetPackage2 = nil
+}
+
+// 设置打包销售账单。并更新订单的税率
+func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
+	// 如果没有改变，则不更新
+	if model.DiningMethod == diningMethod {
+		return
+	}
+	// 默认堂食
+	method := constant.SaleBillDiningMethodDineIn
+	// 严谨判断。拒绝非法的值
+	if diningMethod == constant.SaleBillDiningMethodTakeout {
+		method = constant.SaleBillDiningMethodTakeout
+	}
+	// 严谨判断。拒绝非法的值
+	if diningMethod == constant.SaleBillDiningMethodDineIn {
+		method = constant.SaleBillDiningMethodDineIn
+	}
+	model.DiningMethod = uint(method)
+	model.SetUpdate() // 标记要更新model
+
+	// 由于就餐方式改变，导致税率改变，要重新计算账单金额
+	// 从ProductPackage中获取税率
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.ProductPackage == nil {
+				// 这种情况不应该出现，因为商品包是必填的.panic是为了提示没有预加载这个表
+				panic("saleOrderProduct.ProductPackage is nil")
+			}
+			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
+			saleOrderProduct.SetTaxRate(taxRate)
+		}
+	}
+}
+
+// 设置反结账
+func (model *SaleBill) SetReverseSettle() {
+	// 销售账单状态变为待付款
+	// 销售订单状态变为未结账状态
+	// 销售订单的所有付款单都退款，并生成退款单
+	model.Status = constant.SaleBillStatusPending
+	for _, saleOrder := range model.SaleOrders {
+		saleOrder.Status = constant.SaleOrderStatusPending
+		for _, paymentOrder := range saleOrder.PaymentOrders {
+			paymentOrder.Status = constant.PaymentOrderStatusRefund
+		}
+	}
+}
+
+// 设置销售账单完成
+func (model *SaleBill) SetFinishSaleBill() {
+	model.Status = constant.SaleBillStatusComplete
+	model.FinishTime = time.Now().Unix()
+}
+
+// 设置自助餐套餐
+func (model *SaleBill) SetBuffetPackage(buffetPackageUuids []uint64) {
+	if len(buffetPackageUuids) == 1 {
+		model.BuffetPackage1Uuid = buffetPackageUuids[0]
+		model.BuffetPackage2Uuid = 0
+	}
+	if len(buffetPackageUuids) == 2 {
+		model.BuffetPackage1Uuid = buffetPackageUuids[0]
+		model.BuffetPackage2Uuid = buffetPackageUuids[1]
+	}
+}
+
+// 设置账单为已送厨状态。如果状态已经是送厨，则不修改
+func (model *SaleBill) SetCookingStatus() {
+	if model.IsCookingStatus() {
+		return
+	}
+	model.SetUpdate()
+	model.ProductionTime = time.Now().Unix()
+}
+
+// 设置显示销售账单(取单)
+func (model *SaleBill) SetShowSaleBill(deviceUuid uint64) {
+	model.HideBillTime = 0
+	model.DeviceUuid = deviceUuid
+}
+
+// 设置隐藏销售账单(挂单)
+func (model *SaleBill) SetHideSaleBill() {
+	model.HideBillTime = time.Now().Unix()
+}
+
+// SetProductFields 动态更新商品多个字段值
+func (model *SaleBill) SetProductFields(saleOrderProductUuid uint64, updateProduct SaleOrderProduct, specialFields ...map[string]bool) {
+	for i, order := range model.SaleOrders {
+		for j, product := range order.SaleOrderProducts {
+			if product.Uuid == saleOrderProductUuid {
+				product := model.SaleOrders[i].SaleOrderProducts[j]
+				var fields map[string]bool
+				if len(specialFields) > 0 {
+					fields = specialFields[0]
+				}
+				product.SetFields(updateProduct, fields)
+				product.SetUpdate()
+				break
+			}
+		}
+	}
+}
+
+// SetAllDiscountCancel 设置整单折扣取消
+func (model *SaleBill) SetAllDiscountCancel() bool {
+	isChange := false
+	for _, saleOrder := range model.SaleOrders {
+		isChange = saleOrder.SetAllDiscountCancel() || isChange
+	}
+	return isChange
+}
+
+// 将销售订单商品列表中的“未下单h5商品”变为“h5已下单商品”
+func (model *SaleBill) SetH5OrderProduct(h5OrderUuid uint64) {
+	// 获取未下单的h5订单商品
+	h5OrderProducts := model.GetUnOrderH5OrderProduct()
+	// 遍历销售订单商品列表
+	for _, saleOrderProduct := range h5OrderProducts {
+		saleOrderProduct.SetH5OrderProduct(h5OrderUuid) // 将未下单的h5订单商品变为已下单的h5订单商品
+	}
+}
+
+// 设置自助餐开启时间
+func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
+	newStartTime := time.Now().Unix()
+	// 维护套餐时长和加钟时长
+	if maxTimeLimit == -1 {
+		model.BuffetDuration = 0
+		model.BuffetStartTime = newStartTime
+		model.DelayDuration = uint(model.GetRemainingDelayDuration())
+		model.DelayStartTime = newStartTime
+	} else {
+		// 重新计算开启时间 - 如果已经超时了，则开启时间为当前时间减去上一个套餐的限制时长（已用时长）
+		if model.BuffetIsTimeOut() || model.BuffetDuration == 0 {
+			model.BuffetStartTime = newStartTime - int64(model.BuffetDuration)
+		}
+		// 永远等于最大时间限制 + 总加钟时间
+		model.BuffetDuration = uint(int64(maxTimeLimit))
+		// 重新计算加钟的启动时长
+		model.DelayDuration = uint(model.GetRemainingDelayDuration())
+		if model.BuffetIsTimeOut() || model.BuffetDuration == 0 {
+			model.DelayStartTime = newStartTime
+		} else {
+			model.DelayStartTime = model.GetBuffetEndTime()
+		}
+	}
+}
