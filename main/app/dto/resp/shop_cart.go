@@ -141,6 +141,7 @@ type Product struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
 	FinishedNum         uint               `json:"finished_num"`          // 制作完成数量
+	UnitPrice           float64            `json:"unit_price"`            // 单价
 	SalePrice           float64            `json:"price"`                 // 原价
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）

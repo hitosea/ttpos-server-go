@@ -75,6 +75,7 @@ type DeskInfoResp struct {
 
 type DeskPing struct {
 	DeskInfo            Desk                   `json:"desk_info"`             // 桌台信息
+	IsSplitOrder        bool                   `json:"is_split_order"`        // 是否拆单
 	UnsentKitchenInfo   UnsentKitchenInfo      `json:"unsent_kitchen_info"`   // 未送厨商品信息
 	SentKitchenProducts SentKitchenProductList `json:"sent_kitchen_products"` // 已送厨商品列表
 }
