@@ -206,9 +206,11 @@ class Paytype extends Controller
             }
         }
         //
-        $param['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_checkout'] ?? $orderPayType->is_show_checkout) ? 1 : 0;
-        $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $param['is_show_checkout'] ?? $orderPayType->is_show_checkout) ? 1 : 0;
-        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $param['is_show_recharge'] ?? []) ? 1 : 0;
+        $isShowCheckout = $param['is_show_checkout'] ?: [];
+        $isShowRecharge = $param['is_show_recharge'] ?: [];
+        $param['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
+        $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
+        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowRecharge) ? 1 : 0;
         $param['logo_file_uuid'] = $param['img']['file_id'] ?? 0;
         $param['qrcode_file_uuid'] = $param['qrcode']['file_id'] ?? 0;
         $param['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path'] ?? '');
