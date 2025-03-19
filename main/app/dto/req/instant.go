@@ -208,3 +208,30 @@ type OrderCartInfoReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
 	H5OrderUuid  uint64 `form:"h5_order_uuid"`  // H5订单UUID, 可选。处理扫码接单进入桌台时使用
 }
+
+// InstantOrderPaymentQrcode
+type InstantOrderPaymentQrcodeReq struct {
+	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID, 必填
+	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID, 必填
+	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+}
+
+func (r *InstantOrderPaymentQrcodeReq) Validate() error {
+	if r.SaleBillUuid == 0 || r.SaleOrderUuid == 0 {
+		return errors.New("SaleBillUuid或SaleOrderUuid不能为0")
+	}
+	if r.PaymentMethodUuid == 0 {
+		return errors.New("PaymentMethodUuid不能为空")
+	}
+	if r.PaymentAmount <= 0 {
+		return errors.New("支付金额错误")
+	}
+	if r.PaymentAmount > 200000 {
+		return errors.New("最大支付金额为200000")
+	}
+	if r.PaymentAmount < 1 {
+		return errors.New("最小支付金额为1")
+	}
+	return nil
+}

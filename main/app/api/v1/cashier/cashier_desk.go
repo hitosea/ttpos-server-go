@@ -974,6 +974,34 @@ func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentQrcode 获取支付方式的二维码信息
+// @Summary 获取支付方式的二维码信息
+// @Description 获取支付方式的二维码信息
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp}
+// @Router /cashier/desk/order/payment/qrcode [get]
+func (h *DeskHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付二维码
+	res, err := h.orderService.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderPaymentCreate 创建一个支付单
 // @Summary 创建一个支付单
 // @Description 创建一个支付单
@@ -1027,37 +1055,6 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
 	// 撤销一个支付单
 	res, err := h.orderService.InstantOrderPaymentCancel(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	ctx.Log().Debug("撤销一个支付单成功", zap.Any("res", res))
-	// 返回结果
-	helper.Success(c, res)
-}
-
-// OrderPaymentQrcode 获取支付二维码
-// @Summary 获取支付二维码
-// @Description 获取支付二维码
-// @Tags 收银端.桌台.结账
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.InstantOrderPaymentCreateReq true "创建一个支付单参数"
-// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
-// @Router /cashier/desk/order/payment/qrcode [get]
-func (h *DeskHandler) OrderPaymentQrcode(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到桌台页面创建一个支付单接口请求")
-
-	params := req.InstantOrderPaymentCreateReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, nil)
-		return
-	}
-	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
-	// 创建一个支付单
-	res, err := h.orderService.InstantOrderPaymentCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1495,6 +1492,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
+		privateApi.GET("/desk/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                          // 获取支付方式的二维码信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
 		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账

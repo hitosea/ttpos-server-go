@@ -29,9 +29,27 @@ func (model *SaleOrder) GetBuffetNames(language string) string {
 	return strings.Join(buffets, "+")
 }
 
-// 获取实际支付金额
+// 获取实际支付金额 - 结账之后才有值
 func (model *SaleOrder) GetActualPaymentAmount() float64 {
 	return model.PaymentAmount - model.GetTotalRefundAmount()
+}
+
+// 获取待支付的金额
+func (model *SaleOrder) GetUnpaidAmount() float64 {
+	unpaidAmount := model.GetPrintReceivablePrice() - model.GetSummaryPaymentAmount()
+	if unpaidAmount < 0 {
+		return 0
+	}
+	return unpaidAmount
+}
+
+// 获取汇总支付订单的支付金额 - 未结账也有值
+func (model *SaleOrder) GetSummaryPaymentAmount() float64 {
+	amount := 0.0
+	for _, paymentOrder := range model.PaymentOrders {
+		amount += paymentOrder.PaymentAmount
+	}
+	return amount
 }
 
 // 获取总的退款金额

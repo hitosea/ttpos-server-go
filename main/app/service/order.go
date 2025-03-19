@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/service/lianlian"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -84,6 +85,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                     // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                           // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)             // 获取结账页面信息
+	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)          // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                // 撤销一个支付单
 	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                            // 给销售订单创建一个支付单
@@ -4503,6 +4505,85 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
 		PaymentMethods: resp.PaymentMethodList{List: methodItems},
 		Amounts:        resp.PaymentMethodAmountList{List: amounts},
+	}
+
+	return infoResp, nil
+}
+
+// InstantOrderPaymentQrcode
+func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error) {
+	// baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid + req.PaymentMethodUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid + req.PaymentMethodUuid)
+		ctx.AddLock()
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 获取销售账单信息
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillInfoAndPaymentOrders(req.SaleBillUuid, req.SaleOrderUuid, 0)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+	if saleBill.IsEndStatus() {
+		return nil, errors.WithMessage(errors.New("销售账单已结束"))
+	}
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+	if err := saleOrder.ValidateOrderStatus(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 判断当前是否连连支付
+	paymentMethods := repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
+	var paymentMethod *model.PaymentMethod
+	for _, method := range paymentMethods {
+		if method.Code != constant.PaymentMethodCodeLianLianWechatPay &&
+			method.Code != constant.PaymentMethodCodeLianLianAliPay &&
+			method.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
+			continue
+		}
+		if method.Uuid == req.PaymentMethodUuid {
+			paymentMethod = method
+			break
+		}
+	}
+
+	// 支付方式不可用
+	if paymentMethod == nil {
+		return nil, errors.New("支付方式不可用")
+	}
+
+	// 计算手续费
+	percent := paymentMethod.GetFeePercent()
+	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
+	paymentAmount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
+
+	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
+	unpaidAmount := saleOrder.GetUnpaidAmount()
+	if unpaidAmount < req.PaymentAmount {
+		return nil, errors.New("超出订单剩余可支付金额")
+	}
+
+	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(paymentMethod.Code, paymentAmount)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	//
+	fmt.Println(utils.ToJsonString(payment))
+
+	infoResp := &resp.InstantOrderPaymentQrcodeInfoResp{
+		// MemberInfo:     memberInfo,
+		// PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
+		// PaymentMethods: resp.PaymentMethodList{List: methodItems},
+		// Amounts:        resp.PaymentMethodAmountList{List: amounts},
 	}
 
 	return infoResp, nil
