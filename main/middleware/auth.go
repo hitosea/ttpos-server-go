@@ -35,14 +35,20 @@ func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 
 func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		deskTokenHeader := c.GetHeader("Token") // 桌台二维码的token
+		deskTokenHeader := c.GetHeader("Authorization") // 桌台二维码的token
 
 		if deskTokenHeader == "" {
 			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
 			return
 		}
-		token, err := auth.DecodeDeskToken(deskTokenHeader)
+		parts := strings.SplitN(deskTokenHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
+			c.Abort()
+			return
+		}
+		token, err := auth.DecodeDeskToken(parts[1])
 		if err != nil {
 			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
