@@ -48,7 +48,7 @@ func (r *ShiftLogRepo) GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error
 		db = opt(db)
 	}
 
-	err := r.db.First(&log).Error
+	err := db.First(&log).Error
 	return log, errors.WithMessage(err)
 }
 

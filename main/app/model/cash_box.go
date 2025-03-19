@@ -14,7 +14,7 @@ type CashBox struct {
 type CashBoxLog struct {
 	BaseModel
 	Type                  int     `gorm:"column:type;type:tinyint(1);default:0;comment:类型 1-取现 2-存现;NOT NULL" json:"type"`
-	Scene                 int     `gorm:"column:scene;type:tinyint(1);default:0;comment:场景 1-支付 2-退货退款 3-取消付款 4-中途取出 5-中途存入;NOT NULL" json:"scene"`
+	Scene                 int     `gorm:"column:scene;type:tinyint(1);default:0;comment:场景 1-销售订单支付 2-退货退款 3-取消付款 4-中途取出 5-中途存入 6-会员充值 7-结账找零 8-交班;NOT NULL" json:"scene"`
 	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:金额;NOT NULL" json:"amount"`
 	Remark                string  `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
 	PaymentBillUuid       uint64  `gorm:"column:payment_bill_uuid;type:bigint(20) unsigned;default:0;comment:付款单ID,场景为1时必填;NOT NULL" json:"payment_bill_uuid"`

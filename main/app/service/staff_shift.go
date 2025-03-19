@@ -132,43 +132,101 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 	if req.LeaveCash < 0 {
 		return nil, errors.New("遗留现金不能小于0")
 	}
+	var (
+		withdrawCash decimal.Decimal // 取出现金
+		leaveCash    decimal.Decimal // 遗留现金
+		cashAmount   float64         // 现金收入
+	)
 	// 获取当前班次
 	staff := ctx.GetStaff()
 	db := s.dbm.GetDB(staff.CompanyUuid)
-	shiftLogRepo := repository.NewShiftLogRepo(db)
-	shiftLog, err := shiftLogRepo.GetShiftLog(
-		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
-	)
-	if err != nil {
-		return nil, errors.New("当前班次不存在")
-	}
-	if shiftLog.IsHandedOver() {
-		return nil, errors.New("当前班次已交班")
-	}
-	withdrawCash := decimal.NewFromFloat(req.WithdrawCash)
-	leaveCash := decimal.NewFromFloat(req.LeaveCash)
-	// 当前班次取出金额 + 遗留现金 = 当前钱箱现金总计
-	if !withdrawCash.Add(leaveCash).
-		Equal(decimal.NewFromFloat(shiftLog.CurrentCashTotal)) {
-		return nil, errors.New("输入的本班取出現金和本班遗留备用金总额与当前钱箱现金总计不符")
-	}
-	// 当前班次支付方式收入
-	paymentMethodIncomeList, cashAmount := s.CountShiftPaymentMethodIncome(db, shiftLog.ShiftNo, ctx.GetLanguage())
-	incomes, _ := convertor.ToJson(paymentMethodIncomeList)
-	// 当前班次营业额
-	totalBusiness := 0
-	// 更新当班记录
-	shiftLogRepo.Update(shiftLog, map[string]interface{}{
-		"status":             constant.StaffHandedOver,      // 交班状态
-		"current_cash_total": leaveCash.InexactFloat64(),    // 当前钱箱现金总计
-		"cash_taken_out":     withdrawCash.InexactFloat64(), // 取出现金
-		"cash_left":          leaveCash.InexactFloat64(),    // 遗留现金
-		"shift_end_time":     time.Now().Unix(),             // 交班时间
-		"cash_income":        cashAmount,                    // 现金收入
-		"incomes":            incomes,                       // 支付方式收入
-		"total_business":     totalBusiness,                 // 营业额
+	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+		shiftLogRepo := repository.NewShiftLogRepo(db)
+		shiftLog, err := shiftLogRepo.GetShiftLog(
+			repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+			repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+		)
+		if err != nil {
+			return errors.New("当前班次不存在")
+		}
+		if shiftLog.IsHandedOver() {
+			return errors.New("当前班次已交班")
+		}
+		withdrawCash = decimal.NewFromFloat(req.WithdrawCash)
+		leaveCash = decimal.NewFromFloat(req.LeaveCash)
+		// 当前班次取出金额 + 遗留现金 = 当前钱箱现金总计
+		if !withdrawCash.Add(leaveCash).
+			Equal(decimal.NewFromFloat(shiftLog.CurrentCashTotal)) {
+			return errors.New("输入的本班取出現金和本班遗留备用金总额与当前钱箱现金总计不符")
+		}
+		// 当前班次支付方式收入
+		var paymentMethodIncomeList = make([]resp.PaymentMethodIncome, 0)
+		paymentMethodIncomeList, cashAmount = s.CountShiftPaymentMethodIncome(db, shiftLog.ShiftNo, ctx.GetLanguage())
+		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
+		// 当前班次营业额
+		totalBusiness := 0
+		// 更新当班记录
+		_, err = shiftLogRepo.Update(shiftLog, map[string]interface{}{
+			"status":              constant.StaffHandedOver,      // 交班状态
+			"previous_shift_cash": shiftLog.CurrentCashTotal,     // 上交班现金总计
+			"current_cash_total":  leaveCash.InexactFloat64(),    // 当前钱箱现金总计
+			"cash_taken_out":      withdrawCash.InexactFloat64(), // 取出现金
+			"cash_left":           leaveCash.InexactFloat64(),    // 遗留现金
+			"shift_end_time":      time.Now().Unix(),             // 交班时间
+			"cash_income":         cashAmount,                    // 现金收入
+			"incomes":             incomes,                       // 支付方式收入
+			"total_business":      totalBusiness,                 // 营业额
+		})
+		if err != nil {
+			return errors.New("交班失败")
+		}
+		// 更新钱箱记录
+		cashBoxRepo := repository.NewCashBoxRepo(db)
+		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
+		cashBox := cashBoxRepo.Get()
+		if cashBox.Uuid > 0 {
+			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
+				"balance": gorm.Expr("balance - ?", withdrawCash.InexactFloat64()),
+			})
+			if err != nil {
+				return errors.New("交班失败")
+			}
+			// 更新钱箱记录
+			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
+				Type:   constant.CashBoxLogTypeOut,
+				Scene:  constant.CashBoxLogSceneShift,
+				Amount: withdrawCash.InexactFloat64(),
+			})
+			if err != nil {
+				return errors.New("交班失败")
+			}
+		}
+		// 员工下线
+		err = repository.NewStaffRepo(db).Update(staff.Uuid, map[string]any{
+			"cashier_online":     0,
+			"cashier_login_time": 0,
+			"duty_no":            "",
+		})
+		if err != nil {
+			return errors.New("交班失败")
+		}
+		deviceRepo := repository.NewDeviceRepo(db)
+		device, err := deviceRepo.GetDevice(
+			deviceRepo.WhereSource(constant.SourceCashier),
+			deviceRepo.WhereSn(staff.BindKey),
+		)
+		if err != nil {
+			return errors.New("交班失败")
+		}
+		repository.NewDeviceRepo(db).UpdateDevice(device.Uuid, map[string]any{
+			"finally_login_uuid": 0,
+		})
+		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &resp.ShiftSubmit{
 		CashIncome:   cashAmount,
