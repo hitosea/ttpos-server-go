@@ -181,8 +181,8 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 func (s *staffShiftSrv) CountShiftPaymentMethodIncome(db *gorm.DB, shiftNo string, language string) ([]resp.PaymentMethodIncome, float64) {
 	paymentMethodAmount := repository.NewStatisticsRepo(db).CountShiftPaymentMethodAmount(shiftNo)
 	var (
-		paymentMethodIncomeList []resp.PaymentMethodIncome // 支付方式收入列表
-		cashAmount              decimal.Decimal            // 现金收入
+		paymentMethodIncomeList = make([]resp.PaymentMethodIncome, 0, len(paymentMethodAmount)) // 支付方式收入列表
+		cashAmount              decimal.Decimal                                                 // 现金收入
 	)
 	for _, v := range paymentMethodAmount {
 		payAmount := decimal.NewFromFloat(v.PayAmount.Float64)
@@ -198,10 +198,12 @@ func (s *staffShiftSrv) CountShiftPaymentMethodIncome(db *gorm.DB, shiftNo strin
 	}
 	// 统计当班用餐订单免单金额
 	freeAmount := repository.NewStatisticsRepo(db).CountShiftSaleFreeAmount(shiftNo)
-	paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
-		Name:   i18n.Translate(language, "免单金额"),
-		Amount: freeAmount.FreeAmount.Float64,
-	})
+	if freeAmount.FreeAmount.Float64 > 0 {
+		paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
+			Name:   i18n.Translate(language, "免单金额"),
+			Amount: freeAmount.FreeAmount.Float64,
+		})
+	}
 
 	return paymentMethodIncomeList, cashAmount.InexactFloat64()
 }
