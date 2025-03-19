@@ -1082,6 +1082,15 @@ definitions:
     - is_sold_out
     - product_bom_uuid
     type: object
+  req.SubmitShiftReq:
+    properties:
+      leave_cash:
+        description: '遗留现金: 0 - 当前钱箱现金总计'
+        type: number
+      withdraw_cash:
+        description: '取出金额: 0 - 当前钱箱现金总计'
+        type: number
+    type: object
   req.UpdateAcceptOrderSetting:
     properties:
       auto_order_limit:
@@ -3679,6 +3688,18 @@ definitions:
         type: number
       withdraw_cash:
         description: 中途取出现金
+        type: number
+    type: object
+  resp.ShiftSubmit:
+    properties:
+      cash_income:
+        description: 本班现金收入
+        type: number
+      cash_left:
+        description: 本班遗留现金
+        type: number
+      cash_taken_out:
+        description: 本班取出现金
         type: number
     type: object
   resp.ShopCart:
@@ -10186,6 +10207,34 @@ paths:
       security:
       - JwtToken: []
       summary: 获取交班信息
+      tags:
+      - 收银端.交班
+    post:
+      consumes:
+      - application/json
+      description: 提交交班
+      parameters:
+      - description: 提交交班参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SubmitShiftReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShiftSubmit'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 提交交班
       tags:
       - 收银端.交班
   /cashier/sold_out/add:
