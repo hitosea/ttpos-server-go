@@ -108,6 +108,8 @@ type IOrderSrv interface {
 	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                           // 下单扫码h5订单
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64) (resp.SentKitchen, error)                                                             // 已送厨商品列表
+
+	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) // 送厨
 }
 
 // orderSrv 订单服务结构
@@ -3594,7 +3596,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 
 	// 送厨
-	checkServiceRes, err := s.ActionCooking(ctx, req, saleBill, unCookingSaleOrderProducts)
+	checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts)
 	if err != nil {
 		return nil, nil, err
 	}

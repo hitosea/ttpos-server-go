@@ -25,16 +25,18 @@ type IH5OrderSrv interface {
 }
 
 type h5OrderSrv struct {
-	dbm *database.DBManager
+	dbm      *database.DBManager
+	orderSrv IOrderSrv
 }
 
-func NewH5OrderSrv(dbm *database.DBManager) IH5OrderSrv {
-	return NewH5OrderSrvImpl(dbm)
+func NewH5OrderSrv(dbm *database.DBManager, orderSrv IOrderSrv) IH5OrderSrv {
+	return NewH5OrderSrvImpl(dbm, orderSrv)
 }
 
-func NewH5OrderSrvImpl(dbm *database.DBManager) IH5OrderSrv {
+func NewH5OrderSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv) IH5OrderSrv {
 	return &h5OrderSrv{
-		dbm: dbm,
+		dbm:      dbm,
+		orderSrv: orderSrv,
 	}
 }
 
@@ -261,6 +263,31 @@ func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) erro
 	order.ChangeToAccepted()
 	// 送厨已经接单的商品。送厨指定的商品列表
 
+	// {
+	// 	ignoreMust := true // 接单，送厨忽略必点方案
+	// 	// 获取销售账单信息
+	// 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(0)
+	// 	if errSaleBill != nil {
+	// 		return errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
+	// 	}
+	// 	ctx.Log().Debug("获取销售账单信息")
+
+	// 	// 获取未送厨的商品列表
+	// 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
+	// 	if len(unCookingSaleOrderProducts) == 0 {
+	// 		return errors.New("没有未送厨的商品")
+	// 	}
+
+	// 	// 送厨
+	// 	checkServiceRes, err := s.orderSrv.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts)
+	// 	if err != nil {
+	// 		return errors.WithMessage(err, "ActionCooking")
+	// 	}
+	// 	if checkServiceRes != nil {
+	// 		// return nil, checkServiceRes, nil
+	// 		return nil
+	// 	}
+	// }
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新h5订单
 		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*order); err != nil {

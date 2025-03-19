@@ -131,9 +131,12 @@ func RegisterH5OrderHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
 	// 初始化处理器
 	wrapper := H5OrderHandler{
-		h5OrderSrv: service.NewH5OrderSrv(dbm),
+		h5OrderSrv: service.NewH5OrderSrv(dbm, orderSrv),
 	}
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))

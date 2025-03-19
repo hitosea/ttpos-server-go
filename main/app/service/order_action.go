@@ -2,7 +2,6 @@ package service
 
 import (
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -15,16 +14,17 @@ import (
 )
 
 // ActionCooking 送厨
-func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCookingReq, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
 	var productionOrder *model.ProductionOrder
 	var warehouseOutForm *model.WarehouseOutForm
 
 	if ctx.NoLock() {
-		s.lock.LockUuid(req.SaleBillUuid)
-		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		s.lock.LockUuid(saleBill.Uuid)
+		defer s.lock.UnlockUuid(saleBill.Uuid)
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
+	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	// 送厨相关
 	{
@@ -32,13 +32,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 		saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, req.SaleBillUuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
+		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
 			return nil, errors.New("检查商品失败")
 		}
 		if checkServiceRes != nil {
-			if checkServiceRes.Code == constant.CodeOrderCheckProductMust && req.IgnoreMust {
+			if checkServiceRes.Code == constant.CodeOrderCheckProductMust && ignoreMust {
 				// 必点方案未选择，且忽略必点方案
 			} else {
 				return checkServiceRes, nil
@@ -46,7 +46,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 		}
 
 		// 构建送厨单
-		productionOrder := newProductionOrder(ctx, req.SaleOrderUuid, req.SaleBillUuid, unCookingSaleOrderProducts)
+		productionOrder = newProductionOrder(ctx, saleOrderUuid, saleBill.Uuid, unCookingSaleOrderProducts)
 
 		// 修改商品状态为已送厨
 		for index, _ := range unCookingSaleOrderProducts {
@@ -68,7 +68,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
 		// 构建出库单
-		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
+		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid)
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -137,8 +137,8 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 					Ctx:           ctx,
 					CompanyUuid:   ctx.GetCompanyUuid(),
 					Source:        ctx.GetSource(),
-					SaleBillUuid:  req.SaleBillUuid,
-					SaleOrderUuid: req.SaleOrderUuid,
+					SaleBillUuid:  saleBill.Uuid,
+					SaleOrderUuid: saleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
 				Products: products,
