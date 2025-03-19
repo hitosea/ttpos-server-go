@@ -179,7 +179,7 @@ type ShiftInfo struct {
 
 // PaymentMethodIncomeList 支付方式收入列表
 type PaymentMethodIncomeList struct {
-	List []PaymentMethodIncome
+	List []PaymentMethodIncome `json:"list"`
 }
 
 // PaymentMethodIncome 支付方式收入详情
