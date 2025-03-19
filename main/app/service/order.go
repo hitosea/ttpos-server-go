@@ -6332,6 +6332,7 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	if err != nil {
 		return nil, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
+	fmt.Println("GetOrderedH5ProductList shopCart", utils.ToJsonString(shopCart))
 	var productNum uint
 	productGroup := make(map[int64][]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
@@ -6363,7 +6364,9 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	}
 	var amount resp.AmountInfo
 	for _, order := range saleBill.SaleOrders {
-		calc := order.CalcCookingSaleOrder(*saleBill.SaleBillSetting)
+		products := order.H5OrderProductList()
+		products = append(products, order.CookingOrderProductList()...)
+		calc := order.CalcSaleOrderByProductList(products, *saleBill.SaleBillSetting)
 		amount.ProductOriginalAmount = utils.DecimalAdd(amount.ProductOriginalAmount, calc.ProductOriginalAmount)
 		amount.ProductAmount = utils.DecimalAdd(amount.ProductAmount, calc.ProductAmount)
 		amount.ServiceAmount = utils.DecimalAdd(amount.ServiceAmount, calc.ServiceFee)

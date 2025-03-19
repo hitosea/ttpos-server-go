@@ -436,12 +436,14 @@ const (
 
 type OrderCartInfoOptionFunc func(option *OrderCartInfoOption)
 
+// 查询H5未下单的商品
 func WithUnorderedH5Product() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = UnorderedH5Product
 	}
 }
 
+// 查询H5已下单的商品
 func WithOrderedH5Product() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = OrderedH5Product

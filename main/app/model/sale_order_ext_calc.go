@@ -15,9 +15,12 @@ func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting) *Calc {
 
 // 计算已送厨商品的订单金额
 func (model *SaleOrder) CalcCookingSaleOrder(setting SaleBillSetting) *Calc {
+	return model.CalcSaleOrderByProductList(model.CookingOrderProductList(), setting)
+}
+
+func (model *SaleOrder) CalcSaleOrderByProductList(products []*SaleOrderProduct, setting SaleBillSetting) *Calc {
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	products := model.CookingOrderProductList()
 	return model.calcCookingSaleOrder(products, serviceFeeType, setting.ServiceFeeValue, taxFeeType)
 }
 

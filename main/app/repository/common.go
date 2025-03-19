@@ -334,7 +334,7 @@ func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
 func (r *commonRepo) FilterSaleOrderProductH5Ordered() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking).
-			Where("NOT (delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?)", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept)
+			Or("delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept)
 	}
 }
 
