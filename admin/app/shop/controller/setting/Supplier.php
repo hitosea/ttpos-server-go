@@ -164,7 +164,10 @@ class Supplier extends Controller
                 if (isset($item['action']) && $item['action'] == 'edit') {
                     if (isset($item['id'])) {
                         unset($item['action']);
-                        $taxCategoryModel->update($item, ['id' => $item['id']]);
+                        $taxCategoryModel->update([
+                            'name' => $item['name'],
+                            'tax_rate' => $item['tax_rate'],
+                        ], ['uuid' => $item['id']]);
                     }
                     continue;
                 }
