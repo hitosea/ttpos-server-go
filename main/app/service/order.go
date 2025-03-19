@@ -4572,18 +4572,48 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("超出订单剩余可支付金额")
 	}
 
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
+	}
+
+	// 创建支付订单
 	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(paymentMethod.Code, paymentAmount)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	//
-	fmt.Println(utils.ToJsonString(payment))
+
+	// 创建支付订单
+	paymentOrder := &model.PaymentOrder{
+		PaymentMethodName:    paymentMethod.PaymentName,
+		PaymentMethodUuid:    req.PaymentMethodUuid,
+		PaymentFeePercent:    percent,
+		RelatedType:          constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:          req.SaleOrderUuid,
+		CurrencyUnit:         currencySetting.Unit,
+		PaymentAmount:        req.PaymentAmount,
+		PaymentCommissionFee: commissionFee,
+		Amount:               paymentAmount,
+		Status:               constant.PaymentOrderStatusUnPay,
+	}
+
+	// 创建或更新支付单
+	if err := repository.NewPaymentOrderRepo(db).UpdateOrCreatePaymentOrderRecord(*paymentOrder); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 在 infoResp 初始化之前添加
+	qrCodeExpireSec := 480 // 默认8分钟过期
+	if expireSec, err := strconv.Atoi(payment.Order.QrCodeExpireSec); err == nil {
+		qrCodeExpireSec = expireSec
+	}
 
 	infoResp := &resp.InstantOrderPaymentQrcodeInfoResp{
-		// MemberInfo:     memberInfo,
-		// PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
-		// PaymentMethods: resp.PaymentMethodList{List: methodItems},
-		// Amounts:        resp.PaymentMethodAmountList{List: amounts},
+		PaymentOrderUuid: paymentOrder.Uuid,
+		QrCode:           payment.Order.QrCode,
+		QrCodeExpireSec:  qrCodeExpireSec,
+		Status:           constant.PaymentOrderStatusUnPay,
+		PaymentAmount:    paymentAmount,
 	}
 
 	return infoResp, nil

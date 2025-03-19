@@ -3,6 +3,7 @@ package lianlian
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,8 @@ import (
 	"ttpos-server-go/app/repository/admin"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+
+	"github.com/skip2/go-qrcode"
 
 	"github.com/spf13/viper"
 )
@@ -64,7 +67,7 @@ type LianLianPaymentResp struct {
 		// 支付宝
 		DueDate         string `json:"due_date"`          // 支付宝 - 到期时间
 		OrderCreateTime string `json:"order_create_time"` // 支付宝 - 订单创建时间
-		// 支付宝
+		// LIANLIAN_ALI_OFFLINE_PAY
 		MerchantId      string `json:"merchant_id"`        // 商户ID
 		MerchantOrderId string `json:"merchant_order_id"`  // 商户订单id
 		QrCode          string `json:"qr_code"`            // 二维码 - base64
@@ -105,6 +108,7 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 	if err != nil {
 		return nil, err
 	}
+
 	// 根据支付方式调用不同的支付接口
 	url := ""
 	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay {
@@ -116,6 +120,7 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 	} else {
 		return nil, errors.New("不支持的支付方式")
 	}
+
 	// 组装请求数据
 	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
 		p.ctx.GetCompanyUuid(),
@@ -127,6 +132,7 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 		p.ctx.GetStaffUuid(),
 		strings.ReplaceAll(p.payServiceLianlianCallbackUrl, "/", "\\/"),
 	)
+
 	// 计算签名
 	sign := p.paySign(paymentApp.LlSignSalt, jsonStr)
 	headers := map[string]string{
@@ -137,19 +143,39 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 	if err != nil {
 		return nil, err
 	}
+
 	// 返回支付结果
-	var respe LianLianPaymentResp
+	var resp LianLianPaymentResp
 	// 首先将 map[string]interface{} 转换回 JSON 字符串
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
 	}
 	// 然后将 JSON 字符串解析到结构体中
-	if err := json.Unmarshal(responseJSON, &respe); err != nil {
+	if err := json.Unmarshal(responseJSON, &resp); err != nil {
 		return nil, err
 	}
+	// 当是微信或者支付宝支付的时候，需要把LinkUrl转换成二维码
+	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay || paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+		if resp.Order.QrCode == "" {
+			qr, err := qrcode.New(resp.Order.LinkUrl, qrcode.Medium)
+			if err != nil {
+				return nil, err
+			}
+			// 生成PNG格式的二维码图片
+			png, err := qr.PNG(256) // 生成256x256大小的PNG图片
+			if err != nil {
+				return nil, err
+			}
+			// 转换为base64
+			resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+		}
+	} else {
+		// PromptPay直接使用返回的QR code
+		resp.Order.QrCode = "data:image/png;base64," + resp.Order.QrCode
+	}
 
-	return &respe, nil
+	return &resp, nil
 }
 
 // paySign 计算支付签名

@@ -142,6 +142,37 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付记录表';
 
+-- ----------------------------
+-- Table structure for ttpos_ll_payment_order
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_ll_payment_order`;
+CREATE TABLE `ttpos_ll_payment_order` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自己系统的支付订单ID',
+    `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
+    `merchant_id` varchar(255) DEFAULT '' COMMENT 'lianlian商户号',
+    `merchant_order_id` varchar(255) DEFAULT '' COMMENT '自己系统的为支付生成的订单号',
+    `order_id` varchar(255) DEFAULT '' COMMENT 'lianlian订单ID',
+    `order_type` varchar(50) DEFAULT '' COMMENT '订单类型',
+    `order_status` varchar(50) DEFAULT '' COMMENT 'lianlian订单状态 PI-初始化(未访问支付页操作) WP-等待支付 PS-支付成功 PF-支付失败 PE-支付已过期',
+    `order_amount` decimal(12,2) DEFAULT 0.00 COMMENT 'lianlian订单金额',
+    `order_currency` varchar(50) DEFAULT '' COMMENT 'lianlian订单货币',
+    `full_name` varchar(50) DEFAULT '' COMMENT '订单人名称',
+    `order_desc` varchar(50) DEFAULT '' COMMENT '订单描述',
+    `link_url` varchar(2000) DEFAULT '' COMMENT 'lianlian订单支付链接',
+    `merchant_user_id` varchar(255) DEFAULT '' COMMENT '自己系统的用户ID',
+    `ll_create_time` varchar(250) DEFAULT '0' COMMENT 'lianlian订单创建时间',
+    `pay_time` int(11) NOT NULL DEFAULT 0 COMMENT '支付时间',
+    `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+    KEY `order_id` (`order_id`)
+    KEY `merchant_order_id` (`merchant_order_id`)
+    KEY `payment_order_uuid` (`payment_order_uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='lianlian支付订单';
+
 CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式ID',

@@ -252,9 +252,8 @@ type InstantHideSaleProductList struct {
 // 销售订单的支付页的二维码信息
 type InstantOrderPaymentQrcodeInfoResp struct {
 	PaymentOrderUuid uint64  `json:"payment_order_uuid"` // 支付单uuid
-	LinkUrl          string  `json:"link_url"`           // 支付单链接
 	QrCode           string  `json:"qr_code"`            // 支付单二维码
-	QrCodeExpireSec  int     `json:"qr_code_expire_sec"` // 支付单二维码过期时间
+	QrCodeExpireSec  int     `json:"qr_code_expire_sec"` // 支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码)
 	Status           int     `json:"status"`             // 支付单状态 支付状态, 0-未支付 1-已支付
 	PaymentAmount    float64 `json:"payment_amount"`     // 支付金额
 }
