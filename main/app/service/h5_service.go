@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	srvSetting "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -89,6 +90,12 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 		Buffet:     buffetSetting,
 		Currency:   currencySetting,
 		CloudBasic: cloudBasicSetting,
+		Business: setting.Business{
+			ZeroingMethodList:         make([]setting.ZeroingMethodItem, 0),
+			CheckoutZeroingMethodList: make([]setting.CheckoutZeroingMethodItem, 0),
+			GiftMethodList:            make([]setting.GiftMethodItem, 0),
+			FreeMethodList:            make([]setting.FreeMethodItem, 0),
+		},
 	}, nil
 }
 func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetBaseInfoResponse, error) {

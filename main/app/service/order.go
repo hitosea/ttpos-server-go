@@ -3602,63 +3602,11 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		return nil, checkServiceRes, nil
 	}
 
-	// 获取减库存的清单信息
-	decreaseStockList, err := s.GetProductDecreaseStockList(ctx, unCookingSaleOrderProducts)
-	if err != nil {
-		return nil, nil, err
-	}
-	// 构建出库单
-	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 如果出库单明细不为空，则创建出库单
-		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-			// 创建出库单
-			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建出库单记录
-			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-				return errors.WithMessage(err)
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, nil, err
-	}
-
 	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
-
-	// 发起“送厨”操作的事件
-	products := make(event.Products, 0)
-	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
-		products = append(products, event.OrderProduct{
-			OrderProductId:  unCookingSaleOrderProduct.Uuid,
-			ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
-			ProductName:     unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
-			ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
-			TotalNum:        unCookingSaleOrderProduct.Num,
-			IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
-			Remark:          unCookingSaleOrderProduct.Remark,
-		})
-	}
-	go func() {
-		s.bus.PublishSentCookingEvent(event.SentCookingPayload{
-			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
-				OperatorUuid:  int64(ctx.GetStaffUuid()),
-			},
-			Products: products,
-		})
-	}()
 	return cartInfo, nil, nil
 }
 

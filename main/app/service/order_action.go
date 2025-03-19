@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/eventbus/event"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -69,6 +70,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 		// 构建出库单
 		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, req.SaleBillUuid)
 	}
+
 	ctx.Log().Debug("准备开始更新")
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 送厨相关
@@ -113,5 +115,35 @@ func (s *orderSrv) ActionCooking(ctx context.Context, req req.OrderCartProductCo
 		return nil, errors.WithMessage(err, "更新数据失败")
 	}
 
+	// 操作记录相关
+	{
+		// 发起“送厨”操作的事件
+		products := make(event.Products, 0)
+		for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+			products = append(products, event.OrderProduct{
+				OrderProductId:  unCookingSaleOrderProduct.Uuid,
+				ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
+				ProductName:     unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
+				ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
+				ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
+				TotalNum:        unCookingSaleOrderProduct.Num,
+				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
+				Remark:          unCookingSaleOrderProduct.Remark,
+			})
+		}
+		go func() {
+			s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				Products: products,
+			})
+		}()
+	}
 	return nil, nil
 }
