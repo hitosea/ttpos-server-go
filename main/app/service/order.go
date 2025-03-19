@@ -2939,6 +2939,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 					ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
 					AcceptTime:          saleOrderProduct.GetAcceptTime(),
+					UnitPrice:           saleOrderProduct.SalePrice,
 				}
 				if saleOrderProduct.ProductionOrderProduct != nil {
 					if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -6404,7 +6405,6 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, op
 				if p, exists := signProduct[product.Sign]; exists {
 					product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
 					product.Num = p.Num + product.Num
-					product.SalePrice = utils.DecimalAdd(p.SalePrice, product.SalePrice)
 				}
 				signProduct[product.Sign] = product
 				res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
@@ -6443,12 +6443,27 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64) (res
 			}
 		}
 	}
-	var groups []resp.SentKitchenProductGroup
+
+	groups := make([]resp.SentKitchenProductGroup, 0, len(productGroup))
 	for sendKitchenTime, products := range productGroup {
+		// 分组内的商品合并
+		signProduct := make(map[string]resp.Product)
+		for _, product := range products {
+			if p, exists := signProduct[product.Sign]; exists {
+				product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
+				product.Num = p.Num + product.Num
+			}
+			signProduct[product.Sign] = product
+		}
+		var mergeProducts []resp.Product
+		for _, product := range signProduct {
+			mergeProducts = append(mergeProducts, product)
+		}
+
 		groups = append(groups, resp.SentKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
 			Products: resp.GroupProductList{
-				List: products,
+				List: mergeProducts,
 			},
 		})
 	}

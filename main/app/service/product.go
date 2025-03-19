@@ -87,6 +87,9 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
 			for _, productBom := range product.ProductBoms {
+				if productBom.IsDelete() {
+					continue
+				}
 				if productBom.IsFlavor() {
 					flavors = append(flavors, product_resp.ProductFlavor{
 						Uuid:       productBom.Uuid,
