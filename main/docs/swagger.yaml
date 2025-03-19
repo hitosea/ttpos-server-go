@@ -238,6 +238,12 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
+  req.AcceptH5OrderReq:
+    properties:
+      h5_order_uuid:
+        description: h5订单ID
+        type: integer
+    type: object
   req.AddMemberReq:
     properties:
       level_uuid:
@@ -7809,11 +7815,12 @@ paths:
       - application/json
       description: 接单
       parameters:
-      - description: h5订单uuid
-        in: query
-        name: order_uuid
+      - description: 接单参数
+        in: body
+        name: data
         required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/req.AcceptH5OrderReq'
       produces:
       - application/json
       responses:

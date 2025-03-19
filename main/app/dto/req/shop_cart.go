@@ -74,3 +74,8 @@ type OrderCartProductChangeDeskReq struct {
 type RejectH5OrderReq struct {
 	H5OrderUuid uint64 `json:"h5_order_uuid"` // h5订单ID
 }
+
+// AcceptH5OrderReq 接单请求参数
+type AcceptH5OrderReq struct {
+	H5OrderUuid uint64 `json:"h5_order_uuid"` // h5订单ID
+}

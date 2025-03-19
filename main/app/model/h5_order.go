@@ -47,7 +47,17 @@ func (o *H5Order) SetNil() {
 
 // 拒单
 func (model *H5Order) Reject(staffUuid uint64, lang string) {
-	model.Status = constant.H5OrderStatusRejected
+	model.Handle(staffUuid, lang, constant.H5OrderStatusRejected)
+}
+
+// 接单
+func (model *H5Order) Accept(staffUuid uint64, lang string) {
+	model.Handle(staffUuid, lang, constant.H5OrderStatusAccepted)
+}
+
+// 处理订单
+func (model *H5Order) Handle(staffUuid uint64, lang string, status uint) {
+	model.Status = status
 	model.HandleTime = time.Now().Unix()
 	model.StaffUuid = staffUuid
 	// 快照信息
@@ -57,7 +67,7 @@ func (model *H5Order) Reject(staffUuid uint64, lang string) {
 	model.CustomDiscountRate = model.SaleOrder.CustomDiscountRate
 	// 设置订单商品的快照信息
 	for _, h5OrderProduct := range model.H5OrderProducts {
-		h5OrderProduct.Reject(lang)
+		h5OrderProduct.Handle(lang)
 	}
 	// 根据订单商品快照信息计算订单总价
 	model.ProductTotalPrice = model.CalcProductTotalPrice()
@@ -77,6 +87,13 @@ func (model *H5Order) CalcProductTotalPrice() float64 {
 func (model *H5Order) DeleteSaleOrderProduct() {
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		saleOrderProduct.DeleteTime = time.Now().Unix()
+	}
+}
+
+// 将已下单的h5订单商品变为已接单单的h5订单商品
+func (model *H5Order) ChangeToAccepted() {
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		saleOrderProduct.SetAcceptOrderProduct()
 	}
 }
 
@@ -107,8 +124,8 @@ func (o *H5OrderProduct) SetNil() {
 	o.H5Order = nil
 }
 
-// 拒单
-func (model *H5OrderProduct) Reject(lang string) {
+// 拒单或接单
+func (model *H5OrderProduct) Handle(lang string) {
 	model.Name = model.SaleOrderProduct.MultiLanguageName.GetNameByLang(lang)
 	model.Price = model.SaleOrderProduct.Price
 	model.SalePrice = model.SaleOrderProduct.SalePrice

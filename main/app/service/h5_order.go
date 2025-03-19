@@ -2,14 +2,12 @@ package service
 
 import (
 	"slices"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
-	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -204,11 +202,11 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) erro
 	// 获取h5订单
 	order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
-		return apperrors.ErrInternal
+		return errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
 	}
 	// 非待处理状态不可操作
 	if order.Status != constant.H5OrderStatusOrder {
-		return errors.New("当前状态不可操作")
+		return errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
 	}
 
 	// 拒单,保证h5订单的商品快照信息
@@ -241,57 +239,46 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) erro
 	return nil
 }
 
-func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, orderUuid uint64) error {
+func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
-	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(orderUuid), h5OrderRepo.WithSaleOrderProducts())
+	// 获取h5订单
+	order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
-		return apperrors.ErrInternal
+		return errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
 	}
 	// 非待处理状态不可操作
 	if order.Status != constant.H5OrderStatusOrder {
-		return errors.New("当前状态不可操作")
+		return errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
-		h5OrderRepo = repository.NewH5OrderRepo(tx)
-		err := h5OrderRepo.UpdateH5Order(orderUuid, map[string]any{
-			"status":      constant.H5OrderStatusAccepted, // 标记接单
-			"staff_uuid":  ctx.GetStaffUuid(),
-			"handle_time": time.Now().Unix(),
-		})
-		if err != nil {
-			return apperrors.ErrInternal
-		}
-		saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
-		for _, product := range order.SaleOrderProducts {
-			// ToDo 检查商品，送厨，这里只是简单的快照了销售订单商品
-			h5OrderProduct, err := h5OrderRepo.CreateH5OrderProduct(model.H5OrderProduct{
-				Name:                 product.Name,
-				Price:                product.Price,
-				SalePrice:            product.SalePrice,
-				Num:                  product.Num,
-				AttributeText:        product.GetAttributeNames(),
-				Remark:               product.Remark,
-				SaleOrderProductUuid: product.Uuid,
-				H5OrderUuid:          orderUuid,
-				SaleBillUuid:         product.SaleBillUuid,
-			})
-			if err != nil {
-				return apperrors.ErrInternal
-			}
-			// 标记销售订单商品已接单、已送厨
-			err = saleOrderProductRepo.UpdateSaleOrderProductByMap(product.Uuid, map[string]any{
-				"status":                constant.SaleOrderProductStatusCooking,
-				"is_accept_order":       1,
-				"h5_order_product_uuid": h5OrderProduct.Uuid,
-			})
-			if err != nil {
-				return apperrors.ErrInternal
-			}
-		}
-		// todo 增加操作日志
-		return nil
-	})
 
-	return errors.WithMessage(err)
+	// 接单,保证h5订单的商品快照信息
+	order.Accept(ctx.GetStaffUuid(), ctx.GetLanguage())
+	// 将已下单的h5订单商品变为已接单单的h5订单商品
+	order.ChangeToAccepted()
+	// 送厨已经接单的商品。送厨指定的商品列表
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新h5订单
+		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*order); err != nil {
+			return errors.WithMessage(err, "更新h5订单失败")
+		}
+		// 更新h5订单商品列表
+		for _, h5OrderProduct := range order.H5OrderProducts {
+			// 更新h5订单商品
+			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+				return errors.WithMessage(err, "更新h5订单商品失败")
+			}
+		}
+		// 删除销售订单商品.将该h5订单的商品删除
+		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductList(order.SaleOrderProducts); err != nil {
+			return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
+		}
+
+		// ToDo 增加订单操作日志
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "接单失败")
+	}
+	return nil
 }

@@ -5635,11 +5635,13 @@ const docTemplate = `{
                 "summary": "接单",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "h5订单uuid",
-                        "name": "order_uuid",
-                        "in": "query",
-                        "required": true
+                        "description": "接单参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AcceptH5OrderReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -13155,6 +13157,15 @@ const docTemplate = `{
                 },
                 "max_select": {
                     "description": "小料最大可选数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.AcceptH5OrderReq": {
+            "type": "object",
+            "properties": {
+                "h5_order_uuid": {
+                    "description": "h5订单ID",
                     "type": "integer"
                 }
             }

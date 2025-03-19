@@ -109,6 +109,13 @@ func (model *SaleOrderProduct) GetAcceptTime() int64 {
 	return 0
 }
 
+// 将已下单的h5订单商品变为已接单单的h5订单商品
+func (model *SaleOrderProduct) SetAcceptOrderProduct() {
+	defer model.SetUpdate() // 标记要更新model
+	model.IsAcceptOrder = constant.OrderProductIsAcceptOrderAccepted
+	model.Sign = model.GenerateProductSign() // 更新签名
+}
+
 // 将未下单的h5订单商品变为已下单的h5订单商品
 func (model *SaleOrderProduct) SetH5OrderProduct(h5OrderUuid uint64) {
 	model.H5OrderUuid = h5OrderUuid
@@ -708,7 +715,7 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜原因-h5订单uuid
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜原因-h5订单uuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -716,6 +723,7 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 // 4 赠菜
 // 5 退菜
 // 6 h5下单
+// 7 接单
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -750,7 +758,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -759,7 +767,9 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.ChangePriceTime,
 		model.GiftTime,
 		reasonStr,
-		model.H5OrderUuid)
+		model.H5OrderUuid,
+		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
+	)
 }
 
 // GetAttributeNames 获取属性名称字符串
