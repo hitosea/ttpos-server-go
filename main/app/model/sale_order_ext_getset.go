@@ -15,12 +15,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DiscountInfo struct {
-	MemberDiscountRate     float64 `json:"member_discount_rate"`
-	MemberCardDiscountRate float64 `json:"member_card_discount_rate"`
-	CustomDiscountRate     float64 `json:"custom_discount_rate"`
-}
-
 func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 	return DiscountInfo{
 		MemberDiscountRate:     model.MemberDiscountRate,
@@ -706,4 +700,10 @@ func (model *SaleOrder) IsDiscount() bool {
 func (model *SaleOrder) HasCheckoutZeroRule() bool {
 	// 如果订单的结账抹零规则不为实款实收，则表示订单存在结账抹零
 	return model.ZeroCheckoutRule != constant.SaleBillSettingCheckoutZeroingMethodNone
+}
+
+type DiscountInfo struct {
+	MemberDiscountRate     float64 `json:"member_discount_rate"`
+	MemberCardDiscountRate float64 `json:"member_card_discount_rate"`
+	CustomDiscountRate     float64 `json:"custom_discount_rate"`
 }

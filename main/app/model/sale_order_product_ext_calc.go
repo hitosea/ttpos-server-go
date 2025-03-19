@@ -7,9 +7,9 @@ import (
 )
 
 type CalcOption struct {
-	IsLatestPrice bool
-	CookingStatus int // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
-	H5OrderStatus int // 0-包括已下单和未下单 1-已接单的 2-未接单的
+	IsLatestPrice bool // 是否获取最新价格
+	CookingStatus int  // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
+	H5OrderStatus int  // 0-包括已下单和未下单 1-已接单的 2-未接单的
 }
 
 const (
@@ -23,36 +23,42 @@ const (
 	H5OrderStatusAccepted          // 1-已接单的
 )
 
+// WithLastestPrice 用最新的价格信息计算订单金额
 func WithLastestPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.IsLatestPrice = true
 	}
 }
 
+// WithCooking 获取已送厨的商品
 func WithCooking() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusCooking
 	}
 }
 
+// WithUnCooking 获取未送厨的商品
 func WithUnCooking() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusUnCooking
 	}
 }
 
+// WithH5Order 获取h5已下单的商品
 func WithH5Order() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.H5OrderStatus = H5OrderStatusAccepted
 	}
 }
 
+// WithH5Cart 获取h5购物车的商品（未下单的商品）
 func WithH5Cart() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.H5OrderStatus = H5OrderStatusUnAccepted
 	}
 }
 
+// WithAll 获取全部商品，包括已送厨和未送厨
 func WithAll() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusAll
@@ -130,37 +136,6 @@ func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float6
 	model.ServiceTaxFee = calc.ServiceTaxFee
 	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
-	return calc
-}
-
-type SaleOrderProductCalc struct {
-	SaucePrice        float64 `json:"sauce_price"`
-	ProductPrice      float64 `json:"product_price"`
-	SalePrice         float64 `json:"sale_price"`
-	Price             float64 `json:"price"`
-	MemberDiscountFee float64 `json:"member_discount_fee"`
-	CustomDiscountFee float64 `json:"custom_discount_fee"`
-	DiscountFee       float64 `json:"discount_fee"`
-	TaxFee            float64 `json:"tax_fee"`
-	ServiceFee        float64 `json:"service_fee"`
-	ServiceTaxFee     float64 `json:"service_tax_fee"`
-	TotalPrice        float64 `json:"total_price"`
-}
-
-// 获取价格变动前的信息
-func (model *SaleOrderProduct) BeforeCalc() SaleOrderProductCalc {
-	calc := SaleOrderProductCalc{}
-	calc.SaucePrice = model.SaucePrice
-	calc.ProductPrice = model.ProductPrice
-	calc.SalePrice = model.SalePrice
-	calc.Price = model.Price
-	calc.MemberDiscountFee = model.MemberDiscountFee
-	calc.CustomDiscountFee = model.CustomDiscountFee
-	calc.DiscountFee = model.DiscountFee
-	calc.TaxFee = model.TaxFee
-	calc.ServiceFee = model.ServiceFee
-	calc.ServiceTaxFee = model.ServiceTaxFee
-	calc.TotalPrice = model.TotalPrice
 	return calc
 }
 
@@ -495,4 +470,35 @@ func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(customDiscountRate))
 	return rate.InexactFloat64()
+}
+
+type SaleOrderProductCalc struct {
+	SaucePrice        float64 `json:"sauce_price"`
+	ProductPrice      float64 `json:"product_price"`
+	SalePrice         float64 `json:"sale_price"`
+	Price             float64 `json:"price"`
+	MemberDiscountFee float64 `json:"member_discount_fee"`
+	CustomDiscountFee float64 `json:"custom_discount_fee"`
+	DiscountFee       float64 `json:"discount_fee"`
+	TaxFee            float64 `json:"tax_fee"`
+	ServiceFee        float64 `json:"service_fee"`
+	ServiceTaxFee     float64 `json:"service_tax_fee"`
+	TotalPrice        float64 `json:"total_price"`
+}
+
+// 获取价格变动前的信息
+func (model *SaleOrderProduct) BeforeCalc() SaleOrderProductCalc {
+	calc := SaleOrderProductCalc{}
+	calc.SaucePrice = model.SaucePrice
+	calc.ProductPrice = model.ProductPrice
+	calc.SalePrice = model.SalePrice
+	calc.Price = model.Price
+	calc.MemberDiscountFee = model.MemberDiscountFee
+	calc.CustomDiscountFee = model.CustomDiscountFee
+	calc.DiscountFee = model.DiscountFee
+	calc.TaxFee = model.TaxFee
+	calc.ServiceFee = model.ServiceFee
+	calc.ServiceTaxFee = model.ServiceTaxFee
+	calc.TotalPrice = model.TotalPrice
+	return calc
 }
