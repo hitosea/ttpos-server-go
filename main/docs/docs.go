@@ -397,7 +397,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.AssistantDeskInfo"
+                            "$ref": "#/definitions/resp.DeskInfoResp"
                         }
                     },
                     "404": {
@@ -1989,6 +1989,46 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/ping": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台详情-用于定时轮询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "桌台详情-用于定时轮询",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "桌台uuid",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "桌台详情",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DeskPing"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }
@@ -12378,6 +12418,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/tablet/desk/ping": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取桌台详情-用于定时轮询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.桌台"
+                ],
+                "summary": "获取桌台详情-用于定时轮询",
+                "responses": {
+                    "200": {
+                        "description": "桌台详情",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DeskPing"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/tablet/login": {
             "post": {
                 "description": "登录",
@@ -14547,35 +14618,6 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.AssistantDeskInfo": {
-            "type": "object",
-            "properties": {
-                "desk_info": {
-                    "description": "桌台信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.Desk"
-                        }
-                    ]
-                },
-                "sent_kitchen_products": {
-                    "description": "已送厨商品列表",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.SentKitchenProductList"
-                        }
-                    ]
-                },
-                "unsent_kitchen_info": {
-                    "description": "未送厨商品信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.UnsentKitchenInfo"
-                        }
-                    ]
-                }
-            }
-        },
         "resp.AssistantStaff": {
             "type": "object",
             "properties": {
@@ -15372,6 +15414,35 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.DeskPing": {
+            "type": "object",
+            "properties": {
+                "desk_info": {
+                    "description": "桌台信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Desk"
+                        }
+                    ]
+                },
+                "sent_kitchen_products": {
+                    "description": "已送厨商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.SentKitchenProductList"
+                        }
+                    ]
+                },
+                "unsent_kitchen_info": {
+                    "description": "未送厨商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.UnsentKitchenInfo"
                         }
                     ]
                 }

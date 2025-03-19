@@ -132,6 +132,28 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDeskPing 获取桌台详情-用于定时轮询
+// @Summary 获取桌台详情-用于定时轮询
+// @Description 获取桌台详情-用于定时轮询
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} resp.DeskPing "桌台详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /tablet/desk/ping [get]
+func (h *DeskHandler) GetDeskPing(c *gin.Context) {
+	// 获取收银产品列表
+	res, err := h.deskSrv.GetDeskPing(helper.GetContext(c), helper.GetDeskUuid(c))
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // GetSentKitchen 获取已送厨商品
 // @Summary 获取已送厨商品
 // @Description 获取已送厨商品
@@ -188,6 +210,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)             // 创建桌台订单(开桌)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                  // 获取桌台详情
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                  // 获取桌台详情-用于定时轮询
 		privateApi.GET("/desk/place_order", nil)                           // todo 加购并送厨
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen) // 获取已送厨商品
 	}

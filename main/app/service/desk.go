@@ -25,7 +25,7 @@ type IDeskSrv interface {
 	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
-	GetAssistantDeskInfo(ctx context.Context, deskUuid uint64) (resp.AssistantDeskInfo, error)                          // 获取助手端桌台详情
+	GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPing, error)                                            // 获取桌台详情-用于定时轮询
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                          // 关闭桌台
 	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                    // 完成桌台
@@ -140,20 +140,20 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 	return desk.GetDeskResp(), nil
 }
 
-// GetAssistantDeskInfo 获取助手端桌台详情
-func (s *deskSrv) GetAssistantDeskInfo(ctx context.Context, deskUuid uint64) (resp.AssistantDeskInfo, error) {
-	var res resp.AssistantDeskInfo
+// GetDeskPing 获取桌台详情-用于定时轮询
+func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPing, error) {
+	var res resp.DeskPing
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取桌台详情失败")
+		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
 	}
 	res.DeskInfo = desk.GetDeskResp()
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	if desk.SaleBill != nil {
 		shopCart, err := s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
 		if err != nil {
-			return res, errors.WithMessage(errors.ErrInternal, "获取销售账单信息失败")
+			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
 		}
 		for _, saleOrder := range shopCart.SaleOrderList {
 			for _, product := range saleOrder.ProductList {

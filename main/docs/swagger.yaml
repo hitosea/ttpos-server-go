@@ -1294,21 +1294,6 @@ definitions:
         - $ref: '#/definitions/setting.Printer'
         description: 打印机设置
     type: object
-  resp.AssistantDeskInfo:
-    properties:
-      desk_info:
-        allOf:
-        - $ref: '#/definitions/resp.Desk'
-        description: 桌台信息
-      sent_kitchen_products:
-        allOf:
-        - $ref: '#/definitions/resp.SentKitchenProductList'
-        description: 已送厨商品列表
-      unsent_kitchen_info:
-        allOf:
-        - $ref: '#/definitions/resp.UnsentKitchenInfo'
-        description: 未送厨商品信息
-    type: object
   resp.AssistantStaff:
     properties:
       device_id:
@@ -1846,6 +1831,21 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
+    type: object
+  resp.DeskPing:
+    properties:
+      desk_info:
+        allOf:
+        - $ref: '#/definitions/resp.Desk'
+        description: 桌台信息
+      sent_kitchen_products:
+        allOf:
+        - $ref: '#/definitions/resp.SentKitchenProductList'
+        description: 已送厨商品列表
+      unsent_kitchen_info:
+        allOf:
+        - $ref: '#/definitions/resp.UnsentKitchenInfo'
+        description: 未送厨商品信息
     type: object
   resp.DeskRegion:
     properties:
@@ -4748,7 +4748,7 @@ paths:
         "200":
           description: 桌台详情
           schema:
-            $ref: '#/definitions/resp.AssistantDeskInfo'
+            $ref: '#/definitions/resp.DeskInfoResp'
         "404":
           description: 未找到
       security:
@@ -5675,6 +5675,31 @@ paths:
       security:
       - JwtToken: []
       summary: 获取未送厨商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/ping:
+    get:
+      consumes:
+      - application/json
+      description: 桌台详情-用于定时轮询
+      parameters:
+      - description: 桌台uuid
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台详情
+          schema:
+            $ref: '#/definitions/resp.DeskPing'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台详情-用于定时轮询
       tags:
       - 点餐助手端.桌台
   /assistant/desk/region_and_type:
@@ -11804,6 +11829,25 @@ paths:
       security:
       - JwtToken: []
       summary: 获取已送厨商品
+      tags:
+      - 平板端.桌台
+  /tablet/desk/ping:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台详情-用于定时轮询
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台详情
+          schema:
+            $ref: '#/definitions/resp.DeskPing'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取桌台详情-用于定时轮询
       tags:
       - 平板端.桌台
   /tablet/login:
