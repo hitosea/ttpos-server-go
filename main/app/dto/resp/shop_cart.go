@@ -152,9 +152,10 @@ type Product struct {
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	// 后端使用，前端不返回
-	SendKitchenTime int64  `json:"-"` // 送厨时间
-	AcceptTime      int64  `json:"-"` // 接单时间
-	Sign            string `json:"-"` // 签名，用于合并商品
+	SendKitchenTime    int64  `json:"-"` // 送厨时间
+	AcceptTime         int64  `json:"-"` // 接单时间
+	Sign               string `json:"-"` // 签名，用于合并商品
+	ProductPackageUuid uint64 `json:"-"` // 商品Uuid，用于获取送厨和完成数量
 }
 
 // GetPrice 获取商品价格(折后价)

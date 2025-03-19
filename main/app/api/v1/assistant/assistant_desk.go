@@ -88,18 +88,17 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.DeskInfoReq true "详情参数"
-// @Success 200 {object} resp.DeskInfoResp "桌台详情"
+// @Success 200 {object} resp.AssistantDeskInfo "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
-	companyId := helper.GetCompanyUuid(c)
 	// 绑定请求参数
 	var deskInfoReq req.DeskInfoReq
 	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
 		helper.HandleValidationError(c, err, deskInfoReq, nil)
 		return
 	}
-	res, err := h.deskSrv.GetDeskInfo(companyId, deskInfoReq.Uuid)
+	res, err := h.deskSrv.GetAssistantDeskInfo(helper.GetContext(c), deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)

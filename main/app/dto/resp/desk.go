@@ -73,6 +73,26 @@ type DeskInfoResp struct {
 	Time          uint   `json:"time"`           // 桌台用餐时间（秒）
 }
 
+type AssistantDeskInfo struct {
+	DeskInfo            Desk                   `json:"desk_info"`             // 桌台信息
+	UnsentKitchenInfo   UnsentKitchenInfo      `json:"unsent_kitchen_info"`   // 未送厨商品信息
+	SentKitchenProducts SentKitchenProductList `json:"sent_kitchen_products"` // 已送厨商品列表
+}
+
+type UnsentKitchenInfo struct {
+	ProductNum    uint    `json:"product_num"`    // 未下单商品数量
+	ProductAmount float64 `json:"product_amount"` // 未下单商品金额
+}
+
+type SentKitchenProduct struct {
+	ProductPackageUuid uint64 `json:"product_package_uuid"`     // 商品Uuid
+	SentKitchenNum     uint   `json:"sent_kitchen_product_num"` // 已送厨商品数量
+	FinishedNum        uint   `json:"finished_num"`             // 制作完成数量
+}
+type SentKitchenProductList struct {
+	List []SentKitchenProduct `json:"list"`
+}
+
 // CreateDeskOrderResp 创建桌台订单响应
 type CreateDeskOrderResp struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
