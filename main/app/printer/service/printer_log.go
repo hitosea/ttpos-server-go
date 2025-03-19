@@ -251,9 +251,14 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 					return ""
 				}
 			}(),
-			PrinterName: log.Printer.Name,
-			CreateTime:  log.CreateTime,
-			Status:      log.Status,
+			PrinterName: func() string {
+				if log.Printer != nil {
+					return log.Printer.Name
+				}
+				return ""
+			}(),
+			CreateTime: log.CreateTime,
+			Status:     log.Status,
 			StatusText: func() string {
 				switch log.Status {
 				case 0:
