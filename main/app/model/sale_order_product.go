@@ -97,6 +97,7 @@ type SaleOrderProduct struct {
 	ProductPackage             *ProductPackage              `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
+	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 }
 
 // SetTaxRate 设置税率. 这个方法的定位是只能用这个方法设置商品的税率，不能用其他方式设置商品的税率

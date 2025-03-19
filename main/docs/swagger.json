@@ -422,7 +422,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -1194,104 +1194,6 @@
                 }
             }
         },
-        "/assistant/desk/order/get_send_kitchen": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取已送厨商品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "点餐助手端.桌台"
-                ],
-                "summary": "获取已送厨商品",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.SendKitchen"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/assistant/desk/order/get_un_send_kitchen": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取未送厨商品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "点餐助手端.桌台"
-                ],
-                "summary": "获取未送厨商品",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.UnSendKitchen"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/assistant/desk/order/member/cancel": {
             "delete": {
                 "security": [
@@ -1983,6 +1885,104 @@
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/sent_kitchen": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取已送厨商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取已送厨商品",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SentKitchen"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/unsent_kitchen": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取未送厨商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取未送厨商品",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnsentKitchen"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -3388,7 +3388,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -3637,7 +3637,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8190,6 +8190,46 @@
                 }
             }
         },
+        "/cashier/open_cash_box_printer_config": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打开钱箱的打印机配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "获取打开钱箱的打印机配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/order/cancel": {
             "post": {
                 "security": [
@@ -8290,13 +8330,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -8391,13 +8431,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8430,37 +8470,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -8481,13 +8521,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -8634,13 +8674,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -8728,7 +8768,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -8935,7 +8975,7 @@
                     {
                         "type": "integer",
                         "description": "数据类型 (打印类型), -1=全都、.....",
-                        "name": "data_type",
+                        "name": "dataType",
                         "in": "query"
                     },
                     {
@@ -8956,19 +8996,19 @@
                     {
                         "type": "integer",
                         "description": "打印机UUID",
-                        "name": "printer_uuid",
+                        "name": "printerUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -9515,6 +9555,95 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/report": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取报备信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "获取报备信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CashierReportResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交报备信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "提交报备信息",
+                "parameters": [
+                    {
+                        "description": "提交报备信息",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CashierReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CashierReportResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -10181,6 +10310,49 @@
                 }
             }
         },
+        "/h5/order/cart/product/cooked/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询已送厨商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "查询已送厨商品",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnsentKitchen"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/order/cart/product/uncooked/list": {
             "get": {
                 "security": [
@@ -10211,7 +10383,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.UnSendKitchen"
+                                            "$ref": "#/definitions/resp.UnsentKitchen"
                                         }
                                     }
                                 }
@@ -11155,13 +11327,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID 当查看子订单信息的时候才需要传",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -11200,13 +11372,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "desk_uuid",
+                        "name": "deskUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     }
                 ],
@@ -11239,37 +11411,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "bill_type",
+                        "name": "billType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "date_type",
+                        "name": "dateType",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式,-1=全都、 0-堂食 1-打包",
-                        "name": "dining_method",
+                        "name": "diningMethod",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enable_create_time",
+                        "name": "enableCreateTime",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enable_pay_time",
+                        "name": "enablePayTime",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "order_no",
+                        "name": "orderNo",
                         "in": "query"
                     },
                     {
@@ -11290,13 +11462,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "query_end_time",
+                        "name": "queryEndTime",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "query_start_time",
+                        "name": "queryStartTime",
                         "in": "query"
                     },
                     {
@@ -11341,13 +11513,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "sale_bill_uuid",
+                        "name": "saleBillUuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "sale_order_uuid",
+                        "name": "saleOrderUuid",
                         "in": "query"
                     }
                 ],
@@ -11922,7 +12094,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "is_buffet",
+                        "name": "isBuffet",
                         "in": "query"
                     },
                     {
@@ -12005,7 +12177,7 @@
                 }
             }
         },
-        "/tablet/desk/order/get_send_kitchen": {
+        "/tablet/desk/order/sent_kitchen": {
             "get": {
                 "security": [
                     {
@@ -12044,7 +12216,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.SendKitchen"
+                                            "$ref": "#/definitions/resp.SentKitchen"
                                         }
                                     }
                                 }
@@ -12808,6 +12980,15 @@
                 "product_bom_uuid": {
                     "description": "商品规格Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.CashierReportReq": {
+            "type": "object",
+            "properties": {
+                "exception_remark": {
+                    "description": "异常备注",
+                    "type": "string"
                 }
             }
         },
@@ -14718,6 +14899,23 @@
                 }
             }
         },
+        "resp.CashierReportResp": {
+            "type": "object",
+            "properties": {
+                "previous_shift_cash": {
+                    "description": "上一班遗留备用金",
+                    "type": "number"
+                },
+                "printer_data": {
+                    "description": "打印数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PrinterData"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.CashierStaff": {
             "type": "object",
             "properties": {
@@ -15077,12 +15275,12 @@
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.SendKitchenProductGroup"
+                        "$ref": "#/definitions/resp.SentKitchenProductGroup"
                     }
                 }
             }
         },
-        "resp.GroupProducts": {
+        "resp.GroupProductList": {
             "type": "object",
             "properties": {
                 "list": {
@@ -16652,6 +16850,10 @@
                     "description": "打印数据",
                     "type": "string"
                 },
+                "is_cashier_printer": {
+                    "description": "是否是收银机自带打印机",
+                    "type": "boolean"
+                },
                 "print_method": {
                     "description": "打印方式 1文本打印, 2图片打印'",
                     "type": "integer"
@@ -16766,6 +16968,10 @@
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
                     "type": "number"
                 },
+                "finished_num": {
+                    "description": "制作完成数量",
+                    "type": "integer"
+                },
                 "is_buffet": {
                     "description": "是否是自助餐",
                     "type": "boolean"
@@ -16810,12 +17016,8 @@
                     "description": "备注",
                     "type": "string"
                 },
-                "send_kitchen_time": {
-                    "description": "送厨时间",
-                    "type": "integer"
-                },
                 "status": {
-                    "description": "0: 未送厨 1:已送厨",
+                    "description": "0: 未送厨 1:已送厨 2:制作完成（出餐）",
                     "type": "integer"
                 },
                 "uuid": {
@@ -17718,7 +17920,7 @@
                 }
             }
         },
-        "resp.SendKitchen": {
+        "resp.SentKitchen": {
             "type": "object",
             "properties": {
                 "amount_info": {
@@ -17729,14 +17931,14 @@
                 }
             }
         },
-        "resp.SendKitchenProductGroup": {
+        "resp.SentKitchenProductGroup": {
             "type": "object",
             "properties": {
                 "products": {
                     "description": "组商品列表",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.GroupProducts"
+                            "$ref": "#/definitions/resp.GroupProductList"
                         }
                     ]
                 },
@@ -17989,27 +18191,6 @@
                 }
             }
         },
-        "resp.UnSendKitchen": {
-            "type": "object",
-            "properties": {
-                "amount_info": {
-                    "description": "金额信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.SimpleAmountInfo"
-                        }
-                    ]
-                },
-                "products": {
-                    "description": "商品列表",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.CartProductList"
-                        }
-                    ]
-                }
-            }
-        },
         "resp.UnprocessedCallItem": {
             "type": "object",
             "properties": {
@@ -18060,6 +18241,27 @@
                 "unprocessed_call_count": {
                     "description": "未处理呼叫数量",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.UnsentKitchen": {
+            "type": "object",
+            "properties": {
+                "amount_info": {
+                    "description": "金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.SimpleAmountInfo"
+                        }
+                    ]
+                },
+                "products": {
+                    "description": "商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CartProductList"
+                        }
+                    ]
                 }
             }
         },

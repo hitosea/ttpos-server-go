@@ -977,7 +977,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// GetUnSendKitchen 获取未送厨商品
+// GetUnsentKitchen 获取未送厨商品
 // @Summary 获取未送厨商品
 // @Description 获取未送厨商品
 // @Tags 点餐助手端.桌台
@@ -985,16 +985,16 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.GetProductListReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
-// @Router /assistant/desk/order/get_un_send_kitchen [get]
-func (h *DeskHandler) GetUnSendKitchen(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
+// @Router /assistant/desk/order/unsent_kitchen [get]
+func (h *DeskHandler) GetUnsentKitchen(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	params := req.GetProductListReq{}
 	if err := c.ShouldBindQuery(&params); err != nil {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	info, err := h.orderSrv.GetUnSendKitchen(ctx, params.SaleBillUuid)
+	info, err := h.orderSrv.GetUnsentKitchen(ctx, params.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1003,7 +1003,7 @@ func (h *DeskHandler) GetUnSendKitchen(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// GetSendKitchen 获取已送厨商品
+// GetSentKitchen 获取已送厨商品
 // @Summary 获取已送厨商品
 // @Description 获取已送厨商品
 // @Tags 点餐助手端.桌台
@@ -1011,9 +1011,9 @@ func (h *DeskHandler) GetUnSendKitchen(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.GetProductListReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.SendKitchen}
-// @Router /assistant/desk/order/get_send_kitchen [get]
-func (h *DeskHandler) GetSendKitchen(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.SentKitchen}
+// @Router /assistant/desk/order/sent_kitchen [get]
+func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.GetProductListReq{}
@@ -1022,7 +1022,7 @@ func (h *DeskHandler) GetSendKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSendKitchen(ctx, params.SaleBillUuid)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1114,7 +1114,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
-		privateApi.GET("/desk/order/get_un_send_kitchen", wrapper.GetUnSendKitchen)                           // 获取未送厨商品
-		privateApi.GET("/desk/order/get_send_kitchen", wrapper.GetSendKitchen)                                // 获取已送厨商品
+		privateApi.GET("/desk/order/unsent_kitchen", wrapper.GetUnsentKitchen)                                // 获取未送厨商品
+		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                    // 获取已送厨商品
 	}
 }

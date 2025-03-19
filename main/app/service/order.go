@@ -102,10 +102,10 @@ type IOrderSrv interface {
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                              // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                    // 订单解锁
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                    // 必点方案列表
-	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnSendKitchen, error)   // 获取扫码h5购物车未下单商品列表
+	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)   // 获取扫码h5购物车未下单商品列表
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) // 获取扫码h5购物车已下单商品列表
-	GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error)             // 未送厨商品列表
-	GetSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.SendKitchen, error)                                                             // 已送厨商品列表
+	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
+	GetSentKitchen(ctx context.Context, saleBillUuid uint64) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 }
 
 // orderSrv 订单服务结构
@@ -2924,6 +2924,11 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					IsCancel:            saleOrderProduct.IsCancelProduct(),
 					SendKitchenTime:     sendKitchenTime,
 					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
+				}
+				if saleOrderProduct.ProductionOrderProduct != nil {
+					if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
+						product.FinishedNum = saleOrderProduct.ProductionOrderProduct.Num
+					}
 				}
 				productList = append(productList, product)
 			}
@@ -6306,8 +6311,8 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 }
 
 // GetUnOrderedH5ProductList 获取扫码h5购物车未下单商品列表
-func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnSendKitchen, error) {
-	res, err := s.GetUnSendKitchen(ctx, saleBillUuid, opts...)
+func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error) {
+	res, err := s.GetUnsentKitchen(ctx, saleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -6340,7 +6345,7 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	var groups []resp.H5Group
 	for sendKitchenTime, products := range productGroup {
 		groups = append(groups, resp.H5Group{
-			SendKitchenProductGroup: resp.SendKitchenProductGroup{
+			SentKitchenProductGroup: resp.SentKitchenProductGroup{
 				SendKitchenTime: sendKitchenTime,
 				Products: resp.GroupProductList{
 					List: products,
@@ -6378,8 +6383,8 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 }
 
 // GetUnSendKitchen 未送厨商品列表
-func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnSendKitchen, error) {
-	res := resp.UnSendKitchen{
+func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
+	res := resp.UnsentKitchen{
 		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
 		AmountInfo: resp.SimpleAmountInfo{},
 	}
@@ -6422,10 +6427,10 @@ func (s *orderSrv) GetUnSendKitchen(ctx context.Context, saleBillUuid uint64, op
 }
 
 // GetSendKitchen 已送厨商品列表
-func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (resp.SendKitchen, error) {
+func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64) (resp.SentKitchen, error) {
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if err != nil {
-		return resp.SendKitchen{}, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+		return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
 	var productNum uint
 	productGroup := make(map[int64][]resp.Product)
@@ -6437,9 +6442,9 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 			}
 		}
 	}
-	var groups []resp.SendKitchenProductGroup
+	var groups []resp.SentKitchenProductGroup
 	for sendKitchenTime, products := range productGroup {
-		groups = append(groups, resp.SendKitchenProductGroup{
+		groups = append(groups, resp.SentKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
 			Products: resp.GroupProductList{
 				List: products,
@@ -6451,7 +6456,7 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 	})
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
-		return resp.SendKitchen{}, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
+		return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
 	}
 	var amount resp.AmountInfo
 	for _, order := range saleBill.SaleOrders {
@@ -6465,7 +6470,7 @@ func (s *orderSrv) GetSendKitchen(ctx context.Context, saleBillUuid uint64) (res
 		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
 	}
 	amount.ProductNum = productNum
-	return resp.SendKitchen{
+	return resp.SentKitchen{
 		Groups:     resp.GroupList{List: groups},
 		AmountInfo: amount,
 	}, nil

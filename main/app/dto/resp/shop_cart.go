@@ -30,7 +30,7 @@ type H5GroupList struct {
 }
 
 type H5Group struct {
-	SendKitchenProductGroup
+	SentKitchenProductGroup
 	AcceptTime int64 `json:"accept_time"` // 接单时间. “17:20:01 接单”。值为0时不显示
 }
 
@@ -38,23 +38,23 @@ type H5Product struct {
 	Product
 }
 
-// UnSendKitchen 未送厨商品
-type UnSendKitchen struct {
+// UnsentKitchen 未送厨商品
+type UnsentKitchen struct {
 	Products   CartProductList  `json:"products"`    // 商品列表
 	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
 }
 
-// SendKitchen 已送厨商品
-type SendKitchen struct {
+// SentKitchen 已送厨商品
+type SentKitchen struct {
 	Groups     GroupList  `json:"groups"`
 	AmountInfo AmountInfo `json:"amount_info"`
 }
 
 type GroupList struct {
-	List []SendKitchenProductGroup `json:"list"`
+	List []SentKitchenProductGroup `json:"list"`
 }
 
-type SendKitchenProductGroup struct {
+type SentKitchenProductGroup struct {
 	SendKitchenTime int64            `json:"send_kitchen_time"` // 送厨时间. “17:20:01 下单”
 	Products        GroupProductList `json:"products"`          // 组商品列表
 }
@@ -141,6 +141,7 @@ type Product struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
+	FinishedNum         uint               `json:"finished_num"`          // 制作完成数量
 	SalePrice           float64            `json:"price"`                 // 原价
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）

@@ -521,6 +521,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 						},
 					),
@@ -608,6 +613,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 						},
 					),
@@ -678,6 +688,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
 							},
 						},
+					},
+				),
+				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
 					},
 				),
 				CommonRepo.Preload(

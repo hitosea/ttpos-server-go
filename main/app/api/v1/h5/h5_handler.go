@@ -38,7 +38,7 @@ type H5Handler struct {
 // @Security JwtToken
 // @Success 200 {object} resp.H5BaseInfo{}
 // @Router /h5/base/info [get]
-func (h H5Handler) BaseInfo(c *gin.Context) {
+func (h *H5Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
 	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
@@ -277,7 +277,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
+// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/uncooked/list [get]
 func (h *H5Handler) GetOrderCartProductUnCooked(c *gin.Context) {
@@ -308,7 +308,7 @@ func (h *H5Handler) GetOrderCartProductUnCooked(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.UnSendKitchen}
+// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/cooked/list [get]
 func (h *H5Handler) GetOrderCartProductCooked(c *gin.Context) {
