@@ -67,7 +67,7 @@ class User extends BaseModel
      */
     public function device()
     {
-        return $this->hasOne('app\\common\\model\\shop\\BindRecord', 'key', 'bind_key');
+        return $this->hasMany('app\\common\\model\\shop\\BindRecord', 'device_id', 'bind_key');
     }
 
     /**

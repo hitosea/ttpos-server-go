@@ -41,7 +41,7 @@ class BindRecord extends BaseModel
      */
     public function shopUser()
     {
-        return $this->hasOne('app\\common\\model\\shop\\User', 'shop_user_id', 'finally_login_id')->hidden(['update_time', 'password']);
+        return $this->hasOne(User::class, 'uuid', 'finally_login_uuid');
     }
 
     /**
@@ -215,7 +215,7 @@ class BindRecord extends BaseModel
      */
     public function getBindList($source)
     {
-        $query = $this;
+        $query = (new self());
 
         if ($source !== 'all') {
             if (!in_array($source, [self::SOURCE_CASHIER, self::SOURCE_TABLET, self::SOURCE_KITCHEN, self::SOURCE_ASSISTANT])) {
@@ -224,12 +224,7 @@ class BindRecord extends BaseModel
             }
             $query = $query->where('source', '=', $source);
         }
-
-        $list = $query->with([
-            'shopUser' => function ($query) {
-                $query->field(['shop_user_id', 'IF(real_name = "", username, real_name) as real_name', 'cashier_login_time']);
-            }
-        ])->order(['create_time' => 'desc'])->select();
+        $list = $query->with([ 'shopUser' ])->order(['create_time' => 'desc'])->select();
         // 处理收银机是否有交班  is_cashier_shift 1-已交班 0-未交班
         foreach ($list as &$item) {
             if ($item['source'] == self::SOURCE_CASHIER) {
@@ -255,7 +250,7 @@ class BindRecord extends BaseModel
         $record = $this->where('id', '=', $id)->find();
         //
         $app_id = $record['app_id'] ?? 0;
-        $shop_supplier_id = $record['shop_supplier_id'] ?? 0;
+        $shop_supplier_id = $record['company_uuid'] ?? 0;
         if (!$record) {
             $this->error = "设备不存在";
             return false;
@@ -266,7 +261,7 @@ class BindRecord extends BaseModel
         try {
             // 收银机 （收银机没交班时：自动生成交班操作，预留金额为0，清用户设备绑定key）
             if ($record['source'] == self::SOURCE_CASHIER) {
-                $user = User::where(['bind_key' => $record['key']])->where(['cashier_online' => 1])->find();
+                $user = User::where(['bind_key' => $record['device_id']])->where(['cashier_online' => 1])->find();
                 if ($user) {
                     $data['shop_user_id'] = $user->shop_user_id;
                     $data['is_cash_taken_out_all'] = $curNum <= 1 ? 1 : 0;      // 解绑最后一个收银机时再取出所有钱，预留金额为0
