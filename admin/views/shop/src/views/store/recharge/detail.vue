@@ -270,7 +270,7 @@
   };
 
   const refundClick = (item) => {
-    id.value = item.id;
+    id.value = item.uuid;
     open_refund.value = true;
   };
 
