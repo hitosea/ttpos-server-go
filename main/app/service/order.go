@@ -2799,6 +2799,11 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	option := &repository.OrderCartInfoOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+
 	dbId := ctx.GetDbId()
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
@@ -2904,9 +2909,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 添加正常商品
 		{
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				if saleOrderProduct.IsDelete() {
-					continue
+				// 如果查询的是H5已下单的商品和被拒单的商品，则不跳过被删除的商品
+				if option.UnorderedH5Product != repository.OrderedH5ProductWithReject {
+					if saleOrderProduct.IsDelete() {
+						continue
+					}
 				}
+
 				sendKitchenTime := saleOrderProduct.SendKitchenTime
 				if sendKitchenTime == 0 {
 					sendKitchenTime = saleOrderProduct.CreateTime
@@ -2927,6 +2936,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					SendKitchenTime:     sendKitchenTime,
 					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 					ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
+					AcceptTime:          saleOrderProduct.GetAcceptTime(),
 				}
 				if saleOrderProduct.ProductionOrderProduct != nil {
 					if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -6354,15 +6364,10 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	if err != nil {
 		return nil, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
-	fmt.Println("GetOrderedH5ProductList shopCart", utils.ToJsonString(shopCart))
-	var productNum uint
 	productGroup := make(map[int64][]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			// if product.Status == constant.SaleOrderProductStatusCooking {
-			productNum = productNum + product.Num
 			productGroup[product.SendKitchenTime] = append(productGroup[product.SendKitchenTime], product)
-			// }
 		}
 	}
 	groups := make([]resp.H5Group, 0)
@@ -6380,30 +6385,9 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 	sort.Slice(groups, func(i, j int) bool {
 		return groups[i].SendKitchenTime > groups[j].SendKitchenTime
 	})
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
-	if err != nil {
-		return nil, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
-	}
-	var amount resp.AmountInfo
-	for _, order := range saleBill.SaleOrders {
-		products := order.H5OrderProductList()
-		products = append(products, order.CookingOrderProductList()...)
-		calc := order.CalcSaleOrderByProductList(products, *saleBill.SaleBillSetting)
-		amount.ProductOriginalAmount = utils.DecimalAdd(amount.ProductOriginalAmount, calc.ProductOriginalAmount)
-		amount.ProductAmount = utils.DecimalAdd(amount.ProductAmount, calc.ProductAmount)
-		amount.ServiceAmount = utils.DecimalAdd(amount.ServiceAmount, calc.ServiceFee)
-		amount.TaxAmount = utils.DecimalAdd(amount.TaxAmount, calc.TaxFee)
-		amount.DiscountAmount = utils.DecimalAdd(amount.DiscountAmount, calc.CustomDiscountFee)
-		amount.MemberDiscountAmount = utils.DecimalAdd(amount.MemberDiscountAmount, calc.MemberDiscountFee)
-		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
-	}
-	amount.ProductNum = productNum
+
 	return &resp.H5CartSendProduct{
 		Groups: resp.H5GroupList{List: groups},
-		AmountInfo: resp.SimpleAmountInfo{
-			ProductAmount: amount.ProductAmount,
-			ProductNum:    amount.ProductNum,
-		},
 	}, nil
 }
 

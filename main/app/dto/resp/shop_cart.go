@@ -21,8 +21,7 @@ type ShopCart struct {
 
 // H5CartSendProduct 扫码h5购物车已下单品
 type H5CartSendProduct struct {
-	Groups     H5GroupList      `json:"groups"`      // 商品列表
-	AmountInfo SimpleAmountInfo `json:"amount_info"` // 金额信息
+	Groups H5GroupList `json:"groups"` // 商品列表
 }
 
 type H5GroupList struct {

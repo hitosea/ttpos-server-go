@@ -98,6 +98,15 @@ type SaleOrderProduct struct {
 	SaleBill                   *SaleBill                    `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
+	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
+}
+
+// GetAcceptTime 获取接单时间
+func (model *SaleOrderProduct) GetAcceptTime() int64 {
+	if model.H5Order != nil {
+		return model.H5Order.HandleTime
+	}
+	return 0
 }
 
 // 将未下单的h5订单商品变为已下单的h5订单商品

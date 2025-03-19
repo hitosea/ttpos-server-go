@@ -427,12 +427,13 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 }
 
 type OrderCartInfoOption struct {
-	UnorderedH5Product int // 1-查询H5未下单的商品 2-查询H5已下单的商品
+	UnorderedH5Product int // 1-查询H5未下单的商品 2-查询H5已下单的商品 3-查询H5已下单的商品和被拒单的商品
 }
 
 const (
-	UnorderedH5Product = 1
-	OrderedH5Product   = 2
+	UnorderedH5Product         = 1
+	OrderedH5Product           = 2
+	OrderedH5ProductWithReject = 3
 )
 
 type OrderCartInfoOptionFunc func(option *OrderCartInfoOption)
@@ -448,6 +449,13 @@ func WithUnorderedH5Product() OrderCartInfoOptionFunc {
 func WithOrderedH5Product() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = OrderedH5Product
+	}
+}
+
+// 查询H5已下单的商品和被拒单的商品
+func WithOrderedH5ProductWithReject() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.UnorderedH5Product = OrderedH5ProductWithReject
 	}
 }
 
@@ -467,6 +475,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 	} else if option.UnorderedH5Product == OrderedH5Product {
 		// 只查询H5已下单的商品
 		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductH5Ordered())
+	} else if option.UnorderedH5Product == OrderedH5ProductWithReject {
+		// 只查询H5已下单的商品和被拒单的商品
+		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductH5OrderedWithReject())
 	}
 
 	repo := NewSaleBillRepo(r.db)
