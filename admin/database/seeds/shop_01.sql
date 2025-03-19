@@ -1602,7 +1602,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '交班记录ID',
     `staff_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '员工ID',
     `shift_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '交班编号',
-    `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态: 0未交班,1已交班',
+    `status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '状态: 0未交班,1已交班',
     `previous_shift_cash` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '上一班遗留备用金',
     `current_cash_total` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '当前钱箱现金总计',
     `incomes` VARCHAR(255) DEFAULT NULL COMMENT '收入详情',
