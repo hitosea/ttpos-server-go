@@ -36,7 +36,7 @@ type StaffShiftLog struct {
 	BaseModel
 	StaffUuid         uint64  `gorm:"column:staff_uuid;type:bigint(20) unsigned;default:0;comment:员工ID;NOT NULL" json:"staff_uuid"`
 	ShiftNo           string  `gorm:"column:shift_no;type:varchar(64);comment:交班编号;NOT NULL" json:"shift_no"`
-	Status            int     `gorm:"column:status;type:int(11);default:1;comment:状态： 0未交班,1已交班;NOT NULL" json:"status"`
+	Status            int     `gorm:"column:status;type:int(11);default:0;comment:状态： 0未交班,1已交班;NOT NULL" json:"status"`
 	PreviousShiftCash float64 `gorm:"column:previous_shift_cash;type:decimal(12,2);default:0.00;comment:上一班遗留备用金;NOT NULL" json:"previous_shift_cash"`
 	CurrentCashTotal  float64 `gorm:"column:current_cash_total;type:decimal(12,2);default:0.00;comment:当前钱箱现金总计;NOT NULL" json:"current_cash_total"`
 	Incomes           string  `gorm:"column:incomes;type:varchar(255);comment:收入详情" json:"incomes"`
