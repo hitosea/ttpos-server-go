@@ -719,12 +719,17 @@ func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
 		// 永远等于最大时间限制 + 总加钟时间
 		model.BuffetDuration = uint(int64(maxTimeLimit))
 		// 重新计算加钟的启动时长
-		model.DelayStartTime = model.GetBuffetEndTime()
+		if model.BuffetIsTimeOut() || model.BuffetDuration == 0 {
+			model.DelayStartTime = newStartTime
+		} else {
+			model.DelayStartTime = model.GetBuffetEndTime()
+		}
+		model.DelayDuration = uint(model.GetRemainingDelayDuration())
 	}
 }
 
-// 设置自助餐加钟时间
-func (model *SaleBill) SetBuffetDelayStartTimeAndDuration(delayTime int) {
+// 添加自助餐加钟时间
+func (model *SaleBill) AddBuffetDelayStartTimeAndDuration(delayTime int) {
 	remainingDelayDuration := model.GetRemainingDelayDuration()
 	if remainingDelayDuration == 0 {
 		model.DelayStartTime = time.Now().Unix()

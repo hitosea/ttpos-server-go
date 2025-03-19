@@ -2636,7 +2636,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 		}
 
 		// 设置加钟时长
-		saleBill.SetBuffetDelayStartTimeAndDuration(int(totalDelayTime))
+		saleBill.AddBuffetDelayStartTimeAndDuration(int(totalDelayTime))
 
 		// 计算销售账单金额
 		if err = s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
