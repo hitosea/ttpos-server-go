@@ -10274,7 +10274,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/h5/base/info": {
+        "/h5/base": {
             "get": {
                 "security": [
                     {
@@ -15641,6 +15641,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "business": {
+                    "description": "门店业务设置.为了前端业务统一，这个字段实际未返回任何东西",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Business"
+                        }
+                    ]
+                },
                 "cloud": {
                     "description": "云端基础信息",
                     "allOf": [
@@ -15762,6 +15770,10 @@ const docTemplate = `{
                 "status": {
                     "description": "状态：1-待处理; 2-已接单; 3-已拒单",
                     "type": "integer"
+                },
+                "wait_time": {
+                    "description": "等待时间，单位：秒",
+                    "type": "integer"
                 }
             }
         },
@@ -15835,6 +15847,10 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "状态：1-待处理; 2-已接单; 3-已拒单",
+                    "type": "integer"
+                },
+                "wait_time": {
+                    "description": "等待时间，单位：秒",
                     "type": "integer"
                 }
             }

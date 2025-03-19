@@ -203,3 +203,8 @@ type OrderInvoiceInfoReq struct {
 	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID, 必填
 }
+
+type OrderCartInfoReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
+	H5OrderUuid  uint64 `form:"h5_order_uuid"`  // H5订单UUID, 可选。处理扫码接单进入桌台时使用
+}

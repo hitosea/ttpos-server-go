@@ -1936,6 +1936,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Buffet'
         description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西
       cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
@@ -2010,6 +2014,9 @@ definitions:
       status:
         description: 状态：1-待处理; 2-已接单; 3-已拒单
         type: integer
+      wait_time:
+        description: 等待时间，单位：秒
+        type: integer
     type: object
   resp.H5OrderDetailResp:
     properties:
@@ -2055,6 +2062,9 @@ definitions:
         type: number
       status:
         description: 状态：1-待处理; 2-已接单; 3-已拒单
+        type: integer
+      wait_time:
+        description: 等待时间，单位：秒
         type: integer
     type: object
   resp.H5OrderList:
@@ -10543,7 +10553,7 @@ paths:
       summary: 验证锁屏密码
       tags:
       - 收银端.基础信息
-  /h5/base/info:
+  /h5/base:
     get:
       consumes:
       - application/json

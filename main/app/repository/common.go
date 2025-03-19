@@ -62,6 +62,7 @@ type ICommonRepo interface {
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	FilterSaleOrderProduct() DBOption                               // 只查询常规的购物车商品
+	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption  // 只查询常规的购物车商品、指定某个h5订单的商品
 	FilterSaleOrderProductH5Unordered() DBOption                    // 只查询H5未下单的购物车商品
 	FilterSaleOrderProductH5Ordered() DBOption                      // 只查询H5已下单的购物车商品
 	FilterSaleOrderProductH5OrderedWithReject() DBOption            // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
@@ -313,6 +314,14 @@ func (r *commonRepo) WhereBetweenByCreateTime(startTime uint, endTime uint) DBOp
 func (r *commonRepo) FilterSaleOrderProduct() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
+	}
+}
+
+// FilterSaleOrderProductWithH5Order 只查询常规的购物车商品、指定某个h5订单的商品
+func (r *commonRepo) FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted).
+			Or("delete_time = ? AND is_accept_order = ? AND h5_order_uuid = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderUnAccept, h5OrderUuid)
 	}
 }
 

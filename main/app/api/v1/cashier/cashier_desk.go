@@ -3,13 +3,13 @@ package cashier
 import (
 	"bytes"
 	"io"
-	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -600,23 +600,30 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Router /cashier/desk/order/cart/info [get]
 func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	saleBillUuidStr := c.Query("sale_bill_uuid")
-	if saleBillUuidStr == "" {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("账单ID不能为空"))
+	// 绑定请求参数
+	params := req.OrderCartInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	saleBillUuid, err := strconv.ParseUint(saleBillUuidStr, 10, 64)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
+	// 查询购物车信息
+	if params.H5OrderUuid > constant.OptionalUuid {
+		res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid, repository.WithH5OrderUuid(params.H5OrderUuid))
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
+	} else {
+		res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	res, err := h.orderService.GetOrderCartInfo(ctx, saleBillUuid)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductAdd 向购物车添加商品
