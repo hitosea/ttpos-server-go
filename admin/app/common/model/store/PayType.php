@@ -212,11 +212,6 @@ class PayType extends BaseModel
         $licenses = request()->licenses;
         return array_values(array_filter($enumData, function ($item) use ($LianLian_enable, $licenses) {
             switch ($item['value']) {
-                    // v1.0.8名称唯一性判断冲突，先注释
-                    // case OrderPayTypeEnum::WECHAT:
-                    // case OrderPayTypeEnum::ALIPAY:
-                    // case OrderPayTypeEnum::POS:
-                    // case OrderPayTypeEnum::CASH:
                 case OrderPayTypeEnum::BALANCE:
                     return $licenses['is_open_member'] == 1; // 会员功能开启时显示 0关闭 1开启
                 case OrderPayTypeEnum::FREE_PAY:

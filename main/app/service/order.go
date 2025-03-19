@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/setting"
@@ -2807,7 +2808,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
-	// fmt.Println("GetOrderCartInfo 获取购物车信息shopCart.SaleBill.SaleOrders", utils.ToJsonString(shopCart.SaleBill.SaleOrders))
 	if shopCart.SaleBill.IsEndStatus() {
 		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
@@ -2966,7 +2966,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		saleOrderList = append(saleOrderList, order)
 	}
-	fmt.Println("GetOrderCartInfo 获取购物车信息saleOrderList", utils.ToJsonString(saleOrderList))
 
 	// 获取必点方案列表
 	mustPlan, errPlanMust := s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
@@ -4457,10 +4456,29 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
+	companySetting := ctx.GetCompanySetting()
+	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	for _, paymentMethod := range paymentMethods {
+		// 不显示免单
+		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
+			continue
+		}
+		// 没有启用会员功能不显示余额
+		if companySetting.IsOpenMember != 1 {
+			continue
+		}
+		// LianLianPay 没有配置支付信息 不显示
+		if paymentMethod.Code == constant.PaymentMethodCodeLianLianWechatPay ||
+			paymentMethod.Code == constant.PaymentMethodCodeLianLianAliPay ||
+			paymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
+			if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
+				continue
+			}
+		}
+
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {

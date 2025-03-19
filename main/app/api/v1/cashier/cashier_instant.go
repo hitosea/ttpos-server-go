@@ -617,7 +617,7 @@ func (h *InstantHandler) OrderCartProductCancelGiving(c *gin.Context) {
 // OrderPaymentInfo 获取结账页面信息
 // @Summary 获取结账页面信息
 // @Description 获取结账页面信息
-// @Tags 收银端.点餐
+// @Tags 收银端.点餐.结账
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -650,7 +650,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 // OrderPaymentCreate 创建一个支付单
 // @Summary 创建一个支付单
 // @Description 创建一个支付单
-// @Tags 收银端.点餐
+// @Tags 收银端.点餐.结账
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -681,7 +681,7 @@ func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 // OrderPaymentCancel 撤销一个支付单
 // @Summary 撤销一个支付单
 // @Description 撤销一个支付单
-// @Tags 收银端.点餐
+// @Tags 收银端.点餐.结账
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -712,7 +712,7 @@ func (h *InstantHandler) OrderPaymentCancel(c *gin.Context) {
 // OrderPaymentFinish 完成销售订单的付款结账
 // @Summary 完成销售订单的付款结账
 // @Description 完成销售订单的付款结账
-// @Tags 收银端.点餐
+// @Tags 收银端.点餐.结账
 // @Accept json
 // @Produce json
 // @Security JwtToken
