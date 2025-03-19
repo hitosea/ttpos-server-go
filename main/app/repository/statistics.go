@@ -13,6 +13,7 @@ type IStatisticsRepo interface {
 	CountShiftRechargeRefundAmount(shiftNo string) model.StatisticsShiftRechargeRefundAmount // 统计当班充值订单退款金额
 	CountShiftPaymentMethodAmount(shiftNo string) []model.StatisticsPaymentMethodAmount      // 统计当前班次支付方式收入
 	CountShiftSaleFreeAmount(shiftNo string) model.StatisticsSaleFreeAmount                  // 统计当班用餐订单免单金额
+	CountBusinessAmount(shiftNo string) float64                                              // 统计营业额
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -78,12 +79,13 @@ func (r *StatisticsRepo) CountShiftPaymentMethodAmount(shiftNo string) []model.S
 	saleBillTable := prefix + "sale_bill"
 	saleOrderTable := prefix + "sale_order"
 	returnOrderAmountTable := prefix + "return_order_amount"
+	memberRechargeOrderTable := prefix + "member_recharge_order"
 
 	subQuery := db.Raw(
 		"(SELECT "+saleOrderTable+".uuid AS uuid FROM "+saleBillTable+
 			" LEFT JOIN "+saleOrderTable+" ON "+saleBillTable+".uuid = "+saleOrderTable+".sale_bill_uuid AND "+saleOrderTable+".delete_time = 0 "+
 			"WHERE "+saleBillTable+".duty_no = ? AND "+saleBillTable+".delete_time = 0 AND "+saleOrderTable+".status = ?) UNION ALL "+
-			"(SELECT uuid FROM "+prefix+"member_recharge_order "+
+			"(SELECT uuid FROM "+memberRechargeOrderTable+" "+
 			"WHERE duty_no = ? AND status = 1 AND delete_time = 0)",
 		shiftNo,
 		constant.SaleOrderStatusFinish,
@@ -125,6 +127,15 @@ func (r *StatisticsRepo) CountShiftSaleFreeAmount(shiftNo string) model.Statisti
 		Where(saleOrderTable+".is_free = ?", constant.SaleOrderIsFreeYes).
 		Where(saleOrderTable + ".delete_time = 0").
 		Find(&result)
+
+	return result
+}
+
+// CountBusinessAmount 统计营业额
+// 商品已含税（原商品金额+实收服务费+实收服务税费+实收支付手续费）
+// 商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）
+func (r *StatisticsRepo) CountBusinessAmount(shiftNo string) float64 {
+	var result float64
 
 	return result
 }

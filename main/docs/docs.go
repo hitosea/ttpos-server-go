@@ -9851,6 +9851,55 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交交班",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.交班"
+                ],
+                "summary": "提交交班",
+                "parameters": [
+                    {
+                        "description": "提交交班参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SubmitShiftReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShiftSubmit"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         },
         "/cashier/sold_out/add": {
@@ -14082,6 +14131,19 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SubmitShiftReq": {
+            "type": "object",
+            "properties": {
+                "leave_cash": {
+                    "description": "遗留现金: 0 - 当前钱箱现金总计",
+                    "type": "number"
+                },
+                "withdraw_cash": {
+                    "description": "取出金额: 0 - 当前钱箱现金总计",
+                    "type": "number"
+                }
+            }
+        },
         "req.UpdateAcceptOrderSetting": {
             "type": "object",
             "required": [
@@ -17983,6 +18045,23 @@ const docTemplate = `{
                 },
                 "withdraw_cash": {
                     "description": "中途取出现金",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.ShiftSubmit": {
+            "type": "object",
+            "properties": {
+                "cash_income": {
+                    "description": "本班现金收入",
+                    "type": "number"
+                },
+                "cash_left": {
+                    "description": "本班遗留现金",
+                    "type": "number"
+                },
+                "cash_taken_out": {
+                    "description": "本班取出现金",
                     "type": "number"
                 }
             }

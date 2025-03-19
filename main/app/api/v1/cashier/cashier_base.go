@@ -351,23 +351,23 @@ func (h *BaseHandler) GetShiftInfo(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.SubmitShiftReq true "提交交班参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.ShiftSubmit}
 // @Router /cashier/shift [post]
-// func (h *BaseHandler) SubmitShift(c *gin.Context) {
-// 	ctx := helper.GetContext(c)
-// 	var submitReq req.SubmitShiftReq
-// 	if err := c.ShouldBindJSON(&submitReq); err != nil {
-// 		helper.HandleValidationError(c, err, submitReq, nil)
-// 		return
-// 	}
+func (h *BaseHandler) SubmitShift(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var submitReq req.SubmitShiftReq
+	if err := c.ShouldBindJSON(&submitReq); err != nil {
+		helper.HandleValidationError(c, err, submitReq, nil)
+		return
+	}
 
-// 	err := h.staffShiftSrv.SubmitShift(ctx, submitReq)
-// 	if err != nil {
-// 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-// 		return
-// 	}
-// 	helper.Success(c, gin.H{}, "交班成功")
-// }
+	info, err := h.staffShiftSrv.SubmitShift(ctx, submitReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, info, "交班成功")
+}
 
 // GetReport 获取报备信息
 // @Summary 获取报备信息
@@ -479,6 +479,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 		// 交班
 		privateApi.GET("/shift", wrapper.GetShiftInfo) // 获取交班信息
-		// privateApi.POST("/shift", wrapper.SubmitShift) // 提交交班
+		privateApi.POST("/shift", wrapper.SubmitShift) // 提交交班
 	}
 }
