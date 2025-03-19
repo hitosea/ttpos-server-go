@@ -110,7 +110,7 @@ class PaymentService extends BaseService
     public static function checkSignSalt($shop_supplier_id = 0)
     {
         // 不能合并，以saas端为准
-        return (new PaymentApp([], 0))->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
+        return (new PaymentApp([], 0))->where('company_uuid', $shop_supplier_id)->value('ll_sign_salt') ?: env('PAY_SERVICE_SIGN_SALT') ?: '';
     }
 
     /**

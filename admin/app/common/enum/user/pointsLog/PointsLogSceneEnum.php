@@ -39,11 +39,6 @@ class PointsLogSceneEnum extends Enum
     public static function data()
     {
         return [
-            // self::RECHARGE => [
-            //     'name' => __('充值'), // todo 产品原型没有该选项
-            //     'value' => self::RECHARGE,
-            //     'describe' => '充值：%s',
-            // ],
             self::CONSUME => [
                 'name' => __('订单赠送'),
                 'value' => self::CONSUME,

@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/setting"
@@ -2807,7 +2808,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
-	// fmt.Println("GetOrderCartInfo 获取购物车信息shopCart.SaleBill.SaleOrders", utils.ToJsonString(shopCart.SaleBill.SaleOrders))
 	if shopCart.SaleBill.IsEndStatus() {
 		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
@@ -2926,6 +2926,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					IsCancel:            saleOrderProduct.IsCancelProduct(),
 					SendKitchenTime:     sendKitchenTime,
 					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
+					ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
 				}
 				if saleOrderProduct.ProductionOrderProduct != nil {
 					if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -2965,7 +2966,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		saleOrderList = append(saleOrderList, order)
 	}
-	fmt.Println("GetOrderCartInfo 获取购物车信息saleOrderList", utils.ToJsonString(saleOrderList))
 
 	// 获取必点方案列表
 	mustPlan, errPlanMust := s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
@@ -4456,10 +4456,29 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
+	companySetting := ctx.GetCompanySetting()
+	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
 	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
 	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	for _, paymentMethod := range paymentMethods {
+		// 不显示免单
+		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
+			continue
+		}
+		// 没有启用会员功能不显示余额
+		if companySetting.IsOpenMember != 1 {
+			continue
+		}
+		// LianLianPay 没有配置支付信息 不显示
+		if paymentMethod.Code == constant.PaymentMethodCodeLianLianWechatPay ||
+			paymentMethod.Code == constant.PaymentMethodCodeLianLianAliPay ||
+			paymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
+			if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
+				continue
+			}
+		}
+
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
@@ -6433,7 +6452,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	return nil
 }
 
-// GetUnSendKitchen 未送厨商品列表
+// GetUnsentKitchen 未送厨商品列表
 func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
 	res := resp.UnsentKitchen{
 		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
@@ -6443,27 +6462,23 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, op
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
+	signProduct := make(map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
 			// 未送厨，且不是赠菜
 			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
-				var exists bool
-				for i, p := range res.Products.List {
-					if product.Sign == p.Sign {
-						exists = true
-						res.Products.List[i].DiscountPrice = utils.DecimalAdd(res.Products.List[i].DiscountPrice, product.DiscountPrice)
-						res.Products.List[i].Num = res.Products.List[i].Num + product.Num
-						res.Products.List[i].SalePrice = utils.DecimalAdd(res.Products.List[i].SalePrice, product.SalePrice)
-						break
-					}
+				if p, exists := signProduct[product.Sign]; exists {
+					product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
+					product.Num = p.Num + product.Num
+					product.SalePrice = utils.DecimalAdd(p.SalePrice, product.SalePrice)
 				}
-				if !exists {
-					fmt.Println("GetUnsentKitchen 未送厨商品列表1111", utils.ToJsonString(product))
-					res.Products.List = append(res.Products.List, product)
-					res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
-				}
+				signProduct[product.Sign] = product
+				res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
 			}
 		}
+	}
+	for _, product := range signProduct {
+		res.Products.List = append(res.Products.List, product)
 	}
 	sort.Slice(res.Products.List, func(i, j int) bool {
 		return res.Products.List[i].SendKitchenTime < res.Products.List[j].SendKitchenTime
@@ -6478,7 +6493,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, op
 	return res, nil
 }
 
-// GetSendKitchen 已送厨商品列表
+// GetSentKitchen 已送厨商品列表
 func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64) (resp.SentKitchen, error) {
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if err != nil {

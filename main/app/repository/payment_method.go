@@ -60,7 +60,7 @@ func (r *paymentMethodRepo) GetPaymentMethods(opts ...DBOption) []model.PaymentM
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Find(&paymentMethods)
+	db.Order("CAST(sort AS UNSIGNED), create_time desc").Find(&paymentMethods)
 	return paymentMethods
 }
 

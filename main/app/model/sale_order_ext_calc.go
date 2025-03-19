@@ -801,8 +801,6 @@ func (model *SaleOrder) AllOrderProductList(options ...func(option *CalcOption))
 			// 已送厨和未送厨的商品计入
 			products = append(products, orderProduct)
 		}
-
-		products = append(products, orderProduct)
 	}
 	return products
 }

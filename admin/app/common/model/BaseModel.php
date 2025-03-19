@@ -20,9 +20,6 @@ class BaseModel extends Model
 
     protected int $errorCode = 0;
 
-    // todo 定义全局的查询范围
-    // protected $globalScope = ['app_id'];
-
     /**
      * 构造方法
      */
@@ -81,16 +78,6 @@ class BaseModel extends Model
         self::$app_id = $appId;
         return $this;
     }
-
-    /**
-     * todo 定义全局的查询范围
-     */
-    // public function scopeApp_id($query)
-    // {
-    //     if ($query->getTableFields() && in_array('app_id', $query->getTableFields()) && self::$app_id > 0) {
-    //         $query->where($query->getTable() . '.app_id', self::$app_id);
-    //     }
-    // }
 
     /**
      * 设置默认的检索数据

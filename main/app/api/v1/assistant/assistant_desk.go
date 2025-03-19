@@ -109,6 +109,34 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDeskPing 桌台详情-用于定时轮询
+// @Summary 桌台详情-用于定时轮询
+// @Description 桌台详情-用于定时轮询
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.DeskInfoReq true "详情参数"
+// @Success 200 {object} resp.DeskPing "桌台详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/ping [get]
+func (h *DeskHandler) GetDeskPing(c *gin.Context) {
+	// 绑定请求参数
+	var deskInfoReq req.DeskInfoReq
+	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
+		helper.HandleValidationError(c, err, deskInfoReq, nil)
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(helper.GetContext(c), deskInfoReq.Uuid)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // CreateDeskOrder 处理创建开台
 // @Summary 开台
 // @Description 开台
@@ -1085,6 +1113,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/region_and_type", wrapper.GetDeskRegionAndType)                                 // 获取桌台的区域和类型
 		privateApi.GET("/desk/list", wrapper.GetDeskList)                                                     // 获取桌台列表
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                     // 获取桌台详情
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                                     // 定时获取桌台信息
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品

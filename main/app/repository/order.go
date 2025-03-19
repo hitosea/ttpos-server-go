@@ -44,6 +44,7 @@ type IOrderRepo interface {
 	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error               // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                           // 获取销售账单所有信息
+	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                      // 获取销售账单所有商品信息
 	HasShowOrder(deviceUuid uint64) (bool, error)                                                                              // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                            // 获取销售账单记录
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
@@ -1088,6 +1089,36 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
+	}
+	return &info, nil
+}
+
+// GetSaleBillWithProducts 获取销售账单所有商品信息
+func (r *orderRepo) GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereBySaleBillUuid(saleBillUuid)),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("GetSaleBillWithProducts: %v", err)
 	}
 	return &info, nil
 }

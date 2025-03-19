@@ -43,7 +43,7 @@ func GetLocalIP() (string, error) {
 func GetBaseURL(r *http.Request) string {
 	domain := viper.GetString("DOMAIN")
 	if domain != "" {
-		return domain
+		return domain + "/"
 	}
 
 	// 如果没有配置域名，使用默认的
