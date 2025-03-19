@@ -37,7 +37,7 @@ type H5Handler struct {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} resp.H5BaseInfo{}
-// @Router /h5/base/info [get]
+// @Router /h5/base [get]
 func (h *H5Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
@@ -453,7 +453,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	// 需要认证
 	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
-		privateApi.GET("/base/info", wrapper.BaseInfo)                                             // 获取桌码基础信息
+		privateApi.GET("/base", wrapper.BaseInfo)                                                  // 获取桌码基础信息
 		privateApi.GET("/buffet/list", wrapper.GetBuffetList)                                      // 获取自助餐套餐列表
 		privateApi.POST("/desk/open", wrapper.OpenDesk)                                            // 开台
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)                   // 获取收银产品类别列表

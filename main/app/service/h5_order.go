@@ -2,6 +2,7 @@ package service
 
 import (
 	"slices"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -83,6 +84,7 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 				OrderUuid:  order.Uuid,
 				OrderTime:  order.OrderTime,
 				HandleTime: order.HandleTime,
+				WaitTime:   time.Now().Unix() - order.OrderTime,
 				DeskNo:     order.DeskNo,
 				Price:      price,
 				Status:     order.Status,
@@ -177,6 +179,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 				OrderUuid:  order.Uuid,
 				OrderTime:  order.OrderTime,
 				HandleTime: order.HandleTime,
+				WaitTime:   time.Now().Unix() - order.OrderTime,
 				DeskNo:     order.DeskNo,
 				Price:      price,
 				Status:     order.Status,

@@ -17,6 +17,7 @@ type H5OrderInfo struct {
 	OrderUuid  uint64  `json:"order_uuid"`  // 订单Uuid
 	OrderTime  int64   `json:"order_time"`  // 下单时间
 	HandleTime int64   `json:"handle_time"` // 接单、拒单时间
+	WaitTime   int64   `json:"wait_time"`   // 等待时间，单位：秒
 	DeskNo     string  `json:"desk_no"`     // 桌台编号
 	Price      float64 `json:"price"`       // 订单金额
 	Status     uint    `json:"status"`      // 状态：1-待处理; 2-已接单; 3-已拒单
