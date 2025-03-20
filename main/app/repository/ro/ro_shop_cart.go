@@ -1,7 +1,9 @@
 package ro
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 )
 
 type ShopCartRepo struct {
@@ -33,14 +35,19 @@ func (ro *ShopCartRepo) GetMustPlanProductInfo() MustPlanProductInfo {
 				continue
 			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
-			if num, ok := dataMap[mustPlanUuid][productPackageUuid]; ok {
-				// 累加必点商品数量
-				dataMap[mustPlanUuid][productPackageUuid] = num + saleOrderProduct.Num
+			if _, ok := dataMap[mustPlanUuid]; ok {
+				if num, exist := dataMap[mustPlanUuid][productPackageUuid]; exist {
+					// 累加必点商品数量
+					dataMap[mustPlanUuid][productPackageUuid] = num + saleOrderProduct.Num
+				} else {
+					dataMap[mustPlanUuid][productPackageUuid] = saleOrderProduct.Num
+				}
 			} else {
 				dataMap[mustPlanUuid] = make(map[uint64]uint)
 				dataMap[mustPlanUuid][productPackageUuid] = saleOrderProduct.Num
 			}
 		}
 	}
+	fmt.Println("GetMustPlanProductInfo dataMap", utils.ToJsonString(dataMap))
 	return dataMap
 }

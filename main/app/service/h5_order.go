@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -13,7 +12,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -254,7 +252,6 @@ func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) (*re
 	if err != nil {
 		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
 	}
-	fmt.Println("h5OrderRepo.GetH5OrderDetail:", utils.ToJsonString(h5Order.SaleOrderProducts))
 	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
 		return nil, errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")

@@ -899,7 +899,10 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
+	if !res {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.ErrMustPlanNotComplete))
+		return
+	}
 	// 返回结果
 	helper.Success(c, gin.H{})
 }

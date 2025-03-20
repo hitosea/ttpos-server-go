@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -75,6 +76,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				//}
 				productPackageUuid := productPackage.Product.Uuid
 				num := productPackageMap[productPackageUuid]
+				fmt.Println("stat selectedNum. productPackageUuid", productPackageUuid, "num", num)
 				selectedNum += num
 			}
 		}

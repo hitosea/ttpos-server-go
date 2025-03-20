@@ -1,10 +1,8 @@
 package repository
 
 import (
-	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -110,7 +108,6 @@ func (r *productBomRepoImpl) UpdateProductBoms(productBoms []*model.ProductBom) 
 		bom.SetNil()
 		list = append(list, bom)
 	}
-	fmt.Println("UpdateProductBoms list", utils.ToJsonString(list))
 	if err := r.db.Model(&model.ProductBom{}).Save(list).Error; err != nil {
 		return errors.WithMessage(err)
 	}

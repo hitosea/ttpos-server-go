@@ -922,6 +922,10 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	if !res {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.ErrMustPlanNotComplete)
+		return
+	}
 	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, gin.H{})

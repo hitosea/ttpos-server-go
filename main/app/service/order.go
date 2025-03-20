@@ -6006,9 +6006,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 
 	// 修改sale_bill表的show_must_plan
-	saleBill.ShowMustPlan = constant.SaleBillShowMustPlanNo
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(req.SaleBillUuid); err != nil {
-		ctx.Log().Error("修改sale_bill表的show_must_plan失败", zap.Error(err))
 		return false, errors.WithMessage(err, "确认必点商品失败")
 	}
 

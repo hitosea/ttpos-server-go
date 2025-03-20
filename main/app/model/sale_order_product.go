@@ -549,7 +549,6 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		} else {
 			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
-			fmt.Println(utils.ToJsonString(saleOrderProductBom.ProductBom.ProductSauce))
 			sauceNames = append(sauceNames, sauceName)
 		}
 	}

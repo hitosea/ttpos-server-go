@@ -67,7 +67,6 @@ func cancelSaleOrderProductEventHandler() {
 			}()
 		})
 		event.NewSystemBus().SubscribeCancelSaleOrderProductEvent(func(payload event.CancelSaleOrderProductPayload) {
-			fmt.Println("SubscribeCancelSaleOrderProductEvent payload", utils.ToJsonString(payload))
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			AddStock(db, payload.SaleBillUuid)
 		})
@@ -85,7 +84,6 @@ func AddStock(db *gorm.DB, saleBillUuid uint64) {
 		logger.Logger.Info("SubscribeCancelSaleOrderProductEvent process, GetWarehouseFormItemNotProcessed failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 		return
 	}
-	fmt.Println("warehouseFormItems", utils.ToJsonString(warehouseFormItems))
 	productBoms := make(map[uint64]*model.ProductBom)
 	materials := make(map[uint64]*model.Material)
 	for _, warehouseFormItem := range warehouseFormItems {

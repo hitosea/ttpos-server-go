@@ -1,11 +1,9 @@
 package base
 
 import (
-	"fmt"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -101,7 +99,6 @@ func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 		material.SetNil()
 		list = append(list, material)
 	}
-	fmt.Println("UpdateMaterials list", utils.ToJsonString(list))
 	if err := r.db.Model(&model.Material{}).Save(list).Error; err != nil {
 		return errors.WithMessage(err)
 	}
