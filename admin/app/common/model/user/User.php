@@ -655,16 +655,13 @@ class User extends BaseModel
      */
     public function getConsumerRank($data)
     {
-        $sort = ($data['sort'] ??  0) == 2 ? 'consumption_amount' : 'consumption_num';
-        $consumerRank = Order::alias('a')
-            ->leftjoin('member b', 'a.consumer_uuid = b.uuid')
-            ->field('a.uuid, count(a.uuid) as consumption_num, sum(a.pay_price) as consumption_amount, b.nickname')
-            ->where('a.status', '=', 1)
-            ->where('a.delete_time', '=', 0)
-            ->where('a.uuid', '>', 0)
-            ->group('a.uuid')
+        $sort = ($data['sort'] ??  0) == 2 ? 'accumulated_consumption_amount' : 'consumption_count';
+        $consumerRank = self::field('id,nickname,accumulated_consumption_amount as consumption_amount,consumption_count as consumption_num')
+            ->withAttr('user_id', function ($value, $data) {
+                return $data['id'];
+            })
             ->order($sort, 'desc')
-            ->paginate($data)?->append([]);
+            ->paginate($data);
         return $consumerRank;
     }
 }
