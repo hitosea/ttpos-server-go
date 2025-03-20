@@ -279,6 +279,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			MustType:     plan.GetMustType(),
 			MustRule:     plan.GetMustRule(),
 			CanChangeNum: plan.IsCustomerCanChange(),
+			MealNum:      mealNum,
 			SelectedNum:  selectedNum, // 已选择xx份
 			NeedNum:      needNum,     // 还差xx份。应该算上自动加购商品的数量
 			Products:     resp.ProductPackageList{List: productPackages},
