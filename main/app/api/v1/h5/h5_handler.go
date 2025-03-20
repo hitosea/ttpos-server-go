@@ -436,7 +436,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
-	buffetSrv := service.NewBuffetSrv(dbm, localeSrv)
+	buffetSrv := service.NewBuffetSrv(dbm)
 	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
 	productService := service.NewProductSrv(dbm, localeSrv)
 	callSrv := service.NewCallSrv(dbm)

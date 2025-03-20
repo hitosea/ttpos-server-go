@@ -17,21 +17,17 @@ type IBuffetSrv interface {
 
 // buffetSrv 收银服务结构体
 type buffetSrv struct {
-	dbm       *database.DBManager // 数据库管理器
-	localeSrv ILocaleSrv          // 多语言名称服务
+	dbm *database.DBManager // 数据库管理器
 }
 
 // NewBuffetSrv 创建新的收银产品类别服务
-func NewBuffetSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv {
-	return NewBuffetSrvImpl(dbm, localeSrv)
+func NewBuffetSrv(dbm *database.DBManager) IBuffetSrv {
+	return NewBuffetSrvImpl(dbm)
 }
 
 // NewBuffetSrvImpl 创建新的收银服务实现
-func NewBuffetSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IBuffetSrv {
-	return &buffetSrv{
-		dbm:       dbm,
-		localeSrv: localeSrv,
-	}
+func NewBuffetSrvImpl(dbm *database.DBManager) IBuffetSrv {
+	return &buffetSrv{dbm: dbm}
 }
 
 // GetBuffetList 获取列表
@@ -62,7 +58,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 			CanCombined:         buffet.CanCombined == 1,
 			NonOrderingTime:     buffet.NonOrderingTime * 60,   // 分转为秒
 			ReminderOrderTime:   buffet.ReminderOrderTime * 60, // 分转为秒
-			LocaleName:          s.localeSrv.GetLocaleNames(buffet.MultiLanguageName),
+			LocaleName:          buffet.MultiLanguageName.GetNames(),
 			BuffetCustomerTypes: resp.BuffetCustomerTypeList{List: buffetCustomerTypes},
 		}
 		respBuffets = append(respBuffets, respBuffet)

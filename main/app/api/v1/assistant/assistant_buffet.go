@@ -51,10 +51,7 @@ func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 
 	// 初始化处理器
 	wrapper := BuffetHandler{
-		buffetSrv: service.NewBuffetSrv(
-			dbm,                    // 数据库管理器
-			service.NewLocaleSrv(), // 多语言服务
-		),
+		buffetSrv: service.NewBuffetSrv(dbm),
 	}
 
 	// 需要认证
