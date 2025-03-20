@@ -15,9 +15,11 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/admin"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/skip2/go-qrcode"
 
@@ -72,6 +74,12 @@ type LianLianPaymentResp struct {
 		MerchantOrderId string `json:"merchant_order_id"`  // 商户订单id
 		QrCode          string `json:"qr_code"`            // 二维码 - base64
 		QrCodeExpireSec string `json:"qr_code_expire_sec"` // 二维码过期秒 480
+		// 二维码有效期 微信(90111)-60分 支付宝(90222)-15分 promptPay(90333)-8分
+		// $alive_time = [
+		//     '90111' =>  60 * 60,
+		//     '90222' =>  60 * 15,
+		//     '90333' =>  60 * 8,
+		// ];
 	} `json:"order"`
 }
 
@@ -85,25 +93,8 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 	}
 }
 
-// Validate 验证支付配置
-func (p *PaymentRepo) ValidateConfig() (*model.PaymentApp, error) {
-	db := p.dbm.GetDB(0)
-	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(db).GetPaymentAppCompanyUuid(p.ctx.GetCompanyUuid())
-	// 检查支付配置
-	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
-		return nil, errors.New("未配置支付信息")
-	}
-	if p.payServiceUrl == "" {
-		return nil, errors.New("未配置PAY_SERVICE_URL")
-	}
-	if p.payServiceLianlianCallbackUrl == "" {
-		return nil, errors.New("未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL")
-	}
-	return paymentApp, nil
-}
-
 // CreatePayment 创建支付
-func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64) (*LianLianPaymentResp, error) {
+func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paymentAmount float64) (*model.LlPaymentOrder, error) {
 	paymentApp, err := p.ValidateConfig()
 	if err != nil {
 		return nil, err
@@ -121,10 +112,13 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 		return nil, errors.New("不支持的支付方式")
 	}
 
+	// 生成商户订单号
+	merchantOrderNo := p.GenerateMerchantOrderNo()
+
 	// 组装请求数据
 	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
 		p.ctx.GetCompanyUuid(),
-		p.GenerateMerchantOrderNo(),
+		merchantOrderNo,
 		paymentAmount,
 		"THB",
 		"CHECK_OUT",
@@ -175,7 +169,55 @@ func (p *PaymentRepo) CreatePayment(paymentMethodCode int, paymentAmount float64
 		resp.Order.QrCode = "data:image/png;base64," + resp.Order.QrCode
 	}
 
-	return &resp, nil
+	// 生成雪花ID
+	uuid, err := utils.GetID()
+	if err != nil {
+		return nil, errors.New("生成雪花ID失败")
+	}
+
+	// 创建支付订单
+	paymentOrder := &model.LlPaymentOrder{
+		PaymentOrderUuid: uuid,
+		RelatedType:      relatedType,
+		MerchantOrderId:  merchantOrderNo,
+		MerchantId:       resp.Order.MerchantId,
+		OrderId:          resp.Order.OrderId,
+		OrderType:        resp.PayTypeDesc,
+		OrderStatus:      resp.Order.OrderStatus,
+		OrderAmount:      paymentAmount,
+		OrderCurrency:    resp.Order.OrderCurrency,
+		FullName:         "CASHIER",
+		OrderDesc:        resp.PayTypeDesc,
+		LinkUrl:          resp.Order.QrCode,
+		MerchantUserId:   fmt.Sprintf("%d", p.ctx.GetStaffUuid()),
+		LlCreateTime:     resp.Order.CreateTime,
+		PayTime:          0,
+	}
+
+	// 保存支付订单
+	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
+	if _, err := llPaymentOrderRepo.Create(*paymentOrder); err != nil {
+		return nil, err
+	}
+
+	return paymentOrder, nil
+}
+
+// Validate 验证支付配置
+func (p *PaymentRepo) ValidateConfig() (*model.PaymentApp, error) {
+	db := p.dbm.GetDB(0)
+	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(db).GetPaymentAppCompanyUuid(p.ctx.GetCompanyUuid())
+	// 检查支付配置
+	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
+		return nil, errors.New("未配置支付信息")
+	}
+	if p.payServiceUrl == "" {
+		return nil, errors.New("未配置PAY_SERVICE_URL")
+	}
+	if p.payServiceLianlianCallbackUrl == "" {
+		return nil, errors.New("未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL")
+	}
+	return paymentApp, nil
 }
 
 // paySign 计算支付签名

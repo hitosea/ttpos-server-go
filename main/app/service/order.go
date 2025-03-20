@@ -4516,7 +4516,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 
 // InstantOrderPaymentQrcode
 func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error) {
-	// baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid + req.PaymentMethodUuid)
@@ -4565,6 +4564,17 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 是否已存在有效待支付二维码
+	// if alivePaymentOrder := s.alivePaymentOrder(req.SaleOrderUuid, ctx.GetCashierId(), paymentMethod.Code, req.PaymentAmount, paymentMethod.GetFeePercent()); alivePaymentOrder != nil {
+	// 	return &resp.InstantOrderPaymentQrcodeInfoResp{
+	// 		PaymentOrderUuid: alivePaymentOrder.Uuid,
+	// 		QrCode:           alivePaymentOrder.QrCode,
+	// 		QrCodeExpireSec:  alivePaymentOrder.QrCodeExpireSec,
+	// 		Status:           constant.PaymentOrderStatusUnPay,
+	// 		PaymentAmount:    alivePaymentOrder.PaymentAmount,
+	// 	}, nil
+	// }
+
 	// 计算手续费
 	percent := paymentMethod.GetFeePercent()
 	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
@@ -4579,12 +4589,6 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
-	}
-
-	// 创建支付订单
-	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(paymentMethod.Code, paymentAmount)
-	if err != nil {
-		return nil, errors.WithMessage(err)
 	}
 
 	// 创建支付订单
@@ -4606,16 +4610,17 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	// 在 infoResp 初始化之前添加
-	qrCodeExpireSec := 480 // 默认8分钟过期
-	if expireSec, err := strconv.Atoi(payment.Order.QrCodeExpireSec); err == nil {
-		qrCodeExpireSec = expireSec
+	// 创建连连支付订单
+	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(0, paymentMethod.Code, paymentAmount)
+	if err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
+	// 在 infoResp 初始化之前添加
 	infoResp := &resp.InstantOrderPaymentQrcodeInfoResp{
-		PaymentOrderUuid: paymentOrder.Uuid,
-		QrCode:           payment.Order.QrCode,
-		QrCodeExpireSec:  qrCodeExpireSec,
+		PaymentOrderUuid: payment.PaymentOrderUuid,
+		QrCode:           payment.LinkUrl,
+		QrCodeExpireSec:  payment.GetExpireTime(),
 		Status:           constant.PaymentOrderStatusUnPay,
 		PaymentAmount:    paymentAmount,
 	}
