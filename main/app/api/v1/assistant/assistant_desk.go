@@ -131,7 +131,7 @@ func (h *DeskHandler) GetDeskPing(c *gin.Context) {
 	res, err := h.deskSrv.GetDeskPing(helper.GetContext(c), deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
