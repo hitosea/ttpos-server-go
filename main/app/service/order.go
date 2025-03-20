@@ -544,7 +544,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
-	saleOrderBuffetCustomerTypes, _, _, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
+	saleOrderBuffetCustomerTypes, _, _, maxTimeLimit, nonOrderingTime, reminderOrderTime := saleOrder.GetSaleOrderBuffetCustomerTypes(buffetList, req.BuffetUuids, buffetCustomerTypes, saleBillSetting)
 
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -559,6 +559,8 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 				saleBill.BuffetDuration = 0
 			} else {
 				saleBill.BuffetDuration = uint(maxTimeLimit)
+				saleBill.NonOrderingTime = nonOrderingTime
+				saleBill.ReminderOrderTime = reminderOrderTime
 			}
 		}
 
@@ -2480,7 +2482,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 获取自助餐顾客
 	customerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&customerTypes, req.BuffetCustomerTypes)
-	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit := saleOrder.GetSaleOrderBuffetCustomerTypes(
+	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit, _, _ := saleOrder.GetSaleOrderBuffetCustomerTypes(
 		buffetList,
 		req.BuffetUuids,
 		customerTypes,
@@ -3039,9 +3041,11 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
 			shopCartInfo.Buffet = &resp.BuffetInfo{
-				RemainingSeconds: shopCart.SaleBill.GetTotalRemainingSeconds(),
-				LocaleName:       shopCart.SaleBill.GetBuffetName(),
-				IsTimeLimited:    shopCart.SaleBill.IsTimeLimited(),
+				RemainingSeconds:      shopCart.SaleBill.GetTotalRemainingSeconds(),
+				IsTimeLimited:         shopCart.SaleBill.IsTimeLimited(),
+				LocaleName:            shopCart.SaleBill.GetBuffetName(),
+				RemainingOrderingTime: shopCart.SaleBill.GetRemainingOrderingSeconds(),
+				ReminderOrderTime:     shopCart.SaleBill.ReminderOrderTime,
 			}
 		}
 	}
