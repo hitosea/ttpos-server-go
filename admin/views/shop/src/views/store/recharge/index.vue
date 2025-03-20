@@ -110,7 +110,7 @@
           <el-table-column prop="status" :label="$t('状态')">
             <template #default="scope">
               <div>
-                {{ scope.row.status == 0 ? $t('进行中') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
+                {{ scope.row.status == 0 ? $t('待付款') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
               </div>
             </template>
           </el-table-column>
