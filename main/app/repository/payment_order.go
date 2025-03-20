@@ -13,7 +13,6 @@ type IPaymentOrderRepo interface {
 	WhereRelatedUuid(uuid uint64) DBOption
 	WhereRelatedUuids(uuids []uint64) DBOption
 	WhereStatus(status uint) DBOption
-	WherePaymentTypeUuid(uuid uint64) DBOption
 	WhereUuid(uuid uint64) DBOption
 	WhereRelatedType(relatedType uint64) DBOption
 	WherePaymentMethodUuid(paymentMethodUuid uint64) DBOption
@@ -175,13 +174,6 @@ func (r *paymentOrderRepo) WhereRelatedType(relatedType uint64) DBOption {
 
 // WherePaymentMethodUuid 根据支付方式Uuid查询
 func (r *paymentOrderRepo) WherePaymentMethodUuid(uuid uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("payment_method_uuid = ?", uuid)
-	}
-}
-
-// WherePaymentTypeUuid 根据支付方式Uuid查询
-func (r *paymentOrderRepo) WherePaymentTypeUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("payment_method_uuid = ?", uuid)
 	}

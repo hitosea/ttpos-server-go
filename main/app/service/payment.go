@@ -1,4 +1,4 @@
-package lianlian
+package service
 
 import (
 	"bytes"
@@ -11,17 +11,22 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/admin"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"github.com/skip2/go-qrcode"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"github.com/spf13/viper"
@@ -75,12 +80,6 @@ type LianLianPaymentResp struct {
 		MerchantOrderId string `json:"merchant_order_id"`  // 商户订单id
 		QrCode          string `json:"qr_code"`            // 二维码 - base64
 		QrCodeExpireSec string `json:"qr_code_expire_sec"` // 二维码过期秒 480
-		// 二维码有效期 微信(90111)-60分 支付宝(90222)-15分 promptPay(90333)-8分
-		// $alive_time = [
-		//     '90111' =>  60 * 60,
-		//     '90222' =>  60 * 15,
-		//     '90333' =>  60 * 8,
-		// ];
 	} `json:"order"`
 }
 
@@ -98,11 +97,12 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 func (p *PaymentRepo) CreatePayment(
 	relatedType int,
 	relatedUuid uint64,
+	paymentMethodUuid uint64,
 	paymentMethodCode int,
 	paymentAmount float64,
 	commissionFee float64,
 ) (*model.LlPaymentOrder, error) {
-	paymentApp, err := p.ValidateConfig()
+	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (p *PaymentRepo) CreatePayment(
 	// 创建支付订单仓库
 	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
 	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
-	merchantOrderNo := p.GenerateMerchantOrderNo()
+	merchantOrderNo := p.generateMerchantOrderNo()
 
 	// 获取支付配置
 	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
@@ -189,22 +189,23 @@ func (p *PaymentRepo) CreatePayment(
 
 	// 创建支付订单
 	paymentOrder := &model.LlPaymentOrder{
-		PaymentOrderUuid: uuid,
-		RelatedType:      relatedType,
-		RelatedUuid:      relatedUuid,
-		MerchantOrderId:  merchantOrderNo,
-		MerchantId:       resp.Order.MerchantId,
-		OrderId:          resp.Order.OrderId,
-		OrderType:        resp.PayTypeDesc,
-		OrderStatus:      resp.Order.OrderStatus,
-		OrderAmount:      paymentAmount,
-		OrderCurrency:    resp.Order.OrderCurrency,
-		FullName:         "CASHIER",
-		OrderDesc:        resp.PayTypeDesc,
-		LinkUrl:          resp.Order.QrCode,
-		MerchantUserId:   merchantUserId,
-		LlCreateTime:     resp.Order.CreateTime,
-		CommissionFee:    commissionFee,
+		PaymentOrderUuid:  uuid,
+		PaymentMethodUuid: paymentMethodUuid,
+		RelatedType:       relatedType,
+		RelatedUuid:       relatedUuid,
+		MerchantOrderId:   merchantOrderNo,
+		MerchantId:        resp.Order.MerchantId,
+		OrderId:           resp.Order.OrderId,
+		OrderType:         resp.PayTypeDesc,
+		OrderStatus:       resp.Order.OrderStatus,
+		OrderAmount:       paymentAmount,
+		OrderCurrency:     resp.Order.OrderCurrency,
+		FullName:          "CASHIER",
+		OrderDesc:         resp.PayTypeDesc,
+		LinkUrl:           resp.Order.QrCode,
+		MerchantUserId:    merchantUserId,
+		LlCreateTime:      resp.Order.CreateTime,
+		CommissionFee:     commissionFee,
 	}
 	// 设置创建时间
 	paymentOrder.CreateTime = time.Now().Unix()
@@ -251,6 +252,106 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 	return nil, nil
 }
 
+// HandleCallback 处理支付回调
+func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallbackRequest) error {
+	// 验证签名
+	err := p.validateSign(sign, callbackReq)
+	if err != nil {
+		return err
+	}
+	// 验证支付状态
+	if callbackReq.PayStatus != 1 {
+		fmt.Println("支付状态不正确")
+		return errors.New("支付状态不正确")
+	}
+	// 转换商户ID
+	companyUuid, err := strconv.ParseUint(callbackReq.CompanyUuid, 10, 64)
+	if err != nil {
+		fmt.Println("商户ID格式错误", err)
+		return fmt.Errorf("商户ID格式错误: %v", err)
+	}
+	db := p.dbm.GetDB(companyUuid)
+	// 获取支付订单
+	order, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
+		repository.CommonRepo.WhereBySoftDelete(),
+		func(db *gorm.DB) *gorm.DB {
+			db = db.Where("merchant_user_id = ?", callbackReq.MerchantUserId)
+			db = db.Where("order_amount = ?", callbackReq.OrderAmount)
+			db = db.Where("pay_time = ?", "")
+			db = db.Where("merchant_order_id = ?", callbackReq.MerchantOrderNo)
+			db = db.Preload("PaymentMethod")
+			return db
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if order.Uuid == 0 {
+		fmt.Println("支付订单不存在")
+		return errors.New("支付订单不存在")
+	}
+	// 将PayAt转换为时间戳
+	payAt, err := time.Parse("2006-01-02 15:04:05", callbackReq.PayAt)
+	if err != nil {
+		fmt.Println("支付时间格式错误", err)
+		return fmt.Errorf("支付时间格式错误: %v", err)
+	}
+
+	// 将 paymentAmount 和 fee/100 转换为 decimal
+	commissionFee := decimal.NewFromFloat(order.CommissionFee)
+	orderAmount := decimal.NewFromFloat(order.OrderAmount)
+	paymentFeePercent := commissionFee.Div(orderAmount).Round(3).Round(2).InexactFloat64()
+
+	// 更新支付订单状态
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+
+		fmt.Println("支付订单ID:", order.Uuid)
+		fmt.Println("支付订单pay_time:", payAt)
+		fmt.Println("支付订单pay_time2:", payAt.Unix())
+
+		// 更新连连支付订单
+		err := repository.NewLlPaymentOrderRepo(tx).Update(order.Uuid, map[string]interface{}{
+			"order_status": "PS",
+			"pay_time":     payAt.Unix(),
+		})
+		if err != nil {
+			return err
+		}
+
+		// 创建或更新支付单
+		if err := repository.NewPaymentOrderRepo(tx).UpdateOrCreatePaymentOrderRecord(model.PaymentOrder{
+			BaseModel: model.BaseModel{
+				Uuid: order.PaymentOrderUuid,
+			},
+			PaymentMethodName: func() string {
+				if order.PaymentMethod == nil {
+					return ""
+				}
+				return order.PaymentMethod.Name
+			}(),
+			PaymentFeePercent:    paymentFeePercent,
+			PaymentMethodUuid:    order.PaymentMethodUuid,
+			RelatedType:          order.RelatedType,
+			RelatedUuid:          order.RelatedUuid,
+			CurrencyUnit:         order.OrderCurrency,
+			PaymentAmount:        order.OrderAmount - order.CommissionFee,
+			PaymentCommissionFee: order.CommissionFee,
+			Amount:               order.OrderAmount,
+			TransactionNumber:    callbackReq.PaymentId,
+			Status:               constant.PaymentOrderStatusPaid,
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		fmt.Println("更新支付订单失败 - 03", err)
+		logger.Logger.Error("更新支付订单失败 - 03", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
 // getPaymentInfo 获取支付配置
 func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, error) {
 	// 根据支付方式调用不同的支付接口
@@ -271,10 +372,9 @@ func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, err
 	return url, orderType, nil
 }
 
-// Validate 验证支付配置
-func (p *PaymentRepo) ValidateConfig() (*model.PaymentApp, error) {
-	db := p.dbm.GetDB(0)
-	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(db).GetPaymentAppCompanyUuid(p.ctx.GetCompanyUuid())
+// validateConfig 验证支付配置
+func (p *PaymentRepo) validateConfig(companyUuid uint64) (*model.PaymentApp, error) {
+	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(p.dbm.GetDB(0)).GetPaymentAppCompanyUuid(companyUuid)
 	// 检查支付配置
 	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
 		return nil, errors.New("未配置支付信息")
@@ -286,6 +386,35 @@ func (p *PaymentRepo) ValidateConfig() (*model.PaymentApp, error) {
 		return nil, errors.New("未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL")
 	}
 	return paymentApp, nil
+}
+
+// ValidateSign 验证支付签名
+func (p *PaymentRepo) validateSign(sign string, req req.LianLianCallbackRequest) error {
+	companyUuid, err := strconv.ParseUint(req.CompanyUuid, 10, 64)
+	if err != nil {
+		return fmt.Errorf("商户ID格式错误: %v", err)
+	}
+	paymentApp, err := p.validateConfig(companyUuid)
+	if err != nil {
+		return err
+	}
+	// 组装请求数据
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":\"%v\",\"merchant_order_no\":\"%v\",\"merchant_user_id\":\"%v\",\"pay_type_desc\":\"%v\",\"pay_status\":%v,\"payment_id\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"pay_at\":\"%v\"}",
+		req.CompanyUuid,
+		req.MerchantOrderNo,
+		req.MerchantUserId,
+		req.PayTypeDesc,
+		req.PayStatus,
+		req.PaymentId,
+		req.OrderAmount,
+		req.OrderCurrency,
+		req.PayAt,
+	)
+	// 验证支付签名
+	if p.paySign(paymentApp.LlSignSalt, jsonStr) != sign {
+		return errors.New("支付签名验证失败")
+	}
+	return nil
 }
 
 // paySign 计算支付签名
@@ -355,7 +484,7 @@ func (p *PaymentRepo) postRequest(url string, jsonData string, headers map[strin
 * 请求支付订单号
 * @return string
  */
-func (p *PaymentRepo) GenerateMerchantOrderNo() string {
+func (p *PaymentRepo) generateMerchantOrderNo() string {
 	prefix := "PS"
 	datePart := time.Now().Format("20060102150405")
 	randomPart := fmt.Sprintf("%08d", rand.Intn(100000000))

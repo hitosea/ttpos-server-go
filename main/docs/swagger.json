@@ -11764,6 +11764,25 @@
                 }
             }
         },
+        "/passport/lianlian/callback": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通用.支付"
+                ],
+                "summary": "连连支付回调",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/passport/server_public_key": {
             "get": {
                 "produces": [

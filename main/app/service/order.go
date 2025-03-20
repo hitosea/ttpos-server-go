@@ -20,13 +20,13 @@ import (
 	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
-	"ttpos-server-go/app/service/lianlian"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/cryptor"
@@ -4705,9 +4705,10 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 创建连连支付订单
-	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(
 		constant.PaymentOrderRelatedTypeSaleOrder,
 		saleOrder.Uuid,
+		paymentMethod.Uuid,
 		paymentMethod.Code,
 		paymentAmount,
 		commissionFee,
@@ -4758,6 +4759,34 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 默认支付订单状态
+	paymentOrderStatus := constant.PaymentOrderStatusPaid
+
+	// 获取支付订单
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+
+	//  在线支付订单
+	if paymentMethod.IsLianLianPay() {
+		paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
+			paymentOrderRepo.WhereRelatedUuid(saleOrder.Uuid),
+			paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+		)
+		// 如果已经存在直接返回
+		if paymentOrder.Uuid != 0 {
+			if paymentOrder.PaymentAmount != req.PaymentAmount {
+				return nil, errors.New("不能重复支付")
+			}
+			newInfoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			return newInfoResp, nil
+		}
+		// 默认支付订单状态
+		paymentOrderStatus = constant.PaymentOrderStatusUnPay
+	}
+
+	// 非在线支付订单
 	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
@@ -4791,11 +4820,11 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		PaymentCommissionFee: commissionFee,
 		Amount:               amount, // 实收金额
 		TransactionNumber:    "",
-		Status:               constant.PaymentOrderStatusPaid,
+		Status:               paymentOrderStatus,
 	}
 
 	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
-	paymentOrderList, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderListBySaleOrderUuid(req.SaleOrderUuid)
+	paymentOrderList, err := paymentOrderRepo.GetPaymentOrderListBySaleOrderUuid(req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5051,38 +5080,43 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	// 判断销售订单的每个商品是否都已有对应的出库记录
-	// 获取没有出库记录的销售订单商品
-	withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	// 获取减库存的清单信息
-	decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	// 构建出库单
-	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-			// 创建出库单
-			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+	// 出库
+	go func() {
+		// 判断销售订单的每个商品是否都已有对应的出库记录
+		// 获取没有出库记录的销售订单商品
+		withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
+		if err != nil {
+			logger.Logger.Error("出库失败 - 01", zap.Error(err))
+			return
+		}
+		// 获取减库存的清单信息
+		decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
+		if err != nil {
+			logger.Logger.Error("出库失败 - 02", zap.Error(err))
+			return
+		}
+		// 构建出库单
+		warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
+		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+			if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
+				// 创建出库单
+				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 创建出库单记录
+				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+			// 更新该销售订单的所有出库单记录为已出库
+			if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
 				return errors.WithMessage(err)
 			}
-			// 创建出库单记录
-			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-				return errors.WithMessage(err)
-			}
+			return nil
+		}); err != nil {
+			logger.Logger.Error("出库失败 - 03", zap.Error(err))
 		}
-		// 更新该销售订单的所有出库单记录为已出库
-		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
-			return errors.WithMessage(err)
-		}
-		return nil
-	}); err != nil {
-		return nil, errors.WithMessage(err)
-	}
+	}()
 
 	// 发布"结账"事件
 	saleOrderAmount := saleOrder.GetAmount()

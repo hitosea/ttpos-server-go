@@ -67,9 +67,6 @@ var rootCommand = &cobra.Command{
 		// 定时器
 		initializeTimers(dbm, cache.Global)
 
-		// 内网服务
-		initializeInternalService(dbm, cache.Global)
-
 		// 外网服务
 		initializeExternalService(dbm, cache.Global)
 	},
@@ -103,18 +100,6 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	if err := r.Run(":" + config.Server.Port); err != nil {
 		logger.Logger.Fatal("Error starting server", zap.Error(err))
 	}
-}
-
-// 内网服务
-func initializeInternalService(dbm *database.DBManager, cache cache.Cache) {
-	internalRouter := gin.Default()
-	router.SetupInternal(internalRouter, dbm, cache)
-	go func() {
-		// 启动内网服务
-		if err := internalRouter.Run(":9000"); err != nil {
-			fmt.Printf("Failed to start internal server: %v\n", err)
-		}
-	}()
 }
 
 // 初始化定时器任务

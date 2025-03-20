@@ -44,7 +44,6 @@ func (r *llPaymentOrderRepo) GetPaymentOrder(opts ...DBOption) (model.LlPaymentO
 	for _, w := range opts {
 		db = w(db)
 	}
-	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").First(&paymentOrder).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return paymentOrder, errors.WithMessage(err)
@@ -59,7 +58,6 @@ func (r *llPaymentOrderRepo) GetPaymentOrderList(opts ...DBOption) ([]model.LlPa
 	for _, w := range opts {
 		db = w(db)
 	}
-	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").Find(&paymentOrders).Error
 	return paymentOrders, errors.WithMessage(err)
 }
@@ -71,7 +69,6 @@ func (r *llPaymentOrderRepo) GetPaymentOrderRecordList(opts ...DBOption) ([]*mod
 	for _, w := range opts {
 		db = w(db)
 	}
-	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").Find(&paymentOrders).Error
 	return paymentOrders, errors.WithMessage(err)
 }

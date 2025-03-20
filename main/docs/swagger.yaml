@@ -11528,6 +11528,18 @@ paths:
       summary: 获取验证码
       tags:
       - 通用
+  /passport/lianlian/callback:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 连连支付回调
+      tags:
+      - 通用.支付
   /passport/server_public_key:
     get:
       parameters:

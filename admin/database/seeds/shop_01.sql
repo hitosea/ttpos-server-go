@@ -150,6 +150,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自己系统的支付订单ID',
+    `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付方式ID',
     `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联的充值订单、销售订单ID',
     `merchant_id` varchar(255) DEFAULT '' COMMENT 'lianlian商户号',

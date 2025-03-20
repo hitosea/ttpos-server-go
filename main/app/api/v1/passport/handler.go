@@ -1,8 +1,10 @@
 package passport
 
 import (
-	"github.com/gin-gonic/gin"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
 
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -11,6 +13,7 @@ import (
 )
 
 type Handler struct {
+	dbm        *database.DBManager
 	captchaSrv service.ICaptchaSrv
 	encryptSrv service.IEncryptSrv
 }
@@ -54,11 +57,39 @@ func (h *Handler) GetServerPublicKey(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
-func RegisterHandlers(router gin.IRouter, cache cache.Cache) {
+// LianLianCallback 连连支付回调
+// @Summary 连连支付回调
+// @Tags 通用.支付
+// @Access json
+// @Produce json
+// @Success 200 {object} dto.Response
+// @Router /passport/lianlian/callback [post]
+func (h *Handler) LianLianCallback(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sign := c.GetHeader("sign")
+	//
+	var callbackReq req.LianLianCallbackRequest
+	if err := c.ShouldBind(&callbackReq); err != nil {
+		helper.HandleValidationError(c, err, callbackReq, req.GetServerPublicKeyRequestMessage)
+		return
+	}
+	// 处理支付回调
+	err := service.NewPaymentRepo(ctx, h.dbm).HandleCallback(sign, callbackReq)
+	if err != nil {
+		helper.Fail(c, constant.CodeFail, err.Error())
+		return
+	}
+
+	c.String(200, "success")
+}
+
+func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
+		dbm:        dbm,
 		captchaSrv: service.NewCaptchaSrv(cache),
 		encryptSrv: service.NewEncryptSrv(cache),
 	}
 	router.GET("/captcha", wrapper.GetCaptcha)
 	router.GET("/server_public_key", wrapper.GetServerPublicKey)
+	router.POST("/lianlian/callback", wrapper.LianLianCallback)
 }

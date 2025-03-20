@@ -27,7 +27,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 通用接口
 		passportGroup := apiV1.Group("/passport")
 		{
-			passport.RegisterHandlers(passportGroup, cache)
+			passport.RegisterHandlers(passportGroup, dbm, cache)
 		}
 		// 商家端
 		shopGroup := apiV1.Group("/shop")
