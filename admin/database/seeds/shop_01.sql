@@ -159,6 +159,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `order_status` varchar(50) DEFAULT '' COMMENT 'lianlian订单状态 PI-初始化(未访问支付页操作) WP-等待支付 PS-支付成功 PF-支付失败 PE-支付已过期',
     `order_amount` decimal(12,2) DEFAULT 0.00 COMMENT 'lianlian订单金额',
     `order_currency` varchar(50) DEFAULT '' COMMENT 'lianlian订单货币',
+    `commission_fee` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '支付手续费,支付金额*支付手续费百分比',
     `full_name` varchar(50) DEFAULT '' COMMENT '订单人名称',
     `order_desc` varchar(50) DEFAULT '' COMMENT '订单描述',
     `link_url` text COMMENT 'lianlian订单支付链接',

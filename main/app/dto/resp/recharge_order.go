@@ -121,3 +121,12 @@ type RechargeOrderReverseSettleInfo struct {
 	Status     uint                                 `json:"status"`      // 订单状态：0-正常；1-会员主账户余额不足；2-存在待支付订单
 	Message    string                               `json:"message"`     // 提示信息
 }
+
+// 支付页的二维码信息
+type RechargeOrderPaymentQrcodeInfoResp struct {
+	PaymentOrderUuid uint64  `json:"payment_order_uuid"` // 支付单uuid (当/cashier/recharge_order/info 接口存在相同的uuid时证明已经支付)
+	QrCode           string  `json:"qr_code"`            // 支付单二维码 (永远都是返回base64图片给前端直接显示)
+	QrCodeExpireSec  int64   `json:"qr_code_expire_sec"` // 支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码, 再次请求当前接口就行)
+	Status           int     `json:"status"`             // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
+	PaymentAmount    float64 `json:"payment_amount"`     // 支付金额
+}

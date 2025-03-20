@@ -75,6 +75,9 @@ func (r *deskRepo) GetClientDeskList(source string, status, isBuffet, pageNo, pa
 	query := r.db.Model(&model.Desk{}).
 		Joins(fmt.Sprintf("LEFT JOIN %ssale_bill ON %sdesk.sale_bill_uuid = %ssale_bill.uuid", tablePrefix, tablePrefix, tablePrefix)).
 		Preload("SaleBill").
+		Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted).Order("create_time asc")
+		}).
 		Where(fmt.Sprintf("%sdesk.delete_time = ?", tablePrefix), 0).
 		Where(fmt.Sprintf("%sdesk.is_disable = ?", tablePrefix), constant.DeskEnable)
 
@@ -176,7 +179,9 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 		db = opt(db)
 	}
 
-	result := db.Preload("SaleBill").First(&desk)
+	result := db.Preload("SaleBill").Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
+		return db.Scopes(NotDeleted).Order("create_time asc")
+	}).First(&desk)
 	if result.Error != nil {
 		return desk, result.Error
 	}

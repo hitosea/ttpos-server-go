@@ -1,7 +1,6 @@
 package service
 
 import (
-	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -10,11 +9,15 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
+
+	"gorm.io/gorm"
 )
 
 type UpdateCashBalanceParam struct {
 	CashBoxLogType int
 	Amount         float64
+	CashWithdrawal float64
+	CashDeposit    float64
 	Scene          int
 	OrderUuid      uint64
 }
@@ -54,6 +57,8 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 	}
 
 	amount := param.Amount
+	cashWithdrawal := param.CashWithdrawal
+	cashDeposit := param.CashDeposit
 	fn := func(tx *gorm.DB) error {
 
 		var err error
@@ -62,7 +67,9 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 
 		if cashBox.Uuid != 0 { // 已存在钱箱
 			if err = cashBoxRepo.Update(cashBox.Uuid, map[string]any{
-				"balance": amount + cashBox.Balance,
+				"balance":         amount + cashBox.Balance,
+				"cash_withdrawal": cashWithdrawal + cashBox.CashWithdrawal,
+				"cash_deposit":    cashDeposit + cashBox.CashDeposit,
 			}); err != nil {
 				return errors.WithMessage(err, "更新钱箱失败")
 			}

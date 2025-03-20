@@ -1,7 +1,6 @@
 package cashier
 
 import (
-	"github.com/gin-gonic/gin"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -11,6 +10,8 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler 认证鉴权控制器
@@ -72,7 +73,8 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &AuthHandler{

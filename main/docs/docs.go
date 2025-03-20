@@ -3892,11 +3892,16 @@ const docTemplate = `{
                 "summary": "查询桌台购物车信息",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "账单ID",
+                        "type": "integer",
+                        "description": "H5订单UUID, 可选。处理扫码接单进入桌台时使用",
+                        "name": "h5_order_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID, 必填",
                         "name": "sale_bill_uuid",
-                        "in": "path",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -9588,6 +9593,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/recharge_order/payment/qrcode": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式的二维码信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.充值订单"
+                ],
+                "summary": "获取支付方式的二维码信息",
+                "parameters": [
+                    {
+                        "description": "获取支付方式的二维码信息参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RechargeOrderPaymentQrcodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RechargeOrderPaymentQrcodeInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/recharge_order/print": {
             "post": {
                 "security": [
@@ -11596,6 +11652,100 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/product/category/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取产品类别列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电子菜单"
+                ],
+                "summary": "获取产品类别列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取收银产品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电子菜单"
+                ],
+                "summary": "获取收银产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.ProductListWithPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -14387,7 +14537,6 @@ const docTemplate = `{
         "req.PrintRechargeOrderReq": {
             "type": "object",
             "required": [
-                "print_lang",
                 "recharge_order_uuid"
             ],
             "properties": {
@@ -14478,6 +14627,23 @@ const docTemplate = `{
                 },
                 "recharge_order_uuid": {
                     "description": "充值订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.RechargeOrderPaymentQrcodeReq": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额, 必填",
+                    "type": "number"
+                },
+                "payment_method_uuid": {
+                    "description": "支付方式UUID, 必填",
+                    "type": "integer"
+                },
+                "recharge_order_uuid": {
+                    "description": "充值订单UUID, 必填",
                     "type": "integer"
                 }
             }
@@ -15543,6 +15709,10 @@ const docTemplate = `{
                     "description": "是否锁单",
                     "type": "boolean"
                 },
+                "is_split_order": {
+                    "description": "是否拆单",
+                    "type": "boolean"
+                },
                 "is_wait": {
                     "description": "是否待清台",
                     "type": "boolean"
@@ -15560,7 +15730,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sale_bill_uuid": {
-                    "description": "订单UUID",
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "第一个销售订单UUID",
                     "type": "integer"
                 },
                 "status": {
@@ -15715,6 +15889,14 @@ const docTemplate = `{
         "resp.DeskPing": {
             "type": "object",
             "properties": {
+                "buffet": {
+                    "description": "自助餐信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BuffetInfo"
+                        }
+                    ]
+                },
                 "desk_info": {
                     "description": "桌台信息",
                     "allOf": [
@@ -15722,14 +15904,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.Desk"
                         }
                     ]
-                },
-                "is_split_order": {
-                    "description": "是否拆单",
-                    "type": "boolean"
-                },
-                "sale_order_uuid": {
-                    "description": "订单Uuid",
-                    "type": "integer"
                 },
                 "sent_kitchen_products": {
                     "description": "已送厨商品列表",
@@ -18345,6 +18519,31 @@ const docTemplate = `{
                 "source_text": {
                     "description": "来源",
                     "type": "string"
+                }
+            }
+        },
+        "resp.RechargeOrderPaymentQrcodeInfoResp": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_order_uuid": {
+                    "description": "支付单uuid (当/cashier/recharge_order/info 接口存在相同的uuid时证明已经支付)",
+                    "type": "integer"
+                },
+                "qr_code": {
+                    "description": "支付单二维码 (永远都是返回base64图片给前端直接显示)",
+                    "type": "string"
+                },
+                "qr_code_expire_sec": {
+                    "description": "支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码, 再次请求当前接口就行)",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)",
+                    "type": "integer"
                 }
             }
         },

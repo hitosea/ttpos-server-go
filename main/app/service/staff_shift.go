@@ -33,21 +33,23 @@ type IStaffShiftSrv interface {
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 }
 
-func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
-	return NewShiftSrvImpl(cache, dbm)
+func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv) IStaffShiftSrv {
+	return NewShiftSrvImpl(cache, dbm, cashBoxSrv)
 }
 
 type staffShiftSrv struct {
 	dbm            *database.DBManager
 	cache          cache.Cache
 	cacheKeyPrefix string
+	cashBoxSrv     ICashBoxSrv
 }
 
-func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
+func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv) IStaffShiftSrv {
 	return &staffShiftSrv{
 		dbm:            dbm,
 		cache:          cache,
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
+		cashBoxSrv:     cashBoxSrv,
 	}
 }
 
@@ -184,22 +186,15 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 			return errors.New("交班失败")
 		}
 		// 更新钱箱记录
-		cashBoxRepo := repository.NewCashBoxRepo(db)
-		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
-		cashBox := cashBoxRepo.Get()
-		if cashBox.Uuid > 0 {
-			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
-				"balance": gorm.Expr("balance - ?", withdrawCash.InexactFloat64()),
-			})
-			if err != nil {
-				return errors.New("交班失败")
-			}
-			// 更新钱箱记录
-			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
-				Type:   constant.CashBoxLogTypeOut,
-				Scene:  constant.CashBoxLogSceneShift,
-				Amount: withdrawCash.InexactFloat64(),
-			})
+		if withdrawCash.GreaterThan(decimal.Zero) {
+			err := s.cashBoxSrv.UpdateBalance(
+				ctx,
+				UpdateCashBalanceParam{
+					CashBoxLogType: constant.CashBoxLogTypeOut,
+					Amount:         withdrawCash.InexactFloat64(),
+					Scene:          constant.CashBoxLogSceneShift,
+				},
+			)
 			if err != nil {
 				return errors.New("交班失败")
 			}
@@ -367,26 +362,14 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 			return errors.New("取钱失败")
 		}
 		// 更新钱箱记录
-		cashBoxRepo := repository.NewCashBoxRepo(db)
-		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
-		cashBox := cashBoxRepo.Get()
-		if cashBox.Uuid > 0 {
-			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
-				"balance":         gorm.Expr("balance - ?", req.WithdrawCash),
-				"cash_withdrawal": gorm.Expr("cash_withdrawal + ?", req.WithdrawCash),
-			})
-			if err != nil {
-				return errors.New("取钱失败")
-			}
-			// 更新钱箱记录
-			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
-				Type:   constant.CashBoxLogTypeOut,
-				Scene:  constant.CashBoxLogSceneOut,
-				Amount: req.WithdrawCash,
-			})
-			if err != nil {
-				return errors.New("取钱失败")
-			}
+		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
+			CashBoxLogType: constant.CashBoxLogTypeOut,
+			Amount:         req.WithdrawCash,
+			CashWithdrawal: req.WithdrawCash,
+			Scene:          constant.CashBoxLogSceneOut,
+		})
+		if err != nil {
+			return errors.New("取钱失败")
 		}
 		return nil
 	})
@@ -432,29 +415,17 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 		if err != nil {
 			return errors.New("存钱失败")
 		}
-
 		// 更新钱箱记录
-		cashBoxRepo := repository.NewCashBoxRepo(db)
-		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
-		cashBox := cashBoxRepo.Get()
-		if cashBox.Uuid > 0 {
-			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
-				"balance":      gorm.Expr("balance + ?", req.DepositCash),
-				"cash_deposit": gorm.Expr("cash_deposit + ?", req.DepositCash),
-			})
-			if err != nil {
-				return errors.New("存钱失败")
-			}
-			// 更新钱箱记录
-			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
-				Type:   constant.CashBoxLogTypeIn,
-				Scene:  constant.CashBoxLogSceneIn,
-				Amount: req.DepositCash,
-			})
-			if err != nil {
-				return errors.New("存钱失败")
-			}
+		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
+			CashBoxLogType: constant.CashBoxLogTypeIn,
+			Amount:         req.DepositCash,
+			CashDeposit:    req.DepositCash,
+			Scene:          constant.CashBoxLogSceneIn,
+		})
+		if err != nil {
+			return errors.New("存钱失败")
 		}
+
 		return nil
 	})
 

@@ -175,8 +175,8 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
 	}
 
-	// 是否已拆单，用于点餐助手端
-	res.IsSplitOrder = len(shopCart.SaleOrderList) > 1
+	// 自助餐信息
+	res.Buffet = *shopCart.Buffet
 
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	for _, saleOrder := range shopCart.SaleOrderList {

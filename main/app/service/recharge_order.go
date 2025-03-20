@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/lianlian"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
@@ -30,19 +31,20 @@ import (
 
 // IRechargeOrderSrv 定义充值订单服务接口
 type IRechargeOrderSrv interface {
-	GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrder                                                                    // 获取进行中的会员充值订单
-	CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.RechargeOrder, error)                                 // 创建充值订单
-	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)          // 充值订单添加支付方式
-	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error) // 充值订单撤销支付方式
-	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)    // 确认充值订单
-	PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error)                      // 打印充值订单
-	GetRechargeOrderList(ctx context.Context, listReq req.RechargeOrderListReq) (resp.RechargeOrderList, error)                       // 充值订单列表
-	GetRechargeOrderInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderInfo, error)                                            // 获取充值订单详情
-	CancelRechargeOrder(ctx context.Context, uuid uint64) error                                                                       // 取消充值订单
-	GetRechargeOrderRefundInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderRefundInfo, error)                                // 获取退款信息
-	CheckRechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrderReverseSettleInfo, error)                    // 检查反结账信息
-	RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error                                                                // 充值订单反结账
-	RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error                                              // 充值订单退款
+	GetPendingRechargeOrder(companyUuid uint64) resp.RechargeOrder                                                                              // 获取进行中的会员充值订单
+	CreateRechargeOrder(ctx context.Context, rechargeReq req.RechargeReq) (resp.RechargeOrder, error)                                           // 创建充值订单
+	AddPaymentMethod(ctx context.Context, addPaymentMethod req.RechargeOrderAddPaymentMethodReq) (resp.RechargeOrder, error)                    // 充值订单添加支付方式
+	CancelPaymentMethod(ctx context.Context, cancelPaymentMethod req.RechargeOrderCancelPaymentMethodReq) (resp.RechargeOrder, error)           // 充值订单撤销支付方式
+	ConfirmRechargeOrder(ctx context.Context, confirmRechargeOrderReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error)              // 确认充值订单
+	PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error)                                // 打印充值订单
+	GetRechargeOrderList(ctx context.Context, listReq req.RechargeOrderListReq) (resp.RechargeOrderList, error)                                 // 充值订单列表
+	GetRechargeOrderInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderInfo, error)                                                      // 获取充值订单详情
+	GetRechargeOrderPaymentQrcode(ctx context.Context, req req.RechargeOrderPaymentQrcodeReq) (*resp.RechargeOrderPaymentQrcodeInfoResp, error) // 获取支付方式的二维码信息
+	CancelRechargeOrder(ctx context.Context, uuid uint64) error                                                                                 // 取消充值订单
+	GetRechargeOrderRefundInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderRefundInfo, error)                                          // 获取退款信息
+	CheckRechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrderReverseSettleInfo, error)                              // 检查反结账信息
+	RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error                                                                          // 充值订单反结账
+	RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error                                                        // 充值订单退款
 }
 
 type rechargeOrderSrv struct {
@@ -274,7 +276,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	}
 
 	// 计算支付手续费
-	paymentCommissionFee := s.paymentMethodSrv.CalculatePaymentCommissionFee(paymentMethod, addReq.PaymentAmount)
+	paymentCommissionFee := paymentMethod.CalculatePaymentCommissionFee(addReq.PaymentAmount)
 
 	sumPaymentAmount := s.sumPaymentAmount(order.PaymentOrders)
 	// 支付订单金额大于充值金额
@@ -287,7 +289,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	}
 
 	// 支付订单总金额 = 支付金额 + 支付手续费
-	amount := utils.DecimalAdd(addReq.PaymentAmount, paymentCommissionFee)
+	amount := paymentMethod.CalculatePaymentAmount(addReq.PaymentAmount)
 
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	// 获取已存在的该支付方式的支付订单
@@ -615,6 +617,7 @@ func (s *rechargeOrderSrv) generateRechargeOrderNo() string {
 	return orderNo
 }
 
+// GetRechargeOrderList 获取充值订单列表
 func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req.RechargeOrderListReq) (resp.RechargeOrderList, error) {
 
 	staff := ctx.GetStaff()
@@ -749,6 +752,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	}, nil
 }
 
+// GetRechargeOrderInfo 获取充值订单信息
 func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderInfo, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(uuid),
@@ -827,6 +831,85 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 	}, nil
 }
 
+// GetRechargeOrderPaymentQrcode 获取支付方式的二维码信息
+func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, req req.RechargeOrderPaymentQrcodeReq) (*resp.RechargeOrderPaymentQrcodeInfoResp, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取充值订单
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereUuid(req.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+	)
+	if order.Uuid == 0 || order.Status != constant.RechargeOrderStatusPending {
+		return nil, errors.New("充值订单不存在")
+	}
+
+	// 判断当前是否连连支付
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(req.PaymentMethodUuid))
+	if paymentMethod.Uuid == 0 || !paymentMethod.IsLianLianPay() {
+		return nil, errors.New("支付方式不可用")
+	}
+
+	// 判断支付方式是否已支付
+	orderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
+		repository.CommonRepo.WhereBySoftDelete(),
+		orderRepo.WhereRelatedUuid(order.Uuid),
+		orderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeRechargeOrder),
+		orderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+	if err == nil {
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			return nil, errors.New("当前支付已完成，请选择其他方式支付")
+		}
+	}
+
+	// 计算手续费
+	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
+	paymentAmount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
+	sumPaymentAmount := s.sumPaymentAmount(order.PaymentOrders)
+	sumPaymentAmountAddCash := utils.DecimalAdd(sumPaymentAmount, req.PaymentAmount)
+
+	// 支付订单金额大于充值金额
+	if sumPaymentAmount >= order.RechargeAmount {
+		return nil, errors.New("当前已足额")
+	}
+	if paymentMethod.Code != constant.PaymentMethodCodeCash && sumPaymentAmountAddCash > order.RechargeAmount {
+		return nil, errors.New("非现金支付不能大于应收")
+	}
+
+	// 创建连连支付订单
+	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(
+		constant.PaymentOrderRelatedTypeRechargeOrder,
+		order.Uuid,
+		paymentMethod.Code,
+		paymentAmount,
+		commissionFee,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 在 infoResp 初始化之前添加
+	infoResp := &resp.RechargeOrderPaymentQrcodeInfoResp{
+		PaymentOrderUuid: payment.PaymentOrderUuid,
+		QrCode:           payment.LinkUrl,
+		QrCodeExpireSec:  payment.GetRemainingPayableTime(),
+		Status:           payment.GetStatus(),
+		PaymentAmount:    paymentAmount,
+	}
+
+	return infoResp, nil
+}
+
+// CancelRechargeOrder 取消充值订单
 func (s *rechargeOrderSrv) CancelRechargeOrder(ctx context.Context, uuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
@@ -866,6 +949,7 @@ func (s *rechargeOrderSrv) CancelRechargeOrder(ctx context.Context, uuid uint64)
 	return nil
 }
 
+// CheckRechargeOrderReverseSettle 检查充值订单是否可以反结账
 func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrderReverseSettleInfo, error) {
 	var reverseSettleInfoResp resp.RechargeOrderReverseSettleInfo
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
@@ -907,6 +991,7 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 	}, nil
 }
 
+// RechargeOrderReverseSettle 反结账
 func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
@@ -1083,6 +1168,7 @@ func (s *rechargeOrderSrv) getPaymentRecords(paymentOrders []model.PaymentOrder,
 	return paymentRecords
 }
 
+// GetRechargeOrderRefundInfo 获取退款信息
 func (s *rechargeOrderSrv) GetRechargeOrderRefundInfo(ctx context.Context, uuid uint64) (resp.RechargeOrderRefundInfo, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
@@ -1110,6 +1196,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderRefundInfo(ctx context.Context, uuid 
 	}, nil
 }
 
+// RechargeOrderRefund 退款
 func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)

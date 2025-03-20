@@ -39,6 +39,7 @@ type ICommonRepo interface {
 	WhereByIsShowAssistant(isShow uint) DBOption                    // 根据是否显示点餐助手端查询
 	WhereByIsShowTablet(isShow uint) DBOption                       // 根据是否显示平板端查询
 	WhereByIsShowKitchen(isShow uint) DBOption                      // 根据是否显示厨显端查询
+	WhereByIsShowH5(isShow uint) DBOption                           // 根据是否显示H5端查询
 	WhereBySoftDelete() DBOption                                    // 根据软删除查询
 	WhereByCooking() DBOption                                       // 根据账单已经送厨房查询
 	WhereByRelatedUuid(relatedUuid uint64) DBOption                 // 根据关联UUID查询
@@ -175,6 +176,13 @@ func (r *commonRepo) WhereByIsShowTablet(isShow uint) DBOption {
 func (r *commonRepo) WhereByIsShowKitchen(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_kitchen = ?", isShow)
+	}
+}
+
+// WhereByIsH5 根据是否显示H5端查询
+func (r *commonRepo) WhereByIsShowH5(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_h5 = ?", isShow)
 	}
 }
 

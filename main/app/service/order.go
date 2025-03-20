@@ -4447,7 +4447,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	return shopCartInfo, nil
 }
 
-// InstantOrderMustPlan 获取点餐必点方案
+// InstantOrderMustPlan2 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (*resp.ShopCart, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
@@ -4670,20 +4670,13 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 判断当前是否连连支付
-	paymentMethods := repository.NewPaymentMethodRepo(db).GetPaymentMethodsByCtx(ctx)
-	var paymentMethod *model.PaymentMethod
-	for _, method := range paymentMethods {
-		if method.Code != constant.PaymentMethodCodeLianLianWechatPay &&
-			method.Code != constant.PaymentMethodCodeLianLianAliPay &&
-			method.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
-			continue
-		}
-		if method.Uuid == req.PaymentMethodUuid {
-			paymentMethod = method
-			break
-		}
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(req.PaymentMethodUuid))
+	if paymentMethod.Uuid == 0 {
+		return nil, errors.New("支付方式不存在")
 	}
-	if paymentMethod == nil {
+	// 支付方式是否可用
+	if !paymentMethod.IsLianLianPay() {
 		return nil, errors.New("支付方式不可用")
 	}
 
@@ -4695,17 +4688,15 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		orderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
 		orderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if paymentOrder.Status == constant.PaymentOrderStatusPaid {
-		return nil, errors.New("当前支付已完成，请选择其他方式支付")
+	if err == nil {
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			return nil, errors.New("当前支付已完成，请选择其他方式支付")
+		}
 	}
 
 	// 计算手续费
-	percent := paymentMethod.GetFeePercent()
-	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
-	paymentAmount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
+	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
+	paymentAmount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
 
 	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
 	unpaidAmount := saleOrder.GetUnpaidAmount()
@@ -4719,6 +4710,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		saleOrder.Uuid,
 		paymentMethod.Code,
 		paymentAmount,
+		commissionFee,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -4786,8 +4778,8 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 
 	percent := paymentMethod.GetFeePercent()
-	commissionFee := decimal.NewFromFloat(req.PaymentAmount).Mul(decimal.NewFromFloat(percent)).InexactFloat64()
-	amount := decimal.NewFromFloat(req.PaymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
+	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
+	amount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
 	paymentOrder := &model.PaymentOrder{
 		PaymentMethodName:    paymentMethod.PaymentName,
 		PaymentMethodUuid:    req.PaymentMethodUuid,

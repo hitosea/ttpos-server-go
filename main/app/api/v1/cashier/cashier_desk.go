@@ -594,7 +594,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param sale_bill_uuid path string true "账单ID"
+// @Param data query req.OrderCartInfoReq true "请求参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cart/info [get]
@@ -1448,7 +1448,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	settingSrv := setting.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)

@@ -178,6 +178,14 @@ func (model *Desk) getSaleBillRemark() string {
 
 // GetDeskResp 获取桌台信息
 func (model *Desk) GetDeskResp() resp.Desk {
+
+	var saleOrderUuid uint64
+	var isSplitOrder bool
+	if model.SaleBill != nil && len(model.SaleBill.SaleOrders) > 0 {
+		saleOrderUuid = model.SaleBill.SaleOrders[0].Uuid
+		isSplitOrder = len(model.SaleBill.SaleOrders) > 1
+	}
+
 	return resp.Desk{
 		Uuid:          model.Uuid,
 		DeskNo:        model.DeskNo,
@@ -192,5 +200,7 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		TypeUuid:      model.TypeUuid,
 		RegionUuid:    model.RegionUuid,
 		SaleBillUuid:  model.SaleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
+		IsSplitOrder:  isSplitOrder,
 	}
 }

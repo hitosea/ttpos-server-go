@@ -18,6 +18,7 @@ type LlPaymentOrder struct {
 	OrderStatus      string  `gorm:"column:order_status;type:varchar(50);default:'';comment:lianlian订单状态 PI-初始化(未访问支付页操作) WP-等待支付 PS-支付成功 PF-支付失败 PE-支付已过期;NOT NULL" json:"order_status"`
 	OrderAmount      float64 `gorm:"column:order_amount;type:decimal(12,2);default:0.00;comment:lianlian订单金额;NOT NULL" json:"order_amount"`
 	OrderCurrency    string  `gorm:"column:order_currency;type:varchar(50);default:'';comment:lianlian订单货币;NOT NULL" json:"order_currency"`
+	CommissionFee    float64 `gorm:"column:commission_fee;type:decimal(12,2);default:0.00;comment:支付手续费;NOT NULL" json:"commission_fee"`
 	FullName         string  `gorm:"column:full_name;type:varchar(50);default:'';comment:订单人名称;NOT NULL" json:"full_name"`
 	OrderDesc        string  `gorm:"column:order_desc;type:varchar(50);default:'';comment:订单描述;NOT NULL" json:"order_desc"`
 	LinkUrl          string  `gorm:"column:link_url;type:text;comment:lianlian订单支付链接" json:"link_url"`
