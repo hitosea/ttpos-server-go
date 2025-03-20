@@ -3428,7 +3428,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 }
 
 // checkOrder 检查订单
-func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
@@ -3471,6 +3471,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	{
 		for _, saleOrderProduct := range saleOrderProductAll {
+			// 如果商品是新加购的商品，则不检查。用于加购并送厨的场景
+			if saleOrderProduct.NoPrimaryKey() {
+				continue
+			}
 			status, message := saleOrderProduct.CheckProduct()
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {
@@ -5966,7 +5970,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if saleBill.IsDeskSaleBill() {
 		deskUuid = saleBill.DeskUuid
 	}
-	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, unCookingSaleOrderProducts, saleOrderProductAll)
+	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll)
 	if errCheck != nil {
 		return nil, errors.WithMessage(errCheck, "订单检查失败")
 	}
