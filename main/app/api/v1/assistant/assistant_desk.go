@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -198,6 +199,45 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, info)
+}
+
+// OrderCartInfo 处理查询桌台购物车信息
+// @Summary 查询桌台购物车信息
+// @Description 查询桌台购物车信息
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param sale_bill_uuid path string true "账单ID"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/info [get]
+func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 查询购物车信息
+	if params.H5OrderUuid > constant.OptionalUuid {
+		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid, repository.WithH5OrderUuid(params.H5OrderUuid))
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
+	} else {
+		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
+	}
 }
 
 // OrderCheck 订单检查
@@ -1133,6 +1173,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning) // 取消退菜购物车商品
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                             // 桌台订单商品备注
+		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单

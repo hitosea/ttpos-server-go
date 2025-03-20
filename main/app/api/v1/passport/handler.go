@@ -11,8 +11,8 @@ import (
 )
 
 type Handler struct {
-	captchaService service.ICaptchaSrv
-	encryptService service.IEncryptSrv
+	captchaSrv service.ICaptchaSrv
+	encryptSrv service.IEncryptSrv
 }
 
 // GetCaptcha 获取验证码
@@ -23,7 +23,7 @@ type Handler struct {
 // @Success 200 {object} dto.Response
 // @Router /passport/captcha [get]
 func (h *Handler) GetCaptcha(c *gin.Context) {
-	captcha, err := h.captchaService.Generate()
+	captcha, err := h.captchaSrv.Generate()
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "生成验证码失败")
 		return
@@ -46,7 +46,7 @@ func (h *Handler) GetServerPublicKey(c *gin.Context) {
 		helper.HandleValidationError(c, err, getKeyReq, req.GetServerPublicKeyRequestMessage)
 		return
 	}
-	resp, err := h.encryptService.GetServerPublicKey(getKeyReq.ClientId, getKeyReq.Type)
+	resp, err := h.encryptSrv.GetServerPublicKey(getKeyReq.ClientId, getKeyReq.Type)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "获取服务端公钥失败")
 		return
@@ -56,8 +56,8 @@ func (h *Handler) GetServerPublicKey(c *gin.Context) {
 
 func RegisterHandlers(router gin.IRouter, cache cache.Cache) {
 	wrapper := &Handler{
-		captchaService: service.NewCaptchaSrv(cache),
-		encryptService: service.NewEncryptSrv(cache),
+		captchaSrv: service.NewCaptchaSrv(cache),
+		encryptSrv: service.NewEncryptSrv(cache),
 	}
 	router.GET("/captcha", wrapper.GetCaptcha)
 	router.GET("/server_public_key", wrapper.GetServerPublicKey)

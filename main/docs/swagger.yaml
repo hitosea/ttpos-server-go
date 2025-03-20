@@ -1868,6 +1868,9 @@ definitions:
       is_split_order:
         description: 是否拆单
         type: boolean
+      sale_order_uuid:
+        description: 订单Uuid
+        type: integer
       sent_kitchen_products:
         allOf:
         - $ref: '#/definitions/resp.SentKitchenProductList'
@@ -4964,6 +4967,36 @@ paths:
       security:
       - JwtToken: []
       summary: 送厨购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/info:
+    get:
+      consumes:
+      - application/json
+      description: 查询桌台购物车信息
+      parameters:
+      - description: 账单ID
+        in: path
+        name: sale_bill_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询桌台购物车信息
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/cart/product/add:

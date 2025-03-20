@@ -658,6 +658,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/cart/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询桌台购物车信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "查询桌台购物车信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "账单ID",
+                        "name": "sale_bill_uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/cart/product/add": {
             "post": {
                 "security": [
@@ -15527,6 +15579,10 @@ const docTemplate = `{
                 "is_split_order": {
                     "description": "是否拆单",
                     "type": "boolean"
+                },
+                "sale_order_uuid": {
+                    "description": "订单Uuid",
+                    "type": "integer"
                 },
                 "sent_kitchen_products": {
                     "description": "已送厨商品列表",

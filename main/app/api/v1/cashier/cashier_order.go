@@ -18,8 +18,8 @@ import (
 
 // OrderHandler 收银点餐处理程序
 type OrderHandler struct {
-	service     service.IOrderSrv // 订单服务
-	deskService service.IDeskSrv  // 桌台服务
+	orderSrv service.IOrderSrv // 订单服务
+	deskSrv  service.IDeskSrv  // 桌台服务
 }
 
 // GetCashierOrderList 处理获取订单列表
@@ -42,7 +42,7 @@ func (h *OrderHandler) GetCashierOrderList(c *gin.Context) {
 		return
 	}
 	// 获取产品列表
-	res, err := h.service.GetOrderLists(ctx, req)
+	res, err := h.orderSrv.GetOrderLists(ctx, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -72,7 +72,7 @@ func (h *OrderHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetOrderInfos(ctx, req)
+	res, err := h.orderSrv.GetOrderInfos(ctx, req)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -103,7 +103,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	}
 	// 订单列表中取消订单不需要密码
 	req.NotNeedPassword = true
-	err := h.service.CancelOrder(ctx, req)
+	err := h.orderSrv.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -132,7 +132,7 @@ func (h *OrderHandler) ReturnOrderInfo(c *gin.Context) {
 		return
 	}
 	//
-	res, err := h.service.GetReturnOrderInfo(ctx, req)
+	res, err := h.orderSrv.GetReturnOrderInfo(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -161,7 +161,7 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.ReturnOrder(ctx, req)
+	err := h.orderSrv.ReturnOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -190,7 +190,7 @@ func (h *OrderHandler) ReverseSettleInfo(c *gin.Context) {
 		return
 	}
 	//
-	res, err := h.service.GetReverseSettleInfo(ctx, req)
+	res, err := h.orderSrv.GetReverseSettleInfo(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -219,7 +219,7 @@ func (h *OrderHandler) ReverseSettle(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.ReverseSettle(ctx, req)
+	err := h.orderSrv.ReverseSettle(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -249,7 +249,7 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.DeleteOrder(ctx, companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	err := h.orderSrv.DeleteOrder(ctx, companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -280,13 +280,13 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	var err error
 	var productList *resp.CartProductList
 	if params.DeskUuid > 0 {
-		_, productList, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
+		_, productList, err = h.deskSrv.IsCellCloseDesk(ctx, params.DeskUuid)
 		if productList != nil {
 			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
 			return
 		}
 	} else if params.SaleBillUuid > 0 {
-		productList, err = h.deskService.IsCellCloseInstant(ctx, params.SaleBillUuid)
+		productList, err = h.deskSrv.IsCellCloseInstant(ctx, params.SaleBillUuid)
 		if productList != nil {
 			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
 			return
@@ -319,7 +319,7 @@ func (h *OrderHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.service.OrderPrint(ctx, printReq)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -344,7 +344,7 @@ func (h *OrderHandler) OrderPrintInvoice(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.service.OrderPrintInvoice(ctx, printReq)
+	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -370,7 +370,7 @@ func (h *OrderHandler) OrderInvoiceInfo(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res := h.service.OrderPrintInvoiceInfo(ctx, invoiceReq)
+	res := h.orderSrv.OrderPrintInvoiceInfo(ctx, invoiceReq)
 	helper.Success(c, res)
 }
 
@@ -388,8 +388,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		service:     orderSrv,
-		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
+		orderSrv: orderSrv,
+		deskSrv:  service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
 	}
 
 	// 需要认证

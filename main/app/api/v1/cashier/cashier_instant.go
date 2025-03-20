@@ -23,14 +23,14 @@ import (
 
 // InstantHandler 收银点餐处理程序
 type InstantHandler struct {
-	orderService service.IOrderSrv  // 订单服务
-	memberSrv    service.IMemberSrv // 会员服务
+	orderSrv  service.IOrderSrv  // 订单服务
+	memberSrv service.IMemberSrv // 会员服务
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 创建订单
-	res, err := h.orderService.CreateInstantOrder(ctx)
+	res, err := h.orderSrv.CreateInstantOrder(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "创建订单失败"))
 		return
@@ -58,7 +58,7 @@ func (h *InstantHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(ctx, req)
+	err := h.orderSrv.CancelOrder(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -87,7 +87,7 @@ func (h *InstantHandler) HideOrder(c *gin.Context) {
 		return
 	}
 	//
-	shopCart, err := h.orderService.HideOrder(ctx, req.SaleBillUuid)
+	shopCart, err := h.orderSrv.HideOrder(ctx, req.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -116,7 +116,7 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 		return
 	}
 	//
-	shopCart, err := h.orderService.ShowOrder(ctx, params)
+	shopCart, err := h.orderSrv.ShowOrder(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -144,7 +144,7 @@ func (h *InstantHandler) OrderList(c *gin.Context) {
 		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
-	resp, err := h.orderService.InstantHideOrderList(ctx, listReq)
+	resp, err := h.orderSrv.InstantHideOrderList(ctx, listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -173,7 +173,7 @@ func (h *InstantHandler) OrderTakeout(c *gin.Context) {
 		return
 	}
 	//
-	res, err := h.orderService.OrderTakeout(ctx, params)
+	res, err := h.orderSrv.OrderTakeout(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -205,7 +205,7 @@ func (h *InstantHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	shopCart, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	shopCart, err := h.orderSrv.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -234,7 +234,7 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderProductChangePrice(ctx, params)
+	info, err := h.orderSrv.OrderProductChangePrice(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -275,7 +275,7 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, amountChangeReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderAmountChange(ctx, amountChangeReq)
+		shopCart, err = h.orderSrv.OrderAmountChange(ctx, amountChangeReq)
 	}
 	// 打折
 	if params.DiscountMethod == 2 {
@@ -284,7 +284,7 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, discountReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderDiscount(ctx, discountReq)
+		shopCart, err = h.orderSrv.OrderDiscount(ctx, discountReq)
 	}
 	// 抹零
 	if params.DiscountMethod == 3 {
@@ -293,7 +293,7 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, zeroRuleReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderZeroRule(ctx, zeroRuleReq)
+		shopCart, err = h.orderSrv.OrderZeroRule(ctx, zeroRuleReq)
 	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -323,7 +323,7 @@ func (h *InstantHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderDiscountCancel(ctx, params)
+	info, err := h.orderSrv.OrderDiscountCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -352,7 +352,7 @@ func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderProductRemark(ctx, params)
+	info, err := h.orderSrv.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -383,9 +383,9 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 		return
 	}
 	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
-	res, err := h.orderService.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
+	res, err := h.orderSrv.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderService.GetOrderCartInfoByDeviceSn failed", "deviceSn:", deviceSn))
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderSrv.GetOrderCartInfoByDeviceSn failed", "deviceSn:", deviceSn))
 		return
 	}
 	if res == nil {
@@ -417,7 +417,7 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	// 添加商品。 若没有点餐账单则新建一个
-	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -448,7 +448,7 @@ func (h *InstantHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	res, err := h.orderService.OrderCartProductNum(ctx, params)
+	res, err := h.orderSrv.OrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -480,7 +480,7 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	ctx.Log().Debug("点餐页面送厨购物车商品接口请求", zap.Any("params", params))
 	// 送厨购物车商品
-	res, errRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	res, errRes, err := h.orderSrv.InstantOrderCartProductCooking(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -514,7 +514,7 @@ func (h *InstantHandler) OrderCartProductReturning(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductReturning(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductReturning(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -544,7 +544,7 @@ func (h *InstantHandler) OrderCartProductCancelReturning(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductCancelReturning(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductCancelReturning(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -574,7 +574,7 @@ func (h *InstantHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductGiving(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -604,7 +604,7 @@ func (h *InstantHandler) OrderCartProductCancelGiving(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductCancelGiving(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductCancelGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -637,7 +637,7 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	}
 	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
 	// 获取销售订单的付款信息
-	res, err := h.orderService.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -668,7 +668,7 @@ func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 	}
 	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
 	// 创建一个支付单
-	res, err := h.orderService.InstantOrderPaymentCreate(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -699,7 +699,7 @@ func (h *InstantHandler) OrderPaymentCancel(c *gin.Context) {
 	}
 	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
 	// 撤销一个支付单
-	res, err := h.orderService.InstantOrderPaymentCancel(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -730,7 +730,7 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 	}
 	ctx.Log().Info("销售订单的付款结账", zap.Any("params", params))
 	// 销售订单的付款结账
-	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s %s", ctx.GetRequestUuid(), err))
 		return
@@ -761,7 +761,7 @@ func (h *InstantHandler) OrderFree(c *gin.Context) {
 	}
 	ctx.Log().Info("免单", zap.Any("params", params))
 	// 免单
-	res, err := h.orderService.InstantOrderFree(ctx, params)
+	res, err := h.orderSrv.InstantOrderFree(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -796,7 +796,7 @@ func (h *InstantHandler) OrderPaymentZeroRule(c *gin.Context) {
 	}
 	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
 	// 设置结账抹零规则
-	res, err := h.orderService.InstantOrderPaymentZeroRule(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentZeroRule(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -827,7 +827,7 @@ func (h *InstantHandler) OrderSaleOrderCreate(c *gin.Context) {
 	}
 	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
 	// 创建一个销售订单
-	res, err := h.orderService.InstantOrderSaleOrderCreate(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -858,7 +858,7 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 	}
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
 	// 从一个销售订单移动商品到另一个销售订单
-	res, err := h.orderService.SaleOrderMoveProduct(ctx, params, false)
+	res, err := h.orderSrv.SaleOrderMoveProduct(ctx, params, false)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -889,7 +889,7 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
 	// 确认必点商品
-	res, err := h.orderService.InstantOrderMustPlanConfirm(ctx, params)
+	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -921,7 +921,7 @@ func (h *InstantHandler) OrderCheck(c *gin.Context) {
 	}
 	ctx.Log().Info("订单检查", zap.Any("params", params))
 	// 订单检查
-	checkRes, err := h.orderService.OrderCheck(ctx, params)
+	checkRes, err := h.orderSrv.OrderCheck(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -957,7 +957,7 @@ func (h *InstantHandler) OrderSaleOrderDelete(c *gin.Context) {
 	}
 	ctx.Log().Info("删除一个销售订单(删除拆单)", zap.Any("params", params))
 	// 删除一个销售订单(删除拆单)
-	res, err := h.orderService.InstantOrderSaleOrderDelete(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderDelete(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -988,7 +988,7 @@ func (h *InstantHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 	}
 	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
 	// 删除所有子销售订单(撤销拆单)
-	res, err := h.orderService.InstantOrderSaleOrderDeleteAll(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderDeleteAll(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1043,7 +1043,7 @@ func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderUseMember(ctx, passwordReq)
+	res, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1068,7 +1068,7 @@ func (h *InstantHandler) OrderMemberCancel(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderMemberCancel(ctx, passwordReq)
+	res, err := h.orderSrv.OrderMemberCancel(ctx, passwordReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1093,7 +1093,7 @@ func (h *InstantHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderPrint(ctx, printReq)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1118,7 +1118,7 @@ func (h *InstantHandler) OrderPrintInvoice(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderPrintInvoice(ctx, printReq)
+	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1143,7 +1143,7 @@ func (h *InstantHandler) OrderUnlock(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	err := h.orderService.OrderUnlock(ctx, unlockReq.SaleBillUuid)
+	err := h.orderSrv.OrderUnlock(ctx, unlockReq.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1166,8 +1166,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	memberSrv := service.NewMemberSrv(dbm)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
-		orderService: orderSrv,  // 订单服务
-		memberSrv:    memberSrv, // 会员服务
+		orderSrv:  orderSrv,  // 订单服务
+		memberSrv: memberSrv, // 会员服务
 	}
 
 	// 需要认证
