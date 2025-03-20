@@ -647,9 +647,10 @@ type DefaultSaleOrderProduct struct {
 	Flavor                 Flavor
 	Attribute              []Attribute
 	IsAcceptOrder          uint // 是否接单
+	Num                    uint // 数量
 }
 
-func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
+func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage) *SaleOrderProduct {
 	saleOrderProductUuid, _ := utils.GetID()
 	saleOrderProductBoms := make([]*SaleOrderProductBom, 0)
 	for _, bom := range def.Sauces {
@@ -688,7 +689,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		},
 		Name:                       def.Name,
 		FlavorName:                 def.Flavor.Name,
-		Num:                        1,
+		Num:                        def.Num,
 		Status:                     constant.OrderProductStatusUnSending,
 		IsAcceptOrder:              def.IsAcceptOrder,
 		FlavorPrice:                def.Flavor.Price,
@@ -706,6 +707,11 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct) *SaleOrderProduct {
 		SaleOrderProductAttributes: saleOrderProductAttributes,
 	}
 	product.SetTaxRate(def.TaxRate)
+	// 设置商品包. 加购并送厨时用到，用于计算限购
+	{
+		product.ProductPackage = productPackage
+		product.MultiLanguageName = &productPackage.MultiLanguageName
+	}
 	return &product
 }
 

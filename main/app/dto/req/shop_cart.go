@@ -27,6 +27,22 @@ func (req *OrderCartProductAddReq) IsH5Product() bool {
 	return req.isH5Product
 }
 
+// ProductAddReq 添加商品请求参数
+type ProductAddReq struct {
+	SaleBillUuid  uint64          `json:"sale_bill_uuid"`  // 销售账单ID。
+	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
+	Products      []ProductParams `json:"products"`        // 商品信息列表·
+	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
+}
+
+// ProductParams 商品参数
+type ProductParams struct {
+	FlavorProductBomUuid            uint64   // 商品规格uuid
+	Num                             uint     // 数量数量
+	SauceProductBomUuidList         []uint64 // 加料信息
+	ProductPackageAttributeUuidList []uint64 // 属性信息
+}
+
 // OrderCartProductNumReq 修改购物车商品数量请求参数
 type OrderCartProductNumReq struct {
 	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID

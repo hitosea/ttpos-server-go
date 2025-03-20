@@ -108,8 +108,24 @@ func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.Sa
 // 批量更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error {
 	db := r.db
+
+	// 构建新的对象。 为了防止在加购并送厨的场景下，加购的商品不会被更新
+	list := make([]model.SaleOrderProduct, 0)
 	for _, m := range models {
-		if err := db.Model(&m).Updates(m).Error; err != nil {
+		// 如果对象没有主键，则跳过
+		if m.NoPrimaryKey() {
+			continue
+		}
+		list = append(list, *m)
+	}
+
+	for _, model := range list {
+		model.SetNil()
+		// 如果对象没有主键，则跳过
+		if model.NoPrimaryKey() {
+			continue
+		}
+		if err := db.Model(&model).Select("*").Updates(&model).Error; err != nil {
 			return errors.WithMessage(err)
 		}
 	}

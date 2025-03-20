@@ -2,6 +2,7 @@ package service
 
 import (
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -13,8 +14,22 @@ import (
 	"gorm.io/gorm"
 )
 
+type ActionCookingOption struct {
+	CalcAndSaveSaleBill bool
+}
+
+func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
+	return func(option *ActionCookingOption) {
+		option.CalcAndSaveSaleBill = true
+	}
+}
+
 // ActionCooking 送厨
-func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
+	option := &ActionCookingOption{}
+	for _, opt := range options {
+		opt(option)
+	}
 	var productionOrder *model.ProductionOrder
 	var warehouseOutForm *model.WarehouseOutForm
 
@@ -76,26 +91,31 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 	ctx.Log().Debug("准备开始更新")
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 计算账单. 只有加购并送厨时，才计算账单
+		if option.CalcAndSaveSaleBill {
+			// 注意要先执行CalcAndSaveSaleBill，因为saleOrder中可能有要新建的商品
+			if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 送厨相关
 		{
 			// 修改订单商品状态为已送厨
-			errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts)
-			if errUpdateSaleProductStatus != nil {
+			if errUpdateSaleProductStatus := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(unCookingSaleOrderProducts); errUpdateSaleProductStatus != nil {
 				ctx.Log().Debug("商品状态更新失败", zap.Error(errUpdateSaleProductStatus))
-				return errors.New(errUpdateSaleProductStatus.Error())
+				return errors.WithMessage(errUpdateSaleProductStatus, "商品状态更新失败")
 			}
 			ctx.Log().Debug("商品状态成功")
-			errCreateProduction := repository.NewProductionRepo(tx).CreateProductionOrder(productionOrder)
-			if errCreateProduction != nil {
+			if errCreateProduction := repository.NewProductionRepo(tx).CreateProductionOrder(productionOrder); errCreateProduction != nil {
 				ctx.Log().Debug("创建送厨单失败", zap.Error(errCreateProduction))
-				return errors.New(errCreateProduction.Error())
+				return errors.WithMessage(errCreateProduction, "创建送厨单失败")
 			}
 
 			// 如果账单有更新，则更新账单
 			if saleBill.GetUpdate() {
 				if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 					ctx.Log().Debug("更新账单失败", zap.Error(err))
-					return errors.New(err.Error())
+					return errors.WithMessage(err, "更新账单失败")
 				}
 			}
 		}
@@ -149,4 +169,79 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}()
 	}
 	return nil, nil
+}
+
+// 加购
+func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
+	db := ctx.GetDB()
+
+	saleBill, err := s.actionAdd(ctx, request, saleBill)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// 加购并送厨
+func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error) {
+
+	// 加购相关
+	_, err := s.actionAdd(ctx, request, saleBill)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 送厨相关
+	{
+		// 获取未送厨的商品列表
+		unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
+		if len(unCookingSaleOrderProducts) == 0 {
+			return nil, errors.New("没有未送厨的商品")
+		}
+
+		// 送厨
+		checkServiceRes, err := s.ActionCooking(ctx, false, saleBill, unCookingSaleOrderProducts, withCalcAndSaveSaleBill())
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if checkServiceRes != nil {
+			return checkServiceRes, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// 加购。内部方法复用
+func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*model.SaleBill, error) {
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 录入订单商品数据
+	_, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
+		IsH5Product: request.IsH5Product,
+		Setting:     *saleBill.SaleBillSetting,
+		SaleBill:    saleBill,
+		SaleOrder:   saleOrder,
+		Products:    request.Products,
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err, "构建商品失败")
+	}
+
+	// saleBill已经加入了新的商品，并且重新计算了价格
+	return saleBill, nil
 }
