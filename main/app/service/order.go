@@ -4558,7 +4558,6 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		defer s.lock.UnlockUuid(req.SaleBillUuid + req.PaymentMethodUuid)
 		ctx.AddLock()
 	}
-
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -4572,6 +4571,8 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	if saleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.New("销售账单已结束"))
 	}
+
+	// 获取销售订单
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
@@ -4594,22 +4595,24 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 			break
 		}
 	}
-
-	// 支付方式不可用
 	if paymentMethod == nil {
 		return nil, errors.New("支付方式不可用")
 	}
 
-	// 是否已存在有效待支付二维码
-	// if alivePaymentOrder := s.alivePaymentOrder(req.SaleOrderUuid, ctx.GetCashierId(), paymentMethod.Code, req.PaymentAmount, paymentMethod.GetFeePercent()); alivePaymentOrder != nil {
-	// 	return &resp.InstantOrderPaymentQrcodeInfoResp{
-	// 		PaymentOrderUuid: alivePaymentOrder.Uuid,
-	// 		QrCode:           alivePaymentOrder.QrCode,
-	// 		QrCodeExpireSec:  alivePaymentOrder.QrCodeExpireSec,
-	// 		Status:           constant.PaymentOrderStatusUnPay,
-	// 		PaymentAmount:    alivePaymentOrder.PaymentAmount,
-	// 	}, nil
-	// }
+	// 判断支付方式是否已支付
+	orderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
+		repository.CommonRepo.WhereBySoftDelete(),
+		orderRepo.WhereRelatedUuid(saleOrder.Uuid),
+		orderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+		orderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+		return nil, errors.New("当前支付已完成，请选择其他方式支付")
+	}
 
 	// 计算手续费
 	percent := paymentMethod.GetFeePercent()
@@ -4622,32 +4625,13 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("超出订单剩余可支付金额")
 	}
 
-	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
-	if err != nil {
-		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
-	}
-
-	// 创建支付订单
-	paymentOrder := &model.PaymentOrder{
-		PaymentMethodName:    paymentMethod.PaymentName,
-		PaymentMethodUuid:    req.PaymentMethodUuid,
-		PaymentFeePercent:    percent,
-		RelatedType:          constant.PaymentOrderRelatedTypeSaleOrder,
-		RelatedUuid:          req.SaleOrderUuid,
-		CurrencyUnit:         currencySetting.Unit,
-		PaymentAmount:        req.PaymentAmount,
-		PaymentCommissionFee: commissionFee,
-		Amount:               paymentAmount,
-		Status:               constant.PaymentOrderStatusUnPay,
-	}
-
-	// 创建或更新支付单
-	if err := repository.NewPaymentOrderRepo(db).UpdateOrCreatePaymentOrderRecord(*paymentOrder); err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
 	// 创建连连支付订单
-	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(0, paymentMethod.Code, paymentAmount)
+	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(
+		constant.PaymentOrderRelatedTypeSaleOrder,
+		saleOrder.Uuid,
+		paymentMethod.Code,
+		paymentAmount,
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -4656,8 +4640,8 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	infoResp := &resp.InstantOrderPaymentQrcodeInfoResp{
 		PaymentOrderUuid: payment.PaymentOrderUuid,
 		QrCode:           payment.LinkUrl,
-		QrCodeExpireSec:  payment.GetExpireTime(),
-		Status:           constant.PaymentOrderStatusUnPay,
+		QrCodeExpireSec:  payment.GetRemainingPayableTime(),
+		Status:           payment.GetStatus(),
 		PaymentAmount:    paymentAmount,
 	}
 

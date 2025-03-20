@@ -15,11 +15,14 @@ type IPaymentOrderRepo interface {
 	WhereStatus(status uint) DBOption
 	WherePaymentTypeUuid(uuid uint64) DBOption
 	WhereUuid(uuid uint64) DBOption
+	WhereRelatedType(relatedType uint64) DBOption
+	WherePaymentMethodUuid(paymentMethodUuid uint64) DBOption
 
 	WithPaymentMethod() DBOption       // 关联支付方式
 	WithMemberRechargeOrder() DBOption // 关联会员充值订单
 
-	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error) // 获取详细信息
+	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error)      // 获取详细信息
+	GetPaymentOrderInfo(opts ...DBOption) (*model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
 	GetPaymentOrderRecordList(opts ...DBOption) ([]*model.PaymentOrder, error)
 
@@ -56,6 +59,18 @@ func (r *paymentOrderRepo) GetPaymentOrder(opts ...DBOption) (model.PaymentOrder
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").First(&paymentOrder).Error
 	return paymentOrder, errors.WithMessage(err)
+}
+
+// GetPaymentOrderInfo 获取详细信息
+func (r *paymentOrderRepo) GetPaymentOrderInfo(opts ...DBOption) (*model.PaymentOrder, error) {
+	var paymentOrder model.PaymentOrder
+	db := r.db
+	for _, w := range opts {
+		db = w(db)
+	}
+	db = CommonRepo.WhereBySoftDelete()(db)
+	err := db.Order("id asc").First(&paymentOrder).Error
+	return &paymentOrder, errors.WithMessage(err)
 }
 
 // GetPaymentOrderList 获取列表
@@ -148,6 +163,20 @@ func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
 func (r *paymentOrderRepo) WhereRelatedUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("related_uuid = ?", uuid)
+	}
+}
+
+// WhereRelatedType 根据related_type(销售订单、充值订单)查询
+func (r *paymentOrderRepo) WhereRelatedType(relatedType uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related_type = ?", relatedType)
+	}
+}
+
+// WherePaymentMethodUuid 根据支付方式Uuid查询
+func (r *paymentOrderRepo) WherePaymentMethodUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("payment_method_uuid = ?", uuid)
 	}
 }
 

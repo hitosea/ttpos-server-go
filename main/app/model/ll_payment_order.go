@@ -1,10 +1,14 @@
 package model
 
+import (
+	"time"
+	"ttpos-server-go/app/constant"
+)
+
 // LlPaymentOrder 支付订单 ttpos_ll_payment_order
 type LlPaymentOrder struct {
 	BaseModel
-	SaleBillUuid     uint64  `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
-	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
+	RelatedUuid      uint64  `gorm:"column:related_uuid;type:bigint(20);default:0;comment:关联订单ID" json:"related_uuid"`
 	PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:自己系统的支付订单ID;NOT NULL" json:"payment_order_uuid"`
 	RelatedType      int     `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售订单；1-充值订单;NOT NULL" json:"related_type"`
 	MerchantId       string  `gorm:"column:merchant_id;type:varchar(255);default:'';comment:lianlian商户号;NOT NULL" json:"merchant_id"`
@@ -16,28 +20,45 @@ type LlPaymentOrder struct {
 	OrderCurrency    string  `gorm:"column:order_currency;type:varchar(50);default:'';comment:lianlian订单货币;NOT NULL" json:"order_currency"`
 	FullName         string  `gorm:"column:full_name;type:varchar(50);default:'';comment:订单人名称;NOT NULL" json:"full_name"`
 	OrderDesc        string  `gorm:"column:order_desc;type:varchar(50);default:'';comment:订单描述;NOT NULL" json:"order_desc"`
-	LinkUrl          string  `gorm:"column:link_url;type:varchar(2000);default:'';comment:lianlian订单支付链接;NOT NULL" json:"link_url"`
+	LinkUrl          string  `gorm:"column:link_url;type:text;comment:lianlian订单支付链接" json:"link_url"`
 	MerchantUserId   string  `gorm:"column:merchant_user_id;type:varchar(255);default:'';comment:自己系统的用户ID;NOT NULL" json:"merchant_user_id"`
 	LlCreateTime     string  `gorm:"column:ll_create_time;type:varchar(250);default:'0';comment:lianlian订单创建时间;NOT NULL" json:"ll_create_time"`
-	PayTime          int     `gorm:"column:pay_time;type:int(11);default:0;comment:支付时间;NOT NULL" json:"pay_time"`
+	PayTime          int64   `gorm:"column:pay_time;type:int(11);default:0;comment:支付时间;NOT NULL" json:"pay_time"`
+	ExpiredTime      int64   `gorm:"column:expired_time;type:int(11);default:0;comment:过期时间;NOT NULL" json:"expired_time"`
 }
 
-// 获取过期时间
-func (model *LlPaymentOrder) GetExpireTime() int {
+// 获取有效时间
+func (model *LlPaymentOrder) GetAliveTime() int64 {
 	// 二维码有效期 微信(90111)-60分 支付宝(90222)-15分 promptPay(90333)-8分
-	// $alive_time = [
-	//     '90111' =>  60 * 60,
-	//     '90222' =>  60 * 15,
-	//     '90333' =>  60 * 8,
-	// ];
 	if model.OrderType == "LIANLIAN_WECHAT" {
 		return 60 * 60
 	}
-	if model.OrderType == "LIANLIAN_ALIPAY" {
+	if model.OrderType == "LIANLIAN_ALI_OFFLINE_PAY" {
 		return 60 * 15
 	}
-	if model.OrderType == "LIANLIAN_PROMPTPAY" {
+	if model.OrderType == "LIANLIAN_QR_PROMPT_PAY" {
 		return 60 * 8
 	}
-	return 0
+	return 99999999
+}
+
+// 获取剩余可支付时间
+func (model *LlPaymentOrder) GetRemainingPayableTime() int64 {
+	// 计算从创建时间到现在经过的秒数
+	elapsedSeconds := time.Now().Unix() - model.BaseModel.CreateTime
+	// 剩余可支付时间 = 总有效时间 - 已经过时间
+	remainingTime := model.GetAliveTime() - elapsedSeconds
+	// 如果剩余时间小于0，说明已过期，返回0
+	if remainingTime < 0 {
+		return 0
+	}
+	return remainingTime
+}
+
+// 获取支付状态
+func (model *LlPaymentOrder) GetStatus() int {
+	if model.OrderStatus == "PS" {
+		return constant.PaymentOrderStatusPaid
+	}
+	return constant.PaymentOrderStatusUnPay
 }
