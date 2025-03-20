@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
@@ -34,8 +35,8 @@ type IOrderRepo interface {
 	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                                   // 删除销售订单自助餐顾客类型
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)           // 创建销售订单自助餐加钟
 	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                          // 更新销售订单自助餐加钟
-	CancelOrder(saleBillUuid uint64, reason string, dutyNo string) error                                                            // 取消订单
-	CancelDeskOrder(deskUuid uint64, reason string, dutyNo string) error                                                            // 取消桌台订单
+	CancelOrder(ctx context.Context, saleBillUuid uint64, reason string) error                                                      // 取消订单
+	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                      // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                                    // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                                 // 判断是否存在部分支付
 	HideOrder(saleBillUuid uint64) error                                                                                            // 隐藏订单
@@ -913,7 +914,7 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 }
 
 // CancelOrder 取消订单
-func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string, dutyNo string) error {
+func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, reason string) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleOrderStatusPending).Update("status", constant.SaleOrderStatusCanceled).Error
 		if err != nil {
@@ -924,9 +925,11 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string, dutyNo strin
 			Where("uuid = ?", saleBillUuid).
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
-				"status":  constant.SaleBillStatusCanceled,
-				"reason":  reason,
-				"duty_no": dutyNo,
+				"status":       constant.SaleBillStatusCanceled,
+				"reason":       reason,
+				"duty_no":      ctx.GetStaff().DutyNo,
+				"cashier_uuid": ctx.GetStaff().Uuid,
+				"cashier_name": ctx.GetStaff().Username,
 			}).Error
 	})
 	if err != nil {
@@ -936,7 +939,7 @@ func (r *orderRepo) CancelOrder(saleBillUuid uint64, reason string, dutyNo strin
 }
 
 // CancelDeskOrder 关闭桌台订单
-func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string, dutyNo string) error {
+func (r *orderRepo) CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error {
 	var saleBill model.SaleBill
 	if err := r.db.Model(&model.SaleBill{}).
 		Where("status = ?", constant.SaleBillStatusPending).
@@ -944,7 +947,7 @@ func (r *orderRepo) CancelDeskOrder(deskUuid uint64, reason string, dutyNo strin
 		First(&saleBill).Error; err != nil {
 		return fmt.Errorf("CancelDeskOrder: %v", err)
 	}
-	return r.CancelOrder(saleBill.Uuid, reason, dutyNo)
+	return r.CancelOrder(ctx, saleBill.Uuid, reason)
 }
 
 // DeleteOrder 软删除订单

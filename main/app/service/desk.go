@@ -693,7 +693,7 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			}
 
 			// 关闭桌台 - 取消订单
-			if err := repository.NewDeskRepo(tx).CloseDesk(deskSaleBill.DeskUuid, "合并桌台", saleBill.DutyNo); err != nil {
+			if err := repository.NewDeskRepo(tx).CloseDesk(ctx, deskSaleBill.DeskUuid, "合并桌台"); err != nil {
 				return errors.WithMessage(err)
 			}
 

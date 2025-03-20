@@ -10,7 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64, serialNo string, dutyNo string) *SaleBill {
+func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, mealNum uint, remark string, deskUuid uint64, serialNo string, dutyNo string, cashierUuid uint64, cashierName string) *SaleBill {
 	isBuffet := len(buffetUuids) > 0
 
 	if saleBillUuid == 0 {
@@ -27,8 +27,9 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 		Remark:       remark,
 		DeskUuid:     deskUuid,
 		SerialNo:     serialNo,
-		DutyNo:       dutyNo,
 	}
+	// 设置收银员信息
+	saleBill.SetCashier(dutyNo, cashierUuid, cashierName)
 
 	// 设置自助餐套餐
 	if isBuffet {

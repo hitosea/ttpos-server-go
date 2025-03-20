@@ -342,6 +342,13 @@ func (model *SaleBill) SetNil() {
 	model.BuffetPackage2 = nil
 }
 
+// 设置收银员信息
+func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName string) {
+	model.DutyNo = dutyNo
+	model.CashierUuid = cashierUuid
+	model.CashierName = cashierName
+}
+
 // 设置打包销售账单。并更新订单的税率
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 如果没有改变，则不更新
@@ -390,10 +397,10 @@ func (model *SaleBill) SetReverseSettle() {
 }
 
 // 设置销售账单完成
-func (model *SaleBill) SetFinishSaleBill(dutyNo string) {
+func (model *SaleBill) SetFinishSaleBill(dutyNo string, cashierUuid uint64, cashierName string) {
 	model.Status = constant.SaleBillStatusComplete
 	model.FinishTime = time.Now().Unix()
-	model.DutyNo = dutyNo
+	model.SetCashier(dutyNo, cashierUuid, cashierName)
 }
 
 // 设置自助餐套餐
