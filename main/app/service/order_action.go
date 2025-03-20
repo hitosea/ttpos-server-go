@@ -249,6 +249,14 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 			return nil, errors.New("商品超过限购")
 		}
 	}
+	// 检查超时不能加购
+	{
+		// 获取自助餐的剩余时长
+		remainingOrderingSeconds := saleBill.GetRemainingOrderingSeconds()
+		if remainingOrderingSeconds == 0 {
+			return nil, errors.New("自助餐已结束")
+		}
+	}
 
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil
