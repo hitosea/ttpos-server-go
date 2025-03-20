@@ -2866,6 +2866,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					},
 					SendKitchenTime: orderBuffetCustomer.CreateTime,
 					Sign:            cryptor.Md5String(orderBuffetCustomer.GetSign()),
+					UnitPrice:       orderBuffetCustomer.SalePrice,
 				}
 				productList = append(productList, product)
 			}
@@ -2905,6 +2906,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					},
 					SendKitchenTime: delayProduct.CreateTime,
 					Sign:            cryptor.Md5String(delayProduct.GetSign()),
+					UnitPrice:       delayProduct.Price,
 				}
 				productList = append(productList, product)
 			}
