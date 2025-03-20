@@ -1,6 +1,9 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
+)
 
 // RechargeOrderListReq 充值订单列表查询
 type RechargeOrderListReq struct {
@@ -22,4 +25,30 @@ type RechargeOrderRefundReq struct {
 	Uuid        uint64  `json:"uuid" binding:"required"`                                   // 充值订单uuid
 	RefundType  uint    `json:"refund_type" binding:"required,oneof=1 2"`                  // 退款类型: 1-整单退款, 2-部分退款
 	RefundMoney float64 `json:"refund_money" binding:"omitempty,required_if=RefundType 2"` // 部分退款金额
+}
+
+// RechargeOrderPaymentQrcode
+type RechargeOrderPaymentQrcodeReq struct {
+	RechargeOrderUuid uint64  `json:"recharge_order_uuid"` // 充值订单UUID, 必填
+	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+}
+
+func (r *RechargeOrderPaymentQrcodeReq) Validate() error {
+	if r.RechargeOrderUuid == 0 {
+		return errors.New("RechargeOrderUuid不能为0")
+	}
+	if r.PaymentMethodUuid == 0 {
+		return errors.New("PaymentMethodUuid不能为空")
+	}
+	if r.PaymentAmount <= 0 {
+		return errors.New("支付金额错误")
+	}
+	if r.PaymentAmount > 200000 {
+		return errors.New("最大支付金额为200000")
+	}
+	if r.PaymentAmount < 1 {
+		return errors.New("最小支付金额为1")
+	}
+	return nil
 }

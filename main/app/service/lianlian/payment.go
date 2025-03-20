@@ -95,7 +95,13 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 }
 
 // CreatePayment 创建支付
-func (p *PaymentRepo) CreatePayment(relatedType int, relatedUuid uint64, paymentMethodCode int, paymentAmount float64) (*model.LlPaymentOrder, error) {
+func (p *PaymentRepo) CreatePayment(
+	relatedType int,
+	relatedUuid uint64,
+	paymentMethodCode int,
+	paymentAmount float64,
+	commissionFee float64,
+) (*model.LlPaymentOrder, error) {
 	paymentApp, err := p.ValidateConfig()
 	if err != nil {
 		return nil, err
@@ -198,6 +204,7 @@ func (p *PaymentRepo) CreatePayment(relatedType int, relatedUuid uint64, payment
 		LinkUrl:          resp.Order.QrCode,
 		MerchantUserId:   merchantUserId,
 		LlCreateTime:     resp.Order.CreateTime,
+		CommissionFee:    commissionFee,
 	}
 	// 设置创建时间
 	paymentOrder.CreateTime = time.Now().Unix()
@@ -231,7 +238,7 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 			db = db.Where("order_amount = ?", paymentAmount)
 			db = db.Where("order_currency = ?", "THB")
 			db = db.Where("pay_time = ?", constant.No)
-			db = db.Where("expired_time > ?", time.Now().Unix())
+			db = db.Where("expired_time > ?", time.Now().Unix()+5)
 			return db.Order("id desc")
 		},
 	)

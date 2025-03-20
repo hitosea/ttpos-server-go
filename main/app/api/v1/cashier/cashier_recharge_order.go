@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // RechargeOrderHandler 充值订单处理程序
@@ -74,6 +75,34 @@ func (h *RechargeOrderHandler) GetRechargeOrderInfo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	helper.Success(c, res)
+}
+
+// OrderPaymentQrcode 获取支付方式的二维码信息
+// @Summary 获取支付方式的二维码信息
+// @Description 获取支付方式的二维码信息
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrderPaymentQrcodeInfoResp}
+// @Router /cashier/recharge_order/payment/qrcode [get]
+func (h *RechargeOrderHandler) GetRechargeOrderPaymentQrcode(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.RechargeOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付二维码
+	res, err := h.rechargeOrderSrv.GetRechargeOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
+	// 返回结果
 	helper.Success(c, res)
 }
 
@@ -251,5 +280,6 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.POST("/recharge_order/refund", wrapper.RechargeOrderRefund)
 		privateApi.GET("/recharge_order/check_reverse_settle", wrapper.CheckRechargeOrderReverseSettle)
 		privateApi.POST("/recharge_order/reverse_settle", wrapper.RechargeOrderReverseSettle)
+		privateApi.GET("/recharge_order/payment/qrcode", wrapper.GetRechargeOrderPaymentQrcode)
 	}
 }

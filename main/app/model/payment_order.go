@@ -37,9 +37,35 @@ func (model *PaymentMethod) GetFeePercent() float64 {
 	return model.FeePercent
 }
 
+// 计算手续费
+func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64) float64 {
+	// 将 paymentAmount 和 fee/100 转换为 decimal
+	decimalPrice := decimal.NewFromFloat(paymentAmount)
+	feeRate := decimal.NewFromFloat(model.GetFeePercent())
+	// 计算费用，先保留3位小数，然后四舍五入到2位
+	feeMoney := decimalPrice.Mul(feeRate).Round(3).Round(2)
+	// 转换回 float64
+	return feeMoney.InexactFloat64()
+}
+
+// 包含手续费
+func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float64 {
+	return decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(model.CalculatePaymentCommissionFee(paymentAmount))).InexactFloat64()
+}
+
 // HasCommission 判断是否含手续费
 func (model *PaymentMethod) HasCommission() bool {
 	return model.FeePercent > 0
+}
+
+// IsLianLianPay 是否连连支付
+func (model *PaymentMethod) IsLianLianPay() bool {
+	if model.Code != constant.PaymentMethodCodeLianLianWechatPay &&
+		model.Code != constant.PaymentMethodCodeLianLianAliPay &&
+		model.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
+		return false
+	}
+	return true
 }
 
 // 判断是否不允许取消支付

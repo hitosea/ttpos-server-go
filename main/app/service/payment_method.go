@@ -12,14 +12,12 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
 // IPaymentMethodSrv 定义支付方式服务接口
 type IPaymentMethodSrv interface {
 	IsEnabled(ctx context.Context, paymentMethod model.PaymentMethod, companySetting model.CompanySetting) bool // 支付方式是否已启用
-	CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64             // 计算税费
 	GetList(ctx context.Context, typ string) resp.PaymentMethodList                                             // 获取支付方式列表
 }
 
@@ -61,20 +59,6 @@ func (s *paymentMethodSrv) IsEnabled(ctx context.Context, paymentMethod model.Pa
 		availableCodes = append(availableCodes, paymentMethod.Code)
 	}
 	return slices.Contains(availableCodes, paymentMethod.Code)
-}
-
-// CalculatePaymentCommissionFee 计算支付手续费
-func (s *paymentMethodSrv) CalculatePaymentCommissionFee(paymentMethod model.PaymentMethod, paymentAmount float64) float64 {
-	// 将 paymentAmount 和 fee/100 转换为 decimal
-	decimalPrice := decimal.NewFromFloat(paymentAmount)
-	feeRate := decimal.NewFromFloat(paymentMethod.FeePercent)
-
-	// 计算费用，先保留3位小数，然后四舍五入到2位
-	feeMoney := decimalPrice.Mul(feeRate).Round(3).Round(2)
-
-	// 转换回 float64
-	result, _ := feeMoney.Float64()
-	return result
 }
 
 // GetList 获取支付方式列表
