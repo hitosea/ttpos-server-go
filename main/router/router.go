@@ -32,6 +32,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 商家端
 		shopGroup := apiV1.Group("/shop")
 		{
+			shop.RegisterBaseHandlers(shopGroup, dbm, cache)
 			shop.RegisterOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 		}

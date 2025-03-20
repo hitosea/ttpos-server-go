@@ -239,7 +239,7 @@ class Table extends BaseModel
      */
     public static function close($table_id)
     {
-        return self::where('table_id', '=', $table_id)->update(['status' => 10]);
+        return self::where('uuid', '=', $table_id)->update(['status' => 0]);
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace app\common\model\shop;
 
 use help\DateHelp;
-use help\QueueHelp;
 use think\facade\Cache;
 use app\common\library\helper;
 use app\common\model\BaseModel;
@@ -14,10 +13,9 @@ use app\common\enum\order\OrderStatusEnum;
 use app\common\enum\order\OrderPayTypeEnum;
 use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\order\Order as OrderModel;
-use app\common\model\settings\Setting as SettingModel;
 use app\common\repositories\OrderBusinessDataRepository;
-use app\common\service\order\OrderHandoverPrinterService;
 use app\common\model\order\OrderProduct as OrderProductModel;
+use help\HttpHelp;
 
 /**
  * 用户交班记录模型
@@ -27,6 +25,9 @@ class UserShiftLog extends BaseModel
 
     protected $name = 'staff_shift_log';
     protected $pk = 'id';
+    protected $autoWriteTimestamp = true;
+    protected $defaultSoftDelete = 0;
+    protected $deleteTime = 'delete_time';
 
     /**
      * 生成编号
@@ -101,7 +102,7 @@ class UserShiftLog extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\shop\\User', 'shift_user_id', 'shop_user_id');
+        return $this->belongsTo('app\\common\\model\\shop\\User', 'staff_uuid', 'uuid');
     }
 
     /**
@@ -293,117 +294,27 @@ class UserShiftLog extends BaseModel
      *
      * @param array $params
      */
-    public function shiftLog($params, $deviceId = "")
+    public function shiftLog(User $staff)
     {
-        $shop_user_id = $params['shop_user_id'] ?? 0;
-        if (!$shop_user_id) {
-            $this->error = '收银员id不能为空';
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/shift', json_encode([
+            'is_background' => true,
+            'staff_uuid' => $staff->uuid,
+        ]), [
+            'Content-Type' => 'application/json',
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            $this->error = "请求失败";
             return false;
         }
-        //
-        $pre_print = ($params['pre_print'] ?? 0) ?: 0;
-        $cash_taken_out = ($params['cash_taken_out'] ?? 0) ?: 0;
-        $cash_left = ($params['cash_left'] ?? 0) ?: 0;
-        $is_cash_taken_out_all = $params['is_cash_taken_out_all'] ?? 0;           // 是否后台交班 1-是 0-否
-        //
-        $shopUserModel = new User;
-        $shopUser = $shopUserModel->where('shop_user_id', '=', $shop_user_id)->where('cashier_online', '=', 1)->find();
-        if (!$shopUser) {
-            $this->error = '收银员不存在或未交班';
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            $this->error = $result['message'] ?? '请求失败';
             return false;
         }
-        // 禁止并发操作
-        $queue = new QueueHelp('ADD_SHIFT_LOG' . $shopUser->shop_supplier_id);
-        $queue->while();
 
-        // 打印语言设置
-        if ($printLang = ($params['print_lang'] ?? '')) {
-            request()->language = $printLang;
-        } else {
-            $printerConfig = SettingModel::getSupplierItem('printer', $shopUser->shop_supplier_id, $shopUser->app_id);
-            request()->language = $printerConfig['default_language'] ?? '';
-        }
-
-        //
-        $params['shop_supplier_id'] = $shopUser->shop_supplier_id;
-        $shiftData = $this->getShiftInfo($params, $shopUser);
-
-        // 后台交班，本班遗留备用金为0，本班取出现金为当前钱箱现金总计
-        if ($is_cash_taken_out_all) {
-            $cash_taken_out = $shiftData['current_cash_total'];            // 本班取出现金
-            $cash_left = 0;                                                // 本班遗留备用金
-        } else if ($cash_taken_out === 0) {
-            $cash_left = $shiftData['current_cash_total'];
-            $cash_taken_out = 0;
-        } else {
-            if ($cash_taken_out > $shiftData['current_cash_total']) {
-                $queue->release();
-                $this->error = '请输入本班取出现金正确金额';
-                return false;
-            }
-            if ($cash_left > $shiftData['current_cash_total']) {
-                $queue->release();
-                $this->error = '本班遗留备用金不能大于当前钱箱现金总额';
-                return false;
-            }
-            // 本班取出现金 + 本班遗留备用金 = 当前钱箱现金总计
-            if (helper::number2(helper::bcadd($cash_taken_out, $cash_left)) != $shiftData['current_cash_total']) {
-                $queue->release();
-                $this->error = '输入的本班取出現金和本班遗留备用金总额与当前钱箱现金总计不符';
-                return false;
-            }
-        }
-        //
-        $oldShopUser = clone $shopUser;
-        $this->startTrans();
-        try {
-            $data = [
-                'previous_shift_cash' => $shiftData['previous_shift_cash'], // 上一班遗留备用金
-                'current_cash_total' => $shiftData['current_cash_total'],   // 当前钱箱现金总计(现金收入+上一班遗留备用金)
-                'incomes' => $shiftData['incomes'],                         // 支付列表
-                'total_income' => $shiftData['total_income'],               // 总收入
-                'refund_amount' => $shiftData['refund_amount'],             // 退款金额
-                'cash_taken_out' => $cash_taken_out,                        // 本班取出现金
-                'cash_left' => $cash_left,                                  // 本班遗留备用金
-                'cash_income' => $shiftData['cash_income'],                 // 本班收入现金
-                'total_business' => $shiftData['total_business'],           // 本班营业总额（不包含退款）
-                'remark' => $params['remark'] ?? '',                        // 备注
-                'shift_end_time' => time(),
-                'status' => 1,
-                'abnormal' => json_encode($shiftData['abnormalData']),
-            ];
-            $working = $shopUser->working()->find();
-            $working->save($data);
-            //
-            if (!$pre_print) {
-                // 取出金额 - 更新收银员在线状态
-                Account::updateAmount(0, $cash_taken_out, $working->shift_no, $shopUser->shop_user_id, $working->shop_supplier_id, $working->app_id, 'shift');
-                $shopUser->save(['cashier_online' => 0, 'cashier_login_time' => 0, 'duty_no' => '']);
-                BindRecord::where('source', BindRecord::SOURCE_CASHIER)->where('key', $deviceId)->where('finally_login_id', $shopUser->shop_user_id)->update(['finally_login_id' => 0]);
-                (new User([], 0))->where('shop_user_id', $shopUser->shop_user_id)->find()?->save(['cashier_online' => 0, 'cashier_login_time' => 0, 'duty_no' => '']);
-                // 交班快照
-                (new UserShiftSnapshot)->createSnapshot($working->id, $shiftData['abnormalData']);
-                //
-                $this->commit();
-            } else {
-                $this->rollback();
-            }
-            //
-            $printerData = (new OrderHandoverPrinterService)->cashierPrint($working, $deviceId, $pre_print);
-            request()->language = '';
-            //
-            $queue->release();
-            //
-            return $printerData;
-        } catch (\Exception $e) {
-            request()->language = '';
-            $queue->release();
-            $this->rollback();
-            $this->error = $e->getMessage();
-            //
-            (new User([], 0))->where('shop_user_id', $oldShopUser->shop_user_id)->find()?->save(['cashier_online' => $oldShopUser->cashier_online, 'cashier_login_time' => $oldShopUser->cashier_login_time, 'duty_no' => $oldShopUser->duty_no]);
-            return false;
-        }
+        return true;
     }
 
     /**
