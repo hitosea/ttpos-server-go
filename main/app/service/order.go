@@ -3315,8 +3315,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	}
 
 	// 加购
-	_, err := s.ActionAddAndCooking(ctx, request, saleBill)
-	if err != nil {
+	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
