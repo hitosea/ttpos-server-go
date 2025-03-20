@@ -86,9 +86,9 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 				productPackageUuid := productPackage.Product.Uuid
 				num := productPackageMap[productPackageUuid] // 该商品已点xx个
 				mustNum := productPackage.MustNum            // 该商品要求点的数量
-				result := mustNum - num
+				result := int(mustNum) - int(num)            // uint类型，不能用result < 0来判断. uint不会小于0，负数是个很大的正数
 				if result > 0 {
-					mustMap[productPackageUuid] = result
+					mustMap[productPackageUuid] = uint(result)
 				} else {
 					mustMap[productPackageUuid] = 0
 				}
