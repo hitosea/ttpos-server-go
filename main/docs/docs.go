@@ -604,6 +604,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/buffet/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取自助餐商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取自助餐商品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.BuffetProductList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/cart/cooking": {
             "post": {
                 "security": [
@@ -12817,6 +12868,57 @@ const docTemplate = `{
                         "description": "开台成功",
                         "schema": {
                             "$ref": "#/definitions/resp.CreateDeskOrderResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/tablet/desk/order/buffet/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取自助餐商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.桌台"
+                ],
+                "summary": "获取自助餐商品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.BuffetProductList"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {

@@ -183,6 +183,36 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// GetDeskBuffetProductList 处理获取自助餐商品列表
+// @Summary 获取自助餐商品列表
+// @Description 获取自助餐商品列表
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderChangeBuffetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.BuffetProductList}
+// @Failure 404 {object} nil "未找到"
+// @Router /tablet/desk/order/buffet/product/list [get]
+func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangeBuffetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("获取自助餐商品列表", zap.Any("params", params))
+	//
+	info, err := h.orderSrv.OrderDeskBuffetProductList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -211,10 +241,11 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取桌台列表
 		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台
 
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)             // 创建桌台订单(开桌)
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                  // 获取桌台详情
-		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                  // 获取桌台详情-用于定时轮询
-		privateApi.GET("/desk/place_order", nil)                           // todo 加购并送厨
-		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen) // 获取已送厨商品
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                              // 创建桌台订单(开桌)
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                   // 获取桌台详情
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                   // 获取桌台详情-用于定时轮询
+		privateApi.POST("/desk/order/cart/product/add", nil)                                // 向购物车添加商品并送厨
+		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                  // 获取已送厨商品
+		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList) // 获取自助餐商品列表
 	}
 }

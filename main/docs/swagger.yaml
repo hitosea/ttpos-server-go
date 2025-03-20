@@ -4998,6 +4998,35 @@ paths:
       summary: 桌台订单调整自助餐
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/buffet/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助餐商品列表
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: saleBillUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.BuffetProductList'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取自助餐商品列表
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/cart/cooking:
     post:
       consumes:
@@ -12185,6 +12214,35 @@ paths:
       security:
       - JwtToken: []
       summary: 开台
+      tags:
+      - 平板端.桌台
+  /tablet/desk/order/buffet/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助餐商品列表
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: saleBillUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.BuffetProductList'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取自助餐商品列表
       tags:
       - 平板端.桌台
   /tablet/desk/order/sent_kitchen:

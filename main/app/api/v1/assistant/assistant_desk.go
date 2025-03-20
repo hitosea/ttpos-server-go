@@ -1099,6 +1099,36 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// GetDeskBuffetProductList 处理获取自助餐商品列表
+// @Summary 获取自助餐商品列表
+// @Description 获取自助餐商品列表
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderChangeBuffetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.BuffetProductList}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/buffet/product/list [get]
+func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangeBuffetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("获取自助餐商品列表", zap.Any("params", params))
+	//
+	info, err := h.orderSrv.OrderDeskBuffetProductList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderChangePopulation 处理桌台订单修改人数
 // @Summary 桌台订单修改人数
 // @Description 桌台订单修改人数
@@ -1188,5 +1218,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
 		privateApi.GET("/desk/order/unsent_kitchen", wrapper.GetUnsentKitchen)                                // 获取未送厨商品
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                    // 获取已送厨商品
+		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                   // 获取自助餐商品列表
 	}
 }
