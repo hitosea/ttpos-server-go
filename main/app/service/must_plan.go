@@ -69,15 +69,23 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		selectedNum := uint(0)
 		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
 		if ok {
-			for _, productPackage := range productPackageList {
+			for i, productPackage := range productPackageList {
 				// 不统计自动加购的商品
 				//if productPackage.IsAutoAdd {
 				//	continue
 				//}
 				productPackageUuid := productPackage.Product.Uuid
 				num := productPackageMap[productPackageUuid]
+				productPackageList[i].SelectedNum = num // 设置每个商品的已选数量
 				fmt.Println("stat selectedNum. productPackageUuid", productPackageUuid, "num", num)
-				selectedNum += num
+				// selectedNum += num
+				// 如果必点方案是 “每单必点1份” 且 “任选商品”
+				if plan.GetMustType() == constant.ProductMustPlanMustTypeEachOrder && plan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
+					// “已选择x份” 为选了多少个不同的商品
+					if num > 0 {
+						selectedNum += 1
+					}
+				}
 			}
 		}
 

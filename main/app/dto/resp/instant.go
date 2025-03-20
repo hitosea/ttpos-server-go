@@ -46,7 +46,7 @@ type InstantProductMustPlan struct {
 	Uuid         uint64             `json:"-"`              // 方案名称
 	Name         string             `json:"name"`           // 方案名称
 	MustType     int                `json:"must_type"`      // 必点类型.0-每笔订单必点1份 1-每人必点1份
-	MustRule     int                `json:"must_rule"`      // 必点规则.1-固定商品 2-可选商品
+	MustRule     int                `json:"must_rule"`      // 必点规则.0-固定商品 1-可选商品
 	CanChangeNum bool               `json:"can_change_num"` // 顾客可修改必点数量
 	SelectedNum  uint               `json:"selected_num"`   // 已选数量。已选择xx份
 	NeedNum      uint               `json:"need_num"`       // 这个商品还需要点的数量。还差xx份
