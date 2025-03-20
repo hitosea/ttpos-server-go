@@ -142,10 +142,21 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		leaveCash    decimal.Decimal // 遗留现金
 		cashAmount   float64         // 现金收入
 	)
-	// 获取当前班次
-	staff := ctx.GetStaff()
-	db := s.dbm.GetDB(staff.CompanyUuid)
+	// 获取当前员工
+	var (
+		staff model.Staff
+		db    *gorm.DB = s.dbm.GetDB(ctx.GetCompanyUuid())
+	)
+	if req.IsBackground {
+		staff = repository.NewStaffRepo(db).GetStaff(repository.CommonRepo.WhereByUuid(req.StaffUuid))
+	} else {
+		staff = ctx.GetStaff()
+	}
+	if staff.Uuid == 0 {
+		return nil, errors.New("员工不存在")
+	}
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+		// 获取当前班次
 		shiftLogRepo := repository.NewShiftLogRepo(db)
 		shiftLog, err := shiftLogRepo.GetShiftLog(
 			repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
@@ -159,6 +170,11 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		}
 		withdrawCash = decimal.NewFromFloat(req.WithdrawCash)
 		leaveCash = decimal.NewFromFloat(req.LeaveCash)
+		// 后台交班时，取出金额为当前钱箱现金总计，遗留现金为0
+		if req.IsBackground {
+			withdrawCash = decimal.NewFromFloat(shiftLog.CurrentCashTotal)
+			leaveCash = decimal.Zero
+		}
 		// 当前班次取出金额 + 遗留现金 = 当前钱箱现金总计
 		if !withdrawCash.Add(leaveCash).
 			Equal(decimal.NewFromFloat(shiftLog.CurrentCashTotal)) {

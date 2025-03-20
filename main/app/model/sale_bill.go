@@ -29,6 +29,9 @@ type SaleBill struct {
 	DelayDuration   uint  `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
 	DelayStartTime  int64 `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
 
+	NonOrderingTime   uint `gorm:"default:0;comment:不可下单时间（分钟）"`
+	ReminderOrderTime uint `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
+
 	// 订单基本信息
 	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
 	Remark  string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`

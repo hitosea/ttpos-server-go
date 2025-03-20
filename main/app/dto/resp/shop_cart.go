@@ -107,9 +107,11 @@ type SimpleAmountInfo struct {
 
 // BuffetInfo 自助餐信息
 type BuffetInfo struct {
-	RemainingSeconds int64              `json:"remaining_seconds"` // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
-	IsTimeLimited    bool               `json:"is_time_limited"`   // 是否限时
-	LocaleName       dto.LocaleResponse `json:"locale_name"`       // 自助餐名称
+	RemainingSeconds      int64              `json:"remaining_seconds"`       // 自助餐还剩余多少秒。可以为负数，表示自助餐已经结束了多少秒
+	IsTimeLimited         bool               `json:"is_time_limited"`         // 是否限时
+	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 自助餐名称
+	RemainingOrderingTime uint               `json:"remaining_ordering_time"` // 自助餐剩余点餐时间，单位秒
+	ReminderOrderTime     uint               `json:"reminder_order_time"`     // 自助餐结束前x分钟时提醒即将不可下单，用于助手端、平板端和h5
 }
 
 // DeskInfo 桌台信息

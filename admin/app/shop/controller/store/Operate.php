@@ -2,6 +2,7 @@
 
 namespace app\shop\controller\store;
 
+use app\common\model\order\Order;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\order\OrderOperationLog;
@@ -59,22 +60,10 @@ class Operate extends Controller
         if (mb_strlen($data['cancel_remark'] ?? '') > 50) {
             return $this->renderError('备注最长50个字符');
         }
-        // 请求获取充值订单列表接口
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/cancel', json_encode([
-            'sale_bill_uuid' => intval($data['order_id']),
-            'cancel_reason' => $data['cancel_remark'] ?? '',
-            'not_need_password' => true,
-        ]), [
-            'Authorization: Bearer ' . request()->header('token'),
-            'Accept-Language: ' . request()->header('language'),
-            'Content-Type: application/json; charset=utf-8',
-        ]);
+        $order = new Order();
+        $res = $order->delStay($data['order_id'], $data['cancel_remark'] ?? '');
         if (!$res) {
-            return $this->renderError('请求失败');
-        } 
-        $result = json_decode($res, true);
-        if (($result['code'] ?? -1) != 0) {
-            return $this->renderError($result['message'] ?? '请求失败');
+            return $this->renderError($order->getError() ?: '操作失败');
         }
         return $this->renderSuccess('操作成功');
     }

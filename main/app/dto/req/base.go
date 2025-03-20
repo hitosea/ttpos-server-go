@@ -38,6 +38,8 @@ type KitchenBindReq struct {
 type SubmitShiftReq struct {
 	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额: 0 - 当前钱箱现金总计
 	LeaveCash    float64 `json:"leave_cash"`    // 遗留现金: 0 - 当前钱箱现金总计
+	IsBackground bool    `json:"is_background"` // 是否后台交班: false-否，true-是
+	StaffUuid    uint64  `json:"staff_uuid"`    // 员工uuid: 后台交班时，传入员工uuid
 }
 
 type CashierReportReq struct {

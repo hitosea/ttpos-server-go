@@ -46,7 +46,7 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column prop="user_id" label="ID" width="80"></el-table-column>
+          <el-table-column prop="id" label="ID" width="80"></el-table-column>
           <el-table-column prop="nickName" :label="$t('昵称')"></el-table-column>
 
           <el-table-column prop="gender" :label="$t('性别')">

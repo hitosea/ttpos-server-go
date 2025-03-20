@@ -9,7 +9,6 @@ use app\common\model\store\Table;
 use app\common\enum\http\StatusCode;
 use app\common\enum\settings\SettingEnum;
 use app\shop\model\settings\Setting as SettingModel;
-use app\common\model\shop\UserShiftLog as UserShiftLogModel;
 
 /**
  * 设备绑定模型
@@ -18,6 +17,9 @@ class BindRecord extends BaseModel
 {
     protected $name = 'device';
     protected $pk = 'id';
+    protected $autoWriteTimestamp = true;
+    protected $defaultSoftDelete = 0;
+    protected $deleteTime = 'delete_time';
 
     // 品牌
     const BRAND_A1_1500 = 'A1-1500';       //不带打印机的 compax收银机器
@@ -247,68 +249,67 @@ class BindRecord extends BaseModel
      */
     public function unbind($id)
     {
-        $record = $this->where('id', '=', $id)->find();
-        //
-        $app_id = $record['app_id'] ?? 0;
-        $shop_supplier_id = $record['company_uuid'] ?? 0;
-        if (!$record) {
+        $device = $this->where('id', '=', $id)->find();
+        if (!$device) {
             $this->error = "设备不存在";
             return false;
         }
-        // 绑定数量
-        $curNum = $this->where('source', '=', $record['source'])->count();
         $this->startTrans();
         try {
-            // 收银机 （收银机没交班时：自动生成交班操作，预留金额为0，清用户设备绑定key）
-            if ($record['source'] == self::SOURCE_CASHIER) {
-                $user = User::where(['bind_key' => $record['device_id']])->where(['cashier_online' => 1])->find();
-                if ($user) {
-                    $data['shop_user_id'] = $user->shop_user_id;
-                    $data['is_cash_taken_out_all'] = $curNum <= 1 ? 1 : 0;      // 解绑最后一个收银机时再取出所有钱，预留金额为0
-                    $shift = (new UserShiftLogModel);
-                    if ($shift->shiftLog($data, $record['key']) || !$shift->getError()) {
-                        $user->save(['bind_key' => '']);
-                    } else {
-                        $this->error = "交班失败:" . $shift->getError();
+            // 解绑收银机
+            if ($device['source'] == self::SOURCE_CASHIER) {
+                // 收银机没交班时：自动生成交班操作，预留金额为0
+                $staff = User::with(['working'])->where(['bind_key' => $device['device_id']])->find();
+                if ($staff && $staff->working) {
+                    if (!$staff->working->shiftLog($staff)) {
+                        $this->error = $staff->working->getError();
                         return false;
                     }
-                    // 取消收银台上的订单和挂单
-                    Order::delStayOrder();
                 }
-                // 所有设备被解绑，桌台订单都取消
+                // 解绑时对应设备点餐用餐方式的订单（包含挂单）要取消掉对应订单（已送厨的取消，没送厨的直接删掉订单）
+                $res = (new Order())->delStayOrder($device['uuid']);
+                if (!$res) {
+                    $this->error = (new Order())->getError();
+                    return false;
+                }
+                // 查询收银机数量
+                $curNum = $this->where('source', '=', $device['source'])->count();
                 if ($curNum <= 1) {
-                    Order::delStayTableOrder();
+                    $res = (new Order())->delStayTableOrder();
+                    if (!$res) {
+                        $this->error = (new Order())->getError();
+                        return false;
+                    }
                 }
-
                 // 解绑收银机设备时，去除该收银机的打印设置
                 $settingModel = new SettingModel();
-                $printerSettings = $settingModel::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
+                $printerSettings = $settingModel::getSupplierItem(SettingEnum::PRINTER, $staff ? $staff->company_uuid : 0);
                 if ($printerSettings && isset($printerSettings['cashier_printer'])) {
                     $printerSettings['cashier_printer'] = $printerSettings['cashier_printer'] ?? [];
-                    $newPrinter = array_filter($printerSettings['cashier_printer'], function ($item) use ($record) {
-                        return $item['key'] != $record['key'];
+                    $newPrinter = array_filter($printerSettings['cashier_printer'], function ($item) use ($device) {
+                        return $item['key'] != $device['device_id'];
                     });
                     $printerSettings['cashier_printer'] = $newPrinter;
-                    if (!$settingModel->edit(SettingEnum::PRINTER, $printerSettings, $shop_supplier_id, $app_id)) {
+                    if (!$settingModel->edit(SettingEnum::PRINTER, $printerSettings, $staff ? $staff->company_uuid : 0, 0)) {
                         $this->error = "设置默认打印机失败";
                         return false;
                     }
                 }
             }
             // 平板端（清桌台设备绑定key）
-            if ($record['source'] == self::SOURCE_TABLET) {
-                $table = Table::where('bind_info', $record['key'])->find();
+            if ($device['source'] == self::SOURCE_TABLET) {
+                $table = Table::where('device_uuid', $device['uuid'])->find();
                 if ($table) {
-                    $table->save(['is_bind' => 0, 'bind_info' => '']);
+                    $table->save(['sale_bill_uuid' => 0, 'device_uuid' => 0]);
                 }
             }
             // 厨显端（暂无处理）
-            if ($record['source'] == self::SOURCE_KITCHEN) {
+            if ($device['source'] == self::SOURCE_KITCHEN) {
             }
             // 点餐助手（暂无处理）
-            if ($record['source'] == self::SOURCE_ASSISTANT) {
+            if ($device['source'] == self::SOURCE_ASSISTANT) {
             }
-            $record->delete();
+            $device->delete();
             $this->commit();
             return true;
         } catch (\Exception $e) {

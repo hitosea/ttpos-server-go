@@ -57,13 +57,13 @@ class Terminal extends Controller
         // 判断用餐方式是否有未完成订单，有则不能关闭
         $orderModel = new Order();
         if ($order_method['is_cashier_order'] == 0) {
-            $count = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '=', 0)->count();
+            $count = $orderModel->where("status", 0)->where("desk_uuid", 0)->count();
             if ($count > 0) {
                 $orderModel->delStayOrder();
             }
         }
         if ($order_method['is_table_order'] == 0) {
-            $count = $orderModel->where("status", '=', OrderStatusEnum::NORMAL)->where("desk_uuid", '>', 0)->count();
+            $count = $orderModel->where("status", 0)->where("desk_uuid", '>', 0)->count();
             if ($count > 0) {
                 $orderModel->delStayTableOrder();
             }

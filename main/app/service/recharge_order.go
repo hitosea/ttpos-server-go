@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/service/lianlian"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
@@ -253,13 +252,13 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	var orderResp resp.RechargeOrder
 
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
-	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(addReq.RechargeOrderUuid),
-		rechargeOrderRepo.WithPaymentOrders())
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereUuid(addReq.RechargeOrderUuid),
+		rechargeOrderRepo.WithPaymentOrders(),
+	)
 	if order.Uuid == 0 || order.Status != constant.RechargeOrderStatusPending {
 		return orderResp, errors.New("充值订单不存在")
 	}
-
-	// todo 在线支付订单暂不处理
 
 	// 根据Uuid 获取支付方式
 	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(companyUuid))
@@ -267,17 +266,38 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	if paymentMethod.Uuid == 0 {
 		return orderResp, errors.New("支付方式不存在")
 	}
-	// 支付方式是否可用
-	if paymentMethod.IsShowMemberRecharge == 0 || !s.paymentMethodSrv.IsEnabled(ctx, paymentMethod, addReq.CompanySetting) {
-		return orderResp, errors.New("支付方式未开启")
-	}
 	if paymentMethod.Code == constant.PaymentMethodCodeBalance {
 		return orderResp, errors.New("不能使用余额支付充值")
 	}
 
+	// 获取已存在的该支付方式的支付订单
+	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
+	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
+		paymentOrderRepo.WhereRelatedUuid(order.Uuid),
+		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+
+	// 默认支付订单状态
+	paymentOrderStatus := constant.PaymentOrderStatusPaid
+
+	//  在线支付订单 - 如果已经存在直接返回
+	if paymentMethod.IsLianLianPay() {
+		if paymentOrder.Uuid != 0 {
+			if paymentOrder.PaymentAmount != addReq.PaymentAmount {
+				return orderResp, errors.New("不能重复支付")
+			}
+			return s.GetPendingRechargeOrder(companyUuid), nil
+		}
+		paymentOrderStatus = constant.PaymentOrderStatusUnPay
+	}
+
+	// 支付方式是否可用
+	if paymentMethod.IsShowMemberRecharge == 0 || !s.paymentMethodSrv.IsEnabled(ctx, paymentMethod, addReq.CompanySetting) {
+		return orderResp, errors.New("支付方式未开启")
+	}
+
 	// 计算支付手续费
 	paymentCommissionFee := paymentMethod.CalculatePaymentCommissionFee(addReq.PaymentAmount)
-
 	sumPaymentAmount := s.sumPaymentAmount(order.PaymentOrders)
 	// 支付订单金额大于充值金额
 	if sumPaymentAmount >= order.RechargeAmount {
@@ -290,11 +310,6 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 
 	// 支付订单总金额 = 支付金额 + 支付手续费
 	amount := paymentMethod.CalculatePaymentAmount(addReq.PaymentAmount)
-
-	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
-	// 获取已存在的该支付方式的支付订单
-	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
-		paymentOrderRepo.WhereRelatedUuid(order.Uuid), paymentOrderRepo.WherePaymentTypeUuid(paymentMethod.Uuid))
 
 	var rechargeAmountLeft float64
 	var cashPaidPaymentAmount float64
@@ -335,7 +350,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			PaymentAmount:        addReq.PaymentAmount,
 			PaymentCommissionFee: paymentCommissionFee,
 			Amount:               amount,
-			Status:               constant.PaymentOrderStatusPaid, // ToDo 手动添加在线支付标为0，处理lianlianpay
+			Status:               paymentOrderStatus,
 		})
 		if err != nil {
 			logger.Logger.Error("添加支付订单-创建支付订单", zap.Error(err))
@@ -886,9 +901,10 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 	}
 
 	// 创建连连支付订单
-	payment, err := lianlian.NewPaymentRepo(ctx, s.dbm).CreatePayment(
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(
 		constant.PaymentOrderRelatedTypeRechargeOrder,
 		order.Uuid,
+		paymentMethod.Uuid,
 		paymentMethod.Code,
 		paymentAmount,
 		commissionFee,

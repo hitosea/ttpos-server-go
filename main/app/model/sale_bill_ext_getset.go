@@ -224,6 +224,15 @@ func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 	return model.GetRemainingDelayDuration() + model.GetBuffetRemainingSeconds()
 }
 
+// 获取剩余可点自助餐商品时长
+func (model *SaleBill) GetRemainingOrderingSeconds() uint {
+	remainingOrderingSeconds := model.GetTotalRemainingSeconds() - int64(model.NonOrderingTime)*60
+	if remainingOrderingSeconds > 0 {
+		return uint(remainingOrderingSeconds)
+	}
+	return 0
+}
+
 // 获取自助餐结束时间
 func (model *SaleBill) GetBuffetEndTime() int64 {
 	endTime := model.BuffetStartTime + int64(model.BuffetDuration)

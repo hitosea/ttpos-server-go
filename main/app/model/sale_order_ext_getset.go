@@ -298,7 +298,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	buffetUuids []uint64,
 	buffetCustomerTypes []BuffetUuidMapBuffetCustomerTypes,
 	saleBillSetting *SaleBillSetting,
-) ([]*SaleOrderBuffetCustomerType, []uint64, uint, int) {
+) ([]*SaleOrderBuffetCustomerType, []uint64, uint, int, uint, uint) {
 	buffetUuidMap := make(map[uint64]map[uint64]*struct {
 		BaseModel
 		BuffetPackageUuid  uint64
@@ -308,7 +308,10 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	})
 	buffetMap := make(map[uint64]*BuffetPackage)
 	//
+	var nonOrderingTimes, reminderOrderTimes []uint
 	for _, buffet := range buffetList {
+		nonOrderingTimes = append(nonOrderingTimes, buffet.NonOrderingTime)
+		reminderOrderTimes = append(reminderOrderTimes, buffet.ReminderOrderTime)
 		for index, _ := range buffet.BuffetCustomerTypePrices {
 			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
 			if buffetUuidMap[buffet.Uuid] == nil {
@@ -386,7 +389,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 		}
 	}
 	//
-	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit
+	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit, slices.Min(nonOrderingTimes), slices.Min(reminderOrderTimes)
 }
 
 // GetPercentageList 获取当前订单的百分比对象列表

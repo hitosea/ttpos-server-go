@@ -40,7 +40,7 @@ use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\order\OrderOperationLog;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\ModelNotFoundException;
-use app\cashier\model\store\Table as TableModel;
+use app\common\model\store\Table as TableModel;
 use app\common\enum\product\DeductStockTypeEnum;
 use app\common\service\order\OrderPrinterService;
 use app\common\model\order\OrderRefundDestination;
@@ -60,6 +60,7 @@ use app\cashier\service\order\settled\CashierOrderSettledService;
 use app\common\model\order\OrderBuffetCustomer as OrderBuffetCustomerModel;
 use app\common\model\order\OrderDelay as OrderDelayModel;
 use app\common\model\order\OrderBuffet as OrderBuffetModel;
+use help\HttpHelp;
 
 /**
  * 订单模型模型
@@ -3094,18 +3095,16 @@ class Order extends BaseModelOrder
      * 取消收银台上所有订单
      * @return boolean
      */
-    public static function delStayOrder()
+    public static function delStayOrder($deviceUUid = 0)
     {
-        $list = Order::field(['order_id'])
-            ->where('order_status', OrderStatusEnum::NORMAL)
-            ->where('pay_status', OrderPayStatusEnum::PENDING)
-            ->where(function ($q) {
-                $q->where('is_stay', 1)->whereOr('is_stay', 0);
-            })
-            ->where('table_id', 0)
-            ->select();
-        foreach ($list as $order) {
-            $order->delStay($order->order_id);
+        $builder = Order::where('desk_uuid', 0)->where('status', 0);
+        if ($deviceUUid > 0) {
+            $builder->where('device_uuid', $deviceUUid);
+        }
+        $list = $builder->select();
+        foreach ($list as $item) {
+            /** @var Order $item */
+            $item->delStay($item->uuid);
         }
         return true;
     }
@@ -3116,144 +3115,42 @@ class Order extends BaseModelOrder
      */
     public static function delStayTableOrder()
     {
-        $list = Order::field(['order_id', 'table_id'])
-            ->where('order_status', OrderStatusEnum::NORMAL)
-            ->where('pay_status', OrderPayStatusEnum::PENDING)
-            ->where('table_id', '<>', 0)
-            ->select();
-        foreach ($list as $order) {
-            $order->delStay($order->order_id);
-            TableModel::close($order->table_id);
+        $list = Order::where('desk_uuid', '>', 0)->where('status', 0)->select();
+        foreach ($list as $item) {
+            /** @var Order $item */
+            $item->delStay($item->uuid);
         }
         return true;
     }
 
     /**
      * 整单取消
-     * @param $order_id
+     * @param $saleBillUuid
+     * @param $remark
      * @return bool
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
-    public function delStay($order_id, $remark = '')
+    public function delStay($saleBillUuid, $remark = '')
     {
-        // 检查订单状态
-        /** @var OrderModel $detail */
-        $detail = self::detail([
-            ['order_id', '=', $order_id],
-            ['order_status', '=', OrderStatusEnum::NORMAL]
+        // 请求获取充值订单列表接口
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/cancel', json_encode([
+            'sale_bill_uuid' => intval($saleBillUuid),
+            'cancel_reason' => $remark ?? '',
+            'not_need_password' => true,
+        ]), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
         ]);
-        if (!$detail) {
-            $this->error = '当前状态不可操作';
+        if (!$res) {
+            $this->error = '请求失败';
+            return false;
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            $this->error = $result['message'] ?? '请求失败';
             return false;
         }
-        // 拆单没有取消权限
-        if ($detail->parent_id > 0) {
-            $this->error = '拆单不可操作';
-            return false;
-        }
-        // 禁止并发操作
-        [$details, $queue] = $detail->concurrencyValidateOrderActionableStatus();
-        if (!$details) {
-            $this->error = $detail->getError();
-            return false;
-        } else {
-            $detail = $details;
-        }
-
-        // 检查部分支付
-        if ($error = $detail->checkPartialPayment()) {
-            $this->error = $error;
-            $queue->release();
-            return false;
-        }
-
-        //
-        $isPay = $detail['pay_status']['value'] == 20 ? 1 : 0;
-
-        $this->startTrans();
-        try {
-            $force = $detail['extra_times'] <= 0;
-            // 获取订单产品
-            $orderProducts = OrderProduct::where('order_id', '=', $order_id)->select();
-            foreach ($orderProducts as $orderProduct) {
-                // 如果未送厨，强制删除
-                if ($orderProduct['is_send_kitchen'] == 0 && $orderProduct['batch_no'] == '') {
-                    $orderProduct->force()->delete();
-                } else {
-                    // 如果已送厨，软删除
-                    ProductFactory::getFactory($detail['order_source'])->backProductStock([$orderProduct], $isPay);   // 退回商品库存
-                    $orderProduct->delete();
-                }
-            }
-            //
-            $merge_id = $detail->merge_id;
-            $merge_parent_id = $detail->merge_parent_id;
-            if ($force) {
-                $detail->force()->delete();
-                // 子数据删除
-                $orderBuffetList = OrderBuffet::where('order_id', '=', $order_id)->select();
-                foreach ($orderBuffetList as $item) {
-                    $item->delete();
-                }
-                $orderBuffetCustomerList = OrderBuffetCustomer::where('order_id', '=', $order_id)->select();
-                foreach ($orderBuffetCustomerList as $item) {
-                    $item->delete();
-                }
-                $orderDelayList = OrderDelay::where('order_id', '=', $order_id)->select();
-                foreach ($orderDelayList as $item) {
-                    $item->delete();
-                }
-                // 子单数据
-                $subOrderList = (new self)->where('parent_id', $order_id)->select();
-                foreach ($subOrderList as $item) {
-                    $item->force()->delete();
-                }
-                $opList = OrderProduct::where('order_id', '=', $order_id)->select();
-                foreach ($opList as $item) {
-                    $item->force()->delete();
-                }
-            } else {
-                /** @var OrderModel $detail */
-                $detail->CashierOrderCancels($remark);
-            }
-            // 清除接单数据
-            /** @var TakeOrder $takeOrders */
-            $takeOrders = TakeOrder::where('order_id', $order_id)->where('status', 0)->select();
-            foreach ($takeOrders as $takeOrder) {
-                $takeOrder->reject();
-            }
-            //
-            if ($merge_id) {
-                // 无合单桌台重置
-                $mergeNum = self::where('merge_id', $merge_id)->count();
-                if ($mergeNum <= 1) {
-                    self::where('merge_id', $merge_id)->update(['merge_id' => '', 'merge_parent_id' => 0]);
-                }
-                // 删除主单及关联
-                $masterOrder = self::where('order_id', $merge_parent_id)->find();
-                $masterOrder?->force()->delete();
-                // 删除主单组合支付
-                OrderPayType::where('order_id', $merge_parent_id)->delete();
-            }
-            // 如果是桌台订单，关闭桌台
-            $tableId = $detail['table_id'] ?? 0;
-            if ($tableId > 0) {
-                TableModel::close($tableId);
-            }
-            // 添加操作记录
-            OrderOperationLog::createLog($order_id, OrderOperationLog::ACTION_ORDER_CANCEL, [], '整单取消');
-            //
-            $this->commit();
-            $queue->release();
-            return true;
-        } catch (BaseException $e) {
-            $this->error = $e->getMessage();
-            $this->rollback();
-            $queue->release();
-            return false;
-        }
+        return true;
     }
 
     /**

@@ -75,7 +75,7 @@ class User extends BaseModel
      */
     public function working()
     {
-        return $this->hasOne('app\\common\\model\\shop\\UserShiftLog', 'shift_user_id', 'shop_user_id')->where('shift_no', $this->duty_no)->where('status', 0);
+        return $this->hasOne(UserShiftLog::class, 'staff_uuid', 'uuid')->where('shift_no', $this->duty_no)->where('status', 0);
     }
 
     /**
