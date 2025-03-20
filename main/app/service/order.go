@@ -4673,7 +4673,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	if !saleBill.IsCookingStatus() {
-		return nil, errors.WithMessage(errors.New("请先送厨商品"))
+		return nil, errors.WithMessage(errors.New("订单没有商品，请选购商品"))
 	}
 	// 判断销售订单是否可操作
 	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
