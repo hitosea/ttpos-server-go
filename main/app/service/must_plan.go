@@ -238,12 +238,13 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			for _, productPackage := range productPackages {
 				productPackageUuid := productPackage.Product.Uuid
 				num := productPackageMap[productPackageUuid]
+				// 设置每个商品的已选数量
 				selectedNum += num
 			}
 		}
 		// 获取购物车中各个必点商品已经点了多少个，还差多少个
 		mustMap := make(map[uint64]uint) // product_package_uuid => num 每个必点商品还差多少个
-		for _, productPackage := range productPackages {
+		for i, productPackage := range productPackages {
 			productPackageUuid := productPackage.Product.Uuid
 			num := productPackageMap[productPackageUuid] // 该商品已点xx个
 			mustNum := productPackage.MustNum            // 该商品要求点的数量
@@ -253,7 +254,8 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 				result = 0
 			}
 			mustMap[productPackageUuid] = result
-
+			// 设置每个商品的已选数量
+			productPackages[i].SelectedNum = num
 		}
 
 		// 如果必点方案是可选商品
