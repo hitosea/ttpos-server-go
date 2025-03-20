@@ -43,3 +43,13 @@ type SubmitShiftReq struct {
 type CashierReportReq struct {
 	ExceptionRemark string `json:"exception_remark"` // 异常备注
 }
+
+// ShiftWithdrawReq 交班取钱
+type ShiftWithdrawReq struct {
+	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额, 最多小数点后两位
+}
+
+// ShiftDepositReq 交班存钱
+type ShiftDepositReq struct {
+	DepositCash float64 `json:"deposit_cash"` // 存入金额, 最多小数点后两位
+}

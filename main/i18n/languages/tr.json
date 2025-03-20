@@ -2018,5 +2018,7 @@
   "当前班次不存在": "Mevcut sınıf mevcut değil",
   "当前班次已交班": "Mevcut sınıf teslim edildi",
   "取出金额不能小于0": "Çekim tutarı 0'dan az olamaz",
-  "遗留现金不能小于0": "Kalan nakit 0'dan az olamaz"
+  "遗留现金不能小于0": "Kalan nakit 0'dan az olamaz",
+  "取钱失败": "Para çekme işlemi başarısız oldu",
+  "存钱失败": "Para yatırma başarısız oldu"
 }

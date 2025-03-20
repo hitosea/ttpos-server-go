@@ -21,12 +21,12 @@ import (
 
 // H5Handler 商家H5端处理程序
 type H5Handler struct {
-	service        service.IH5Srv      // h5扫码服务
-	deskSrv        service.IDeskSrv    // 桌台服务
-	buffetSrv      service.IBuffetSrv  // 自助餐服务
-	productService service.IProductSrv // 产品服务
-	callSrv        service.ICallSrv    // 呼叫服务
-	orderService   service.IOrderSrv   // 订单服务
+	h5Srv      service.IH5Srv      // h5扫码服务
+	deskSrv    service.IDeskSrv    // 桌台服务
+	buffetSrv  service.IBuffetSrv  // 自助餐服务
+	productSrv service.IProductSrv // 产品服务
+	callSrv    service.ICallSrv    // 呼叫服务
+	orderSrv   service.IOrderSrv   // 订单服务
 }
 
 // BaseInfo 获取桌码基础信息
@@ -42,7 +42,7 @@ func (h *H5Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
 	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
-	info, err := h.service.GetBaseInfo(ctx, deskUuid)
+	info, err := h.h5Srv.GetBaseInfo(ctx, deskUuid)
 	if err != nil {
 		ctx.Log().Info("获取桌台基本信息失败", zap.String("error", err.Error()))
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -120,7 +120,7 @@ func (h *H5Handler) OpenDesk(c *gin.Context) {
 // @Router /h5/product/category/list [get]
 func (h *H5Handler) GetProductCategoryList(c *gin.Context) {
 	// 获取收银产品类别列表
-	res, err := h.productService.GetProductCategoryList(helper.GetCompanyUuid(c))
+	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
 
 	// 处理错误
 	if err != nil {
@@ -153,7 +153,7 @@ func (h *H5Handler) GetProductList(c *gin.Context) {
 	}
 
 	// 获取收银产品列表
-	res, err := h.productService.GetProductList(helper.GetContext(c), req)
+	res, err := h.productSrv.GetProductList(helper.GetContext(c), req)
 
 	// 处理错误
 	if err != nil {
@@ -210,7 +210,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -218,7 +218,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
-	info, err := h.orderService.OrderProductRemark(ctx, params)
+	info, err := h.orderSrv.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -246,7 +246,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -261,12 +261,12 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	}
 	params.SetIsH5Product() // 设置为H5商品
 	// 添加商品。 若没有点餐账单则新建一个
-	_, err = h.orderService.InstantOrderCartProductAdd(ctx, params)
+	_, err = h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -288,7 +288,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -299,7 +299,7 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 	}
 	ctx.Log().Debug("查询未下单商品", zap.Any("saleBillUuid", saleBillUuid), zap.Any("saleOrderUuid", saleOrderUuid))
 	fmt.Println("GetOrderCartProductUnordered 查询未下单商品", saleBillUuid, saleOrderUuid)
-	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -321,7 +321,7 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -330,7 +330,7 @@ func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	res, err := h.orderService.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5ProductWithReject())
+	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5ProductWithReject())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -360,7 +360,7 @@ func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
 		return
 	}
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -373,12 +373,12 @@ func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
 	params.SaleBillUuid = saleBillUuid
 	ctx.Log().Debug("扫码点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	_, err = h.orderService.OrderCartProductNum(ctx, params)
+	_, err = h.orderSrv.OrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderService.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -401,7 +401,7 @@ func (h *H5Handler) ConfirmOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
 	// 获取桌台的账单uuid和第一子单的uuid
-	saleBillUuid, saleOrderUuid, err := h.orderService.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -410,11 +410,11 @@ func (h *H5Handler) ConfirmOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	if err := h.orderService.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid); err != nil {
+	if err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderService.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
+	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -442,12 +442,12 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	callSrv := service.NewCallSrv(dbm)
 	// 初始化处理器
 	wrapper := H5Handler{
-		service:        h5Srv,
-		deskSrv:        deskSrv,
-		buffetSrv:      buffetSrv,
-		productService: productService,
-		callSrv:        callSrv,
-		orderService:   orderSrv,
+		h5Srv:      h5Srv,
+		deskSrv:    deskSrv,
+		buffetSrv:  buffetSrv,
+		productSrv: productService,
+		callSrv:    callSrv,
+		orderSrv:   orderSrv,
 	}
 
 	// 需要认证

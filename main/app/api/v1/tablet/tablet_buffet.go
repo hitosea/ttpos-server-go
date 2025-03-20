@@ -15,7 +15,7 @@ import (
 
 // BuffetHandler 自助餐处理程序
 type BuffetHandler struct {
-	Service service.IBuffetSrv // 主服务
+	buffetSrv service.IBuffetSrv // 主服务
 }
 
 // GetBuffetList 处理获取自助餐列表
@@ -31,7 +31,7 @@ type BuffetHandler struct {
 func (h *BuffetHandler) GetBuffetList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 获取自助餐列表
-	res, err := h.Service.GetBuffetList(companyUuid)
+	res, err := h.buffetSrv.GetBuffetList(companyUuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -52,7 +52,7 @@ func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 
 	// 初始化处理器
 	wrapper := BuffetHandler{
-		Service: service.NewBuffetSrv(
+		buffetSrv: service.NewBuffetSrv(
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
 		),

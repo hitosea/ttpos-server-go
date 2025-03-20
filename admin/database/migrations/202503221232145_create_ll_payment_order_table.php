@@ -27,7 +27,7 @@ class CreateLlPaymentOrderTable extends Migrator
             $table->addColumn('id', 'integer', ['signed' => false, 'identity' => true, 'comment' => '自增ID'])
                 ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'UUID'])
                 ->addColumn('payment_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '自己系统的支付订单ID'])
-                ->addColumn('related_type', 'tinyint', ['default' => 0, 'comment' => '关联订单类型：0-销售订单；1-充值订单'])
+                ->addColumn('related_type', 'tinyinteger', ['default' => 0, 'comment' => '关联订单类型：0-销售订单；1-充值订单'])
                 ->addColumn('merchant_id', 'string', ['limit' => 255, 'default' => '', 'comment' => 'lianlian商户号'])
                 ->addColumn('merchant_order_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '自己系统的为支付生成的订单号'])
                 ->addColumn('order_id', 'string', ['limit' => 255, 'default' => '', 'comment' => 'lianlian订单ID'])

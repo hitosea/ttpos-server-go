@@ -152,9 +152,9 @@ class ErpWarehouseOutForm extends BaseModel
                     1 => self::STATUS_REVOKED,
                 ][$item['status']],
                 'operator' => [
-                    'shop_user_id' => $item['operator']['shop_user_id'],
-                    'user_name' => $item['operator']['username'],
-                    'real_name' => $item['operator']['real_name'],
+                    'shop_user_id' => $item['operator']['shop_user_id'] ?? 0,
+                    'user_name' => $item['operator']['username'] ?? '',
+                    'real_name' => $item['operator']['real_name'] ?? '',
                 ],
                 'out_time' => strtotime($item['create_time']),
                 'revoke_time' => strtotime($item['revoke_time']),

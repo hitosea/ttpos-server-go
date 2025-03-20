@@ -23,9 +23,9 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	service      service.IDeskSrv   // 主服务
-	memberSrv    service.IMemberSrv // 会员服务
-	orderService service.IOrderSrv
+	deskSrv   service.IDeskSrv   // 主服务
+	memberSrv service.IMemberSrv // 会员服务
+	orderSrv  service.IOrderSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -41,7 +41,7 @@ type DeskHandler struct {
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
 	companyId := helper.GetCompanyUuid(c)
 	// 处理获取桌台的区域和类型的逻辑
-	res, err := h.service.GetDeskRegionAndTypeList(companyId)
+	res, err := h.deskSrv.GetDeskRegionAndTypeList(companyId)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -72,7 +72,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetDeskList(ctx, companyUuid, listReq)
+	res, err := h.deskSrv.GetDeskList(ctx, companyUuid, listReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -102,7 +102,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 		return
 	}
 	// 获取收银产品列表
-	res, err := h.service.GetDeskInfo(companyUuid, infoReq.Uuid)
+	res, err := h.deskSrv.GetDeskInfo(companyUuid, infoReq.Uuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -134,7 +134,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	}
 
 	// 创建桌台订单
-	res, err := h.service.CreateDeskOrder(ctx, params)
+	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
 	// 处理错误
 	if err != nil {
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
@@ -166,7 +166,7 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.CloseDesk(ctx, params)
+	err := h.deskSrv.CloseDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -195,7 +195,7 @@ func (h *DeskHandler) CompleteDesk(c *gin.Context) {
 		return
 	}
 	//
-	err := h.service.CompleteDesk(ctx, params)
+	err := h.deskSrv.CompleteDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -224,7 +224,7 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.service.ChangeDesk(ctx, params)
+	info, err := h.deskSrv.ChangeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -253,7 +253,7 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 		return
 	}
 	//
-	info, deskMergeCheckResp, err := h.service.MergeDesk(ctx, params)
+	info, deskMergeCheckResp, err := h.deskSrv.MergeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, err)
 		return
@@ -282,7 +282,7 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderService.CancelOrder(ctx, cancelReq)
+	err := h.orderSrv.CancelOrder(ctx, cancelReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -314,7 +314,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	//
-	shopCart, err := h.orderService.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	shopCart, err := h.orderSrv.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -343,7 +343,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderProductChangePrice(ctx, params)
+	info, err := h.orderSrv.OrderProductChangePrice(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -385,7 +385,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, amountChangeReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderAmountChange(ctx, amountChangeReq)
+		shopCart, err = h.orderSrv.OrderAmountChange(ctx, amountChangeReq)
 	}
 	// 打折
 	if params.DiscountMethod == 2 {
@@ -394,7 +394,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, discountReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderDiscount(ctx, discountReq)
+		shopCart, err = h.orderSrv.OrderDiscount(ctx, discountReq)
 	}
 	// 抹零
 	if params.DiscountMethod == 3 {
@@ -403,7 +403,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 			helper.HandleValidationError(c, err, zeroRuleReq, req.OrderReqMessage)
 			return
 		}
-		shopCart, err = h.orderService.OrderZeroRule(ctx, zeroRuleReq)
+		shopCart, err = h.orderSrv.OrderZeroRule(ctx, zeroRuleReq)
 	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -432,7 +432,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderDiscountCancel(ctx, params)
+	info, err := h.orderSrv.OrderDiscountCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -461,7 +461,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderChangePopulation(ctx, params)
+	info, err := h.orderSrv.OrderChangePopulation(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -490,7 +490,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderChangeBuffet(ctx, params)
+	info, err := h.orderSrv.OrderChangeBuffet(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -519,7 +519,7 @@ func (h *DeskHandler) OrderChangeBuffetClock(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderChangeBuffetClock(ctx, params)
+	info, err := h.orderSrv.OrderChangeBuffetClock(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -549,7 +549,7 @@ func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
 	}
 	ctx.Log().Debug("获取自助餐商品列表", zap.Any("params", params))
 	//
-	info, err := h.orderService.OrderDeskBuffetProductList(ctx, params)
+	info, err := h.orderSrv.OrderDeskBuffetProductList(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -578,7 +578,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderService.OrderProductRemark(ctx, params)
+	info, err := h.orderSrv.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -608,7 +608,7 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 	}
 	// 查询购物车信息
 	if params.H5OrderUuid > constant.OptionalUuid {
-		res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid, repository.WithH5OrderUuid(params.H5OrderUuid))
+		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid, repository.WithH5OrderUuid(params.H5OrderUuid))
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 			return
@@ -616,7 +616,7 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 		// 返回结果
 		helper.Success(c, res)
 	} else {
-		res, err := h.orderService.GetOrderCartInfo(ctx, params.SaleBillUuid)
+		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid)
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 			return
@@ -646,7 +646,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	// 添加商品。 若没有点餐账单则新建一个
-	res, err := h.orderService.InstantOrderCartProductAdd(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -677,7 +677,7 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	res, err := h.orderService.OrderCartProductNum(ctx, params)
+	res, err := h.orderSrv.OrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -708,7 +708,7 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
 	// 送厨购物车商品
-	res, checkRes, err := h.orderService.InstantOrderCartProductCooking(ctx, params)
+	res, checkRes, err := h.orderSrv.InstantOrderCartProductCooking(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -743,7 +743,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductReturning(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductReturning(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -773,7 +773,7 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductCancelReturning(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductCancelReturning(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -803,7 +803,7 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 		return
 	}
 	// 转菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductChangeDesk(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductChangeDesk(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -833,7 +833,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductGiving(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -863,7 +863,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 		return
 	}
 	// 退菜购物车商品
-	res, err := h.orderService.InstantOrderCartProductCancelGiving(ctx, params)
+	res, err := h.orderSrv.InstantOrderCartProductCancelGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -894,7 +894,7 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
 	// 确认必点商品
-	res, err := h.orderService.InstantOrderMustPlanConfirm(ctx, params)
+	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -926,7 +926,7 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 	}
 	ctx.Log().Info("订单检查", zap.Any("params", params))
 	// 订单检查
-	checkRes, err := h.orderService.OrderCheck(ctx, params)
+	checkRes, err := h.orderSrv.OrderCheck(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -964,7 +964,7 @@ func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
 	}
 	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
 	// 获取销售订单的付款信息
-	res, err := h.orderService.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -992,7 +992,7 @@ func (h *DeskHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
 		return
 	}
 	// 获取支付二维码
-	res, err := h.orderService.InstantOrderPaymentQrcode(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1023,7 +1023,7 @@ func (h *DeskHandler) OrderPaymentCreate(c *gin.Context) {
 	}
 	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
 	// 创建一个支付单
-	res, err := h.orderService.InstantOrderPaymentCreate(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1054,7 +1054,7 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 	}
 	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
 	// 撤销一个支付单
-	res, err := h.orderService.InstantOrderPaymentCancel(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1085,7 +1085,7 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 	}
 	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
 	// 桌台销售订单的付款结账
-	res, err := h.orderService.InstantOrderPaymentFinish(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1116,7 +1116,7 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 	}
 	ctx.Log().Info("桌台免单", zap.Any("params", params))
 	// 桌台免单
-	res, err := h.orderService.InstantOrderFree(ctx, params)
+	res, err := h.orderSrv.InstantOrderFree(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1151,7 +1151,7 @@ func (h *DeskHandler) OrderPaymentZeroRule(c *gin.Context) {
 	}
 	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
 	// 设置结账抹零规则
-	res, err := h.orderService.InstantOrderPaymentZeroRule(ctx, params)
+	res, err := h.orderSrv.InstantOrderPaymentZeroRule(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1182,7 +1182,7 @@ func (h *DeskHandler) OrderSaleOrderCreate(c *gin.Context) {
 	}
 	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
 	// 创建一个销售订单
-	res, err := h.orderService.InstantOrderSaleOrderCreate(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1213,7 +1213,7 @@ func (h *DeskHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 	}
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
 	// 从一个销售订单移动商品到另一个销售订单
-	res, err := h.orderService.SaleOrderMoveProduct(ctx, params, false)
+	res, err := h.orderSrv.SaleOrderMoveProduct(ctx, params, false)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1244,7 +1244,7 @@ func (h *DeskHandler) OrderSaleOrderDelete(c *gin.Context) {
 	}
 	ctx.Log().Info("删除一个销售订单(删除拆单)", zap.Any("params", params))
 	// 删除一个销售订单(删除拆单)
-	res, err := h.orderService.InstantOrderSaleOrderDelete(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderDelete(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1275,7 +1275,7 @@ func (h *DeskHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 	}
 	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
 	// 删除所有子销售订单(撤销拆单)
-	res, err := h.orderService.InstantOrderSaleOrderDeleteAll(ctx, params)
+	res, err := h.orderSrv.InstantOrderSaleOrderDeleteAll(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1330,7 +1330,7 @@ func (h *DeskHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderUseMember(ctx, passwordReq)
+	res, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1355,7 +1355,7 @@ func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderMemberCancel(ctx, passwordReq)
+	res, err := h.orderSrv.OrderMemberCancel(ctx, passwordReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1380,7 +1380,7 @@ func (h *DeskHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderPrint(ctx, printReq)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1405,7 +1405,7 @@ func (h *DeskHandler) OrderPrintInvoice(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderService.OrderPrintInvoice(ctx, printReq)
+	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1430,7 +1430,7 @@ func (h *DeskHandler) OrderUnlock(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	err := h.orderService.OrderUnlock(ctx, unlockReq.SaleBillUuid)
+	err := h.orderSrv.OrderUnlock(ctx, unlockReq.SaleBillUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1454,9 +1454,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 初始化处理器
 	wrapper := DeskHandler{
-		service:      service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
-		memberSrv:    memberSrv,
-		orderService: orderSrv,
+		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
+		memberSrv: memberSrv,
+		orderSrv:  orderSrv,
 	}
 
 	// 需要认证

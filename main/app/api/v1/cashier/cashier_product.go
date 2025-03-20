@@ -17,7 +17,7 @@ import (
 
 // ProductHandler 收银产品处理程序
 type ProductHandler struct {
-	productService service.IProductSrv // 产品服务
+	productSrv service.IProductSrv // 产品服务
 }
 
 // GetProductList 获取收银产品列表
@@ -41,7 +41,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 	}
 
 	// 获取收银产品列表
-	res, err := h.productService.GetProductList(helper.GetContext(c), req)
+	res, err := h.productSrv.GetProductList(helper.GetContext(c), req)
 
 	// 处理错误
 	if err != nil {
@@ -65,7 +65,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 // @Router /cashier/product/category/list [get]
 func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	// 获取收银产品类别列表
-	res, err := h.productService.GetProductCategoryList(helper.GetCompanyUuid(c))
+	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
 
 	// 处理错误
 	if err != nil {
@@ -89,7 +89,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 	// 创建收银产品处理程序
 	wrapper := ProductHandler{
-		productService: service.NewProductSrv(
+		productSrv: service.NewProductSrv(
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
 		),

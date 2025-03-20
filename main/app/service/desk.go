@@ -142,53 +142,74 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 
 // GetDeskPing 获取桌台详情-用于定时轮询
 func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPing, error) {
-	var res resp.DeskPing
+	res := resp.DeskPing{
+		DeskInfo: resp.Desk{},
+		SentKitchenProducts: resp.SentKitchenProductList{
+			List: make([]resp.SentKitchenProduct, 0),
+		},
+	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
 	if err != nil {
 		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
 	}
 	res.DeskInfo = desk.GetDeskResp()
+
+	// 如果没有销售账单,直接返回
+	if desk.SaleBill == nil {
+		return res, nil
+	}
+
+	// 计算未送厨商品金额
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillWithProducts(desk.SaleBillUuid)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单所有商品信息失败")
+	}
+	for _, order := range saleBill.SaleOrders {
+		res.UnsentKitchenInfo.ProductAmount = utils.DecimalAdd(res.UnsentKitchenInfo.ProductAmount, order.GetUnCookingProductAmount())
+	}
+
+	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
+	shopCart, err := s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+	}
+
+	// 是否已拆单，用于点餐助手端
+	res.IsSplitOrder = len(shopCart.SaleOrderList) > 1
+
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
-	if desk.SaleBill != nil {
-		shopCart, err := s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
-		if err != nil {
-			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
-		}
-		res.IsSplitOrder = len(shopCart.SaleOrderList) > 1
-		for _, saleOrder := range shopCart.SaleOrderList {
-			for _, product := range saleOrder.ProductList {
-				// 未送厨，且不是赠菜
-				if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
-					res.UnsentKitchenInfo.ProductNum = res.UnsentKitchenInfo.ProductNum + product.Num
+	for _, saleOrder := range shopCart.SaleOrderList {
+		for _, product := range saleOrder.ProductList {
+			// 合计未送厨商品数量
+			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
+				res.UnsentKitchenInfo.ProductNum = res.UnsentKitchenInfo.ProductNum + product.Num
+			}
+			// 合计已送厨商品列表
+			if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) {
+				var sentKitchenNum, finishedNum uint
+				if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
+					sentKitchenNum = existsProduct.SentKitchenNum + product.Num
+					finishedNum = existsProduct.FinishedNum + product.FinishedNum
+				} else {
+					sentKitchenNum = product.Num
+					finishedNum = product.FinishedNum
 				}
-				// 送厨和完成数量
-				if product.Status == constant.SaleOrderProductStatusCooking {
-					var sentKitchenNum, finishedNum uint
-					if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
-						sentKitchenNum = existsProduct.SentKitchenNum + product.Num
-						finishedNum = existsProduct.FinishedNum + product.FinishedNum
-					} else {
-						sentKitchenNum = product.Num
-						finishedNum = product.FinishedNum
-					}
-					productPackageUuidMap[product.ProductPackageUuid] = resp.SentKitchenProduct{
-						ProductPackageUuid: product.ProductPackageUuid,
-						SentKitchenNum:     sentKitchenNum,
-						FinishedNum:        finishedNum,
-					}
+				productPackageUuidMap[product.ProductPackageUuid] = resp.SentKitchenProduct{
+					ProductPackageUuid: product.ProductPackageUuid,
+					SentKitchenNum:     sentKitchenNum,
+					FinishedNum:        finishedNum,
 				}
 			}
 		}
-		saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillWithProducts(desk.SaleBillUuid)
-		for _, order := range saleBill.SaleOrders {
-			res.UnsentKitchenInfo.ProductAmount = utils.DecimalAdd(res.UnsentKitchenInfo.ProductAmount, order.GetUnCookingProductAmount())
-		}
 	}
+
+	// 转换成切片
 	sentKitchenProducts := make([]resp.SentKitchenProduct, 0, len(productPackageUuidMap))
 	for _, product := range productPackageUuidMap {
 		sentKitchenProducts = append(sentKitchenProducts, product)
 	}
+
 	res.SentKitchenProducts = resp.SentKitchenProductList{
 		List: sentKitchenProducts,
 	}
