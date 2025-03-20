@@ -492,7 +492,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	printerLogSrv := printerService.NewPrinterLogSrv(dbm, settingSrv)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
