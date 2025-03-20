@@ -176,7 +176,9 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 	}
 
 	// 自助餐信息
-	res.Buffet = *shopCart.Buffet
+	if shopCart.Buffet != nil {
+		res.Buffet = *shopCart.Buffet
+	}
 
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	for _, saleOrder := range shopCart.SaleOrderList {
