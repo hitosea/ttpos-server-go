@@ -1,0 +1,88 @@
+package menu
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+)
+
+type Handler struct {
+	productSrv service.IProductSrv // 产品服务
+}
+
+// GetProductCategoryList 获取产品类别列表
+// @Summary 获取产品类别列表
+// @Description 获取产品类别列表
+// @Tags 电子菜单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.ProductCategoryListResp} "成功"
+// @Router /menu/product/category/list [get]
+func (h *Handler) GetProductCategoryList(c *gin.Context) {
+	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// GetProductList 获取收银产品列表
+// @Summary 获取收银产品列表
+// @Description 获取收银产品列表
+// @Tags 电子菜单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} dto.Response{data=product_resp.ProductListWithPaginationResp} "成功"
+// @Router /menu/product/list [get]
+func (h *Handler) GetProductList(c *gin.Context) {
+	listReq := req.ProductListReq{}
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductList(helper.GetContext(c), listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// RegisterMenuHandlers 注册菜单路由
+func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+
+	productService := service.NewProductSrv(dbm, localeSrv)
+	// 初始化处理器
+	wrapper := Handler{
+		productSrv: productService,
+	}
+	// 需要认证
+	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
+	{
+		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取产品类别列表
+		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取产品列表
+	}
+}

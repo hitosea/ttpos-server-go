@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
 	"ttpos-server-go/app/api/v1/kitchen"
+	"ttpos-server-go/app/api/v1/menu"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
@@ -67,6 +68,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		h5Group := apiV1.Group("/h5")
 		{
 			h5.RegisterH5Handlers(h5Group, dbm, cache)
+		}
+		// 电子菜单菜单
+		menuGroup := apiV1.Group("/menu")
+		{
+			menu.RegisterMenuHandlers(menuGroup, dbm, cache)
 		}
 		// 厨房端
 		kitchenGroup := apiV1.Group("/kitchen")

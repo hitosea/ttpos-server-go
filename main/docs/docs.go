@@ -11657,6 +11657,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/menu/product/category/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取产品类别列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电子菜单"
+                ],
+                "summary": "获取产品类别列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取收银产品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电子菜单"
+                ],
+                "summary": "获取收银产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.ProductListWithPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/passport/captcha": {
             "get": {
                 "produces": [
@@ -15640,7 +15734,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "sale_order_uuid": {
-                    "description": "销售订单UUID",
+                    "description": "第一个销售订单UUID",
                     "type": "integer"
                 },
                 "status": {
@@ -15795,6 +15889,14 @@ const docTemplate = `{
         "resp.DeskPing": {
             "type": "object",
             "properties": {
+                "buffet": {
+                    "description": "自助餐信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BuffetInfo"
+                        }
+                    ]
+                },
                 "desk_info": {
                     "description": "桌台信息",
                     "allOf": [

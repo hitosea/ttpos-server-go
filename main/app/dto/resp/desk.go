@@ -79,6 +79,7 @@ type DeskPing struct {
 	DeskInfo            Desk                   `json:"desk_info"`             // 桌台信息
 	UnsentKitchenInfo   UnsentKitchenInfo      `json:"unsent_kitchen_info"`   // 未送厨商品信息
 	SentKitchenProducts SentKitchenProductList `json:"sent_kitchen_products"` // 已送厨商品列表
+	Buffet              BuffetInfo             `json:"buffet"`                // 自助餐信息
 }
 
 type UnsentKitchenInfo struct {
