@@ -7,7 +7,6 @@ use hg\apidoc\annotation as Apidoc;
 use app\common\model\order\UserRechargeOrder as UserRechargeOrderModel;
 use app\shop\service\order\UserRechargeExportService;
 use help\HttpHelp;
-use think\facade\Log;
 
 /**
  * 充值订单（v1.1.0）
@@ -59,7 +58,7 @@ class UserRechargeOrder extends Controller
     private function buildListQueryParams($data)
     {
         // 搜索日期类型: 0全部 1今天 2昨天 3本周
-        $dateType = $data['time_type'] - 1;
+        $dateType = ($data['time_type'] ?: 0) - 1;
         // 搜索订单号
         $orderNo = $data['order_no'] ?? '';
         // 搜索日期范围
@@ -145,7 +144,6 @@ class UserRechargeOrder extends Controller
     {
         $data = $this->postData();
         $data['list_rows'] = 1000;
-        Log::debug('data:' . json_encode($data));
         // 请求获取充值订单列表接口
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/list', $this->buildListQueryParams($data), [
             'Authorization: Bearer ' . $data['token'],
