@@ -4359,7 +4359,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	return shopCartInfo, nil
 }
 
-// InstantOrderMustPlan 获取点餐必点方案
+// InstantOrderMustPlan2 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (*resp.ShopCart, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 

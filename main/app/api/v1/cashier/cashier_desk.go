@@ -594,7 +594,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param sale_bill_uuid path string true "账单ID"
+// @Param data query req.OrderCartInfoReq true "请求参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cart/info [get]
