@@ -631,10 +631,12 @@ func (model *SaleOrder) calcZeroFee(amount float64) float64 {
 func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 	amount := float64(0)
 	for _, saleOrderProduct := range products {
-		// 商品的最终金额
-		giftFee := saleOrderProduct.GetPrice()
-		// 累计各个赠品的最终金额
-		amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
+		if saleOrderProduct.IsGiftProduct() {
+			// 商品的最终金额
+			giftFee := saleOrderProduct.GetPrice()
+			// 累计各个赠品的最终金额
+			amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
+		}
 	}
 	return amount
 }
