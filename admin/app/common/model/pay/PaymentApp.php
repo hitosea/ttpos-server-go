@@ -37,7 +37,7 @@ class PaymentApp extends BaseModel
     {
         // 获取支付服务环境配置
         $ip = env('PAY_SERVICE_IP');
-        $url = env('PAY_SERVICE_URL') . env('PAY_SERVICE_AUTH_URI');
+        $url = env('PAY_SERVICE_URL') . '/api/platform/add';
         $pbk = env('PAY_SERVICE_RSA_PUBLIC_KEY');
 
         // 检查环境配置

@@ -35,27 +35,6 @@ import (
 // 请求超时
 const REQUEST_TIME_OUT = 10
 
-// 支付方式
-const (
-	LIANLIAN_WECHAT_PAY      = "/api/receipts/lianlianWechatPay"
-	LIANLIAN_PROMPT_PAY      = "/api/receipts/lianlianQrPromptPay"
-	LIANLIAN_ALI_OFFLINE_PAY = "/api/receipts/lianlianAliOfflinePay"
-)
-
-// 支付类型
-const (
-	CASHIER_ORDER  = 1
-	RECHARGE_ORDER = 2
-)
-
-// PaymentRepo 连连支付仓库
-type PaymentRepo struct {
-	dbm                           *database.DBManager
-	ctx                           contexts.Context
-	payServiceUrl                 string
-	payServiceLianlianCallbackUrl string
-}
-
 // LianLianPaymentRepo 连连支付仓库
 type LianLianPaymentResp struct {
 	CallbackUrl     string `json:"callback_url"`      // 回调地址
@@ -83,13 +62,41 @@ type LianLianPaymentResp struct {
 	} `json:"order"`
 }
 
+// PaymentRepo 连连支付仓库
+type PaymentRepo struct {
+	dbm               *database.DBManager
+	ctx               contexts.Context
+	payServiceUrl     string
+	payCallbackUrl    string // 支付回调地址
+	refundCallbackUrl string // 退款回调地址
+}
+
 // NewPaymentRepo 创建连连支付仓库
 func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo {
 	return &PaymentRepo{
-		ctx:                           ctx,
-		dbm:                           dbm,
-		payServiceUrl:                 viper.GetString("PAY_SERVICE_URL"),
-		payServiceLianlianCallbackUrl: viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL"),
+		ctx:           ctx,
+		dbm:           dbm,
+		payServiceUrl: viper.GetString("PAY_SERVICE_URL"),
+		payCallbackUrl: func() string {
+			if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
+				if viper.GetString("DOMAIN") != "" {
+					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/callback"
+				} else {
+					return ""
+				}
+			}
+			return viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL")
+		}(),
+		refundCallbackUrl: func() string {
+			if viper.GetString("PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL") == "" {
+				if viper.GetString("DOMAIN") != "" {
+					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/refund/callback"
+				} else {
+					return ""
+				}
+			}
+			return viper.GetString("PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL")
+		}(),
 	}
 }
 
@@ -136,7 +143,7 @@ func (p *PaymentRepo) CreatePayment(
 		"CHECK_OUT",
 		"CASHIER",
 		p.ctx.GetStaffUuid(),
-		strings.ReplaceAll(p.payServiceLianlianCallbackUrl, "/", "\\/"),
+		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
 	)
 
 	// 计算签名
@@ -357,14 +364,15 @@ func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, err
 	// 根据支付方式调用不同的支付接口
 	var url string
 	var orderType string
+	// 支付方式
 	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay {
-		url = p.payServiceUrl + LIANLIAN_WECHAT_PAY
+		url = p.payServiceUrl + "/api/receipts/lianlianWechatPay"
 		orderType = "LIANLIAN_WECHAT"
 	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
-		url = p.payServiceUrl + LIANLIAN_ALI_OFFLINE_PAY
+		url = p.payServiceUrl + "/api/receipts/lianlianAliOfflinePay"
 		orderType = "LIANLIAN_ALI_OFFLINE_PAY"
 	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianQRPromptPay {
-		url = p.payServiceUrl + LIANLIAN_PROMPT_PAY
+		url = p.payServiceUrl + "/api/receipts/lianlianQrPromptPay"
 		orderType = "LIANLIAN_QR_PROMPT_PAY"
 	} else {
 		return "", "", errors.New("不支持的支付方式")
@@ -382,7 +390,7 @@ func (p *PaymentRepo) validateConfig(companyUuid uint64) (*model.PaymentApp, err
 	if p.payServiceUrl == "" {
 		return nil, errors.New("未配置PAY_SERVICE_URL")
 	}
-	if p.payServiceLianlianCallbackUrl == "" {
+	if p.payCallbackUrl == "" {
 		return nil, errors.New("未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL")
 	}
 	return paymentApp, nil
