@@ -389,7 +389,14 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 		}
 	}
 	//
-	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit, slices.Min(nonOrderingTimes), slices.Min(reminderOrderTimes)
+	var minNonOrderingTime, minReminderOrderTime uint
+	if len(nonOrderingTimes) > 0 {
+		minNonOrderingTime = slices.Min(nonOrderingTimes)
+	}
+	if len(reminderOrderTimes) > 0 {
+		minReminderOrderTime = slices.Min(reminderOrderTimes)
+	}
+	return saleOrderBuffetCustomerTypes, newBuffetUuids, mealNum, maxTimeLimit, minNonOrderingTime, minReminderOrderTime
 }
 
 // GetPercentageList 获取当前订单的百分比对象列表

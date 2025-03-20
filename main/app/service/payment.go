@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -117,7 +116,7 @@ func (p *PaymentRepo) CreatePayment(
 	// 创建支付订单仓库
 	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
 	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
-	merchantOrderNo := p.generateMerchantOrderNo()
+	merchantOrderNo := utils.GenerateMerchantOrderNo("PS")
 
 	// 获取支付配置
 	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
@@ -257,6 +256,132 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 		return &order, nil
 	}
 	return nil, nil
+}
+
+// Refund 创建退款
+func (p *PaymentRepo) Refund(
+	relatedType int,
+	relatedUuid uint64,
+	paymentMethodUuid uint64,
+	paymentMethodCode int,
+	paymentAmount float64,
+	commissionFee float64,
+) (*model.LlPaymentOrder, error) {
+	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建支付订单仓库
+	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
+	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
+	merchantOrderNo := utils.GenerateMerchantOrderNo("PS")
+
+	// 获取支付配置
+	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
+	if err != nil {
+		return nil, err
+	}
+
+	// 判断是否已存在有效待支付二维码
+	order, err := p.GetValidPaymentOrderByUuid(relatedType, relatedUuid, orderType, merchantUserId, paymentAmount)
+	if err != nil {
+		return nil, err
+	}
+	if order != nil {
+		return order, nil
+	}
+
+	// 组装请求数据
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
+		p.ctx.GetCompanyUuid(),
+		merchantOrderNo,
+		paymentAmount,
+		"THB",
+		"CHECK_OUT",
+		"CASHIER",
+		p.ctx.GetStaffUuid(),
+		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
+	)
+
+	// 计算签名
+	response, err := p.postRequest(url, jsonStr, map[string]string{
+		"Content-Type": "application/json; charset=utf-8",
+		"sign":         p.paySign(paymentApp.LlSignSalt, jsonStr),
+	}, REQUEST_TIME_OUT)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回支付结果
+	var resp LianLianPaymentResp
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	// 然后将 JSON 字符串解析到结构体中
+	if err := json.Unmarshal(responseJSON, &resp); err != nil {
+		return nil, err
+	}
+	// 当是微信或者支付宝支付的时候，需要把LinkUrl转换成二维码
+	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay || paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+		if resp.Order.QrCode == "" {
+			qr, err := qrcode.New(resp.Order.LinkUrl, qrcode.Medium)
+			if err != nil {
+				return nil, err
+			}
+			// 生成PNG格式的二维码图片
+			png, err := qr.PNG(256) // 生成256x256大小的PNG图片
+			if err != nil {
+				return nil, err
+			}
+			// 转换为base64
+			resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+		}
+		if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+			resp.Order.CreateTime = resp.Order.OrderCreateTime
+		}
+	} else {
+		// PromptPay直接使用返回的QR code
+		resp.Order.QrCode = "data:image/png;base64," + resp.Order.QrCode
+	}
+
+	// 生成雪花ID
+	uuid, err := utils.GetID()
+	if err != nil {
+		return nil, errors.New("生成雪花ID失败")
+	}
+
+	// 创建支付订单
+	paymentOrder := &model.LlPaymentOrder{
+		PaymentOrderUuid:  uuid,
+		PaymentMethodUuid: paymentMethodUuid,
+		RelatedType:       relatedType,
+		RelatedUuid:       relatedUuid,
+		MerchantOrderId:   merchantOrderNo,
+		MerchantId:        resp.Order.MerchantId,
+		OrderId:           resp.Order.OrderId,
+		OrderType:         resp.PayTypeDesc,
+		OrderStatus:       resp.Order.OrderStatus,
+		OrderAmount:       paymentAmount,
+		OrderCurrency:     resp.Order.OrderCurrency,
+		FullName:          "CASHIER",
+		OrderDesc:         resp.PayTypeDesc,
+		LinkUrl:           resp.Order.QrCode,
+		MerchantUserId:    merchantUserId,
+		LlCreateTime:      resp.Order.CreateTime,
+		CommissionFee:     commissionFee,
+	}
+	// 设置创建时间
+	paymentOrder.CreateTime = time.Now().Unix()
+	// 设置过期时间
+	paymentOrder.ExpiredTime = paymentOrder.CreateTime + paymentOrder.GetAliveTime()
+	// 保存支付订单
+	if _, err := llPaymentOrderRepo.Create(*paymentOrder); err != nil {
+		return nil, err
+	}
+	// 返回支付订单
+	return paymentOrder, nil
 }
 
 // HandleCallback 处理支付回调
@@ -486,15 +611,4 @@ func (p *PaymentRepo) postRequest(url string, jsonData string, headers map[strin
 	}
 
 	return responseData, nil
-}
-
-/**
-* 请求支付订单号
-* @return string
- */
-func (p *PaymentRepo) generateMerchantOrderNo() string {
-	prefix := "PS"
-	datePart := time.Now().Format("20060102150405")
-	randomPart := fmt.Sprintf("%08d", rand.Intn(100000000))
-	return prefix + datePart + randomPart
 }

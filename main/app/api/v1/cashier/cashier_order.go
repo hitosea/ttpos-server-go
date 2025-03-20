@@ -161,9 +161,9 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderSrv.ReturnOrder(ctx, req)
+	err, codeFail := h.orderSrv.ReturnOrder(ctx, req)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.Fail(c, codeFail, err.Error())
 		return
 	}
 	// 返回结果

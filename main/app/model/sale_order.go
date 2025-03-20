@@ -123,10 +123,12 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 			amount = returnAmount
 		}
 		returnOrderAmounts = append(returnOrderAmounts, ReturnOrderAmount{
-			ReturnOrderUuid:   returnOrderUuid,
-			PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
-			PaymentOrderUuid:  paymentOrder.PaymentOrderUuid,
-			Amount:            amount.InexactFloat64(),
+			ReturnOrderUuid:       returnOrderUuid,
+			PaymentMethodUuid:     paymentOrder.PaymentMethodUuid,
+			PaymentOrderUuid:      paymentOrder.PaymentOrderUuid,
+			Amount:                amount.InexactFloat64(),
+			MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("PS"),
+			PaymentMethod:         &PaymentMethod{Code: paymentOrder.PaymentMethodCode},
 		})
 		returnAmount = returnAmount.Sub(amount)
 		// 如果退款金额为0，则退出

@@ -49,7 +49,7 @@ type IOrderSrv interface {
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                          // 获取订单详情
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                 // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                 // 删除订单
-	ReturnOrder(ctx context.Context, req req.OrderReturnReq) error                                                                                 // 退款订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                          // 退款订单
 	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                         // 获取退款信息
 	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                         // 获取反结账信息
 	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                        // 反结账
@@ -1236,7 +1236,7 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 }
 
 // ReturnOrder 退款订单
-func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) error {
+func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
@@ -1248,13 +1248,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 	// 获取销售账单信息
 	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
-		return errors.WithMessage(err)
+		return errors.WithMessage(err), constant.CodeFail
 	}
 
 	// 获取销售订单信息
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
-		return errors.WithMessage(errors.New("找不到销售订单"))
+		return errors.WithMessage(errors.New("找不到销售订单")), constant.CodeFail
 	}
 
 	returnType := constant.ReturnOrderRefundTypeTotal
@@ -1285,7 +1285,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 		// 注意：要判断订单商品是否还有可退货数量
 		saleOrderProductList := saleOrder.GetSaleOrderProductList(saleOrderProductUuids)
 		if len(saleOrderProductList) == 0 {
-			return errors.WithMessage(errors.New("找不到退货商品"))
+			return errors.WithMessage(errors.New("找不到退货商品")), constant.CodeFail
 		}
 		for _, saleOrderProduct := range saleOrderProductList {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
@@ -1294,7 +1294,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 				if num <= canReturnNum {
 					saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				} else {
-					return errors.WithMessage(errors.New("退货数量超过可退货数量"))
+					return errors.WithMessage(errors.New("退货数量超过可退货数量")), constant.CodeFail
 				}
 			}
 		}
@@ -1302,11 +1302,21 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 
 	// 如果退款类型为部分退款，则必须有可退货的商品。整单退款则可以没有可退货的商品，可能已经退完商品了但还有手续费没有退
 	if len(saleOrderProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
-		return errors.WithMessage(errors.New("没有可退货的商品"))
+		return errors.WithMessage(errors.New("没有可退货的商品")), constant.CodeFail
 	}
 
 	// 创建退款单
 	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, numMap, returnType)
+
+	// 是否存在QrPromptPay支付
+	if returnOrder.IsExistQrPromptPay() {
+		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
+			return errors.WithMessage(errors.New("请选择银行")), constant.CodeReturnOrderBank
+		}
+		returnOrder.BankCode = req.BankCode
+		returnOrder.AccountNo = req.AccountNo
+		returnOrder.AccountName = req.AccountName
+	}
 
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建退货单
@@ -1324,11 +1334,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) erro
 		return nil
 	})
 	if err != nil {
-		return errors.WithMessage(err)
+		return errors.WithMessage(err), constant.CodeFail
 	}
-	// 发布退款事件 todo
-	// 退款到余额或现金 todo
-	return nil
+
+	// todo 发布退款事件
+	// todo 退款到余额或现金
+	// todo 回退积分
+	return nil, 0
 }
 
 // GetReturnOrderInfo 获取退款信息

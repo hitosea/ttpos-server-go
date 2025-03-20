@@ -73,6 +73,11 @@ func (model *PaymentMethod) IsLianLianPay() bool {
 	return true
 }
 
+// IsQrPromptPay 是否QrPromptPay 支付
+func (model *PaymentMethod) IsQrPromptPay() bool {
+	return model.Code == constant.PaymentMethodCodeLianLianQRPromptPay
+}
+
 // 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
 	return slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,

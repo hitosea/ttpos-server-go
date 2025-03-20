@@ -57,6 +57,10 @@ type OrderReturnReq struct {
 	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID。退款都是针对子单进行退款
 	Products      []OrderReturnProduct `json:"products"`        // 退款商品UUID列表. 如果为空，则退款所有商品,即整单退款
+	// 退款账户信息
+	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
+	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
+	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
 }
 
 type OrderReturnProduct struct {
