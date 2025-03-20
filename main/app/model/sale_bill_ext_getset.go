@@ -332,6 +332,42 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	return h5OrderProducts
 }
 
+// 获取超过限购的商品
+func (model *SaleBill) GetSaleOrderProductOverLimit() []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+
+	saleOrderProductAll := model.GetSaleOrderProductAll()
+	// product_package_uuid => num
+	numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
+	// product_package_uuid => ProductPackage
+	productPackageMap := make(map[uint64]*ProductPackage) // key为商品包uuid value为已购买数量
+	// product_package_uuid => SaleOrderProduct
+	saleOrderProductMap := make(map[uint64]*SaleOrderProduct) // key为商品包uuid value为订单商品
+	for _, saleOrderProduct := range saleOrderProductAll {
+		// 限购检查只检查本台的商品，并台过来的商品不记.
+		// 跳过非本台的商品
+		if !saleOrderProduct.IsCurrentDeskProduct() {
+			continue
+		}
+		productPackageUuid := saleOrderProduct.ProductPackageUuid
+		productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
+		numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
+		saleOrderProductMap[productPackageUuid] = saleOrderProduct
+	}
+
+	for productPackageUuid, num := range numMap {
+		limitNum := productPackageMap[productPackageUuid].LimitNum
+		// 0表示不限购
+		if limitNum == 0 {
+			continue
+		}
+		if num > limitNum {
+			products = append(products, saleOrderProductMap[productPackageUuid])
+		}
+	}
+	return products
+}
+
 func (model *SaleBill) SetNil() {
 	model.SaleOrders = nil
 	model.H5OrderProducts = nil

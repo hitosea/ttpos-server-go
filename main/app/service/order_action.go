@@ -242,6 +242,14 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
 
+	// 检查限购
+	{
+		overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+		if len(overLimitProducts) > 0 {
+			return nil, errors.New("商品超过限购")
+		}
+	}
+
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil
 }

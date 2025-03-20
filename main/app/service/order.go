@@ -3411,6 +3411,14 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
+	// 检查限购
+	{
+		overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+		if len(overLimitProducts) > 0 {
+			return nil, errors.New("商品超过限购")
+		}
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errUpdate

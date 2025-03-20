@@ -126,6 +126,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 			MustType:     plan.GetMustType(),
 			MustRule:     plan.GetMustRule(),
 			CanChangeNum: plan.IsCustomerCanChange(),
+			MealNum:      1,           // 点餐必点方案的MealNum为1
 			SelectedNum:  selectedNum, // 已选择xx份
 			NeedNum:      needNum,     // 还差xx份。不应该算上自动加购商品的数量
 			Products:     resp.ProductPackageList{List: productPackageList},
