@@ -85,13 +85,13 @@ func (h *RechargeOrderHandler) GetRechargeOrderInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.RechargeOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @param data query req.RechargeOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
 // @Success 200 {object} dto.Response{data=resp.RechargeOrderPaymentQrcodeInfoResp}
 // @Router /cashier/recharge_order/payment/qrcode [get]
 func (h *RechargeOrderHandler) GetRechargeOrderPaymentQrcode(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	params := req.RechargeOrderPaymentQrcodeReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBindQuery(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}

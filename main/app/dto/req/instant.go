@@ -211,10 +211,10 @@ type OrderCartInfoReq struct {
 
 // InstantOrderPaymentQrcodeReq
 type InstantOrderPaymentQrcodeReq struct {
-	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID, 必填
-	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID, 必填
-	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
-	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+	SaleBillUuid      uint64  `form:"sale_bill_uuid" json:"sale_bill_uuid"`           // 销售账单UUID, 必填
+	SaleOrderUuid     uint64  `form:"sale_order_uuid" json:"sale_order_uuid"`         // 销售订单UUID, 必填
+	PaymentMethodUuid uint64  `form:"payment_method_uuid" json:"payment_method_uuid"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `form:"payment_amount" json:"payment_amount"`           // 支付金额, 必填
 }
 
 func (r *InstantOrderPaymentQrcodeReq) Validate() error {
