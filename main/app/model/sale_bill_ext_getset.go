@@ -347,6 +347,9 @@ func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName
 	model.DutyNo = dutyNo
 	model.CashierUuid = cashierUuid
 	model.CashierName = cashierName
+	for _, saleOrder := range model.SaleOrders {
+		saleOrder.SetCashier(cashierUuid, cashierName)
+	}
 }
 
 // 设置打包销售账单。并更新订单的税率

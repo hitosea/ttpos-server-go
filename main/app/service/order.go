@@ -5349,6 +5349,8 @@ func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T
 func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
 	// 计算订单商品、订单、账单
 	saleBill.CalcAll(options...)
+	// 设置收银员信息
+	saleBill.SetCashier(ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
 	// 保存到数据库
 	if db == nil {
 		db = s.dbm.GetDB(ctx.GetDbId())

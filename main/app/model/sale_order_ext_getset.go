@@ -496,6 +496,11 @@ func (model *SaleOrder) SetNil() {
 	model.SaleOrderBuffetDelayProducts = nil
 }
 
+func (model *SaleOrder) SetCashier(cashierUuid uint64, cashierName string) {
+	model.CashierUuid = cashierUuid
+	model.CashierName = cashierName
+}
+
 // 设置会员折扣，并修改订单商品的折扣
 func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, cardDiscount float64) {
 	// 修改订单的会员信息
