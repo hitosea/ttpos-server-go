@@ -4888,7 +4888,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取支付二维码",
+                "description": "获取支付方式的二维码信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -4898,15 +4898,15 @@ const docTemplate = `{
                 "tags": [
                     "收银端.桌台.结账"
                 ],
-                "summary": "获取支付二维码",
+                "summary": "获取支付方式的二维码信息",
                 "parameters": [
                     {
-                        "description": "创建一个支付单参数",
+                        "description": "获取支付方式的二维码信息参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.InstantOrderPaymentCreateReq"
+                            "$ref": "#/definitions/req.InstantOrderPaymentQrcodeReq"
                         }
                     }
                 ],
@@ -4922,7 +4922,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentQrcodeInfoResp"
                                         }
                                     }
                                 }
@@ -13496,6 +13496,27 @@ const docTemplate = `{
                 }
             }
         },
+        "req.InstantOrderPaymentQrcodeReq": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额, 必填",
+                    "type": "number"
+                },
+                "payment_method_uuid": {
+                    "description": "支付方式UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.InstantOrderPaymentZeroRuleReq": {
             "type": "object",
             "properties": {
@@ -16068,6 +16089,31 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.PaymentInfoList"
                         }
                     ]
+                }
+            }
+        },
+        "resp.InstantOrderPaymentQrcodeInfoResp": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_order_uuid": {
+                    "description": "支付单uuid",
+                    "type": "integer"
+                },
+                "qr_code": {
+                    "description": "支付单二维码",
+                    "type": "string"
+                },
+                "qr_code_expire_sec": {
+                    "description": "支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码)",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付单状态 支付状态, 0-未支付 1-已支付",
+                    "type": "integer"
                 }
             }
         },

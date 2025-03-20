@@ -6500,41 +6500,58 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 
 // GetUnsentKitchen 未送厨商品列表
 func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
+	// 初始化返回结果
 	res := resp.UnsentKitchen{
 		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
 		AmountInfo: resp.SimpleAmountInfo{},
 	}
+
+	// 获取购物车信息
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
+
+	// 按商品签名分组并合并相同商品
 	signProduct := make(map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			// 未送厨，且不是赠菜
-			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
-				if p, exists := signProduct[product.Sign]; exists {
-					product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
-					product.Num = p.Num + product.Num
-				}
-				signProduct[product.Sign] = product
-				res.AmountInfo.ProductNum = res.AmountInfo.ProductNum + product.Num
+			// 只处理未送厨且非赠菜的商品
+			if product.Status != constant.SaleOrderProductStatusNormal || product.IsGift {
+				continue
 			}
+
+			// 合并相同商品的数量和折扣价格
+			if p, exists := signProduct[product.Sign]; exists {
+				product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
+				product.Num = p.Num + product.Num
+			}
+			signProduct[product.Sign] = product
+			res.AmountInfo.ProductNum += product.Num
 		}
 	}
+
+	// 将合并后的商品添加到结果列表
+	res.Products.List = make([]resp.Product, 0, len(signProduct))
 	for _, product := range signProduct {
 		res.Products.List = append(res.Products.List, product)
 	}
+
+	// 按送厨时间排序
 	sort.Slice(res.Products.List, func(i, j int) bool {
 		return res.Products.List[i].SendKitchenTime < res.Products.List[j].SendKitchenTime
 	})
+
+	// 获取销售账单信息并计算未送厨商品总金额
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
 	}
+
 	for _, order := range saleBill.SaleOrders {
 		res.AmountInfo.ProductAmount = utils.DecimalAdd(res.AmountInfo.ProductAmount, order.GetUnCookingProductAmount())
 	}
+
 	return res, nil
 }
 
@@ -6544,48 +6561,59 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64) (res
 	if err != nil {
 		return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
 	}
-	var productNum uint
-	productGroup := make(map[int64][]resp.Product)
+
+	// 统计已送厨商品并按送厨时间分组
+	productNum := uint(0)
+	productGroup := make(map[int64]map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			if product.Status == constant.SaleOrderProductStatusCooking {
-				productNum = productNum + product.Num
-				productGroup[product.SendKitchenTime] = append(productGroup[product.SendKitchenTime], product)
+			if product.Status != constant.SaleOrderProductStatusCooking {
+				continue
 			}
-		}
-	}
 
-	groups := make([]resp.SentKitchenProductGroup, 0, len(productGroup))
-	for sendKitchenTime, products := range productGroup {
-		// 分组内的商品合并
-		signProduct := make(map[string]resp.Product)
-		for _, product := range products {
-			if p, exists := signProduct[product.Sign]; exists {
+			productNum += product.Num
+
+			// 按送厨时间分组,并在组内按商品签名合并
+			if _, exists := productGroup[product.SendKitchenTime]; !exists {
+				productGroup[product.SendKitchenTime] = make(map[string]resp.Product)
+			}
+
+			if p, exists := productGroup[product.SendKitchenTime][product.Sign]; exists {
 				product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
 				product.Num = p.Num + product.Num
 			}
-			signProduct[product.Sign] = product
+			productGroup[product.SendKitchenTime][product.Sign] = product
 		}
-		var mergeProducts []resp.Product
-		for _, product := range signProduct {
-			mergeProducts = append(mergeProducts, product)
+	}
+
+	// 构建分组列表
+	groups := make([]resp.SentKitchenProductGroup, 0, len(productGroup))
+	for sendKitchenTime, signProducts := range productGroup {
+		products := make([]resp.Product, 0, len(signProducts))
+		for _, product := range signProducts {
+			products = append(products, product)
 		}
 
 		groups = append(groups, resp.SentKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
 			Products: resp.GroupProductList{
-				List: mergeProducts,
+				List: products,
 			},
 		})
 	}
+
+	// 按送厨时间倒序排序
 	sort.Slice(groups, func(i, j int) bool {
 		return groups[i].SendKitchenTime > groups[j].SendKitchenTime
 	})
+
+	// 获取销售账单并计算金额
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
 		return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
 	}
-	var amount resp.AmountInfo
+
+	amount := resp.AmountInfo{ProductNum: productNum}
 	for _, order := range saleBill.SaleOrders {
 		calc := order.CalcCookingSaleOrder(*saleBill.SaleBillSetting)
 		amount.ProductOriginalAmount = utils.DecimalAdd(amount.ProductOriginalAmount, calc.ProductOriginalAmount)
@@ -6596,7 +6624,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64) (res
 		amount.MemberDiscountAmount = utils.DecimalAdd(amount.MemberDiscountAmount, calc.MemberDiscountFee)
 		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
 	}
-	amount.ProductNum = productNum
+
 	return resp.SentKitchen{
 		Groups:     resp.GroupList{List: groups},
 		AmountInfo: amount,
