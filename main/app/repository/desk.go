@@ -28,7 +28,7 @@ type IDeskRepo interface {
 	UnbindDesk(deskUuid, deviceUuid uint64) error               // 平板端解绑桌台
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
-	CloseDesk(deskUuid uint64, reason string) error
+	CloseDesk(deskUuid uint64, reason string, dutyNo string) error
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
 	WhereIsDisable(isDisable int) DBOption
@@ -246,8 +246,8 @@ func (r *deskRepo) DeleteDesk(deskUuid uint64) error {
 }
 
 // CloseDesk 关闭桌台
-func (r *deskRepo) CloseDesk(deskUuid uint64, reason string) error {
-	err := NewOrderRepo(r.db).CancelDeskOrder(deskUuid, reason)
+func (r *deskRepo) CloseDesk(deskUuid uint64, reason string, dutyNo string) error {
+	err := NewOrderRepo(r.db).CancelDeskOrder(deskUuid, reason, dutyNo)
 	if err != nil {
 		return errors.WithMessage(err)
 	}

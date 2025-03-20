@@ -13,7 +13,7 @@ type SaleBill struct {
 	BaseModel
 	// 主键和标识字段
 	OrderNo  string `gorm:"column:order_no;type:varchar(255);default:'';comment:销售账单编号" json:"order_no"`
-	DutyNo   string `gorm:"column:duty_no;type:varchar(255);default:'';comment:当班编号,用于标记该账单属于哪个当班" json:"duty_no"`
+	DutyNo   string `gorm:"column:duty_no;type:varchar(255);default:'';comment:当班编号,用于标记该账单属于哪个当班" json:"duty_no"` // 创建账单时，收银员通过duty_no来标记该账单属于哪个当班；结账完成时，通过duty_no来标记该账单属于哪个当班
 	SerialNo string `gorm:"column:serial_no;type:varchar(255);default:'';comment:桌位编号 (点餐流水号)" json:"serial_no"`
 
 	// 状态相关字段

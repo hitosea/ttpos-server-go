@@ -390,9 +390,10 @@ func (model *SaleBill) SetReverseSettle() {
 }
 
 // 设置销售账单完成
-func (model *SaleBill) SetFinishSaleBill() {
+func (model *SaleBill) SetFinishSaleBill(dutyNo string) {
 	model.Status = constant.SaleBillStatusComplete
 	model.FinishTime = time.Now().Unix()
+	model.DutyNo = dutyNo
 }
 
 // 设置自助餐套餐

@@ -525,7 +525,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 
 	// 构建销售账单
-	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo)
+	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo, ctx.GetStaff().DutyNo)
 
 	// 构建销售账单设置
 	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
@@ -1160,13 +1160,13 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 			return errors.WithMessage(err)
 		}
 		// 关闭桌台
-		err = deskRepo.CloseDesk(billInfo.DeskUuid, req.CancelReason)
+		err = deskRepo.CloseDesk(billInfo.DeskUuid, req.CancelReason, staff.DutyNo)
 		if err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)
 		}
 	} else {
-		err = orderRepo.CancelOrder(req.SaleBillUuid, req.CancelReason)
+		err = orderRepo.CancelOrder(req.SaleBillUuid, req.CancelReason, staff.DutyNo)
 		if err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)
@@ -4937,7 +4937,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 更新销售账单
 	updateSaleBill := false
 	if saleBill.CanFinishSaleBill() {
-		saleBill.SetFinishSaleBill()
+		saleBill.SetFinishSaleBill(ctx.GetStaff().DutyNo)
 		saleBill.CalcAll()
 		updateSaleBill = true
 	}
@@ -5121,7 +5121,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	updateSaleBill := false
 	// 如果销售账单中只有一个销售订单，则可以结束销售账单
 	if saleBill.CanFinishSaleBill() {
-		saleBill.SetFinishSaleBill()
+		saleBill.SetFinishSaleBill(ctx.GetStaff().DutyNo)
 		saleBill.CalcAll()
 		updateSaleBill = true
 	}
