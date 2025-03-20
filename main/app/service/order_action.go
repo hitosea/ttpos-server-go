@@ -86,7 +86,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
 		// 构建出库单
-		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid)
+		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid())
 	}
 
 	ctx.Log().Debug("准备开始更新")

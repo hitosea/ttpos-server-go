@@ -155,13 +155,13 @@ func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
 // 使用场景：
 // 1. 送厨时，下单减库存，创建出库单
 // 2. 结账时，判断订单的每个商品是否都已有对应的出库记录，如果没有，则创建出库单
-func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64) *WarehouseOutForm {
+func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64, staffUuid uint64) *WarehouseOutForm {
 	uuid, _ := utils.GetID()
 	form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
 	form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
 	form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
 	form.AssociatedOrderUuid = saleBillUuid
-
+	form.OperatorUuid = staffUuid
 	status := constant.WarehouseOutFormItemStatusPre
 	if isCheckout {
 		status = constant.WarehouseOutFormItemStatusSuccess

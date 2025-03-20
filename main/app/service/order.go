@@ -1609,7 +1609,7 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		warehouseOutForm = model.NewWarehouseOutForm(productList, false, saleBill.Uuid)
+		warehouseOutForm = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid())
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -4999,7 +4999,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 	// 构建出库单
-	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid)
+	warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 			// 创建出库单
