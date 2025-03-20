@@ -117,28 +117,30 @@ type IOrderSrv interface {
 
 // orderSrv 订单服务结构
 type orderSrv struct {
-	bus         *event.SystemEventBus
-	dbm         *database.DBManager // 数据库管理器
-	lock        lock.Lock
-	localeSrv   ILocaleSrv
-	settingSrv  setting.ISrv
-	mustPlanSrv IMustPlanSrv
+	bus              *event.SystemEventBus
+	dbm              *database.DBManager // 数据库管理器
+	lock             lock.Lock
+	localeSrv        ILocaleSrv
+	settingSrv       setting.ISrv
+	mustPlanSrv      IMustPlanSrv
+	paymentMethodSrv IPaymentMethodSrv
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv) IOrderSrv {
 	return &orderSrv{
-		bus:         event.NewSystemBus(),
-		dbm:         dbm,
-		lock:        lock.NewSystemLock(),
-		localeSrv:   localeSrv,
-		settingSrv:  settingSrv,
-		mustPlanSrv: mustPlanSrv,
+		bus:              event.NewSystemBus(),
+		dbm:              dbm,
+		lock:             lock.NewSystemLock(),
+		localeSrv:        localeSrv,
+		settingSrv:       settingSrv,
+		mustPlanSrv:      mustPlanSrv,
+		paymentMethodSrv: paymentMethodSrv,
 	}
 }
 
@@ -4769,6 +4771,11 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 支付方式是否可用
+	if paymentMethod.IsShowMemberRecharge == 0 || !s.paymentMethodSrv.IsEnabled(ctx, *paymentMethod, ctx.GetCompanySetting()) {
+		return nil, errors.New("支付方式未开启")
 	}
 
 	// 默认支付订单状态

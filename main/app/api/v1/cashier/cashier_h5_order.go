@@ -140,7 +140,8 @@ func RegisterH5OrderHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv)
 	// 初始化处理器
 	wrapper := H5OrderHandler{
 		h5OrderSrv: service.NewH5OrderSrv(dbm, orderSrv),
