@@ -647,6 +647,34 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentQrcode 获取支付方式的二维码信息
+// @Summary 获取支付方式的二维码信息
+// @Description 获取支付方式的二维码信息
+// @Tags 收银端.点餐.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp}
+// @Router /cashier/instant/order/payment/qrcode [get]
+func (h *InstantHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付二维码
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderPaymentCreate 创建一个支付单
 // @Summary 创建一个支付单
 // @Description 创建一个支付单
@@ -1210,5 +1238,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/print", wrapper.OrderPrint)                                              // 打印
 		privateApi.POST("/instant/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 		privateApi.POST("/instant/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
+		privateApi.GET("/instant/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                          // 获取支付方式的二维码信息
 	}
 }

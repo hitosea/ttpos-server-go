@@ -37,7 +37,7 @@ class CreateLlPaymentOrderTable extends Migrator
                 ->addColumn('order_currency', 'string', ['limit' => 50, 'default' => '', 'comment' => 'lianlian订单货币'])
                 ->addColumn('full_name', 'string', ['limit' => 50, 'default' => '', 'comment' => '订单人名称'])
                 ->addColumn('order_desc', 'string', ['limit' => 50, 'default' => '', 'comment' => '订单描述'])
-                ->addColumn('link_url', 'string', ['limit' => 2000, 'default' => '', 'comment' => 'lianlian订单支付链接'])
+                ->addColumn('link_url', 'string', ['limit' => 5000, 'default' => '', 'comment' => 'lianlian订单支付链接'])
                 ->addColumn('merchant_user_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '自己系统的用户ID'])
                 ->addColumn('ll_create_time', 'string', ['limit' => 250, 'default' => '0', 'comment' => 'lianlian订单创建时间'])
                 ->addColumn('pay_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '支付时间'])

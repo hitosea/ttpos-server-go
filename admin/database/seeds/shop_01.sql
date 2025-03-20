@@ -151,6 +151,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自己系统的支付订单ID',
     `related_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '关联订单类型：0-销售订单；1-充值订单',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联的充值订单、销售订单ID',
     `merchant_id` varchar(255) DEFAULT '' COMMENT 'lianlian商户号',
     `merchant_order_id` varchar(255) DEFAULT '' COMMENT '自己系统的为支付生成的订单号',
     `order_id` varchar(255) DEFAULT '' COMMENT 'lianlian订单ID',
@@ -160,9 +161,10 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `order_currency` varchar(50) DEFAULT '' COMMENT 'lianlian订单货币',
     `full_name` varchar(50) DEFAULT '' COMMENT '订单人名称',
     `order_desc` varchar(50) DEFAULT '' COMMENT '订单描述',
-    `link_url` varchar(2000) DEFAULT '' COMMENT 'lianlian订单支付链接',
+    `link_url` text COMMENT 'lianlian订单支付链接',
     `merchant_user_id` varchar(255) DEFAULT '' COMMENT '自己系统的用户ID',
     `ll_create_time` varchar(250) DEFAULT '0' COMMENT 'lianlian订单创建时间',
+    `expired_time` int(11) NOT NULL DEFAULT 0 COMMENT '过期时间',
     `pay_time` int(11) NOT NULL DEFAULT 0 COMMENT '支付时间',
     `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
@@ -170,6 +172,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
     UNIQUE KEY `unique_uuid` (`uuid`)
     KEY `order_id` (`order_id`)
     KEY `merchant_order_id` (`merchant_order_id`)
+    KEY `related_uuid` (`related_uuid`)
     KEY `payment_order_uuid` (`payment_order_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='lianlian支付订单';
 

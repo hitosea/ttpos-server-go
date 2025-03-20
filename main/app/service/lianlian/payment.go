@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/skip2/go-qrcode"
+	"gorm.io/gorm"
 
 	"github.com/spf13/viper"
 )
@@ -94,26 +95,31 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 }
 
 // CreatePayment 创建支付
-func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paymentAmount float64) (*model.LlPaymentOrder, error) {
+func (p *PaymentRepo) CreatePayment(relatedType int, relatedUuid uint64, paymentMethodCode int, paymentAmount float64) (*model.LlPaymentOrder, error) {
 	paymentApp, err := p.ValidateConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	// 根据支付方式调用不同的支付接口
-	url := ""
-	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay {
-		url = p.payServiceUrl + LIANLIAN_WECHAT_PAY
-	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
-		url = p.payServiceUrl + LIANLIAN_ALI_OFFLINE_PAY
-	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianQRPromptPay {
-		url = p.payServiceUrl + LIANLIAN_PROMPT_PAY
-	} else {
-		return nil, errors.New("不支持的支付方式")
+	// 创建支付订单仓库
+	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
+	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
+	merchantOrderNo := p.GenerateMerchantOrderNo()
+
+	// 获取支付配置
+	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
+	if err != nil {
+		return nil, err
 	}
 
-	// 生成商户订单号
-	merchantOrderNo := p.GenerateMerchantOrderNo()
+	// 判断是否已存在有效待支付二维码
+	order, err := p.GetValidPaymentOrderByUuid(relatedType, relatedUuid, orderType, merchantUserId, paymentAmount)
+	if err != nil {
+		return nil, err
+	}
+	if order != nil {
+		return order, nil
+	}
 
 	// 组装请求数据
 	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
@@ -128,19 +134,16 @@ func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paym
 	)
 
 	// 计算签名
-	sign := p.paySign(paymentApp.LlSignSalt, jsonStr)
-	headers := map[string]string{
+	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
-		"sign":         sign,
-	}
-	response, err := p.postRequest(url, jsonStr, headers, REQUEST_TIME_OUT)
+		"sign":         p.paySign(paymentApp.LlSignSalt, jsonStr),
+	}, REQUEST_TIME_OUT)
 	if err != nil {
 		return nil, err
 	}
 
 	// 返回支付结果
 	var resp LianLianPaymentResp
-	// 首先将 map[string]interface{} 转换回 JSON 字符串
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
@@ -164,6 +167,9 @@ func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paym
 			// 转换为base64
 			resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 		}
+		if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+			resp.Order.CreateTime = resp.Order.OrderCreateTime
+		}
 	} else {
 		// PromptPay直接使用返回的QR code
 		resp.Order.QrCode = "data:image/png;base64," + resp.Order.QrCode
@@ -179,6 +185,7 @@ func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paym
 	paymentOrder := &model.LlPaymentOrder{
 		PaymentOrderUuid: uuid,
 		RelatedType:      relatedType,
+		RelatedUuid:      relatedUuid,
 		MerchantOrderId:  merchantOrderNo,
 		MerchantId:       resp.Order.MerchantId,
 		OrderId:          resp.Order.OrderId,
@@ -189,18 +196,72 @@ func (p *PaymentRepo) CreatePayment(relatedType int, paymentMethodCode int, paym
 		FullName:         "CASHIER",
 		OrderDesc:        resp.PayTypeDesc,
 		LinkUrl:          resp.Order.QrCode,
-		MerchantUserId:   fmt.Sprintf("%d", p.ctx.GetStaffUuid()),
+		MerchantUserId:   merchantUserId,
 		LlCreateTime:     resp.Order.CreateTime,
-		PayTime:          0,
 	}
-
+	// 设置创建时间
+	paymentOrder.CreateTime = time.Now().Unix()
+	// 设置过期时间
+	paymentOrder.ExpiredTime = paymentOrder.CreateTime + paymentOrder.GetAliveTime()
 	// 保存支付订单
-	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
 	if _, err := llPaymentOrderRepo.Create(*paymentOrder); err != nil {
 		return nil, err
 	}
-
+	// 返回支付订单
 	return paymentOrder, nil
+}
+
+// GetValidPaymentOrder 获取有效的支付订单
+func (p *PaymentRepo) GetValidPaymentOrderByUuid(
+	relatedType int,
+	relatedUuid uint64,
+	orderType string,
+	merchantUserId string,
+	paymentAmount float64,
+) (*model.LlPaymentOrder, error) {
+	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
+	// 判断是否已存在有效待支付二维码
+	order, err := llPaymentOrderRepo.GetPaymentOrder(
+		repository.CommonRepo.WhereBySoftDelete(),
+		func(db *gorm.DB) *gorm.DB {
+			db = db.Where("related_uuid = ?", relatedUuid)
+			db = db.Where("related_type = ?", relatedType)
+			db = db.Where("merchant_user_id = ?", merchantUserId)
+			db = db.Where("order_type = ?", orderType)
+			db = db.Where("order_amount = ?", paymentAmount)
+			db = db.Where("order_currency = ?", "THB")
+			db = db.Where("pay_time = ?", constant.No)
+			db = db.Where("expired_time > ?", time.Now().Unix())
+			return db.Order("id desc")
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if order.Uuid > 0 {
+		return &order, nil
+	}
+	return nil, nil
+}
+
+// getPaymentInfo 获取支付配置
+func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, error) {
+	// 根据支付方式调用不同的支付接口
+	var url string
+	var orderType string
+	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay {
+		url = p.payServiceUrl + LIANLIAN_WECHAT_PAY
+		orderType = "LIANLIAN_WECHAT"
+	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+		url = p.payServiceUrl + LIANLIAN_ALI_OFFLINE_PAY
+		orderType = "LIANLIAN_ALI_OFFLINE_PAY"
+	} else if paymentMethodCode == constant.PaymentMethodCodeLianLianQRPromptPay {
+		url = p.payServiceUrl + LIANLIAN_PROMPT_PAY
+		orderType = "LIANLIAN_QR_PROMPT_PAY"
+	} else {
+		return "", "", errors.New("不支持的支付方式")
+	}
+	return url, orderType, nil
 }
 
 // Validate 验证支付配置

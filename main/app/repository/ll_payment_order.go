@@ -46,7 +46,10 @@ func (r *llPaymentOrderRepo) GetPaymentOrder(opts ...DBOption) (model.LlPaymentO
 	}
 	db = CommonRepo.WhereBySoftDelete()(db)
 	err := db.Order("id asc").First(&paymentOrder).Error
-	return paymentOrder, errors.WithMessage(err)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return paymentOrder, errors.WithMessage(err)
+	}
+	return paymentOrder, nil
 }
 
 // GetPaymentOrderList 获取列表

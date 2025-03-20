@@ -7049,6 +7049,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/payment/qrcode": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式的二维码信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐.结账"
+                ],
+                "summary": "获取支付方式的二维码信息",
+                "parameters": [
+                    {
+                        "description": "获取支付方式的二维码信息参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentQrcodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentQrcodeInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/payment/zero_rule": {
             "post": {
                 "security": [
@@ -16252,19 +16303,19 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "payment_order_uuid": {
-                    "description": "支付单uuid",
+                    "description": "支付单uuid (当/cashier/desk/order/payment/info接口的payment_orders中的存在相同的uuid时证明已经支付)",
                     "type": "integer"
                 },
                 "qr_code": {
-                    "description": "支付单二维码",
+                    "description": "支付单二维码 (永远都是返回base64图片给前端直接显示)",
                     "type": "string"
                 },
                 "qr_code_expire_sec": {
-                    "description": "支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码)",
+                    "description": "支付单二维码剩余时间（秒）(少于等于0的时候 需要重新生成二维码, 再次请求当前接口就行)",
                     "type": "integer"
                 },
                 "status": {
-                    "description": "支付单状态 支付状态, 0-未支付 1-已支付",
+                    "description": "支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)",
                     "type": "integer"
                 }
             }
