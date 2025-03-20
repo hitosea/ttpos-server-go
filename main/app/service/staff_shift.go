@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -28,6 +29,8 @@ type IStaffShiftSrv interface {
 	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
 	GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error)                          // 获取交班信息
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) // 提交交班
+	ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error
+	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager) IStaffShiftSrv {
@@ -324,6 +327,139 @@ func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.Cashier
 	})
 	if err != nil {
 		return errors.New("更新交班记录失败")
+	}
+
+	return nil
+}
+
+// ShiftWithdraw 交班取钱
+func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error {
+	if req.WithdrawCash <= 0 {
+		return errors.New("请输入正确金额")
+	}
+	// 验证参数, 大于0, 最多小数点后两位
+	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
+	if !reg.MatchString(convertor.ToString(req.WithdrawCash)) {
+		return errors.New("请输入正确金额")
+	}
+	staff := ctx.GetStaff()
+	db := s.dbm.GetDB(staff.CompanyUuid)
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	log, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return errors.New("当前班次错误，请退出重新登录")
+	}
+	if log.IsHandedOver() {
+		return errors.New("当前班次已交班")
+	}
+
+	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+		// 更新交班记录
+		_, err = shiftLogRepo.Update(log, map[string]interface{}{
+			"withdraw_cash":      gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
+			"current_cash_total": gorm.Expr("current_cash_total - ?", req.WithdrawCash),
+			"cash_left":          gorm.Expr("cash_left - ?", req.WithdrawCash),
+		})
+		if err != nil {
+			return errors.New("取钱失败")
+		}
+		// 更新钱箱记录
+		cashBoxRepo := repository.NewCashBoxRepo(db)
+		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
+		cashBox := cashBoxRepo.Get()
+		if cashBox.Uuid > 0 {
+			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
+				"balance":         gorm.Expr("balance - ?", req.WithdrawCash),
+				"cash_withdrawal": gorm.Expr("cash_withdrawal + ?", req.WithdrawCash),
+			})
+			if err != nil {
+				return errors.New("取钱失败")
+			}
+			// 更新钱箱记录
+			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
+				Type:   constant.CashBoxLogTypeOut,
+				Scene:  constant.CashBoxLogSceneOut,
+				Amount: req.WithdrawCash,
+			})
+			if err != nil {
+				return errors.New("取钱失败")
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ShiftDeposit 交班存钱
+func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error {
+	// 验证参数, 大于0, 最多小数点后两位
+	if req.DepositCash <= 0 {
+		return errors.New("请输入正确金额")
+	}
+	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
+	if !reg.MatchString(convertor.ToString(req.DepositCash)) {
+		return errors.New("请输入正确金额")
+	}
+	staff := ctx.GetStaff()
+	db := s.dbm.GetDB(staff.CompanyUuid)
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	log, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return errors.New("当前班次错误，请退出重新登录")
+	}
+	if log.IsHandedOver() {
+		return errors.New("当前班次已交班")
+	}
+
+	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+		// 更新交班记录
+		_, err = shiftLogRepo.Update(log, map[string]interface{}{
+			"deposit_cash":       gorm.Expr("deposit_cash + ?", req.DepositCash),
+			"current_cash_total": gorm.Expr("current_cash_total + ?", req.DepositCash),
+			"cash_left":          gorm.Expr("cash_left + ?", req.DepositCash),
+		})
+		if err != nil {
+			return errors.New("存钱失败")
+		}
+
+		// 更新钱箱记录
+		cashBoxRepo := repository.NewCashBoxRepo(db)
+		cashBoxLogRepo := repository.NewCashBoxLogRepo(db)
+		cashBox := cashBoxRepo.Get()
+		if cashBox.Uuid > 0 {
+			err = cashBoxRepo.Update(cashBox.Uuid, map[string]interface{}{
+				"balance":      gorm.Expr("balance + ?", req.DepositCash),
+				"cash_deposit": gorm.Expr("cash_deposit + ?", req.DepositCash),
+			})
+			if err != nil {
+				return errors.New("存钱失败")
+			}
+			// 更新钱箱记录
+			_, err = cashBoxLogRepo.Create(model.CashBoxLog{
+				Type:   constant.CashBoxLogTypeIn,
+				Scene:  constant.CashBoxLogSceneIn,
+				Amount: req.DepositCash,
+			})
+			if err != nil {
+				return errors.New("存钱失败")
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	return nil

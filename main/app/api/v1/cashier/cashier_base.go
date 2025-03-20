@@ -432,6 +432,58 @@ func (h *BaseHandler) GetOpenCashBoxPrinterConfig(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// ShiftWithdraw 交班取钱
+// @Summary 交班取钱
+// @Description 交班取钱
+// @Tags 收银端.交班
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ShiftWithdrawReq true "交班取钱参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/shift/withdraw [post]
+func (h *BaseHandler) ShiftWithdraw(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var withdrawReq req.ShiftWithdrawReq
+	if err := c.ShouldBindJSON(&withdrawReq); err != nil {
+		helper.HandleValidationError(c, err, withdrawReq, nil)
+		return
+	}
+
+	err := h.staffShiftSrv.ShiftWithdraw(ctx, withdrawReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// ShiftDeposit 交班存钱
+// @Summary 交班存钱
+// @Description 交班存钱
+// @Tags 收银端.交班
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ShiftDepositReq true "交班存钱参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/shift/deposit [post]
+func (h *BaseHandler) ShiftDeposit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var depositReq req.ShiftDepositReq
+	if err := c.ShouldBindJSON(&depositReq); err != nil {
+		helper.HandleValidationError(c, err, depositReq, nil)
+		return
+	}
+
+	err := h.staffShiftSrv.ShiftDeposit(ctx, depositReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -478,7 +530,9 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/setting", wrapper.GetSetting)                                // 获取设置
 
 		// 交班
-		privateApi.GET("/shift", wrapper.GetShiftInfo) // 获取交班信息
-		privateApi.POST("/shift", wrapper.SubmitShift) // 提交交班
+		privateApi.GET("/shift", wrapper.GetShiftInfo)            // 获取交班信息
+		privateApi.POST("/shift", wrapper.SubmitShift)            // 提交交班
+		privateApi.POST("/shift/withdraw", wrapper.ShiftWithdraw) // 取钱
+		privateApi.POST("/shift/deposit", wrapper.ShiftDeposit)   // 存钱
 	}
 }
