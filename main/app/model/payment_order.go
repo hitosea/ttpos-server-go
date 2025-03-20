@@ -58,6 +58,11 @@ func (model *PaymentMethod) HasCommission() bool {
 	return model.FeePercent > 0
 }
 
+// IsBalance 是否是余额支付
+func (model *PaymentMethod) IsBalance() bool {
+	return model.Code == constant.PaymentMethodCodeBalance
+}
+
 // IsLianLianPay 是否连连支付
 func (model *PaymentMethod) IsLianLianPay() bool {
 	if model.Code != constant.PaymentMethodCodeLianLianWechatPay &&

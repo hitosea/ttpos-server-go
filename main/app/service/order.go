@@ -4777,6 +4777,16 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	// 获取支付订单
 	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
 
+	if paymentMethod.IsBalance() {
+		// 检查会员余额是否充足
+		if saleOrder.Member == nil {
+			return nil, errors.New("会员不存在")
+		}
+		if saleOrder.Member.GetBalanceAll() < req.PaymentAmount {
+			return nil, errors.New("会员余额不足")
+		}
+	}
+
 	//  在线支付订单
 	if paymentMethod.IsLianLianPay() {
 		paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
