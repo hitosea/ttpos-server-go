@@ -34,7 +34,6 @@ class AlterProductNameToReturnOrderProduct extends Migrator
                 'null' => true,
                 'default' => null,
                 'comment' => '商品名称',
-                'after' => 'product_package_uuid',
             ]);
         }
         $table->update();

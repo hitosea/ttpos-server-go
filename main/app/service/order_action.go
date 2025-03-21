@@ -251,10 +251,12 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	}
 	// 检查超时不能加购
 	{
-		// 获取自助餐的剩余时长
-		remainingOrderingSeconds := saleBill.GetRemainingOrderingSeconds()
-		if remainingOrderingSeconds == 0 {
-			return nil, errors.New("自助餐已结束")
+		if saleBill.IsBuffetSaleBill() {
+			// 获取自助餐的剩余时长
+			remainingOrderingSeconds := saleBill.GetRemainingOrderingSeconds()
+			if remainingOrderingSeconds == 0 {
+				return nil, errors.New("自助餐已结束")
+			}
 		}
 	}
 
