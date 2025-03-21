@@ -46,6 +46,7 @@ type ISrv interface {
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
 	GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error)                                                                 // 获取云端基础信息
 	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)                                  // 获取点餐助手设置
+	GetPointsSetting(ctx context.Context) (setting.Points, error)                                                                         // 获取积分设置
 	GetKitchenSetting(ctx context.Context, companySetting model.CompanySetting, languageList []dto.LanguageItem) (setting.Kitchen, error) // 获取厨显端设置
 	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                // 获取扫码H5设置
 	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                                     // 获取门店业务设置
@@ -1002,6 +1003,27 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 		defaultAssistant.IsShowAssistantSoldOut = s.getDefaultCashier(languageList).IsShowAssistantSoldOut
 	}
 	return defaultAssistant, nil
+}
+
+// GetPointsSetting 获取积分设置
+func (s *Srv) GetPointsSetting(ctx context.Context) (setting.Points, error) {
+	var (
+		err    error
+		points setting.Points
+	)
+	st := s.getSettingByKey(ctx, constant.SettingPoints)
+	err = json.Unmarshal([]byte(st.Values), &points)
+	if err != nil {
+		ctx.Log().Error("解析积分设置失败", zap.Error(err))
+		return points, errors.New("解析积分设置失败")
+	}
+	defaultPoints := s.getDefaultPoints()
+	err = copier.CopyWithOption(&defaultPoints, points, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+	if err != nil {
+		ctx.Log().Error("合并积分设置失败", zap.Error(err))
+		return points, errors.New("合并积分设置失败")
+	}
+	return defaultPoints, nil
 }
 
 // GetKitchenSetting 获取厨显端设置

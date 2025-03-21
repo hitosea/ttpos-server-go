@@ -21,6 +21,12 @@ const (
 	WarehouseOutFormItemReduceStockSuccess             // 已减库存 1
 )
 
+// MemberPointLogProcessed 会员积分日志是否已处理
+const (
+	MemberPointLogProcessedNot     = iota // 未处理 0 未处理积分变动
+	MemberPointLogProcessedSuccess        // 已处理 1 已处理积分变动
+)
+
 // WarehouseFormScene 入库单场景
 const (
 	WarehouseFormScenePurchase = iota // 采购入库 0

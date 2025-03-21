@@ -1015,19 +1015,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		rechargeOrderRepo.WithMember(), rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 
 	if order.Uuid == 0 {
-		return errors.New("充值订单不存在")
+		return errors.WithMessage(errors.New("充值订单不存在"))
 	}
 
 	if order.Status != constant.RechargeOrderStatusPaid {
-		return errors.New("当前状态不可操作")
+		return errors.WithMessage(errors.New("当前状态不可操作"))
 	}
 
 	if order.RefundMoney > 0 {
-		return errors.New("退款后不能反结账")
+		return errors.WithMessage(errors.New("退款后不能反结账"))
 	}
 
 	if order.Member == nil {
-		return errors.New("会员不存在")
+		return errors.WithMessage(errors.New("会员不存在"))
 	}
 
 	var memberPointsChanged bool
@@ -1069,7 +1069,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				"status":      constant.PaymentOrderStatusRefund,
 				"delete_time": time.Now().Unix(),
 			}); err != nil {
-				return errors2.ErrInternal
+				return errors.WithMessage(errors2.ErrInternal, err.Error())
 			}
 
 			amount := paymentOrder.Amount
@@ -1105,7 +1105,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			IsReverseSettlement: 1,
 		})
 		if err != nil {
-			return errors2.ErrInternal
+			return errors.WithMessage(errors2.ErrInternal, err.Error())
 		}
 
 		if refundCashAmount > 0 {
@@ -1126,7 +1126,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			"refund_money": 0,
 			"charge_due":   0,
 		}); err != nil {
-			return errors2.ErrInternal
+			return errors.WithMessage(errors2.ErrInternal)
 		}
 
 		return nil

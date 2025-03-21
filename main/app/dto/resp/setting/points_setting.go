@@ -1,5 +1,12 @@
 package setting
 
+import (
+	"math"
+	"strconv"
+
+	"github.com/shopspring/decimal"
+)
+
 // Points 积分设置
 type Points struct {
 	DeductionOrder     string       `json:"deduction_order"`      // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
@@ -12,6 +19,23 @@ type Points struct {
 	Discount           DiscountItem `json:"discount"`             // 积分抵扣
 	Describe           string       `json:"describe"`             // 充值说明
 	DeductOrder        string       `json:"deduct_order"`
+}
+
+// PointsGiftRatio 积分赠送比例
+func (p *Points) GetGiftRatio() float64 {
+	if p.GiftRatio == "" {
+		return 0
+	}
+	ratio, err := strconv.ParseFloat(p.GiftRatio, 64)
+	if err != nil {
+		return 0
+	}
+	// 积分赠送比例取值范围0-100, 转换为0-1
+	ratio = decimal.NewFromFloat(ratio).Div(decimal.NewFromInt(100)).InexactFloat64()
+	// 积分赠送比例取值范围0-1
+	ratio = math.Min(ratio, 1)
+	ratio = math.Max(ratio, 0)
+	return ratio
 }
 
 type DiscountItem struct {

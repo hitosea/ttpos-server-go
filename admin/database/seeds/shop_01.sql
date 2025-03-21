@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `final_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额',
     `payment_commission_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '支付手续费,关联付款单的支付手续费之和',
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
+    `gift_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分. 赠送积分=应收金额amount*积分赠送比例.',
+    `gift_point_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '赠送积分比例. 取值范围0-1。结账后记录，不受后台改变',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- 关联ID
@@ -895,6 +897,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `password` VARCHAR(200) NOT NULL DEFAULT '' COMMENT '密码',
     `birthday` INT(10) NOT NULL DEFAULT 0 COMMENT '生日,时间戳',
     `point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '积分',
+    `frozen_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分',
     `accumulated_consumption_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '累计消费金额',
     `consumption_count` INT(11) NOT NULL DEFAULT 0 COMMENT '消费次数',
     `balance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '余额',
@@ -1013,6 +1016,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
     `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减',
     `value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '数值,负数:减积分 正数:加积分',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联uuid. 表示积分变动记录关联的业务订单ID,可能是销售订单、充值订单、退款单、退货单退款金额',
+    `processed` INT(10) NOT NULL DEFAULT 0 COMMENT '是否已处理,0-未处理 1-已处理. 用于处理积分变动，修改会员的积分并清0冻结的积分',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

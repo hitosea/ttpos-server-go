@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -79,6 +80,11 @@ func StructToStruct(data interface{}, newdata interface{}, filtrationKeys ...str
 func JsonToStr(data interface{}) (string, error) {
 	result, err := json.Marshal(data)
 	return string(result), err
+}
+
+// NumToStr 数字转字符串
+func NumToStr(num any) string {
+	return fmt.Sprintf("%v", num)
 }
 
 // StructToMap 结构体转map

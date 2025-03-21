@@ -62,8 +62,9 @@ type ReturnOrderAmount struct {
 	PaymentMethodUuid uint64 `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:关联支付方式ID;NOT NULL" json:"payment_method_uuid"`
 	PaymentOrderUuid  uint64 `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:关联支付单ID,用于判断支付单的钱还有多少未退;NOT NULL" json:"payment_order_uuid"`
 
-	ReturnOrder   *ReturnOrder   `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
-	PaymentMethod *PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式
+	ReturnOrder    *ReturnOrder    `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
+	PaymentMethod  *PaymentMethod  `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式
+	MemberPointLog *MemberPointLog `gorm:"foreignKey:RelatedUuid;references:uuid"`       // 关联积分变动记录.扣减积分
 }
 
 // SetNil 设置关联对象为nil，避免gorm创建时将关联对象也创建

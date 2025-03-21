@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
@@ -56,6 +57,8 @@ type SaleOrder struct {
 	FinalPrice           float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
+	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
+	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
 
 	// 虚拟字段，用于标记当前子单是第几个
 	Index int `gorm:"-" json:"index,omitempty"`
@@ -70,6 +73,41 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
+	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+}
+
+// 设置积分赠送比例
+func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
+	model.GiftPointsRate = giftPointsRate
+	model.GiftPoints = model.CalcMemberPoint()
+}
+
+// CalcMemberPoint 计算会员积分. 会员积分=订单应收金额*积分赠送比例
+func (model *SaleOrder) CalcMemberPoint() float64 {
+	return decimal.NewFromFloat(model.Amount).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+}
+
+// 发放消费积分
+func (model *SaleOrder) HandleMemberPoints(member *Member) {
+	model.Member = member // 使用最新的会员信息。避免该会员的积分信息已经被更新过
+	// 如果开启积分赠送且赠送比例大于0，则发放积分
+	if model.GiftPointsRate > 0 {
+		// 发放积分
+		member.ChangePoint(model.GiftPoints) // 增加积分
+	}
+	// 创建积分变动记录
+	model.MemberPointLog = model.NewMemberPointLog()
+}
+
+func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {
+	memberPointLog := &MemberPointLog{
+		MemberUuid:  model.Member.Uuid,
+		Scene:       constant.MemberPointLogSceneConsume,
+		Value:       model.GiftPoints,
+		Describe:    fmt.Sprintf("订单赠送：%s", model.OrderNo),
+		RelatedUuid: model.Uuid,
+	}
+	return memberPointLog
 }
 
 // 创建退货单

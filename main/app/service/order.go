@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -3375,7 +3376,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
-		return nil, errSaleBill
+		return nil, errors.WithMessage(errSaleBill)
 	}
 	ctx.Log().Debug("获取到账单信息成功")
 
@@ -3394,7 +3395,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 获取销售订单商品信息
 	saleOrderProduct, index, errSaleOrderProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
 	if errSaleOrderProduct != nil {
-		return nil, errSaleOrderProduct
+		return nil, errors.WithMessage(errSaleOrderProduct)
 	}
 	ctx.Log().Debug("获取到订单商品信息成功")
 
@@ -3415,6 +3416,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}
 
 	// 修改销售订单商品数量
+	beforeNum := saleOrderProduct.Num
 	saleOrderProduct.Num = uint(request.Num)
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
@@ -3431,24 +3433,27 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 检查限购
 	{
-		overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
-		if len(overLimitProducts) > 0 {
-			return nil, errors.New("商品超过限购")
+		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
+		if uint(request.Num) > beforeNum {
+			overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+			if len(overLimitProducts) > 0 {
+				return nil, errors.WithMessage(errors.New("商品超过限购"))
+			}
 		}
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
-			return errUpdate
+			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
-			return errUpdate
+			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
 		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
-			return errUpdateSaleBill
+			return errors.WithMessage(errUpdateSaleBill)
 		}
 		return nil
 	}); err != nil {
@@ -4138,6 +4143,7 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 			GiftTime:   time.Now().Unix(),
+			Sign:       saleOrderProduct.GenerateProductSign(),
 			GiftReason: req.Reason,
 		})
 		// 添加赠菜原因
@@ -4758,6 +4764,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 // InstantOrderPaymentCreate 给销售订单创建一个支付单
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	fmt.Println("InstantOrderPaymentCreate source:", ctx.GetSource())
 	// 判断订单是否已经结束，若订单结束则拒绝操作
 	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -4786,8 +4793,17 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 
 	// 支付方式是否可用
-	if paymentMethod.IsShowMemberRecharge == 0 || !s.paymentMethodSrv.IsEnabled(ctx, *paymentMethod, ctx.GetCompanySetting()) {
-		return nil, errors.New("支付方式未开启")
+	if ctx.GetSource() == jwt.SourceAssistant {
+		if paymentMethod.IsShowAssistant == 0 {
+			return nil, errors.WithMessage(errors.New("支付方式未开启"))
+		}
+	} else if ctx.GetSource() == jwt.SourceCashier {
+		if paymentMethod.IsShowCashier == 0 {
+			return nil, errors.WithMessage(errors.New("支付方式未开启"))
+		}
+	}
+	if !s.paymentMethodSrv.IsEnabled(ctx, *paymentMethod, ctx.GetCompanySetting()) {
+		return nil, errors.WithMessage(errors.New("支付方式未开启"))
 	}
 
 	// 默认支付订单状态
@@ -5085,6 +5101,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 计算积分
+	// 获取商家当前的积分赠送比例
+	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	fmt.Println("s.settingSrv.GetPointsSetting(ctx) pointsSetting:", utils.ToJsonString(pointsSetting))
+	// 计算本单获取的积分
+	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新销售订单

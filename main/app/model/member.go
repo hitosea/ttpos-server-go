@@ -12,6 +12,7 @@ type Member struct {
 	Password                     string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
 	Birthday                     int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
 	Point                        float64 `gorm:"column:point;type:decimal(12,2);default:0.00;comment:积分;NOT NULL" json:"point"`
+	FrozenPoint                  float64 `gorm:"column:frozen_point;type:decimal(12,2);default:0.00;comment:冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分;NOT NULL" json:"frozen_point"`
 	AccumulatedConsumptionAmount float64 `gorm:"column:accumulated_consumption_amount;type:decimal(12,2);default:0.00;comment:累计消费金额;NOT NULL" json:"accumulated_consumption_amount"`
 	ConsumptionCount             int     `gorm:"column:consumption_count;type:int(11);default:0;comment:消费次数;NOT NULL" json:"consumption_count"`
 	Balance                      float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:余额;NOT NULL" json:"balance"`
@@ -22,6 +23,25 @@ type Member struct {
 
 	MemberLevel *MemberLevel `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+}
+
+// 获取会员的积分余额，用于展示在前端。
+// 会员积分余额=积分+冻结积分
+func (model *Member) GetPointBalance() float64 {
+	return decimal.NewFromFloat(model.Point).Add(decimal.NewFromFloat(model.FrozenPoint)).InexactFloat64()
+}
+
+// 变动积分. 扣减积分时，参数points为负数；增加积分时，参数points为正数
+func (model *Member) ChangePoint(points float64) {
+	model.FrozenPoint = decimal.NewFromFloat(model.FrozenPoint).Add(decimal.NewFromFloat(points)).InexactFloat64()
+}
+
+// 更改会员积分。仅用于处理积分变动记录时，修改会员积分。
+// 参数changePoints为积分变动值，正数为增加积分，负数为扣减积分。
+// 清零冻结的积分。表示该会员的积分变动已经处理完，无需再冻结。
+func (model *Member) UpdatePoint(changePoints float64) {
+	model.Point = decimal.NewFromFloat(model.Point).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
+	model.FrozenPoint = 0
 }
 
 // 获取会员的余额，用于展示在前端。
@@ -162,10 +182,12 @@ type MemberBalanceLog struct {
 // MemberPointLog 会员积分变动记录表 `ttpos_member_point_log`
 type MemberPointLog struct {
 	BaseModel
-	MemberUuid uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
-	Scene      int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减;NOT NULL" json:"scene"`
-	Value      float64 `gorm:"column:value;type:decimal(12,2);default:0;comment:数值,负数:减积分 正数:加积分;NOT NULL" json:"value"`
-	Describe   string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
+	MemberUuid  uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+	Scene       int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减;NOT NULL" json:"scene"`
+	Value       float64 `gorm:"column:value;type:decimal(12,2);default:0;comment:数值,负数:减积分 正数:加积分;NOT NULL" json:"value"`
+	Describe    string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
+	RelatedUuid uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:关联uuid. 表示积分变动记录关联的业务订单ID,可能是销售订单、充值订单、退款单、退货单退款金额;NOT NULL" json:"related_uuid"`
+	Processed   uint64  `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理积分变动，修改会员的积分并清0冻结的积分;NOT NULL" json:"processed"`
 }
 
 // MemberRechargeOrder 会员充值订单表 `ttpos_member_recharge_order`

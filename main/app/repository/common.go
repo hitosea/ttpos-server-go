@@ -60,6 +60,7 @@ type ICommonRepo interface {
 	WhereBySign(sign string) DBOption                               // 根据签名查询
 	WhereByStaffUuid(staffUuid uint64) DBOption                     // 根据员工UUID查询
 	WhereByShiftNo(shiftNo string) DBOption                         // 根据交班编号查询
+	WhereByProcessedNot() DBOption                                  // 根据未处理查询
 	WhereLikeByName(name string) DBOption                           // 根据名称查询
 	WhereBetweenByCreateTime(startTime uint, endTime uint) DBOption // 根据创建时间查询
 	FilterSaleOrderProduct() DBOption                               // 只查询常规的购物车商品
@@ -425,6 +426,12 @@ func (r *commonRepo) WhereByStaffUuid(staffUuid uint64) DBOption {
 func (r *commonRepo) WhereByShiftNo(shiftNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("shift_no = ?", shiftNo)
+	}
+}
+
+func (r *commonRepo) WhereByProcessedNot() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("processed = ?", constant.MemberPointLogProcessedNot)
 	}
 }
 

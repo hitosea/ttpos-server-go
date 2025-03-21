@@ -1,10 +1,12 @@
 package repository
 
 import (
-	"errors"
-	"gorm.io/gorm"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 type IMemberRepo interface {
@@ -14,11 +16,15 @@ type IMemberRepo interface {
 
 	WhereUuid(uuid uint64) DBOption // Uuid 条件
 
-	GetMember(opts ...DBOption) model.Member    // 获取会员
-	GetMemberLevels() []model.MemberLevel       // 获取会员等级
-	SearchMember(keyword string) []model.Member // 关键字搜索会员
-	CheckMemberExists(phone string) bool        // 根据手机号检查是否存在
-	CheckLevelExists(uuid uint64) bool          // 根据Uuid检查等级是否存在
+	GetMember(opts ...DBOption) model.Member // 获取会员
+	GetMemberList(opts ...DBOption) ([]*model.Member, error)
+	GetMemberRecord(opts ...DBOption) (*model.Member, error)   // 获取会员
+	GetMemberByUuid(uuid uint64) (model.Member, error)         // 根据uuid获取会员
+	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
+	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
+	SearchMember(keyword string) []model.Member                // 关键字搜索会员
+	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
+	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
 
 	CreateMember(member model.Member) error        // 添加会员
 	Update(uuid uint64, vars map[string]any) error // 更新会员信息
@@ -81,6 +87,54 @@ func (r *memberRepo) GetMember(opts ...DBOption) model.Member {
 	}
 	db.First(&member)
 	return member
+}
+
+// GetMemberList 查询会员列表
+func (r *memberRepo) GetMemberList(opts ...DBOption) ([]*model.Member, error) {
+	var members []*model.Member
+	db := r.db.Model(&model.Member{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&members).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员列表失败")
+	}
+	return members, nil
+}
+
+// GetMembersByUuids 根据uuid列表查询会员列表
+func (r *memberRepo) GetMembersByUuids(uuids []uint64) ([]*model.Member, error) {
+	members, err := r.GetMemberList(
+		CommonRepo.WhereInUuids(uuids),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员列表失败")
+	}
+	return members, nil
+}
+
+// GetMemberRecord 查询会员
+func (r *memberRepo) GetMemberRecord(opts ...DBOption) (*model.Member, error) {
+	var member model.Member
+	db := r.db.Model(&model.Member{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&member).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败")
+	}
+	return &member, nil
+}
+
+// GetMemberByUuid 根据uuid查询会员
+func (r *memberRepo) GetMemberByUuid(uuid uint64) (model.Member, error) {
+	member, err := r.GetMemberRecord(r.WhereUuid(uuid))
+	if err != nil {
+		return model.Member{}, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
+	}
+	return *member, nil
 }
 
 // Update 更新会员信息
