@@ -69,7 +69,7 @@ class UserRechargeOrder extends Controller
         $times = $data['time'] ?? [];
         if (!empty($times)) {
             $queryStartTime = strtotime($times[0]);
-            $queryEndTime = strtotime($times[1]);
+            $queryEndTime = strtotime($times[1]) + 86399;
             $enableCreateTime = in_array(0, $data['time_mode']);
             $enablePaymentTime = in_array(1, $data['time_mode']);
         }
