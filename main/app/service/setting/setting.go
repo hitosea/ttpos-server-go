@@ -264,6 +264,16 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
 		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
 	}
+	// 处理 cashier_printer 字段，确保它是一个数组
+	if cashierPrinter, ok := jsonMap["cashier_printer"]; ok {
+		// 如果是对象，转换为数组
+		if _, ok := cashierPrinter.(map[string]interface{}); ok {
+			// 将对象转换为数组
+			cashierPrinterArray := []interface{}{cashierPrinter}
+			jsonMap["cashier_printer"] = cashierPrinterArray
+		}
+	}
+
 	// 处理 KitchenPrintMethod
 	if kitchenPrintMethod, ok := jsonMap["kitchen_print_method"]; ok {
 		// 如果是float64（JSON中的数字类型），转换为字符串
@@ -321,29 +331,34 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 }
 
 // GetPrinterInfo 获取打印机设置
-func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error) {
+func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceSn string) (setting.PrinterInfo, error) {
 	var (
-		isCashierOpen    = printerSetting.CashierOpen == "1"
-		printerId        string
-		printerUuid      uint64
-		printer          model.Printer
-		err              error
-		copies           uint = 1
-		printerConfig    string
-		printerType      string
-		cashierBindKey   string
-		isCashierPrinter bool // 是否收银机自带打印机
+		isCashierOpen          = printerSetting.CashierOpen == "1"
+		printerId              string
+		printerUuid            uint64
+		printer                model.Printer
+		err                    error
+		copies                 uint = 1
+		printerConfig          string
+		printerType            string
+		printerCashierDeviceSn string
+		isCashierPrinter       bool // 是否收银机自带打印机
 	)
+
+	// 收银机开启
 	if isCashierOpen {
+
+		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
-			if cashierPrinter.Key == deviceId {
+			if cashierPrinter.Key == deviceSn {
 				printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
 				break
 			}
 		}
 
+		// 普通打印机 uuid uint64 字符串
 		matched, _ := regexp.MatchString(`^\d+$`, printerId)
-		if len(printerId) <= 18 && matched { // 普通打印机 uuid uint64 字符串
+		if len(printerId) <= 18 && matched {
 			printerUuid, _ = strconv.ParseUint(printerId, 10, 64)
 			printerRepo := repository.NewPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 			printer, err = printerRepo.GetPrinter(printerRepo.WhereUuid(printerUuid), printerRepo.WithPrinterType())
@@ -355,11 +370,14 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			if printer.PrinterType != nil {
 				printerType = printer.PrinterType.Key
 			}
-		} else if printerId != "0" && printerId != "" { // 收银机内置的打印机
-			cashierBindKey = printerId
+			// 由当前点击的设备进行打印
+			printerCashierDeviceSn = deviceSn
+		} else if printerId != "0" && printerId != "" {
+			// 收银机内置的打印机
+			printerCashierDeviceSn = printerId
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceId))
+			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceSn))
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
 				printerType = constant.PrinterTypeCashierSunmi
@@ -374,13 +392,13 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 	}
 	//
 	return setting.PrinterInfo{
-		PrinterType:      printerType,
-		PrinterUuid:      printerUuid, // 默认为0，如果是普通打印机，则为model.Printer的Uuid
-		Copies:           copies,
-		PrinterConfig:    printerConfig,
-		IsCashierPrinter: isCashierPrinter,
-		IsCashierOpen:    isCashierOpen,
-		CashierBindKey:   cashierBindKey,
+		PrinterType:            printerType,
+		PrinterUuid:            printerUuid, // 默认为0，如果是普通打印机，则为model.Printer的Uuid
+		Copies:                 copies,
+		PrinterConfig:          printerConfig,
+		IsCashierPrinter:       isCashierPrinter,
+		IsCashierOpen:          isCashierOpen,
+		PrinterCashierDeviceSn: printerCashierDeviceSn,
 	}, nil
 }
 

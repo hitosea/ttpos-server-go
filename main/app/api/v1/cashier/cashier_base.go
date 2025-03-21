@@ -484,6 +484,31 @@ func (h *BaseHandler) ShiftDeposit(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ShiftPrinter 交班打印
+// @Summary 交班打印
+// @Description 交班打印
+// @Tags 收银端.交班
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ShiftPrinterReq true "交班打印参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/shift/printer [post]
+func (h *BaseHandler) ShiftPrinter(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var printerReq req.ShiftPrinterReq
+	if err := c.ShouldBindJSON(&printerReq); err != nil {
+		helper.HandleValidationError(c, err, printerReq, nil)
+		return
+	}
+	printerData, err := h.staffShiftSrv.ShiftPrinter(ctx, printerReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, printerData)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -535,5 +560,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/shift", wrapper.SubmitShift)            // 提交交班
 		privateApi.POST("/shift/withdraw", wrapper.ShiftWithdraw) // 取钱
 		privateApi.POST("/shift/deposit", wrapper.ShiftDeposit)   // 存钱
+		privateApi.POST("/shift/printer", wrapper.ShiftPrinter)   // 打印
 	}
 }

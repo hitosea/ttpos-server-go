@@ -38,6 +38,7 @@ func checkoutSaleOrderEventHandler() {
 				payload.SaleBill,
 				payload.SaleOrderUuid,
 				0,
+				0,
 			)
 			if err != nil {
 				return

@@ -23,7 +23,7 @@ import (
 // PPrinterRepo 打印
 type PPrinterRepo interface {
 	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
-	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int) (*resp.PrinterData, error)
+	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int, payMethodUuid uint64) (*resp.PrinterData, error)
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
 }

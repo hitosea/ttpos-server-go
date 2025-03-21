@@ -9,11 +9,14 @@ import (
 
 type IDeviceRepo interface {
 	WhereSn(deviceId string) DBOption   // sn/device_id 条件
+	WhereUuid(uuid uint64) DBOption     // uuid 条件
 	WhereSource(source string) DBOption // 来源（cashier、tablet、kitchen、assistant）条件
 
 	GetDevice(opts ...DBOption) (model.Device, error)       // 获取设备
 	GetDeviceBySn(sn string) (*model.Device, error)         // 根据sn获取设备
+	GetDeviceByUuid(uuid uint64) (*model.Device, error)     // 根据uuid获取设备
 	GetDeviceBrand(opts ...DBOption) string                 // 获取设备品牌
+	GetDeviceSn(opts ...DBOption) string                    // 获取设备sn
 	GetBindCountBySource(source string) uint                // 根据来源获取设备绑定数量
 	CreateDevice(device model.Device) (model.Device, error) // 创建设备
 	UpdateDevice(uuid uint64, vars map[string]any) error    // 更新设备
@@ -49,6 +52,13 @@ func (r *deviceRepo) GetDeviceBySn(sn string) (*model.Device, error) {
 	return &device, errors.WithMessage(err, "r.GetDevice failed")
 }
 
+func (r *deviceRepo) GetDeviceByUuid(uuid uint64) (*model.Device, error) {
+	device, err := r.GetDevice(
+		CommonRepo.WhereByDeviceUuid(uuid),
+	)
+	return &device, errors.WithMessage(err, "r.GetDevice failed")
+}
+
 func (r *deviceRepo) GetDeviceBrand(opts ...DBOption) string {
 	var brand string
 	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)
@@ -57,6 +67,16 @@ func (r *deviceRepo) GetDeviceBrand(opts ...DBOption) string {
 	}
 	db.Select("brand").Scan(&brand)
 	return brand
+}
+
+func (r *deviceRepo) GetDeviceSn(opts ...DBOption) string {
+	var sn string
+	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("device_id").Scan(&sn)
+	return sn
 }
 
 func (r *deviceRepo) WhereSn(deviceId string) DBOption {
@@ -68,6 +88,12 @@ func (r *deviceRepo) WhereSn(deviceId string) DBOption {
 func (r *deviceRepo) WhereSource(source string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("source = ?", source)
+	}
+}
+
+func (r *deviceRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
 	}
 }
 

@@ -55,3 +55,8 @@ type ShiftWithdrawReq struct {
 type ShiftDepositReq struct {
 	DepositCash float64 `json:"deposit_cash"` // 存入金额, 最多小数点后两位
 }
+
+type ShiftPrinterReq struct {
+	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额: 0 - 当前钱箱现金总计
+	LeaveCash    float64 `json:"leave_cash"`    // 遗留现金: 0 - 当前钱箱现金总计
+}

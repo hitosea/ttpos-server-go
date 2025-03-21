@@ -21,10 +21,10 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
 ) (*resp.PrinterData, error) {
-	// todo 设备id没对
+	deviceSn := p.ctx.GetDeviceSn()
 
 	// 获取打印设置
-	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
+	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
@@ -73,7 +73,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		RelatedType:     1,
 		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
-		CashierDeviceId: p.ctx.GetDeviceSn(),
+		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
 		DataType:        constant.PrinterLogDataTypeInvoice,
 		Data:            printContent,
 		Type:            1,

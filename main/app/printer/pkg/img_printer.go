@@ -817,16 +817,30 @@ func (i *ImgFont) AppendQrcode(data string, size int, margin int, isBase64 bool)
 
 	// 处理二维码数据
 	if isBase64 {
+		// 检查并去除可能的前缀
+		base64Data := data
+		// 查找常见的Base64前缀
+		prefixIndex := strings.Index(data, ";base64,")
+		if prefixIndex != -1 {
+			base64Data = data[prefixIndex+8:] // 跳过";base64,"及其前面的内容
+		}
+
 		// 如果是Base64编码的图片数据
-		decoded, decodeErr := base64.StdEncoding.DecodeString(data)
+		decoded, decodeErr := base64.StdEncoding.DecodeString(base64Data)
 		if decodeErr != nil {
-			return i
+			fmt.Println("解码Base64图片错误:", decodeErr)
+			// 尝试使用URL安全的Base64解码
+			decoded, decodeErr = base64.URLEncoding.DecodeString(base64Data)
+			if decodeErr != nil {
+				fmt.Println("URL安全Base64解码也失败:", decodeErr)
+				return i
+			}
 		}
 
 		// 解码图片
 		qrImg, _, err = image.Decode(bytes.NewReader(decoded))
 		if err != nil {
-			fmt.Println("解码图片错误")
+			fmt.Println("解码图片错误", err)
 			return i
 		}
 
@@ -1076,6 +1090,12 @@ func (i *ImgFont) SetTextLineHeight(textLineHeight int) *ImgFont {
 	if textLineHeight > 0 {
 		i.TextLineHeight = textLineHeight
 	}
+	return i
+}
+
+// SetTextTotalHeight 设置文本总高度
+func (i *ImgFont) SetTextTotalHeight(height int) *ImgFont {
+	i.TextTotalHeight = i.TextTotalHeight - height
 	return i
 }
 

@@ -15,6 +15,8 @@ import (
 	image "ttpos-server-go/pkg/Image"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/disintegration/imaging"
 )
 
 // 打印类型
@@ -299,6 +301,52 @@ func (p *printerTemplate) GetLogoAddr() string {
 	err := image.NewImageHelp().WhiteBackgroundWithBlackText(logoURL, outputPath)
 	if err != nil {
 		fmt.Println("处理图像失败:", err)
+		return ""
+	}
+
+	return outputPath
+}
+
+// GetQrcodeAddr 获取二维码地址
+func (p *printerTemplate) GetQrcodeAddr(qrcodeURL string) string {
+
+	fmt.Println("qrcodeURL:", qrcodeURL)
+	// 检查是否是URL
+	if !strings.HasPrefix(qrcodeURL, "http://") && !strings.HasPrefix(qrcodeURL, "https://") {
+		return qrcodeURL
+	}
+
+	// 从 URL 中提取文件名
+	urlParts := strings.Split(qrcodeURL, "/")
+	fileName := urlParts[len(urlParts)-1]
+
+	// 如果有扩展名，去掉扩展名
+	fileNameWithoutExt := strings.Split(fileName, ".")[0]
+
+	// 创建目录
+	outputDir := "./tmp/printer/shop/qrcode"
+	os.MkdirAll(outputDir, 0777)
+
+	// 输出文件路径
+	outputPath := fmt.Sprintf("%s/%s.png", outputDir, fileNameWithoutExt)
+
+	// 检查文件是否已经存在
+	if _, err := os.Stat(outputPath); err == nil {
+		// 文件已存在，直接返回
+		return outputPath
+	}
+
+	// 从URL下载图像
+	src, err := image.NewImageHelp().DownloadImage(qrcodeURL)
+	if err != nil {
+		fmt.Println("下载图像失败:", err)
+		return ""
+	}
+
+	// 保存图像
+	err = imaging.Save(src, outputPath)
+	if err != nil {
+		fmt.Println("保存图像失败:", err)
 		return ""
 	}
 

@@ -21,10 +21,10 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	order model.MemberRechargeOrder,
 	FirstExecution int,
 ) (*resp.PrinterData, error) {
-	// todo 设备id没对
+	deviceSn := p.ctx.GetDeviceSn()
 
 	// 获取打印设置
-	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
+	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
@@ -62,7 +62,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		RelatedType:     2,
 		RelatedUuid:     order.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
-		CashierDeviceId: p.ctx.GetDeviceSn(),
+		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
 		DataType:        constant.PrinterLogDataTypeRecharge,
 		Data:            printContent,
 		Type:            1,

@@ -40,11 +40,11 @@ type CashierPrinterItem struct {
 }
 
 type PrinterInfo struct {
-	PrinterUuid      uint64 // 0 或者 model.Printer 的Uuid
-	PrinterType      string // 打印机类型
-	Copies           uint   // 打印份数
-	PrinterConfig    string // 打印机设置
-	IsCashierPrinter bool
-	IsCashierOpen    bool
-	CashierBindKey   string
+	PrinterUuid            uint64 // 0 或者 model.Printer 的Uuid
+	PrinterType            string // 打印机类型
+	Copies                 uint   // 打印份数
+	PrinterConfig          string // 打印机设置
+	IsCashierPrinter       bool   // 是否收银机自带打印机
+	IsCashierOpen          bool   // 是否开启打印
+	PrinterCashierDeviceSn string // 执行打印的收银机设备ID
 }

@@ -33,7 +33,7 @@ func (h *ImageHelp) WhiteBackgroundWithBlackText(imgPath, imgSavePath string) er
 	// 检查是否是URL
 	if strings.HasPrefix(imgPath, "http://") || strings.HasPrefix(imgPath, "https://") {
 		// 从URL下载图像
-		src, err = h.downloadImage(imgPath)
+		src, err = h.DownloadImage(imgPath)
 	} else {
 		// 读取本地图像
 		src, err = imaging.Open(imgPath)
@@ -163,7 +163,7 @@ func (h *ImageHelp) simpleRemoveDomain(imageURL string) string {
 }
 
 // downloadImage 从URL下载图像
-func (h *ImageHelp) downloadImage(imageURL string) (image.Image, error) {
+func (h *ImageHelp) DownloadImage(imageURL string) (image.Image, error) {
 	// 创建HTTP客户端，设置超时
 	client := &http.Client{
 		Timeout: 30 * time.Second,

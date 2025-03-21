@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/printer/template"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
 
@@ -22,11 +23,22 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
 	FirstExecution int,
+	payMethodUuid uint64,
 ) (*resp.PrinterData, error) {
-	// todo 设备id没对
+
+	// 设备sn
+	deviceSn := p.ctx.GetDeviceSn()
+	// 如果不是收银端和助手端，从订单获取 获取设备品牌
+	if p.ctx.GetSource() != constant.SourceCashier && p.ctx.GetSource() != constant.SourceAssistant {
+		deviceRepo := repository.NewDeviceRepo(p.ctx.GetDB())
+		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(saleBill.DeviceUuid))
+		if deviceSn == "" {
+			return nil, errors.New("获取设备失败")
+		}
+	}
 
 	// 获取打印设置
-	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
+	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
@@ -57,7 +69,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder)
+	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder, payMethodUuid)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -70,7 +82,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		RelatedType:     1,
 		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
-		CashierDeviceId: p.ctx.GetDeviceSn(),
+		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
 		DataType:        printType,
 		Data:            printContent,
 		Type:            1,
@@ -104,6 +116,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	printType int, // 打印类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单 8-充值单 9-退菜单
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
+	payMethodUuid uint64,
 ) string {
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(printType))
@@ -135,6 +148,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 			tmp,
 			saleBill,
 			saleOrder,
+			payMethodUuid,
 		)
 	}
 

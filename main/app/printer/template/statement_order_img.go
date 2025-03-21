@@ -7,9 +7,12 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // statementOrderImgTemplate 图片订单打印模板
@@ -32,6 +35,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
+	payMethodUuid uint64,
 ) string {
 	name := t.base.Translate("人")
 	// 店铺设置
@@ -574,39 +578,49 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 打印支付二维码
-	// if saleOrder.PaymentOrders != nil && saleOrder.PaymentOrders[0].PaymentMethod.QrcodeFile.GetUrl() != nil && saleOrder.PaymentOrders[0].PayType.Source != 0 && saleOrder.PaymentOrders[0].PayType.Value > 0 {
-	// 	payValue := saleOrder.PaymentOrders[0].PayType.Value
-	// 	paymentOrderId := saleOrder.PaymentOrders[0].Id
-	// 	payType := (new PayType([], t.Ctx.AppId)).Where("source", "<>", 0).Where("value", payValue).Find()
-	// 	paymentOrder := payType.Source == 2 ? (new PaymentOrder([], t.Ctx.AppId)).Where("id", paymentOrderId).Find() : nil
-	// 	if payType != nil && (payType.Source != 2 || (payType.Source == 2 && paymentOrder != nil)) {
-	// 		img.AppendSplitLine()
-	// 		img.LineFeed(1)
-	// 		img.SetAlignment(pkg.AlignCenter)
-	// 		img.SetTextLineHeight(35)
-	// 		img.AppendText(t.base.Translate("请用") + " " + payType.Name + " " + t.base.Translate("扫一扫支付"))
-	// 		img.LineFeed(1)
-	// 		// 1-自行添加 2-LianLianPay
-	// 		if payType.Source == 1 {
-	// 			$printer->appendImg('http://nginx' . $payType->qrcode);
-	// 		} else {
-	// 			if ($paymentOrder->link_url) {
-	// 				$printer->appendQrcode($paymentOrder->link_url);
-	// 			} else {
-	// 				$printer->appendQrcode($paymentOrder->qr_code, 280, 10, true);
-	// 			}
-	// 		}
-	// 		$printer->setTextLineHeight(50);
-	// 	}
-	// }
-
-	// img.AppendSplitLine()
-	// img.LineFeed(1)
-	// img.SetAlignment(pkg.AlignCenter)
-	// img.SetTextLineHeight(35)
-	// img.AppendText(t.base.Translate("请用") + " " + "payType.Name" + " " + t.base.Translate("扫一扫支付"))
-	// img.LineFeed(1)
-	// img.AppendQrcode("logoAddr", 280, 0, false)
+	if payMethodUuid != 0 {
+		db := t.base.Ctx.GetDB()
+		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+		paymentMethod := paymentMethodRepo.GetPaymentMethod(
+			paymentMethodRepo.WhereUuid(payMethodUuid),
+			paymentMethodRepo.WithQrcodeFile(),
+		)
+		if paymentMethod.Uuid != 0 {
+			img.AppendSplitLine()
+			img.LineFeed(1)
+			img.SetAlignment(pkg.AlignCenter)
+			img.SetTextLineHeight(35)
+			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.PaymentName + " " + t.base.Translate("扫一扫支付"))
+			img.LineFeed(1)
+			if paymentMethod.IsLianLianPay() {
+				llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
+					repository.CommonRepo.WhereBySoftDelete(),
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("related_uuid = ?", saleOrder.Uuid)
+						db = db.Where("order_type = ?", constant.PaymentOrderRelatedTypeSaleOrder)
+						db = db.Where("payment_method_uuid = ?", paymentMethod.Uuid)
+						return db.Order("id desc")
+					},
+				)
+				if err == nil && llPaymentOrder.Uuid > 0 {
+					img.AppendQrcode(llPaymentOrder.LinkUrl, 280, 0, true)
+					if !paymentMethod.IsQrPromptPay() {
+						img.LineFeed(1)
+					} else {
+						img.SetTextTotalHeight(35)
+					}
+				} else {
+					img.LineFeed(1)
+					img.AppendText(t.base.Translate("获取二维码错误"))
+					img.LineFeed(1)
+				}
+			} else {
+				qrCodeUrl := paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
+				img.AppendImg(t.base.GetQrcodeAddr(qrCodeUrl), 280, false, 10)
+			}
+			img.SetTextLineHeight(50)
+		}
+	}
 
 	// 技术支持方
 	img.AppendSplitLine()

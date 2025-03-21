@@ -39,6 +39,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 			3,
 			saleBill,
 			saleOrder,
+			0,
 		)
 	}
 

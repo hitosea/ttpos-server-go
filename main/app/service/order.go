@@ -6515,6 +6515,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		saleBill,
 		saleOrder.Uuid,
 		firstExecution,
+		request.PayMethodUuid,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
