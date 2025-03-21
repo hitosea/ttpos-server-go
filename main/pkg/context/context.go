@@ -218,15 +218,15 @@ func (c *ContextImpl) Log() *zap.Logger {
 }
 
 func (c *ContextImpl) SetDB(tx *gorm.DB) {
-	if c.db == nil {
-		c.db = tx
-	}
+	c.db = tx
 }
 
 // GetDB 获取gorm实例
 func (c *ContextImpl) GetDB() *gorm.DB {
-	if db, exists := c.GetGin().Get(jwt.DB); exists {
-		return db.(*gorm.DB)
+	if c.db == nil {
+		if db, exists := c.GetGin().Get(jwt.DB); exists {
+			return db.(*gorm.DB)
+		}
 	}
 	return c.db
 }

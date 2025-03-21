@@ -9,8 +9,6 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
-
-	"gorm.io/gorm"
 )
 
 type UpdateCashBalanceParam struct {
@@ -59,52 +57,42 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 	amount := param.Amount
 	cashWithdrawal := param.CashWithdrawal
 	cashDeposit := param.CashDeposit
-	fn := func(tx *gorm.DB) error {
-
-		var err error
-		cashBoxRepo := repository.NewCashBoxRepo(tx)
-		cashBox := cashBoxRepo.Get()
-
-		if cashBox.Uuid != 0 { // 已存在钱箱
-			if err = cashBoxRepo.Update(cashBox.Uuid, map[string]any{
-				"balance":         amount + cashBox.Balance,
-				"cash_withdrawal": cashWithdrawal + cashBox.CashWithdrawal,
-				"cash_deposit":    cashDeposit + cashBox.CashDeposit,
-			}); err != nil {
-				return errors.WithMessage(err, "更新钱箱失败")
-			}
-		} else { // 不存在钱箱
-			if cashBox, err = cashBoxRepo.Create(model.CashBox{
-				Balance: amount,
-			}); err != nil {
-				return errors.WithMessage(err, "更新钱箱失败")
-			}
-		}
-
-		log := model.CashBoxLog{
-			Type:   cashBoxLogType,
-			Scene:  param.Scene,
-			Amount: amount,
-		}
-
-		// TODO 钱箱日志，如果是充值订单付现金，订单如何保存；如果是退款充值订单，又该如何保存
-		switch param.Scene {
-		//case constant.CashBoxLogSceneRecharge:
-		//	log.PaymentBillUuid = param.OrderUuid
-		case constant.CashBoxLogSceneRefund:
-			log.RefundOrderAmountUuid = param.OrderUuid
-		}
-		_, err = repository.NewCashBoxLogRepo(tx).Create(log)
-
-		return errors.WithMessage(err)
-	}
 
 	tx := ctx.GetDB()
-	if tx == nil {
-		return s.dbm.GetDB(ctx.GetCompanyUuid()).Transaction(func(tx *gorm.DB) error {
-			return fn(tx)
-		})
-	} else {
-		return fn(tx)
+	var err error
+	cashBoxRepo := repository.NewCashBoxRepo(tx)
+	cashBox := cashBoxRepo.Get()
+
+	if cashBox.Uuid != 0 { // 已存在钱箱
+		if err = cashBoxRepo.Update(cashBox.Uuid, map[string]any{
+			"balance":         amount + cashBox.Balance,
+			"cash_withdrawal": cashWithdrawal + cashBox.CashWithdrawal,
+			"cash_deposit":    cashDeposit + cashBox.CashDeposit,
+		}); err != nil {
+			return errors.WithMessage(err, "更新钱箱失败")
+		}
+	} else { // 不存在钱箱
+		if cashBox, err = cashBoxRepo.Create(model.CashBox{
+			Balance: amount,
+		}); err != nil {
+			return errors.WithMessage(err, "更新钱箱失败")
+		}
 	}
+
+	log := model.CashBoxLog{
+		Type:   cashBoxLogType,
+		Scene:  param.Scene,
+		Amount: amount,
+	}
+
+	// TODO 钱箱日志，如果是充值订单付现金，订单如何保存；如果是退款充值订单，又该如何保存
+	switch param.Scene {
+	//case constant.CashBoxLogSceneRecharge:
+	//	log.PaymentBillUuid = param.OrderUuid
+	case constant.CashBoxLogSceneRefund:
+		log.RefundOrderAmountUuid = param.OrderUuid
+	}
+	_, err = repository.NewCashBoxLogRepo(tx).Create(log)
+
+	return errors.WithMessage(err)
 }

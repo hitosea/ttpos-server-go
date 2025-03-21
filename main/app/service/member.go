@@ -184,38 +184,28 @@ type MemberPointsChangeReq struct {
 
 // HandleMemberPoints 处理会员积分
 func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error {
-	fn := func(tx *gorm.DB) error {
-		memberRepo := repository.NewMemberRepo(tx)
-		member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
-		if member.Uuid == 0 {
-			return errors.New("会员不存在")
-		}
-		// 处理会员积分
-		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"point": utils.DecimalAdd(member.Point, changeReq.Points),
-		}); err != nil {
-			return errors.WithMessage(err, "处理会员积分失败")
-		}
-		// 添加积分日志
-		if _, err := repository.NewMemberPointLogRepo(tx).Create(model.MemberPointLog{
-			MemberUuid: changeReq.Uuid,
-			Scene:      changeReq.Scene,
-			Value:      changeReq.Points,
-			Describe:   changeReq.Describe,
-		}); err != nil {
-			return errors.WithMessage(err, "处理会员积分失败")
-		}
-		return nil
-	}
-
 	tx := ctx.GetDB()
-	if tx == nil {
-		return s.dbm.GetDB(ctx.GetCompanyUuid()).Transaction(func(tx *gorm.DB) error {
-			return fn(tx)
-		})
-	} else {
-		return fn(tx)
+	memberRepo := repository.NewMemberRepo(tx)
+	member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
+	if member.Uuid == 0 {
+		return errors.New("会员不存在")
 	}
+	// 处理会员积分
+	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
+		"point": utils.DecimalAdd(member.Point, changeReq.Points),
+	}); err != nil {
+		return errors.WithMessage(err, "处理会员积分失败")
+	}
+	// 添加积分日志
+	if _, err := repository.NewMemberPointLogRepo(tx).Create(model.MemberPointLog{
+		MemberUuid: changeReq.Uuid,
+		Scene:      changeReq.Scene,
+		Value:      changeReq.Points,
+		Describe:   changeReq.Describe,
+	}); err != nil {
+		return errors.WithMessage(err, "处理会员积分失败")
+	}
+	return nil
 }
 
 type MemberBalanceChangeReq struct {
@@ -228,38 +218,30 @@ type MemberBalanceChangeReq struct {
 
 // HandleMemberBalance 处理会员余额
 func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error {
-	fn := func(tx *gorm.DB) error {
-		memberRepo := repository.NewMemberRepo(tx)
-		member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
-		if member.Uuid == 0 {
-			return errors.New("会员不存在")
-		}
-		if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-			"balance":      utils.DecimalAdd(member.Balance, changeReq.Money),
-			"gift_balance": utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
-		}); err != nil {
-			return errors.WithMessage(err, "更新会员余额失败")
-		}
-		// 余额明细
-		if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
-			MemberUuid: changeReq.Uuid,
-			Scene:      changeReq.Scene,
-			Money:      utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
-			GiftMoney:  changeReq.GiftMoney,
-			Describe:   changeReq.Describe,
-		}); err != nil {
-			return errors.WithMessage(err, "处理会员余额失败")
-		}
-		return nil
-	}
 	tx := ctx.GetDB()
-	if tx == nil {
-		return s.dbm.GetDB(ctx.GetCompanyUuid()).Transaction(func(tx *gorm.DB) error {
-			return fn(tx)
-		})
-	} else {
-		return fn(tx)
+	memberRepo := repository.NewMemberRepo(tx)
+	member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
+	if member.Uuid == 0 {
+		return errors.New("会员不存在")
 	}
+	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
+		"balance":      utils.DecimalAdd(member.Balance, changeReq.Money),
+		"gift_balance": utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
+	}); err != nil {
+		return errors.WithMessage(err, "更新会员余额失败")
+	}
+
+	// 余额明细
+	if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
+		MemberUuid: changeReq.Uuid,
+		Scene:      changeReq.Scene,
+		Money:      utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
+		GiftMoney:  changeReq.GiftMoney,
+		Describe:   changeReq.Describe,
+	}); err != nil {
+		return errors.WithMessage(err, "处理会员余额失败")
+	}
+	return nil
 }
 
 // checkCanUpgrade 检查会员是否可以升级
