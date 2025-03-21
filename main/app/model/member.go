@@ -25,6 +25,12 @@ type Member struct {
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
+// 累计会员的消费金额、消费次数
+func (model *Member) AccumulateConsumeAmount(amount float64) {
+	model.AccumulatedConsumptionAmount = decimal.NewFromFloat(model.AccumulatedConsumptionAmount).Add(decimal.NewFromFloat(amount)).InexactFloat64()
+	model.ConsumptionCount++
+}
+
 // 获取会员的积分余额，用于展示在前端。
 // 会员积分余额=积分+冻结积分
 func (model *Member) GetPointBalance() float64 {

@@ -99,6 +99,12 @@ func (model *SaleOrder) HandleMemberPoints(member *Member) {
 	model.MemberPointLog = model.NewMemberPointLog()
 }
 
+// 累计会员的消费金额、消费次数
+func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
+	model.Member = member // 使用最新的会员信息。避免该会员的积分信息已经被更新过
+	model.Member.AccumulateConsumeAmount(model.Amount)
+}
+
 func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {
 	memberPointLog := &MemberPointLog{
 		MemberUuid:  model.Member.Uuid,

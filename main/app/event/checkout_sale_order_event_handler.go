@@ -97,13 +97,15 @@ func checkoutSaleOrderEventHandler() {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
-				// 创建积分发放记录
+				// 创建积分发放记录. // 累计会员的消费金额、消费次数
 				saleOrder.HandleMemberPoints(&member)
-
+				saleOrder.AccumulateMemberConsumeAmountAndTimes(&member) // 累计会员的消费金额、消费次数
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
-						"frozen_point": member.FrozenPoint,
+						"frozen_point":                   member.FrozenPoint,
+						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount,
+						"consumption_count":              member.ConsumptionCount,
 					}); err != nil {
 						return errors.WithMessage(err)
 					}
@@ -122,6 +124,47 @@ func checkoutSaleOrderEventHandler() {
 				go HandleMemberPoints(db, saleOrder.ConsumerUuid)
 			}
 		})
+
+		// 累计会员的消费金额、消费次数
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			if payload.SaleOrderUuid == 0 {
+				return
+			}
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
+			// 如果订单有会员，则累计会员的消费金额、消费次数
+			if saleOrder.ConsumerUuid != 0 {
+				// 加锁, 避免并发问题
+				lock.NewSystemLock().LockUuid(saleOrder.ConsumerUuid)
+				defer lock.NewSystemLock().UnlockUuid(saleOrder.ConsumerUuid)
+
+				// 获取最新的会员信息
+				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+				if err != nil {
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
+					return
+				}
+				// 累计会员的消费金额、消费次数
+				before := saleOrder.Member.AccumulatedConsumptionAmount
+				beforeConsumptionCount := saleOrder.Member.ConsumptionCount
+				saleOrder.AccumulateMemberConsumeAmountAndTimes(&member)
+				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+					// 更新会员积分
+					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
+						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount,
+						"consumption_count":              member.ConsumptionCount,
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					return nil
+				}); err != nil {
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
+					return
+				}
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, AccumulateMemberConsumeAmountAndTimes", zap.Any("before AccumulatedConsumptionAmount", before), zap.Any("add amount", saleOrder.Amount), zap.Any("after AccumulatedConsumptionAmount", saleOrder.Member.AccumulatedConsumptionAmount), zap.Any("beforeConsumptionCount", beforeConsumptionCount), zap.Any("add consumptionCount", 1), zap.Any("afterConsumptionCount", saleOrder.Member.ConsumptionCount))
+			}
+		})
+
 	})
 }
 
