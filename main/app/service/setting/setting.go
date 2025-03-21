@@ -942,9 +942,8 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err = settingRepo.Create(model.Setting{
-			Key:         settingKey,
-			Description: "",
-			Values:      string(value),
+			Key:    settingKey,
+			Values: string(value),
 		}); err != nil {
 			return errors.New("更新设置失败")
 		}
