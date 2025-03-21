@@ -9450,6 +9450,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/printer/report": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印报告",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.打印记录"
+                ],
+                "summary": "打印报告",
+                "parameters": [
+                    {
+                        "description": "打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterReportReqs"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/product/category/list": {
             "get": {
                 "security": [
@@ -14837,6 +14879,35 @@ const docTemplate = `{
                 "uuid": {
                     "description": "打印日志uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.PrinterReportReq": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "description": "失败原因",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 0=失败, 1=成功",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "打印uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PrinterReportReqs": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "打印日志uuid",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.PrinterReportReq"
+                    }
                 }
             }
         },

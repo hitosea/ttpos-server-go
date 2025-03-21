@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/context"
 
 	"github.com/jinzhu/copier"
+	"github.com/spf13/viper"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -170,20 +171,24 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if len(permissions) == 0 {
 			return loginResp, errors.New("当前无权限，请联系管理员")
 		}
-		// ToDo 记得开启
-		// 检查是否有未交班的收银员
+
+		// 获取员工仓库
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-		currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
-		if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
-			return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
-		}
-		// 是否已在其他收银机登录
-		if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
-			cashierName := staff.RealName
-			if cashierName == "" {
-				cashierName = staff.Username
+
+		// 检查是否有未交班的收银员
+		if viper.GetString("CHECK_SHIFT_HANDOVER") != "false" {
+			currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
+			if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
+				return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 			}
-			return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+			// 是否已在其他收银机登录
+			if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
+				cashierName := staff.RealName
+				if cashierName == "" {
+					cashierName = staff.Username
+				}
+				return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+			}
 		}
 
 		// 更新员工信息

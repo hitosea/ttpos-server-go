@@ -997,6 +997,26 @@ definitions:
         description: 打印日志uuid
         type: integer
     type: object
+  req.PrinterReportReq:
+    properties:
+      reason:
+        description: 失败原因
+        type: string
+      status:
+        description: 状态 0=失败, 1=成功
+        type: integer
+      uuid:
+        description: 打印uuid
+        type: integer
+    type: object
+  req.PrinterReportReqs:
+    properties:
+      data:
+        description: 打印日志uuid
+        items:
+          $ref: '#/definitions/req.PrinterReportReq'
+        type: array
+    type: object
   req.ProcessedCallReq:
     properties:
       uuid:
@@ -10167,6 +10187,32 @@ paths:
       security:
       - JwtToken: []
       summary: 打印
+      tags:
+      - 收银端.打印记录
+  /cashier/printer/report:
+    post:
+      consumes:
+      - application/json
+      description: 打印报告
+      parameters:
+      - description: 打印参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterReportReqs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打印报告
       tags:
       - 收银端.打印记录
   /cashier/product/category/list:

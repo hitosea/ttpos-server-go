@@ -93,6 +93,32 @@ func (h *PrinterHandler) PrinterPrint(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// PrinterReport 打印报告
+// @Summary 打印报告
+// @Description 打印报告
+// @Tags 收银端.打印记录
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.PrinterReportReqs true "打印参数"
+// @Success 200 {object} dto.Response
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/printer/report [post]
+func (h *PrinterHandler) PrinterReport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	req := req.PrinterReportReqs{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	err := h.printerLogSrv.PrinterReport(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterPrinterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -111,8 +137,9 @@ func RegisterPrinterHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/printer/base", wrapper.GetPrinterBase) // 获取打印数据
-		privateApi.GET("/printer/list", wrapper.GetPrinterList) // 获取打印数据
-		privateApi.POST("/printer/print", wrapper.PrinterPrint) // 打印
+		privateApi.GET("/printer/base", wrapper.GetPrinterBase)   // 获取打印数据
+		privateApi.GET("/printer/list", wrapper.GetPrinterList)   // 获取打印数据
+		privateApi.POST("/printer/print", wrapper.PrinterPrint)   // 打印
+		privateApi.POST("/printer/report", wrapper.PrinterReport) // 打印报告
 	}
 }

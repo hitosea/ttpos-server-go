@@ -29,15 +29,17 @@ type IPrinterLogRepo interface {
 	WhereTimeRange(startTime, endTime uint) DBOption // 时间范围查询条件
 
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.PrinterLog, int64, error) // 分页获取
-	GetPrintLogCount(opts ...DBOption) (int64, error)
+	GetPrintLogCount(opts ...DBOption) (int64, error)                                    // 根据条件或者打印日志数量
 
 	GetPrinterLog(opts ...DBOption) model.PrinterLog
 	GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error)
 	GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error)
+	GetByUuids(uuids []uint64) ([]model.PrinterLog, error)
 
 	//
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
+	BatchUpdate(logs []model.PrinterLog) error
 
 	Create(printerLog model.PrinterLog) (model.PrinterLog, error)
 }
@@ -162,6 +164,21 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 	return printerLogList, nil
 }
 
+// GetByUuids 根据UUID列表获取打印日志
+func (r *printerLogRepo) GetByUuids(uuids []uint64) ([]model.PrinterLog, error) {
+	var printerLogs []model.PrinterLog
+	if len(uuids) == 0 {
+		return printerLogs, nil
+	}
+
+	err := r.db.Model(&model.PrinterLog{}).Scopes(NotDeleted).Where("uuid IN (?)", uuids).Find(&printerLogs).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return printerLogs, nil
+}
+
 func (r *printerLogRepo) WithPrinter() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Printer")
@@ -267,6 +284,27 @@ func (r *printerLogRepo) UpdateByWhere(vars map[string]any, opts ...DBOption) er
 		db = opt(db)
 	}
 	return db.Updates(vars).Error
+}
+
+func (r *printerLogRepo) BatchUpdate(logs []model.PrinterLog) error {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	tx := r.db.Begin()
+	for _, log := range logs {
+		err := tx.Model(&model.PrinterLog{}).Where("uuid = ?", log.Uuid).Updates(map[string]interface{}{
+			"status": log.Status,
+			"reason": log.Reason,
+		}).Error
+
+		if err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
+	}
+
+	return errors.WithMessage(tx.Commit().Error)
 }
 
 func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {

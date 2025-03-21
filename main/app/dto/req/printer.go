@@ -2,6 +2,7 @@ package req
 
 import (
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
 )
 
 // PrinterListReq 打印机列表查询
@@ -17,4 +18,42 @@ type PrinterListReq struct {
 // PrinterPrintReq 打印请求
 type PrinterPrintReq struct {
 	Uuid uint64 `json:"uuid"` // 打印日志uuid
+}
+
+type PrinterReportReq struct {
+	Uuid   uint64 `json:"uuid"`   // 打印uuid
+	Status int    `json:"status"` // 状态 0=失败, 1=成功
+	Reason string `json:"reason"` // 失败原因
+}
+
+type PrinterReportReqs struct {
+	Data []PrinterReportReq `json:"data"` // 打印日志uuid
+}
+
+// Validate 验证参数
+func (req PrinterReportReqs) Validate() error {
+	if len(req.Data) == 0 {
+		return errors.New("打印报告数据不能为空")
+	}
+	for _, report := range req.Data {
+		if report.Uuid == 0 {
+			return errors.New("打印UUID不能为空")
+		}
+		if report.Status != 0 && report.Status != 1 {
+			return errors.New("打印状态错误")
+		}
+		if report.Status == 0 && report.Reason == "" {
+			return errors.New("打印失败时必须提供失败原因")
+		}
+	}
+	return nil
+}
+
+// Uuids 获取所有打印UUID
+func (req PrinterReportReqs) Uuids() []uint64 {
+	uuids := make([]uint64, 0, len(req.Data))
+	for _, report := range req.Data {
+		uuids = append(uuids, report.Uuid)
+	}
+	return uuids
 }

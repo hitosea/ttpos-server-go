@@ -33,6 +33,7 @@ type IPrinterLogSrv interface {
 	GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error)                                     // 获取打印列表
 	GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error)                                                                       // 获取打印数据
 	PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error)                                                    // 打印
+	PrinterReport(ctx context.Context, req req.PrinterReportReqs) error                                                                      // 打印报告
 	GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (*resp.PrinterData, error)                                                        // 获取静态打印机配置
 }
 
@@ -52,7 +53,7 @@ func NewPrinterLogSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPri
 	}
 }
 
-// GetPrinterBase 获取打印数据
+// GetPrinterBase 获取打印查询条件数据
 func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 获取打印机列表
@@ -468,4 +469,29 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 	}, nil
+}
+
+// PrinterReport 打印报告
+func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReportReqs) error {
+	if err := req.Validate(); err != nil {
+		return err
+	}
+	// 更新打印日志
+	printerLogs := []model.PrinterLog{}
+	for _, report := range req.Data {
+		printerLogs = append(printerLogs, model.PrinterLog{
+			BaseModel: model.BaseModel{
+				Uuid: report.Uuid,
+			},
+			Status: report.Status,
+			Reason: report.Reason,
+		})
+	}
+	//
+	err := repository.NewPrinterLogRepo(ctx.GetDB()).BatchUpdate(printerLogs)
+	if err != nil {
+		return errors.WithMessage(err, "更新打印日志失败")
+	}
+	//
+	return nil
 }
