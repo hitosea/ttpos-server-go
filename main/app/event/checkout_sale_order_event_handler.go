@@ -40,7 +40,6 @@ func checkoutSaleOrderEventHandler() {
 				0,
 			)
 			if err != nil {
-				logger.Logger.Error("SubscribeCheckoutZeroSaleOrderEvent process, PrintStatementOrder failed", zap.Any("payload", payload), zap.Error(err))
 				return
 			}
 		})
