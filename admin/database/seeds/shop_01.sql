@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
 -- ----------------------------
 DROP TABLE IF EXISTS `ttpos_ll_payment_order`;
 CREATE TABLE `ttpos_ll_payment_order` (
-    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自己系统的支付订单ID',
     `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付方式ID',
@@ -175,10 +175,10 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-    KEY `order_id` (`order_id`)
-    KEY `merchant_order_id` (`merchant_order_id`)
-    KEY `related_uuid` (`related_uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `order_id` (`order_id`),
+    KEY `merchant_order_id` (`merchant_order_id`),
+    KEY `related_uuid` (`related_uuid`),
     KEY `payment_order_uuid` (`payment_order_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='lianlian支付订单';
 
@@ -1147,7 +1147,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购单明细表';
 
-CREATE TABLE `ttpos_purchase_form_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_form_log` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单日志UUID',
     `purchase_form_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '采购单uuid',
@@ -1219,7 +1219,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '报损单表';
 
-CREATE TABLE `ttpos_warehouse_monthly_form` (
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_monthly_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表ID',
     `year` int(11) DEFAULT 0 COMMENT '年',
@@ -1232,7 +1232,7 @@ CREATE TABLE `ttpos_warehouse_monthly_form` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '月度报表';
 
-CREATE TABLE `ttpos_warehouse_monthly_material_form` (
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_monthly_material_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表uuid',
     `year` int(11) DEFAULT 0 COMMENT '年',
@@ -1246,7 +1246,7 @@ CREATE TABLE `ttpos_warehouse_monthly_material_form` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '月度物料报表';
 
-CREATE TABLE `ttpos_warehouse_monthly_product_bom_form` (
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_monthly_product_bom_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '月度报表uuid',
     `year` int(11) DEFAULT 0 COMMENT '年',
@@ -1753,7 +1753,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_amount` (
     `return_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联退货单ID',
     `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联支付方式ID',
     `payment_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联支付单ID,用于判断支付单的钱还有多少未退',
-    `amount` DECIMAL(12, 2) NOT NULL DEFA1ULT 0.00 COMMENT '退款金额',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
     `refund_status` INT(11) NOT NULL DEFAULT 1 COMMENT '退款状态 0-退款中 1-退款成功 2-退款失败',
     `merchant_refund_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商户退款单号',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
