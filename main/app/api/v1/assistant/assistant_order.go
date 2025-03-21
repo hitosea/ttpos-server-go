@@ -1,9 +1,10 @@
 package assistant
 
 import (
-	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -19,32 +20,48 @@ type OrderHandler struct {
 	deskSrv  service.IDeskSrv  // 桌台服务
 }
 
-// GetMustPlanList 必点方案列表
-// @Summary 必点方案列表
-// @Description 必点方案列表
+// IsCellClose 判断订单是否可关闭
+// @Summary 判断订单是否可关闭
+// @Description 判断订单是否可关闭
 // @Tags 点餐助手端.订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param sale_bill_uuid query int true "销售账单Uuid"
-// @Success 200 {object} dto.Response{data=resp.ProductMustPlanList}
+// @param data query req.OrderIsCellCloseReq true "详情参数"
 // @Failure 404 {object} nil "未找到"
-// @Router /assistant/order/must_plan_list [get]
-func (h *OrderHandler) GetMustPlanList(c *gin.Context) {
-	saleBillUuid, err := strconv.ParseUint(c.Query("sale_bill_uuid"), 10, 64)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
-	}
+// @Router /assistant/order/is_cell_close [get]
+func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	// 创建桌台订单
-	res, err := h.orderSrv.GetMustPlanList(ctx, saleBillUuid)
-	// 处理错误
+	//
+	params := req.OrderIsCellCloseReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	var err error
+	var productList *resp.CartProductList
+	if params.DeskUuid > 0 {
+		_, productList, err = h.deskSrv.IsCellCloseDesk(ctx, params.DeskUuid)
+		if productList != nil {
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			return
+		}
+	} else if params.SaleBillUuid > 0 {
+		productList, err = h.deskSrv.IsCellCloseInstant(ctx, params.SaleBillUuid)
+		if productList != nil {
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			return
+		}
+	} else {
+		err = errors.New("参数错误")
+	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, res)
+	helper.Success(c, gin.H{})
 }
 
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -69,6 +86,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/order/must_plan_list", wrapper.GetMustPlanList)
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose) // 判断订单是否可关闭
 	}
 }

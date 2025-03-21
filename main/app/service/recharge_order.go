@@ -288,7 +288,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			}
 			return s.GetPendingRechargeOrder(companyUuid), nil
 		}
-		paymentOrderStatus = constant.PaymentOrderStatusUnPay
+		// paymentOrderStatus = constant.PaymentOrderStatusUnPay
 	}
 
 	// 支付方式是否可用
@@ -882,7 +882,14 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 	)
 	if err == nil {
 		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
-			return nil, errors.New("当前支付已完成，请选择其他方式支付")
+			infoResp := &resp.RechargeOrderPaymentQrcodeInfoResp{
+				PaymentOrderUuid: paymentOrder.Uuid,
+				QrCode:           "",
+				QrCodeExpireSec:  10000,
+				Status:           paymentOrder.Status,
+				PaymentAmount:    paymentOrder.PaymentAmount,
+			}
+			return infoResp, nil
 		}
 	}
 

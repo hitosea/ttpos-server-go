@@ -244,7 +244,6 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 			db = db.Where("order_type = ?", orderType)
 			db = db.Where("order_amount = ?", paymentAmount)
 			db = db.Where("order_currency = ?", "THB")
-			db = db.Where("pay_time = ?", constant.No)
 			db = db.Where("expired_time > ?", time.Now().Unix()+5)
 			return db.Order("id desc")
 		},
@@ -436,11 +435,6 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 
 	// 更新支付订单状态
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-
-		fmt.Println("支付订单ID:", order.Uuid)
-		fmt.Println("支付订单pay_time:", payAt)
-		fmt.Println("支付订单pay_time2:", payAt.Unix())
-
 		// 更新连连支付订单
 		err := repository.NewLlPaymentOrderRepo(tx).Update(order.Uuid, map[string]interface{}{
 			"order_status": "PS",

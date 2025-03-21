@@ -178,12 +178,21 @@ class Operate extends Controller
             ];
         }
 
+        // 退款到银行账户
+        $requeustData['bank_code'] = $data['bank_code'] ?? '';
+        $requeustData['account_no'] = $data['account_no'] ?? '';
+        $requeustData['account_name'] = $data['account_name'] ?? '';
+
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/return', json_encode($requeustData), $requeustHeader);
         if (!$res) {
             return $this->renderError('请求失败');
         }
         $result = json_decode($res, true);
-        if (($result['code'] ?? -1) != 0) {
+        $code = $result['code'] ?? -1;
+        if ($code == -401) {
+            return $this->renderError($result['message'] ?? '请求失败', ['code' => -901], 0);
+        }
+        if ($code != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
 

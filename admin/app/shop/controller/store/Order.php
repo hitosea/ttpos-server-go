@@ -129,7 +129,7 @@ class Order extends Controller
         $time = $data['time'] ?: [];
         if (!empty($time)) {
             $queryStartTime = strtotime($time[0]);
-            $queryEndTime = strtotime($time[1]);
+            $queryEndTime = strtotime($time[1]) + 86399;
             $timeMode = $data['time_mode'] ?: [];
             if (in_array(0, $timeMode)) {
                 $enableCreateTime = true;

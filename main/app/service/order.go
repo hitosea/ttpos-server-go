@@ -4722,7 +4722,14 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	)
 	if err == nil {
 		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
-			return nil, errors.New("当前支付已完成，请选择其他方式支付")
+			infoResp := &resp.InstantOrderPaymentQrcodeInfoResp{
+				PaymentOrderUuid: paymentOrder.Uuid,
+				QrCode:           "",
+				QrCodeExpireSec:  10000,
+				Status:           paymentOrder.Status,
+				PaymentAmount:    paymentOrder.PaymentAmount,
+			}
+			return infoResp, nil
 		}
 	}
 
@@ -4839,8 +4846,6 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 			}
 			return newInfoResp, nil
 		}
-		// 默认支付订单状态
-		paymentOrderStatus = constant.PaymentOrderStatusUnPay
 	}
 
 	// 非在线支付订单
@@ -6726,10 +6731,12 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, op
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
 			// 只处理未送厨且非赠菜的商品
-			if product.Status != constant.SaleOrderProductStatusNormal || product.IsGift {
+			if product.Status != constant.SaleOrderProductStatusNormal {
 				continue
 			}
-
+			if product.IsGift {
+				product.DiscountPrice = 0
+			}
 			// 合并相同商品的数量和折扣价格
 			if p, exists := signProduct[product.Sign]; exists {
 				product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)

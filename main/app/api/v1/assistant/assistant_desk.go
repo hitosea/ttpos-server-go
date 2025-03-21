@@ -1129,6 +1129,70 @@ func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// CloseDesk 处理关闭桌台
+// @Summary 关闭桌台
+// @Description 关闭桌台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.DeskCloseReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/close [post]
+func (h *DeskHandler) CloseDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskCloseReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.deskSrv.CloseDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderPaymentZeroRule 设置结账抹零规则
+// @Summary 设置结账抹零规则
+// @Description 设置结账抹零规则
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentZeroRuleReq true "设置结账抹零规则参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp}
+// @Router /assistant/desk/order/payment/zero_rule [post]
+func (h *DeskHandler) OrderPaymentZeroRule(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面设置结账抹零规则接口请求")
+
+	params := req.InstantOrderPaymentZeroRuleReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	if err := params.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
+	// 设置结账抹零规则
+	res, err := h.orderSrv.InstantOrderPaymentZeroRule(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("设置结账抹零规则成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderChangePopulation 处理桌台订单修改人数
 // @Summary 桌台订单修改人数
 // @Description 桌台订单修改人数
@@ -1219,5 +1283,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/unsent_kitchen", wrapper.GetUnsentKitchen)                                // 获取未送厨商品
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                    // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                   // 获取自助餐商品列表
+		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
+		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 	}
 }
