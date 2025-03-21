@@ -224,7 +224,7 @@ class UserRechargeOrder extends Controller
     {
         $data = $this->request->param(); // get post
         if ($this->request->isGet()) {
-            // 请求获取充值订单列表接口
+            // 请求获取充值订单退款信息接口
             $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/refund', ['uuid' => $data['id'] ?? 0], [
                 'Authorization: Bearer ' . request()->header('token'),
                 'Accept-Language: ' . request()->header('language'),
@@ -233,7 +233,11 @@ class UserRechargeOrder extends Controller
                 return $this->renderError('请求失败');
             } 
             $result = json_decode($res, true);
-            if (($result['code'] ?? -1) != 0) {
+            $code = $result['code'] ?? -1;
+            if ($code == -401) {
+                return $this->renderError($result['message'] ?? '请求失败', ['code' => -901], 0);
+            }
+            if ($code != 0) {
                 return $this->renderError($result['message'] ?? '请求失败');
             }
 
@@ -243,11 +247,14 @@ class UserRechargeOrder extends Controller
             return $this->renderSuccess('', compact('info', 'pay_list'));
         }
 
-        // 请求获取充值订单列表接口
+        // 请求提交充值订单退款接口
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/recharge_order/refund', json_encode([
             'uuid' => intval($data['id']),
             'refund_type' => intval($data['refund_type']),
             'refund_money' => floatval($data['refund_money']),
+            'bank_code' => $data['bank_code'] ?? '',
+            'account_no' => $data['account_no'] ?? '',
+            'account_name' => $data['account_name'] ?? '',
         ]), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
