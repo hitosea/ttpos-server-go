@@ -35,12 +35,18 @@ type ProductAddReq struct {
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
 }
 
+type TabletOrderCartProductAddReq struct {
+	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单ID。
+	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单ID。
+	Products      []ProductParams `json:"products" binding:"required,min=1,dive"` // 商品信息列表·
+}
+
 // ProductParams 商品参数
 type ProductParams struct {
-	FlavorProductBomUuid            uint64   // 商品规格uuid
-	Num                             uint     // 数量数量
-	SauceProductBomUuidList         []uint64 // 加料信息
-	ProductPackageAttributeUuidList []uint64 // 属性信息
+	FlavorProductBomUuid            uint64   `json:"flavor_product_bom_uuid" binding:"required"` // 商品规格uuid
+	Num                             uint     `json:"num"  binding:"required"`                    // 数量数量
+	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
+	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

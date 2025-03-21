@@ -114,6 +114,8 @@ type IOrderSrv interface {
 
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                     // 加购并送厨
+
+	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error // 平板端加购并送厨
 }
 
 // orderSrv 订单服务结构

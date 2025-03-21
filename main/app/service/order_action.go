@@ -221,6 +221,24 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	return nil, nil
 }
 
+// TabletAddAndCooking 平板端加购并送厨
+func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error {
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillWithProducts(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(errors.ErrInternal, "数据错误")
+	}
+	if saleBill.Uuid == 0 || len(saleBill.SaleOrders) == 0 {
+		return errors.New("订单不存在")
+	}
+	_, err = s.ActionAddAndCooking(ctx, req.ProductAddReq{
+		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: request.SaleOrderUuid,
+		Products:      request.Products,
+		IsH5Product:   false,
+	}, saleBill)
+	return err
+}
+
 // 加购。内部方法复用
 func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*model.SaleBill, error) {
 

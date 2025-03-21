@@ -37,9 +37,9 @@ func (h *Handler) GetProductCategoryList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetProductList 获取收银产品列表
-// @Summary 获取收银产品列表
-// @Description 获取收银产品列表
+// GetProductList 获取产品列表
+// @Summary 获取产品列表
+// @Description 获取产品列表
 // @Tags 电子菜单
 // @Accept json
 // @Produce json
