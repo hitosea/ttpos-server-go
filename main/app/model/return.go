@@ -12,7 +12,6 @@ type ReturnOrder struct {
 	Unit                string  `gorm:"column:unit;type:varchar(255);comment:货币单位;NOT NULL" json:"unit"`
 	RefundTaxAmount     float64 `gorm:"column:refund_tax_amount;type:decimal(12,2);default:0.00;comment:退款税额;NOT NULL" json:"refund_tax_amount"`
 	RefundReason        string  `gorm:"column:refund_reason;type:varchar(255);comment:退款原因;NOT NULL" json:"refund_reason"`
-	RefundStatus        int     `gorm:"column:refund_status;type:int(11);default:0;comment:退款状态 0-未退款 1-部分成功 2-全部成功;NOT NULL" json:"refund_status"`
 	BankCode            string  `gorm:"column:bank_code;type:varchar(255);comment:银行编码 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"bank_code"`
 	AccountNo           string  `gorm:"column:account_no;type:varchar(255);comment:账号 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_no"`
 	AccountName         string  `gorm:"column:account_name;type:varchar(255);comment:账户名称 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_name"`
@@ -39,6 +38,19 @@ func (model *ReturnOrder) IsExistLianLianPay() bool {
 	return false
 }
 
+// GetLianLianPayCount 获取连连支付数量
+func (model *ReturnOrder) GetLianLianPayCount() int {
+	count := 0
+	for _, amount := range model.ReturnOrderAmounts {
+		if amount.PaymentMethod != nil {
+			if amount.PaymentMethod.IsLianLianPay() {
+				count++
+			}
+		}
+	}
+	return count
+}
+
 // IsExistQrPromptPay 是否存在QrPromptPay支付
 func (model *ReturnOrder) IsExistQrPromptPay() bool {
 	for _, amount := range model.ReturnOrderAmounts {
@@ -54,13 +66,16 @@ func (model *ReturnOrder) IsExistQrPromptPay() bool {
 // ReturnOrderAmount 退款金额表 ttpos_return_order_amount
 type ReturnOrderAmount struct {
 	BaseModel
-	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
-	RefundStatus          int     `gorm:"column:refund_status;type:int(11);default:0;comment:退款状态 0-退款中 1-退款成功 2-退款失败;NOT NULL" json:"refund_status"`
-	MerchantRefundOrderNo string  `gorm:"column:merchant_refund_order_no;type:varchar(255);comment:商户退款单号;NOT NULL" json:"merchant_refund_order_no"`
+	Amount       float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
+	RefundStatus int     `gorm:"column:refund_status;type:int(11);default:0;comment:退款状态 0-退款中 1-退款成功 2-退款失败;NOT NULL" json:"refund_status"`
 	// 关联字段
 	ReturnOrderUuid   uint64 `gorm:"column:return_order_uuid;type:bigint(20) unsigned;default:0;comment:关联退货单ID;NOT NULL" json:"return_order_uuid"`
 	PaymentMethodUuid uint64 `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:关联支付方式ID;NOT NULL" json:"payment_method_uuid"`
 	PaymentOrderUuid  uint64 `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:关联支付单ID,用于判断支付单的钱还有多少未退;NOT NULL" json:"payment_order_uuid"`
+
+	// 连连退款
+	MerchantRefundOrderNo string `gorm:"column:merchant_refund_order_no;type:varchar(255);comment:商户退款单号;NOT NULL" json:"merchant_refund_order_no"`
+	LlReturnOrderid       string `gorm:"column:ll_return_order_id;type:varchar(255);comment:连连退款订单ID, 用来重新发起退款;NOT NULL" json:"ll_return_order_id"`
 
 	ReturnOrder    *ReturnOrder    `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
 	PaymentMethod  *PaymentMethod  `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式

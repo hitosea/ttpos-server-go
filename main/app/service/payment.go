@@ -68,6 +68,7 @@ type PaymentRepo struct {
 	payServiceUrl     string
 	payCallbackUrl    string // 支付回调地址
 	refundCallbackUrl string // 退款回调地址
+	orderCurrency     string
 }
 
 // NewPaymentRepo 创建连连支付仓库
@@ -96,6 +97,7 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 			}
 			return viper.GetString("PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL")
 		}(),
+		orderCurrency: "THB",
 	}
 }
 
@@ -138,7 +140,7 @@ func (p *PaymentRepo) CreatePayment(
 		p.ctx.GetCompanyUuid(),
 		merchantOrderNo,
 		paymentAmount,
-		"THB",
+		p.orderCurrency,
 		"CHECK_OUT",
 		"CASHIER",
 		p.ctx.GetStaffUuid(),
@@ -148,7 +150,7 @@ func (p *PaymentRepo) CreatePayment(
 	// 计算签名
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
-		"sign":         p.paySign(paymentApp.LlSignSalt, jsonStr),
+		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, REQUEST_TIME_OUT)
 	if err != nil {
 		return nil, err
@@ -243,8 +245,8 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 			db = db.Where("merchant_user_id = ?", merchantUserId)
 			db = db.Where("order_type = ?", orderType)
 			db = db.Where("order_amount = ?", paymentAmount)
-			db = db.Where("order_currency = ?", "THB")
-			db = db.Where("expired_time > ?", time.Now().Unix()+5)
+			db = db.Where("order_currency = ?", p.orderCurrency)
+			db = db.Where("(expired_time > ? or pay_time != ?)", time.Now().Unix()+5, 0)
 			return db.Order("id desc")
 		},
 	)
@@ -258,62 +260,74 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 }
 
 // Refund 创建退款
-func (p *PaymentRepo) Refund(
-	relatedType int,
-	relatedUuid uint64,
-	paymentMethodUuid uint64,
-	paymentMethodCode int,
-	paymentAmount float64,
-	commissionFee float64,
-) (*model.LlPaymentOrder, error) {
+// LianLianPaymentRepo 连连支付仓库
+type PaymentServiceRefundReq struct {
+	PaymentOrderUuid      uint64  // 支付订单UUID
+	RelatedType           int     // 支付订单类型
+	MerchantRefundOrderNo string  // 商户退款订单号
+	RefundAmount          float64 // 退款金额
+	RefundOrderId         string  // 退款ID
+	BankCode              string  // 银行代码
+	AccountNo             string  // 账号
+	AccountName           string  // 账号名称
+}
+type LianLianPaymentRefundResp struct {
+	MerchantId       string `json:"merchant_id"`        // 商户ID
+	RefundOrderId    string `json:"refund_order_id"`    // 退款订单ID
+	MerchantRefundId string `json:"merchant_refund_id"` // 商户退款ID
+	RefundAmount     string `json:"refund_amount"`      // 退款金额
+	RefundCurrency   string `json:"refund_currency"`    // 退款币种
+	RefundStatus     string `json:"refund_status"`      // 退款状态
+	CreateTime       string `json:"ll_create_time"`     // 创建时间
+}
+
+func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLianPaymentRefundResp, error) {
 	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
 	if err != nil {
 		return nil, err
 	}
-
-	// 创建支付订单仓库
-	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
-	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
-	merchantOrderNo := utils.GenerateMerchantOrderNo("PS")
-
-	// 获取支付配置
-	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
-	if err != nil {
-		return nil, err
-	}
-
-	// 判断是否已存在有效待支付二维码
-	order, err := p.GetValidPaymentOrderByUuid(relatedType, relatedUuid, orderType, merchantUserId, paymentAmount)
-	if err != nil {
-		return nil, err
-	}
-	if order != nil {
-		return order, nil
-	}
-
-	// 组装请求数据
-	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
-		p.ctx.GetCompanyUuid(),
-		merchantOrderNo,
-		paymentAmount,
-		"THB",
-		"CHECK_OUT",
-		"CASHIER",
-		p.ctx.GetStaffUuid(),
-		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
+	//
+	order, err := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId())).GetPaymentOrder(
+		repository.CommonRepo.WhereBySoftDelete(),
+		func(db *gorm.DB) *gorm.DB {
+			db = db.Where("payment_order_uuid = ?", serviceRefundReq.PaymentOrderUuid)
+			db = db.Where("related_type = ?", serviceRefundReq.RelatedType)
+			return db.Order("id desc")
+		},
 	)
-
-	// 计算签名
-	response, err := p.postRequest(url, jsonStr, map[string]string{
+	if err != nil {
+		return nil, err
+	}
+	if order.Uuid == 0 {
+		return nil, errors.New("支付订单不存在")
+	}
+	if order.PayTime == 0 {
+		return nil, errors.New("支付订单未支付")
+	}
+	// 组装请求数据
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":\"%v\",\"merchant_order_no\":\"%v\",\"merchant_refund_id\":\"%v\",\"refund_amount\":\"%v\",\"refund_currency\":\"%v\",\"refund_reason\":\"%v\",\"callback_url\":\"%v\",\"merchant_refund_order_no\":\"%v\",\"bank_code\":\"%v\",\"account_no\":\"%v\",\"account_name\":\"%v\"}",
+		p.ctx.GetCompanyUuid(),
+		order.MerchantOrderId,
+		serviceRefundReq.RefundOrderId,
+		serviceRefundReq.RefundAmount,
+		p.orderCurrency,
+		"其他",
+		strings.ReplaceAll(p.refundCallbackUrl+"?merchant_refund_id="+serviceRefundReq.MerchantRefundOrderNo, "/", "\\/"),
+		serviceRefundReq.MerchantRefundOrderNo,
+		serviceRefundReq.BankCode,
+		serviceRefundReq.AccountNo,
+		serviceRefundReq.AccountName,
+	)
+	// 计算签名并请求
+	response, err := p.postRequest(p.payServiceUrl+"/api/receipts/lianlianRefund", jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
-		"sign":         p.paySign(paymentApp.LlSignSalt, jsonStr),
+		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, REQUEST_TIME_OUT)
 	if err != nil {
 		return nil, err
 	}
-
-	// 返回支付结果
-	var resp LianLianPaymentResp
+	// 返回结果
+	var resp LianLianPaymentRefundResp
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
@@ -322,65 +336,9 @@ func (p *PaymentRepo) Refund(
 	if err := json.Unmarshal(responseJSON, &resp); err != nil {
 		return nil, err
 	}
-	// 当是微信或者支付宝支付的时候，需要把LinkUrl转换成二维码
-	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay || paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
-		if resp.Order.QrCode == "" {
-			qr, err := qrcode.New(resp.Order.LinkUrl, qrcode.Medium)
-			if err != nil {
-				return nil, err
-			}
-			// 生成PNG格式的二维码图片
-			png, err := qr.PNG(256) // 生成256x256大小的PNG图片
-			if err != nil {
-				return nil, err
-			}
-			// 转换为base64
-			resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
-		}
-		if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
-			resp.Order.CreateTime = resp.Order.OrderCreateTime
-		}
-	} else {
-		// PromptPay直接使用返回的QR code
-		resp.Order.QrCode = "data:image/png;base64," + resp.Order.QrCode
-	}
 
-	// 生成雪花ID
-	uuid, err := utils.GetID()
-	if err != nil {
-		return nil, errors.New("生成雪花ID失败")
-	}
-
-	// 创建支付订单
-	paymentOrder := &model.LlPaymentOrder{
-		PaymentOrderUuid:  uuid,
-		PaymentMethodUuid: paymentMethodUuid,
-		RelatedType:       relatedType,
-		RelatedUuid:       relatedUuid,
-		MerchantOrderId:   merchantOrderNo,
-		MerchantId:        resp.Order.MerchantId,
-		OrderId:           resp.Order.OrderId,
-		OrderType:         resp.PayTypeDesc,
-		OrderStatus:       resp.Order.OrderStatus,
-		OrderAmount:       paymentAmount,
-		OrderCurrency:     resp.Order.OrderCurrency,
-		FullName:          "CASHIER",
-		OrderDesc:         resp.PayTypeDesc,
-		LinkUrl:           resp.Order.QrCode,
-		MerchantUserId:    merchantUserId,
-		LlCreateTime:      resp.Order.CreateTime,
-		CommissionFee:     commissionFee,
-	}
-	// 设置创建时间
-	paymentOrder.CreateTime = time.Now().Unix()
-	// 设置过期时间
-	paymentOrder.ExpiredTime = paymentOrder.CreateTime + paymentOrder.GetAliveTime()
-	// 保存支付订单
-	if _, err := llPaymentOrderRepo.Create(*paymentOrder); err != nil {
-		return nil, err
-	}
 	// 返回支付订单
-	return paymentOrder, nil
+	return &resp, nil
 }
 
 // HandleCallback 处理支付回调
@@ -433,21 +391,35 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 	orderAmount := decimal.NewFromFloat(order.OrderAmount)
 	paymentFeePercent := commissionFee.Div(orderAmount).Round(3).Round(2).InexactFloat64()
 
+	// 获取支付订单
+	paymentOrderId := uint(0)
+	paymentOrderUuid := order.PaymentOrderUuid
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
+		paymentOrderRepo.WhereRelatedUuid(order.RelatedUuid),
+		paymentOrderRepo.WherePaymentMethodUuid(order.PaymentMethodUuid),
+	)
+	if paymentOrder.Uuid > 0 {
+		paymentOrderId = paymentOrder.ID
+		paymentOrderUuid = paymentOrder.Uuid
+	}
+
 	// 更新支付订单状态
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 更新连连支付订单
 		err := repository.NewLlPaymentOrderRepo(tx).Update(order.Uuid, map[string]interface{}{
-			"order_status": "PS",
-			"pay_time":     payAt.Unix(),
+			"order_status":       "PS",
+			"pay_time":           payAt.Unix(),
+			"payment_order_uuid": paymentOrderUuid,
 		})
 		if err != nil {
 			return err
 		}
-
 		// 创建或更新支付单
 		if err := repository.NewPaymentOrderRepo(tx).UpdateOrCreatePaymentOrderRecord(model.PaymentOrder{
 			BaseModel: model.BaseModel{
-				Uuid: order.PaymentOrderUuid,
+				ID:   paymentOrderId,
+				Uuid: paymentOrderUuid,
 			},
 			PaymentMethodName: func() string {
 				if order.PaymentMethod == nil {
@@ -475,6 +447,54 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 		logger.Logger.Error("更新支付订单失败 - 03", zap.Error(err))
 		return err
 	}
+	return nil
+}
+
+// HandleRefundCallback 处理退款回调
+func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLianRefundCallbackRequest) error {
+	// 验证签名
+	err := p.validateRefundSign(sign, callbackReq)
+	if err != nil {
+		fmt.Println("验证签名失败", err)
+		logger.Logger.Error("验证签名失败", zap.Error(err))
+		return err
+	}
+	// 转换商户ID
+	companyUuid, err := strconv.ParseUint(callbackReq.CompanyUuid, 10, 64)
+	if err != nil {
+		fmt.Println("商户ID格式错误", err)
+		logger.Logger.Error("商户ID格式错误", zap.Error(err))
+		return fmt.Errorf("商户ID格式错误: %v", err)
+	}
+	db := p.dbm.GetDB(companyUuid)
+	//
+	returnOrderRepo := repository.NewReturnOrderRepo(db)
+	orderAmount, err := returnOrderRepo.GetReturnOrderAmount(
+		returnOrderRepo.WithReturnOrder(),
+		returnOrderRepo.WhereMerchantRefundOrderNo(callbackReq.MerchantRefundOrderNo),
+	)
+	if err != nil {
+		fmt.Println("获取退货金额失败", err)
+		logger.Logger.Error("获取退货金额失败", zap.Error(err))
+		return err
+	}
+	// 验证退款状态
+	if orderAmount.RefundStatus == 1 || orderAmount.RefundStatus == 2 {
+		return nil
+	}
+	// 更新退款状态
+	if callbackReq.RefundStatus == "RS" {
+		orderAmount.RefundStatus = 1
+	} else {
+		orderAmount.RefundStatus = -1
+	}
+	err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
+	if err != nil {
+		fmt.Println("更新退款状态失败", err)
+		logger.Logger.Error("更新退款状态失败", zap.Error(err))
+		return err
+	}
+
 	return nil
 }
 
@@ -538,14 +558,37 @@ func (p *PaymentRepo) validateSign(sign string, req req.LianLianCallbackRequest)
 		req.PayAt,
 	)
 	// 验证支付签名
-	if p.paySign(paymentApp.LlSignSalt, jsonStr) != sign {
+	if p.requestSign(paymentApp.LlSignSalt, jsonStr) != sign {
+		return errors.New("支付签名验证失败")
+	}
+	return nil
+}
+
+// validateRefundSign 验证退款签名
+func (p *PaymentRepo) validateRefundSign(sign string, req req.LianLianRefundCallbackRequest) error {
+	companyUuid, err := strconv.ParseUint(req.CompanyUuid, 10, 64)
+	if err != nil {
+		return fmt.Errorf("商户ID格式错误: %v", err)
+	}
+	paymentApp, err := p.validateConfig(companyUuid)
+	if err != nil {
+		return err
+	}
+	// 组装请求数据
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":\"%v\",\"refund_status\":\"%v\",\"refund_order_id\":\"%v\"}",
+		req.CompanyUuid,
+		req.RefundStatus,
+		req.RefundOrderId,
+	)
+	// 验证支付签名
+	if p.requestSign(paymentApp.LlSignSalt, jsonStr) != sign {
 		return errors.New("支付签名验证失败")
 	}
 	return nil
 }
 
 // paySign 计算支付签名
-func (p *PaymentRepo) paySign(signSalt string, jsonStr string) string {
+func (p *PaymentRepo) requestSign(signSalt string, jsonStr string) string {
 	// 将盐值和 JSON 字符串组合
 	combinedStr := signSalt + jsonStr
 	// 计算 SHA-256 哈希

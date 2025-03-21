@@ -40,7 +40,7 @@ type RechargeOrderAddPaymentMethodReq struct {
 	RechargeOrderUuid uint64  `json:"recharge_order_uuid" binding:"required"`     // 充值订单Uuid
 	PaymentAmount     float64 `json:"payment_amount" binding:"required,min=0.01"` // 支付金额，使用现金支付，可能大于充值金额，比如充值19，但是会员给了20
 	PaymentMethodUuid uint64  `json:"payment_method_uuid" binding:"required"`     // 支付方式Uuid
-	PaymentOrderUuid  uint64  `json:"-"`                                          // 在线充值订单支付订单Uuid，在线支付时需要
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`                         // 支付订单Uuid 第三方支付的时候需要传
 
 	CompanySetting model.CompanySetting `json:"-"`
 }

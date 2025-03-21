@@ -72,6 +72,7 @@ type InstantOrderPaymentCreateReq struct {
 	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID, 必填
 	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
 	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID, 非必填
 }
 
 // InstantOrderPaymentCancelReq 撤销一个支付单请求

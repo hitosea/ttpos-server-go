@@ -270,15 +270,15 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		return orderResp, errors.New("不能使用余额支付充值")
 	}
 
+	// 默认支付订单状态
+	paymentOrderStatus := constant.PaymentOrderStatusPaid
+
 	// 获取已存在的该支付方式的支付订单
 	paymentOrderRepo := repository.NewPaymentOrderRepo(s.dbm.GetDB(companyUuid))
 	paymentOrder, _ := paymentOrderRepo.GetPaymentOrder(
 		paymentOrderRepo.WhereRelatedUuid(order.Uuid),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-
-	// 默认支付订单状态
-	paymentOrderStatus := constant.PaymentOrderStatusPaid
 
 	//  在线支付订单 - 如果已经存在直接返回
 	if paymentMethod.IsLianLianPay() {
@@ -288,7 +288,11 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			}
 			return s.GetPendingRechargeOrder(companyUuid), nil
 		}
-		// paymentOrderStatus = constant.PaymentOrderStatusUnPay
+		if addReq.PaymentOrderUuid == 0 || addReq.PaymentOrderUuid != paymentOrder.Uuid {
+			return orderResp, errors.New("支付订单ID错误")
+		}
+	} else if addReq.PaymentOrderUuid != 0 {
+		return orderResp, errors.New("非在线支付无需传支付订单ID")
 	}
 
 	// 支付方式是否可用
@@ -1275,9 +1279,11 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		// 遍历所有支付方式，如果小于扣款金额，则继续扣款，否则跳过
 		if record.RefundableAmount < refundMoney {
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
-				PaymentMethodUuid: record.PaymentMethodUuid,
-				Amount:            record.RefundableAmount,
-				PaymentOrderUuid:  record.PaymentOrderUuid,
+				PaymentMethodUuid:     record.PaymentMethodUuid,
+				Amount:                record.RefundableAmount,
+				PaymentOrderUuid:      record.PaymentOrderUuid,
+				MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("RE"),
+				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode},
 			})
 			refundMoney = utils.DecimalSub(refundMoney, record.RefundableAmount)
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
@@ -1285,9 +1291,11 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			}
 		} else {
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
-				PaymentMethodUuid: record.PaymentMethodUuid,
-				Amount:            refundMoney,
-				PaymentOrderUuid:  record.PaymentOrderUuid,
+				PaymentMethodUuid:     record.PaymentMethodUuid,
+				Amount:                refundMoney,
+				PaymentOrderUuid:      record.PaymentOrderUuid,
+				MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("RE"),
+				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode},
 			})
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
 				refundCashMoney = refundMoney
@@ -1296,9 +1304,32 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		}
 	}
 
+	// 创建退货单
+	returnOrder := model.ReturnOrder{
+		RelatedOrderType:   constant.ReturnOrderRelatedOrderTypeRechargeOrder,
+		RelatedOrderUuid:   order.Uuid,
+		RelatedOrderNo:     order.OrderNo,
+		ReturnType:         refundReq.RefundType,
+		RefundAmount:       refundReq.RefundMoney,
+		BankCode:           refundReq.BankCode,
+		AccountNo:          refundReq.AccountNo,
+		AccountName:        refundReq.AccountName,
+		ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
+	}
+
+	// 是否存在QrPromptPay支付
+	if returnOrder.IsExistLianLianPay() {
+		if refundReq.BankCode == "" || refundReq.AccountNo == "" || refundReq.AccountName == "" {
+			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
+		}
+	}
+
+	lianLianPayCount := returnOrder.GetLianLianPayCount()
+
 	err := db.Transaction(func(tx *gorm.DB) error {
 		ctx.SetDB(tx)
 
+		// 更新充值订单
 		err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
 			"refund_money":  utils.DecimalAdd(order.RefundMoney, refundReq.RefundMoney),
 			"refund_amount": utils.DecimalAdd(order.RefundAmount, deductionMoney),
@@ -1306,6 +1337,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		if err != nil {
 			return errors2.ErrInternal
 		}
+
 		// 添加操作日志
 		err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 			OperatorName:      ctx.GetStaff().RealName,
@@ -1319,19 +1351,44 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		if err != nil {
 			return errors2.ErrInternal
 		}
+
 		// 创建退货单
-		returnOrder, err := repository.NewReturnOrderRepo(tx).CreateReturnOrder(model.ReturnOrder{
-			RelatedOrderType:   constant.ReturnOrderRelatedOrderTypeRechargeOrder,
-			RelatedOrderUuid:   order.Uuid,
-			RelatedOrderNo:     order.OrderNo,
-			ReturnType:         refundReq.RefundType,
-			RefundAmount:       refundReq.RefundMoney,
-			ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
-		})
-		if err != nil {
-			return errors2.ErrInternal
+		if _, err = repository.NewReturnOrderRepo(tx).CreateReturnOrderRecord(returnOrder); err != nil {
+			return errors.WithMessage(err)
 		}
 
+		// 创建连连退款订单
+		for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+			if lianLianPayCount > 0 && returnOrderAmount.PaymentMethod.IsLianLianPay() {
+				paymentServiceRefundReq := PaymentServiceRefundReq{
+					RelatedType:           constant.PaymentOrderRelatedTypeRechargeOrder,
+					PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,
+					MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,
+					RefundAmount:          returnOrderAmount.Amount,
+					BankCode:              returnOrder.BankCode,
+					AccountNo:             returnOrder.AccountNo,
+					AccountName:           returnOrder.AccountName,
+				}
+				if lianLianPayCount > 1 {
+					go NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+				} else {
+					payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+					if err != nil {
+						return errors.WithMessage(err)
+					}
+					// 设置连连退款订单ID
+					returnOrderAmount.LlReturnOrderid = payment.RefundOrderId
+				}
+			} else {
+				returnOrderAmount.RefundStatus = 1
+			}
+			// 创建退款金额
+			if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		// 退还余额
 		if deductionMoney > 0 {
 			err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
 				Uuid:     order.MemberUuid,
@@ -1344,6 +1401,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			}
 		}
 
+		// 退还现金
 		if refundCashMoney > 0 {
 			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 				CashBoxLogType: constant.CashBoxLogTypeOut,

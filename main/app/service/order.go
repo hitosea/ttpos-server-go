@@ -1319,14 +1319,43 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		returnOrder.AccountName = req.AccountName
 	}
 
+	lianLianPayCount := returnOrder.GetLianLianPayCount()
+
+	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建退货单
 		if _, err = repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(*returnOrder); err != nil {
 			return errors.WithMessage(err)
 		}
-		// 创建退款金额
-		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount(returnOrder.ReturnOrderAmounts); err != nil {
-			return errors.WithMessage(err)
+		// 创建连连退款订单
+		for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+			if lianLianPayCount > 0 && returnOrderAmount.PaymentMethod.IsLianLianPay() {
+				paymentServiceRefundReq := PaymentServiceRefundReq{
+					RelatedType:           constant.PaymentOrderRelatedTypeSaleOrder,
+					PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,
+					MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,
+					RefundAmount:          returnOrderAmount.Amount,
+					BankCode:              returnOrder.BankCode,
+					AccountNo:             returnOrder.AccountNo,
+					AccountName:           returnOrder.AccountName,
+				}
+				if lianLianPayCount > 1 {
+					go NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+				} else {
+					payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+					if err != nil {
+						return errors.WithMessage(err)
+					}
+					// 设置连连退款订单ID
+					returnOrderAmount.LlReturnOrderid = payment.RefundOrderId
+				}
+			} else {
+				returnOrderAmount.RefundStatus = 1
+			}
+			// 创建退款金额
+			if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		// 创建退货单商品
 		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderProduct(returnOrder.ReturnOrderProducts); err != nil {
@@ -4849,6 +4878,11 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 			}
 			return newInfoResp, nil
 		}
+		if req.PaymentOrderUuid == 0 || req.PaymentOrderUuid != paymentOrder.Uuid {
+			return nil, errors.New("支付订单ID错误")
+		}
+	} else if req.PaymentOrderUuid != 0 {
+		return nil, errors.New("非在线支付无需传支付订单ID")
 	}
 
 	// 非在线支付订单
@@ -4875,6 +4909,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
 	amount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
 	paymentOrder := &model.PaymentOrder{
+		BaseModel:            model.BaseModel{Uuid: req.PaymentOrderUuid},
 		PaymentMethodName:    paymentMethod.PaymentName,
 		PaymentMethodUuid:    req.PaymentMethodUuid,
 		PaymentFeePercent:    percent,

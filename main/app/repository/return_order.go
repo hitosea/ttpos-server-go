@@ -12,6 +12,15 @@ type IReturnOrderRepo interface {
 	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)      // 创建退货单
 	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error      // 创建退货金额
 	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error  // 创建退货商品
+	// 获取退货金额
+	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
+	// 更新退货金额
+	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
+
+	WhereUuid(uuid uint64) DBOption                                   // 通过uuid查询
+	WhereMerchantRefundOrderNo(merchantRefundOrderNo string) DBOption // 通过商户退货单号查询
+
+	WithReturnOrder() DBOption // 预加载退货单
 }
 
 func NewReturnOrderRepo(db *gorm.DB) IReturnOrderRepo {
@@ -52,4 +61,40 @@ func (r *returnOrderRepo) CreateReturnOrderProduct(products []*model.ReturnOrder
 		product.SetNil()
 	}
 	return r.db.Model(&model.ReturnOrderProduct{}).Create(products).Error
+}
+
+func (r *returnOrderRepo) GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) {
+	var amount model.ReturnOrderAmount
+	db := r.db
+	for _, w := range opts {
+		db = w(db)
+	}
+	err := db.First(&amount).Error
+	return amount, errors.WithMessage(err)
+}
+
+func (r *returnOrderRepo) UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(&amount).Error
+}
+
+func (r *returnOrderRepo) WhereMerchantRefundOrderNo(merchantRefundOrderNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("merchant_refund_order_no = ?", merchantRefundOrderNo)
+	}
+}
+
+func (r *returnOrderRepo) WithReturnOrder() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ReturnOrder")
+	}
+}
+
+func (r *returnOrderRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
 }

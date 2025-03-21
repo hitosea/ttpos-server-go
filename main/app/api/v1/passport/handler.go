@@ -58,12 +58,6 @@ func (h *Handler) GetServerPublicKey(c *gin.Context) {
 }
 
 // LianLianCallback 连连支付回调
-// @Summary 连连支付回调
-// @Tags 通用.支付
-// @Access json
-// @Produce json
-// @Success 200 {object} dto.Response
-// @Router /passport/lianlian/callback [post]
 func (h *Handler) LianLianCallback(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	sign := c.GetHeader("sign")
@@ -83,6 +77,28 @@ func (h *Handler) LianLianCallback(c *gin.Context) {
 	c.String(200, "success")
 }
 
+// LianLianRefundCallback 连连支付退款回调
+func (h *Handler) LianLianRefundCallback(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sign := c.GetHeader("sign")
+	//
+	var callbackReq req.LianLianRefundCallbackRequest
+	if err := c.ShouldBind(&callbackReq); err != nil {
+		helper.HandleValidationError(c, err, callbackReq, req.GetServerPublicKeyRequestMessage)
+		return
+	}
+	callbackReq.MerchantRefundOrderNo = c.Query("merchant_refund_id")
+
+	// 处理支付回调
+	err := service.NewPaymentRepo(ctx, h.dbm).HandleRefundCallback(sign, callbackReq)
+	if err != nil {
+		helper.Fail(c, constant.CodeFail, err.Error())
+		return
+	}
+
+	c.String(200, "success")
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
 		dbm:        dbm,
@@ -92,4 +108,5 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	router.GET("/captcha", wrapper.GetCaptcha)
 	router.GET("/server_public_key", wrapper.GetServerPublicKey)
 	router.POST("/lianlian/callback", wrapper.LianLianCallback)
+	router.POST("/lianlian/refund/callback", wrapper.LianLianRefundCallback)
 }

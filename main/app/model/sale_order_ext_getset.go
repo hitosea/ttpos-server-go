@@ -37,6 +37,17 @@ func (model *SaleOrder) GetActualPaymentAmount() float64 {
 	return model.PaymentAmount - model.GetTotalRefundAmount()
 }
 
+// 获取汇总支付订单的支付金额 - 未结账也有值
+func (model *SaleOrder) GetSummaryPaymentAmount() float64 {
+	amount := 0.0
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.Status != constant.PaymentOrderStatusRefund {
+			amount += paymentOrder.PaymentAmount
+		}
+	}
+	return amount
+}
+
 // 获取待支付的金额
 func (model *SaleOrder) GetUnpaidAmount() float64 {
 	unpaidAmount := model.GetPrintReceivablePrice() - model.GetSummaryPaymentAmount()
@@ -44,15 +55,6 @@ func (model *SaleOrder) GetUnpaidAmount() float64 {
 		return 0
 	}
 	return unpaidAmount
-}
-
-// 获取汇总支付订单的支付金额 - 未结账也有值
-func (model *SaleOrder) GetSummaryPaymentAmount() float64 {
-	amount := 0.0
-	for _, paymentOrder := range model.PaymentOrders {
-		amount += paymentOrder.PaymentAmount
-	}
-	return amount
 }
 
 // 获取总的退款金额
@@ -450,7 +452,7 @@ func (model *SaleOrder) GetMemberSurplusBalance() float64 {
 		return 0
 	}
 	if model.Status == constant.SaleOrderStatusFinish {
-		// todo 未完成
+		// todo 未完成 = 获取当前订单结账之后剩余的会员余额
 		return 0
 	}
 	return model.Member.GetBalanceAll()
@@ -461,8 +463,7 @@ func (model *SaleOrder) GetMemberSurplusPoints() float64 {
 	if model.IsFree != 0 {
 		return 0
 	} else {
-		// todo 未完成
-		return model.Member.Point
+		return model.GiftPoints
 	}
 }
 

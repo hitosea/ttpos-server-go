@@ -136,7 +136,7 @@ class Survey extends Controller
             return $this->renderError('请选择时间');
         }
         if (strtotime($data['date'][1]) - strtotime($data['date'][0]) > 30 * 86400) {
-            return $this->renderError('时间范围不能超过30天');
+            return $this->renderError('时间范围不能超过31天');
         }
         $model = new OrderModel;
         $list = $model->storeOverviewByDate($data);
