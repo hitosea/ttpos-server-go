@@ -147,6 +147,9 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 		SentKitchenProducts: resp.SentKitchenProductList{
 			List: make([]resp.SentKitchenProduct, 0),
 		},
+		MustPlans: resp.ProductMustPlanList{
+			List: make([]resp.InstantProductMustPlan, 0),
+		},
 	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
@@ -178,6 +181,10 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 	// 自助餐信息
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet
+	}
+	// 必点方案列表
+	if shopCart.MustPlans != nil {
+		res.MustPlans = *shopCart.MustPlans
 	}
 
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)

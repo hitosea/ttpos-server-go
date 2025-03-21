@@ -4786,7 +4786,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	}
 
 	// 支付方式是否可用
-	if paymentMethod.IsShowMemberRecharge == 0 || !s.paymentMethodSrv.IsEnabled(ctx, *paymentMethod, ctx.GetCompanySetting()) {
+	if !s.paymentMethodSrv.IsEnabled(ctx, *paymentMethod, ctx.GetCompanySetting()) {
 		return nil, errors.New("支付方式未开启")
 	}
 

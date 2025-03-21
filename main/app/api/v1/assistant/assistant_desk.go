@@ -1129,6 +1129,35 @@ func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// CloseDesk 处理关闭桌台
+// @Summary 关闭桌台
+// @Description 关闭桌台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.DeskCloseReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/close [post]
+func (h *DeskHandler) CloseDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskCloseReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.deskSrv.CloseDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // OrderChangePopulation 处理桌台订单修改人数
 // @Summary 桌台订单修改人数
 // @Description 桌台订单修改人数
@@ -1219,5 +1248,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/unsent_kitchen", wrapper.GetUnsentKitchen)                                // 获取未送厨商品
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                    // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                   // 获取自助餐商品列表
+		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
 	}
 }

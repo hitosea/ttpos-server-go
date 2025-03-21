@@ -244,7 +244,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                              // 创建桌台订单(开桌)
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                   // 获取桌台详情
 		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                   // 获取桌台详情-用于定时轮询
-		privateApi.POST("/desk/order/cart/product/add", nil)                                // 向购物车添加商品并送厨
+		privateApi.POST("/desk/order/cart/product/add", nil)                                // todo 向购物车添加商品并送厨
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                  // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList) // 获取自助餐商品列表
 	}
