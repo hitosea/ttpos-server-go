@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"time"
@@ -571,6 +572,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		{
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
 				deviceRepo := repository.NewDeviceRepo(db)
+				fmt.Println("++++++")
+				authBytes, _ := json.Marshal(auth)
+				fmt.Println("assistant auth: ", string(authBytes))
+				fmt.Println("++++++")
 				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
 				if cashierDevice.Uuid == 0 {
 					return company, companySetting, staff, desk, errors.New("收银员设备已解绑，请重新绑定")
@@ -676,6 +681,10 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 	if staff.Company.CompanySetting == nil || staff.Company.CompanySetting.IsOpenAssistant != 1 {
 		return newToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 	}
+
+	bindReqBytes, _ := json.Marshal(bindReq)
+	fmt.Println("bindReq: ", string(bindReqBytes))
+
 	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
 	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, ctx.GetDeviceUuid(), config.JWT.Secret, config.JWT.Expire, auth.Assistant{
 		DeviceId:  ctx.GetGin().GetString(jwt.DeviceId),
