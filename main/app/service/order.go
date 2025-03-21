@@ -4139,10 +4139,13 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		}
 		reasons = _reasons
 	}
+	// 设置赠菜时间
+	saleOrderProduct.GiftTime = time.Now().Unix()
+	saleOrderProduct.SetUpdate()
 	// 执行
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
-			GiftTime:   time.Now().Unix(),
+			GiftTime:   saleOrderProduct.GiftTime,
 			Sign:       saleOrderProduct.GenerateProductSign(),
 			GiftReason: req.Reason,
 		})
