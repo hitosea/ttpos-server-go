@@ -213,6 +213,35 @@ func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderProductRemark 处理桌台订单商品备注
+// @Summary 桌台订单商品备注
+// @Description 桌台订单商品备注
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /tablet/desk/order/product/remark [post]
+func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderProductRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -247,5 +276,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/add", nil)                                // todo 向购物车添加商品并送厨
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                  // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList) // 获取自助餐商品列表
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)           // 桌台订单商品备注
 	}
 }

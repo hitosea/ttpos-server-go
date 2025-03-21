@@ -5635,6 +5635,35 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/payment/zero_rule:
+    post:
+      consumes:
+      - application/json
+      description: 设置结账抹零规则
+      parameters:
+      - description: 设置结账抹零规则参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentZeroRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 设置结账抹零规则
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/population:
     post:
       consumes:
@@ -12280,6 +12309,37 @@ paths:
       security:
       - JwtToken: []
       summary: 获取自助餐商品列表
+      tags:
+      - 平板端.桌台
+  /tablet/desk/order/product/remark:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单商品备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单商品备注
       tags:
       - 平板端.桌台
   /tablet/desk/order/sent_kitchen:
