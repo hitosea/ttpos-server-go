@@ -288,7 +288,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			}
 			return s.GetPendingRechargeOrder(companyUuid), nil
 		}
-		paymentOrderStatus = constant.PaymentOrderStatusUnPay
+		// paymentOrderStatus = constant.PaymentOrderStatusUnPay
 	}
 
 	// 支付方式是否可用

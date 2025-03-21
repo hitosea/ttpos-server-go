@@ -4823,8 +4823,6 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 			}
 			return newInfoResp, nil
 		}
-		// 默认支付订单状态
-		paymentOrderStatus = constant.PaymentOrderStatusUnPay
 	}
 
 	// 非在线支付订单
