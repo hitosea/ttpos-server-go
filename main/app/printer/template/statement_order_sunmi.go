@@ -567,8 +567,16 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			[]int{0, pkg.AlignRight, 0},
 		)
 		printer.AppendText("------------------------------------------------\n")
-		//
-		point := saleOrder.GetMemberSurplusPoints()
+		// 获取商家当前的积分赠送比例
+		var giftRatio float64 = 0
+		if !saleOrder.IsPaid() {
+			pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
+			if err == nil {
+				giftRatio = pointsSetting.GetGiftRatio()
+			}
+		}
+		// 计算本单获取的积分
+		point := saleOrder.GetMemberSurplusPoints(giftRatio)
 		balance := saleOrder.GetMemberSurplusBalance()
 		printer.PrintInColumns(
 			t.base.Translate("会员剩余余额"),

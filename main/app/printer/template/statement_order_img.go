@@ -565,7 +565,16 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if saleOrder.Member != nil {
 		img.AppendSplitLine()
 		img.LineFeed(1)
-		point := saleOrder.GetMemberSurplusPoints()
+		// 获取商家当前的积分赠送比例
+		var giftRatio float64 = 0
+		if !saleOrder.IsPaid() {
+			pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
+			if err == nil {
+				giftRatio = pointsSetting.GetGiftRatio()
+			}
+		}
+		// 计算本单获取的积分
+		point := saleOrder.GetMemberSurplusPoints(giftRatio)
 		balance := saleOrder.GetMemberSurplusBalance()
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("会员剩余余额"), Width: 350, Align: pkg.AlignLeft},
