@@ -340,6 +340,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '下单时间(时间戳)',
     -- 关联uuid
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单uuid',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid',
     
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)，扫码下单时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

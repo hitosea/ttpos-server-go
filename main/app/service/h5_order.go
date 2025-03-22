@@ -83,13 +83,14 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 		}
 		items = append(items, resp.H5OrderItem{
 			H5OrderInfo: resp.H5OrderInfo{
-				OrderUuid:  order.Uuid,
-				OrderTime:  order.OrderTime,
-				HandleTime: order.HandleTime,
-				WaitTime:   time.Now().Unix() - order.OrderTime,
-				DeskNo:     order.DeskNo,
-				Price:      price,
-				Status:     order.Status,
+				SaleBillUuid: order.SaleBillUuid,
+				H5OrderUuid:  order.Uuid,
+				OrderTime:    order.OrderTime,
+				HandleTime:   order.HandleTime,
+				WaitTime:     time.Now().Unix() - order.OrderTime,
+				DeskNo:       order.DeskNo,
+				Price:        price,
+				Status:       order.Status,
 			},
 			DeskRegionUuid: regionUuid,
 			Num:            num,
@@ -178,13 +179,13 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
-				OrderUuid:  order.Uuid,
-				OrderTime:  order.OrderTime,
-				HandleTime: order.HandleTime,
-				WaitTime:   time.Now().Unix() - order.OrderTime,
-				DeskNo:     order.DeskNo,
-				Price:      price,
-				Status:     order.Status,
+				H5OrderUuid: order.Uuid,
+				OrderTime:   order.OrderTime,
+				HandleTime:  order.HandleTime,
+				WaitTime:    time.Now().Unix() - order.OrderTime,
+				DeskNo:      order.DeskNo,
+				Price:       price,
+				Status:      order.Status,
 			},
 			DeskUuid: order.DeskUuid,
 			Cashier:  cashier,

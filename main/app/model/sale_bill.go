@@ -316,6 +316,7 @@ func (model *SaleBill) NewH5Order() *H5Order {
 		},
 		DeskUuid:        model.DeskUuid,                   // 桌台uuid
 		SaleOrderUuid:   h5OrderProducts[0].SaleOrderUuid, // 销售订单uuid
+		SaleBillUuid:    model.Uuid,                       // 销售账单uuid
 		DeskNo:          model.Desk.DeskNo,                // 桌台编号
 		Status:          constant.H5OrderStatusOrder,      // 状态，已下单
 		OrderTime:       time.Now().Unix(),                // 下单时间
