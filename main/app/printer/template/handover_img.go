@@ -54,7 +54,6 @@ func (t *handoverImgTemplate) GetPrintContent(
 	img.SetAlignment(pkg.AlignCenter)
 	img.AppendText(t.base.StoreSetting.Name)
 	img.LineFeed(1, 58)
-	fmt.Println("temp", temp)
 	// 模版二
 	if temp == 2 || temp == 3 {
 		img.SetFontSize(28)
