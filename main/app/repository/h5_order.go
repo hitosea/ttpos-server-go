@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -40,14 +41,15 @@ type IH5OrderRepo interface {
 
 	// 扫码订单商品相关
 
-	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                    // 扫码订单商品
-	GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, error)                             // 扫码订单详情
-	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) // 快照销售订单商品
+	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                           // 扫码订单商品
+	GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid uint64) ([]*model.H5OrderProduct, error) // 获取同一个销售账单，已接单的，h5订单商品
+	GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, error)                                    // 扫码订单详情
+	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error)        // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
 
-	WithSaleOrderProduct222() DBOption // 关联销售订单商品
-	WithH5Order() DBOption             // 关联扫码订单
+	WithSaleOrderProduct() DBOption // 关联销售订单商品
+	WithH5Order() DBOption          // 关联扫码订单
 }
 
 func NewH5OrderRepo(db *gorm.DB) IH5OrderRepo {
@@ -272,6 +274,33 @@ func (r *H5OrderRepoImpl) GetH5OrderProducts(opts ...DBOption) ([]*model.H5Order
 	return products, errors.WithMessage(err)
 }
 
+// GetH5OrderProductsBySaleBillUuidAndAccept 获取同一个销售账单，已接单的，h5订单商品
+func (r *H5OrderRepoImpl) GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid uint64) ([]*model.H5OrderProduct, error) {
+	products, err := r.GetH5OrderProducts(
+		CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "H5Order",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.H5OrderStatusAccepted)),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrderProduct.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	for _, product := range products {
+		if product.IsAccepted() {
+			products = append(products, product)
+		}
+	}
+	return products, nil
+}
+
 func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) {
 	h5OrderProduct.SetNil()
 	err := r.db.Model(&model.H5OrderProduct{}).Create(&h5OrderProduct).Error
@@ -317,7 +346,7 @@ func (r *H5OrderRepoImpl) WhereSaleBillUuid(uuid uint64) DBOption {
 	}
 }
 
-func (r *H5OrderRepoImpl) WithSaleOrderProduct222() DBOption {
+func (r *H5OrderRepoImpl) WithSaleOrderProduct() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct")
 	}

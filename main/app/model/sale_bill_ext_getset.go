@@ -337,7 +337,7 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 获取第一个销售订单
 	saleOrder := model.SaleOrders[0]
 	// 获取未下单的h5订单商品
-	h5OrderProducts := saleOrder.GetH5OrderProductList()
+	h5OrderProducts := saleOrder.GetH5CartProductList()
 	return h5OrderProducts
 }
 

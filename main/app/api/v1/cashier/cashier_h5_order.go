@@ -1,7 +1,6 @@
 package cashier
 
 import (
-	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -55,15 +54,16 @@ func (h *H5OrderHandler) GetH5OrderList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param order_uuid query int true "h5订单uuid"
+// @Param h5_order_uuid query int true "h5订单uuid"
 // @Success 200 {object} dto.Response{data=resp.H5OrderDetailResp}
 // @Router /cashier/h5_order/detail [get]
 func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
-	orderUuid, err := strconv.ParseUint(c.Query("order_uuid"), 10, 64)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err, "参数错误"))
+	var h5OrderDetailReq req.H5OrderDetailReq
+	if err := c.ShouldBindQuery(&h5OrderDetailReq); err != nil {
+		helper.HandleValidationError(c, err, h5OrderDetailReq, nil)
+		return
 	}
-	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetCompanyUuid(c), orderUuid)
+	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetCompanyUuid(c), h5OrderDetailReq.H5OrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

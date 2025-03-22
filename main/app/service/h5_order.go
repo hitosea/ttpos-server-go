@@ -144,13 +144,12 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 		}
 		// 获取同一个销售账单，已接单的，h5订单商品
 		if saleBillUuid > 0 {
-			products, err := h5OrderRepo.GetH5OrderProducts(h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
-				h5OrderRepo.WithSaleOrderProduct222(), h5OrderRepo.WithSaleOrderProductMultiLanguageName(), h5OrderRepo.WithH5Order())
+			products, err := h5OrderRepo.GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 			}
 			for _, product := range products {
-				if product.H5Order.Status == constant.H5OrderStatusAccepted {
+				if product.IsAccepted() {
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
 						LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        product.Num,

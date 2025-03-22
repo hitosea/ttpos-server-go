@@ -134,3 +134,15 @@ func (model *H5OrderProduct) Handle(lang string) {
 	model.AttributeText = model.SaleOrderProduct.GetAttributeNamesByLang(lang)
 	model.Remark = model.SaleOrderProduct.Remark
 }
+
+// 是否已接单
+func (model *H5OrderProduct) IsAccepted() bool {
+	if model.H5OrderUuid == 0 {
+		return false
+	}
+	// 如果H5Order为空，则认为未接单
+	if model.H5Order == nil {
+		return false
+	}
+	return model.H5Order.Status == constant.H5OrderStatusAccepted
+}

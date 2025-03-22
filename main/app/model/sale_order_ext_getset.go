@@ -167,7 +167,7 @@ func (model *SaleOrder) GetH5OrderProductList() []*SaleOrderProduct {
 	return model.GetAllOrderProductList(WithH5Order())
 }
 
-// 获取h5购物车的商品
+// 获取h5购物车的商品(未下单的商品)
 func (model *SaleOrder) GetH5CartProductList() []*SaleOrderProduct {
 	return model.GetAllOrderProductList(WithH5Cart())
 }
