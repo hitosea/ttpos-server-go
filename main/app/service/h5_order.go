@@ -120,26 +120,27 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 
 func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*resp.H5OrderDetailResp, error) {
 	h5OrderRepo := repository.NewH5OrderRepo(s.dbm.GetDB(companyUuid))
-	order, err := h5OrderRepo.GetH5Order(h5OrderRepo.WhereUuid(h5OrderUuid), h5OrderRepo.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
-		h5OrderRepo.WithH5OrderProducts(), h5OrderRepo.WithH5OrderProductSaleOrderProduct(), h5OrderRepo.WithH5OrderProductSaleOrderProductMultiLanguageName(),
-		h5OrderRepo.WithSaleOrderProducts(), h5OrderRepo.WithSaleOrderProductsMultiLanguageName(), h5OrderRepo.WithCashier())
+	h5Order, err := h5OrderRepo.GetH5OrderDetailOrdered(h5OrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 	}
 	newProducts := make([]resp.ProductItem, 0)
 	acceptedProducts := make([]resp.ProductItem, 0)
 	var price float64
-	if order.Status == 1 { // 待处理
+	if h5Order.Status == constant.H5OrderStatusOrder { // 待处理
 		var saleBillUuid uint64
-		if len(order.SaleOrderProducts) > 0 {
-			saleBillUuid = order.SaleOrderProducts[0].SaleBillUuid
+		if len(h5Order.SaleOrderProducts) > 0 {
+			saleBillUuid = h5Order.SaleOrderProducts[0].SaleBillUuid
 		}
-		for _, product := range order.SaleOrderProducts {
-			newProducts = append(newProducts, resp.ProductItem{
-				LocaleName: product.MultiLanguageName.GetNames(),
-				Num:        product.Num,
-				TotalPrice: product.Price,
-			})
+		for _, product := range h5Order.SaleOrderProducts {
+			if !product.IsAcceptOrderBool() {
+				newProducts = append(newProducts, resp.ProductItem{
+					LocaleName: product.MultiLanguageName.GetNames(),
+					Num:        product.Num,
+					TotalPrice: product.Price,
+				})
+			}
+
 			price = price + product.Price
 		}
 		// 获取同一个销售账单，已接单的，h5订单商品
@@ -160,7 +161,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 			}
 		}
 	} else { // 已接单、拒单
-		for _, product := range order.H5OrderProducts {
+		for _, product := range h5Order.H5OrderProducts {
 			newProducts = append(newProducts, resp.ProductItem{
 				LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 				Num:        product.Num,
@@ -171,23 +172,23 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 	}
 
 	var cashier string
-	if order.Staff != nil {
-		cashier = order.Staff.RealName
+	if h5Order.Staff != nil {
+		cashier = h5Order.Staff.RealName
 	}
 
 	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
-				SaleBillUuid: order.SaleBillUuid,
-				H5OrderUuid:  order.Uuid,
-				OrderTime:    order.OrderTime,
-				HandleTime:   order.HandleTime,
-				WaitTime:     time.Now().Unix() - order.OrderTime,
-				DeskNo:       order.DeskNo,
+				SaleBillUuid: h5Order.SaleBillUuid,
+				H5OrderUuid:  h5Order.Uuid,
+				OrderTime:    h5Order.OrderTime,
+				HandleTime:   h5Order.HandleTime,
+				WaitTime:     time.Now().Unix() - h5Order.OrderTime,
+				DeskNo:       h5Order.DeskNo,
 				Price:        price,
-				Status:       order.Status,
+				Status:       h5Order.Status,
 			},
-			DeskUuid: order.DeskUuid,
+			DeskUuid: h5Order.DeskUuid,
 			Cashier:  cashier,
 		},
 		NewProductList: resp.ProductList{

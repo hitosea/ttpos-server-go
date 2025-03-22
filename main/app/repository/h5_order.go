@@ -13,6 +13,7 @@ import (
 type IH5OrderRepo interface {
 	PaginateGetH5Order(pageNo, pageSize int, opts ...DBOption) ([]model.H5Order, int64, error)
 	GetH5Order(opts ...DBOption) (*model.H5Order, error)
+	GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error) // 获取接单详情，只获取已下单商品
 	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
 	GetH5OrderCount(opts ...DBOption) (int64, error)
 	Update(data map[string]interface{}, opts ...DBOption) error // 更新订单商品
@@ -91,6 +92,31 @@ func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (*model.H5Order, error) {
 	}
 	err := db.First(&h5Order).Error
 	return &h5Order, errors.WithMessage(err)
+}
+
+func (r *H5OrderRepoImpl) GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error) {
+	h5Order, err := r.GetH5Order(
+		CommonRepo.WhereByUuid(uuid),
+		r.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "H5OrderProducts",
+			},
+			WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Staff",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return h5Order, nil
 }
 
 // GetH5OrderDetail 获取接单详情
@@ -293,12 +319,13 @@ func (r *H5OrderRepoImpl) GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	newProducts := make([]*model.H5OrderProduct, 0)
 	for _, product := range products {
 		if product.IsAccepted() {
-			products = append(products, product)
+			newProducts = append(newProducts, product)
 		}
 	}
-	return products, nil
+	return newProducts, nil
 }
 
 func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) {
