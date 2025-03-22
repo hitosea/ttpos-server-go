@@ -178,13 +178,14 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
-				H5OrderUuid: order.Uuid,
-				OrderTime:   order.OrderTime,
-				HandleTime:  order.HandleTime,
-				WaitTime:    time.Now().Unix() - order.OrderTime,
-				DeskNo:      order.DeskNo,
-				Price:       price,
-				Status:      order.Status,
+				SaleBillUuid: order.SaleBillUuid,
+				H5OrderUuid:  order.Uuid,
+				OrderTime:    order.OrderTime,
+				HandleTime:   order.HandleTime,
+				WaitTime:     time.Now().Unix() - order.OrderTime,
+				DeskNo:       order.DeskNo,
+				Price:        price,
+				Status:       order.Status,
 			},
 			DeskUuid: order.DeskUuid,
 			Cashier:  cashier,
