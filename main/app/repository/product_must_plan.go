@@ -78,6 +78,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanList(ctx context.Context, op
 func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Context) ([]*model.ProductMustPlan, error) {
 	productMustPlans, err := r.GetProductMustPlanList(ctx,
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByStatus(constant.ProductMustPlanStatusOn),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.MultiLanguageName",
@@ -113,6 +114,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Con
 func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error) {
 	productMustPlans, err := r.GetProductMustPlanList(ctx,
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByStatus(constant.ProductMustPlanStatusOn),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.MultiLanguageName",
