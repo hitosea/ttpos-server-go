@@ -120,7 +120,7 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 		r.WithPrinter(),
 		r.WithPrinterPrinterType(),
 		r.WhereType(1),
-		r.WhereStatus(0),
+		r.WhereStatus(1),
 		r.WhereLimit(5),
 		r.WhereFirstExecution(0),
 		func(db *gorm.DB) *gorm.DB {

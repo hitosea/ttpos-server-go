@@ -83,6 +83,9 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 		log.Fatalf("执行打印任务失败 : %s", err)
 		return
 	}
+	if len(printerLogList) == 0 {
+		return
+	}
 
 	// 执行打印
 	for _, printerLog := range printerLogList {
