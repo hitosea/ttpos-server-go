@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 )
@@ -33,12 +34,32 @@ type SaleOrderBuffetCustomerType struct {
 	// 关联字段
 	BuffetPackage           BuffetPackage           `gorm:"foreignKey:BuffetPackageUuid;references:uuid"`
 	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
+	ReturnOrderProducts     []*ReturnOrderProduct   `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`        // 退货单商品表，用于获取该顾客商品的退货数量
 }
 
 // 设置为空。为了更新数据库数据时，不更新关联对象
 func (model *SaleOrderBuffetCustomerType) SetNil() {
 	model.BuffetPackage = BuffetPackage{}
 	model.BuffetCustomerTypePrice = BuffetCustomerTypePrice{}
+}
+
+// GetCanReturnNum 获取销售订单自助餐顾客类型的可退货数量. 可退货数量=订单自助餐顾客类型数量-已退货数量
+func (model *SaleOrderBuffetCustomerType) GetCanReturnNum() uint {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrderProduct := range model.ReturnOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
+	}
+	// 如果可退货数量小于0，则返回0
+	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
+	if model.Num <= uint(amount.InexactFloat64()) {
+		return 0
+	}
+	return model.Num - uint(amount.InexactFloat64())
+}
+
+// GetCanReturnPrice 获取销售订单自助餐顾客类型的可退货金额. 可退货金额=订单自助餐顾客类型金额-已退货金额
+func (model *SaleOrderBuffetCustomerType) GetCanReturnPrice() float64 {
+	return decimal.NewFromFloat(model.Price).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
 }
 
 // CalcPrice 计算顾客最终单价。顾客最终单价=自助餐顾客类型原价*自定义折扣率

@@ -1414,6 +1414,34 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 	// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
 	paymentRecords, currencyUnit := saleOrder.GetPaymentOrderCanReturnAmount()
 
+	// 获取销售订单的自助餐顾客列表
+	buffetCustomers := saleOrder.GetCustomerList()
+	for _, buffetCustomer := range buffetCustomers {
+		products = append(products, resp.OrderReturnProduct{
+			SaleOrderProductUuid: buffetCustomer.Uuid,
+			LocaleName:           buffetCustomer.LocaleName,
+			LocaleAttributeName:  buffetCustomer.LocaleAttributeName,
+			Num:                  buffetCustomer.CanReturnNum,    // 自助餐顾客类型可退货数量
+			Price:                buffetCustomer.UnitPrice,       // 自助餐顾客类型单价
+			CanReturnAmount:      buffetCustomer.CanReturnAmount, // 自助餐顾客类型可退款金额
+			CurrencyUnit:         currencyUnit,
+		})
+	}
+
+	// 获取销售订单的加钟商品列表
+	delayProducts := saleOrder.GetDelayProductList()
+	for _, delayProduct := range delayProducts {
+		products = append(products, resp.OrderReturnProduct{
+			SaleOrderProductUuid: delayProduct.Uuid,
+			LocaleName:           delayProduct.LocaleName,
+			LocaleAttributeName:  delayProduct.LocaleAttributeName,
+			Num:                  delayProduct.CanReturnNum,    // 加钟商品可退货数量
+			Price:                delayProduct.UnitPrice,       // 加钟商品单价
+			CanReturnAmount:      delayProduct.CanReturnAmount, // 加钟商品可退款金额
+			CurrencyUnit:         currencyUnit,
+		})
+	}
+
 	// 获取销售订单商品列表
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 		products = append(products, resp.OrderReturnProduct{
@@ -2880,129 +2908,20 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
 		{
-			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
-				if orderBuffetCustomer.IsDelete() {
-					continue
-				}
-				// 自助餐顾客价格收费列表
-				product := resp.Product{
-					Uuid:       orderBuffetCustomer.Uuid,
-					LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
-					LocaleAttributeName: dto.LocaleResponse{
-						ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					},
-					Num:           orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
-					FinishedNum:   orderBuffetCustomer.Num,
-					SalePrice:     orderBuffetCustomer.GetOriginPrice(),
-					DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
-					Status:        1,
-					Remark:        "",
-					IsMust:        false,
-					IsGift:        false,
-					IsCancel:      false,
-					IsBuffet:      false,
-					AboutBuffet: resp.AboutBuffet{
-						IsCustomer:       true,
-						IsDelay:          false,
-						CustomerTypeUuid: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
-						BuffetUuid:       orderBuffetCustomer.BuffetPackageUuid,
-					},
-					SendKitchenTime: orderBuffetCustomer.CreateTime,
-					Sign:            cryptor.Md5String(orderBuffetCustomer.GetSign()),
-					UnitPrice:       orderBuffetCustomer.SalePrice,
-				}
-				productList = append(productList, product)
-			}
+			customerList := saleOrder.GetCustomerList()
+			productList = append(productList, customerList...)
 		}
 
 		// 添加加钟商品
 		{
-			for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
-				if delayProduct.IsDelete() {
-					continue
-				}
-				product := resp.Product{
-					Uuid: delayProduct.Uuid,
-					LocaleName: dto.LocaleResponse{
-						ZH:   delayProduct.Name,
-						TH:   delayProduct.Name,
-						EN:   delayProduct.Name,
-						ZHTW: delayProduct.Name,
-						JA:   delayProduct.Name,
-						KO:   delayProduct.Name,
-						MY:   delayProduct.Name,
-						TR:   delayProduct.Name,
-					},
-					LocaleAttributeName: dto.LocaleResponse{},
-					Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
-					FinishedNum:         delayProduct.Num,
-					SalePrice:           delayProduct.GetAmount(),
-					DiscountPrice:       0,  // 加钟商品没有优惠价
-					Status:              1,  // 添加后标记送厨状态，不可修改
-					Remark:              "", // 加钟商品没有备注
-					IsMust:              false,
-					IsGift:              false,
-					IsCancel:            false,
-					IsBuffet:            false,
-					AboutBuffet: resp.AboutBuffet{
-						IsCustomer: false,
-						IsDelay:    true, // 标记该商品是加钟商品
-					},
-					SendKitchenTime: delayProduct.CreateTime,
-					Sign:            cryptor.Md5String(delayProduct.GetSign()),
-					UnitPrice:       delayProduct.Price,
-				}
-				productList = append(productList, product)
-			}
+			delayProductList := saleOrder.GetDelayProductList()
+			productList = append(productList, delayProductList...)
 		}
 
 		// 添加正常商品
 		{
-			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				// 如果查询的是H5已下单的商品和被拒单的商品，则不跳过被删除的商品
-				if option.UnorderedH5Product != repository.OrderedH5ProductWithReject {
-					if saleOrderProduct.IsDelete() {
-						continue
-					}
-				}
-
-				sendKitchenTime := saleOrderProduct.SendKitchenTime
-				if sendKitchenTime == 0 {
-					sendKitchenTime = saleOrderProduct.CreateTime
-				}
-				product := resp.Product{
-					Uuid:                saleOrderProduct.Uuid,
-					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
-					Num:                 saleOrderProduct.Num,
-					SalePrice:           saleOrderProduct.GetSalePrice(),
-					DiscountPrice:       saleOrderProduct.GetPrice(),
-					Status:              saleOrderProduct.StatusValue(),
-					Remark:              saleOrderProduct.Remark,
-					IsMust:              saleOrderProduct.IsMustProduct(),
-					IsGift:              saleOrderProduct.IsGiftProduct(),
-					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
-					IsCancel:            saleOrderProduct.IsCancelProduct(),
-					SendKitchenTime:     sendKitchenTime,
-					Sign:                cryptor.Md5String(saleOrderProduct.Sign),
-					ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
-					AcceptTime:          saleOrderProduct.GetAcceptTime(),
-					UnitPrice:           saleOrderProduct.SalePrice,
-				}
-				if saleOrderProduct.ProductionOrderProduct != nil {
-					if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
-						product.FinishedNum = saleOrderProduct.ProductionOrderProduct.Num
-					}
-				}
-				productList = append(productList, product)
-			}
+			products := saleOrder.GetProductList(option.UnorderedH5Product == repository.OrderedH5ProductWithReject)
+			productList = append(productList, products...)
 		}
 
 		// 商品计数

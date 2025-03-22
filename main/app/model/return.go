@@ -93,10 +93,10 @@ type ReturnOrderProduct struct {
 	BaseModel
 	// 基本信息
 	SaleOrderUuid        uint64  `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
-	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;comment:销售订单商品表ID" json:"sale_order_product_uuid"`
+	SaleOrderProductUuid uint64  `gorm:"column:sale_order_product_uuid;comment:销售订单商品表ID" json:"sale_order_product_uuid"` // 销售订单商品表ID、自助餐顾客类型表ID、自助餐加钟表ID
 	ReturnOrderUuid      uint64  `gorm:"column:return_order_uuid;comment:退货单ID" json:"return_order_uuid"`
 	ProductType          uint    `gorm:"column:product_type;comment:商品类型, 1-销售订单商品SaleOrderProduct 2-销售订单顾客类型SaleOrderBuffetCustomerType 3-自助餐加钟BuffetAddTimeProduct" json:"product_type"`
-	ProductPackageUuid   uint64  `gorm:"column:product_package_uuid;comment:商品包ID" json:"product_package_uuid"`
+	ProductPackageUuid   uint64  `gorm:"column:product_package_uuid;comment:商品包ID" json:"product_package_uuid"` // 商品包ID、自助餐顾客类型ID、自助餐加钟ID
 	ProductName          string  `gorm:"column:product_name;comment:商品名称" json:"product_name"`
 	ProductPrice         float64 `gorm:"column:product_price;comment:商品单价" json:"product_price"`
 	TaxRate              float64 `gorm:"column:tax_rate;comment:税率,根据结账时税率计算" json:"tax_rate"`

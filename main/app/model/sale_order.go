@@ -3,9 +3,12 @@ package model
 import (
 	"fmt"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/cryptor"
 	"github.com/shopspring/decimal"
 )
 
@@ -75,6 +78,143 @@ type SaleOrder struct {
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+}
+
+// 获取销售订单的顾客列表
+func (model *SaleOrder) GetCustomerList() []resp.Product {
+	productList := make([]resp.Product, 0)
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 自助餐顾客价格收费列表
+		product := resp.Product{
+			Uuid:       orderBuffetCustomer.Uuid,
+			LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+			LocaleAttributeName: dto.LocaleResponse{
+				ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			},
+			Num:           orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+			FinishedNum:   orderBuffetCustomer.Num,
+			SalePrice:     orderBuffetCustomer.GetOriginPrice(),
+			DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
+			Status:        1,
+			Remark:        "",
+			IsMust:        false,
+			IsGift:        false,
+			IsCancel:      false,
+			IsBuffet:      false,
+			AboutBuffet: resp.AboutBuffet{
+				IsCustomer:       true,
+				IsDelay:          false,
+				CustomerTypeUuid: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
+				BuffetUuid:       orderBuffetCustomer.BuffetPackageUuid,
+			},
+			SendKitchenTime: orderBuffetCustomer.CreateTime,
+			Sign:            cryptor.Md5String(orderBuffetCustomer.GetSign()),
+			UnitPrice:       orderBuffetCustomer.SalePrice,
+			CanReturnNum:    orderBuffetCustomer.GetCanReturnNum(),
+			CanReturnAmount: orderBuffetCustomer.GetCanReturnPrice(),
+		}
+		productList = append(productList, product)
+	}
+	return productList
+}
+
+// 获取销售订单的加钟商品列表
+func (model *SaleOrder) GetDelayProductList() []resp.Product {
+	productList := make([]resp.Product, 0)
+	for _, delayProduct := range model.SaleOrderBuffetDelayProducts {
+		if delayProduct.IsDelete() {
+			continue
+		}
+		product := resp.Product{
+			Uuid: delayProduct.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   delayProduct.Name,
+				TH:   delayProduct.Name,
+				EN:   delayProduct.Name,
+				ZHTW: delayProduct.Name,
+				JA:   delayProduct.Name,
+				KO:   delayProduct.Name,
+				MY:   delayProduct.Name,
+				TR:   delayProduct.Name,
+			},
+			LocaleAttributeName: dto.LocaleResponse{},
+			Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+			FinishedNum:         delayProduct.Num,
+			SalePrice:           delayProduct.GetAmount(),
+			DiscountPrice:       0,  // 加钟商品没有优惠价
+			Status:              1,  // 添加后标记送厨状态，不可修改
+			Remark:              "", // 加钟商品没有备注
+			IsMust:              false,
+			IsGift:              false,
+			IsCancel:            false,
+			IsBuffet:            false,
+			AboutBuffet: resp.AboutBuffet{
+				IsCustomer: false,
+				IsDelay:    true, // 标记该商品是加钟商品
+			},
+			SendKitchenTime: delayProduct.CreateTime,
+			Sign:            cryptor.Md5String(delayProduct.GetSign()),
+			UnitPrice:       delayProduct.Price,
+			CanReturnNum:    delayProduct.GetCanReturnNum(),
+			CanReturnAmount: delayProduct.GetCanReturnPrice(),
+		}
+		productList = append(productList, product)
+	}
+	return productList
+}
+
+// 获取销售订单的商品列表
+func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []resp.Product {
+	productList := make([]resp.Product, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 如果查询的是H5已下单的商品和被拒单的商品，则不跳过被删除的商品
+		if hasOrderedH5ProductWithReject {
+			if saleOrderProduct.IsDelete() {
+				continue
+			}
+		}
+
+		sendKitchenTime := saleOrderProduct.SendKitchenTime
+		if sendKitchenTime == 0 {
+			sendKitchenTime = saleOrderProduct.CreateTime
+		}
+		product := resp.Product{
+			Uuid:                saleOrderProduct.Uuid,
+			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			Num:                 saleOrderProduct.Num,
+			SalePrice:           saleOrderProduct.GetSalePrice(),
+			DiscountPrice:       saleOrderProduct.GetPrice(),
+			Status:              saleOrderProduct.StatusValue(),
+			Remark:              saleOrderProduct.Remark,
+			IsMust:              saleOrderProduct.IsMustProduct(),
+			IsGift:              saleOrderProduct.IsGiftProduct(),
+			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
+			IsCancel:            saleOrderProduct.IsCancelProduct(),
+			SendKitchenTime:     sendKitchenTime,
+			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
+			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
+			AcceptTime:          saleOrderProduct.GetAcceptTime(),
+			UnitPrice:           saleOrderProduct.SalePrice,
+		}
+		if saleOrderProduct.ProductionOrderProduct != nil {
+			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
+				product.FinishedNum = saleOrderProduct.ProductionOrderProduct.Num
+			}
+		}
+		productList = append(productList, product)
+	}
+	return productList
 }
 
 // 设置会员余额。如果订单设置了会员，则记录会员消费这笔订单后的余额。

@@ -235,10 +235,32 @@ type SaleOrderBuffetDelayProduct struct {
 	// 关联ID字段
 	SaleOrderUuid   uint64 `gorm:"default:0;column:sale_order_uuid;comment:'销售订单ID'"`
 	BuffetDelayUuid uint64 `gorm:"default:0;column:buffet_delay_uuid;comment:'自助餐加钟价格ID'"`
+
+	// 关联对象
+	ReturnOrderProducts []*ReturnOrderProduct `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"` // 退货单商品表，用于获取该加钟商品的退货数量
 }
 
 func (model *SaleOrderBuffetDelayProduct) SetNil() {
+	model.ReturnOrderProducts = nil
+}
 
+// GetCanReturnNum 获取销售订单自助餐顾客类型的可退货数量. 可退货数量=订单自助餐顾客类型数量-已退货数量
+func (model *SaleOrderBuffetDelayProduct) GetCanReturnNum() uint {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrderProduct := range model.ReturnOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
+	}
+	// 如果可退货数量小于0，则返回0
+	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
+	if model.Num <= uint(amount.InexactFloat64()) {
+		return 0
+	}
+	return model.Num - uint(amount.InexactFloat64())
+}
+
+// GetCanReturnPrice 获取销售订单自助餐顾客类型的可退货金额. 可退货金额=订单自助餐顾客类型金额-已退货金额
+func (model *SaleOrderBuffetDelayProduct) GetCanReturnPrice() float64 {
+	return decimal.NewFromFloat(model.Price).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).InexactFloat64()
 }
 
 func (model *SaleOrderBuffetDelayProduct) GetSign() string {

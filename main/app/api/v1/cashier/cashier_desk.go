@@ -606,7 +606,7 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	// 查询购物车信息
+	// 查询购物车信息。含H5订单的商品。使用场景“接单”-“进入桌台”
 	if params.H5OrderUuid > constant.OptionalUuid {
 		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid, repository.WithH5OrderUuid(params.H5OrderUuid))
 		if err != nil {
@@ -616,6 +616,7 @@ func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
 		// 返回结果
 		helper.Success(c, res)
 	} else {
+		// 查询购物车信息
 		res, err := h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid)
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
