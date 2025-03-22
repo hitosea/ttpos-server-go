@@ -66,6 +66,7 @@ type IOrderSrv interface {
 	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                        // 修改订单抹零规则
 	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                            // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
 	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                        // 修改订单人数
+	GetOrderChangeBuffet(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (resp.OrderBuffetResp, error)                                          // 自助餐信息
 	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                                // 调整自助餐
 	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                      // 调整自助餐
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                   // 获取桌台的自助餐商品列表
@@ -2514,6 +2515,37 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}
 
 	return info, nil
+}
+
+// GetOrderChangeBuffet 桌台订单自助餐信息
+func (s *orderSrv) GetOrderChangeBuffet(ctx context.Context, saleBillUuid, saleOrderUuid uint64) (resp.OrderBuffetResp, error) {
+	res := resp.OrderBuffetResp{
+		BuffetUuids:         make([]uint64, 0),
+		BuffetCustomerTypes: make([]resp.DeskBuffetCustomerType, 0),
+	}
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetOrderBuffetInfo(saleBillUuid, saleOrderUuid)
+	if err != nil {
+		return res, errors.ErrInternal
+	}
+	if !saleBill.IsBuffetSaleBill() {
+		return res, nil
+	}
+	if len(saleBill.SaleOrders) == 0 {
+		return res, nil
+	}
+	var customerTypes []resp.DeskBuffetCustomerType
+	var buffetUuids []uint64
+	for _, customerType := range saleBill.SaleOrders[0].SaleOrderBuffetCustomerTypes {
+		customerTypes = append(customerTypes, resp.DeskBuffetCustomerType{
+			Uuid:    customerType.BuffetCustomerTypePrice.BuffetCustomerType.Uuid,
+			MealNum: customerType.Num,
+		})
+		buffetUuids = append(buffetUuids, customerType.BuffetPackageUuid)
+	}
+	return resp.OrderBuffetResp{
+		BuffetUuids:         buffetUuids,
+		BuffetCustomerTypes: customerTypes,
+	}, nil
 }
 
 // OrderChangeBuffet 调整自助餐

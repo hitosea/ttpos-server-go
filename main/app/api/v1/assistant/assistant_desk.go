@@ -1074,6 +1074,32 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetOrderChangeBuffet 获取订单自助餐信息
+// @Summary 获取订单自助餐信息
+// @Description 获取订单自助餐信息
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetOrderBuffetReq true "请求参数"
+// @Success 200 {object} dto.Response{data=resp.OrderBuffetResp} "桌台订单自助餐详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/buffet [get]
+func (h *DeskHandler) GetOrderChangeBuffet(c *gin.Context) {
+	var params req.GetOrderBuffetReq
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	orderBuffet, err := h.orderSrv.GetOrderChangeBuffet(helper.GetContext(c), params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, orderBuffet)
+}
+
 // OrderChangeBuffet 处理桌台订单调整自助餐
 // @Summary 桌台订单调整自助餐
 // @Description 桌台订单调整自助餐
@@ -1407,6 +1433,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数
+		privateApi.GET("/desk/order/buffet", wrapper.GetOrderChangeBuffet)                                    // 桌台订单调整自助餐
 		privateApi.POST("/desk/order/buffet", wrapper.OrderChangeBuffet)                                      // 桌台订单调整自助餐
 		privateApi.GET("/desk/order/unsent_kitchen", wrapper.GetUnsentKitchen)                                // 获取未送厨商品
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                    // 获取已送厨商品

@@ -214,3 +214,15 @@ type SaleOrderInvoiceInfo struct {
 	CompanyTaxNumber string `json:"company_tax_number"`
 	CompanyPhone     string `json:"company_phone"`
 }
+
+// OrderBuffetResp 订单自助餐信息
+type OrderBuffetResp struct {
+	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
+	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表
+}
+
+// DeskBuffetCustomerType 自助餐顾客类型
+type DeskBuffetCustomerType struct {
+	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
+	MealNum uint   `json:"meal_num"` // 就餐人数
+}

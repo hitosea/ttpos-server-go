@@ -1876,6 +1876,15 @@ definitions:
         description: 桌台UUID
         type: integer
     type: object
+  resp.DeskBuffetCustomerType:
+    properties:
+      meal_num:
+        description: 就餐人数
+        type: integer
+      uuid:
+        description: 自助餐顾客类型uuid
+        type: integer
+    type: object
   resp.DeskExtra:
     properties:
       available_num:
@@ -2548,6 +2557,19 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.OperationLogItem'
+        type: array
+    type: object
+  resp.OrderBuffetResp:
+    properties:
+      buffet_customer_types:
+        description: 自助餐顾客类型列表
+        items:
+          $ref: '#/definitions/resp.DeskBuffetCustomerType'
+        type: array
+      buffet_uuids:
+        description: '自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2'
+        items:
+          type: integer
         type: array
     type: object
   resp.OrderCheckRes:
@@ -5065,6 +5087,38 @@ paths:
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/buffet:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单自助餐信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 桌台订单自助餐详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderBuffetResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取订单自助餐信息
+      tags:
+      - 点餐助手端.桌台
     post:
       consumes:
       - application/json

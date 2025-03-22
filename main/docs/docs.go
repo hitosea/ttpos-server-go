@@ -561,6 +561,61 @@ const docTemplate = `{
             }
         },
         "/assistant/desk/order/buffet": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取订单自助餐信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "获取订单自助餐信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "桌台订单自助餐详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderBuffetResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -16404,6 +16459,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DeskBuffetCustomerType": {
+            "type": "object",
+            "properties": {
+                "meal_num": {
+                    "description": "就餐人数",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "自助餐顾客类型uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.DeskExtra": {
             "type": "object",
             "properties": {
@@ -17466,6 +17534,25 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.OperationLogItem"
+                    }
+                }
+            }
+        },
+        "resp.OrderBuffetResp": {
+            "type": "object",
+            "properties": {
+                "buffet_customer_types": {
+                    "description": "自助餐顾客类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.DeskBuffetCustomerType"
+                    }
+                },
+                "buffet_uuids": {
+                    "description": "自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
                     }
                 }
             }

@@ -27,6 +27,7 @@ type IOrderRepo interface {
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                   // 获取桌台的销售账单详细信息
 	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                           // 获取桌台的销售账单详细信息
 	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                // 获取点餐购物车信息
+	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                  // 获取订单自助餐信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)       // 获取销售账单详细信息-包含商品信息
 	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error) // 获取销售账单详细信息-包含商品信息
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                // 根据销售订单商品uuid列表获取销售订单商品列表
@@ -763,6 +764,31 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 			return &ro.ShopCartRepo{SaleBill: bill}, nil
 		}
 	}
+}
+
+// GetOrderBuffetInfo 获取订单自助餐信息
+func (r *orderRepo) GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error) {
+	return NewSaleBillRepo(r.db).GetSaleBill(
+		CommonRepo.WhereByUuid(saleBillUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("uuid = ? AND delete_time = ?", saleOrderUuid, constant.NotDeleted)
+					},
+				},
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			},
+		),
+	)
 }
 
 // GetSaleBillInfoAndProduct 获取销售账单详细信息-包含商品信息

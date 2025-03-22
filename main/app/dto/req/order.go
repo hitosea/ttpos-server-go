@@ -86,6 +86,12 @@ type OrderDeleteReq struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID 传0的时候默认删除主单以及所有子单，不然只删除子单
 }
 
+// GetOrderBuffetReq 获取订单自助餐信息请求
+type GetOrderBuffetReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`    // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid"  json:"sale_order_uuid"` // 销售订单UUID
+}
+
 // OrderShowReq 订单显示 取单
 type OrderShowReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID
