@@ -4,6 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -15,13 +16,21 @@ import (
 )
 
 /**
- * 会员充值订单打印
+ * 交班单打印
  */
-func (p *PrinterRepoImpl) PrintingRechargeOrder(
-	order model.MemberRechargeOrder,
+func (p *PrinterRepoImpl) PrintingHandoverOrder(
+	log *model.StaffShiftLog,
+	businessData *business_data_resp.BusinessDataAll,
 	FirstExecution int,
+	deviceSnId ...string,
 ) (*resp.PrinterData, error) {
-	deviceSn := p.ctx.GetDeviceSn()
+	var deviceSn string
+	// 设备sn
+	if len(deviceSnId) > 0 {
+		deviceSn = deviceSnId[0]
+	} else {
+		deviceSn = p.ctx.GetDeviceSn()
+	}
 
 	// 获取打印设置
 	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
@@ -49,7 +58,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, order)
+	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -59,11 +68,11 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		PrinterType: settingPrinterInfo.PrinterType,
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
-		RelatedType:     2,
-		RelatedUuid:     order.Uuid,
+		RelatedType:     3,
+		RelatedUuid:     log.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterTemplateRecharge,
+		DataType:        constant.PrinterTemplateHandoverSheet,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  FirstExecution,
@@ -91,10 +100,13 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 }
 
 // 构建订单打印的内容
-func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
-	printerType string,
-	order model.MemberRechargeOrder,
+func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
+	printerType string, // 打印机类型
+	log *model.StaffShiftLog,
+	businessData *business_data_resp.BusinessDataAll,
 ) string {
+	// 获取打印模板
+	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -118,42 +130,62 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
-		return template.NewRechargeImgTemplate(base).GetPrintContent(order)
-	}
-
-	/* *
-	* Compax 收银打印机 80mm 自带
-	 */
-	if printerType == constant.PrinterTypeCashierCompax {
-		return template.NewRechargeCompaxTemplate(base).GetPrintContent(order)
-	}
-
-	/* *
-	 * 芯烨打印机
-	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(
-			printerType,
-			order,
+		return template.NewHandoverImgTemplate(base).GetPrintContent(
+			tmp,
+			log,
+			businessData,
 		)
 	}
 
-	/* *
-	* 商米打印机
-	 */
-	if base.IsSunMi {
-		return template.NewRechargeSunmiTemplate(base).GetPrintContent(
-			printerType,
-			order,
-		)
-	}
+	// /* *
+	// * Compax 收银打印机 80mm 自带
+	//  */
+	// if printerType == constant.PrinterTypeCashierCompax {
+	// 	return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
+	// 		constant.PrinterTemplateHandoverSheet,
+	// 		tmp,
+	// 		log,
+	// 		shiftUuid,
+	// 	)
+	// }
 
-	/* *
-	* CODESOFT 打印机
-	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(order)
-	}
+	// /* *
+	//  * 芯烨打印机
+	//  */
+	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+	// 	return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
+	// 		printerType,
+	// 		constant.PrinterTemplateHandoverSheet,
+	// 		tmp,
+	// 		log,
+	// 		shiftUuid,
+	// 	)
+	// }
+
+	// /* *
+	// * 商米打印机
+	//  */
+	// if base.IsSunMi {
+	// 	return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
+	// 		printerType,
+	// 		constant.PrinterTemplateHandoverSheet,
+	// 		tmp,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
+
+	// /* *
+	// * CODESOFT 打印机
+	//  */
+	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+	// 	return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
+	// 		constant.PrinterTemplateHandoverSheet,
+	// 		tmp,
+	// 		saleBill,
+	// 		saleOrder,
+	// 	)
+	// }
 
 	return ""
 }

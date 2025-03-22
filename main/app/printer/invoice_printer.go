@@ -74,7 +74,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterLogDataTypeInvoice,
+		DataType:        constant.PrinterTemplateInvoice,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  1,

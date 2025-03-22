@@ -8,8 +8,10 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -31,6 +33,7 @@ type IStaffShiftSrv interface {
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) // 提交交班
 	ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
+	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq) (*resp.PrinterData, error)
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv) IStaffShiftSrv {
@@ -303,7 +306,7 @@ func (s *staffShiftSrv) GetCashierReport(ctx context.Context) (*resp.CashierRepo
 		return nil, err
 	}
 
-	//
+	// 返回报备信息
 	return &resp.CashierReportResp{
 		PreviousShiftCash: log.PreviousShiftCash,
 		PrinterData:       *printerData,
@@ -327,11 +330,6 @@ func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.Cashier
 	if log.IsHandedOver() {
 		return errors.New("当前班次已交班")
 	}
-	// todo 是否已报备 暂时不拦截
-	// if log.IsReported() {
-	// 	return errors.New("当前班次已经报备")
-	// }
-
 	// 更新交班记录
 	_, err = shiftLogRepo.Update(log, map[string]interface{}{
 		"exception_remark": req.ExceptionRemark,
@@ -450,4 +448,122 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 	}
 
 	return nil
+}
+
+// ShiftPrinter 交班打印
+func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq) (*resp.PrinterData, error) {
+	staff := ctx.GetStaff()
+	shiftLogRepo := repository.NewShiftLogRepo(ctx.GetDB())
+
+	// 查询交班记录
+	log, err := shiftLogRepo.GetShiftLog(
+		shiftLogRepo.WithStaff(),
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.New("当前班次错误，请退出重新登录")
+	}
+	if log.IsHandedOver() {
+		return nil, errors.New("当前班次已交班")
+	}
+
+	// 营业数据
+	var businessData = business_data_resp.BusinessDataAll{
+		TotalSales:             log.TotalBusiness,
+		TotalReceivedPrice:     log.CurrentCashTotal,
+		TotalPayPrice:          21230,
+		TotalPayFeeMoney:       2110,
+		TotalServiceMoney:      120,
+		TotalTaxMoney:          10124,
+		TotalUserDiscountMoney: 120,
+		TotalDiscountMoney:     120,
+		TotalFreeOrderPrice:    120,
+		TotalRefundMoney:       10,
+		TotalOrderNum:          1230,
+		TotalPeopleNum:         120,
+		TotalProductNum:        320,
+		TotalTableNum:          120,
+		AvgOrderPrice:          620,
+		MinOrderPrice:          120,
+		MaxOrderPrice:          1200,
+		AllTableOrderNum:       1230,
+		AllTablePeopleNum:      120,
+		AllTableAvgOrderPrice:  620,
+		AllTableMinOrderPrice:  120,
+		AllTableMaxOrderPrice:  1200,
+		AllTablePeopleAvg:      10,
+		PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
+			{
+				Name:     "现金",
+				OrderNum: 1,
+				Amount:   123213,
+				Code:     40,
+			},
+			{
+				Name:     "支付宝",
+				OrderNum: 1,
+				Amount:   24121,
+				Code:     41,
+			},
+			{
+				Name:     "微信支付",
+				OrderNum: 1,
+				Amount:   123213,
+				Code:     42,
+			},
+		},
+		AbnormalData: business_data_resp.AbnormalData{},
+		MemberData: business_data_resp.MemberData{
+			RechargeAmount: 120,
+			GiftMoney:      120,
+			GiftPoints:     120,
+		},
+		PeakHourList: []business_data_resp.PeakHour{
+			{
+				TimePeriod: "12",
+				OrderNum:   120,
+				Amount:     120,
+			},
+			{
+				TimePeriod: "121232",
+				OrderNum:   120,
+				Amount:     120,
+			},
+		},
+		CategoryList: []business_data_resp.Category{
+			{
+				Name:     "12",
+				SalesNum: 120,
+				Prices:   120,
+			},
+			{
+				Name:     "121232",
+				SalesNum: 120,
+				Prices:   120,
+			},
+		},
+		PercentageList: []business_data_resp.Percentage{
+			{
+				TaxRate:        120,
+				ConsumptionTax: 120,
+			},
+			{
+				TaxRate:        110,
+				ConsumptionTax: 2120,
+			},
+		},
+	}
+
+	// 打印
+	printerData, err := printer.NewPrinterRepo(ctx).PrintingHandoverOrder(
+		&log,
+		&businessData,
+		1,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return printerData, nil
 }

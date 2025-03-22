@@ -8,6 +8,8 @@ import (
 )
 
 type IShiftLogRepo interface {
+	WithStaff() DBOption
+
 	GetPreviousShiftCash() (float64, error)
 	Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
 	GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error)
@@ -56,4 +58,11 @@ func (r *ShiftLogRepo) GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error
 func (r *ShiftLogRepo) Update(shiftLog model.StaffShiftLog, updates map[string]interface{}) (model.StaffShiftLog, error) {
 	err := r.db.Model(&model.StaffShiftLog{}).Where("id = ?", shiftLog.ID).Updates(updates).Error
 	return shiftLog, errors.WithMessage(err)
+}
+
+// WithStaff 预加载收银员
+func (r *ShiftLogRepo) WithStaff() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Staff")
+	}
 }

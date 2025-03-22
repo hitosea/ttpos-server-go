@@ -65,12 +65,11 @@ func (model *PaymentMethod) IsBalance() bool {
 
 // IsLianLianPay 是否连连支付
 func (model *PaymentMethod) IsLianLianPay() bool {
-	if model.Code != constant.PaymentMethodCodeLianLianWechatPay &&
-		model.Code != constant.PaymentMethodCodeLianLianAliPay &&
-		model.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
-		return false
-	}
-	return true
+	return slices.Contains([]int{
+		constant.PaymentMethodCodeLianLianWechatPay,
+		constant.PaymentMethodCodeLianLianAliPay,
+		constant.PaymentMethodCodeLianLianQRPromptPay,
+	}, model.Code)
 }
 
 // IsQrPromptPay 是否QrPromptPay 支付
@@ -80,9 +79,7 @@ func (model *PaymentMethod) IsQrPromptPay() bool {
 
 // 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
-	return slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
-		constant.PaymentMethodCodeLianLianAliPay,
-		constant.PaymentMethodCodeLianLianQRPromptPay}, model.Code)
+	return model.IsLianLianPay()
 }
 
 // GetSourceText 获取来源文本

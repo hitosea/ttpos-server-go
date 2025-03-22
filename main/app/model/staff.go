@@ -53,6 +53,8 @@ type StaffShiftLog struct {
 	Abnormal          string  `gorm:"column:abnormal;type:varchar(255);comment:异常信息-json字符串" json:"abnormal"`
 	ShiftStartTime    int64   `gorm:"column:shift_start_time;type:int(10);default:0;comment:当班开始时间;NOT NULL" json:"shift_start_time"`
 	ShiftEndTime      int64   `gorm:"column:shift_end_time;type:int(10);default:0;comment:当班结束时间;NOT NULL" json:"shift_end_time"`
+
+	Staff *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
 }
 
 // StaffLoginLog 管理员登录记录表 `ttpos_staff_login_log`

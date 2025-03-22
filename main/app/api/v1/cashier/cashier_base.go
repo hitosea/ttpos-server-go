@@ -495,18 +495,18 @@ func (h *BaseHandler) ShiftDeposit(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/shift/printer [post]
 func (h *BaseHandler) ShiftPrinter(c *gin.Context) {
-	// ctx := helper.GetContext(c)
-	// var printerReq req.ShiftPrinterReq
-	// if err := c.ShouldBindJSON(&printerReq); err != nil {
-	// 	helper.HandleValidationError(c, err, printerReq, nil)
-	// 	return
-	// }
-	// printerData, err := h.staffShiftSrv.ShiftPrinter(ctx, printerReq)
-	// if err != nil {
-	// 	helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-	// 	return
-	// }
-	// helper.Success(c, printerData)
+	ctx := helper.GetContext(c)
+	var printerReq req.ShiftPrinterReq
+	if err := c.ShouldBindJSON(&printerReq); err != nil {
+		helper.HandleValidationError(c, err, printerReq, nil)
+		return
+	}
+	printerData, err := h.staffShiftSrv.ShiftPrinter(ctx, printerReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, printerData)
 }
 
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
