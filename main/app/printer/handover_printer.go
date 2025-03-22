@@ -164,18 +164,18 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 		)
 	}
 
-	// /* *
-	// * 商米打印机
-	//  */
-	// if base.IsSunMi {
-	// 	return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		constant.PrinterTemplateHandoverSheet,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	* 商米打印机
+	 */
+	if base.IsSunMi {
+		return template.NewHandoverSunmiTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			log,
+			businessData,
+			firstExecution,
+		)
+	}
 
 	/* *
 	* CODESOFT 打印机

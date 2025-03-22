@@ -102,7 +102,6 @@ func NewPrinterTemplate(
 func (t *printerTemplate) GetPriceAndUnit(price float64) string {
 	// 格式化金额为字符串，保留两位小数
 	priceStr := t.Amount(price)
-	// priceStr := strconv.FormatFloat(price, 'f', 2, 64)
 	if t.CurrencyUnitPosition == 1 {
 		return priceStr + t.CurrencyUnit
 	}

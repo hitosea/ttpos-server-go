@@ -3,6 +3,7 @@ package template
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
@@ -379,7 +380,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("商品数量"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.Amount(float64(businessData.TotalProductNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: strconv.Itoa(businessData.TotalProductNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("优惠折扣"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
@@ -569,7 +570,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 			}
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: peak.TimePeriod, Width: 280, Align: pkg.AlignLeft, FontWeight: 1},
-				pkg.ColumnConfig{Text: t.base.Amount(float64(peak.OrderNum)), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%d", peak.OrderNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(peak.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
@@ -588,7 +589,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 			}
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: category.Name, Width: 280, Align: pkg.AlignLeft, FontWeight: 1},
-				pkg.ColumnConfig{Text: t.base.Amount(float64(category.SalesNum)), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%d", category.SalesNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(category.Prices), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
