@@ -5156,6 +5156,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	fmt.Println("s.settingSrv.GetPointsSetting(ctx) pointsSetting:", utils.ToJsonString(pointsSetting))
 	// 计算本单获取的积分
 	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
+	// 记录会员余额
+	saleOrder.SetMemberBalance()
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新销售订单

@@ -59,6 +59,7 @@ type SaleOrder struct {
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
 	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
+	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
 
 	// 虚拟字段，用于标记当前子单是第几个
 	Index int `gorm:"-" json:"index,omitempty"`
@@ -74,6 +75,14 @@ type SaleOrder struct {
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+}
+
+// 设置会员余额。如果订单设置了会员，则记录会员消费这笔订单后的余额。
+func (model *SaleOrder) SetMemberBalance() {
+	if model.ConsumerUuid == 0 {
+		return
+	}
+	model.MemberBalance = model.Member.GetBalanceAll()
 }
 
 // 设置积分赠送比例

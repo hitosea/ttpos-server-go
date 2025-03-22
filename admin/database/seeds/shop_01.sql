@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `gift_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分. 赠送积分=应收金额amount*积分赠送比例.',
     `gift_point_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '赠送积分比例. 取值范围0-1。结账后记录，不受后台改变',
+    `member_balance`  DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员余额.会员消费本单后剩余的余额',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- 关联ID
