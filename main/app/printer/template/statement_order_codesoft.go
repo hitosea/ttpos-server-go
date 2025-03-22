@@ -587,8 +587,16 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetLineSpacing(70)
 		printer.AppendText("------------------------------------------------\n")
-		//
-		point := saleOrder.GetMemberSurplusPoints()
+		// 获取商家当前的积分赠送比例
+		var giftRatio float64 = 0
+		if !saleOrder.IsPaid() {
+			pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
+			if err == nil {
+				giftRatio = pointsSetting.GetGiftRatio()
+			}
+		}
+		// 计算本单获取的积分
+		point := saleOrder.GetMemberSurplusPoints(giftRatio)
 		balance := saleOrder.GetMemberSurplusBalance()
 		printer.AppendText(t.base.PrintText(t.base.Translate("会员剩余余额"), "", t.base.GetPriceAndUnit(balance), width, 34) + "\n")
 		printer.AppendText(t.base.PrintText(t.base.Translate("本次积分"), "", point, width, 34))

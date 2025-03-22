@@ -452,17 +452,25 @@ func (model *SaleOrder) GetMemberSurplusBalance() float64 {
 		return 0
 	}
 	if model.Status == constant.SaleOrderStatusFinish {
-		// todo 未完成 = 获取当前订单结账之后剩余的会员余额
-		return 0
+		return model.MemberBalance
 	}
 	return model.Member.GetBalanceAll()
 }
 
 // 获取会员积分
-func (model *SaleOrder) GetMemberSurplusPoints() float64 {
-	if model.IsFree != 0 {
+func (model *SaleOrder) GetMemberSurplusPoints(giftRatio ...float64) float64 {
+	if model.Member == nil || model.IsFree != 0 {
 		return 0
 	} else {
+		if model.Status == constant.SaleOrderStatusFinish {
+			return model.GiftPoints
+		}
+		if len(giftRatio) == 0 {
+			return 0
+		}
+		// 计算本单获取的积分
+		model.SetGiftPointsRate(giftRatio[0])
+		// 记录会员余额
 		return model.GiftPoints
 	}
 }
