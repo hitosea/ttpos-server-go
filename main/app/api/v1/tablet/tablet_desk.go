@@ -145,7 +145,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 // @Router /tablet/desk/ping [get]
 func (h *DeskHandler) GetDeskPing(c *gin.Context) {
 	// 获取收银产品列表
-	res, err := h.deskSrv.GetDeskPing(helper.GetContext(c), helper.GetDeskUuid(c))
+	res, err := h.deskSrv.GetDeskPing(helper.GetContext(c), helper.GetDeskUuid(c), nil)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -163,7 +163,7 @@ func (h *DeskHandler) GetDeskPing(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderCartProductAddReq true "商品参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.DeskPing}
 // @Router /tablet/desk/order/cart/product/add [post]
 func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -174,9 +174,15 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	// 添加商品。 若没有点餐账单则新建一个
-	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
@@ -227,7 +233,7 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -274,7 +280,7 @@ func (h *DeskHandler) GetDeskBuffetProductList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderProductRemarkReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /tablet/desk/order/product/remark [post]
 func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
@@ -286,13 +292,19 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
 	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, res)
 }
 
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

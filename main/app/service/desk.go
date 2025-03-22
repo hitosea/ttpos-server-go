@@ -25,7 +25,7 @@ type IDeskSrv interface {
 	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
-	GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPing, error)                                            // 获取桌台详情-用于定时轮询
+	GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error)                   // 获取桌台详情-用于定时轮询
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                          // 关闭桌台
 	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                    // 完成桌台
@@ -141,15 +141,24 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 }
 
 // GetDeskPing 获取桌台详情-用于定时轮询
-func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPing, error) {
+func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error) {
 	res := resp.DeskPing{
-		DeskInfo: resp.Desk{},
+		SentKitchen: resp.SentKitchen{
+			Groups: resp.GroupList{
+				List: []resp.SentKitchenProductGroup{{
+					Products: resp.GroupProductList{
+						List: make([]resp.Product, 0),
+					},
+				}},
+			},
+		},
 		SentKitchenProducts: resp.SentKitchenProductList{
 			List: make([]resp.SentKitchenProduct, 0),
 		},
 		MustPlans: resp.ProductMustPlanList{
 			List: make([]resp.InstantProductMustPlan, 0),
 		},
+		SaleOrderList: make([]resp.SaleOrder, 0),
 	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
@@ -162,22 +171,17 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 	if desk.SaleBill == nil {
 		return res, nil
 	}
-
-	// 计算未送厨商品金额
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillWithProducts(desk.SaleBillUuid)
-	if err != nil {
-		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单所有商品信息失败")
-	}
-	for _, order := range saleBill.SaleOrders {
-		res.UnsentKitchenInfo.ProductAmount = utils.DecimalAdd(res.UnsentKitchenInfo.ProductAmount, order.GetUnCookingProductAmount())
-	}
-
 	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
-	shopCart, err := s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
-	if err != nil {
-		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+	if shopCart == nil {
+		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
+		if err != nil {
+			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+		}
 	}
-
+	// 未送厨商品信息
+	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart)
+	// 已送厨商品信息
+	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart)
 	// 自助餐信息
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet
@@ -186,14 +190,12 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64) (resp.DeskPi
 	if shopCart.MustPlans != nil {
 		res.MustPlans = *shopCart.MustPlans
 	}
+	// 订单列表，拆单时，会有多个
+	res.SaleOrderList = shopCart.SaleOrderList
 
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			// 合计未送厨商品数量
-			if product.Status == constant.SaleOrderProductStatusNormal && !product.IsGift {
-				res.UnsentKitchenInfo.ProductNum = res.UnsentKitchenInfo.ProductNum + product.Num
-			}
 			// 合计已送厨商品列表
 			if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) {
 				var sentKitchenNum, finishedNum uint
