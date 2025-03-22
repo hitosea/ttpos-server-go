@@ -126,5 +126,5 @@ func (t *rechargeImgTemplate) GetPrintContent(
 	img.LineFeed(2)
 	img.LineFeed(1, 20)
 	//
-	return img.Save("", !t.base.IsSunMi, false)
+	return img.Save("", !t.base.IsSunMi, 0)
 }

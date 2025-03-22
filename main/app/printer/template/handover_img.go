@@ -8,7 +8,6 @@ import (
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -31,13 +30,12 @@ func (t *handoverImgTemplate) GetPrintContent(
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
+	firstExecution int,
 ) string {
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
 	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
 	isOpenBalance := paymentSetting.IsBalance == "1"
-	// 品牌
-	brandName := config.Server.BrandName
 	// 日历
 	startTime := t.base.FormatUnixTimeDefault(log.ShiftStartTime)
 	endTime := t.base.FormatUnixTimeDefault(log.ShiftEndTime)
@@ -264,11 +262,11 @@ func (t *handoverImgTemplate) GetPrintContent(
 		// 合计
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("所有订单数"), Width: 320, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.Amount(float64(businessData.TotalOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("人数"), Width: 320, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.Amount(float64(businessData.TotalPeopleNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalPeopleNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.SetTextLineHeight(34)
 		img.PrintInColumns(
@@ -406,8 +404,8 @@ func (t *handoverImgTemplate) GetPrintContent(
 			img.SetTextLineHeight(55)
 		}
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 28},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 28},
 		)
 		// 税收百分比对象列表
 		if len(businessData.PercentageList) > 0 {
@@ -429,7 +427,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 				)
 				img.SetAlignment(pkg.AlignRight)
 				if t.base.Lang == "ja" {
-					img.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消費税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+					img.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
 				} else {
 					img.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
 				}
@@ -623,22 +621,12 @@ func (t *handoverImgTemplate) GetPrintContent(
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(log.CashLeft), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 	}
-
-	// 技术支持方
-	img.AppendSplitLine()
-	img.LineFeed(1, 50)
-	img.SetAlignment(pkg.AlignCenter)
-	if t.base.Lang == "tr" {
-		img.AppendText("Ziyaretiniz için teşekkür ederiz! Bu mağaza")
-		img.LineFeed(1)
-		img.AppendText("tarafından: " + brandName + " Sistem destek sağlar.")
-	} else if t.base.Lang == "th" {
-		img.AppendText("ขอบคุณที่แวะมาหากัน!สนับสนุนโดย " + brandName)
-	} else {
-		img.AppendText(t.base.Translate("感谢您的光临！本店由") + " " + brandName + " " + t.base.Translate("系统提供支持。"))
-	}
 	//
-	img.LineFeed(4)
-
-	return img.Save("", !t.base.IsSunMi, false)
+	img.LineFeed(3)
+	//
+	openMoneybox := 0
+	if firstExecution == 0 {
+		openMoneybox = utils.IfInt(t.base.IsSunMi, 2, 1)
+	}
+	return img.Save("", !t.base.IsSunMi, openMoneybox)
 }

@@ -534,13 +534,13 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		CategoryList: []business_data_resp.Category{
 			{
 				Name:     "12",
-				SalesNum: 120,
-				Prices:   120,
+				SalesNum: 1,
+				Prices:   323,
 			},
 			{
 				Name:     "121232",
-				SalesNum: 120,
-				Prices:   120,
+				SalesNum: 2,
+				Prices:   23,
 			},
 		},
 		PercentageList: []business_data_resp.Percentage{

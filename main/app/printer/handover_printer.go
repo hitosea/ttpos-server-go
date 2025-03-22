@@ -58,7 +58,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData)
+	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData, FirstExecution)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -104,6 +104,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	printerType string, // 打印机类型
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
+	firstExecution int,
 ) string {
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
@@ -134,33 +135,34 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
+			firstExecution,
 		)
 	}
 
-	// /* *
-	// * Compax 收银打印机 80mm 自带
-	//  */
-	// if printerType == constant.PrinterTypeCashierCompax {
-	// 	return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-	// 		constant.PrinterTemplateHandoverSheet,
-	// 		tmp,
-	// 		log,
-	// 		shiftUuid,
-	// 	)
-	// }
+	/* *
+	* Compax 收银打印机 80mm 自带
+	 */
+	if printerType == constant.PrinterTypeCashierCompax {
+		return template.NewHandoverCompaxTemplate(base).GetPrintContent(
+			tmp,
+			log,
+			businessData,
+			firstExecution,
+		)
+	}
 
-	// /* *
-	//  * 芯烨打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-	// 	return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
-	// 		printerType,
-	// 		constant.PrinterTemplateHandoverSheet,
-	// 		tmp,
-	// 		log,
-	// 		shiftUuid,
-	// 	)
-	// }
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+		return template.NewHandoverXprinterTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			log,
+			businessData,
+			firstExecution,
+		)
+	}
 
 	// /* *
 	// * 商米打印机
