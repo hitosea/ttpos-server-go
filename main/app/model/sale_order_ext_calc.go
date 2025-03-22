@@ -308,12 +308,12 @@ func (model *SaleOrder) calcSumOrderProductCustomerPrice() float64 {
 	return sumCustomerPrice.InexactFloat64()
 }
 
-// 计算订单商品Price之和。等于所有已接单商品Price之和
+// 计算订单“商品金额”。订单“商品金额”=等于所有已接单商品Price之和
 func (model *SaleOrder) calcSumOrderProductPrice(products []*SaleOrderProduct) float64 {
 	sumPrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
 		// price * num
-		price := decimal.NewFromFloat(orderProduct.Price).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		price := decimal.NewFromFloat(orderProduct.GetFinalSalePrice()).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
 		sumPrice = sumPrice.Add(price)
 	}
 	return sumPrice.Round(2).InexactFloat64()

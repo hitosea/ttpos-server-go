@@ -485,6 +485,14 @@ func (model *SaleOrderProduct) GetSalePrice() float64 {
 	return salePrice
 }
 
+// 获取商品的最终售价。最终售价为商品的最终单价，默认等于Price，如果免单，则等于0
+func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
+	if model.IsGiftBool() {
+		return 0
+	}
+	return model.Price
+}
+
 // 获取商品总金额
 func (model *SaleOrderProduct) GetTotalPrice() float64 {
 	// 金额*数量
