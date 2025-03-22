@@ -106,7 +106,7 @@ func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.AcceptH5OrderReq true "接单参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
 // @Router /cashier/h5_order/accept [post]
 func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 	ctx := helper.GetContext(c)
