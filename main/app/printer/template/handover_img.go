@@ -105,7 +105,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		// 支付方式
 		totalPayPrice := float64(0)
 		for key, income := range businessData.PaymentMethodIncomes {
-			if income.Code != constant.PaymentMethodCodeCash {
+			if income.Code != constant.PaymentMethodCodeFreePay {
 				if key == len(businessData.PaymentMethodIncomes)-1 {
 					img.SetTextLineHeight(34)
 				}
@@ -534,7 +534,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		// 支付方式
 		totalPayPrice := float64(0)
 		for key, income := range businessData.PaymentMethodIncomes {
-			if income.Code != constant.PaymentMethodCodeCash {
+			if income.Code != constant.PaymentMethodCodeFreePay {
 				if key == len(businessData.PaymentMethodIncomes)-1 {
 					img.SetTextLineHeight(34)
 				}

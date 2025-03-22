@@ -11,22 +11,22 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// handoverXprinterTemplate 图片订单打印模板
-type handoverXprinterTemplate struct {
+// handoverCodesoftTemplate 图片订单打印模板
+type handoverCodesoftTemplate struct {
 	base *printerTemplate
 }
 
-// NewHandoverXprinterTemplate 创建新的图片订单打印模板
-func NewHandoverXprinterTemplate(
+// NewHandoverCodesoftTemplate 创建新的图片订单打印模板
+func NewHandoverCodesoftTemplate(
 	base *printerTemplate,
-) *handoverXprinterTemplate {
-	return &handoverXprinterTemplate{
+) *handoverCodesoftTemplate {
+	return &handoverCodesoftTemplate{
 		base: base,
 	}
 }
 
 // GetPrintContent 图片打印
-func (t *handoverXprinterTemplate) GetPrintContent(
+func (t *handoverCodesoftTemplate) GetPrintContent(
 	printerType string,
 	temp int,
 	log *model.StaffShiftLog,
@@ -58,13 +58,13 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 	if temp == 2 || temp == 3 {
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.AppendText(t.base.StoreSetting.Name)
-		printer.LineFeed(1)
+		printer.LineFeed(2)
 		printer.SetLineSpacing(80)
 		printer.SetCharacterSize(2, 2)
 		printer.AppendText(t.base.Translate("交班单"))
 		printer.SetCharacterSize(1, 1)
 		printer.LineFeed(1)
-		if printerType == constant.PrinterTypeXPrinterWifi {
+		if t.base.Lang != "th" {
 			printer.LineFeed(1)
 		}
 		printer.AppendText(fmt.Sprintf("%s %s %s", startTime, t.base.Translate("至"), endTime))
@@ -76,7 +76,11 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", log.Staff.RealName, width))
 		printer.LineFeed()
 		// 营业数据
-		printer.SetLineSpacing(90)
+		if t.base.Lang != "th" {
+			printer.SetLineSpacing(30)
+		} else {
+			printer.SetLineSpacing(90)
+		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.TotalSales), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width))
@@ -86,18 +90,25 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(true, false, false)
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
-		printer.LineFeed(1)
 		totalPayPrice := float64(0)
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, "", t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
-				printer.LineFeed()
+				if t.base.Lang == "th" {
+					printer.LineFeed(2)
+				} else {
+					printer.LineFeed(1)
+				}
 				totalPayPrice += income.Amount
 			}
 		}
 		if totalPayPrice > 0 {
 			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
-			printer.LineFeed(1)
+			if t.base.Lang == "th" {
+				printer.LineFeed(2)
+			} else {
+				printer.LineFeed(1)
+			}
 		}
 		// 其他费用
 		printer.AppendText("------------------------------------------------")
@@ -118,34 +129,32 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 			printer.LineFeed(1)
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
-		printer.LineFeed(1)
+		printer.LineFeed(2)
 		// 退款
 		printer.AppendText("------------------------------------------------")
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.TotalRefundMoney), width))
-		printer.LineFeed(1)
+		if t.base.Lang == "th" {
+			printer.LineFeed(2)
+		} else {
+			printer.LineFeed(1)
+		}
 		printer.AppendText("------------------------------------------------")
 		// 异常信息
 		if temp == 3 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("退菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.RefundProductTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("退款次数"), "", t.base.Amount(float64(businessData.AbnormalData.RefundTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("反结账次数"), "", t.base.Amount(float64(businessData.AbnormalData.ReverseSettleTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("赠菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.ProductFreeTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("免单次数"), "", t.base.Amount(float64(businessData.AbnormalData.FreeOrderTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("转菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.ProductMoveTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("单品改价次数"), "", t.base.Amount(float64(businessData.AbnormalData.ChangePriceTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("整单改价次数"), "", t.base.Amount(float64(businessData.AbnormalData.ChangeOrderPriceTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("整单折扣次数"), "", t.base.Amount(float64(businessData.AbnormalData.DiscountOrderTimes)), width))
-			printer.LineFeed(1)
-			printer.AppendText(t.base.PrintText(t.base.Translate("整单抹零次数"), "", t.base.Amount(float64(businessData.AbnormalData.RoundOrderTimes)), width))
-			printer.LineFeed(1)
+			printer.SetupColumns(
+				[]int{510, pkg.AlignLeft, 0},
+				[]int{0, pkg.AlignRight, 0},
+			)
+			printer.PrintInColumns(t.base.Translate("退菜次数"), t.base.Amount(float64(businessData.AbnormalData.RefundProductTimes)))
+			printer.PrintInColumns(t.base.Translate("退款次数"), t.base.Amount(float64(businessData.AbnormalData.RefundTimes)))
+			printer.PrintInColumns(t.base.Translate("反结账次数"), t.base.Amount(float64(businessData.AbnormalData.ReverseSettleTimes)))
+			printer.PrintInColumns(t.base.Translate("赠菜次数"), t.base.Amount(float64(businessData.AbnormalData.ProductFreeTimes)))
+			printer.PrintInColumns(t.base.Translate("免单次数"), t.base.Amount(float64(businessData.AbnormalData.FreeOrderTimes)))
+			printer.PrintInColumns(t.base.Translate("转菜次数"), t.base.Amount(float64(businessData.AbnormalData.ProductMoveTimes)))
+			printer.PrintInColumns(t.base.Translate("单品改价次数"), t.base.Amount(float64(businessData.AbnormalData.ChangePriceTimes)))
+			printer.PrintInColumns(t.base.Translate("整单改价次数"), t.base.Amount(float64(businessData.AbnormalData.ChangeOrderPriceTimes)))
+			printer.PrintInColumns(t.base.Translate("整单折扣次数"), t.base.Amount(float64(businessData.AbnormalData.DiscountOrderTimes)))
+			printer.PrintInColumns(t.base.Translate("整单抹零次数"), t.base.Amount(float64(businessData.AbnormalData.RoundOrderTimes)))
 			printer.AppendText("------------------------------------------------")
 		}
 		// 会员充值
@@ -175,14 +184,17 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		// 高峰时间
 		printer.AppendText("------------------------------------------------")
 		printer.SetPrintModes(true, false, false)
-		printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
+		printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 18))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed()
-		for key, peak := range businessData.PeakHourList {
-			if key == len(businessData.PeakHourList)-1 {
-				printer.SetPrintModes(true, false, false)
+		for _, peak := range businessData.PeakHourList {
+			if t.base.Lang == "th" {
+				printer.LineFeed(1)
 			}
 			printer.AppendText(t.base.PrintText(peak.TimePeriod, t.base.Amount(float64(peak.OrderNum)), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
+			if t.base.Lang == "th" {
+				printer.LineFeed(1)
+			}
 		}
 		// 分类列表
 		printer.SetAlignment(pkg.AlignLeft)
@@ -196,10 +208,14 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 			printer.AppendText(t.base.PrintText(category.Name, t.base.Amount(float64(category.SalesNum)), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
-		printer.SetLineSpacing(90)
+		if t.base.Lang == "th" {
+			printer.SetLineSpacing(20)
+		} else {
+			printer.SetLineSpacing(90)
+		}
 		// 汇总
 		leftWidth := 35
-		printer.AppendText("------------------------------------------------\n")
+		printer.AppendText("------------------------------------------------")
 		printer.AppendText(t.base.PrintText(t.base.Translate("上一班遗留备用金"), "", t.base.GetPriceAndUnit(log.PreviousShiftCash), width, leftWidth))
 		printer.LineFeed()
 		printer.AppendText(t.base.PrintText(t.base.Translate("中途存入现金"), "", t.base.GetPriceAndUnit(log.DepositCash), width, leftWidth))
@@ -231,7 +247,11 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.AppendText(endTime)
 		printer.LineFeed()
 		// 营业数据
-		printer.SetLineSpacing(90)
+		if t.base.Lang == "th" {
+			printer.SetLineSpacing(20)
+		} else {
+			printer.SetLineSpacing(90)
+		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.TotalSales), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("原商品金额"), "", t.base.GetPriceAndUnit(businessData.TotalProductPrice), width))
@@ -294,16 +314,12 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", float64(businessData.TotalOrderNum), width))
 		printer.LineFeed(1)
-		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("桌数"), "", float64(businessData.TotalTableNum), width))
 		printer.LineFeed(1)
-		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", float64(businessData.TotalPeopleNum), width))
 		printer.LineFeed(1)
-		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.MinOrderPrice), t.base.GetPriceAndUnit(businessData.MaxOrderPrice)), width))
 		printer.LineFeed(1)
-		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AvgOrderPrice), width))
 		printer.LineFeed(1)
 		// 桌台方式
@@ -352,22 +368,36 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, income.OrderNum, t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
-				printer.LineFeed()
+				if t.base.Lang == "th" {
+					printer.LineFeed(2)
+				} else {
+					printer.LineFeed(1)
+				}
 				totalPayPrice += income.Amount
 			}
 		}
 		if totalPayPrice > 0 {
 			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
-			printer.LineFeed(1)
+			if t.base.Lang == "th" {
+				printer.LineFeed(2)
+			} else {
+				printer.LineFeed(1)
+			}
 		}
 		// 高峰时间
 		printer.AppendText("------------------------------------------------")
 		printer.SetPrintModes(true, false, false)
-		printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
+		printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, leftWidth-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		for _, peak := range businessData.PeakHourList {
+			if t.base.Lang == "th" {
+				printer.LineFeed(1)
+			}
 			printer.AppendText(t.base.PrintText(peak.TimePeriod, t.base.Amount(float64(peak.OrderNum)), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
+			if t.base.Lang == "th" {
+				printer.LineFeed(1)
+			}
 		}
 		// 分类列表
 		printer.SetAlignment(pkg.AlignLeft)
@@ -380,6 +410,11 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		for _, category := range businessData.CategoryList {
 			printer.AppendText(t.base.PrintText(category.Name, t.base.Amount(float64(category.SalesNum)), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
+		}
+		if t.base.Lang == "th" {
+			printer.SetLineSpacing(20)
+		} else {
+			printer.SetLineSpacing(90)
 		}
 		// 汇总
 		leftWidth := 35
@@ -396,8 +431,8 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.AppendText(t.base.PrintText(t.base.Translate("本班遗留备用金"), "", t.base.GetPriceAndUnit(log.CashLeft), width, leftWidth))
 	}
-
 	//
+	printer.SetLineSpacing(90)
 	printer.LineFeed(2)
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)

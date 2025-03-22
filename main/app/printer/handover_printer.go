@@ -177,17 +177,18 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	// 	)
 	// }
 
-	// /* *
-	// * CODESOFT 打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-	// 	return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-	// 		constant.PrinterTemplateHandoverSheet,
-	// 		tmp,
-	// 		saleBill,
-	// 		saleOrder,
-	// 	)
-	// }
+	/* *
+	* CODESOFT 打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+		return template.NewHandoverCodesoftTemplate(base).GetPrintContent(
+			printerType,
+			tmp,
+			log,
+			businessData,
+			firstExecution,
+		)
+	}
 
 	return ""
 }
