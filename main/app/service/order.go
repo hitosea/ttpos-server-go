@@ -1455,13 +1455,22 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 		})
 	}
 
+	// 过滤掉单价为0的商品
+	productList := make([]resp.OrderReturnProduct, 0)
+	for _, product := range products {
+		if product.Price == 0 {
+			continue
+		}
+		productList = append(productList, product)
+	}
+
 	// 获取销售订单付款单列表
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
 	res := &resp.OrderReturnInfoResp{
 		CanReturnAmount: canReturnAmount, // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
 		PaymentRecords:  paymentRecords,
-		Products:        products,
+		Products:        productList,
 	}
 
 	return res, nil
@@ -2663,6 +2672,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if buffetErr != nil {
 		return nil, buffetErr
 	}
+	fmt.Println("OrderChangeBuffetClock buffetSetting", utils.ToJsonString(buffetSetting))
 	if buffetSetting.IsAddClock != "1" {
 		return nil, errors.New("未开启加钟")
 	}
