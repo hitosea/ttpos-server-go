@@ -85,10 +85,10 @@ type BusinessDataAll struct {
 	AllTableMaxOrderPrice float64 `json:"all_table_max_order_price"` // 总桌数最大订单金额
 	AllTablePeopleAvg     float64 `json:"all_table_people_avg"`      // 总桌数人均
 	// 收银方式
-	CashierOrderNum      int     `json:"cashier_order_num"`       // 收银方式订单数
-	CashierMinOrderPrice float64 `json:"cashier_min_order_price"` // 收银方式最小订单金额
-	CashierMaxOrderPrice float64 `json:"cashier_max_order_price"` // 收银方式最大订单金额
-	CashierAvgOrderPrice float64 `json:"cashier_avg_order_price"` // 收银方式平均订单金额
+	AllCashierOrderNum      int     `json:"all_cashier_order_num"`       // 收银方式订单数
+	AllCashierMinOrderPrice float64 `json:"all_cashier_min_order_price"` // 收银方式最小订单金额
+	AllCashierMaxOrderPrice float64 `json:"all_cashier_max_order_price"` // 收银方式最大订单金额
+	AllCashierAvgOrderPrice float64 `json:"all_cashier_avg_order_price"` // 收银方式平均订单金额
 	// 未结账数据
 	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 总订单数
 	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 总金额
@@ -103,20 +103,20 @@ type BusinessDataAll struct {
 
 // 营业数据 - 按支付方式
 type BusinessDataPaymentMethod struct {
-	ReceivedPrice        float64               `json:"received_price"`         // 总实收金额
+	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 }
 
 // 营业数据 - 按商品分类
 type BusinessDataProductCategory struct {
 	SalesNum             int                   `json:"sales_num"`              // 销售笔数
+	TotalRefundMoney     float64               `json:"total_refund_money"`     // 总退款金额
+	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	CategoryList         []Category            `json:"category_list"`          // 分类列表
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 }
 
 // 营业数据 - 按商品
 type BusinessDataProduct struct {
-	SalesNum             int                   `json:"sales_num"`              // 销售笔数
-	CategoryList         []Category            `json:"category_list"`          // 分类列表
-	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
+	Products []Product `json:"products"` // 商品列表
 }

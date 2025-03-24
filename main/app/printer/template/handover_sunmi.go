@@ -464,17 +464,17 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(2)
 		printer.SetAlignment(pkg.AlignLeft)
-		printer.PrintInColumns(t.base.Translate("订单数"), fmt.Sprintf("%.0f", float64(businessData.CashierOrderNum)))
+		printer.PrintInColumns(t.base.Translate("订单数"), fmt.Sprintf("%.0f", float64(businessData.AllCashierOrderNum)))
 		printer.LineFeed(1)
 		if t.base.Lang == "my" {
 			printer.SetLineSpacing(50)
 		}
-		printer.PrintInColumns(t.base.Translate("最小/大订单金额"), fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.CashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.CashierMaxOrderPrice)))
+		printer.PrintInColumns(t.base.Translate("最小/大订单金额"), fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.AllCashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.AllCashierMaxOrderPrice)))
 		if t.base.Lang == "my" {
 			printer.SetLineSpacing(lineSpacing)
 		}
 		printer.LineFeed(1)
-		printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.CashierAvgOrderPrice))
+		printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.AllCashierAvgOrderPrice))
 		printer.LineFeed(1)
 		// 支付方式
 		printer.AppendText("------------------------------------------------")

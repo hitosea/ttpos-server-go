@@ -386,6 +386,12 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
+	var kitchenSettingResp setting2.KitchenResp
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
+	if err != nil {
+		return assistantBase, errors.WithMessage(err)
+	}
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
@@ -412,6 +418,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Business:  businessSetting,
 		Assistant: assistantSettingResp,
 		Printer:   printerSetting,
+		Kitchen:   kitchenSettingResp,
 	}, nil
 }
 
@@ -451,6 +458,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
+
 	return resp.TabletBase{
 		Buffet:     buffetSetting,
 		CloudBasic: cloudBasicSetting,
@@ -463,6 +471,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Currency: currencySetting,
 		Business: businessSetting,
 		Tablet:   tabletSettingResp,
+		Kitchen:  kitchenSettingResp,
 	}, nil
 }
 

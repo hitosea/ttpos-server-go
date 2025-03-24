@@ -500,15 +500,15 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.CashierOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.AllCashierOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("最小/大订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.CashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.CashierMaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.AllCashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.AllCashierMaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("平均订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.CashierAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.AllCashierAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		// 支付方式
 		img.AppendSplitLine()

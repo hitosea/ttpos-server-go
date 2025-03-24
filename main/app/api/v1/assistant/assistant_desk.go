@@ -1313,7 +1313,7 @@ func (h *DeskHandler) OrderPaymentZeroRule(c *gin.Context) {
 // OrderFree 免单
 // @Summary 免单
 // @Description 免单
-// @Tags 点餐助手.桌台
+// @Tags 点餐助手端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -1339,6 +1339,40 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 	ctx.Log().Debug("桌台免单成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// OrderMustPlanConfirm 确认必点商品
+// @Summary 确认必点商品
+// @Description 确认必点商品
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
+// @Success 200 {object} dto.Response{}
+// @Router /assistant/desk/order/must_plan/confirm [post]
+func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面确认必点商品接口请求")
+
+	params := req.InstantOrderMustPlanConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 确认必点商品
+	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if !res {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.ErrMustPlanNotComplete))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
 }
 
 // OrderChangePopulation 处理桌台订单修改人数
@@ -1442,5 +1476,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/close", wrapper.CloseDesk)                                                     // 关闭桌台
 		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 		privateApi.POST("/desk/order/free", wrapper.OrderFree)                                                // 免单
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 	}
 }
