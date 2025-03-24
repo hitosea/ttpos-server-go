@@ -51,13 +51,14 @@ type AssistantBase struct {
 }
 
 type TabletBase struct {
-	Buffet     setting.Buffet      `json:"buffet"`   // 自助餐设置
-	CloudBasic setting.CloudBasic  `json:"cloud"`    // 云端基础信
-	Company    Company             `json:"company"`  // 商家信息
-	Currency   setting.Currency    `json:"currency"` // 货币单位
-	Business   setting.Business    `json:"business"` // 门店业务设置
-	Tablet     setting.TabletResp  `json:"tablet"`   // 平板端设置
-	Kitchen    setting.KitchenResp `json:"kitchen"`  // 厨显设置
+	RealName   string              `json:"real_name"` // 员工姓名
+	Buffet     setting.Buffet      `json:"buffet"`    // 自助餐设置
+	CloudBasic setting.CloudBasic  `json:"cloud"`     // 云端基础信
+	Company    Company             `json:"company"`   // 商家信息
+	Currency   setting.Currency    `json:"currency"`  // 货币单位
+	Business   setting.Business    `json:"business"`  // 门店业务设置
+	Tablet     setting.TabletResp  `json:"tablet"`    // 平板端设置
+	Kitchen    setting.KitchenResp `json:"kitchen"`   // 厨显设置
 }
 
 type TabletDeskItem struct {

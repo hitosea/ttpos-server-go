@@ -16,6 +16,7 @@ type Product struct {
 	Flavors             ProductFlavorList         `json:"flavors"`               // 商品规格
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
+	Describe            string                    `json:"describe"`              // 卖点，h5端显示
 }
 
 // ProductFlavor 商品规格

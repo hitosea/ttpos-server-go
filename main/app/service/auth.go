@@ -460,6 +460,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	}
 
 	return resp.TabletBase{
+		RealName:   ctx.GetStaff().RealName,
 		Buffet:     buffetSetting,
 		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{
