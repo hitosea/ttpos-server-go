@@ -59,7 +59,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 
 	// 是否自己打印
-	isOneself := printerType != PrinterTypeSunmiLan && printerType != PrinterTypeSunmiCloud
+	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)

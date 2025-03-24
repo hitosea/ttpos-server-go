@@ -506,7 +506,7 @@ func (h *BaseHandler) ShiftPrinter(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, printerData)
+	helper.Success(c, printerData, "发送成功")
 }
 
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

@@ -324,7 +324,7 @@ func (h *OrderHandler) OrderPrint(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res)
+	helper.Success(c, res, "发送成功")
 }
 
 // OrderPrint 打印发票
@@ -349,7 +349,7 @@ func (h *OrderHandler) OrderPrintInvoice(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res)
+	helper.Success(c, res, "发送成功")
 }
 
 // OrderInvoiceInfo 获取发票信息

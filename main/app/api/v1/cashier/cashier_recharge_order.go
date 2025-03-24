@@ -151,7 +151,7 @@ func (h *RechargeOrderHandler) PrintTicket(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, order)
+	helper.Success(c, order, "发送成功")
 }
 
 // GetRechargeOrderRefundInfo 获取充值订单退款信息

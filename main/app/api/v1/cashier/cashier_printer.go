@@ -90,7 +90,7 @@ func (h *PrinterHandler) PrinterPrint(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, resp)
+	helper.Success(c, resp, "发送成功")
 }
 
 // PrinterReport 打印报告

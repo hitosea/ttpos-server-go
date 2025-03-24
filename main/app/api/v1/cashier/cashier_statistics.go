@@ -41,7 +41,7 @@ func (h *statisticsHandler) Printer(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, printerData)
+	helper.Success(c, printerData, "发送成功")
 }
 
 // CountBusiness 统计营业数据

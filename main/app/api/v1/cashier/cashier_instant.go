@@ -1130,7 +1130,7 @@ func (h *InstantHandler) OrderPrint(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res)
+	helper.Success(c, res, "发送成功")
 }
 
 // OrderPrint 打印发票
@@ -1155,7 +1155,7 @@ func (h *InstantHandler) OrderPrintInvoice(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, res)
+	helper.Success(c, res, "发送成功")
 }
 
 // OrderUnlock 订单解锁
