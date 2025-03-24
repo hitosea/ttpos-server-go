@@ -25,7 +25,7 @@ class CreateSaleOrderPeakTimeTable extends Migrator
             ]);
             $table->addColumn('id', 'integer', ['signed' => false, 'identity' => true, 'comment' => '自增ID'])
                 ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'UUID'])
-                ->addColumn('date', 'int', ['default' => 0, 'comment' => '日期（天）'])
+                ->addColumn('date', 'integer', ['default' => 0, 'comment' => '日期（天）'])
                 ->addColumn('hour', 'integer', ['default' => 0, 'comment' => '小时'])
                 ->addColumn('num', 'integer', ['default' => 0, 'comment' => '订单数'])
                 ->addColumn('amount', 'decimal', ['precision' => 12, 'scale' => 2, 'default' => 0.00, 'comment' => '订单金额'])
