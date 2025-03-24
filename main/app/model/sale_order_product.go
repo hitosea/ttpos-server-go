@@ -481,7 +481,7 @@ func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 // 获取商品销售价(折前价)
 func (model *SaleOrderProduct) GetSalePrice() float64 {
 	// 销售价*数量
-	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(2).InexactFloat64()
 	return salePrice
 }
 
@@ -525,11 +525,6 @@ func (model *SaleOrderProduct) IsCancelProduct() bool {
 // 是否送到厨房
 func (model *SaleOrderProduct) IsSendKitchen() bool {
 	return model.Status == constant.OrderProductStatusSentKitchen
-}
-
-// 判断商品是否有打折
-func (model *SaleOrderProduct) IsDiscount() bool {
-	return model.Price != model.SalePrice // 折前价格不等于折后价格时，说明有折扣
 }
 
 // 判断是哪个业务状态

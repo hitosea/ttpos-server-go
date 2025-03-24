@@ -446,13 +446,13 @@ func (model *SaleOrderProduct) IsBuffetProduct() bool {
 // 计算商品销售价。
 // 如果商品改价，则直接修改SalePrice。
 // 如果没有改价，销售价=ProductPrice
-// 如果商品是自助餐商品，则销售价=0
+// 如果商品是自助餐商品，则销售价=小料原价
 func (model *SaleOrderProduct) calcSalePrice() float64 {
 	if model.IsCustomPriceBool() {
 		return model.SalePrice
 	}
 	if model.IsBuffetProduct() {
-		return 0
+		return model.SaucePrice
 	}
 	return model.ProductPrice
 }
