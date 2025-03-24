@@ -14066,6 +14066,22 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "all_cashier_avg_order_price": {
+                    "description": "收银方式平均订单金额",
+                    "type": "number"
+                },
+                "all_cashier_max_order_price": {
+                    "description": "收银方式最大订单金额",
+                    "type": "number"
+                },
+                "all_cashier_min_order_price": {
+                    "description": "收银方式最小订单金额",
+                    "type": "number"
+                },
+                "all_cashier_order_num": {
+                    "description": "收银方式",
+                    "type": "integer"
+                },
                 "all_table_avg_order_price": {
                     "description": "总桌数平均订单金额",
                     "type": "number"
@@ -14093,22 +14109,6 @@ const docTemplate = `{
                 "avg_order_price": {
                     "description": "平均订单金额",
                     "type": "number"
-                },
-                "cashier_avg_order_price": {
-                    "description": "收银方式平均订单金额",
-                    "type": "number"
-                },
-                "cashier_max_order_price": {
-                    "description": "收银方式最大订单金额",
-                    "type": "number"
-                },
-                "cashier_min_order_price": {
-                    "description": "收银方式最小订单金额",
-                    "type": "number"
-                },
-                "cashier_order_num": {
-                    "description": "收银方式",
-                    "type": "integer"
                 },
                 "category_list": {
                     "description": "分类列表",
@@ -14269,16 +14269,16 @@ const docTemplate = `{
                         "$ref": "#/definitions/business_data_resp.PaymentMethodIncome"
                     }
                 },
-                "refund_amount": {
-                    "description": "退款金额",
-                    "type": "number"
-                },
                 "sales_num": {
                     "description": "销售笔数",
                     "type": "integer"
                 },
                 "total_received_price": {
                     "description": "总实收金额",
+                    "type": "number"
+                },
+                "total_refund_money": {
+                    "description": "总退款金额",
                     "type": "number"
                 }
             }

@@ -112,10 +112,10 @@ func (t *businessDataImgTemplate) GetPrintContent(
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(income.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
-		if businessData.ProductCategory.RefundAmount > 0 {
+		if businessData.ProductCategory.TotalRefundMoney > 0 {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("退款金额"), Width: 300, Align: pkg.AlignLeft, FontWeight: 1},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.ProductCategory.RefundAmount), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.ProductCategory.TotalRefundMoney), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
 		img.PrintInColumns(
@@ -320,15 +320,15 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.All.CashierOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.All.AllCashierOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("最小/大订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.CashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.CashierMaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllCashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllCashierMaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("平均订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.CashierAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.AllCashierAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		// 支付方式
 		img.AppendSplitLine()

@@ -140,15 +140,16 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	// 	)
 	// }
 
-	// /* *
-	//  * 芯烨打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-	// 	return template.NewHandoverXprinterTemplate(base).GetPrintContent(
-	// 		tmp,
-	// 		businessData,
-	// 	)
-	// }
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
+			businessData,
+			startTime,
+			endTime,
+		)
+	}
 
 	// /* *
 	// * 商米打印机
