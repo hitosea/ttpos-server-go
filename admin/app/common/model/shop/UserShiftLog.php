@@ -10,7 +10,6 @@ use app\shop\model\product\Category;
 use app\common\exception\BaseException;
 use app\common\model\order\OrderRefund;
 use app\common\enum\order\OrderStatusEnum;
-use app\common\enum\order\OrderPayTypeEnum;
 use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\order\Order as OrderModel;
 use app\common\repositories\OrderBusinessDataRepository;
@@ -63,10 +62,10 @@ class UserShiftLog extends BaseModel
         $value = $value ? json_decode($value, true) : [];
         if ($value) {
             foreach ($value as $key => $v) {
-                if ($v['pay_type'] == OrderPayTypeEnum::FREE_PAY) {
-                    $value[$key]['pay_type_name'] = OrderPayTypeEnum::data($v['pay_type'], 2)['name'] ?? '';
-                }
-                $value[$key]['pay_type_name'] = __($value[$key]['pay_type_name']);
+                // if ($v['pay_type'] == OrderPayTypeEnum::FREE_PAY) {
+                //     $value[$key]['pay_type_name'] = OrderPayTypeEnum::data($v['pay_type'], 2)['name'] ?? '';
+                // }
+                $value[$key]['pay_type_name'] = __($value[$key]['name']);
             }
         }
         return $value;
@@ -132,7 +131,7 @@ class UserShiftLog extends BaseModel
         }
 
         if ($userId) {
-            $model = $model->where('a.uuid', '=', $userId);
+            $model = $model->where('su.uuid', '=', $userId);
         }
 
         if ($startTime && $endTime) {

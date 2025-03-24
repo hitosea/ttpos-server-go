@@ -2,7 +2,6 @@
 
 namespace app\shop\service\statistics;
 
-use app\common\library\helper;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
