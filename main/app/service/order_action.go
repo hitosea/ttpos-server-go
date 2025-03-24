@@ -271,8 +271,7 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	{
 		if saleBill.IsBuffetSaleBill() {
 			// 获取自助餐的剩余时长
-			remainingOrderingSeconds := saleBill.GetRemainingOrderingSeconds()
-			if remainingOrderingSeconds == 0 {
+			if saleBill.GetTotalRemainingSeconds() == 0 {
 				return nil, errors.New("自助餐已结束")
 			}
 		}

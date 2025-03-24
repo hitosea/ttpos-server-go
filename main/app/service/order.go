@@ -3088,7 +3088,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				IsTimeLimited:         shopCart.SaleBill.IsTimeLimited(),
 				LocaleName:            shopCart.SaleBill.GetBuffetName(),
 				RemainingOrderingTime: shopCart.SaleBill.GetRemainingOrderingSeconds(),
-				ReminderOrderTime:     shopCart.SaleBill.ReminderOrderTime,
+				ReminderOrderTime:     int64(shopCart.SaleBill.ReminderOrderTime),
 			}
 		}
 	}

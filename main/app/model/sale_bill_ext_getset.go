@@ -216,7 +216,7 @@ func (model *SaleBill) GetRemainingDelayDuration() int64 {
 	return duration
 }
 
-// 获取总的剩余时长
+// 获取总的剩余时长. -1表示自助餐不限时
 func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 	if model.BuffetDuration == 0 {
 		return -1
@@ -225,10 +225,13 @@ func (model *SaleBill) GetTotalRemainingSeconds() int64 {
 }
 
 // 获取剩余可点自助餐商品时长
-func (model *SaleBill) GetRemainingOrderingSeconds() uint {
+func (model *SaleBill) GetRemainingOrderingSeconds() int64 {
+	if model.GetTotalRemainingSeconds() == -1 {
+		return -1
+	}
 	remainingOrderingSeconds := model.GetTotalRemainingSeconds() - int64(model.NonOrderingTime)*60
 	if remainingOrderingSeconds > 0 {
-		return uint(remainingOrderingSeconds)
+		return remainingOrderingSeconds
 	}
 	return 0
 }
