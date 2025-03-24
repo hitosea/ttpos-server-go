@@ -647,5 +647,5 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	//
 	img.LineFeed(4)
 
-	return img.Save("", !t.base.IsSunMi, false)
+	return img.Save("", !t.base.IsSunMi, 0)
 }

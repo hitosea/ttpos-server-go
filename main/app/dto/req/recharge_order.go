@@ -33,9 +33,9 @@ type RechargeOrderRefundReq struct {
 
 // RechargeOrderPaymentQrcode
 type RechargeOrderPaymentQrcodeReq struct {
-	RechargeOrderUuid uint64  `json:"recharge_order_uuid"` // 充值订单UUID, 必填
-	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
-	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
+	RechargeOrderUuid uint64  `form:"recharge_order_uuid"` // 充值订单UUID, 必填
+	PaymentMethodUuid uint64  `form:"payment_method_uuid"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `form:"payment_amount"`      // 支付金额, 必填
 }
 
 func (r *RechargeOrderPaymentQrcodeReq) Validate() error {
