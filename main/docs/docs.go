@@ -10802,6 +10802,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/statistics/printer": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "打印",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.营业数据"
+                ],
+                "summary": "打印",
+                "parameters": [
+                    {
+                        "description": "打印参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataPrinterReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/verify_advanced_password": {
             "post": {
                 "security": [
@@ -14168,6 +14219,31 @@ const docTemplate = `{
                 }
             }
         },
+        "req.BusinessDataPrinterReq": {
+            "type": "object",
+            "properties": {
+                "category_type": {
+                    "description": "分类类型 (1 按一级分类, 2 按二级分类)",
+                    "type": "integer"
+                },
+                "query_end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "query_start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                },
+                "statistics_type": {
+                    "description": "统计类型 (1 全部, 2 按支付方式, 3 按商品分类, 4 按商品)",
+                    "type": "integer"
+                },
+                "time_type": {
+                    "description": "时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)",
+                    "type": "integer"
+                }
+            }
+        },
         "req.CallReq": {
             "type": "object",
             "required": [
@@ -15756,6 +15832,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "kitchen": {
+                    "description": "厨显设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.KitchenResp"
+                        }
+                    ]
+                },
                 "permissions": {
                     "description": "点餐助手权限",
                     "type": "array",
@@ -16836,6 +16920,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/setting.H5"
+                        }
+                    ]
+                },
+                "kitchen": {
+                    "description": "厨显设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Kitchen"
                         }
                     ]
                 }
@@ -19860,6 +19952,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "kitchen": {
+                    "description": "厨显设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.KitchenResp"
+                        }
+                    ]
+                },
                 "tablet": {
                     "description": "平板端设置",
                     "allOf": [
@@ -20478,6 +20578,64 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.OrderLimit"
                         }
                     ]
+                }
+            }
+        },
+        "setting.Kitchen": {
+            "type": "object",
+            "properties": {
+                "advanced_password": {
+                    "description": "高级设置密码",
+                    "type": "string"
+                },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "is_call_service": {
+                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_come_dish": {
+                    "description": "是否开启来菜提醒 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_open": {
+                    "description": "是否开启厨显功能 0关闭 1开启",
+                    "type": "string"
+                },
+                "is_wait_color": {
+                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "server": {
+                    "description": "厨显服务器连接",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Server"
+                        }
+                    ]
+                },
+                "wait_color": {
+                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

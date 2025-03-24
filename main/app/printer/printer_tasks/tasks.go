@@ -73,9 +73,11 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 		printerLogRepo.WherePrinterTime(),
 		printerLogRepo.WhereLimit(5),
 		func(db *gorm.DB) *gorm.DB {
-			db.Where("print_method = ?", 2)
-			db.Where("first_execution = ?", 0)
-			db.Where("type = ?", constant.No)
+			if config.Server.Mode != constant.ServerModeDebug {
+				db.Where("print_method = ?", 2)
+				db.Where("first_execution = ?", 0)
+				db.Where("type = ?", constant.No)
+			}
 			return db
 		},
 	)

@@ -28,6 +28,7 @@ type PPrinterRepo interface {
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingBusinessData(businessData *business_data_resp.BusinessDataAll, tmp int, deviceSnId ...string) (*resp.PrinterData, error)
 }
 
 type PrinterRepoImpl struct {
