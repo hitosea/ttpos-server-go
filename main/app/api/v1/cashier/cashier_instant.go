@@ -1196,8 +1196,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv)
 	memberSrv := service.NewMemberSrv(dbm)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
 		orderSrv:  orderSrv,  // 订单服务

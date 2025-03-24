@@ -8,6 +8,7 @@ package constant
 
 // 锁的名称
 const (
-	LockNameMemberPoints = 3652949106400001 // 会员积分锁. 避免多个事件并发处理积分变动
-	LockXxxXxx           = 3652949106400002 // 示例
+	LockNameMemberPoints  = 3652949106400001 // 会员积分锁. 避免多个事件并发处理积分变动
+	LockNameMemberBalance = 3652949106400002 // 会员余额锁. 避免多个事件并发处理会员余额
+	LockNameXxxXxx        = 3652949106400003 // 示例
 )

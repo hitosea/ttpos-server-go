@@ -23,8 +23,8 @@ const (
 
 // MemberPointLogProcessed 会员积分日志是否已处理
 const (
-	MemberPointLogProcessedNot     = iota // 未处理 0 未处理积分变动
-	MemberPointLogProcessedSuccess        // 已处理 1 已处理积分变动
+	MemberPointLogOrBalanceProcessedNot     = iota // 未处理 0 未处理积分变动\会员余额变动
+	MemberPointLogOrBalanceProcessedSuccess        // 已处理 1 已处理积分变动\会员余额变动
 )
 
 // WarehouseFormScene 入库单场景

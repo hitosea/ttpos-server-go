@@ -1,14 +1,16 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IMemberBalanceLogRepo interface {
-	Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error) // 创建会员积分日志
-
+	Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error)           // 创建会员积分日志
+	GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error) // 获取会员余额日志列表
+	GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error)         // 获取未处理的会员余额日志. 用于处理会员余额变动
 }
 
 func NewMemberBalanceLogRepo(db *gorm.DB) IMemberBalanceLogRepo {
@@ -27,4 +29,31 @@ func NewMemberBalanceLogRepoImpl(db *gorm.DB) *MemberBalanceLogRepo {
 func (r *MemberBalanceLogRepo) Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error) {
 	err := r.db.Model(&model.MemberBalanceLog{}).Create(&log).Error
 	return log, errors.WithMessage(err)
+}
+
+// GetMemberBalanceLogList 获取会员余额日志列表
+func (r *MemberBalanceLogRepo) GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error) {
+	var logs []*model.MemberBalanceLog
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&logs)
+	if result.Error != nil {
+		return nil, errors.WithMessage(result.Error)
+	}
+	return logs, nil
+}
+
+// GetMemberBalanceLogNotProcessed 获取未处理的会员余额日志. 用于处理会员余额变动
+func (r *MemberBalanceLogRepo) GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error) {
+	logs, err := r.GetMemberBalanceLogList(
+		CommonRepo.WhereByProcessedNot(),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return logs, nil
 }

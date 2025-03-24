@@ -128,15 +128,16 @@ type orderSrv struct {
 	settingSrv       setting.ISrv
 	mustPlanSrv      IMustPlanSrv
 	paymentMethodSrv IPaymentMethodSrv
+	memberSrv        IMemberSrv
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv) IOrderSrv {
 	return &orderSrv{
 		bus:              event.NewSystemBus(),
 		dbm:              dbm,
@@ -145,6 +146,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		settingSrv:       settingSrv,
 		mustPlanSrv:      mustPlanSrv,
 		paymentMethodSrv: paymentMethodSrv,
+		memberSrv:        memberSrv,
 	}
 }
 
@@ -4554,7 +4556,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 			Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
 			Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
 			Balance:  saleOrder.Member.GetBalanceAll(),
-			Points:   saleOrder.Member.Point,
+			Points:   saleOrder.Member.GetPoints(),
 		}
 	}
 	paymentOrders := make([]resp.PaymentOrder, 0)
@@ -5117,10 +5119,35 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	fmt.Println("s.settingSrv.GetPointsSetting(ctx) pointsSetting:", utils.ToJsonString(pointsSetting))
 	// 计算本单获取的积分
 	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
+
+	// 会员余额扣费相关
+	memberBalanceAmount, memberGiftBalanceAmount := float64(0), float64(0)
+	{
+		// 加锁. 避免会员余额并发操作
+		s.lock.LockUuid(saleOrder.Member.Uuid)
+		defer s.lock.UnlockUuid(saleOrder.Member.Uuid)
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.Member.Uuid)
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("获取会员信息失败"), err.Error())
+		}
+		saleOrder.Member = member // 将最新的会员信息赋值给销售订单. 避免并发问题
+		// 扣减会员余额
+		// 获取该销售订单使用会员余额支付的金额
+		balanceAmount := saleOrder.GetMemberBalanceAmount()
+		if member.GetBalanceAll() < memberBalanceAmount {
+			return nil, errors.New("会员余额不足,请先充值")
+		}
+		if balanceAmount > 0 {
+			deductRatioMain, deductRatioGift := pointsSetting.GetDeductRatioMainAndGift()
+			memberBalanceAmount, memberGiftBalanceAmount = member.SetFrozenBalance(balanceAmount, deductRatioMain, deductRatioGift)
+		}
+	}
+
 	// 记录会员余额
 	saleOrder.SetMemberBalance()
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		ctx.SetDB(db)
 		// 更新销售订单
 		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
 			return errors.WithMessage(err)
@@ -5148,6 +5175,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
 					return err
 				}
+			}
+		}
+		// 更新会员的余额
+		if saleOrder.Member.GetUpdate() {
+			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+				Uuid:      saleOrder.Member.Uuid,
+				Money:     memberBalanceAmount,     // 扣减会员余额
+				GiftMoney: memberGiftBalanceAmount, // 扣减会员赠送余额
+				Scene:     constant.MemberBalanceLogConsume,
+				Describe:  fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
+			}); err != nil {
+				return errors.WithMessage(err)
 			}
 		}
 		return nil

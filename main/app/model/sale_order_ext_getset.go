@@ -295,6 +295,17 @@ func (model *SaleOrder) GetMemberName() string {
 	return model.Member.Nickname
 }
 
+// 获取该销售订单使用会员余额支付的金额
+func (model *SaleOrder) GetMemberBalanceAmount() float64 {
+	memberBalanceAmount := decimal.NewFromFloat(0)
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+			memberBalanceAmount = memberBalanceAmount.Add(decimal.NewFromFloat(paymentOrder.Amount))
+		}
+	}
+	return memberBalanceAmount.InexactFloat64()
+}
+
 func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	buffetList []*BuffetPackage,
 	buffetUuids []uint64,

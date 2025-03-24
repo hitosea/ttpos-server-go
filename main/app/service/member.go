@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/shopspring/decimal"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -11,6 +10,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
@@ -128,7 +129,7 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 		Card:     resp.Card{Name: cardName},
 		Level:    resp.Level{Name: level},
 		Balance:  member.GetBalanceAll(),
-		Points:   member.Point,
+		Points:   member.GetPoints(),
 		Phone:    member.Phone,
 	}
 }
@@ -192,7 +193,7 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 	}
 	// 处理会员积分
 	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-		"point": utils.DecimalAdd(member.Point, changeReq.Points),
+		"frozen_point": utils.DecimalAdd(member.GetPoints(), changeReq.Points),
 	}); err != nil {
 		return errors.WithMessage(err, "处理会员积分失败")
 	}
@@ -225,8 +226,8 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 		return errors.New("会员不存在")
 	}
 	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-		"balance":      utils.DecimalAdd(member.Balance, changeReq.Money),
-		"gift_balance": utils.DecimalAdd(member.GiftBalance, changeReq.GiftMoney),
+		"frozen_balance":      utils.DecimalAdd(member.FrozenBalance, changeReq.Money),
+		"frozen_gift_balance": utils.DecimalAdd(member.FrozenGiftBalance, changeReq.GiftMoney),
 	}); err != nil {
 		return errors.WithMessage(err, "更新会员余额失败")
 	}
@@ -235,7 +236,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 	if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 		MemberUuid: changeReq.Uuid,
 		Scene:      changeReq.Scene,
-		Money:      utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
+		Money:      changeReq.Money,
 		GiftMoney:  changeReq.GiftMoney,
 		Describe:   changeReq.Describe,
 	}); err != nil {
@@ -247,13 +248,13 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 // checkCanUpgrade 检查会员是否可以升级
 func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel) bool {
 	if (level.OpenMoney == 1 && level.OpenPoint == 1) &&
-		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.Point >= level.UpgradePoint) {
+		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.GetPoints() >= level.UpgradePoint) {
 		return true
 	}
 	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {
 		return true
 	}
-	if level.OpenPoint == 1 && member.Point >= level.UpgradePoint {
+	if level.OpenPoint == 1 && member.GetPoints() >= level.UpgradePoint {
 		return true
 	}
 	return false
@@ -299,7 +300,7 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 			Card:     resp.Card{Name: cardName},
 			Level:    resp.Level{Name: levelName},
 			Balance:  member.GetBalanceAll(),
-			Points:   member.Point,
+			Points:   member.GetPoints(),
 			Phone:    member.Phone,
 		},
 		HasPassword:     member.HasPassword(),

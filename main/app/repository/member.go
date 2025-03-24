@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
@@ -19,7 +20,7 @@ type IMemberRepo interface {
 	GetMember(opts ...DBOption) model.Member // 获取会员
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
 	GetMemberRecord(opts ...DBOption) (*model.Member, error)   // 获取会员
-	GetMemberByUuid(uuid uint64) (model.Member, error)         // 根据uuid获取会员
+	GetMemberByUuid(uuid uint64) (*model.Member, error)        // 根据uuid获取会员
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
 	SearchMember(keyword string) []model.Member                // 关键字搜索会员
@@ -30,6 +31,7 @@ type IMemberRepo interface {
 	Update(uuid uint64, vars map[string]any) error // 更新会员信息
 
 	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
+	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {
@@ -129,12 +131,12 @@ func (r *memberRepo) GetMemberRecord(opts ...DBOption) (*model.Member, error) {
 }
 
 // GetMemberByUuid 根据uuid查询会员
-func (r *memberRepo) GetMemberByUuid(uuid uint64) (model.Member, error) {
+func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
 	member, err := r.GetMemberRecord(r.WhereUuid(uuid))
 	if err != nil {
-		return model.Member{}, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
+		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
 	}
-	return *member, nil
+	return member, nil
 }
 
 // Update 更新会员信息
@@ -176,4 +178,12 @@ func (r *memberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid u
 		return nil, errors.New("会员不存在")
 	}
 	return &member, nil
+}
+
+// UpdateProcessed 更新会员积分日志为已处理
+func (r *memberRepo) UpdateProcessed(uuids []uint64) error {
+	if err := r.db.Model(&model.MemberBalanceLog{}).Where("uuid IN (?)", uuids).Update("processed", constant.MemberPointLogOrBalanceProcessedSuccess).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

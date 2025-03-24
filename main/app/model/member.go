@@ -16,7 +16,9 @@ type Member struct {
 	AccumulatedConsumptionAmount float64 `gorm:"column:accumulated_consumption_amount;type:decimal(12,2);default:0.00;comment:累计消费金额;NOT NULL" json:"accumulated_consumption_amount"`
 	ConsumptionCount             int     `gorm:"column:consumption_count;type:int(11);default:0;comment:消费次数;NOT NULL" json:"consumption_count"`
 	Balance                      float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:余额;NOT NULL" json:"balance"`
+	FrozenBalance                float64 `gorm:"column:frozen_balance;type:decimal(12,2);default:0.00;comment:冻结余额。冻结余额不能使用，在前端显示为已扣除或已增加。冻结余额可为负数。会员余额=余额+冻结余额;NOT NULL" json:"frozen_balance"`
 	GiftBalance                  float64 `gorm:"column:gift_balance;type:decimal(12,2);default:0.00;comment:赠送账户余额;NOT NULL" json:"gift_balance"`
+	FrozenGiftBalance            float64 `gorm:"column:frozen_gift_balance;type:decimal(12,2);default:0.00;comment:冻结赠送账户余额。冻结赠送账户余额不能使用，在前端显示为已扣除或已增加。冻结赠送账户余额可为负数。赠送账户余额=赠送账户余额+冻结赠送账户余额;NOT NULL" json:"frozen_gift_balance"`
 	AccumulatedRechargeAmount    float64 `gorm:"column:accumulated_recharge_amount;type:decimal(12,2);default:0.00;comment:累计充值金额;NOT NULL" json:"accumulated_recharge_amount"`
 	MemberLevelUuid              uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
 	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
@@ -33,7 +35,7 @@ func (model *Member) AccumulateConsumeAmount(amount float64) {
 
 // 获取会员的积分余额，用于展示在前端。
 // 会员积分余额=积分+冻结积分
-func (model *Member) GetPointBalance() float64 {
+func (model *Member) GetPoints() float64 {
 	return decimal.NewFromFloat(model.Point).Add(decimal.NewFromFloat(model.FrozenPoint)).InexactFloat64()
 }
 
@@ -50,11 +52,84 @@ func (model *Member) UpdatePoint(changePoints float64) {
 	model.FrozenPoint = 0
 }
 
+// 更改会员余额。仅用于处理积分变动记录时，修改会员积分。
+// 参数changeBalance为余额变动值，正数为增加余额，负数为扣减余额。
+// 清零冻结的余额。表示该会员的余额变动已经处理完，无需再冻结。
+func (model *Member) UpdateBalance(changeBalance float64) {
+	model.Balance = decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(changeBalance)).InexactFloat64()
+	model.FrozenBalance = 0
+}
+
+// 设置会员冻结余额
+// 参数balanceAmount为本销售订单使用会员余额支付的金额
+// 参数deductRatioMain为主账户扣款比例，参数deductRatioGift为赠送账户扣款比例。
+func (model *Member) SetFrozenBalance(balanceAmount float64, deductRatioMain float64, deductRatioGift float64) (float64, float64) {
+	defer model.SetUpdate()
+	// 主账户扣款
+	// 当deductRatioMain为0时，balanceAmountMain1为0，balanceAmountGift1为0
+	balanceAmountMain1, balanceAmountGift1 := model.getBalanceAmountMain(balanceAmount, deductRatioMain)
+	// 赠送账户扣款
+	// 当deductRatioGift为0时，balanceAmountMain2为0，balanceAmountGift2为0
+	balanceAmountMain2, balanceAmountGift2 := model.getBalanceAmountGift(balanceAmount, deductRatioGift)
+
+	// 主账户扣款=主账户扣款+赠送帐户余额不足时从主账户扣款。
+	balanceAmountMain := balanceAmountMain1 + balanceAmountMain2
+	// 赠送账户扣款=赠送账户扣款+赠送帐户余额不足时从主账户扣款。
+	balanceAmountGift := balanceAmountGift1 + balanceAmountGift2
+
+	// 冻结余额=冻结余额-主账户扣款
+	model.FrozenBalance = decimal.NewFromFloat(model.FrozenBalance).Sub(decimal.NewFromFloat(balanceAmountMain)).InexactFloat64()
+	// 冻结赠送账户余额=冻结赠送账户余额-赠送账户扣款
+	model.FrozenGiftBalance = decimal.NewFromFloat(model.FrozenGiftBalance).Sub(decimal.NewFromFloat(balanceAmountGift)).InexactFloat64()
+	// 返回主账户扣款金额和赠送账户扣款金额
+	return -balanceAmountMain, -balanceAmountGift
+}
+
+// 获取主账户扣款金额
+func (model *Member) getBalanceAmountMain(balanceAmount float64, deductRatioMain float64) (float64, float64) {
+	balanceAmountMain := float64(0)
+	balanceAmountGift := float64(0)
+	// 主账户扣款
+	balanceAmountMain = decimal.NewFromFloat(balanceAmount).Mul(decimal.NewFromFloat(deductRatioMain)).InexactFloat64()
+	// 如果主账户金额不足，则不足部分从赠送账户扣款
+	if balanceAmountMain > model.GetBalance() {
+		balanceAmountGift = balanceAmountMain - model.GetBalance()
+		balanceAmountMain = model.GetBalance()
+	}
+	return balanceAmountMain, balanceAmountGift
+}
+
+// 获取赠送账户扣款金额
+func (model *Member) getBalanceAmountGift(balanceAmount float64, deductRatioGift float64) (float64, float64) {
+	balanceAmountMain := float64(0)
+	balanceAmountGift := float64(0)
+	// 赠送账户扣款
+	balanceAmountGift = decimal.NewFromFloat(balanceAmount).Mul(decimal.NewFromFloat(deductRatioGift)).InexactFloat64()
+	// 如果赠送账户金额不足，则不足部分从主账户扣款
+	if balanceAmountGift > model.GetGiftBalance() {
+		balanceAmountMain = balanceAmountGift - model.GetGiftBalance()
+		balanceAmountGift = model.GetGiftBalance()
+	}
+	return balanceAmountMain, balanceAmountGift
+}
+
 // 获取会员的余额，用于展示在前端。
 // 会员余额=余额+赠送余额
 func (model *Member) GetBalanceAll() float64 {
 	// 会员余额=余额+赠送余额
-	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.GiftBalance)).InexactFloat64()
+	return decimal.NewFromFloat(model.GetBalance()).Add(decimal.NewFromFloat(model.GetGiftBalance())).InexactFloat64()
+}
+
+// 获取会员的余额，用于展示在前端。
+// 会员余额=余额+冻结余额
+func (model *Member) GetBalance() float64 {
+	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.FrozenBalance)).InexactFloat64()
+}
+
+// 获取会员的赠送余额，用于展示在前端。
+// 会员赠送余额=赠送余额+冻结赠送余额
+func (model *Member) GetGiftBalance() float64 {
+	return decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(model.FrozenGiftBalance)).InexactFloat64()
 }
 
 func (model *Member) GetMemberCardName() string {
@@ -183,6 +258,7 @@ type MemberBalanceLog struct {
 	Money      float64 `gorm:"column:money;type:decimal(12,2);default:0.00;comment:变动金额,负数:减余额 整数:加余额;NOT NULL" json:"money"`
 	GiftMoney  float64 `gorm:"column:gift_money;type:decimal(12,2);default:0.00;comment:变动赠送金额" json:"gift_money"`
 	Describe   string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
+	Processed  uint64  `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额;NOT NULL" json:"processed"`
 }
 
 // MemberPointLog 会员积分变动记录表 `ttpos_member_point_log`

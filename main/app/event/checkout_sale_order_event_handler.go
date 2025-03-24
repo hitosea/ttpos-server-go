@@ -98,8 +98,8 @@ func checkoutSaleOrderEventHandler() {
 					return
 				}
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
-				saleOrder.HandleMemberPoints(&member)
-				saleOrder.AccumulateMemberConsumeAmountAndTimes(&member) // 累计会员的消费金额、消费次数
+				saleOrder.HandleMemberPoints(member)
+				saleOrder.AccumulateMemberConsumeAmountAndTimes(member) // 累计会员的消费金额、消费次数
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
@@ -121,7 +121,7 @@ func checkoutSaleOrderEventHandler() {
 				}
 
 				// 发布“积分变动”事件
-				go HandleMemberPoints(db, saleOrder.ConsumerUuid)
+				go HandleMemberPoints(db)
 			}
 		})
 
@@ -147,7 +147,7 @@ func checkoutSaleOrderEventHandler() {
 				// 累计会员的消费金额、消费次数
 				before := saleOrder.Member.AccumulatedConsumptionAmount
 				beforeConsumptionCount := saleOrder.Member.ConsumptionCount
-				saleOrder.AccumulateMemberConsumeAmountAndTimes(&member)
+				saleOrder.AccumulateMemberConsumeAmountAndTimes(member)
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
@@ -165,11 +165,17 @@ func checkoutSaleOrderEventHandler() {
 			}
 		})
 
+		// 处理会员余额
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			go HandleMemberBalance(db)
+		})
+
 	})
 }
 
 // 处理积分变动
-func HandleMemberPoints(db *gorm.DB, memberUuid uint64) {
+func HandleMemberPoints(db *gorm.DB) {
 	// 加锁, 避免并发问题
 	lock.NewSystemLock().LockUuid(constant.LockNameMemberPoints)
 	defer lock.NewSystemLock().UnlockUuid(constant.LockNameMemberPoints)
@@ -178,7 +184,7 @@ func HandleMemberPoints(db *gorm.DB, memberUuid uint64) {
 	memberPointLogRepo := repository.NewMemberPointLogRepo(db)
 	memberPointLogs, err := memberPointLogRepo.GetMemberPointLogNotProcessed()
 	if err != nil {
-		logger.Logger.Info("HandleMemberPoints process, GetMemberPointLogNotProcessed failed", zap.Any("memberUuid", memberUuid), zap.Error(err))
+		logger.Logger.Info("HandleMemberPoints process, GetMemberPointLogNotProcessed failed", zap.Error(err))
 		return
 	}
 
@@ -204,10 +210,10 @@ func HandleMemberPoints(db *gorm.DB, memberUuid uint64) {
 	// 更新会员积分
 	logMemberInfoMap := make(map[string][]float64)
 	for _, member := range members {
-		beforePoint := member.Point
+		beforePoint := member.GetPoints()
 		memberChangePoint := memberChangePoint[MemberUuid(member.Uuid)].InexactFloat64()
 		member.UpdatePoint(memberChangePoint)
-		logMemberInfoMap[member.Nickname] = []float64{beforePoint, memberChangePoint, member.Point}
+		logMemberInfoMap[member.Nickname] = []float64{beforePoint, memberChangePoint, member.GetPoints()}
 	}
 
 	uuids := make([]uint64, 0)
@@ -219,7 +225,7 @@ func HandleMemberPoints(db *gorm.DB, memberUuid uint64) {
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		for _, member := range members {
 			if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
-				"point":        member.Point,
+				"point":        member.GetPoints(),
 				"frozen_point": member.FrozenPoint,
 			}); err != nil {
 				return errors.WithMessage(err)
@@ -237,5 +243,77 @@ func HandleMemberPoints(db *gorm.DB, memberUuid uint64) {
 	// 记录日志
 	for nickname, info := range logMemberInfoMap {
 		logger.Logger.Info("HandleMemberPoints process, UpdateMemberPoint", zap.Any("member", nickname), zap.Any("before point", info[0]), zap.Any("change point", info[1]), zap.Any("after point", info[2]))
+	}
+}
+
+// 处理会员余额
+func HandleMemberBalance(db *gorm.DB) {
+	// 加锁, 避免并发问题
+	lock.NewSystemLock().LockUuid(constant.LockNameMemberBalance)
+	defer lock.NewSystemLock().UnlockUuid(constant.LockNameMemberBalance)
+
+	// 查询积分变动
+	memberBalanceLogRepo := repository.NewMemberBalanceLogRepo(db)
+	memberBalanceLogs, err := memberBalanceLogRepo.GetMemberBalanceLogNotProcessed()
+	if err != nil {
+		logger.Logger.Info("HandleMemberBalance process, GetMemberBalanceLogNotProcessed failed", zap.Error(err))
+		return
+	}
+
+	type MemberUuid uint64
+	memberChangeBalance := make(map[MemberUuid]decimal.Decimal) // 各个会员的余额变动
+	for _, memberBalanceLog := range memberBalanceLogs {
+		// 累计同一个会员的余额变动
+		pre := memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)]
+		memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)] = pre.Add(decimal.NewFromFloat(memberBalanceLog.Money))
+	}
+
+	memberUuids := make([]uint64, 0) // 余额有变动的会员
+	for memberUuid := range memberChangeBalance {
+		memberUuids = append(memberUuids, uint64(memberUuid))
+	}
+
+	// 获取会员信息
+	members, err := repository.NewMemberRepo(db).GetMembersByUuids(memberUuids)
+	if err != nil {
+		logger.Logger.Info("HandleMemberBalance process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
+		return
+	}
+	// 更新会员积分
+	logMemberInfoMap := make(map[string][]float64)
+	for _, member := range members {
+		beforeBalance := member.Balance
+		memberChangeBalance := memberChangeBalance[MemberUuid(member.Uuid)].InexactFloat64()
+		member.UpdateBalance(memberChangeBalance)
+		logMemberInfoMap[member.Nickname] = []float64{beforeBalance, memberChangeBalance, member.Balance}
+	}
+
+	uuids := make([]uint64, 0) // 未处理的余额变动记录
+	for _, memberBalanceLog := range memberBalanceLogs {
+		uuids = append(uuids, memberBalanceLog.Uuid)
+	}
+
+	// 更新会员积分,更新到数据库
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		for _, member := range members {
+			if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
+				"balance":        member.GetBalance(),
+				"frozen_balance": 0,
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 标记所有记录为已经处理
+		if err := repository.NewMemberRepo(tx).UpdateProcessed(uuids); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		logger.Logger.Info("HandleMemberBalance process, Transaction failed", zap.Any("members", members), zap.Error(err))
+		return
+	}
+	// 记录日志
+	for nickname, info := range logMemberInfoMap {
+		logger.Logger.Info("HandleMemberBalance process, UpdateMemberBalance", zap.Any("member", nickname), zap.Any("before balance", info[0]), zap.Any("change balance", info[1]), zap.Any("after balance", info[2]))
 	}
 }

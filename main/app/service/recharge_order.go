@@ -461,9 +461,9 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		"amount":            s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
 		"status":            constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
 		"payment_time":      time.Now().Unix(),
-		"charge_due":        chargeDue,                                                                                    // 找零
-		"balance":           utils.DecimalAdd(member.Balance, member.GiftBalance),                                         // 充值前会员余额
-		"balance_recharged": utils.DecimalAdd(member.Balance, member.GiftBalance, order.RechargeAmount, order.GiftAmount), // 充值后会员余额
+		"charge_due":        chargeDue,                                                                        // 找零
+		"balance":           member.GetBalanceAll(),                                                           // 充值前会员余额
+		"balance_recharged": utils.DecimalAdd(member.GetBalanceAll(), order.RechargeAmount, order.GiftAmount), // 充值后会员余额
 	}
 
 	var memberPointsChanged bool
@@ -1001,7 +1001,7 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 		status = 2
 	}
 	member := order.Member
-	if member.Balance < order.RechargeAmount || member.Point < order.GiftPoint || member.GiftBalance < order.GiftAmount {
+	if member.GetBalance() < order.RechargeAmount || member.GetPoints() < order.GiftPoint || member.GetGiftBalance() < order.GiftAmount {
 		message = i18n.Translate(ctx.GetLanguage(), "当前会员账户不足反结账")
 		status = 1
 	}
@@ -1009,9 +1009,9 @@ func (s *rechargeOrderSrv) CheckRechargeOrderReverseSettle(ctx context.Context, 
 		MemberInfo: resp.ReverseSettleRechargeOrderMemberInfo{
 			Uuid:        member.Uuid,
 			Nickname:    member.Nickname,
-			Balance:     member.Balance,
-			GiftBalance: member.GiftBalance,
-			Points:      member.Point,
+			Balance:     member.GetBalance(),
+			GiftBalance: member.GetGiftBalance(),
+			Points:      member.GetPoints(),
 		},
 		Status:  status,
 		Message: message,
@@ -1215,9 +1215,9 @@ func (s *rechargeOrderSrv) GetRechargeOrderRefundInfo(ctx context.Context, uuid 
 		GiftAmount:       order.GiftAmount,
 		GiftPoint:        order.GiftPoint,
 		RechargeMemberInfo: resp.RefundRechargeOrderMemberInfo{
-			Balance:     order.Member.Balance,
-			GiftBalance: order.Member.GiftBalance,
-			Points:      order.Member.Point,
+			Balance:     order.Member.GetBalance(),
+			GiftBalance: order.Member.GetGiftBalance(),
+			Points:      order.Member.GetPoints(),
 		},
 		PaymentRecords: paymentRecords,
 	}, nil
@@ -1266,7 +1266,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		deductionMoney = refundMoney
 	}
 	// 要从会员主账户扣除的金额 > 用户主账户余额，不可退款
-	if deductionMoney > order.Member.Balance {
+	if deductionMoney > order.Member.GetBalance() {
 		return errors.New("当前会员主账户余额不足以退款")
 	}
 	// 处理退款金额

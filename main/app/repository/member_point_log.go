@@ -76,7 +76,7 @@ func (r *MemberPointLogRepo) GetMemberPointLogNotProcessed() ([]model.MemberPoin
 
 // UpdateProcessed 更新会员积分日志为已处理
 func (r *MemberPointLogRepo) UpdateProcessed(uuids []uint64) error {
-	if err := r.db.Model(&model.MemberPointLog{}).Where("uuid IN (?)", uuids).Update("processed", constant.MemberPointLogProcessedSuccess).Error; err != nil {
+	if err := r.db.Model(&model.MemberPointLog{}).Where("uuid IN (?)", uuids).Update("processed", constant.MemberPointLogOrBalanceProcessedSuccess).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil

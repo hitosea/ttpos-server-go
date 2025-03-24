@@ -431,7 +431,7 @@ func (r *commonRepo) WhereByShiftNo(shiftNo string) DBOption {
 
 func (r *commonRepo) WhereByProcessedNot() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("processed = ?", constant.MemberPointLogProcessedNot)
+		return db.Where("processed = ?", constant.MemberPointLogOrBalanceProcessedNot)
 	}
 }
 
