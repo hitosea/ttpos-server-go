@@ -10,6 +10,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -28,7 +29,7 @@ type PPrinterRepo interface {
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, deviceSnId ...string) (*resp.PrinterData, error)
-	PrintingBusinessData(businessData *business_data_resp.BusinessDataAll, tmp int, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, deviceSnId ...string) (*resp.PrinterData, error)
 }
 
 type PrinterRepoImpl struct {

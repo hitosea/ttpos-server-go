@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
@@ -32,98 +33,182 @@ func NewBusinessSrvImpl(dbm *database.DBManager) IBusinessSrv {
 
 // Printer 打印
 func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error) {
-	// 营业数据
-	var businessData = business_data_resp.BusinessDataAll{
-		TotalSales:             2131231,
-		TotalReceivedPrice:     43124,
-		TotalPayPrice:          21230,
-		TotalPayFeeMoney:       2110,
-		TotalServiceMoney:      120,
-		TotalTaxMoney:          10124,
-		TotalUserDiscountMoney: 120,
-		TotalDiscountMoney:     120,
-		TotalFreeOrderPrice:    120,
-		TotalRefundMoney:       10,
-		TotalOrderNum:          1230,
-		TotalPeopleNum:         120,
-		TotalProductNum:        320,
-		TotalTableNum:          120,
-		AvgOrderPrice:          620,
-		MinOrderPrice:          120,
-		MaxOrderPrice:          1200,
-		AllTableOrderNum:       1230,
-		AllTablePeopleNum:      120,
-		AllTableAvgOrderPrice:  620,
-		AllTableMinOrderPrice:  120,
-		AllTableMaxOrderPrice:  1200,
-		AllTablePeopleAvg:      10,
-		PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
-			{
-				Name:     "现金",
-				OrderNum: 1,
-				Amount:   123213,
-				Code:     40,
+	// Initialize the pointer to avoid nil dereference
+	reqPrinterData := &template.PrintingBusinessData{}
+	//
+	if req.StatisticsType == 0 {
+		reqPrinterData.All = &business_data_resp.BusinessDataAll{
+			TotalSales:             2131231,
+			TotalReceivedPrice:     43124,
+			TotalPayPrice:          21230,
+			TotalPayFeeMoney:       2110,
+			TotalServiceMoney:      120,
+			TotalTaxMoney:          10124,
+			TotalUserDiscountMoney: 120,
+			TotalDiscountMoney:     120,
+			TotalFreeOrderPrice:    120,
+			TotalRefundMoney:       10,
+			TotalOrderNum:          1230,
+			TotalPeopleNum:         120,
+			TotalProductNum:        320,
+			TotalTableNum:          120,
+			AvgOrderPrice:          620,
+			MinOrderPrice:          120,
+			MaxOrderPrice:          1200,
+			AllTableOrderNum:       1230,
+			AllTablePeopleNum:      120,
+			AllTableAvgOrderPrice:  620,
+			AllTableMinOrderPrice:  120,
+			AllTableMaxOrderPrice:  1200,
+			AllTablePeopleAvg:      10,
+			PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
+				{
+					Name:     "现金",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     40,
+				},
+				{
+					Name:     "支付宝",
+					OrderNum: 1,
+					Amount:   24121,
+					Code:     41,
+				},
+				{
+					Name:     "微信支付",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     42,
+				},
 			},
-			{
-				Name:     "支付宝",
-				OrderNum: 1,
-				Amount:   24121,
-				Code:     41,
+			AbnormalData: business_data_resp.AbnormalData{},
+			MemberData: business_data_resp.MemberData{
+				RechargeAmount: 120,
+				GiftMoney:      120,
+				GiftPoints:     120,
 			},
-			{
-				Name:     "微信支付",
-				OrderNum: 1,
-				Amount:   123213,
-				Code:     42,
+			PeakHourList: []business_data_resp.PeakHour{
+				{
+					TimePeriod: "12",
+					OrderNum:   120,
+					Amount:     120,
+				},
+				{
+					TimePeriod: "121232",
+					OrderNum:   120,
+					Amount:     120,
+				},
 			},
-		},
-		AbnormalData: business_data_resp.AbnormalData{},
-		MemberData: business_data_resp.MemberData{
-			RechargeAmount: 120,
-			GiftMoney:      120,
-			GiftPoints:     120,
-		},
-		PeakHourList: []business_data_resp.PeakHour{
-			{
-				TimePeriod: "12",
-				OrderNum:   120,
-				Amount:     120,
+			CategoryList: []business_data_resp.Category{
+				{
+					Name:     "12",
+					SalesNum: 1,
+					Prices:   323,
+				},
+				{
+					Name:     "121232",
+					SalesNum: 2,
+					Prices:   23,
+				},
 			},
-			{
-				TimePeriod: "121232",
-				OrderNum:   120,
-				Amount:     120,
+			PercentageList: []business_data_resp.Percentage{
+				{
+					TaxRate:        120,
+					ConsumptionTax: 120,
+				},
+				{
+					TaxRate:        110,
+					ConsumptionTax: 2120,
+				},
 			},
-		},
-		CategoryList: []business_data_resp.Category{
-			{
-				Name:     "12",
-				SalesNum: 1,
-				Prices:   323,
+		}
+	}
+
+	if req.StatisticsType == 1 {
+		reqPrinterData.PaymentMethod = &business_data_resp.BusinessDataPaymentMethod{
+			TotalReceivedPrice: 1121,
+			PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
+				{
+					Name:     "现金",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     40,
+				},
+				{
+					Name:     "支付宝",
+					OrderNum: 1,
+					Amount:   24121,
+					Code:     41,
+				},
+				{
+					Name:     "微信支付",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     42,
+				},
 			},
-			{
-				Name:     "121232",
-				SalesNum: 2,
-				Prices:   23,
+		}
+	}
+
+	if req.StatisticsType == 2 {
+		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
+			SalesNum: 120,
+			CategoryList: []business_data_resp.Category{
+				{
+					Name:     "12",
+					SalesNum: 1,
+					Prices:   323,
+				},
+				{
+					Name:     "121232",
+					SalesNum: 2,
+					Prices:   23,
+				},
 			},
-		},
-		PercentageList: []business_data_resp.Percentage{
-			{
-				TaxRate:        120,
-				ConsumptionTax: 120,
+			PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
+				{
+					Name:     "现金",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     40,
+				},
+				{
+					Name:     "支付宝",
+					OrderNum: 1,
+					Amount:   24121,
+					Code:     41,
+				},
+				{
+					Name:     "微信支付",
+					OrderNum: 1,
+					Amount:   123213,
+					Code:     42,
+				},
 			},
-			{
-				TaxRate:        110,
-				ConsumptionTax: 2120,
+		}
+	}
+
+	if req.StatisticsType == 3 {
+		reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
+			Products: []business_data_resp.Product{
+				{
+					Name:     "12",
+					SalesNum: 1,
+					Price:    323,
+					Subtotal: 323,
+				},
+				{
+					Name:     "121232",
+					SalesNum: 2,
+					Price:    23,
+					Subtotal: 46,
+				},
 			},
-		},
+		}
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(
-		&businessData,
-		req.StatisticsType,
-	)
+	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(req.QueryStartTime), int64(req.QueryEndTime))
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

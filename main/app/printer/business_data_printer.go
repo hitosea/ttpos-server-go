@@ -4,7 +4,6 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
-	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -19,8 +18,9 @@ import (
  * 业务数据打印
  */
 func (p *PrinterRepoImpl) PrintingBusinessData(
-	businessData *business_data_resp.BusinessDataAll,
-	tmp int,
+	businessData *template.PrintingBusinessData,
+	startTime int64,
+	endTime int64,
 	deviceSnId ...string,
 ) (*resp.PrinterData, error) {
 	var deviceSn string
@@ -57,7 +57,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingBusinessDataContent(settingPrinterInfo.PrinterType, tmp, businessData)
+	printContent := p.getPrintingBusinessDataContent(settingPrinterInfo.PrinterType, businessData, startTime, endTime)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -101,8 +101,9 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	printerType string, // 打印机类型
-	tmp int,
-	businessData *business_data_resp.BusinessDataAll,
+	businessData *template.PrintingBusinessData,
+	startTime int64,
+	endTime int64,
 ) string {
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -126,10 +127,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 
 	// 图片打印
 	if p.printerSetting.PrintMethod == "2" {
-		return template.NewBusinessDataImgTemplate(base).GetPrintContent(
-			tmp,
-			businessData,
-		)
+		return template.NewBusinessDataImgTemplate(base).GetPrintContent(businessData, startTime, endTime)
 	}
 
 	// /* *

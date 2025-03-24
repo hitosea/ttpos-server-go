@@ -103,20 +103,20 @@ type BusinessDataAll struct {
 
 // 营业数据 - 按支付方式
 type BusinessDataPaymentMethod struct {
-	ReceivedPrice        float64               `json:"received_price"`         // 总实收金额
+	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 }
 
 // 营业数据 - 按商品分类
 type BusinessDataProductCategory struct {
 	SalesNum             int                   `json:"sales_num"`              // 销售笔数
+	RefundAmount         float64               `json:"refund_amount"`          // 退款金额
+	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	CategoryList         []Category            `json:"category_list"`          // 分类列表
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 }
 
 // 营业数据 - 按商品
 type BusinessDataProduct struct {
-	SalesNum             int                   `json:"sales_num"`              // 销售笔数
-	CategoryList         []Category            `json:"category_list"`          // 分类列表
-	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
+	Products []Product `json:"products"` // 商品列表
 }

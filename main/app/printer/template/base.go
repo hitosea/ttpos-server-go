@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"ttpos-server-go/app/dto/resp/business_data_resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/service/setting"
@@ -32,6 +33,14 @@ const (
 	PrinterTypeCodesoftLan   = "CODESOFT_LAN"   // Codesoft（网口）80mm
 	PrinterTypeCodesoftWifi  = "CODESOFT_WIFI"  //Codesoft（WIFI）80mm
 )
+
+// 打印业务数据的
+type PrintingBusinessData struct {
+	All             *business_data_resp.BusinessDataAll             `json:"business_data_all"`              // 全部数据
+	PaymentMethod   *business_data_resp.BusinessDataPaymentMethod   `json:"business_data_payment_method"`   // 支付方式数据
+	ProductCategory *business_data_resp.BusinessDataProductCategory `json:"business_data_product_category"` // 产品类别数据
+	Product         *business_data_resp.BusinessDataProduct         `json:"business_data_product"`          // 产品数据
+}
 
 // printerTemplate 模板基类
 type printerTemplate struct {
