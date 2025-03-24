@@ -1,5 +1,7 @@
 package business_data_resp
 
+import "ttpos-server-go/app/dto"
+
 // 商品
 type Product struct {
 	Name     string  `json:"name"`      // 商品名称
@@ -150,4 +152,21 @@ type ProductRank struct {
 	ProductName string  `json:"product_name"` // 商品名称
 	SalesNum    int     `json:"sales_num"`    // 销售数量
 	SalesPrice  float64 `json:"sales_price"`  // 销售金额
+}
+
+// 营业数据 - 商品销售列表统计
+type BusinessDataCountProductSalesPagination struct {
+	List []BusinessDataCountProductSalesItem `json:"list"` // 商品列表
+	Meta dto.PageResponse                    `json:"meta"` // 元数据
+}
+
+// BusinessDataCountProductItem 营业数据商品销售统计列表
+type BusinessDataCountProductSalesItem struct {
+	ProductName        string  `json:"product_name"`         // 商品名称
+	CategoryName       string  `json:"category_name"`        // 分类名称
+	OriginalSalesPrice float64 `json:"original_sales_price"` // 原价销售额
+	SalesPrice         float64 `json:"sales_price"`          // 实际销售金额
+	TotalPayPrice      float64 `json:"total_pay_price"`      // 营业收入
+	SalesNum           int     `json:"sales_num"`            // 销售数量
+	GiveProductNum     int     `json:"give_product_num"`     // 赠菜数量
 }
