@@ -15,3 +15,10 @@ type BusinessDataCountReq struct {
 	QueryEndTime   int64 `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int   `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 }
+
+// BusinessDataRankProductReq 营业数据排行请求
+type BusinessDataRankProductReq struct {
+	QueryStartTime int64 `json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64 `json:"query_end_time"`   // 查询结束时间戳
+	RankType       int   `json:"rank_type"`        // 排行类型 (1 按销量, 2 按销售额)
+}

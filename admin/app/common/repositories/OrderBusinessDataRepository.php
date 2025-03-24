@@ -14,6 +14,7 @@ use app\common\model\order\UserRechargeOrder;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\model\order\UserRechargeOrderOperationLog;
+use help\HttpHelp;
 
 /**
  * 订单业务数据仓库
@@ -785,244 +786,39 @@ class OrderBusinessDataRepository
      */
     public function getRegionData($dates = [])
     {
-        $prefix = env('DB_PREFIX');
-        $data = $this->baseModel->clone()
-            ->leftJoin('table t', 'a.table_id = t.table_id')
-            ->leftJoin('table_area ta', 't.area_id = ta.area_id')
-            ->leftJoin("
-                (
-                    select order_id,
-                        sum(total_num) as total_num,
-                        sum(if(is_free = 2, total_product_price, 0)) as free_not_include_product_price,
-                        sum(no_free_product_service_fee) as free_not_include_product_service_fee,
-                        sum(no_free_product_consumption_tax) as free_not_include_product_consumption_tax,
-                        sum(product_service_fee / total_num * refund_num) as refund_product_service_fee
-                    from  (
-                        select order_id,
-                            is_free,
-                            total_num,
-                            (no_free_product_consumption_tax + no_free_product_service_consumption_tax) as no_free_product_consumption_tax,
-                            no_free_product_service_fee,
-                            total_product_price,
-                            product_service_fee,
-                            refund_num
-                        from {$prefix}order_product where product_id > 0 and is_return = 0
-                        UNION ALL
-                        select order_id,
-                            0 is_free,
-                            num as total_num,
-                            0 as no_free_product_service_fee,
-                            0 as no_free_product_consumption_tax,
-                            0 as total_product_price,
-                            product_service_fee,
-                            refund_num
-                        from {$prefix}order_buffet_customer
-                    ) rp
-                    group by order_id
-                ) rp
-            ", 'a.order_id = rp.order_id and a.is_merge = 0')
-            // 兄弟订单的数量
-            ->leftJoin("
-                (
-                    select
-                        opt.merge_parent_id, count(1) as order_count
-                    from {$prefix}order opt
-                    group by opt.merge_parent_id
-                ) o_merge_order
-            ", 'a.merge_parent_id = o_merge_order.merge_parent_id and a.merge_parent_id > 0')
-            // 子订单的汇总
-            ->leftJoin("
-                (
-                    select
-                        sub.parent_id,
-
-                        ifnull(sum(
-                            case
-                                when sub.is_free=0 then
-                                    sub.total_product_price
-                                    + sub.total_product_service_consumption_tax
-                                    + if( sub.consumption_tax_type = 2,
-                                        sub.total_product_consumption_tax
-                                    , 0)
-                                    - sub.refund_consumption_tax
-                                    + sub.pay_fee_money
-                                    - ifnull(rp.free_not_include_product_price, 0)
-                                when sub.is_free=1 then
-                                    sub.total_product_price
-                                    + sub.total_product_service_consumption_tax
-                                    + if( sub.consumption_tax_type = 2,
-                                        sub.total_product_consumption_tax
-                                    , 0)
-                                    - sub.refund_consumption_tax
-                                    + sub.pay_fee_money
-                                else 0
-                            end
-                        ), 0) as sub_receivable_price,
-
-                        ifnull(sum(
-                            case
-                                when sub.is_free=0 then sub.consumption_tax_money - sub.refund_consumption_tax
-                                when sub.is_free=1 then sub.consumption_tax_money - sub.refund_consumption_tax
-                                else 0
-                            end
-                        ), 0) as sub_consumption_tax_money,
-
-                        ifnull(sum(
-                            case
-                                when sub.is_free=0 || sub.is_free=1 then
-                                    if(order_refund_type.mode > 0, 0, sub.service_money)
-                                else 0
-                            end
-                        ), 0) as sub_service_money
-
-                    from {$prefix}order sub
-                    left join (
-                        select
-                            d.order_id, sum(if(d.refund_type=1, 1, 0)) as mode
-                        from {$prefix}order_refund d
-                        group by d.order_id
-                    ) order_refund_type on order_refund_type.order_id = sub.order_id
-                    left join (
-                        select p.sub_order_id, sum(if(p.is_free = 2, p.total_product_price, 0)) as free_not_include_product_price
-                        from {$prefix}order_product p
-                        where p.product_id > 0 and p.is_return = 0
-                        group by p.sub_order_id
-                    ) rp on rp.sub_order_id = sub.order_id
-                    group by sub.parent_id
-                ) sub_order
-            ", 'sub_order.parent_id = a.order_id')
-            // 付款方式
-            ->leftJoin("
-                (
-                    select
-                        opt.order_id,
-                        sum(price) as balance_price,
-                        sum(price - ifnull(order_refund_destination.refund_money, 0)) as balance_price_not_exist_refund
-                    from {$prefix}order_pay_type opt
-                    left join (
-                        select
-                            d.order_id, sum(refund_money) as refund_money
-                        from {$prefix}order_refund_destination d
-                        where d.value=10 and d.status=1
-                        group by d.order_id
-                    ) order_refund_destination on order_refund_destination.order_id = opt.order_id
-                    where opt.value=10
-                    group by opt.order_id
-                ) o_pay_balance
-            ", 'o_pay_balance.order_id = if(a.merge_parent_id > 0, a.merge_parent_id, a.order_id)')
-            // 退款方式 - 是否整单退款, order_refund_type.mode > 0 就是整单退款
-            ->leftJoin("
-                (
-                    select
-                        d.order_id,
-                        sum(if(d.refund_type=1, 1, 0)) as mode
-                    from {$prefix}order_refund d
-                    group by d.order_id
-                ) order_refund_type
-            ", 'order_refund_type.order_id = if(a.merge_parent_id > 0, a.merge_parent_id, a.order_id)')
-            // 退款类型 - 是否系统退款, order_refund_method.mode > 0 就是整单退款
-            ->leftJoin("
-                (
-                    select
-                        d.order_id,
-                        sum(if(d.refund_method=1, 1, 0)) as mode,
-                        sum(if(d.refund_method=1, d.refund_money, 0)) as refund_money
-                    from {$prefix}order_refund d
-                    group by d.order_id
-                ) order_refund_method
-            ", 'order_refund_method.order_id = if(a.merge_parent_id > 0, a.merge_parent_id, a.order_id)')
-            // 应收-销售额
-            ->field("
-                ifnull(sum(
-                    case
-                        when a.is_free=0 then
-                            a.total_product_price
-                            + a.total_product_service_consumption_tax
-                            + if( a.consumption_tax_type = 2,
-                                a.total_product_consumption_tax
-                            , 0)
-                            - a.refund_consumption_tax
-                            + a.pay_fee_money
-                            - rp.free_not_include_product_price
-                        when a.is_free=1 then
-                            a.total_product_price
-                            + a.total_product_service_consumption_tax
-                            + if( a.consumption_tax_type = 2,
-                                a.total_product_consumption_tax
-                            , 0)
-                            - a.refund_consumption_tax
-                            + a.pay_fee_money
-                        else sub_order.sub_receivable_price
-                    end
-                ), 0) as sales_price
-            ")
-            // 消费税费
-            ->field("
-                ifnull(sum(
-                    case
-                        when a.is_free=0 then a.consumption_tax_money - a.refund_consumption_tax
-                        when a.is_free=1 then a.consumption_tax_money - a.refund_consumption_tax
-                        else sub_order.sub_consumption_tax_money
-                    end
-                ), 0) as consumption_tax_money
-            ")
-            // 余额消费金额, 不包含退款 任务描述: 部分退款之前都不会退固定服务费的，手续费也不会
-            ->field("
-                ifnull( sum(
-                    if( order_refund_method.mode > 0,
-                        o_pay_balance.balance_price - order_refund_method.refund_money,
-                        o_pay_balance.balance_price
-                    )
-                    / ifnull(o_merge_order.order_count, 1)
-                ), 0) as received_balance_price
-            ")
-            // 实收金额,  任务：需求补充-关于会员充值/会员消费的数值显示 ,（v1.0.8）, 实收 = (不包括会员余额消费金额，不包含退款)
-            ->field("
-                ifnull(
-                    sum(
-                        (a.pay_price - ifnull(o_pay_balance.balance_price / ifnull(o_merge_order.order_count, 1), 0)) -
-                        if(order_refund_type.mode > 0 and a.refund_money > (a.pay_price - ifnull(o_pay_balance.balance_price / ifnull(o_merge_order.order_count, 1), 0))
-                            , a.pay_price - ifnull(o_pay_balance.balance_price / ifnull(o_merge_order.order_count, 1), 0)
-                            , a.refund_money
-                        )
-                    )
-            , 0) as received_price")
-            // 服务费  字段：setting_service_money > 0 等于固定服务费不然就是百分比服务费
-            ->field("
-                ifnull(sum(
-                    if (a.merge_parent_id != 0 and a.is_merge != 1, 0,
-                        case
-                            when a.is_free=0 || a.is_free=1 then
-                                if(order_refund_type.mode > 0, 0,
-                                    if(a.setting_service_money > 0,
-                                        a.service_money,
-                                        a.service_money - ifnull(rp.refund_product_service_fee, 0)
-                                    )
-                                )
-                            else sub_order.sub_service_money
-                        end
-                    )
-                ), 0) as service_money
-            ")
-            ->field("ifnull(sum(rp.total_num), 0) as product_num")                                  // 商品数量
-            ->field("ifnull(ta.area_id,0) area_id, ifnull(ta.area_name,'--') area_name")
-            ->group("ta.area_id")
-            ->order('ta.area_id')
-            ->where('ta.area_id', '>', 0)
-            ->when($dates, function ($q) use ($dates) {
-                $q->where('a.pay_time', 'between', $dates);
-            })
-            ->where('a.is_merge', 0)
-            ->select()?->append([])->toArray() ?: [];
-        // 营业收入（v1.0.7） = 实收金额-税费
-        foreach ($data as $key => $item) {
-            // 总销售额 = 原商品金额+页面的服务费+页面的支付手续费+页面税费（v1.1.1版本）- 产品需求
-            $data[$key]['sales_price'] = helper::bcadd($data[$key]['sales_price'], $data[$key]['service_money']);
-            // 余额消费金额, 不包含退款 任务描述: 部分退款之前都不会退固定服务费的，手续费也不会
-            $data[$key]['business_price'] = helper::bcadd(helper::bcsub($item['received_price'], $item['consumption_tax_money']), $item['received_balance_price']);
+        $startTime = $this->startTime;
+        $endTime = $this->endTime;
+        if ($dates) {
+            $startTime = $dates[0];
+            $endTime = $dates[1];
         }
-        //
-        return $data;
+
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/area', [
+            'query_start_time' => $startTime,
+            'query_end_time' => $endTime,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return [];
+        }
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            return [];
+        }
+        $data = $res['data'];
+        $regionData = [];
+        foreach ($data['areas'] as $item) {
+            $regionData[] = [
+                'area_name' => $item['name'],
+                'sales_price' => $item['total_sales'],
+                'business_price' => $item['total_received_price'],
+                'product_num' => $item['total_product_num'],
+            ];
+        }
+        return $regionData;
     }
 
     /**

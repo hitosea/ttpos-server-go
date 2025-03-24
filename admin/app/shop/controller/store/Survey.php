@@ -99,23 +99,13 @@ class Survey extends Controller
         $model = new OrderModel();
 
         // 店內概況
-        $detail = [];
+        $detail = $model->storeOverview($data);
         // 区域数据
-        $regionData =[];
-        // 销量排行
-        $salesNumRank = [];
-        // 销售额排行
-        $salesMoneyRank = [];
-
-        // todo 兼容
-        // // 店內概況
-        // $detail = $model->storeOverview($data);
-        // // 区域数据
-        // $regionData = $model->regionData($data);
+        $regionData = $model->regionData($data);
         // // 销量排行
-        // $salesNumRank = $model->getProductRank(0, 1, $shopSupplierId, $data);
+        $salesNumRank = $model->getProductRank(0, 1, $shopSupplierId, $data);
         // // 销售额排行
-        // $salesMoneyRank = $model->getProductRank(1, 1, $shopSupplierId, $data);
+        $salesMoneyRank = $model->getProductRank(1, 1, $shopSupplierId, $data);
         //
         return $this->renderSuccess('', compact('detail', 'regionData', 'salesNumRank', 'salesMoneyRank'));
     }
