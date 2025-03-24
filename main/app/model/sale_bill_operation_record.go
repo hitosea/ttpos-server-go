@@ -12,6 +12,8 @@ type SaleBillOperationRecord struct {
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员ID" json:"operator_uuid"`
+
+	Operator Staff `gorm:"foreignKey:OperatorUuid;references:uuid"`
 }
 
 func (model *SaleBillOperationRecord) SetNil() {

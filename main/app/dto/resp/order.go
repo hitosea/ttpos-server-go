@@ -142,14 +142,28 @@ type OrderInfos struct {
 }
 
 type OrderOperationLog struct {
-	Uuid          uint64 `json:"uuid"`            // 账单操作记录ID
-	Source        string `json:"source"`          // 操作来源 cashier-收银 assistant-助手 shop-商家后台
-	Action        string `json:"action"`          // 操作行为
-	Data          any    `json:"data"`            // 消息数据
-	Remark        string `json:"remark"`          // 备注
-	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
-	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID
-	CreateTime    int64  `json:"create_time"`     // 创建时间(时间戳)
+	Uuid        uint64                           `json:"uuid"`        // 账单操作记录ID
+	RealName    string                           `json:"user_name"`   // 操作人
+	Email       string                           `json:"user_email"`  // 操作人邮箱
+	Source      string                           `json:"source"`      // 操作来源 cashier-收银 assistant-助手 shop-商家后台
+	CreateTime  int64                            `json:"create_time"` // 创建时间
+	Description string                           `json:"description"` // 描述
+	PayType     []OrderOperationLogPaymentMethod `json:"pay_type"`    // 支付方式列表
+}
+
+type OrderOperationLogPaymentMethod struct {
+	Price               string `json:"price"`                 // 支付金额
+	Code                int    `json:"value"`                 // 支付方式代号
+	Name                string `json:"name"`                  // 支付方式名称
+	Remark              string `json:"remark"`                // 备注
+	PaymentOrderId      int    `json:"payment_order_id"`      // 付款单ID
+	RefundMoney         string `json:"refund_money"`          // 退款金额
+	BankCode            string `json:"bank_code"`             // 银行代码
+	AccountNo           string `json:"account_no"`            // 账号
+	AccountName         string `json:"account_name"`          // 账号姓名
+	RefundDestinationId int    `json:"refund_destination_id"` // 退款目的地ID ??
+	PaymentStatus       int    `json:"payment_status"`        // 支付状态
+	Unit                string `json:"unit"`                  // 现金单位
 }
 
 type OrderInfosResp struct {

@@ -19428,35 +19428,88 @@ const docTemplate = `{
         "resp.OrderOperationLog": {
             "type": "object",
             "properties": {
-                "action": {
-                    "description": "操作行为",
-                    "type": "string"
-                },
                 "create_time": {
-                    "description": "创建时间(时间戳)",
+                    "description": "创建时间",
                     "type": "integer"
                 },
-                "data": {
-                    "description": "消息数据"
-                },
-                "remark": {
-                    "description": "备注",
+                "description": {
+                    "description": "描述",
                     "type": "string"
                 },
-                "sale_bill_uuid": {
-                    "description": "销售账单ID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单ID",
-                    "type": "integer"
+                "pay_type": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderOperationLogPaymentMethod"
+                    }
                 },
                 "source": {
                     "description": "操作来源 cashier-收银 assistant-助手 shop-商家后台",
                     "type": "string"
                 },
+                "user_email": {
+                    "description": "操作人邮箱",
+                    "type": "string"
+                },
+                "user_name": {
+                    "description": "操作人",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "账单操作记录ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderOperationLogPaymentMethod": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "description": "账号姓名",
+                    "type": "string"
+                },
+                "account_no": {
+                    "description": "账号",
+                    "type": "string"
+                },
+                "bank_code": {
+                    "description": "银行代码",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_order_id": {
+                    "description": "付款单ID",
+                    "type": "integer"
+                },
+                "payment_status": {
+                    "description": "支付状态",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "支付金额",
+                    "type": "string"
+                },
+                "refund_destination_id": {
+                    "description": "退款目的地ID ??",
+                    "type": "integer"
+                },
+                "refund_money": {
+                    "description": "退款金额",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "unit": {
+                    "description": "现金单位",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "支付方式代号",
                     "type": "integer"
                 }
             }

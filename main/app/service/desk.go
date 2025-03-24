@@ -816,11 +816,18 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	}); err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
-
-	// todo： 操作记录
-	// deskNos
-	// OrderOperationLog::createLog($this->order_id, OrderOperationLog::ACTION_MERGE_TABLE, $tableNos, '并台');
-
+	// 发布“并台”操作事件
+	go func() {
+		s.bus.PublishMergeDeskEvent(event.MergeDeskPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+			DeskNos: deskNos,
+		})
+	}()
 	// 返回购物车信息
 	info, err := s.orderSrv.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {

@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -11,28 +12,26 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
-
-	"go.uber.org/zap"
 )
 
-var once_cancel_sale_order_discount_event_handler sync.Once
+var once_cancel_split_order_event_handler sync.Once
 
-// init 自动注册事件处理器
+// init 自动注册"添加销售账单记录"事件处理器
 func init() {
 	// 只初始化一次
-	cancelSaleOrderDiscountEventHandler()
+	cancelSplitOrderEventHandler()
 }
 
-// cancelSaleOrderDiscountEventHandler "取消优惠折扣"事件处理器
-func cancelSaleOrderDiscountEventHandler() {
-	once_cancel_sale_order_discount_event_handler.Do(func() {
-		event.NewSystemBus().SubscribeCancelSaleOrderDiscountEvent(func(payload event.CancelSaleOrderDiscountPayload) {
+// cancelSplitOrderEventHandler "取消拆单"事件处理器
+func cancelSplitOrderEventHandler() {
+	once_cancel_split_order_event_handler.Do(func() {
+		event.NewSystemBus().SubscribeCancelSplitOrderEvent(func(payload event.CancelSplitOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleBillOperationRecord{
 				Source:        payload.Source,
-				Action:        constant.OrderCancelDiscount,
-				Remark:        "撤销优惠折扣",
+				Action:        constant.OrderCancelSplitOrder,
+				Remark:        "撤销拆单",
 				SaleBillUuid:  payload.SaleBillUuid,
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
@@ -40,10 +39,10 @@ func cancelSaleOrderDiscountEventHandler() {
 			record.Data = ""
 			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeCancelSaleOrderDiscountEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeCancelSplitOrderEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
-			logger.Logger.Info(fmt.Sprintf("操作记录:撤销优惠折扣 %+v", payload), zap.Uint64("record", uuid))
+			logger.Logger.Info(fmt.Sprintf("操作记录:撤销拆单 %+v", payload), zap.Uint64("record", uuid))
 		})
 	})
 }

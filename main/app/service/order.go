@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -1016,7 +1015,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			List []resp.OrderOperationLog `json:"list"`
 		}{
 			List: func() []resp.OrderOperationLog {
-				logs, err := s.GetRecordList(ctx.GetDbId(), req.SaleBillUuid, 0)
+				logs, err := s.getRecordList(ctx, req.SaleBillUuid, 0)
 				if err != nil {
 					return []resp.OrderOperationLog{}
 				}
@@ -1027,35 +1026,23 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	}, nil
 }
 
-// GetRecordList 获取操作记录
-func (s *orderSrv) GetRecordList(dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.OrderOperationLog, error) {
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(s.dbm.GetDB(dbId))
+// getRecordList 获取操作记录
+func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.OrderOperationLog, error) {
+	orderRecordRepo := repository.NewOrderOperationRecordRepo(ctx.GetDB())
 	orderRecordLists, err := orderRecordRepo.GetRecordLists(saleBillUuid)
 	if err != nil {
 		return []resp.OrderOperationLog{}, errors.WithMessage(err)
 	}
-	// todo - 数据格式待处理
 	logs := make([]resp.OrderOperationLog, 0)
 	for _, record := range orderRecordLists {
-		// 解析Data字段的JSON字符串为map
-		var data any
-		if record.Data != "" {
-			if err := json.Unmarshal([]byte(record.Data), &data); err != nil {
-				data = struct{}{}
-			}
-		} else {
-			data = struct{}{}
-		}
-		//
 		logs = append(logs, resp.OrderOperationLog{
-			Uuid:          record.Uuid,
-			Source:        record.Source,
-			Action:        record.Action,
-			Data:          data,
-			Remark:        record.Remark,
-			SaleBillUuid:  record.SaleBillUuid,
-			SaleOrderUuid: record.SaleOrderUuid,
-			CreateTime:    record.CreateTime,
+			Uuid:        record.Uuid,
+			RealName:    record.Operator.RealName,
+			Email:       record.Operator.Username,
+			Source:      record.Source,
+			CreateTime:  record.CreateTime,
+			Description: s.getActionDescription(record, ctx.GetLanguage()), // 获取描述
+			PayType:     nil,                                               // ToDo 关联支付方式
 		})
 	}
 	return logs, nil
@@ -1082,8 +1069,6 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 // CancelOrder 取消订单
 func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) error {
 	dbId := ctx.GetDbId()
-	staff := ctx.GetStaff()
-	source := ctx.GetSource()
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
@@ -1125,7 +1110,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	orderRepo := repository.NewOrderRepo(tx)
 	deskRepo := repository.NewDeskRepo(tx)
 	qrOrderRepo := repository.NewH5OrderRepo(tx)
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(tx)
 
 	// 退回商品库存
 	{
@@ -1183,14 +1167,17 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 	}
 
-	// 添加操作日志
-	orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderOrderCancel, model.SaleBillOperationRecord{
-		Source:        source,
-		Remark:        "取消订单",
-		SaleBillUuid:  billInfo.SaleOrders[0].Uuid,
-		SaleOrderUuid: billInfo.SaleOrders[0].Uuid,
-		OperatorUuid:  staff.Uuid,
-	}, nil)
+	// 发布“整单取消”操作事件
+	go func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -5611,6 +5598,29 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		ctx.Log().Error("查询购物车信息失败", zap.Any("errCartInfo", errCartInfo))
 		return nil, errors.WithMessage(errCartInfo, "查询购物车信息失败")
 	}
+
+	var orders []event.Order
+	for i, order := range cartInfo.SaleOrderList {
+		orders = append(orders, event.Order{
+			SaleOrderUuid: order.Uuid,
+			OrderName:     fmt.Sprintf("%d", i+1),
+			Amount:        order.AmountInfo.Amount,
+		})
+	}
+
+	// 发布“拆单”操作事件
+	go func() {
+		s.bus.PublishSplitOrderEvent(event.SplitOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+			Orders: orders,
+		})
+	}()
+
 	return cartInfo, nil
 }
 
@@ -6384,6 +6394,18 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
+
+	// 发布“撤销拆单”操作事件
+	go func() {
+		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
 
 	return info, nil
 

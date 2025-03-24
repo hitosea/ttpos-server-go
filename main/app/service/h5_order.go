@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -26,6 +27,7 @@ type IH5OrderSrv interface {
 }
 
 type h5OrderSrv struct {
+	bus      *event.SystemEventBus
 	dbm      *database.DBManager
 	orderSrv IOrderSrv
 }
@@ -258,7 +260,18 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) erro
 			return errors.WithMessage(err, "删除销售订单商品失败")
 		}
 
-		// ToDo 增加订单操作日志
+		// 发布“拒单”操作事件
+		go func() {
+			s.bus.PublishRejectH5OrderEvent(event.RejectH5OrderPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: order.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				H5OrderUuid: order.Uuid,
+			})
+		}()
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err, "拒单失败")
@@ -325,7 +338,20 @@ func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) (*re
 		// 	}
 		// }
 
-		// ToDo 增加订单操作日志
+		// 发布“接单”操作事件
+		go func() {
+			s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: h5Order.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				IsAutoOrder: false,
+				H5OrderUuid: h5Order.Uuid,
+			})
+		}()
+
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err, "接单失败")

@@ -103,38 +103,39 @@ var OrderSourceMapToBillType = map[string]uint{
 
 // 订单操作类型
 const (
-	OrderOpenTable           = "OPEN"                // 开台
-	OrderSendKitchen         = "SEND"                // 送厨
-	OrderRefundProduct       = "REFUND"              // 退菜
-	OrderCancelRefundProduct = "CANCEL_REFUND"       // 取消退菜
-	OrderProductFree         = "PRODUCT_FREE"        // 赠菜
-	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE" // 取消赠菜
-	OrderChangeTable         = "CHANGE_TABLE"        // 转台
-	OrderChangePrice         = "CHANGE_PRICE"        // 改价
-	OrderStayOrder           = "STAY_ORDER"          // 挂单
-	OrderPickOrder           = "PICK_ORDER"          // 取单
-	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"     // 修改桌台就餐人数
-	OrderProductMove         = "PRODUCT_MOVE"        // 转菜
-	OrderDiscount            = "DISCOUNT"            // 优惠折扣
-	OrderCancelDiscount      = "CANCEL_DISCOUNT"     // 撤销优惠折扣
-	OrderRemark              = "CHANGE_PRICE"        // 备注
-	OrderSettle              = "SETTLE"              // 结账
-	OrderReverseSettle       = "REVERSE_SETTLE"      // 反结账
-	OrderRefund              = "REFUND"              // 退款
-	OrderOrderTaking         = "ORDER_TAKING"        // 接单
-	OrderOrderReject         = "ORDER_REJECT"        // 拒单
-	OrderMergeTable          = "MERGE_TABLE"         // 并台
-	OrderOrderCancel         = "ORDER_CANCEL"        // 整单取消
-	OrderCheckoutDiscount    = "CHECKOUT_DISCOUNT"   // 结账手动抹零
-	OrderSplitOrder          = "SPLIT_ORDER"         // 拆单
-	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"  // 撤销拆单
-	OrderAddProduct          = "ADD_PRODUCT"         // 增加菜品
-	OrderDeleteProduct       = "DELETE_PRODUCT"      // 删除菜品
-	OrderClock               = "CLOCK"               // 加钟
-	OrderTakeout             = "TAKEOUT"             // 打包
-	OrderUnlock              = "UNLOCK"              // 解锁
-	OrderQuery               = "QUERY"               // 查询。查询自助餐商品列表
-	OrderH5Confirm           = "H5_CONFIRM"          // 下单扫码h5订单
+	OrderOpenTable           = "OPEN_TABLE"            // 开台
+	OrderSendKitchen         = "SEND_KITCHEN"          // 送厨
+	OrderRefundProduct       = "REFUND_PRODUCT"        // 退菜
+	OrderCancelRefundProduct = "CANCEL_REFUND_PRODUCT" // 取消退菜
+	OrderChangeTable         = "CHANGE_TABLE"          // 转台
+	OrderChangePrice         = "CHANGE_PRICE"          // 改价
+	OrderUpdateMealNum       = "UPDATE_MEAL_NUM"       // 修改桌台就餐人数
+	OrderStayOrder           = "STAY_ORDER"            // 挂单
+	OrderPickOrder           = "PICK_ORDER"            // 取单
+	OrderProductFree         = "PRODUCT_FREE"          // 赠菜
+	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE"   // 取消赠菜
+	OrderProductMove         = "PRODUCT_MOVE"          // 转菜
+	OrderDiscount            = "DISCOUNT"              // 优惠折扣
+	OrderCancelDiscount      = "CANCEL_DISCOUNT"       // 撤销优惠折扣
+	OrderSettle              = "SETTLE"                // 结账
+	OrderReverseSettle       = "REVERSE_SETTLE"        // 反结账
+	OrderRefund              = "REFUND"                // 退款
+	OrderOrderTaking         = "ORDER_TAKING"          // 接单
+	OrderOrderReject         = "ORDER_REJECT"          // 拒单
+	OrderMergeTable          = "MERGE_TABLE"           // 并台
+	OrderOrderCancel         = "ORDER_CANCEL"          // 整单取消
+	OrderCheckoutDiscount    = "CHECKOUT_DISCOUNT"     // 结账手动抹零
+	OrderSplitOrder          = "SPLIT_ORDER"           // 拆单
+	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"    // 撤销拆单
+
+	OrderRemark        = "CHANGE_PRICE"   // 备注
+	OrderAddProduct    = "ADD_PRODUCT"    // 增加菜品
+	OrderDeleteProduct = "DELETE_PRODUCT" // 删除菜品
+	OrderClock         = "CLOCK"          // 加钟
+	OrderTakeout       = "TAKEOUT"        // 打包
+	OrderUnlock        = "UNLOCK"         // 解锁
+	OrderQuery         = "QUERY"          // 查询。查询自助餐商品列表
+	OrderH5Confirm     = "H5_CONFIRM"     // 下单扫码h5订单
 )
 
 // 结账抹零操作类型
