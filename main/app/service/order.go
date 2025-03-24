@@ -2679,7 +2679,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 				if product.IsBuffetProduct() {
 					return errors.New("请先清除自助餐套餐内商品")
 				}
-				if slices.Contains(buffetProductUuids, product.Uuid) {
+				if slices.Contains(buffetProductUuids, product.ProductPackageUuid) {
 					product.IsBuffet = 1
 					if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(product); err != nil {
 						return errors.WithMessage(err)
