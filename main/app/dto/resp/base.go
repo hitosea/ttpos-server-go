@@ -47,15 +47,17 @@ type AssistantBase struct {
 	Business   setting.Business      `json:"business"`  // 门店业务设置
 	Assistant  setting.AssistantResp `json:"assistant"` // 点餐助手设置
 	Printer    setting.Printer       `json:"printer"`   // 打印机设置
+	Kitchen    setting.KitchenResp   `json:"kitchen"`   // 厨显设置
 }
 
 type TabletBase struct {
-	Buffet     setting.Buffet     `json:"buffet"`   // 自助餐设置
-	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信
-	Company    Company            `json:"company"`  // 商家信息
-	Currency   setting.Currency   `json:"currency"` // 货币单位
-	Business   setting.Business   `json:"business"` // 门店业务设置
-	Tablet     setting.TabletResp `json:"tablet"`   // 平板端设置
+	Buffet     setting.Buffet      `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic  `json:"cloud"`    // 云端基础信
+	Company    Company             `json:"company"`  // 商家信息
+	Currency   setting.Currency    `json:"currency"` // 货币单位
+	Business   setting.Business    `json:"business"` // 门店业务设置
+	Tablet     setting.TabletResp  `json:"tablet"`   // 平板端设置
+	Kitchen    setting.KitchenResp `json:"kitchen"`  // 厨显设置
 }
 
 type TabletDeskItem struct {

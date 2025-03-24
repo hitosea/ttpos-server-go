@@ -105,14 +105,14 @@ type H5 struct {
 		LimitTime   string `json:"limit_time"`    // 限制时间
 		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
 		LimitNum    string `json:"limit_num"`     // 限制数量
-	} `json:"buffet_order_limit"` // 自助餐订单限制
+	} `json:"buffet_order_limit"`               // 自助餐订单限制
 	IsOrderLimit string `json:"is_order_limit"` // 是否订单限制
 	OrderLimit   struct {
 		IsLimitTime string `json:"is_limit_time"` // 是否限制时间
 		LimitTime   string `json:"limit_time"`    // 限制时间
 		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
 		LimitNum    string `json:"limit_num"`     // 限制数量
-	} `json:"order_limit"` // 订单限制
+	} `json:"order_limit"`                                      // 订单限制
 	Language          []string   `json:"language"`              // 语言
 	DefaultLanguage   string     `json:"default_language"`      // 默认语言
 	IsShowScanSoldOut int        `json:"is_show_scan_sold_out"` // 是否显示扫码售罄
@@ -128,6 +128,7 @@ type H5BaseInfo struct {
 	Currency   setting.Currency   `json:"currency"` // 货币设置
 	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
 	Business   setting.Business   `json:"business"` // 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西
+	Kitchen    setting.Kitchen    `json:"kitchen"`  // 厨显设置
 }
 
 type GetBaseInfoResponse struct {
@@ -388,14 +389,14 @@ type H5H5 struct {
 		LimitTime   string `json:"limit_time"`    // 限制时间
 		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
 		LimitNum    string `json:"limit_num"`     // 限制数量
-	} `json:"buffet_order_limit"` // 自助餐订单限制
+	} `json:"buffet_order_limit"`               // 自助餐订单限制
 	IsOrderLimit string `json:"is_order_limit"` // 是否订单限制
 	OrderLimit   struct {
 		IsLimitTime string `json:"is_limit_time"` // 是否限制时间
 		LimitTime   string `json:"limit_time"`    // 限制时间
 		IsLimitNum  string `json:"is_limit_num"`  // 是否限制数量
 		LimitNum    string `json:"limit_num"`     // 限制数量
-	} `json:"order_limit"` // 订单限制
+	} `json:"order_limit"`                                      // 订单限制
 	Language          []string   `json:"language"`              // 语言
 	DefaultLanguage   string     `json:"default_language"`      // 默认语言
 	IsShowScanSoldOut int        `json:"is_show_scan_sold_out"` // 是否显示扫码售罄

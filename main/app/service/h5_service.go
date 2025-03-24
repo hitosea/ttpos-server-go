@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"github.com/jinzhu/copier"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/setting"
@@ -79,6 +81,12 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 		return nil, errors.WithMessage(err)
 	}
 
+	var kitchenSettingResp setting.KitchenResp
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	return &resp.H5BaseInfo{
 		Desk: deskInfo,
 		Company: resp.Company{
@@ -96,6 +104,7 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 			GiftMethodList:            make([]setting.GiftMethodItem, 0),
 			FreeMethodList:            make([]setting.FreeMethodItem, 0),
 		},
+		Kitchen: kitchenSetting,
 	}, nil
 }
 func (s *h5Srv) GetCompanyInfo(ctx context.Context, deskUuid uint64) (*resp.GetBaseInfoResponse, error) {
