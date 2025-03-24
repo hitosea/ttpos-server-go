@@ -160,7 +160,7 @@ func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, e
 
 	// 判断是否有待支付、未挂单的订单
 	orderRepo := repository.NewOrderRepo(db)
-	saleBill, err := orderRepo.GetInstantSaleBill()
+	saleBill, err := orderRepo.GetInstantSaleBill(device.Uuid)
 	if err != nil && !strings.Contains(err.Error(), "record not found") {
 		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
 	}
