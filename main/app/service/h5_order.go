@@ -13,15 +13,16 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
 // IH5OrderSrv 定义接单服务接口
 type IH5OrderSrv interface {
-	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (resp.H5OrderList, error) // 获取h5订单列表
-	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)             // 获取h5订单详情
-	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                        // 拒单
-	AcceptH5Order(ctx context.Context, orderUuid uint64) (*resp.OrderCheckServiceRes, error)            // 接单
+	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (*resp.H5OrderList, error) // 获取h5订单列表
+	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)              // 获取h5订单详情
+	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                         // 拒单
+	AcceptH5Order(ctx context.Context, orderUuid uint64) (*resp.OrderCheckServiceRes, error)             // 接单
 }
 
 type h5OrderSrv struct {
@@ -40,7 +41,7 @@ func NewH5OrderSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv) IH5OrderSrv 
 	}
 }
 
-func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListReq) (resp.H5OrderList, error) {
+func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListReq) (*resp.H5OrderList, error) {
 	var listResp = resp.H5OrderList{
 		List: make([]resp.H5OrderItem, 0),
 	}
@@ -67,7 +68,7 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 	)
 	orders, total, err := h5OrderRepo.PaginateGetH5Order(listReq.PageNo, listReq.PageSize, dbOptions...)
 	if err != nil {
-		return listResp, apperrors.ErrInternal
+		return nil, apperrors.ErrInternal
 	}
 	items := make([]resp.H5OrderItem, 0, len(orders))
 	for _, order := range orders {
@@ -77,6 +78,18 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 			for _, product := range order.SaleOrderProducts {
 				num = num + product.Num
 				price = price + product.Price
+			}
+			// 再加上已经接单的商品价格。同一个销售账单，已接单的，h5订单商品
+			if order.SaleBillUuid > 0 {
+				amount := decimal.NewFromFloat(0) // 已下单的商品金额之和
+				products, err := h5OrderRepo.GetH5OrderProductsBySaleBillUuidAndAccept(order.SaleBillUuid)
+				if err != nil {
+					return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+				}
+				for _, product := range products {
+					amount = amount.Add(decimal.NewFromFloat(product.Price))
+				}
+				price += amount.InexactFloat64()
 			}
 		} else if slices.Contains([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected}, order.Status) { // 如果订单状态是2（已接单），3（已拒单），读取关联的扫码订单商品
 			for _, product := range order.H5OrderProducts {
@@ -106,13 +119,13 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 
 	unhandledCount, err := h5OrderRepo.GetH5OrderCount(unhandledStatusOption)
 	if err != nil {
-		return listResp, apperrors.ErrInternal
+		return nil, apperrors.ErrInternal
 	}
 	listResp.Extra.UnhandledCount = unhandledCount
 
 	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption)
 	if err != nil {
-		return listResp, apperrors.ErrInternal
+		return nil, apperrors.ErrInternal
 	}
 	listResp.Extra.HandledCount = handledCount
 
@@ -122,7 +135,7 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 		PageSize: listReq.PageSize,
 		Total:    total,
 	}
-	return listResp, nil
+	return &listResp, nil
 }
 
 func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*resp.H5OrderDetailResp, error) {
