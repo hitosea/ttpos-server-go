@@ -57,7 +57,14 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 	if listReq.DeskRegionUuid > 0 {
 		dbOptions = append(dbOptions, h5OrderRepo.WhereDeskRegionUuid(listReq.DeskRegionUuid))
 	}
-	dbOptions = append(dbOptions, h5OrderRepo.WithDesk(), h5OrderRepo.WithH5OrderProducts(), h5OrderRepo.WithSaleOrderProducts())
+	dbOptions = append(
+		dbOptions,
+		repository.CommonRepo.SortWithCreateTime("desc"),
+		h5OrderRepo.WithDesk(),
+		h5OrderRepo.WithH5OrderProducts(),
+		h5OrderRepo.WithSaleOrderProducts(),
+		h5OrderRepo.WithSaleOrderProductsMultiLanguageName(),
+	)
 	orders, total, err := h5OrderRepo.PaginateGetH5Order(listReq.PageNo, listReq.PageSize, dbOptions...)
 	if err != nil {
 		return listResp, apperrors.ErrInternal
