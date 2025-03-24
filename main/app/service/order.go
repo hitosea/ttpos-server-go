@@ -3142,6 +3142,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 				Num:                             1,
 				SauceProductBomUuidList:         request.SauceUuidList,
 				ProductPackageAttributeUuidList: request.AttributeUuidList,
+				Operation:                       request.Operation,
 			},
 		},
 		IsH5Product: request.IsH5Product(),
