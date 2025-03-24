@@ -24,7 +24,7 @@ func NewBusinessDataImgTemplate(
 	}
 }
 
-// GetPrintContent 图片打印
+// GetPrintContent 获取内容
 func (t *businessDataImgTemplate) GetPrintContent(
 	businessData *PrintingBusinessData,
 	startTime int64,
@@ -136,8 +136,8 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		for _, product := range businessData.Product.Products {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: product.Name, Width: 300, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%d", product.SalesNum), Width: 120, Align: pkg.AlignRight},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.Price), Width: 0, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%.0f*%d", product.Price, product.SalesNum), Width: 120, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.Subtotal), Width: 0, Align: pkg.AlignRight},
 			)
 		}
 	} else if businessData.All != nil {
@@ -188,7 +188,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 400, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 22},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		// 税收百分比对象列表
 		if len(businessData.All.PercentageList) > 0 {
@@ -206,7 +206,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 				img.LineFeed(1)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("合计"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(percentage.TotalPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 				)
 				img.SetAlignment(pkg.AlignRight)
 				if t.base.Lang == "ja" {
@@ -335,15 +335,15 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignCenter, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		totalPayPrice := float64(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				img.PrintInColumns(
-					pkg.ColumnConfig{Text: income.Name, Width: 280, Align: pkg.AlignLeft, FontWeight: 2},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%d", income.OrderNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 2},
+					pkg.ColumnConfig{Text: income.Name, Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
+					pkg.ColumnConfig{Text: fmt.Sprintf("%d", income.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(income.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 				)
 				totalPayPrice += income.Amount
@@ -351,8 +351,8 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		}
 		if totalPayPrice > 0 {
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: t.base.Translate("总金额"), Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: "", Width: 96, Align: pkg.AlignCenter, FontWeight: 2},
+				pkg.ColumnConfig{Text: t.base.Translate("总金额"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
+				pkg.ColumnConfig{Text: "", Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(totalPayPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 			)
 		}
@@ -362,13 +362,13 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		// 高峰时间
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 220, 180), utils.IfInt(t.base.Lang == "my", 180, 120)), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: utils.IfString(t.base.Lang == "en", "Amount", t.base.Translate("订单金额")), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		for _, peak := range businessData.All.PeakHourList {
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: peak.TimePeriod, Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%d", peak.OrderNum), Width: 96, Align: pkg.AlignCenter, FontWeight: 2},
+				pkg.ColumnConfig{Text: peak.TimePeriod, Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%d", peak.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(peak.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 			)
 		}

@@ -1,12 +1,21 @@
 // Package template 提供打印模板相关功能
 package template
 
-// businessDataXprinterTemplate 图片订单打印模板
+import (
+	"fmt"
+	"strconv"
+	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/pkg/utils"
+)
+
+// businessDataXprinterTemplate 商米打印模板
 type businessDataXprinterTemplate struct {
 	base *printerTemplate
 }
 
-// NewBusinessDataXprinterTemplate 创建新的图片订单打印模板
+// NewBusinessDataXprinterTemplate 创建新的商米打印模板
 func NewBusinessDataXprinterTemplate(
 	base *printerTemplate,
 ) *businessDataXprinterTemplate {
@@ -15,386 +24,282 @@ func NewBusinessDataXprinterTemplate(
 	}
 }
 
-// GetPrintContent 图片打印
+// GetPrintContent 获取内容
 func (t *businessDataXprinterTemplate) GetPrintContent(
+	printerType string,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
-	// // 店铺设置
-	// companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
-	// paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
-	// isOpenBalance := paymentSetting.IsBalance == "1"
-	// // 日历
-	// startTimeStr := t.base.FormatUnixTimeDefault(startTime)
-	// endTimeStr := t.base.FormatUnixTimeDefault(endTime)
-	// if endTime == 0 {
-	// 	endTimeStr = t.base.FormatUnixTimeDefault(time.Now().Unix())
-	// }
-	// // 判断是否是土耳其语、泰语、英语
-	// isTrThEn := t.base.Lang == "tr" || t.base.Lang == "th" || t.base.Lang == "en"
+	// 店铺设置
+	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
+	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
+	isOpenBalance := paymentSetting.IsBalance == "1"
+	// 日历
+	startTimeStr := t.base.FormatUnixTimeDefault(startTime)
+	endTimeStr := t.base.FormatUnixTimeDefault(endTime)
+	if endTime == 0 {
+		endTimeStr = t.base.FormatUnixTimeDefault(time.Now().Unix())
+	}
+	// 判断是否是土耳其语、泰语、英语
+	isTrThEn := t.base.Lang == "tr" || t.base.Lang == "th" || t.base.Lang == "en"
 
-	// // 宽度
-	// width := 48
-	// leftWidth := 27
-	// centerWidth := 12
-	// rightWidth := 19
+	// 宽度
+	width := 48 - utils.IfInt(printerType == constant.BrandA11510P, 1, 0)
+	differenceWidth := 0
+	if printerType == constant.BrandA11510P && (t.base.CurrencyUnit == "￥" || t.base.CurrencyUnit == "¥" || t.base.CurrencyUnit == "\xC2\xA5") {
+		differenceWidth = 1
+	}
 
-	// //  创建打印机实例
-	// printer := pkg.NewPrinter(567)
-	// // 模版二
-	// if temp == 2 || temp == 3 {
-	// 	printer.SetAlignment(pkg.AlignCenter)
-	// 	printer.AppendText(t.base.StoreSetting.Name)
-	// 	printer.LineFeed(1)
-	// 	printer.SetLineSpacing(80)
-	// 	printer.SetCharacterSize(2, 2)
-	// 	printer.AppendText(t.base.Translate("交班单"))
-	// 	printer.SetCharacterSize(1, 1)
-	// 	printer.LineFeed(1)
-	// 	if printerType == constant.PrinterTypeXPrinterWifi {
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	printer.AppendText(fmt.Sprintf("%s %s %s", startTime, t.base.Translate("至"), endTime))
-	// 	printer.LineFeed(2)
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("当班编号"), "", log.ShiftNo, width))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", log.Staff.RealName, width))
-	// 	printer.LineFeed()
-	// 	// 营业数据
-	// 	printer.SetLineSpacing(90)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.TotalSales), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width))
-	// 	printer.LineFeed(1)
-	// 	// 支付方式
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	totalPayPrice := float64(0)
-	// 	for _, income := range businessData.PaymentMethodIncomes {
-	// 		if income.Code != constant.PaymentMethodCodeFreePay {
-	// 			printer.AppendText(t.base.PrintText(income.Name, "", t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
-	// 			printer.LineFeed()
-	// 			totalPayPrice += income.Amount
-	// 		}
-	// 	}
-	// 	if totalPayPrice > 0 {
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	// 其他费用
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("原商品金额"), "", t.base.GetPriceAndUnit(businessData.TotalProductPrice), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("支付手续费"), "", t.base.GetPriceAndUnit(businessData.TotalPayFeeMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("服务费"), "", t.base.GetPriceAndUnit(businessData.TotalServiceMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.TotalTaxMoney), width))
-	// 	printer.LineFeed(1)
-	// 	// 优惠折扣
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), width))
-	// 	printer.LineFeed(1)
-	// 	if isOpenBalance || businessData.TotalUserDiscountMoney > 0 {
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("会员折扣"), "", t.base.GetPriceAndUnit(businessData.TotalUserDiscountMoney), width))
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	// 退款
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.TotalRefundMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText("------------------------------------------------")
-	// 	// 异常信息
-	// 	if temp == 3 {
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("退菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.RefundProductTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("退款次数"), "", t.base.Amount(float64(businessData.AbnormalData.RefundTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("反结账次数"), "", t.base.Amount(float64(businessData.AbnormalData.ReverseSettleTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.ProductFreeTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("免单次数"), "", t.base.Amount(float64(businessData.AbnormalData.FreeOrderTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("转菜次数"), "", t.base.Amount(float64(businessData.AbnormalData.ProductMoveTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("单品改价次数"), "", t.base.Amount(float64(businessData.AbnormalData.ChangePriceTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("整单改价次数"), "", t.base.Amount(float64(businessData.AbnormalData.ChangeOrderPriceTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("整单折扣次数"), "", t.base.Amount(float64(businessData.AbnormalData.DiscountOrderTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("整单抹零次数"), "", t.base.Amount(float64(businessData.AbnormalData.RoundOrderTimes)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText("------------------------------------------------")
-	// 	}
-	// 	// 会员充值
-	// 	if isOpenBalance || businessData.MemberData.RechargeAmount > 0 {
-	// 		printer.SetAlignment(pkg.AlignCenter)
-	// 		printer.SetPrintModes(true, false, false)
-	// 		printer.AppendText(t.base.Translate("会员数据"))
-	// 		printer.SetPrintModes(false, false, false)
-	// 		printer.LineFeed(1)
-	// 		printer.SetAlignment(pkg.AlignLeft)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("充值金额"), "", t.base.GetPriceAndUnit(businessData.MemberData.RechargeAmount), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("赠送金额"), "", t.base.GetPriceAndUnit(businessData.MemberData.GiftMoney), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("赠送积分"), "", t.base.Amount(float64(businessData.MemberData.GiftPoints)), width))
-	// 		printer.LineFeed(1)
-	// 		printer.AppendText("------------------------------------------------")
-	// 	}
-	// 	// 合计
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", float64(businessData.TotalOrderNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", float64(businessData.TotalPeopleNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AvgOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	// 高峰时间
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed()
-	// 	for key, peak := range businessData.PeakHourList {
-	// 		if key == len(businessData.PeakHourList)-1 {
-	// 			printer.SetPrintModes(true, false, false)
-	// 		}
-	// 		printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
-	// 	}
-	// 	// 分类列表
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText("\n------------------------------------------------\n")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("分类"), t.base.Translate("数量"), t.base.Translate("小计"), width, leftWidth-utils.IfInt(t.base.Lang == "tr", 2, 0)))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.SetLineSpacing(100)
-	// 	printer.LineFeed()
-	// 	for _, category := range businessData.CategoryList {
-	// 		printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
-	// 		printer.LineFeed()
-	// 	}
-	// 	printer.SetLineSpacing(90)
-	// 	// 汇总
-	// 	leftWidth := 35
-	// 	printer.AppendText("------------------------------------------------\n")
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("上一班遗留备用金"), "", t.base.GetPriceAndUnit(log.PreviousShiftCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("中途存入现金"), "", t.base.GetPriceAndUnit(log.DepositCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("中途取出现金"), "", t.base.GetPriceAndUnit(log.WithdrawCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("本班取出现金"), "", t.base.GetPriceAndUnit(log.CashTakenOut), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("本班遗留备用金"), "", t.base.GetPriceAndUnit(log.CashLeft), width, leftWidth))
-	// } else {
-	// 	// 模版 一
-	// 	printer.SetAlignment(pkg.AlignCenter)
-	// 	printer.AppendText(t.base.StoreSetting.Name)
-	// 	printer.LineFeed()
-	// 	printer.SetLineSpacing(80)
-	// 	printer.SetCharacterSize(2, 2)
-	// 	printer.AppendText(t.base.Translate("交班单"))
-	// 	printer.SetCharacterSize(1, 1)
-	// 	printer.LineFeed(2)
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("当班编号"), "", log.ShiftNo, width))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", log.Staff.RealName, width))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("当班时间"), "", startTime+" "+t.base.Translate("至"), width))
-	// 	printer.LineFeed()
-	// 	printer.SetAlignment(pkg.AlignRight)
-	// 	printer.AppendText(endTime)
-	// 	printer.LineFeed()
-	// 	// 营业数据
-	// 	printer.SetLineSpacing(90)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.TotalSales), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("原商品金额"), "", t.base.GetPriceAndUnit(businessData.TotalProductPrice), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("支付手续费"), "", t.base.GetPriceAndUnit(businessData.TotalPayFeeMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("服务费"), "", t.base.GetPriceAndUnit(businessData.TotalServiceMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.TotalTaxMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.TotalProductNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), width))
-	// 	printer.LineFeed(1)
-	// 	if isOpenBalance || businessData.TotalUserDiscountMoney > 0 {
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("会员折扣"), "", t.base.GetPriceAndUnit(businessData.TotalUserDiscountMoney), width))
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.TotalRefundMoney), width))
-	// 	printer.LineFeed(1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetPrintModes(true, true, false)
-	// 	printer.SetCharacterSize(2, 1)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width))
-	// 	printer.SetCharacterSize(1, 1)
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.AppendText("\n------------------------------------------------")
-	// 	printer.LineFeed(1)
-	// 	// 税收百分比对象列表
-	// 	for _, percentage := range businessData.PercentageList {
-	// 		printer.SetAlignment(pkg.AlignLeft)
-	// 		printer.SetPrintModes(true, false, false)
-	// 		if t.base.Lang == "ja" {
-	// 			printer.AppendText(fmt.Sprintf("%.1f%s%s", percentage.TaxRate, "%", t.base.Translate("的对象")))
-	// 		} else {
-	// 			printer.AppendText(fmt.Sprintf("VAT (%.1f%%)", percentage.TaxRate))
-	// 		}
-	// 		printer.SetPrintModes(false, false, false)
-	// 		printer.LineFeed(1)
-	// 		printer.SetAlignment(pkg.AlignLeft)
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width))
-	// 		printer.LineFeed(1)
-	// 		printer.SetAlignment(pkg.AlignRight)
-	// 		if t.base.Lang == "ja" {
-	// 			printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消費税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-	// 		} else {
-	// 			printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-	// 		}
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	printer.AppendText("------------------------------------------------")
-	// 	// 合计
-	// 	printer.SetAlignment(pkg.AlignCenter)
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.Translate("合计"))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", float64(businessData.TotalOrderNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("桌数"), "", float64(businessData.TotalTableNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", float64(businessData.TotalPeopleNum), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.MinOrderPrice), t.base.GetPriceAndUnit(businessData.MaxOrderPrice)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AvgOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	// 桌台方式
-	// 	printer.SetAlignment(pkg.AlignCenter)
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.Translate("桌台方式"))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("订单数（桌数）"), "", fmt.Sprintf("%.0f", float64(businessData.AllTableOrderNum)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", fmt.Sprintf("%.0f", float64(businessData.AllTablePeopleNum)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.AllTableMinOrderPrice), t.base.GetPriceAndUnit(businessData.AllTableMaxOrderPrice)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AllTableAvgOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("人均"), "", t.base.GetPriceAndUnit(businessData.AllTablePeopleAvg), width))
-	// 	printer.LineFeed(1)
-	// 	// 收银方式
-	// 	printer.SetAlignment(pkg.AlignCenter)
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.Translate("点餐方式"))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("订单数"), "", fmt.Sprintf("%.0f", float64(businessData.CashierOrderNum)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.CashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.CashierMaxOrderPrice)), width))
-	// 	printer.LineFeed(1)
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.CashierAvgOrderPrice), width))
-	// 	printer.LineFeed(1)
-	// 	// 支付方式
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	var totalPayPrice float64 = 0
-	// 	for _, income := range businessData.PaymentMethodIncomes {
-	// 		if income.Code != constant.PaymentMethodCodeFreePay {
-	// 			printer.AppendText(t.base.PrintText(income.Name, income.OrderNum, t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
-	// 			printer.LineFeed()
-	// 			totalPayPrice += income.Amount
-	// 		}
-	// 	}
-	// 	if totalPayPrice > 0 {
-	// 		printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
-	// 		printer.LineFeed(1)
-	// 	}
-	// 	// 高峰时间
-	// 	printer.AppendText("------------------------------------------------")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.LineFeed(1)
-	// 	for _, peak := range businessData.PeakHourList {
-	// 		printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
-	// 	}
-	// 	// 分类列表
-	// 	printer.SetAlignment(pkg.AlignLeft)
-	// 	printer.AppendText("\n------------------------------------------------\n")
-	// 	printer.SetPrintModes(true, false, false)
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("分类"), t.base.Translate("数量"), t.base.Translate("小计"), width, leftWidth-utils.IfInt(t.base.Lang == "tr", 2, 0)))
-	// 	printer.SetPrintModes(false, false, false)
-	// 	printer.SetLineSpacing(100)
-	// 	printer.LineFeed()
-	// 	for _, category := range businessData.CategoryList {
-	// 		printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
-	// 		printer.LineFeed()
-	// 	}
-	// 	// 汇总
-	// 	leftWidth := 35
-	// 	printer.AppendText("------------------------------------------------\n")
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("本班实收金额"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("上一班遗留备用金"), "", t.base.GetPriceAndUnit(log.PreviousShiftCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("中途存入现金"), "", t.base.GetPriceAndUnit(log.DepositCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("中途取出现金"), "", t.base.GetPriceAndUnit(log.WithdrawCash), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("本班取出现金"), "", t.base.GetPriceAndUnit(log.CashTakenOut), width, leftWidth))
-	// 	printer.LineFeed()
-	// 	printer.AppendText(t.base.PrintText(t.base.Translate("本班遗留备用金"), "", t.base.GetPriceAndUnit(log.CashLeft), width, leftWidth))
-	// }
-
-	// //
-	// printer.LineFeed(2)
-	// printer.PrintAndExitPageMode()
-	// printer.LineFeed(4)
-	// printer.CutPaper(true)
-	// // 打开钱箱
-	// if firstExecution == 0 {
-	// 	printer.AppendText("\x10\x14\x01\x00\x01")
-	// }
-	// //
-	// return printer.GetOrderData()
-	return ""
+	//  创建打印机实例
+	printer := pkg.NewPrinter(567)
+	printer.SetAlignment(pkg.AlignCenter)
+	printer.AppendText(fmt.Sprintf("%s\n", t.base.StoreSetting.Name))
+	printer.LineFeed(1)
+	printer.SetLineSpacing(40)
+	printer.SetPrintModes(true, true, false)
+	printer.SetCharacterSize(2, 2)
+	printer.AppendText(fmt.Sprintf("%s\n", t.base.Translate("营业数据")))
+	printer.LineFeed(1)
+	printer.SetLineSpacing(25)
+	printer.LineFeed()
+	if printerType == constant.PrinterTypeXPrinterWifi {
+		printer.LineFeed(2)
+	}
+	printer.SetLineSpacing(70)
+	printer.SetCharacterSize(1, 1)
+	printer.RestoreDefaultLineSpacing()
+	//
+	printer.SetPrintModes(false, false, false)
+	printer.SetAlignment(pkg.AlignCenter)
+	printer.AppendText(fmt.Sprintf("%s %s %s\n", startTimeStr, t.base.Translate("至"), endTimeStr))
+	printer.LineFeed(2)
+	//
+	printer.RestoreDefaultLineSpacing()
+	printer.SetPrintModes(false, false, false)
+	printer.SetAlignment(pkg.AlignLeft)
+	if businessData.PaymentMethod != nil {
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.PaymentMethod.TotalReceivedPrice), width))
+		printer.SetPrintModes(false, false, false)
+		printer.AppendText("\n------------------------------------------------")
+		printer.LineFeed(1)
+		for _, income := range businessData.PaymentMethod.PaymentMethodIncomes {
+			if income.Code == -1 {
+				income.Name = t.base.Translate("免单金额")
+			}
+			printer.AppendText(t.base.PrintText(income.Name, "", t.base.GetPriceAndUnit(income.Amount), width, 30, 1, 24))
+			printer.LineFeed(2)
+		}
+	} else if businessData.ProductCategory != nil {
+		// 按商品分类
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.PrintText(t.base.Translate("分类"), t.base.Translate("数量"), t.base.Translate("小计"), width, 29))
+		printer.SetPrintModes(false, false, false)
+		printer.AppendText("\n------------------------------------------------\n")
+		printer.LineFeed()
+		for key, category := range businessData.ProductCategory.CategoryList {
+			printer.AppendText(t.base.PrintText(category.Name, category.SalesNum, t.base.GetPriceAndUnit(category.Prices), width, 29))
+			printer.LineFeed()
+			if key != len(businessData.ProductCategory.CategoryList)-1 {
+				printer.LineFeed()
+			}
+		}
+		printer.AppendText("\n------------------------------------------------\n")
+		//
+		printer.AppendText(t.base.PrintText(t.base.Translate("销售笔数"), "", fmt.Sprintf("%d", businessData.ProductCategory.SalesNum), width))
+		printer.LineFeed()
+		printer.LineFeed()
+		//
+		for _, income := range businessData.ProductCategory.PaymentMethodIncomes {
+			if income.Code == -1 {
+				income.Name = t.base.Translate("免单金额")
+			}
+			printer.AppendText(t.base.PrintText(income.Name, "", t.base.GetPriceAndUnit(income.Amount), width, 30, 1, 24))
+			printer.LineFeed()
+			printer.LineFeed()
+		}
+		//
+		if businessData.ProductCategory.TotalRefundMoney > 0 {
+			printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.ProductCategory.TotalRefundMoney), width))
+			printer.LineFeed()
+			printer.LineFeed()
+		}
+		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.ProductCategory.TotalReceivedPrice), width))
+	} else if businessData.Product != nil {
+		// 按商品
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品名称"), t.base.Translate("销量"), t.base.Translate("小计"), width, 26))
+		printer.SetPrintModes(false, false, false)
+		printer.AppendText("\n------------------------------------------------")
+		for _, product := range businessData.Product.Products {
+			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%.0f*%d", product.Price, product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
+			printer.LineFeed()
+			printer.LineFeed()
+		}
+	} else if businessData.All != nil {
+		// 全部
+		printer.SetLineSpacing(utils.IfInt(printerType == constant.BrandA11510P, 40, 90))
+		printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.All.TotalSales), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("原商品金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalProductPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("服务费"), "", t.base.GetPriceAndUnit(businessData.All.TotalServiceMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("支付手续费"), "", t.base.GetPriceAndUnit(businessData.All.TotalPayFeeMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.All.TotalTaxMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.All.TotalProductNum), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.All.TotalDiscountMoney), width))
+		printer.LineFeed(1)
+		if isOpenBalance || businessData.All.TotalUserDiscountMoney > 0 {
+			printer.AppendText(t.base.PrintText(t.base.Translate("会员折扣"), "", t.base.GetPriceAndUnit(businessData.All.TotalUserDiscountMoney), width))
+			printer.LineFeed(1)
+		}
+		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalRefundMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), width))
+		printer.LineFeed(1)
+		printer.SetPrintModes(true, true, false)
+		printer.SetCharacterSize(2, 1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalReceivedPrice), width))
+		printer.SetCharacterSize(1, 1)
+		printer.SetPrintModes(false, false, false)
+		printer.AppendText("\n------------------------------------------------")
+		printer.LineFeed(1)
+		// 税收百分比对象列表
+		for _, percentage := range businessData.All.PercentageList {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.SetPrintModes(true, false, false)
+			if t.base.Lang == "ja" {
+				printer.AppendText(fmt.Sprintf("%.1f%s%s", percentage.TaxRate, "%", t.base.Translate("的对象")))
+			} else {
+				printer.AppendText(fmt.Sprintf("VAT (%.1f%%)", percentage.TaxRate))
+			}
+			printer.SetPrintModes(false, false, false)
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(percentage.TotalPrice), width))
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignRight)
+			if t.base.Lang == "ja" {
+				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消費税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+			} else {
+				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+			}
+			printer.LineFeed(1)
+		}
+		// 会员充值
+		printer.AppendText("------------------------------------------------")
+		printer.SetAlignment(pkg.AlignCenter)
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.Translate("会员数据"))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("充值金额"), "", t.base.GetPriceAndUnit(businessData.All.MemberData.RechargeAmount), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠送金额"), "", t.base.GetPriceAndUnit(businessData.All.MemberData.GiftMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠送积分"), "", fmt.Sprintf("%d", businessData.All.MemberData.GiftPoints), width))
+		printer.LineFeed(1)
+		// 未结账相关
+		printer.AppendText("------------------------------------------------")
+		printer.SetAlignment(pkg.AlignCenter)
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.Translate("未结账数据"))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("订单数"), "", fmt.Sprintf("%.0f", float64(businessData.All.UnclosedTotalOrderNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("金额"), "", t.base.GetPriceAndUnit(businessData.All.UnclosedTotalPrice), width))
+		printer.LineFeed(1)
+		// 合计
+		printer.AppendText("------------------------------------------------")
+		printer.SetAlignment(pkg.AlignCenter)
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.Translate("合计"))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", fmt.Sprintf("%.0f", float64(businessData.All.TotalOrderNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("桌数"), "", fmt.Sprintf("%.0f", float64(businessData.All.TotalTableNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", fmt.Sprintf("%.0f", float64(businessData.All.TotalPeopleNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.MinOrderPrice), t.base.GetPriceAndUnit(businessData.All.MaxOrderPrice)), width-differenceWidth))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.All.AvgOrderPrice), width))
+		printer.LineFeed(1)
+		// 桌台方式
+		printer.SetAlignment(pkg.AlignCenter)
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.Translate("桌台方式"))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("订单数（桌数）"), "", fmt.Sprintf("%.0f", float64(businessData.All.AllTableOrderNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", fmt.Sprintf("%.0f", float64(businessData.All.AllTablePeopleNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllTableMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllTableMaxOrderPrice)), width-differenceWidth))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.All.AllTableAvgOrderPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("人均"), "", t.base.GetPriceAndUnit(businessData.All.AllTablePeopleAvg), width))
+		printer.LineFeed(1)
+		// 收银方式
+		printer.SetAlignment(pkg.AlignCenter)
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.Translate("点餐方式"))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		printer.SetAlignment(pkg.AlignLeft)
+		printer.AppendText(t.base.PrintText(t.base.Translate("订单数"), "", fmt.Sprintf("%.0f", float64(businessData.All.AllCashierOrderNum)), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllCashierMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllCashierMaxOrderPrice)), width-differenceWidth))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.All.AllCashierAvgOrderPrice), width))
+		printer.LineFeed(1)
+		// 支付方式
+		printer.AppendText("------------------------------------------------")
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		var totalPayPrice float64 = 0
+		for _, income := range businessData.All.PaymentMethodIncomes {
+			if income.Code != constant.PaymentMethodCodeFreePay {
+				printer.AppendText(t.base.PrintText(income.Name, income.OrderNum, t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
+				printer.LineFeed()
+				totalPayPrice += income.Amount
+			}
+		}
+		if totalPayPrice > 0 {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
+			printer.LineFeed(1)
+		}
+		// 高峰时间
+		printer.AppendText("------------------------------------------------")
+		printer.SetPrintModes(true, false, false)
+		printer.AppendText(t.base.PrintText(t.base.Translate("高峰时间"), t.base.Translate("订单数"), t.base.Translate("订单金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
+		printer.SetPrintModes(false, false, false)
+		printer.LineFeed(1)
+		for _, peak := range businessData.All.PeakHourList {
+			printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
+			printer.LineFeed(1)
+		}
+	}
+	//
+	printer.LineFeed(3)
+	// Print and exit page mode
+	printer.PrintAndExitPageMode()
+	printer.LineFeed(4)
+	printer.CutPaper(true)
+	//
+	return printer.GetOrderData()
 }

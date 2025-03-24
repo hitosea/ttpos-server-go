@@ -55,6 +55,7 @@ type Category struct {
 type Percentage struct {
 	TaxRate        float64 `json:"tax_rate"`        // 税率
 	ConsumptionTax float64 `json:"consumption_tax"` // 消费税
+	TotalPrice     float64 `json:"total_price"`     // 合计
 }
 
 // 营业数据 - 全部
@@ -90,8 +91,8 @@ type BusinessDataAll struct {
 	AllCashierMaxOrderPrice float64 `json:"all_cashier_max_order_price"` // 收银方式最大订单金额
 	AllCashierAvgOrderPrice float64 `json:"all_cashier_avg_order_price"` // 收银方式平均订单金额
 	// 未结账数据
-	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 总订单数
-	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 总金额
+	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 未结账数据 - 总订单数
+	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 未结账数据 - 总金额
 	// 支付方式
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 	AbnormalData         AbnormalData          `json:"abnormal_data"`          // 异常数据

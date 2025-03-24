@@ -569,7 +569,7 @@ func (i *ImgFont) GetTextWidth(fontSize int, text string) float64 {
 }
 
 // drawText 使用freetype绘制文本
-func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int, textColor color.RGBA) {
+func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y int, textColor color.RGBA) {
 	// 从缓存获取字体
 	f, ok := i.FontCache[fontPath]
 	if !ok {
@@ -608,10 +608,13 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight, x, y int
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
 	pt := freetype.Pt(x, y+fontSize)
-	_, err := ctx.DrawString(text, pt)
-	if err != nil {
-		fmt.Println("绘制原始文本失败:", err)
+	for i := 0; i < fontWeight; i++ {
+		_, err := ctx.DrawString(text, pt)
+		if err != nil {
+			fmt.Println("绘制原始文本失败:", err)
+		}
 	}
+
 }
 
 // AppendPartingline 添加文本行
@@ -1056,12 +1059,8 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 		i.ImageWidth = imageWidth
 
 		// 恢复字体设置
-		if fontWeight > 0 {
-			i.SetFontWeight(oldFontWeight)
-		}
-		if fontSize > 0 {
-			i.SetFontSize(oldFontSize)
-		}
+		i.SetFontWeight(oldFontWeight)
+		i.SetFontSize(oldFontSize)
 	}
 
 	// 找出最大高度
@@ -1145,7 +1144,7 @@ func (i *ImgFont) SetFontSize(fontSize int) *ImgFont {
 // SetFontWeight 设置字体粗细
 func (i *ImgFont) SetFontWeight(fontWeight int) *ImgFont {
 	if fontWeight >= 1 {
-		i.FontWeight = fontWeight * 2
+		i.FontWeight = fontWeight
 	}
 	return i
 }
