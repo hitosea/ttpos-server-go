@@ -197,7 +197,7 @@ func (h *H5Handler) Call(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderProductRemarkReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/remark [post]
 func (h *H5Handler) OrderProductRemark(c *gin.Context) {
@@ -217,13 +217,20 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
-	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
 	// 返回结果
-	helper.Success(c, info)
+	helper.Success(c, res)
 }
 
 // OrderCartProductAdd 向购物车添加商品
@@ -233,7 +240,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.OrderCartProductAddReq true "商品参数"
-// @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
+// @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/add [post]
 func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
@@ -259,21 +266,28 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	}
 	params.SetIsH5Product() // 设置为H5商品
 	// 添加商品。 若没有点餐账单则新建一个
-	_, err = h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	_, err = h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, shopCart, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
 	helper.Success(c, res)
 }
 
-// GetOrderCartProductUnCooked 查询未下单商品
+// GetOrderCartProductUnordered 查询未下单商品
 // @Summary 查询未下单商品
 // @Description 查询未下单商品
 // @Tags 扫码点餐
@@ -295,7 +309,7 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -304,7 +318,7 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetOrderCartProductCooked 查询已下单商品
+// GetOrderCartProductOrdered 查询已下单商品
 // @Summary 查询已下单商品
 // @Description 查询已下单商品
 // @Tags 扫码点餐
@@ -369,14 +383,21 @@ func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
 	params.SaleBillUuid = saleBillUuid
 	ctx.Log().Debug("扫码点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	_, err = h.orderSrv.OrderCartProductNum(ctx, params)
+	shopCart, err := h.orderSrv.OrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, repository.WithUnorderedH5Product())
+	_, err = h.orderSrv.GetUnOrderedH5ProductList(ctx, saleBillUuid, shopCart, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
@@ -413,6 +434,98 @@ func (h *H5Handler) ConfirmOrder(c *gin.Context) {
 	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetDeskBuffetProductList 处理获取自助餐商品列表
+// @Summary 获取自助餐商品列表
+// @Description 获取自助餐商品列表
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderChangeBuffetProductListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.BuffetProductList}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/desk/order/buffet/product/list [get]
+func (h *H5Handler) GetDeskBuffetProductList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderChangeBuffetProductListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("获取自助餐商品列表", zap.Any("params", params))
+	//
+	info, err := h.orderSrv.OrderDeskBuffetProductList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderMustPlanConfirm 确认必点商品
+// @Summary 确认必点商品
+// @Description 确认必点商品
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
+// @Success 200 {object} dto.Response{}
+// @Router /h5/desk/order/must_plan/confirm [post]
+func (h *H5Handler) OrderMustPlanConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面确认必点商品接口请求")
+
+	params := req.InstantOrderMustPlanConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 确认必点商品
+	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if !res {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.ErrMustPlanNotComplete))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// GetDeskPing 桌台详情-用于定时轮询
+// @Summary 桌台详情-用于定时轮询
+// @Description 桌台详情-用于定时轮询
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.DeskInfoReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.H5DeskPing} "桌台详情"
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/desk/ping [get]
+func (h *H5Handler) GetDeskPing(c *gin.Context) {
+	// 绑定请求参数
+	var deskInfoReq req.DeskInfoReq
+	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
+		helper.HandleValidationError(c, err, deskInfoReq, nil)
+		return
+	}
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), deskInfoReq.Uuid, nil)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	// 返回结果
@@ -464,5 +577,8 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.GET("/order/cart/product/ordered/list", wrapper.GetOrderCartProductOrdered)     // 查询购物车已下单商品列表
 		privateApi.POST("/order/cart/product/num", wrapper.OrderCartProductNum)                    // 修改购物车商品数量
 		privateApi.POST("/order/cart/confirm", wrapper.ConfirmOrder)                               // 确认下单
+		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)        // 获取自助餐商品列表
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)             // 确认必点商品
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                          // 定时获取桌台信息
 	}
 }

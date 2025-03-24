@@ -86,6 +86,14 @@ type DeskPing struct {
 	SaleOrderList       []SaleOrder            `json:"sale_order_list"`       // 销售订单列表
 }
 
+type H5DeskPing struct {
+	DeskInfo      Desk                `json:"desk_info"`      // 桌台信息
+	SentKitchen   SentKitchen         `json:"sent_kitchen"`   // 已送厨商品信息
+	UnsentKitchen UnsentKitchen       `json:"unsent_kitchen"` // 未送厨商品信息
+	Buffet        BuffetInfo          `json:"buffet"`         // 自助餐信息
+	MustPlans     ProductMustPlanList `json:"must_plans"`     // 必点方案列表
+}
+
 type UnsentKitchenInfo struct {
 	ProductNum    uint    `json:"product_num"`    // 未下单商品数量
 	ProductAmount float64 `json:"product_amount"` // 未下单商品金额

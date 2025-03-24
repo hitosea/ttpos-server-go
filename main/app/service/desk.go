@@ -26,6 +26,7 @@ type IDeskSrv interface {
 	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
 	GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error)                   // 获取桌台详情-用于定时轮询
+	GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.H5DeskPing, error)               // 获取桌台详情-用于h5定时轮询
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                  // 创建桌台订单
 	CloseDesk(ctx context.Context, req req.DeskCloseReq) error                                                          // 关闭桌台
 	CompleteDesk(ctx context.Context, req req.DeskJsonUuidReq) error                                                    // 完成桌台
@@ -224,6 +225,94 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	res.SentKitchenProducts = resp.SentKitchenProductList{
 		List: sentKitchenProducts,
 	}
+	return res, nil
+}
+
+// GetH5DeskPing 获取桌台详情-用于h5定时轮询
+func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.H5DeskPing, error) {
+	res := resp.H5DeskPing{
+		SentKitchen: resp.SentKitchen{
+			Groups: resp.GroupList{
+				List: []resp.SentKitchenProductGroup{{
+					Products: resp.GroupProductList{
+						List: make([]resp.Product, 0),
+					},
+				}},
+			},
+		},
+		MustPlans: resp.ProductMustPlanList{
+			List: make([]resp.InstantProductMustPlan, 0),
+		},
+	}
+	// 获取桌台详情
+	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
+	}
+	res.DeskInfo = desk.GetDeskResp()
+
+	// 如果没有销售账单,直接返回
+	if desk.SaleBill == nil {
+		return res, nil
+	}
+	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
+	if shopCart == nil {
+		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
+		if err != nil {
+			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+		}
+	}
+	// 未送厨商品信息
+	unsentKitchen, err := s.orderSrv.GetUnOrderedH5ProductList(ctx, desk.SaleBillUuid, shopCart)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+	}
+	res.UnsentKitchen = *unsentKitchen
+
+	// 已送厨商品信息
+	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart)
+	// 自助餐信息
+	if shopCart.Buffet != nil {
+		res.Buffet = *shopCart.Buffet
+	}
+	// 必点方案列表
+	if shopCart.MustPlans != nil {
+		res.MustPlans = *shopCart.MustPlans
+	}
+
+	// 获取耳机分类
+
+	//productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
+	//for _, saleOrder := range shopCart.SaleOrderList {
+	//	for _, product := range saleOrder.ProductList {
+	//		// 合计已送厨商品列表
+	//		if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) {
+	//			var sentKitchenNum, finishedNum uint
+	//			if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
+	//				sentKitchenNum = existsProduct.SentKitchenNum + product.Num
+	//				finishedNum = existsProduct.FinishedNum + product.FinishedNum
+	//			} else {
+	//				sentKitchenNum = product.Num
+	//				finishedNum = product.FinishedNum
+	//			}
+	//			productPackageUuidMap[product.ProductPackageUuid] = resp.SentKitchenProduct{
+	//				ProductPackageUuid: product.ProductPackageUuid,
+	//				SentKitchenNum:     sentKitchenNum,
+	//				FinishedNum:        finishedNum,
+	//			}
+	//		}
+	//	}
+	//}
+
+	//// 转换成切片
+	//sentKitchenProducts := make([]resp.SentKitchenProduct, 0, len(productPackageUuidMap))
+	//for _, product := range productPackageUuidMap {
+	//	sentKitchenProducts = append(sentKitchenProducts, product)
+	//}
+	//
+	//res.SentKitchenProducts = resp.SentKitchenProductList{
+	//	List: sentKitchenProducts,
+	//}
 	return res, nil
 }
 
