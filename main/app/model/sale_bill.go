@@ -213,9 +213,34 @@ func (model *SaleBill) AddBuffetDelayStartTimeAndDuration(delayTime int) {
 	}
 }
 
+// AddSaleOrderBuffetCustomerType 将自助餐添加到销售账单的对应销售订单中
+func (model *SaleBill) AddSaleOrderBuffetCustomerType(saleOrderUuid uint64, customer *SaleOrderBuffetCustomerType) {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.Uuid == saleOrderUuid {
+			// 将customer添加到销售订单的SaleOrderBuffetCustomerTypes列表中
+			if saleOrder.SaleOrderBuffetCustomerTypes == nil {
+				saleOrder.SaleOrderBuffetCustomerTypes = make([]*SaleOrderBuffetCustomerType, 0)
+			}
+			saleOrder.SaleOrderBuffetCustomerTypes = append(saleOrder.SaleOrderBuffetCustomerTypes, customer)
+			break
+		}
+	}
+}
+
+// DeleteSaleOrderBuffetCustomerTypeAll 将自助餐从销售账单的对应销售订单中删除
+func (model *SaleBill) DeleteSaleOrderBuffetCustomerTypeAll(saleOrderUuid uint64) {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.Uuid == saleOrderUuid {
+			for _, customerType := range saleOrder.SaleOrderBuffetCustomerTypes {
+				customerType.DeleteTime = time.Now().Unix()
+			}
+			break
+		}
+	}
+}
+
 // AddSaleOrderBuffetDelayProduct 将自助餐加钟产品添加到销售账单的对应销售订单中
 func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, delayProduct SaleOrderBuffetDelayProduct) {
-	// 查找对应的销售订单
 	for _, saleOrder := range model.SaleOrders {
 		if saleOrder.Uuid == saleOrderUuid {
 			// 将delayProduct添加到销售订单的SaleOrderBuffetDelayProducts列表中

@@ -2582,7 +2582,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfoAndProduct(req.SaleBillUuid, 0, 0)
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
@@ -2610,14 +2610,20 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	saleOrder := saleBill.SaleOrders[0]
 
 	// 是否新增
-	oldBuffetIds := []uint64{saleBill.BuffetPackage1Uuid, saleBill.BuffetPackage2Uuid}
+	oldBuffetIds := []uint64{}
+	if saleBill.BuffetPackage1Uuid != 0 {
+		oldBuffetIds = append(oldBuffetIds, saleBill.BuffetPackage1Uuid)
+	}
+	if saleBill.BuffetPackage2Uuid != 0 {
+		oldBuffetIds = append(oldBuffetIds, saleBill.BuffetPackage2Uuid)
+	}
 	addBuffetIds := slice.Difference(req.BuffetUuids, oldBuffetIds)
 	removeBuffetIds := slice.Difference(oldBuffetIds, req.BuffetUuids)
 
 	// 获取自助餐顾客
 	customerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&customerTypes, req.BuffetCustomerTypes)
-	saleOrderCustomerTypes, buffetUuids, num, maxTimeLimit, _, _ := saleOrder.GetSaleOrderBuffetCustomerTypes(
+	saleOrderCustomerTypes, buffetUuids, mealNum, maxTimeLimit, _, _ := saleOrder.GetSaleOrderBuffetCustomerTypes(
 		buffetList,
 		req.BuffetUuids,
 		customerTypes,
@@ -2627,14 +2633,12 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 修改
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 删除原来的 CustomerType
-		repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
+		saleBill.DeleteSaleOrderBuffetCustomerTypeAll(saleOrder.Uuid)
 
 		// 创建新的顾客
 		if len(saleOrderCustomerTypes) > 0 {
 			for _, customer := range saleOrderCustomerTypes {
-				if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetCustomerType(*customer); err != nil {
-					return errors.WithMessage(err)
-				}
+				saleBill.AddSaleOrderBuffetCustomerType(saleOrder.Uuid, customer)
 			}
 		}
 
@@ -2663,17 +2667,11 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		}
 
 		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
-		saleBill.MealNum = num
+		saleBill.SetMealNum(mealNum)
 		saleBill.SetBuffetPackage(buffetUuids)
-		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(saleBill); err != nil {
-			return errors.WithMessage(err)
-		}
+		saleBill.SetDelayProductMealNum(mealNum)
 
-		// 重新计算和保存
-		saleBill, errSaleBill := repository.NewOrderRepo(tx).GetSaleBillAllInfo(req.SaleBillUuid)
-		if errSaleBill != nil {
-			return errSaleBill
-		}
+		//
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
@@ -2724,7 +2722,6 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if buffetErr != nil {
 		return nil, buffetErr
 	}
-	fmt.Println("OrderChangeBuffetClock buffetSetting", utils.ToJsonString(buffetSetting))
 	if buffetSetting.IsAddClock != "1" {
 		return nil, errors.New("未开启加钟")
 	}
@@ -2736,10 +2733,10 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 		return nil, errors.New("销售账单不存在")
 	}
 	if !saleBill.IsBuffetSaleBill() {
-		return nil, errors.New("当前不是自助餐类订单，无法调整加钟")
+		return nil, errors.New("当前不是自助餐类订单，无法添加加钟")
 	}
 	if saleBill.GetBuffetRemainingSeconds() == -1 {
-		return nil, errors.New("当前套餐已经是无限时，无法调整加钟")
+		return nil, errors.New("当前套餐已经是无限时，无法添加加钟")
 	}
 	if err := saleBill.ValidateOrderStatus(constant.OrderClock, req.SaleOrderUuid); err != nil {
 		return nil, err
@@ -2770,9 +2767,6 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 				Num:             saleBill.MealNum,
 				DelayTime:       delay.DelayTime,
 				Sign:            uuid.New().String(),
-			}
-			if _, err = repository.NewOrderRepo(tx).CreateSaleOrderBuffetDelayProduct(delayProduct); err != nil {
-				return err
 			}
 			//
 			totalDelayTime += delay.DelayTime * 60
@@ -5621,6 +5615,12 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 			// 保存自助餐顾客
 			for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 				if err := repository.NewSaleOrderBuffetCustomerTypeRepo(db).UpdateOrCreateSaleOrderBuffetCustomerTypeRecord(*buffetCustomer); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+			// 保存自助餐加钟商品
+			for _, buffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+				if err := repository.NewSaleOrderBuffetDelayProductRepo(db).UpdateOrCreateSaleOrderBuffetDelayProductRecord(*buffetDelayProduct); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
