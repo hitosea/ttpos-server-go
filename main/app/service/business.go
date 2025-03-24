@@ -100,9 +100,9 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 			},
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
-					int(req.QueryStartTime),
-					int(req.QueryEndTime),
-					int(ctx.GetStaffUuid()),
+					uint(req.QueryStartTime),
+					uint(req.QueryEndTime),
+					ctx.GetStaffUuid(),
 				)
 				if err != nil {
 					return []business_data_resp.PeakHour{}
@@ -285,9 +285,9 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		},
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
-				int(req.QueryStartTime),
-				int(req.QueryEndTime),
-				int(ctx.GetStaffUuid()),
+				uint(req.QueryStartTime),
+				uint(req.QueryEndTime),
+				ctx.GetStaffUuid(),
 			)
 			if err != nil {
 				// 如果出错，返回空切片

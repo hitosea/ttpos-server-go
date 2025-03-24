@@ -15,7 +15,7 @@ import (
 
 type ISaleOrderPeakTimeRepo interface {
 	Record(recordType string, saleBill *model.SaleBill, refundMoney float64) error
-	GetMaxRecord(startTime, endTime, cashierUuid int) ([]business_data_resp.PeakHour, error)
+	GetMaxRecord(startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
 }
 
 type saleOrderPeakTimeRepo struct {
@@ -30,7 +30,7 @@ func NewSaleOrderPeakTimeRepo(db *gorm.DB) ISaleOrderPeakTimeRepo {
 // recordType: inc - 增加, dec - 减少
 func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64) error {
 	// 获取完成时间的时间对象
-	finishTime := time.Unix(int64(saleBill.FinishTime), 0)
+	finishTime := time.Unix(saleBill.FinishTime, 0)
 	// 获取日期时间戳 - 将时间设置为当天的0点0分0秒
 	dateTime := time.Date(finishTime.Year(), finishTime.Month(), finishTime.Day(), 0, 0, 0, 0, finishTime.Location())
 	dateTimestamp := dateTime.Unix()
@@ -78,7 +78,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 }
 
 // 获取高峰时段
-func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime, cashierUuid int) ([]business_data_resp.PeakHour, error) {
+func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error) {
 	// 获取开始时间和结束时间的时间对象
 	startTimeObj := time.Unix(int64(startTime), 0)
 	endTimeObj := time.Unix(int64(endTime), 0)

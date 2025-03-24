@@ -521,9 +521,9 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		},
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
-				int(log.ShiftStartTime),
-				int(log.ShiftEndTime),
-				int(log.StaffUuid),
+				uint(log.ShiftStartTime),
+				uint(log.ShiftEndTime),
+				log.StaffUuid,
 			)
 			if err != nil {
 				return []business_data_resp.PeakHour{}
