@@ -2909,6 +2909,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.KitchenResp'
         description: 厨显端设置
+      real_name:
+        description: 员工真实姓名
+        type: string
     type: object
   resp.LanguageResp:
     properties:

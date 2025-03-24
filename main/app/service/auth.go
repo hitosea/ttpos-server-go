@@ -506,6 +506,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		return kitchenBase, errors.WithMessage(err)
 	}
 	return resp.KitchenBase{
+		RealName:   ctx.GetStaff().RealName,
 		Buffet:     buffetSetting,
 		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{
