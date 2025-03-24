@@ -5157,10 +5157,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 会员余额扣费相关
 	memberBalanceAmount, memberGiftBalanceAmount := float64(0), float64(0)
 	var balancePaymentOrder *model.PaymentOrder // 余额支付的付款单
-	{
+	if saleOrder.ConsumerUuid != 0 {
 		// 加锁. 避免会员余额并发操作
-		s.lock.LockUuid(saleOrder.Member.Uuid)
-		defer s.lock.UnlockUuid(saleOrder.Member.Uuid)
+		s.lock.LockUuid(saleOrder.ConsumerUuid)
+		defer s.lock.UnlockUuid(saleOrder.ConsumerUuid)
 		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.Member.Uuid)
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("获取会员信息失败"), err.Error())
@@ -5224,18 +5224,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 		// 更新会员的余额
-		if saleOrder.Member.GetUpdate() {
-			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				MemberUuid:  saleOrder.Member.Uuid,
-				Money:       -memberBalanceAmount,     // 扣减会员余额
-				GiftMoney:   -memberGiftBalanceAmount, // 扣减会员赠送余额
-				Scene:       constant.MemberBalanceLogConsume,
-				Describe:    fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
-				RelatedUuid: saleOrder.Uuid,
-			}); err != nil {
-				return errors.WithMessage(err)
+		if saleOrder.ConsumerUuid != 0 {
+			if saleOrder.Member.GetUpdate() {
+				if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+					MemberUuid:  saleOrder.Member.Uuid,
+					Money:       -memberBalanceAmount,     // 扣减会员余额
+					GiftMoney:   -memberGiftBalanceAmount, // 扣减会员赠送余额
+					Scene:       constant.MemberBalanceLogConsume,
+					Describe:    fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
+					RelatedUuid: saleOrder.Uuid,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
 			}
 		}
+
 		// 更新余额支付的付款单
 		if balancePaymentOrder != nil {
 			if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*balancePaymentOrder); err != nil {
