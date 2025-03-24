@@ -18867,6 +18867,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
+                },
+                "real_name": {
+                    "description": "员工真实姓名",
+                    "type": "string"
                 }
             }
         },
