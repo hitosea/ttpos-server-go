@@ -118,9 +118,7 @@ class Index extends Controller
     public function index()
     {
         $service = new ShopService;
-        // todo 兼容
-        // return $this->renderSuccess('', ['data' => $service->getHomeData($this->store['user']), 'test' => DiskHelp::getDiskSpaceInfo()]);
-        return $this->renderSuccess('', ['data' => [], 'test' => DiskHelp::getDiskSpaceInfo()]);
+        return $this->renderSuccess('', ['data' => $service->getHomeData($this->store['user']), 'test' => DiskHelp::getDiskSpaceInfo()]);
     }
 
     /**

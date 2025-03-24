@@ -340,7 +340,7 @@ func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5ProductWithReject())
+	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5ProductWithReject())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -431,7 +431,7 @@ func (h *H5Handler) ConfirmOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, repository.WithOrderedH5Product())
+	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

@@ -231,13 +231,9 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 // GetH5DeskPing 获取桌台详情-用于h5定时轮询
 func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.H5DeskPing, error) {
 	res := resp.H5DeskPing{
-		SentKitchen: resp.SentKitchen{
-			Groups: resp.GroupList{
-				List: []resp.SentKitchenProductGroup{{
-					Products: resp.GroupProductList{
-						List: make([]resp.Product, 0),
-					},
-				}},
+		SentKitchen: resp.H5CartSendProduct{
+			Groups: resp.H5GroupList{
+				List: make([]resp.H5Group, 0),
 			},
 		},
 		MustPlans: resp.ProductMustPlanList{
@@ -265,12 +261,17 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 	// 未送厨商品信息
 	unsentKitchen, err := s.orderSrv.GetUnOrderedH5ProductList(ctx, desk.SaleBillUuid, shopCart)
 	if err != nil {
-		return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+		return res, errors.WithMessage(errors.New("订单不存在"), "获取未送厨商品信息失败")
 	}
 	res.UnsentKitchen = *unsentKitchen
 
 	// 已送厨商品信息
-	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart)
+	sentKitchen, err := s.orderSrv.GetOrderedH5ProductList(ctx, desk.SaleBill.Uuid, shopCart)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("订单不存在"), "获取已送厨商品信息失败")
+	}
+	res.SentKitchen = *sentKitchen
+
 	// 自助餐信息
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet

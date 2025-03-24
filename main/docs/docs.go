@@ -15577,6 +15577,10 @@ const docTemplate = `{
                     "description": "分类类型 (1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
+                "duty_no": {
+                    "description": "班次编号",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
@@ -16094,6 +16098,10 @@ const docTemplate = `{
                 "flavor_uuid": {
                     "description": "某个规格商品ID",
                     "type": "integer"
+                },
+                "operation": {
+                    "description": "操作类型。add: 加购，sub: 减购. 不填，默认是加购",
+                    "type": "string"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。",
@@ -16680,6 +16688,10 @@ const docTemplate = `{
                 "num": {
                     "description": "数量数量",
                     "type": "integer"
+                },
+                "operation": {
+                    "description": "操作类型。add: 加购，sub: 减购",
+                    "type": "string"
                 },
                 "product_package_attribute_uuid_list": {
                     "description": "属性信息",
@@ -18366,7 +18378,7 @@ const docTemplate = `{
                     "description": "已送厨商品信息",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.SentKitchen"
+                            "$ref": "#/definitions/resp.H5CartSendProduct"
                         }
                     ]
                 },

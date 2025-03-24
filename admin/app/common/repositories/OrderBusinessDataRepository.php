@@ -270,6 +270,26 @@ class OrderBusinessDataRepository
     }
     public function getBusinessData($type = 1)
     {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/business', [
+            'query_start_time' => $this->startTime,
+            'query_end_time' => $this->endTime,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return [];
+        }
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            return [];
+        }
+
+        return $res['data'];
+
+
+
         $prefix = env('DB_PREFIX');
 
         // 总营业数据
