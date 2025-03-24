@@ -1430,7 +1430,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "点餐助手.桌台"
+                    "点餐助手端.桌台"
                 ],
                 "summary": "免单",
                 "parameters": [
@@ -1626,6 +1626,45 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/must_plan/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "确认必点商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "确认必点商品",
+                "parameters": [
+                    {
+                        "description": "确认必点商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderMustPlanConfirmReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -10802,6 +10841,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/statistics/business": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计营业数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.营业数据"
+                ],
+                "summary": "统计营业数据",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataAll"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/statistics/payment_method": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计支付方式",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.营业数据"
+                ],
+                "summary": "统计支付方式",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataPaymentMethod"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/statistics/printer": {
             "post": {
                 "security": [
@@ -10844,6 +10985,108 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/statistics/product": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.营业数据"
+                ],
+                "summary": "统计商品",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataProduct"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/statistics/product_category": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计商品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.营业数据"
+                ],
+                "summary": "统计商品分类",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataProductCategory"
                                         }
                                     }
                                 }
@@ -13767,6 +14010,385 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "business_data_resp.AbnormalData": {
+            "type": "object",
+            "properties": {
+                "change_order_price_times": {
+                    "description": "整单改价次数",
+                    "type": "integer"
+                },
+                "change_price_times": {
+                    "description": "单品改价次数",
+                    "type": "integer"
+                },
+                "discount_order_times": {
+                    "description": "整单折扣次数",
+                    "type": "integer"
+                },
+                "free_order_times": {
+                    "description": "免单次数",
+                    "type": "integer"
+                },
+                "product_free_times": {
+                    "description": "赠菜次数",
+                    "type": "integer"
+                },
+                "product_move_times": {
+                    "description": "转菜次数",
+                    "type": "integer"
+                },
+                "refund_product_times": {
+                    "description": "退菜次数",
+                    "type": "integer"
+                },
+                "refund_times": {
+                    "description": "退款次数",
+                    "type": "integer"
+                },
+                "reverse_settle_times": {
+                    "description": "反结账次数",
+                    "type": "integer"
+                },
+                "round_order_times": {
+                    "description": "整单抹零次数",
+                    "type": "integer"
+                }
+            }
+        },
+        "business_data_resp.BusinessDataAll": {
+            "type": "object",
+            "properties": {
+                "abnormal_data": {
+                    "description": "异常数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/business_data_resp.AbnormalData"
+                        }
+                    ]
+                },
+                "all_table_avg_order_price": {
+                    "description": "总桌数平均订单金额",
+                    "type": "number"
+                },
+                "all_table_max_order_price": {
+                    "description": "总桌数最大订单金额",
+                    "type": "number"
+                },
+                "all_table_min_order_price": {
+                    "description": "总桌数最小订单金额",
+                    "type": "number"
+                },
+                "all_table_order_num": {
+                    "description": "桌台方式",
+                    "type": "integer"
+                },
+                "all_table_people_avg": {
+                    "description": "总桌数人均",
+                    "type": "number"
+                },
+                "all_table_people_num": {
+                    "description": "总桌数人数",
+                    "type": "integer"
+                },
+                "avg_order_price": {
+                    "description": "平均订单金额",
+                    "type": "number"
+                },
+                "cashier_avg_order_price": {
+                    "description": "收银方式平均订单金额",
+                    "type": "number"
+                },
+                "cashier_max_order_price": {
+                    "description": "收银方式最大订单金额",
+                    "type": "number"
+                },
+                "cashier_min_order_price": {
+                    "description": "收银方式最小订单金额",
+                    "type": "number"
+                },
+                "cashier_order_num": {
+                    "description": "收银方式",
+                    "type": "integer"
+                },
+                "category_list": {
+                    "description": "分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.Category"
+                    }
+                },
+                "max_order_price": {
+                    "description": "最大订单金额",
+                    "type": "number"
+                },
+                "member_data": {
+                    "description": "会员数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/business_data_resp.MemberData"
+                        }
+                    ]
+                },
+                "min_order_price": {
+                    "description": "最小订单金额",
+                    "type": "number"
+                },
+                "payment_method_incomes": {
+                    "description": "支付方式",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.PaymentMethodIncome"
+                    }
+                },
+                "peak_hour_list": {
+                    "description": "高峰时间",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.PeakHour"
+                    }
+                },
+                "percentage_list": {
+                    "description": "税收百分比对象列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.Percentage"
+                    }
+                },
+                "total_discount_money": {
+                    "description": "总优惠折扣",
+                    "type": "number"
+                },
+                "total_free_order_price": {
+                    "description": "总免单金额",
+                    "type": "number"
+                },
+                "total_order_num": {
+                    "description": "总订单数",
+                    "type": "integer"
+                },
+                "total_pay_fee_money": {
+                    "description": "总支付手续费",
+                    "type": "number"
+                },
+                "total_pay_price": {
+                    "description": "总支付金额",
+                    "type": "number"
+                },
+                "total_people_num": {
+                    "description": "总人数",
+                    "type": "integer"
+                },
+                "total_product_num": {
+                    "description": "总商品数",
+                    "type": "integer"
+                },
+                "total_product_price": {
+                    "description": "总原商品金额 (未含税的总商品金额)",
+                    "type": "number"
+                },
+                "total_received_price": {
+                    "description": "总实收金额",
+                    "type": "number"
+                },
+                "total_refund_money": {
+                    "description": "总退款金额",
+                    "type": "number"
+                },
+                "total_sales": {
+                    "description": "总销售额",
+                    "type": "number"
+                },
+                "total_service_money": {
+                    "description": "总服务费",
+                    "type": "number"
+                },
+                "total_table_num": {
+                    "description": "总桌数",
+                    "type": "integer"
+                },
+                "total_tax_money": {
+                    "description": "总税费",
+                    "type": "number"
+                },
+                "total_user_discount_money": {
+                    "description": "总会员折扣",
+                    "type": "number"
+                },
+                "unclosed_total_order_num": {
+                    "description": "未结账数据",
+                    "type": "integer"
+                },
+                "unclosed_total_price": {
+                    "description": "总金额",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.BusinessDataPaymentMethod": {
+            "type": "object",
+            "properties": {
+                "payment_method_incomes": {
+                    "description": "支付方式",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.PaymentMethodIncome"
+                    }
+                },
+                "total_received_price": {
+                    "description": "总实收金额",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.BusinessDataProduct": {
+            "type": "object",
+            "properties": {
+                "products": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.Product"
+                    }
+                }
+            }
+        },
+        "business_data_resp.BusinessDataProductCategory": {
+            "type": "object",
+            "properties": {
+                "category_list": {
+                    "description": "分类列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.Category"
+                    }
+                },
+                "payment_method_incomes": {
+                    "description": "支付方式",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.PaymentMethodIncome"
+                    }
+                },
+                "refund_amount": {
+                    "description": "退款金额",
+                    "type": "number"
+                },
+                "sales_num": {
+                    "description": "销售笔数",
+                    "type": "integer"
+                },
+                "total_received_price": {
+                    "description": "总实收金额",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.Category": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "分类名称",
+                    "type": "string"
+                },
+                "prices": {
+                    "description": "销售金额",
+                    "type": "number"
+                },
+                "sales_num": {
+                    "description": "销售数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "business_data_resp.MemberData": {
+            "type": "object",
+            "properties": {
+                "gift_money": {
+                    "description": "赠送金额",
+                    "type": "number"
+                },
+                "gift_points": {
+                    "description": "赠送积分",
+                    "type": "integer"
+                },
+                "recharge_amount": {
+                    "description": "充值金额",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.PaymentMethodIncome": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "收入金额",
+                    "type": "number"
+                },
+                "code": {
+                    "description": "支付方式代码",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "order_num": {
+                    "description": "订单数量",
+                    "type": "integer"
+                }
+            }
+        },
+        "business_data_resp.PeakHour": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单金额",
+                    "type": "number"
+                },
+                "num": {
+                    "description": "订单数量",
+                    "type": "integer"
+                },
+                "time_period": {
+                    "description": "时间段",
+                    "type": "string"
+                }
+            }
+        },
+        "business_data_resp.Percentage": {
+            "type": "object",
+            "properties": {
+                "consumption_tax": {
+                    "description": "消费税",
+                    "type": "number"
+                },
+                "tax_rate": {
+                    "description": "税率",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.Product": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品名称",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "单价",
+                    "type": "number"
+                },
+                "sales_num": {
+                    "description": "销售数量",
+                    "type": "integer"
+                },
+                "subtotal": {
+                    "description": "小计",
+                    "type": "number"
+                }
+            }
+        },
         "dto.LanguageItem": {
             "type": "object",
             "properties": {
@@ -14219,6 +14841,27 @@ const docTemplate = `{
                 }
             }
         },
+        "req.BusinessDataCountReq": {
+            "type": "object",
+            "properties": {
+                "category_type": {
+                    "description": "分类类型 (1 按一级分类, 2 按二级分类)",
+                    "type": "integer"
+                },
+                "query_end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "query_start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                },
+                "time_type": {
+                    "description": "时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)",
+                    "type": "integer"
+                }
+            }
+        },
         "req.BusinessDataPrinterReq": {
             "type": "object",
             "properties": {
@@ -14235,7 +14878,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "statistics_type": {
-                    "description": "统计类型 (1 全部, 2 按支付方式, 3 按商品分类, 4 按商品)",
+                    "description": "统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)",
                     "type": "integer"
                 },
                 "time_type": {

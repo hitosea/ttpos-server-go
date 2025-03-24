@@ -7,3 +7,11 @@ type BusinessDataPrinterReq struct {
 	QueryEndTime   uint `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int  `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 }
+
+// BusinessDataCountReq 营业数据统计请求
+type BusinessDataCountReq struct {
+	TimeType       int   `json:"time_type"`        // 时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)
+	QueryStartTime int64 `json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64 `json:"query_end_time"`   // 查询结束时间戳
+	CategoryType   int   `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
+}
