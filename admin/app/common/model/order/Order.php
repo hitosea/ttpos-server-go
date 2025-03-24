@@ -641,26 +641,72 @@ class Order extends BaseModelOrder
      */
     public function storeOverview($params)
     {
-        Db::connect()->execute("SET SESSION sql_mode = ''");
-        //
         $repository = new OrderBusinessDataRepository($this, $params);
-        //
         [$startTime, $endTime] = $repository->getTimes();
-        //
-        $all = $repository->getBusinessData();
-        // 高峰时间段
-        $all['peak_hour_list'] = OrderPeakTime::getMaxRecord($startTime, $endTime, $params['cashier_id'] ?? 0);
-        // 税收百分比对象列表
-        $all['percentage_list'] = $repository->getPercentageList();
-        // 收入列表
-        $all['incomes'] = $repository->getIncomesList();
-        //  新增会员数
-        $all['user_count'] = UserModel::where('is_delete', '=', 0)
-            ->when($startTime && $endTime, function ($q) use ($startTime, $endTime) {
-                $q->where('create_time', 'between', "$startTime,$endTime");
-            })->count();
-        //
-        return $all;
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/business', [
+            'query_start_time' => $startTime,
+            'query_end_time' => $endTime,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            $this->error = '请求失败';
+            return false;
+        }
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            $this->error = $res['message'] ?? '请求失败';
+            return false;
+        }
+
+        $data = $res['data'];
+
+        $incomes = [];
+        $paymentMethodIncomes = $data['payment_method_incomes'];
+        foreach ($paymentMethodIncomes as $paymentMethodIncome) {
+            $incomes[] = [
+                'pay_type' => $paymentMethodIncome['code'],
+                'pay_type_name' => $paymentMethodIncome['name'],
+                'price' => $paymentMethodIncome['amount'],
+                'order_num' => $paymentMethodIncome['order_num'],
+            ];
+        }
+
+        return [
+            'receivable_price' => $data['total_sales'],
+            'received_price' => $data['total_received_price'],
+            'product_num' => $data['total_product_num'],
+            'user_count' => $data['member_data']['user_count'],
+            'user_discount_money' => $data['total_user_discount_money'],
+            'business_price' => $data['total_pay_price'],
+            'service_money' => $data['total_service_money'],
+            'pay_fee_money' => $data['total_pay_fee_money'],
+            'consumption_tax_money' => $data['total_tax_money'],
+            'refund_money' => $data['total_refund_money'],
+            'discount_money' => $data['total_user_discount_money'],
+            'discount_ratio' => $data['total_discount_ratio'] . '%',
+            'free_product_price' => $data['total_give_product_price'],
+            'free_product_num' => $data['total_give_product_num'],
+            'free_order_price' => $data['total_free_order_price'],
+            'free_order_num' => $data['total_free_order_num'],
+            'recharge_amount' => $data['member_data']['recharge_amount'],
+            'total_order_num' => $data['total_order_num'],
+            'min_order_price' => $data['min_order_price'],
+            'max_order_price' => $data['max_order_price'],
+            'avg_order_price' => $data['avg_order_price'],
+            'table_order_num' => $data['all_table_order_num'],
+            'table_people_num' => $data['all_table_people_num'],
+            'table_min_order_price' => $data['all_table_min_order_price'],
+            'table_max_order_price' => $data['all_table_max_order_price'],
+            'table_avg_order_price' => $data['all_table_avg_order_price'],
+            'cashier_order_num' => $data['all_cashier_order_num'],
+            'cashier_min_order_price' => $data['all_cashier_min_order_price'],
+            'cashier_max_order_price' => $data['all_cashier_max_order_price'],
+            'cashier_avg_order_price' => $data['all_cashier_avg_order_price'],
+            'incomes' => $incomes,
+        ];
     }
 
     /**
@@ -816,46 +862,36 @@ class Order extends BaseModelOrder
     {
         $start_time = isset($data['date'][0]) ? $data['date'][0] : 0;
         $end_time = isset($data['date'][1]) ? $data['date'][1] : 0;
-        $model = new OrderProduct;
-        if ($type == 0) {
-            $order = 'total_num desc';
-        } else {
-            $order = 'total_price desc';
+
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_rank', [
+            'query_start_time' => $start_time,
+            'query_end_time' => $end_time,
+            'rank_type' => $type,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            $this->error = '请求失败';
+            return false;
         }
-        if ($product_type >= 0) {
-            $model = $model->where('p.product_type', '=', $product_type);
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            $this->error = $res['message'] ?? '请求失败';
+            return false;
         }
-        if ($shop_supplier_id) {
-            $model = $model->where('p.shop_supplier_id', '=', $shop_supplier_id);
+        $data = $res['data'];
+
+        $list = [];
+        foreach ($data['ranks'] as $item) {
+            $list[] = [
+                'product_name_text' => $item['product_name'],
+                'total_num' => $item['sales_num'],
+                'total_price' => $item['sales_price'],
+            ];
         }
-        if ($start_time && $end_time) {
-            if (strpos($end_time, ':') !== false) {
-                $end_time = strtotime($end_time);
-            } else {
-                $end_time = strtotime($end_time) + 86399;
-            }
-            $model = $model->where('o.create_time', 'between', [strtotime($start_time), $end_time]);
-        }
-        $list = $model->alias('op')
-            ->where('o.pay_status', '=', 20)
-            ->where('o.order_status', '<>', 20)
-            ->where('o.is_merge', '=', 0)
-            ->join('order o', 'op.order_id=o.order_id')
-            ->join('product p', 'p.product_id=op.product_id')
-            ->field('
-                p.product_name,
-                sum(op.line_price) as total_price,
-                sum(op.total_num) as total_num
-            ')
-            ->group('op.product_id')
-            ->where('op.is_return', 0) // 不包含退货
-            ->order($order)
-            ->limit(10)
-            ->select();
-        foreach ($list as &$item) {
-            $item['total_price'] = helper::number2($item['total_price']);
-            $item['total_num'] = helper::number2($item['total_num']);
-        }
+
         return $list;
     }
 

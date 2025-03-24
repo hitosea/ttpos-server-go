@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // MemberHandler 会员相关控制器
@@ -285,6 +286,34 @@ func (h *MemberHandler) CheckPassword(c *gin.Context) {
 	helper.Success(c, gin.H{}, "密码正确")
 }
 
+// OrderPaymentQrcode 获取支付方式的二维码信息
+// @Summary 获取支付方式的二维码信息
+// @Description 获取支付方式的二维码信息
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.RechargeOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @Success 200 {object} dto.Response{data=resp.RechargeOrderPaymentQrcodeInfoResp}
+// @Router /cashier/member/recharge_order/payment/qrcode [get]
+func (h *MemberHandler) GetRechargeOrderPaymentQrcode(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.RechargeOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付二维码
+	res, err := h.rechargeOrderSrv.GetRechargeOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -307,16 +336,17 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm), middleware.OperationLog(staffOperationLogSrv))
 	{
-		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                    // 获取会员等级列表
-		privateApi.POST("/member/add", wrapper.AddMember)                                            // 添加会员
-		privateApi.GET("/member/search", wrapper.SearchMember)                                       // 模糊搜索会员
-		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)                            // 充值会员信息
-		privateApi.GET("/member/check_password", wrapper.CheckPassword)                              // 使用会员优惠验证密码
-		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)        // 获取进行中的充值订单
-		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                // 创建充值订单
-		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)       // 充值订单添加支付方式
-		privateApi.POST("/member/recharge_order_cancel_payment_method", wrapper.CancelPaymentMethod) // 充值订单撤销支付方式
-		privateApi.POST("/member/confirm_recharge_order", wrapper.ConfirmRechargeOrder)              // 确认充值订单
-		privateApi.POST("/member/print_recharge_order", wrapper.PrintRechargeOrder)                  // 打印充值订单
+		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                      // 获取会员等级列表
+		privateApi.POST("/member/add", wrapper.AddMember)                                              // 添加会员
+		privateApi.GET("/member/search", wrapper.SearchMember)                                         // 模糊搜索会员
+		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)                              // 充值会员信息
+		privateApi.GET("/member/check_password", wrapper.CheckPassword)                                // 使用会员优惠验证密码
+		privateApi.GET("/member/recharge_order_in_progress", wrapper.GetPendingRechargeOrder)          // 获取进行中的充值订单
+		privateApi.POST("/member/create_recharge_order", wrapper.CreateRechargeOrder)                  // 创建充值订单
+		privateApi.POST("/member/recharge_order_add_payment_method", wrapper.AddPaymentMethod)         // 充值订单添加支付方式
+		privateApi.POST("/member/recharge_order_cancel_payment_method", wrapper.CancelPaymentMethod)   // 充值订单撤销支付方式
+		privateApi.POST("/member/confirm_recharge_order", wrapper.ConfirmRechargeOrder)                // 确认充值订单
+		privateApi.POST("/member/print_recharge_order", wrapper.PrintRechargeOrder)                    // 打印充值订单
+		privateApi.GET("/member/recharge_order/payment/qrcode", wrapper.GetRechargeOrderPaymentQrcode) // 获取充值订单支付二维码
 	}
 }

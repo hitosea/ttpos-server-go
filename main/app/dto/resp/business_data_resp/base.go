@@ -35,6 +35,7 @@ type MemberData struct {
 	RechargeAmount float64 `json:"recharge_amount"` // 充值金额
 	GiftMoney      float64 `json:"gift_money"`      // 赠送金额
 	GiftPoints     int     `json:"gift_points"`     // 赠送积分
+	UserCount      int     `json:"user_count"`      // 会员数量
 }
 
 // 高峰时间
@@ -55,6 +56,7 @@ type Category struct {
 type Percentage struct {
 	TaxRate        float64 `json:"tax_rate"`        // 税率
 	ConsumptionTax float64 `json:"consumption_tax"` // 消费税
+	TotalPrice     float64 `json:"total_price"`     // 合计
 }
 
 // 营业数据 - 全部
@@ -68,8 +70,12 @@ type BusinessDataAll struct {
 	TotalTaxMoney          float64 `json:"total_tax_money"`           // 总税费
 	TotalUserDiscountMoney float64 `json:"total_user_discount_money"` // 总会员折扣
 	TotalDiscountMoney     float64 `json:"total_discount_money"`      // 总优惠折扣
+	TotalDiscountRatio     float64 `json:"total_discount_ratio"`      // 总优惠占比
 	TotalFreeOrderPrice    float64 `json:"total_free_order_price"`    // 总免单金额
 	TotalRefundMoney       float64 `json:"total_refund_money"`        // 总退款金额
+	TotalGiveProductPrice  float64 `json:"total_give_product_price"`  // 总赠菜金额
+	TotalFreeOrderNum      int     `json:"total_free_order_num"`      // 总免单数量
+	TotalGiveProductNum    int     `json:"total_give_product_num"`    // 总赠菜数量
 	TotalOrderNum          int     `json:"total_order_num"`           // 总订单数
 	TotalPeopleNum         int     `json:"total_people_num"`          // 总人数
 	TotalProductNum        int     `json:"total_product_num"`         // 总商品数
@@ -90,8 +96,8 @@ type BusinessDataAll struct {
 	AllCashierMaxOrderPrice float64 `json:"all_cashier_max_order_price"` // 收银方式最大订单金额
 	AllCashierAvgOrderPrice float64 `json:"all_cashier_avg_order_price"` // 收银方式平均订单金额
 	// 未结账数据
-	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 总订单数
-	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 总金额
+	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 未结账数据 - 总订单数
+	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 未结账数据 - 总金额
 	// 支付方式
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
 	AbnormalData         AbnormalData          `json:"abnormal_data"`          // 异常数据
@@ -119,4 +125,29 @@ type BusinessDataProductCategory struct {
 // 营业数据 - 按商品
 type BusinessDataProduct struct {
 	Products []Product `json:"products"` // 商品列表
+}
+
+// 营业数据 - 按区域
+type BusinessDataArea struct {
+	Areas []Area `json:"areas"` // 区域列表
+}
+
+// 区域
+type Area struct {
+	Name               string  `json:"name"`                 // 区域名称
+	TotalSales         float64 `json:"total_sales"`          // 总销售额
+	TotalReceivedPrice float64 `json:"total_received_price"` // 总实收金额
+	TotalProductNum    int     `json:"total_product_num"`    // 总商品数
+}
+
+// 营业数据 - 商品排行
+type BusinessDataProductRank struct {
+	Ranks []ProductRank `json:"ranks"` // 商品排行
+}
+
+// 商品排行
+type ProductRank struct {
+	ProductName string  `json:"product_name"` // 商品名称
+	SalesNum    int     `json:"sales_num"`    // 销售数量
+	SalesPrice  float64 `json:"sales_price"`  // 销售金额
 }

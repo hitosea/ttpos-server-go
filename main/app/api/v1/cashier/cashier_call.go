@@ -158,7 +158,7 @@ func (h *CallHandler) Reprint(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, resp)
+	helper.Success(c, resp, "发送成功")
 }
 
 func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

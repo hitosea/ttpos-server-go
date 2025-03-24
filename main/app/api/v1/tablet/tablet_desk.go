@@ -307,6 +307,40 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderMustPlanConfirm 确认必点商品
+// @Summary 确认必点商品
+// @Description 确认必点商品
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
+// @Success 200 {object} dto.Response{}
+// @Router /tablet/desk/order/must_plan/confirm [post]
+func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面确认必点商品接口请求")
+
+	params := req.InstantOrderMustPlanConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 确认必点商品
+	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if !res {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.ErrMustPlanNotComplete))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -343,5 +377,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                  // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList) // 获取自助餐商品列表
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)           // 桌台订单商品备注
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)      // 确认必点商品
 	}
 }

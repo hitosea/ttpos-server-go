@@ -130,46 +130,35 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 		return template.NewBusinessDataImgTemplate(base).GetPrintContent(businessData, startTime, endTime)
 	}
 
-	// /* *
-	// * Compax 收银打印机 80mm 自带
-	//  */
-	// if printerType == constant.PrinterTypeCashierCompax {
-	// 	return template.NewHandoverCompaxTemplate(base).GetPrintContent(
-	// 		tmp,
-	// 		businessData,
-	// 	)
-	// }
-
 	/* *
-	 * 芯烨打印机
+	* 商米打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
+	if base.IsSunMi {
+		return template.NewBusinessDataSunmiTemplate(base).GetPrintContent(
+			printerType,
 			businessData,
 			startTime,
 			endTime,
 		)
 	}
 
-	// /* *
-	// * 商米打印机
-	//  */
-	// if base.IsSunMi {
-	// 	return template.NewHandoverSunmiTemplate(base).GetPrintContent(
-	// 		tmp,
-	// 		businessData,
-	// 	)
-	// }
-
-	// /* *
-	// * CODESOFT 打印机
-	//  */
-	// if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
-	// 	return template.NewHandoverCodesoftTemplate(base).GetPrintContent(
-	// 		tmp,
-	// 		businessData,
-	// 	)
-	// }
+	/* *
+	 * 芯烨打印机
+	 */
+	if slices.Contains([]string{
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCodesoftLan,
+		constant.PrinterTypeCodesoftWifi,
+		constant.BrandA11510P,
+	}, printerType) {
+		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
+			printerType,
+			businessData,
+			startTime,
+			endTime,
+		)
+	}
 
 	return ""
 }

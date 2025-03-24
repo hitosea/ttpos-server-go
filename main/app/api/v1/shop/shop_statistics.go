@@ -1,4 +1,4 @@
-package cashier
+package shop
 
 import (
 	"ttpos-server-go/app/api/helper"
@@ -14,46 +14,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// statisticsHandler 营业数据相关控制器
 type statisticsHandler struct {
 	businessSrv service.IBusinessSrv
-}
-
-// Printer 打印
-// @Summary 打印
-// @Description 打印
-// @Tags 收银端.营业数据
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.BusinessDataPrinterReq true "打印参数"
-// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
-// @Router /cashier/statistics/printer [post]
-func (h *statisticsHandler) Printer(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var printerReq req.BusinessDataPrinterReq
-	if err := c.ShouldBindJSON(&printerReq); err != nil {
-		helper.HandleValidationError(c, err, printerReq, nil)
-		return
-	}
-	printerData, err := h.businessSrv.Printer(ctx, printerReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, printerData, "发送成功")
 }
 
 // CountBusiness 统计营业数据
 // @Summary 统计营业数据
 // @Description 统计营业数据
-// @Tags 收银端.营业数据
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.BusinessDataCountReq true "统计参数"
 // @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataAll} "统计数据"
-// @Router /cashier/statistics/business [get]
+// @Router /shop/statistics/business [get]
 func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var countReq req.BusinessDataCountReq
@@ -72,13 +46,13 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 // CountPaymentMethod 统计支付方式
 // @Summary 统计支付方式
 // @Description 统计支付方式
-// @Tags 收银端.营业数据
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.BusinessDataCountReq true "统计参数"
 // @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataPaymentMethod} "统计数据"
-// @Router /cashier/statistics/payment_method [get]
+// @Router /shop/statistics/payment_method [get]
 func (h *statisticsHandler) CountPaymentMethod(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var countReq req.BusinessDataCountReq
@@ -97,13 +71,13 @@ func (h *statisticsHandler) CountPaymentMethod(c *gin.Context) {
 // CountProductCategory 统计商品分类
 // @Summary 统计商品分类
 // @Description 统计商品分类
-// @Tags 收银端.营业数据
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.BusinessDataCountReq true "统计参数"
 // @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProductCategory} "统计数据"
-// @Router /cashier/statistics/product_category [get]
+// @Router /shop/statistics/product_category [get]
 func (h *statisticsHandler) CountProductCategory(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var countReq req.BusinessDataCountReq
@@ -122,13 +96,13 @@ func (h *statisticsHandler) CountProductCategory(c *gin.Context) {
 // CountProduct 统计商品
 // @Summary 统计商品
 // @Description 统计商品
-// @Tags 收银端.营业数据
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.BusinessDataCountReq true "统计参数"
 // @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProduct} "统计数据"
-// @Router /cashier/statistics/product [get]
+// @Router /shop/statistics/product [get]
 func (h *statisticsHandler) CountProduct(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var countReq req.BusinessDataCountReq
@@ -142,6 +116,56 @@ func (h *statisticsHandler) CountProduct(c *gin.Context) {
 		return
 	}
 	helper.Success(c, productData)
+}
+
+// CountArea 统计区域
+// @Summary 统计区域
+// @Description 统计区域
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataArea} "统计数据"
+// @Router /shop/statistics/area [get]
+func (h *statisticsHandler) CountArea(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	areaData, err := h.businessSrv.CountArea(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, areaData)
+}
+
+// CountProductRank 统计商品排行
+// @Summary 统计商品排行
+// @Description 统计商品排行
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataRankProductReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProductRank} "统计数据"
+// @Router /shop/statistics/product_rank [get]
+func (h *statisticsHandler) CountProductRank(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataRankProductReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	productRankData, err := h.businessSrv.RankProduct(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productRankData)
 }
 
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -162,10 +186,11 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/statistics/printer", wrapper.Printer)                      // 打印
 		privateApi.GET("/statistics/business", wrapper.CountBusiness)                // 统计营业数据
 		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)     // 统计支付方式
 		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory) // 统计商品分类
 		privateApi.GET("/statistics/product", wrapper.CountProduct)                  // 统计商品
+		privateApi.GET("/statistics/area", wrapper.CountArea)                        // 统计区域
+		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)         // 统计商品排行
 	}
 }

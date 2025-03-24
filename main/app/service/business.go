@@ -17,6 +17,8 @@ type IBusinessSrv interface {
 	CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error)     // 统计支付方式
 	CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error) // 统计商品分类
 	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                 // 统计商品
+	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                       // 统计区域
+	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)        // 统计商品排行
 }
 
 // businessSrv 收银服务结构体
@@ -410,4 +412,46 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 	}
 
 	return &productData, nil
+}
+
+// CountArea 统计区域
+func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error) {
+	var areaData = business_data_resp.BusinessDataArea{
+		Areas: []business_data_resp.Area{
+			{
+				Name:               "12",
+				TotalSales:         120,
+				TotalReceivedPrice: 120,
+				TotalProductNum:    120,
+			},
+			{
+				Name:               "121232",
+				TotalSales:         120,
+				TotalReceivedPrice: 120,
+				TotalProductNum:    120,
+			},
+		},
+	}
+
+	return &areaData, nil
+}
+
+// RankProduct 统计商品排行
+func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error) {
+	var productRankData = business_data_resp.BusinessDataProductRank{
+		Ranks: []business_data_resp.ProductRank{
+			{
+				ProductName: "12",
+				SalesNum:    1,
+				SalesPrice:  323,
+			},
+			{
+				ProductName: "121232",
+				SalesNum:    2,
+				SalesPrice:  23,
+			},
+		},
+	}
+
+	return &productRankData, nil
 }
