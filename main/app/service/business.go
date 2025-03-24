@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/template"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -97,18 +98,17 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 				GiftMoney:      120,
 				GiftPoints:     120,
 			},
-			PeakHourList: []business_data_resp.PeakHour{
-				{
-					TimePeriod: "12",
-					OrderNum:   120,
-					Amount:     120,
-				},
-				{
-					TimePeriod: "121232",
-					OrderNum:   120,
-					Amount:     120,
-				},
-			},
+			PeakHourList: func() []business_data_resp.PeakHour {
+				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+					int(req.QueryStartTime),
+					int(req.QueryEndTime),
+					int(ctx.GetStaffUuid()),
+				)
+				if err != nil {
+					return []business_data_resp.PeakHour{}
+				}
+				return peakHours
+			}(),
 			CategoryList: []business_data_resp.Category{
 				{
 					Name:     "12",
@@ -283,18 +283,18 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			GiftMoney:      120,
 			GiftPoints:     120,
 		},
-		PeakHourList: []business_data_resp.PeakHour{
-			{
-				TimePeriod: "12",
-				OrderNum:   120,
-				Amount:     120,
-			},
-			{
-				TimePeriod: "121232",
-				OrderNum:   120,
-				Amount:     120,
-			},
-		},
+		PeakHourList: func() []business_data_resp.PeakHour {
+			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+				int(req.QueryStartTime),
+				int(req.QueryEndTime),
+				int(ctx.GetStaffUuid()),
+			)
+			if err != nil {
+				// 如果出错，返回空切片
+				return []business_data_resp.PeakHour{}
+			}
+			return peakHours
+		}(),
 		CategoryList: []business_data_resp.Category{
 			{
 				Name:     "12",

@@ -277,6 +277,30 @@ func (p *printerTemplate) Amount(amount float64) string {
 	return integerPart
 }
 
+// Number 计算数字
+func (p *printerTemplate) Number(amount float64) string {
+	if amount == 0 {
+		return "0"
+	}
+	// 先格式化为2位小数
+	formattedAmount := strconv.FormatFloat(amount, 'f', 2, 64)
+	// 分割整数和小数部分
+	parts := strings.Split(formattedAmount, ".")
+	integerPart := parts[0]
+	decimalPart := ""
+	if len(parts) > 1 {
+		decimalPart = parts[1]
+	}
+	// 处理小数部分，去除尾部的0
+	decimalPart = strings.TrimRight(decimalPart, "0")
+
+	// 组合结果
+	if decimalPart != "" {
+		return integerPart + "." + decimalPart
+	}
+	return integerPart
+}
+
 // GetLogoAddr 获取logo地址
 func (p *printerTemplate) GetLogoAddr() string {
 	if p.StoreSetting == nil || p.StoreSetting.LogoURL == "" {

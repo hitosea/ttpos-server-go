@@ -404,7 +404,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 				} else {
 					// 计算折扣率：折扣金额 / 原始金额 * 100
 					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(float64(saleOrder.GetOriginAmount()))).Mul(decimal.NewFromInt(100))
-					ratio = fmt.Sprintf(" (%.0f%% OFF)", discountRate.InexactFloat64())
+					ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 				}
 			}
 			//
@@ -582,7 +582,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		)
 		printer.PrintInColumns(
 			t.base.Translate("本次积分"),
-			fmt.Sprintf("%.0f", point),
+			t.base.Number(point),
 		)
 	}
 

@@ -519,18 +519,17 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			GiftMoney:      120,
 			GiftPoints:     120,
 		},
-		PeakHourList: []business_data_resp.PeakHour{
-			{
-				TimePeriod: "12",
-				OrderNum:   120,
-				Amount:     120,
-			},
-			{
-				TimePeriod: "121232",
-				OrderNum:   120,
-				Amount:     120,
-			},
-		},
+		PeakHourList: func() []business_data_resp.PeakHour {
+			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+				int(log.ShiftStartTime),
+				int(log.ShiftEndTime),
+				int(log.StaffUuid),
+			)
+			if err != nil {
+				return []business_data_resp.PeakHour{}
+			}
+			return peakHours
+		}(),
 		CategoryList: []business_data_resp.Category{
 			{
 				Name:     "12",

@@ -143,7 +143,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("------------------------------------------------\n")
 		for _, product := range businessData.Product.Products {
-			printer.PrintInColumns(product.Name, fmt.Sprintf("%.0f*%d", product.Price, product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal))
+			printer.PrintInColumns(product.Name, fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal))
 			printer.LineFeed(1)
 		}
 	} else if businessData.All != nil {

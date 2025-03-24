@@ -31,7 +31,8 @@ func init() {
 // checkoutSaleOrderEventHandler "结账"事件处理器
 func checkoutSaleOrderEventHandler() {
 	once_checkout_sale_order_event_handler.Do(func() {
-		// 打印
+
+		// 创建打印
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
 				constant.PrinterTemplateBilling,
@@ -44,6 +45,7 @@ func checkoutSaleOrderEventHandler() {
 				return
 			}
 		})
+
 		// 创建操作记录
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
@@ -64,11 +66,13 @@ func checkoutSaleOrderEventHandler() {
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:结账 %+v", payload), zap.Uint64("record", uuid))
 		})
+
 		// 扣减库存
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			ReduceStock(db, payload.SaleBillUuid)
 		})
+
 		// 扣减会员余额
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			// db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
@@ -169,6 +173,20 @@ func checkoutSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			go HandleMemberBalance(db)
+		})
+
+		// 处理高峰时段
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			// 如果订单未完成，不处理
+			if !payload.SaleBill.IsFinish() {
+				return
+			}
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			err := repository.NewSaleOrderPeakTimeRepo(db).Record("inc", payload.SaleBill, 0.0)
+			if err != nil {
+				fmt.Println("SubscribeCheckoutSaleOrderEvent process, Record failed", payload, err)
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
+			}
 		})
 
 	})

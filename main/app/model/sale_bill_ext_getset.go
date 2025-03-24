@@ -576,3 +576,8 @@ func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
 		}
 	}
 }
+
+// 是否完成
+func (model *SaleBill) IsFinish() bool {
+	return model.Status == constant.SaleBillStatusComplete
+}

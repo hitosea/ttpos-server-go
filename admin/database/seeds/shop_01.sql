@@ -324,6 +324,22 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_invoice_info` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单发票信息表';
 
+-- 销售订单高峰时间表
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_peak_time` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一ID',
+  `date` int(11) DEFAULT 0 COMMENT '日期（天）',
+  `hour` int(11) DEFAULT 0 COMMENT '小时',
+  `num` int(11) DEFAULT 0 COMMENT '订单数',
+  `amount` decimal(12,2) DEFAULT 0.00 COMMENT '订单金额',
+  `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  INDEX `idx_cashier_uuid` (`cashier_uuid`),
+  UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单高峰时间表';
+
 -- h5订单表
 CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

@@ -422,7 +422,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				} else {
 					// 计算折扣率：折扣金额 / 原始金额 * 100
 					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(float64(saleOrder.GetOriginAmount()))).Mul(decimal.NewFromInt(100))
-					ratio = fmt.Sprintf(" (%.0f%% OFF)", discountRate.InexactFloat64())
+					ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 				}
 			}
 			//
@@ -580,7 +580,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("本次积分"), Width: 280, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: t.base.Amount(point), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: t.base.Number(point), Width: 0, Align: pkg.AlignRight},
 		)
 	}
 

@@ -136,7 +136,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		for _, product := range businessData.Product.Products {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: product.Name, Width: 300, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%.0f*%d", product.Price, product.SalesNum), Width: 120, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), Width: 120, Align: pkg.AlignRight},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.Subtotal), Width: 0, Align: pkg.AlignRight},
 			)
 		}

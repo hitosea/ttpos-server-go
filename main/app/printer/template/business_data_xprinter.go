@@ -133,7 +133,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("\n------------------------------------------------")
 		for _, product := range businessData.Product.Products {
-			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%.0f*%d", product.Price, product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
+			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
 			printer.LineFeed()
 			printer.LineFeed()
 		}

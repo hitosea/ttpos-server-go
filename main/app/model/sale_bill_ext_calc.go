@@ -30,6 +30,9 @@ func (model *SaleBill) calcProductOriginalAmount() float64 {
 func (model *SaleBill) calcAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+			continue
+		}
 		amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
 	}
 	return amount.InexactFloat64()
@@ -39,7 +42,9 @@ func (model *SaleBill) calcAmount() float64 {
 func (model *SaleBill) calcProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.ProductAmount))
+		if saleOrder.IsDelete() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.ProductAmount))
+		}
 	}
 	return amount.InexactFloat64()
 }
@@ -48,7 +53,9 @@ func (model *SaleBill) calcProductAmount() float64 {
 func (model *SaleBill) calcServiceFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+		}
 	}
 	return amount.InexactFloat64()
 }
@@ -57,7 +64,9 @@ func (model *SaleBill) calcServiceFee() float64 {
 func (model *SaleBill) calcTaxFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.TaxFee))
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.TaxFee))
+		}
 	}
 	return amount.InexactFloat64()
 }
@@ -66,7 +75,9 @@ func (model *SaleBill) calcTaxFee() float64 {
 func (model *SaleBill) calcDiscountFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.CustomDiscountFee))
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.CustomDiscountFee))
+		}
 	}
 	return amount.InexactFloat64()
 }
@@ -75,7 +86,9 @@ func (model *SaleBill) calcDiscountFee() float64 {
 func (model *SaleBill) calcMemberDiscountFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.MemberDiscountFee))
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.MemberDiscountFee))
+		}
 	}
 	return amount.InexactFloat64()
 }
@@ -94,7 +107,7 @@ func (model *SaleBill) calcGiftAmount() float64 {
 func (model *SaleBill) calcFreeAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsFreeSaleOrder() {
+		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
 		}
 	}

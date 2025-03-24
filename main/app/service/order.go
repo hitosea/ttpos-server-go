@@ -1371,6 +1371,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderProduct(returnOrder.ReturnOrderProducts); err != nil {
 			return errors.WithMessage(err)
 		}
+		// 更新高峰时段
+		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, returnOrder.RefundAmount); err != nil {
+			return errors.WithMessage(err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -1630,6 +1634,10 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*hideSaleBill); err != nil {
 				return errors.WithMessage(err)
 			}
+		}
+		// 更新高峰时段
+		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, 0); err != nil {
+			return errors.WithMessage(err)
 		}
 		// 更新销售账单
 		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
