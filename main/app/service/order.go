@@ -44,74 +44,74 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                          // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                                    // 创建桌台订单
-	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                                        // 获取订单列表
-	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                                 // 获取订单详情
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                        // 取消订单
-	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                        // 删除订单
-	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                 // 退款订单
-	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                                // 获取退款信息
-	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                                // 获取反结账信息
-	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                               // 反结账
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                                   // 判断桌台是否可取消
-	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                                           // 挂单
-	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                                          // 显示订单
-	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                                        // 获取挂单订单列表
-	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                                    // 打包
-	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                          // 删除订单商品
-	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                                              // 修改订单商品价格
-	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                                          // 修改订单金额
-	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                                  // 修改订单折扣
-	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                                  // 修改订单抹零规则
-	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                                      // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
-	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                                  // 修改订单人数
-	GetOrderChangeBuffet(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (resp.OrderBuffetResp, error)                                                    // 自助餐信息
-	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                                          // 调整自助餐
-	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                                // 调整自助餐
-	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                             // 获取桌台的自助餐商品列表
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                      // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                                        // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                                              // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                              // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                       // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                               // 向购物车添加商品
-	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                         // 获取销售账单uuid和销售订单uuid
-	OrderCartProductAdd(ctx context.Context, req req.ProductAddReq) (*resp.ShopCart, error)                                                                               // 修改购物车商品数量
-	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                                      // 修改购物车商品数量
-	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                           // 送厨购物车商品
-	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                                   // 退菜购物车商品
-	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                         // 退菜购物车商品
-	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                                 // 转菜购物车商品
-	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                         // 取消赠菜购物车商品
-	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                            // 取消赠菜购物车商品
-	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                                  // 获取点餐必点方案
-	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                                    // 获取结账页面信息
-	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                 // 获取支付二维码
-	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 给销售订单创建一个支付单
-	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                       // 撤销一个支付单
-	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                                   // 给销售订单创建一个支付单
-	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                                     // 免单
-	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                                   // 设置结账抹零规则
-	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                                      // 给销售订单创建一个销售订单
-	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)                              // 从一个销售订单移动商品到另一个销售订单
-	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                                                // 确认必点商品
-	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                                                     // 订单检查
-	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                                      // 删除一个销售订单(删除拆单)
-	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                                                // 删除所有子销售订单(撤销拆单)
-	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                       // 取消使用会员优惠
-	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                        // 使用会员优惠
-	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                      // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                                                     // 打印
-	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                       // 图片打印
-	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                                                     // 图片打印
-	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                                           // 订单解锁
-	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                                           // 必点方案列表
-	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error) // 获取扫码h5购物车未下单商品列表
-	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error)                        // 获取扫码h5购物车已下单商品列表
-	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                  // 下单扫码h5订单
-	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)           // 未送厨商品列表
-	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                           // 已送厨商品列表
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                            // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                                      // 创建桌台订单
+	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                                          // 获取订单列表
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                                   // 获取订单详情
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                          // 取消订单
+	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                          // 删除订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                   // 退款订单
+	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                                  // 获取退款信息
+	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                                  // 获取反结账信息
+	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                                 // 反结账
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                                     // 判断桌台是否可取消
+	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                                             // 挂单
+	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                                            // 显示订单
+	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                                          // 获取挂单订单列表
+	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                                      // 打包
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                            // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                                                // 修改订单商品价格
+	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                                            // 修改订单金额
+	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                                    // 修改订单折扣
+	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                                    // 修改订单抹零规则
+	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                                        // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                                    // 修改订单人数
+	GetOrderChangeBuffet(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (resp.OrderBuffetResp, error)                                                      // 自助餐信息
+	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                                            // 调整自助餐
+	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                                  // 调整自助餐
+	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                               // 获取桌台的自助餐商品列表
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                        // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                                          // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                                                // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                                // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                         // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                                 // 向购物车添加商品
+	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                           // 获取销售账单uuid和销售订单uuid
+	OrderCartProductAdd(ctx context.Context, req req.ProductAddReq) (*resp.ShopCart, error)                                                                                 // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                                        // 修改购物车商品数量
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                             // 送厨购物车商品
+	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                                     // 退菜购物车商品
+	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                           // 退菜购物车商品
+	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                                   // 转菜购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                           // 取消赠菜购物车商品
+	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                              // 取消赠菜购物车商品
+	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                                    // 获取点餐必点方案
+	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                                      // 获取结账页面信息
+	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                   // 获取支付二维码
+	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                         // 给销售订单创建一个支付单
+	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                         // 撤销一个支付单
+	InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error)                                                     // 给销售订单创建一个支付单
+	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                                       // 免单
+	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                                     // 设置结账抹零规则
+	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                                        // 给销售订单创建一个销售订单
+	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)                                // 从一个销售订单移动商品到另一个销售订单
+	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                                                  // 确认必点商品
+	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                                                       // 订单检查
+	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                                        // 删除一个销售订单(删除拆单)
+	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                                                  // 删除所有子销售订单(撤销拆单)
+	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                         // 取消使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 使用会员优惠
+	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                        // 计算并保存销售账单
+	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                                                       // 打印
+	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                         // 图片打印
+	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                                                       // 图片打印
+	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                                             // 订单解锁
+	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                                             // 必点方案列表
+	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)   // 获取扫码h5购物车未下单商品列表
+	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) // 获取扫码h5购物车已下单商品列表
+	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                    // 下单扫码h5订单
+	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
+	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                     // 加购并送厨
@@ -6750,10 +6750,13 @@ func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid u
 }
 
 // GetOrderedH5ProductList 获取扫码h5购物车已下单商品列表
-func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) {
-	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
-	if err != nil {
-		return nil, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) {
+	if shopCart == nil {
+		var err error
+		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
+		if err != nil {
+			return nil, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+		}
 	}
 	productGroup := make(map[int64][]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {

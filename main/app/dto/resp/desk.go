@@ -88,7 +88,7 @@ type DeskPing struct {
 
 type H5DeskPing struct {
 	DeskInfo      Desk                `json:"desk_info"`      // 桌台信息
-	SentKitchen   SentKitchen         `json:"sent_kitchen"`   // 已送厨商品信息
+	SentKitchen   H5CartSendProduct   `json:"sent_kitchen"`   // 已送厨商品信息
 	UnsentKitchen UnsentKitchen       `json:"unsent_kitchen"` // 未送厨商品信息
 	Buffet        BuffetInfo          `json:"buffet"`         // 自助餐信息
 	MustPlans     ProductMustPlanList `json:"must_plans"`     // 必点方案列表
