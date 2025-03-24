@@ -156,6 +156,7 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 			Price:               minPrice,
 			LimitNum:            product.LimitNum,
 			CategoryUuid:        product.CategoryUuid,
+			FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
 			SpecialCategoryUuid: product.SpecialCategoryUuid,
 			Flavors: product_resp.ProductFlavorList{
 				List: flavors,

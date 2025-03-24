@@ -168,6 +168,31 @@ func (h *statisticsHandler) CountProductRank(c *gin.Context) {
 	helper.Success(c, productRankData)
 }
 
+// CountProductSales 统计商品销售
+// @Summary 统计商品销售
+// @Description 统计商品销售
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountProductSalesReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataCountProductSalesPagination} "统计数据"
+// @Router /shop/statistics/product_sales [get]
+func (h *statisticsHandler) CountProductSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountProductSalesReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	productSalesData, err := h.businessSrv.CountProductSales(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productSalesData)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -192,5 +217,6 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/product", wrapper.CountProduct)                  // 统计商品
 		privateApi.GET("/statistics/area", wrapper.CountArea)                        // 统计区域
 		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)         // 统计商品排行
+		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)       // 统计商品销售
 	}
 }

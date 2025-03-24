@@ -54,9 +54,7 @@ class Product extends Controller
         $data = $this->postData() ?: [];
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?? 0;
         $model = new OrderModel();
-        // todo 兼容 商品销售列表
-        // $list = $model->productSales($data);
-        $list = [];
+        $list = $model->productSales($data);
         // 区域列表
         $area_list = TableArea::getAllList($shop_supplier_id);
         // 商品分类列表

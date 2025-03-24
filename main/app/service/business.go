@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
@@ -12,13 +13,14 @@ import (
 
 // IBusinessSrv 定义收银服务接口
 type IBusinessSrv interface {
-	Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error)                                          // 打印
-	CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error)                    // 统计营业数据
-	CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error)     // 统计支付方式
-	CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error) // 统计商品分类
-	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                 // 统计商品
-	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                       // 统计区域
-	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)        // 统计商品排行
+	Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error)                                                               // 打印
+	CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error)                                         // 统计营业数据
+	CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error)                          // 统计支付方式
+	CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error)                      // 统计商品分类
+	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                                      // 统计商品
+	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                                            // 统计区域
+	CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) // 统计商品列表
+	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                             // 统计商品排行
 }
 
 // businessSrv 收银服务结构体
@@ -454,4 +456,47 @@ func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankP
 	}
 
 	return &productRankData, nil
+}
+
+// CountProductSales 统计商品列表
+func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) {
+	var list = []business_data_resp.BusinessDataCountProductSalesItem{
+		{
+			ProductName:        "12",
+			SalesNum:           1,
+			SalesPrice:         323,
+			CategoryName:       "12",
+			OriginalSalesPrice: 120,
+			TotalPayPrice:      120,
+			GiveProductNum:     120,
+		},
+		{
+			ProductName:        "121232",
+			SalesNum:           2,
+			SalesPrice:         23,
+			CategoryName:       "121232",
+			OriginalSalesPrice: 120,
+			TotalPayPrice:      120,
+			GiveProductNum:     120,
+		},
+		{
+			ProductName:        "121232",
+			SalesNum:           2,
+			SalesPrice:         23,
+			CategoryName:       "121232",
+			OriginalSalesPrice: 120,
+			TotalPayPrice:      120,
+			GiveProductNum:     120,
+		},
+	}
+	var productListData = business_data_resp.BusinessDataCountProductSalesPagination{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   1,
+			PageSize: 10,
+			Total:    int64(len(list)),
+		},
+	}
+
+	return &productListData, nil
 }

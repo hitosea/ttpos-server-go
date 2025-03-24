@@ -714,8 +714,6 @@ class Order extends BaseModelOrder
      */
     public function productSales($params)
     {
-        Db::connect()->execute("SET SESSION sql_mode = ''");
-        //
         $repository = new OrderBusinessDataRepository($this, $params);
         //
         return $repository->getProductData($params);

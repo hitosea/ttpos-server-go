@@ -10,6 +10,7 @@ type Product struct {
 	Unit                dto.LocaleResponse        `json:"unit"`                  // 商品单位
 	Price               float64                   `json:"price"`                 // 商品价格
 	CategoryUuid        uint64                    `json:"category_uuid"`         // 商品类别UUID
+	FirstCategoryUuid   uint64                    `json:"first_category_uuid"`   // 商品一级类别UUID
 	SpecialCategoryUuid uint64                    `json:"special_category_uuid"` // 商品特殊类别UUID
 	LimitNum            uint                      `json:"limit_num"`             // 商品限购数量
 	Flavors             ProductFlavorList         `json:"flavors"`               // 商品规格

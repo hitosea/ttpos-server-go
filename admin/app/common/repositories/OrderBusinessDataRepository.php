@@ -827,76 +827,59 @@ class OrderBusinessDataRepository
      */
     public function getProductData($params = [])
     {
-        $area_id = $params['area_id'] ?? 0;
-        $category_id = $params['category_id'] ?? 0;
-        $product_name = $params['product_name'] ?? '';
-        $sort_field = $params['sort_field'] ?? 'op.create_time'; // 排序字段
-        $sort_type = $params['sort_type'] ?? 'desc'; // 排序方式
-        //
-        $data = $this->baseModel->clone()
-            ->leftJoin('table t', 'a.table_id = t.table_id')
-            ->leftJoin('table_area ta', 't.area_id = ta.area_id')
-            ->leftJoin('order_product op', 'a.order_id = op.order_id')
-            ->leftJoin('product p', 'op.product_id = p.product_id')
-            ->leftJoin('category c', 'p.category_id = c.category_id and c.is_button = 0')
-            ->leftJoin('category pc', 'c.parent_id = pc.category_id and pc.is_button = 0') // 父类分类
-            // 原价销售额（原商品金额+商品实付服务费+商品实付税费（如有折扣，计原价，免单的对应商品销售额服务费/税费为0））
-            // consumption_tax - 总的 - 产品 + 产品服务的税费(折后)
-            // product_consumption_tax - 商品消费税(折后)
-            // product_service_consumption_tax - 商品服务费消费税(折后)
-            // product_service_fee - 商品服务费(折后)
-            ->field("
-                ifnull(sum(op.total_product_price + op.product_service_consumption_tax + op.product_service_fee ), 0) as sales_price
-            ")
-            // 消费税费
-            ->field("
-                ifnull(sum(
-                    case
-                        when a.is_free=0 && op.is_free=0 then op.consumption_tax - op.refund_consumption_tax
-                        else 0
-                    end
-                ), 0) as consumption_tax_money
-            ")
-            // 实际销售额（指商品原价扣除优惠折扣、会员折扣后的金额（包含商品实付服务费、商品实付税费））免单不计入
-            ->field("
-                ifnull(sum(
-                    case
-                        when a.is_free=0 && op.is_free=0 then op.total_pay_price + op.product_service_consumption_tax + op.product_service_fee + if(op.tax_calc_type=2, product_consumption_tax, 0) - op.refund_money
-                        else 0
-                    end
-                ), 0) as received_price
-            ")
-            ->field("ifnull(sum(op.total_num), 0) as product_num")                                      // 商品数量（销售的数量，赠菜也包括在内）
-            ->field("sum(if(a.is_free > 0 || op.is_free > 0, op.total_num, 0)) as free_product_num")    // 赠菜数量（包含普通赠菜、免单赠菜；免单后等于所有的商品都是赠菜；某个商品标记为赠菜，所属订单标记为免单则赠菜记1）
-            ->field("ifnull(p.product_id,0) product_id, ifnull(p.product_name,'--') product_name")
-            ->field("ifnull(c.category_id,0) category_id, ifnull(c.name,'--') category_name")
-            ->field("ifnull(pc.category_id,0) parent_category_id, ifnull(pc.name,'--') parent_category_name") // 父类分类
-            ->group("op.product_id")
-            ->order($sort_field, $sort_type)
-            ->where('op.product_id', '>', 0)
-            ->where('op.is_return', 0) // 不包含退货
-            ->when($area_id, function ($q) use ($area_id) {
-                $q->where('ta.area_id', $area_id);
-            })
-            ->when($category_id, function ($q) use ($category_id) {
-                $q->where('c.category_id', $category_id);
-            })
-            ->when($product_name, function ($q) use ($product_name) {
-                $q->jsonLike('p.product_name', $product_name);
-            })
-            ->paginate($params)?->append([])->toArray() ?: [];
-        //
-        foreach ($data['data'] as &$item) {
-            // 营业收入 = 实收金额-税费（实收的税费，包含商品税费、服务费税费）
-            $item['business_price'] = helper::bcsub($item['received_price'], $item['consumption_tax_money']);
-            $item['product_name_text'] = extractLanguage($item['product_name'] ?? '');
-            if ($item['parent_category_id'] == 0) {
-                $item['category_name_text'] = extractLanguage($item['category_name'] ?? '');
-            } else {
-                $item['category_name_text'] = extractLanguage($item['parent_category_name'] ?? '') . "/" . extractLanguage($item['category_name'] ?? '');
-            }
+        $areaId = $params['area_id'] ?? 0;
+        $categoryId = $params['category_id'] ?? 0;
+        $productName = $params['product_name'] ?? '';
+        $sortField = $params['sort_field'] ?? 'create_time';
+        $sortType = $params['sort_type'] ?? 'desc';
+        $token = $params['token'] ?? '';
+        $language = $params['language'] ?? 'zh-CN';
+
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_sales', [
+            'product_name' => $productName,
+            'area_uuid' => $areaId,
+            'category_uuid' => $categoryId,
+            'query_start_time' => $this->startTime,
+            'query_end_time' => $this->endTime,
+            'sort_field' => ['create_time' => 0, 'product_num' => 1, 'sales_price' => 2][$sortField],
+            'sort_type' => ['asc' => 1, 'desc' => 2][$sortType],
+            'page_no' => $params['page'] ?? 1,
+            'page_size' => $params['list_rows'] ?? 10,
+        ], [
+            'Authorization: Bearer ' . (request()->header('token') ?: $token),
+            'Accept-Language: ' . (request()->header('language') ?: $language),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+
+        if (!$res) {
+            return [];
         }
-        return $data;
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            return [];
+        }
+        $data = $res['data'];
+        $meta = $data['meta'];
+        $list = [];
+        foreach ($data['list'] as $item) {
+            $list[] = [
+                'product_name_text' => $item['product_name'],
+                'category_name_text' => $item['category_name'],
+                'product_num' => $item['sales_num'],
+                'sales_price' => $item['original_sales_price'],
+                'free_product_num' => $item['give_product_num'],
+                'received_price' => $item['total_pay_price'],
+                'business_price' => $item['sales_price'],
+            ];
+        }
+
+        return [
+            'data' => $list,
+            'current_page' => $meta['page_no'],
+            'per_page' => $meta['page_size'],
+            'total' => $meta['total'],
+            'last_page' => ceil($meta['total'] / $meta['page_size']),
+        ];
     }
 
     /**

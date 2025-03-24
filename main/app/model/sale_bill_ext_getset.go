@@ -472,6 +472,20 @@ func (model *SaleBill) SetBuffetPackage(buffetPackageUuids []uint64) {
 	}
 }
 
+// 设置人数
+func (model *SaleBill) SetMealNum(mealNum uint) {
+	model.MealNum = mealNum
+}
+
+// 设置加钟人数
+func (model *SaleBill) SetDelayProductMealNum(mealNum uint) {
+	for _, saleOrder := range model.SaleOrders {
+		for _, delayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+			delayProduct.Num = mealNum
+		}
+	}
+}
+
 // 设置隐藏必点方案
 func (model *SaleBill) SetHideMustPlan() {
 	model.ShowMustPlan = constant.SaleBillShowMustPlanNo
