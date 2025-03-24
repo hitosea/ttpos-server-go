@@ -99,6 +99,29 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
+
+	// 内部字段
+	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+}
+
+func (model *SaleOrderProduct) SetAddOperation() {
+	model.operation = "add"
+}
+
+func (model *SaleOrderProduct) SetSubOperation() {
+	model.operation = "sub"
+}
+
+func (model *SaleOrderProduct) IsAddOperation() bool {
+	// 如果operation为空，则默认是加购
+	if model.operation == "" {
+		return true
+	}
+	return model.operation == "add"
+}
+
+func (model *SaleOrderProduct) IsSubOperation() bool {
+	return model.operation == "sub"
 }
 
 // GetAcceptTime 获取接单时间
@@ -652,7 +675,7 @@ type DefaultSaleOrderProduct struct {
 	Num                    uint // 数量
 }
 
-func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage) *SaleOrderProduct {
+func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
 	saleOrderProductUuid, _ := utils.GetID()
 	saleOrderProductBoms := make([]*SaleOrderProductBom, 0)
 	for _, bom := range def.Sauces {
@@ -713,6 +736,10 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	{
 		product.ProductPackage = productPackage
 		product.MultiLanguageName = &productPackage.MultiLanguageName
+	}
+
+	if operation == "sub" {
+		product.SetSubOperation()
 	}
 	return &product
 }

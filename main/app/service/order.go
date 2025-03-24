@@ -3274,11 +3274,14 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			},
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
-		}, &productPackage)
+		}, &productPackage, product.Operation)
 		// 设置必点信息
 		var mustPlanUuid uint64
 		var isRequire bool
 		mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, innerParams.SaleBillUuid, productPackage.Uuid, innerParams.DeskUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
 		// 判断该必点方案是不是这个sale_biil的
 		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(innerParams.SaleBillUuid)
@@ -3340,10 +3343,17 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 订单中存在相同签名的商品
 		//hasSameSign := false
 		if orderProduct != nil {
-			// 加上新增的商品数量
-			orderProduct.Num += saleOrderProduct.Num
-			orderProduct.SetUpdate()
-			saleOrderProducts = append(saleOrderProducts, orderProduct)
+			if saleOrderProduct.IsAddOperation() {
+				// 加上新增的商品数量
+				orderProduct.Num += saleOrderProduct.Num
+				orderProduct.SetUpdate()
+				saleOrderProducts = append(saleOrderProducts, orderProduct)
+			} else if saleOrderProduct.IsSubOperation() {
+				// 减去新增的商品数量
+				orderProduct.Num -= saleOrderProduct.Num
+				orderProduct.SetUpdate()
+				saleOrderProducts = append(saleOrderProducts, orderProduct)
+			}
 		} else {
 			// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 			params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)

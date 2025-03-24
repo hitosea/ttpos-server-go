@@ -14,7 +14,7 @@ type OrderCartProductAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`     // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 规格ID
-
+	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }
@@ -47,6 +47,7 @@ type ProductParams struct {
 	Num                             uint     `json:"num"  binding:"required"`                    // 数量数量
 	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
 	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
+	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数
