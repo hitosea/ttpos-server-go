@@ -1365,7 +1365,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			// 如果退款金额为余额，则退回余额，创建余额变动记录
 			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
 				if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-					Uuid:        returnOrderAmount.MemberBalanceLog.MemberUuid,
+					MemberUuid:  returnOrderAmount.MemberBalanceLog.MemberUuid,
 					GiftMoney:   returnOrderAmount.MemberBalanceLog.GiftMoney, // 退款金额。余额退款都是退回到赠送帐户
 					Scene:       returnOrderAmount.MemberBalanceLog.Scene,
 					Describe:    returnOrderAmount.MemberBalanceLog.Describe,
@@ -1654,13 +1654,38 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				return errors.WithMessage(err)
 			}
 		}
-		// 退款
+		// 更新支付订单,状态为已退款
 		for _, saleOrder := range saleBill.SaleOrders {
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
+		}
+		// 生成退款单
+		for _, saleOrder := range saleBill.SaleOrders {
+			for _, paymentOrder := range saleOrder.PaymentOrders {
+				refundOrder := paymentOrder.RefundOrder
+				if err := repository.NewPaymentOrderRepo(db).CreateRefundOrderRecord(*refundOrder); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 如果是余额支付，则退款到余额
+				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+					s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+						MemberUuid:  saleOrder.ConsumerUuid,
+						Money:       paymentOrder.BalanceAmount,
+						GiftMoney:   paymentOrder.GiftBalanceAmount,
+						Scene:       constant.MemberBalanceLogReverse,
+						Describe:    fmt.Sprintf("订单反结账：%s", saleOrder.OrderNo),
+						RelatedUuid: saleOrder.Uuid,
+					})
+				}
+			}
+			// 发布“会员余额变动”事件
+			go func() {
+				time.Sleep(time.Microsecond * 200)
+				event2.HandleMemberBalance(s.dbm.GetDB(ctx.GetDbId()))
+			}()
 		}
 		// 更新桌台
 		if saleBill.IsDeskSaleBill() {
@@ -1743,7 +1768,6 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 				return errors.WithMessage(err)
 			}
 		}
-		fmt.Println("8888888888:")
 
 		// 如果出库单明细不为空，则创建出库单
 		if warehouseOutForm != nil && len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -1762,18 +1786,15 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 		return errors.WithMessage(err)
 	}
 
-	fmt.Println("9999999999:")
 	// 发布"加库存"事件
 	go func() {
 		event2.AddStock(db, saleBill.Uuid)
 	}()
-	fmt.Println("10000000000:")
 	// 发布"减库存"事件
 	go func() {
 		event2.ReduceStock(db, saleBill.Uuid)
 	}()
 
-	fmt.Println("1111111221111:")
 	return nil
 }
 
@@ -5140,6 +5161,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	// 会员余额扣费相关
 	memberBalanceAmount, memberGiftBalanceAmount := float64(0), float64(0)
+	var balancePaymentOrder *model.PaymentOrder // 余额支付的付款单
 	{
 		// 加锁. 避免会员余额并发操作
 		s.lock.LockUuid(saleOrder.Member.Uuid)
@@ -5156,9 +5178,20 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			return nil, errors.New("会员余额不足,请先充值")
 		}
 		if balanceAmount > 0 {
+			// 扣减会员余额
 			deductRatioMain, deductRatioGift := pointsSetting.GetDeductRatioMainAndGift()
 			memberBalanceAmount, memberGiftBalanceAmount = member.SetFrozenBalance(balanceAmount, deductRatioMain, deductRatioGift)
+			// 更新付款单，记录退款金额。主账户扣款多少、赠送帐户扣款多少
+			for _, paymentOrder := range saleOrder.PaymentOrders {
+				if paymentOrder.PaymentMethod.IsBalance() {
+					paymentOrder.SetUpdate()
+					paymentOrder.BalanceAmount = memberBalanceAmount         // 主账户扣款多少
+					paymentOrder.GiftBalanceAmount = memberGiftBalanceAmount // 赠送帐户扣款多少
+					balancePaymentOrder = paymentOrder
+				}
+			}
 		}
+
 	}
 
 	// 记录会员余额
@@ -5198,13 +5231,19 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		// 更新会员的余额
 		if saleOrder.Member.GetUpdate() {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:        saleOrder.Member.Uuid,
-				Money:       memberBalanceAmount,     // 扣减会员余额
-				GiftMoney:   memberGiftBalanceAmount, // 扣减会员赠送余额
+				MemberUuid:  saleOrder.Member.Uuid,
+				Money:       -memberBalanceAmount,     // 扣减会员余额
+				GiftMoney:   -memberGiftBalanceAmount, // 扣减会员赠送余额
 				Scene:       constant.MemberBalanceLogConsume,
 				Describe:    fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
 				RelatedUuid: saleOrder.Uuid,
 			}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 更新余额支付的付款单
+		if balancePaymentOrder != nil {
+			if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*balancePaymentOrder); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

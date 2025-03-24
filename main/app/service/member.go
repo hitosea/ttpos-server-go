@@ -210,23 +210,23 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 }
 
 type MemberBalanceChangeReq struct {
-	Uuid        uint64  `json:"uuid"`
-	Money       float64 `json:"money"`
-	GiftMoney   float64 `json:"gift_money"`
+	MemberUuid  uint64  `json:"uuid"`
+	Money       float64 `json:"money"`      // 变动的金额。 正数为增加，负数为减少
+	GiftMoney   float64 `json:"gift_money"` // 变动的赠送金额。 正数为增加，负数为减少
 	Scene       int     `json:"scene"`
 	Describe    string  `json:"describe"`
-	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID
+	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
 }
 
 // HandleMemberBalance 处理会员余额
 func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error {
 	tx := ctx.GetDB()
 	memberRepo := repository.NewMemberRepo(tx)
-	member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.Uuid))
+	member := memberRepo.GetMember(memberRepo.WhereUuid(changeReq.MemberUuid))
 	if member.Uuid == 0 {
 		return errors.New("会员不存在")
 	}
-	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
+	if err := memberRepo.Update(changeReq.MemberUuid, map[string]any{
 		"frozen_balance":      utils.DecimalAdd(member.FrozenBalance, changeReq.Money),
 		"frozen_gift_balance": utils.DecimalAdd(member.FrozenGiftBalance, changeReq.GiftMoney),
 	}); err != nil {
@@ -235,7 +235,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 
 	// 余额明细
 	if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
-		MemberUuid:  changeReq.Uuid,
+		MemberUuid:  changeReq.MemberUuid,
 		Scene:       changeReq.Scene,
 		Money:       changeReq.Money,
 		GiftMoney:   changeReq.GiftMoney,

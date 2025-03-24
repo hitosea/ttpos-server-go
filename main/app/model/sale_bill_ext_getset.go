@@ -448,6 +448,7 @@ func (model *SaleBill) SetReverseSettle() {
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			paymentOrder.Status = constant.PaymentOrderStatusRefund
+			paymentOrder.RefundOrder = paymentOrder.NewRefundOrder() // 生成退款单
 		}
 	}
 }

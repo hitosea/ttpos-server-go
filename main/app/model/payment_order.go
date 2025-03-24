@@ -109,19 +109,35 @@ type PaymentOrder struct {
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
 
+	// 余额支付相关
+	BalanceAmount     float64 `gorm:"column:balance_amount;type:decimal(12,2);default:0;comment:主账户金额,用于反结账时退款;NOT NULL" json:"balance_amount"`
+	GiftBalanceAmount float64 `gorm:"column:gift_balance_amount;type:decimal(12,2);default:0;comment:赠送帐户金额,用于反结账时退款;NOT NULL" json:"gift_balance_amount"`
+
 	// 关联字段
 	PaymentMethod       *PaymentMethod       `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`
 	ReturnOrderAmounts  []*ReturnOrderAmount `gorm:"foreignKey:PaymentOrderUuid;references:Uuid"`
+	RefundOrder         *RefundOrder         `gorm:"foreignKey:PaymentOrderUuid;references:Uuid"`
+}
+
+// NewRefundOrder 创建退款单
+func (model *PaymentOrder) NewRefundOrder() *RefundOrder {
+	return &RefundOrder{
+		SaleOrderUuid:    model.RelatedUuid,
+		PaymentOrderUuid: model.Uuid,
+		RefundType:       1, // 反结账
+		Amount:           model.Amount,
+		Reason:           "反结账",
+	}
 }
 
 // RefundOrder 退款单表 `ttpos_refund_order`
 type RefundOrder struct {
 	BaseModel
-	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"`
-	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`
+	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"` // 也可能是充值订单ID
+	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`            // 废弃，暂时用不到
 	PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:支付单ID;NOT NULL" json:"payment_order_uuid"`
-	RefundType       uint    `gorm:"column:refund_type;type:int(11);default:0;comment:退款类型,1-反结账,2-取消付款;NOT NULL" json:"refund_type"`
+	RefundType       uint    `gorm:"column:refund_type;type:int(11);default:0;comment:退款类型,1-反结账;NOT NULL" json:"refund_type"`
 	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
 	Reason           string  `gorm:"column:reason;type:varchar(255);default:'';comment:退款原因;NOT NULL" json:"reason"`
 	Status           uint    `gorm:"column:status;type:int(11);default:0;comment:退款状态;NOT NULL" json:"status"`

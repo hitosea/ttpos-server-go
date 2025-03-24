@@ -84,7 +84,7 @@ func (model *Member) SetFrozenBalance(balanceAmount float64, deductRatioMain flo
 	// 冻结赠送账户余额=冻结赠送账户余额-赠送账户扣款
 	model.FrozenGiftBalance = decimal.NewFromFloat(model.FrozenGiftBalance).Sub(decimal.NewFromFloat(balanceAmountGift)).InexactFloat64()
 	// 返回主账户扣款金额和赠送账户扣款金额
-	return -balanceAmountMain, -balanceAmountGift
+	return balanceAmountMain, balanceAmountGift
 }
 
 // 获取主账户扣款金额

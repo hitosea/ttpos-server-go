@@ -491,7 +491,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		// 处理会员余额
 		if order.RechargeAmount > 0 || order.GiftAmount > 0 {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:        member.Uuid,
+				MemberUuid:  member.Uuid,
 				Money:       order.RechargeAmount,
 				GiftMoney:   order.GiftAmount,
 				Scene:       constant.MemberBalanceLogRecharge,
@@ -1060,7 +1060,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		// 处理会员余额
 		if order.RechargeAmount > 0 || order.GiftAmount > 0 {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:        order.MemberUuid,
+				MemberUuid:  order.MemberUuid,
 				Money:       -order.RechargeAmount,
 				GiftMoney:   -order.GiftAmount,
 				Scene:       constant.MemberBalanceLogRechargeReverse,
@@ -1393,7 +1393,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		// 退还余额
 		if deductionMoney > 0 {
 			err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:        order.MemberUuid,
+				MemberUuid:  order.MemberUuid,
 				Money:       -deductionMoney,
 				Scene:       constant.MemberBalanceLogRechargeRefund,
 				Describe:    fmt.Sprintf("退款：%s", order.OrderNo),

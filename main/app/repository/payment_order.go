@@ -31,6 +31,7 @@ type IPaymentOrderRepo interface {
 	Create(order model.PaymentOrder) (model.PaymentOrder, error)   // 创建支付订单
 	UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error // 没有主键时创建，有主键时更新
 	Update(uuid uint64, vars map[string]any) error                 // 更新支付订单金额
+	CreateRefundOrderRecord(refundOrder model.RefundOrder) error   // 创建退款单
 }
 
 // paymentOrderRepo 仓库
@@ -156,6 +157,15 @@ func (r *paymentOrderRepo) UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrd
 func (r *paymentOrderRepo) Update(uuid uint64, vars map[string]any) error {
 	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Updates(vars).Error
 	return errors.WithMessage(err)
+}
+
+// CreateRefundOrderRecord 创建退款单
+func (r *paymentOrderRepo) CreateRefundOrderRecord(refundOrder model.RefundOrder) error {
+	err := r.db.Model(&model.RefundOrder{}).Create(&refundOrder).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // WhereRelatedUuid 根据related_uuid(销售订单、充值订单)查询

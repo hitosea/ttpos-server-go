@@ -68,7 +68,7 @@ type SaleOrder struct {
 	Index int `gorm:"-" json:"index,omitempty"`
 
 	// 关联对象
-	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"`
+	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
 	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
 	SaleOrderProducts            []*SaleOrderProduct            `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	ReturnOrders                 []ReturnOrder                  `gorm:"foreignKey:RelatedOrderUuid;references:uuid"`
