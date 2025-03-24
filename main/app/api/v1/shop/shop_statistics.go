@@ -1,0 +1,196 @@
+package shop
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+)
+
+type statisticsHandler struct {
+	businessSrv service.IBusinessSrv
+}
+
+// CountBusiness 统计营业数据
+// @Summary 统计营业数据
+// @Description 统计营业数据
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataAll} "统计数据"
+// @Router /shop/statistics/business [get]
+func (h *statisticsHandler) CountBusiness(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, businessData)
+}
+
+// CountPaymentMethod 统计支付方式
+// @Summary 统计支付方式
+// @Description 统计支付方式
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataPaymentMethod} "统计数据"
+// @Router /shop/statistics/payment_method [get]
+func (h *statisticsHandler) CountPaymentMethod(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	paymentMethodData, err := h.businessSrv.CountPaymentMethod(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, paymentMethodData)
+}
+
+// CountProductCategory 统计商品分类
+// @Summary 统计商品分类
+// @Description 统计商品分类
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProductCategory} "统计数据"
+// @Router /shop/statistics/product_category [get]
+func (h *statisticsHandler) CountProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	productCategoryData, err := h.businessSrv.CountProductCategory(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productCategoryData)
+}
+
+// CountProduct 统计商品
+// @Summary 统计商品
+// @Description 统计商品
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProduct} "统计数据"
+// @Router /shop/statistics/product [get]
+func (h *statisticsHandler) CountProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	productData, err := h.businessSrv.CountProduct(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productData)
+}
+
+// CountArea 统计区域
+// @Summary 统计区域
+// @Description 统计区域
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataArea} "统计数据"
+// @Router /shop/statistics/area [get]
+func (h *statisticsHandler) CountArea(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	areaData, err := h.businessSrv.CountArea(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, areaData)
+}
+
+// CountProductRank 统计商品排行
+// @Summary 统计商品排行
+// @Description 统计商品排行
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataRankProductReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataProductRank} "统计数据"
+// @Router /shop/statistics/product_rank [get]
+func (h *statisticsHandler) CountProductRank(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataRankProductReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	productRankData, err := h.businessSrv.RankProduct(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productRankData)
+}
+
+func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	businessSrv := service.NewBusinessSrv()
+
+	wrapper := &statisticsHandler{
+		businessSrv: businessSrv,
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+	{
+		privateApi.GET("/statistics/business", wrapper.CountBusiness)                // 统计营业数据
+		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)     // 统计支付方式
+		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory) // 统计商品分类
+		privateApi.GET("/statistics/product", wrapper.CountProduct)                  // 统计商品
+		privateApi.GET("/statistics/area", wrapper.CountArea)                        // 统计区域
+		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)         // 统计商品排行
+	}
+}
