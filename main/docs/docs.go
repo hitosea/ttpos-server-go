@@ -15057,6 +15057,10 @@ const docTemplate = `{
                     "description": "商品类别UUID",
                     "type": "integer"
                 },
+                "first_category_uuid": {
+                    "description": "商品一级类别UUID",
+                    "type": "integer"
+                },
                 "flavors": {
                     "description": "商品规格",
                     "allOf": [
