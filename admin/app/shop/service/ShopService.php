@@ -60,58 +60,58 @@ class ShopService
         $data = [
             'top_data' => [
                 // 商品总量
-                'product_total' => $this->getProductTotal($where),
+                'product_total' => $businessData['total_product_num'],
                 // 用户总量
-                'user_total' => $this->getUserTotal(),
+                'user_total' => $businessData['member_data']['user_count'],
                 // 订单总量
-                'order_total' => $this->getOrderTotal(null, $shop_supplier_id),
+                'order_total' => $businessData['total_order_num'],
                 // 店铺总量
-                'supplier_total' => $this->getSupplierTotal(),
-                // 营业额
-                'total_money' => $businessData['received_price'],
+                'supplier_total' => 0,
+                // 实收金额
+                'total_money' => $businessData['total_received_price'],
                 // 折扣总额
-                'total_discount_money' => Helper::bcadd($businessData['discount_money'], $businessData['user_discount_money']),
+                'total_discount_money' => Helper::bcadd($businessData['total_discount_money'], $businessData['total_user_discount_money']),
                 // 优惠折扣
-                'discount_money' => $businessData['discount_money'],
+                'discount_money' => $businessData['total_discount_money'],
                 // 会员折扣
-                'user_discount_money' => $businessData['user_discount_money'],
+                'user_discount_money' => $businessData['total_user_discount_money'],
                 // 退款金额
-                'refund_money' => $businessData['refund_money'],
+                'refund_money' => $businessData['total_refund_money'],
             ],
             'wait_data' => [
                 // 订单
                 'order' => [
-                    'disposal' => $this->getReviewOrderTotal($shop_supplier_id),
+                    'disposal' => 0,
                 ],
                 // 库存
                 'stock' => [
-                    'product' => $this->getProductStockTotal($shop_supplier_id),
+                    'product' => 0,
                 ],
                 // 采购单
                 'purchase' => [
-                    'apply' => $this->getPurchaseOrderCount($shop_supplier_id),
+                    'apply' => 0,
                 ],
             ],
             'today_data' => [
                 // 销售额(元)
                 'order_total_price' => [
-                    'tday' => $todayBusinessData['received_price'],
-                    'ytd' => $ytdBusinessData['received_price']
+                    'tday' => $todayBusinessData['total_received_price'],
+                    'ytd' => $ytdBusinessData['total_received_price']
                 ],
                 // 支付订单数
                 'order_total' => [
-                    'tday' => $this->getOrderTotal($today, $shop_supplier_id),
-                    'ytd' => $this->getOrderTotal($yesterday, $shop_supplier_id)
+                    'tday' => $todayBusinessData['total_order_num'],
+                    'ytd' => $ytdBusinessData['total_order_num']
                 ],
                 // 新增用户数
                 'new_user_total' => [
-                    'tday' => $this->getUserTotal($today),
-                    'ytd' => $this->getUserTotal($yesterday)
+                    'tday' => $businessData['member_data']['user_count'],
+                    'ytd' => $businessData['member_data']['user_count']
                 ],
                 // 新供应商数
                 'new_supplier_total' => [
-                    'tday' => SupplierModel::getSupplierTotalByDay($today),
-                    'ytd' => SupplierModel::getSupplierTotalByDay($yesterday)
+                    'tday' => 0,
+                    'ytd' => 0
                 ],
                 // 下单用户数
                 'order_user_total' => [
@@ -120,18 +120,18 @@ class ShopService
                 ],
                 // 优惠折扣(元)
                 'discount_money' => [
-                    'tday' => $todayBusinessData['discount_money'],
-                    'ytd' => $ytdBusinessData['discount_money'],
+                    'tday' => $todayBusinessData['total_discount_money'],
+                    'ytd' => $ytdBusinessData['total_discount_money'],
                 ],
                 // 会员折扣(元)
                 'user_discount_money' => [
-                    'tday' => $todayBusinessData['user_discount_money'],
-                    'ytd' => $ytdBusinessData['user_discount_money'],
+                    'tday' => $todayBusinessData['total_user_discount_money'],
+                    'ytd' => $ytdBusinessData['total_user_discount_money'],
                 ],
                 // 退款金额(元)
                 'order_refund_money' => [
-                    'tday' => $todayBusinessData['refund_money'],
-                    'ytd' => $ytdBusinessData['refund_money']
+                    'tday' => $todayBusinessData['total_refund_money'],
+                    'ytd' => $ytdBusinessData['total_refund_money']
                 ],
             ],
             'product_data' => [
@@ -255,7 +255,7 @@ class ShopService
      */
     private function getPayOrderUserTotal($day, $shop_supplier_id = 0)
     {
-        return number_format($this->OrderModel->getPayOrderUserTotal($day, $shop_supplier_id), 0, '.', '');
+        return 0;
     }
 
     /**
