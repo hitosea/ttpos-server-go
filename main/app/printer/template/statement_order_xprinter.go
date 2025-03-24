@@ -388,13 +388,11 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.SetLineSpacing(90)
 	printer.SetAlignment(pkg.AlignRight)
-	// 商品金额 = 订单总价 - 赠品金额
-	totalProductPrice := saleOrder.ProductAmount - freeMoney
 	if temp == 3 {
 		printer.AppendText(t.base.PrintText(
 			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
 			"",
-			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(totalProductPrice),
+			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductAmount),
 			width,
 			leftWidth,
 			centerWidth,
@@ -404,7 +402,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	} else {
 		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%d", productNum))
 		printer.LineFeed()
-		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(totalProductPrice))
+		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductAmount))
 		printer.LineFeed()
 	}
 	if saleOrder.ServiceFee > 0 {

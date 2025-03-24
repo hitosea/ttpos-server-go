@@ -377,18 +377,16 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.AppendSplitLine()
 	img.LineFeed(1)
 	img.SetAlignment(pkg.AlignRight)
-	// 商品金额 = 订单总价 - 赠品金额
-	totalProductPrice := saleOrder.Amount - freeMoney
 	if temp == 3 {
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(totalProductPrice)), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductAmount)), Width: 0, Align: pkg.AlignRight},
 		)
 	} else {
 		img.SetAlignment(pkg.AlignRight)
 		img.AppendText(fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum))
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(totalProductPrice)))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductAmount)))
 		img.LineFeed(1)
 	}
 

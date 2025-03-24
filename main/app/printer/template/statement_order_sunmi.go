@@ -358,8 +358,6 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.AppendText("------------------------------------------------\n")
 	printer.SetLineSpacing(45)
 	printer.SetAlignment(pkg.AlignRight)
-	// 商品金额 = 订单总价 - 赠品金额
-	totalProductPrice := saleOrder.ProductAmount - freeMoney
 	if temp == 3 {
 		printer.SetupColumns(
 			[]int{200, pkg.AlignLeft, 0},
@@ -367,13 +365,13 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		)
 		printer.PrintInColumns(
 			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
-			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(totalProductPrice),
+			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductAmount),
 		)
 	} else {
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%d", productNum))
 		printer.LineFeed()
-		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(totalProductPrice))
+		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductAmount))
 		printer.LineFeed()
 	}
 	printer.SetAlignment(pkg.AlignRight)
