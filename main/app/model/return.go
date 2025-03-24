@@ -77,15 +77,18 @@ type ReturnOrderAmount struct {
 	MerchantRefundOrderNo string `gorm:"column:merchant_refund_order_no;type:varchar(255);comment:商户退款单号;NOT NULL" json:"merchant_refund_order_no"`
 	LlReturnOrderid       string `gorm:"column:ll_return_order_id;type:varchar(255);comment:连连退款订单ID, 用来重新发起退款;NOT NULL" json:"ll_return_order_id"`
 
-	ReturnOrder    *ReturnOrder    `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
-	PaymentMethod  *PaymentMethod  `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式
-	MemberPointLog *MemberPointLog `gorm:"foreignKey:RelatedUuid;references:uuid"`       // 关联积分变动记录.扣减积分
+	ReturnOrder      *ReturnOrder      `gorm:"foreignKey:ReturnOrderUuid;references:Uuid"`   // 关联退货单
+	PaymentMethod    *PaymentMethod    `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"` // 关联支付方式
+	MemberPointLog   *MemberPointLog   `gorm:"foreignKey:RelatedUuid;references:uuid"`       // 关联积分变动记录.扣减积分
+	MemberBalanceLog *MemberBalanceLog `gorm:"foreignKey:RelatedUuid;references:uuid"`       // 关联余额变动记录.退回余额
 }
 
 // SetNil 设置关联对象为nil，避免gorm创建时将关联对象也创建
 func (r *ReturnOrderAmount) SetNil() {
 	r.ReturnOrder = nil
 	r.PaymentMethod = nil
+	r.MemberPointLog = nil
+	r.MemberBalanceLog = nil
 }
 
 // ReturnOrderProduct 退货单商品表 ttpos_return_order_product

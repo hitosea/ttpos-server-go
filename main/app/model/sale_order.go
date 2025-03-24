@@ -315,14 +315,31 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		if returnAmount.InexactFloat64() <= paymentOrder.CanReturnAmount {
 			amount = returnAmount
 		}
-		returnOrderAmounts = append(returnOrderAmounts, ReturnOrderAmount{
+		// 创建退款金额记录
+		returnOrderAmountUuid, _ := utils.GetID()
+		returnOrderAmount := ReturnOrderAmount{
+			BaseModel: BaseModel{
+				Uuid: returnOrderAmountUuid,
+			},
 			ReturnOrderUuid:       returnOrderUuid,
 			PaymentMethodUuid:     paymentOrder.PaymentMethodUuid,
 			PaymentOrderUuid:      paymentOrder.PaymentOrderUuid,
 			Amount:                amount.InexactFloat64(),
 			MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("PS"),
 			PaymentMethod:         &PaymentMethod{Code: paymentOrder.PaymentMethodCode},
-		})
+		}
+		// 如果退款金额为余额，则创建余额变动记录
+		if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+			returnOrderAmount.MemberBalanceLog = &MemberBalanceLog{
+				MemberUuid:  model.ConsumerUuid,
+				Scene:       constant.MemberPointLogSceneRefund,
+				Money:       0,
+				GiftMoney:   returnOrderAmount.Amount,
+				Describe:    fmt.Sprintf("订单退款：%s", model.OrderNo),
+				RelatedUuid: returnOrderAmountUuid,
+			}
+		}
+		returnOrderAmounts = append(returnOrderAmounts, returnOrderAmount)
 		returnAmount = returnAmount.Sub(amount)
 		// 如果退款金额为0，则退出
 		if returnAmount.InexactFloat64() <= 0 {

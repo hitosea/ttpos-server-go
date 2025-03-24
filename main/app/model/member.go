@@ -55,9 +55,11 @@ func (model *Member) UpdatePoint(changePoints float64) {
 // 更改会员余额。仅用于处理积分变动记录时，修改会员积分。
 // 参数changeBalance为余额变动值，正数为增加余额，负数为扣减余额。
 // 清零冻结的余额。表示该会员的余额变动已经处理完，无需再冻结。
-func (model *Member) UpdateBalance(changeBalance float64) {
+func (model *Member) UpdateBalance(changeBalance, changeBalanceGift float64) {
 	model.Balance = decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(changeBalance)).InexactFloat64()
 	model.FrozenBalance = 0
+	model.GiftBalance = decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(changeBalanceGift)).InexactFloat64()
+	model.FrozenGiftBalance = 0
 }
 
 // 设置会员冻结余额
@@ -253,12 +255,13 @@ type MemberCardLog struct {
 // MemberBalanceLog 会员余额变动记录表 `ttpos_member_balance_log`
 type MemberBalanceLog struct {
 	BaseModel
-	MemberUuid uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
-	Scene      int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减;NOT NULL" json:"scene"`
-	Money      float64 `gorm:"column:money;type:decimal(12,2);default:0.00;comment:变动金额,负数:减余额 整数:加余额;NOT NULL" json:"money"`
-	GiftMoney  float64 `gorm:"column:gift_money;type:decimal(12,2);default:0.00;comment:变动赠送金额" json:"gift_money"`
-	Describe   string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
-	Processed  uint64  `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额;NOT NULL" json:"processed"`
+	MemberUuid  uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+	Scene       int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减;NOT NULL" json:"scene"`
+	Money       float64 `gorm:"column:money;type:decimal(12,2);default:0.00;comment:变动金额,负数:减余额 整数:加余额;NOT NULL" json:"money"`
+	GiftMoney   float64 `gorm:"column:gift_money;type:decimal(12,2);default:0.00;comment:变动赠送金额" json:"gift_money"`
+	Describe    string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
+	Processed   uint64  `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额;NOT NULL" json:"processed"`
+	RelatedUuid uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:关联uuid. 表示余额变动记录关联的业务订单ID,可能是销售订单(场景20)、充值订单(场景10)、退款单(场景80)、退货单退款金额(场景40);NOT NULL" json:"related_uuid"`
 }
 
 // MemberPointLog 会员积分变动记录表 `ttpos_member_point_log`

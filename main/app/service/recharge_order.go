@@ -491,11 +491,12 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		// 处理会员余额
 		if order.RechargeAmount > 0 || order.GiftAmount > 0 {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:      member.Uuid,
-				Money:     order.RechargeAmount,
-				GiftMoney: order.GiftAmount,
-				Scene:     constant.MemberBalanceLogRecharge,
-				Describe:  fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
+				Uuid:        member.Uuid,
+				Money:       order.RechargeAmount,
+				GiftMoney:   order.GiftAmount,
+				Scene:       constant.MemberBalanceLogRecharge,
+				Describe:    fmt.Sprintf("收银机管理员操作 [%s]", ctx.GetStaff().RealName),
+				RelatedUuid: order.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -1059,11 +1060,12 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		// 处理会员余额
 		if order.RechargeAmount > 0 || order.GiftAmount > 0 {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:      order.MemberUuid,
-				Money:     -order.RechargeAmount,
-				GiftMoney: -order.GiftAmount,
-				Scene:     constant.MemberBalanceLogRechargeReverse,
-				Describe:  fmt.Sprintf("充值反结账：%s", order.OrderNo),
+				Uuid:        order.MemberUuid,
+				Money:       -order.RechargeAmount,
+				GiftMoney:   -order.GiftAmount,
+				Scene:       constant.MemberBalanceLogRechargeReverse,
+				Describe:    fmt.Sprintf("充值反结账：%s", order.OrderNo),
+				RelatedUuid: order.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -1391,10 +1393,11 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		// 退还余额
 		if deductionMoney > 0 {
 			err = s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:     order.MemberUuid,
-				Money:    -deductionMoney,
-				Scene:    constant.MemberBalanceLogRechargeRefund,
-				Describe: fmt.Sprintf("退款：%s", order.OrderNo),
+				Uuid:        order.MemberUuid,
+				Money:       -deductionMoney,
+				Scene:       constant.MemberBalanceLogRechargeRefund,
+				Describe:    fmt.Sprintf("退款：%s", order.OrderNo),
+				RelatedUuid: order.Uuid,
 			})
 			if err != nil {
 				return errors.WithMessage(err)

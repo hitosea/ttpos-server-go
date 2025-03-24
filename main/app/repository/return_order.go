@@ -47,8 +47,8 @@ func (r *returnOrderRepo) CreateReturnOrder(order model.ReturnOrder) (model.Retu
 }
 
 func (r *returnOrderRepo) CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error {
-	for _, amount := range amounts {
-		amount.SetNil()
+	for i, _ := range amounts {
+		amounts[i].SetNil()
 	}
 	return r.db.Model(&model.ReturnOrderAmount{}).Create(&amounts).Error
 }

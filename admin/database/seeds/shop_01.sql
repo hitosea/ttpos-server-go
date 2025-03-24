@@ -1008,6 +1008,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `gift_money` decimal(12, 2) DEFAULT 0.00 COMMENT '变动赠送金额',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `processed` INT(10) NOT NULL DEFAULT 0 COMMENT '是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联uuid. 表示余额变动记录关联的业务订单ID,可能是销售订单(场景90)、充值订单(场景10)、退款单(场景80)、退货单退款金额(场景40)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

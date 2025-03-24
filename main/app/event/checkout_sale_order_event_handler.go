@@ -261,17 +261,28 @@ func HandleMemberBalance(db *gorm.DB) {
 	}
 
 	type MemberUuid uint64
-	memberChangeBalance := make(map[MemberUuid]decimal.Decimal) // 各个会员的余额变动
+	memberChangeBalance := make(map[MemberUuid]decimal.Decimal)     // 各个会员的余额变动
+	memberChangeBalanceGift := make(map[MemberUuid]decimal.Decimal) // 各个会员的赠送帐户余额变动
 	for _, memberBalanceLog := range memberBalanceLogs {
 		// 累计同一个会员的余额变动
 		pre := memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)]
 		memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)] = pre.Add(decimal.NewFromFloat(memberBalanceLog.Money))
+		// 累计同一个会员的赠送帐户余额变动
+		preGift := memberChangeBalanceGift[MemberUuid(memberBalanceLog.MemberUuid)]
+		memberChangeBalanceGift[MemberUuid(memberBalanceLog.MemberUuid)] = preGift.Add(decimal.NewFromFloat(memberBalanceLog.GiftMoney))
 	}
 
 	memberUuids := make([]uint64, 0) // 余额有变动的会员
 	for memberUuid := range memberChangeBalance {
 		memberUuids = append(memberUuids, uint64(memberUuid))
 	}
+	memberUuidsGift := make([]uint64, 0) // 赠送帐户余额有变动的会员
+	for memberUuid := range memberChangeBalanceGift {
+		memberUuidsGift = append(memberUuidsGift, uint64(memberUuid))
+	}
+	memberUuids = append(memberUuids, memberUuidsGift...)
+	// memberUuids 去重
+	memberUuids = utils.RemoveDuplicateUint64(memberUuids)
 
 	// 获取会员信息
 	members, err := repository.NewMemberRepo(db).GetMembersByUuids(memberUuids)
@@ -283,9 +294,11 @@ func HandleMemberBalance(db *gorm.DB) {
 	logMemberInfoMap := make(map[string][]float64)
 	for _, member := range members {
 		beforeBalance := member.Balance
+		beforeBalanceGift := member.GiftBalance
 		memberChangeBalance := memberChangeBalance[MemberUuid(member.Uuid)].InexactFloat64()
-		member.UpdateBalance(memberChangeBalance)
-		logMemberInfoMap[member.Nickname] = []float64{beforeBalance, memberChangeBalance, member.Balance}
+		memberChangeBalanceGift := memberChangeBalanceGift[MemberUuid(member.Uuid)].InexactFloat64()
+		member.UpdateBalance(memberChangeBalance, memberChangeBalanceGift)
+		logMemberInfoMap[member.Nickname] = []float64{beforeBalance, memberChangeBalance, member.Balance, beforeBalanceGift, memberChangeBalanceGift, member.GiftBalance}
 	}
 
 	uuids := make([]uint64, 0) // 未处理的余额变动记录
@@ -297,8 +310,10 @@ func HandleMemberBalance(db *gorm.DB) {
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		for _, member := range members {
 			if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
-				"balance":        member.GetBalance(),
-				"frozen_balance": 0,
+				"balance":             member.GetBalance(),
+				"gift_balance":        member.GetGiftBalance(),
+				"frozen_balance":      0,
+				"frozen_gift_balance": 0,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -314,6 +329,6 @@ func HandleMemberBalance(db *gorm.DB) {
 	}
 	// 记录日志
 	for nickname, info := range logMemberInfoMap {
-		logger.Logger.Info("HandleMemberBalance process, UpdateMemberBalance", zap.Any("member", nickname), zap.Any("before balance", info[0]), zap.Any("change balance", info[1]), zap.Any("after balance", info[2]))
+		logger.Logger.Info("HandleMemberBalance process, UpdateMemberBalance", zap.Any("member", nickname), zap.Any("before balance", info[0]), zap.Any("change balance", info[1]), zap.Any("after balance", info[2]), zap.Any("before balance gift", info[3]), zap.Any("change balance gift", info[4]), zap.Any("after balance gift", info[5]))
 	}
 }

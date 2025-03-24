@@ -1,11 +1,11 @@
 package constant
 
-// 场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减
+// 场景,10-用户充值 20-订单赠送 30-管理员操作 40-订单退款 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减
 const (
 	MemberPointLogSceneRecharge        = 10 // 用户充值
 	MemberPointLogSceneConsume         = 20 // 消费赠送/订单赠送
 	MemberPointLogSceneAdmin           = 30 // 管理员操作
-	MemberPointLogSceneRefund          = 40 // 退款扣除
+	MemberPointLogSceneRefund          = 40 // 订单退款
 	MemberPointLogSceneReverse         = 60 // 订单反结账
 	MemberPointLogSceneRechargeGive    = 70 // 充值赠送
 	MemberPointLogSceneRechargeReverse = 80 // 充值反结账

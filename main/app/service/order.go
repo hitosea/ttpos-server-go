@@ -1328,6 +1328,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
 		// 创建退货单
 		if _, err = repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(*returnOrder); err != nil {
 			return errors.WithMessage(err)
@@ -1361,6 +1362,23 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
 				return errors.WithMessage(err)
 			}
+			// 如果退款金额为余额，则退回余额，创建余额变动记录
+			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+				if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+					Uuid:        returnOrderAmount.MemberBalanceLog.MemberUuid,
+					GiftMoney:   returnOrderAmount.MemberBalanceLog.GiftMoney, // 退款金额。余额退款都是退回到赠送帐户
+					Scene:       returnOrderAmount.MemberBalanceLog.Scene,
+					Describe:    returnOrderAmount.MemberBalanceLog.Describe,
+					RelatedUuid: returnOrderAmount.MemberBalanceLog.RelatedUuid,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 发布“会员余额变动”事件
+				go func() {
+					time.Sleep(400 * time.Microsecond)
+					event2.HandleMemberBalance(s.dbm.GetDB(ctx.GetDbId())) // 不要使用tx或者ctx.GetDB, 执行完会context canceled
+				}()
+			}
 		}
 		// 创建退货单商品
 		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderProduct(returnOrder.ReturnOrderProducts); err != nil {
@@ -1373,7 +1391,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 
 	// todo 发布退款事件
-	// todo 退款到余额或现金
+	// todo 退款到现金
 	// todo 回退积分
 	return nil, 0
 }
@@ -5180,11 +5198,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		// 更新会员的余额
 		if saleOrder.Member.GetUpdate() {
 			if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
-				Uuid:      saleOrder.Member.Uuid,
-				Money:     memberBalanceAmount,     // 扣减会员余额
-				GiftMoney: memberGiftBalanceAmount, // 扣减会员赠送余额
-				Scene:     constant.MemberBalanceLogConsume,
-				Describe:  fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
+				Uuid:        saleOrder.Member.Uuid,
+				Money:       memberBalanceAmount,     // 扣减会员余额
+				GiftMoney:   memberGiftBalanceAmount, // 扣减会员赠送余额
+				Scene:       constant.MemberBalanceLogConsume,
+				Describe:    fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
+				RelatedUuid: saleOrder.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}

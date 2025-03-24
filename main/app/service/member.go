@@ -210,11 +210,12 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 }
 
 type MemberBalanceChangeReq struct {
-	Uuid      uint64  `json:"uuid"`
-	Money     float64 `json:"money"`
-	GiftMoney float64 `json:"gift_money"`
-	Scene     int     `json:"scene"`
-	Describe  string  `json:"describe"`
+	Uuid        uint64  `json:"uuid"`
+	Money       float64 `json:"money"`
+	GiftMoney   float64 `json:"gift_money"`
+	Scene       int     `json:"scene"`
+	Describe    string  `json:"describe"`
+	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID
 }
 
 // HandleMemberBalance 处理会员余额
@@ -234,11 +235,12 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 
 	// 余额明细
 	if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
-		MemberUuid: changeReq.Uuid,
-		Scene:      changeReq.Scene,
-		Money:      changeReq.Money,
-		GiftMoney:  changeReq.GiftMoney,
-		Describe:   changeReq.Describe,
+		MemberUuid:  changeReq.Uuid,
+		Scene:       changeReq.Scene,
+		Money:       changeReq.Money,
+		GiftMoney:   changeReq.GiftMoney,
+		Describe:    changeReq.Describe,
+		RelatedUuid: changeReq.RelatedUuid,
 	}); err != nil {
 		return errors.WithMessage(err, "处理会员余额失败")
 	}
