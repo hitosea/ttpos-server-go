@@ -67,7 +67,7 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts 
 func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderOperationRecord, error) {
 	var orderOperationRecords []model.SaleOrderOperationRecord
 	err := r.db.Model(&model.SaleOrderOperationRecord{}).Preload("Operator").
-		Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderOperationRecords).Error
+		Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Order("create_time desc, id desc").Find(&orderOperationRecords).Error
 	return orderOperationRecords, errors.WithMessage(err)
 }
 

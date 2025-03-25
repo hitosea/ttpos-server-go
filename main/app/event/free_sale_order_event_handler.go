@@ -44,6 +44,29 @@ func freeSaleOrderEventHandler() {
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:免单 %+v", payload), zap.Uint64("record", uuid))
+
+			// 结账操作日志
+			settleRecord := model.SaleOrderOperationRecord{
+				Source:        payload.Source,
+				Action:        constant.OrderSettle,
+				Remark:        "结账",
+				SaleBillUuid:  payload.SaleBillUuid,
+				SaleOrderUuid: payload.SaleOrderUuid,
+				OperatorUuid:  payload.GetOperatorUuid(),
+			}
+			checkoutSaleOrder := event.CheckoutSaleOrderPayload{
+				OrderPrice: payload.OrderPrice,
+				PayPrice:   payload.PayPrice,
+				IsFree:     true,
+			}
+			settleRecord.Data = checkoutSaleOrder.ToJsonString()
+			uuid, err = orderRecordRepo.CreateSaleOrderOperationRecord(settleRecord)
+			if err != nil {
+				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				return
+			}
+			logger.Logger.Info(fmt.Sprintf("操作记录:结账 %+v", payload), zap.Uint64("record", uuid))
+
 		})
 	})
 }

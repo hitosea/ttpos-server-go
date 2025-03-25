@@ -11,8 +11,8 @@ const EventAcceptH5Order EventName = "Event_Accept_H5_Order"
 // AcceptH5OrderPayload 接单事件数据结构
 type AcceptH5OrderPayload struct {
 	BasePayload
-	IsAutoOrder bool   `json:"is_auto_order"`  // 是否自动接单
-	H5OrderUuid uint64 `json:"h_5_order_uuid"` // h5订单Uuid
+	IsAutoOrder bool   `json:"is_auto_order"` // 是否自动接单
+	H5OrderUuid uint64 `json:"h5_order_uuid"` // h5订单Uuid
 }
 
 func (payload *AcceptH5OrderPayload) ToJsonString() string {

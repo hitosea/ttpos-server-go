@@ -18,6 +18,7 @@ type CheckoutSaleOrderPayload struct {
 	ActualPrice float64   `json:"actual_price"` // 最终实付金额。最终实付金额=最终应付金额+找零金额。如果没有找零，则最终实付金额=最终应付金额。最终实付金额=每笔付款单的付款金额之和（含手续费）
 	ChangeDue   float64   `json:"change_due"`   // 找零金额
 	PayType     []PayType `json:"pay_type"`     // 支付方式
+	IsFree      bool      `json:"is_free"`      // 是否免单
 }
 
 type PayType struct {

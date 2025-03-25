@@ -34,8 +34,8 @@ type OrderListReq struct {
 
 // OrderInfoReq 订单信息查询
 type OrderInfoReq struct {
-	SaleBillUuid  uint64 `form:"sale_bill_uuid"`  // 销售账单UUID
-	SaleOrderUuid uint64 `form:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`   // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" json:"sale_order_uuid"` // 销售订单UUID 当查看子订单信息的时候才需要传
 }
 
 // OrderCancelReq 订单取消

@@ -26,7 +26,7 @@ func init() {
 // rejectH5OrderEventHandler "拒单"事件处理器
 func rejectH5OrderEventHandler() {
 	once_reject_h5_order_event_handler.Do(func() {
-		event.NewSystemBus().SubscribeAcceptH5OrderEvent(func(payload event.AcceptH5OrderPayload) {
+		event.NewSystemBus().SubscribeRejectH5OrderEvent(func(payload event.RejectH5OrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
@@ -40,7 +40,7 @@ func rejectH5OrderEventHandler() {
 			record.Data = ""
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeAcceptH5OrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeRejectH5OrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:拒单 %+v", payload), zap.Uint64("record", uuid))

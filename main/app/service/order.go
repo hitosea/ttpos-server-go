@@ -957,15 +957,22 @@ func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleO
 		return []resp.OrderOperationLog{}, errors.WithMessage(err)
 	}
 	logs := make([]resp.OrderOperationLog, 0)
+	language := ctx.GetLanguage()
+
 	for _, record := range orderRecordLists {
+		desc := s.getActionDescription(ctx, record, language)
+		actionText := s.getActionText(record, language)
+		if desc != "" {
+			actionText = actionText + ": " + desc
+		}
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
 			RealName:    record.Operator.RealName,
 			Email:       record.Operator.Username,
 			Source:      record.Source,
 			CreateTime:  record.CreateTime,
-			Description: s.getActionDescription(record, ctx.GetLanguage()), // 获取描述
-			PayType:     nil,                                               // ToDo 关联支付方式
+			Description: actionText,                                     // 获取描述
+			PayType:     make([]resp.OrderOperationLogPaymentMethod, 0), // ToDo 关联支付方式
 		})
 	}
 	return logs, nil
@@ -5144,7 +5151,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	// 如果支付方式是含手续费的支付方式且该订单之前未产生过含手续且该订单设置了结账抹零，则自动取消结账抹零
 	if needCancelCheckoutZeroRule {
 		go func() {
-			s.bus.PublishCheckoutZeroCancelSaleOrderEvent(event.CheckoutZeroCancelSaleOrderPayload{
+			s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
 				BasePayload: event.BasePayload{
 					CompanyUuid:   ctx.GetCompanyUuid(),
 					Source:        ctx.GetSource(),
@@ -5152,6 +5159,8 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 					SaleOrderUuid: req.SaleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
+				Operation: constant.OrderCheckoutDiscountCancel,
+				Reason:    "选择含手续费的支付方式",
 			})
 		}()
 	}
