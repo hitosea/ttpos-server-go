@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
 
@@ -24,5 +25,12 @@ func NewMemberRechargeOperationRepoImpl(db *gorm.DB) *MemberRechargeOperationRep
 
 // AddLog 添加会员充值操作日志
 func (r *MemberRechargeOperationRepo) AddLog(log model.MemberRechargeOrderOperationLog) error {
-	return r.db.Model(&model.MemberRechargeOrderOperationLog{}).Create(&log).Error
+	// 设置默认值
+	if err := r.db.Model(&model.MemberRechargeOrderOperationLog{}).Create(&log).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 添加异常日志
+	go NewMemberRechargeAbnormalRecordRepo(r.db).CreateRechargeAbnormalLog(log)
+	// 返回
+	return nil
 }

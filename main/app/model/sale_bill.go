@@ -271,10 +271,11 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 }
 
 // ValidateOrderStatus 判断订单是否可操作
-func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...uint64) error {
-	if operation != constant.OrderSettle &&
-		operation != constant.OrderUnlock &&
-		model.IsLockStatus() {
+func (model *SaleBill) ValidateOrderStatus(source string, operation string, saleOrderUuid ...uint64) error {
+	if model.IsLockStatus() && !slices.Contains([]string{
+		constant.OrderSettle,
+		constant.OrderUnlock,
+	}, operation) {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
 	if model.Status == constant.SaleBillStatusCanceled {
@@ -287,10 +288,10 @@ func (model *SaleBill) ValidateOrderStatus(operation string, saleOrderUuid ...ui
 		return errors.New("订单已结账")
 	}
 	if len(model.SaleOrders) > 0 {
-		// todo: 要判断来源 除了收银端一样 拆单没有取消权限
-		// if operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
-		// 	return errors.New("拆单不可操作")
-		// }
+		// 当不是收银端的时候，拆单不可操作
+		if source != constant.SourceCashier && operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
+			return errors.New("拆单不可操作")
+		}
 		// 单个订单不能操作
 		for _, so := range model.SaleOrders {
 			if len(saleOrderUuid) == 0 || slices.Contains(saleOrderUuid, so.Uuid) {

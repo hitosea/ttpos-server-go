@@ -980,7 +980,7 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 	if err != nil {
 		return model.SaleBill{}, errors.WithMessage(err)
 	}
-	if err := billInfo.ValidateOrderStatus(constant.OrderOrderCancel); err != nil {
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderCancel); err != nil {
 		return model.SaleBill{}, errors.WithMessage(err)
 	}
 	if orderRepo.IsPartiallyPaid(saleBillUuid) {
@@ -1070,7 +1070,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
-		// 拒绝所有待接单 - todo 待对应的服务层实现
+		// 拒绝所有待接单
 		err := qrOrderRepo.Reject(billInfo.DeskUuid)
 		if err != nil {
 			tx.Rollback()
@@ -1978,7 +1978,7 @@ func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderTakeout, 0); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderTakeout, 0); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2029,7 +2029,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 判断订单商品状态
@@ -2137,7 +2137,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderChangePrice, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2228,7 +2228,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2297,7 +2297,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2368,7 +2368,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2428,7 +2428,7 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2501,7 +2501,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	oldMealNum := billInfo.MealNum
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderUpdateMealNum, 0); err != nil {
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateMealNum, 0); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2604,7 +2604,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	if saleBill.IsSplit() {
 		return nil, errors.New("当前订单已拆单，无法调整自助餐")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateMealNum); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateMealNum); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2748,7 +2748,7 @@ func (s *orderSrv) OrderChangeBuffetClock(ctx context.Context, req req.OrderChan
 	if saleBill.GetBuffetRemainingSeconds() == -1 {
 		return nil, errors.New("当前套餐已经是无限时，无法添加加钟")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderClock, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderClock, req.SaleOrderUuid); err != nil {
 		return nil, err
 	}
 
@@ -2865,7 +2865,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderProductRemark, req.SaleOrderUuid); err != nil {
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderProductRemark, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3368,7 +3368,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3408,7 +3408,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateProductNum, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateProductNum, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3991,7 +3991,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		return nil, errors.New("退菜数量不能大于当前商品数量")
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderRefundProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -4124,7 +4124,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 获取销售订单和商品
@@ -4212,7 +4212,7 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderChangeTable, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderChangeTable, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -4325,7 +4325,7 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 获取销售订单和商品
@@ -4423,7 +4423,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 		return nil, errors.WithMessage(err, "销售账单不存在")
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderCancelRefundProduct, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 获取销售订单和商品
@@ -4999,7 +4999,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(errors.New("订单没有商品，请选购商品"))
 	}
 	// 判断销售订单是否可操作
-	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -5554,7 +5554,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 销售账单已经结束
-	if err := saleBill.ValidateOrderStatus(constant.OrderSettle, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -5699,7 +5699,7 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(constant.OrderSettle); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -6855,6 +6855,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		printType = constant.PrinterTemplateBilling
 		firstExecution = 0
 	}
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		firstExecution = 0
+	}
 
 	// 打印
 	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
@@ -6871,6 +6875,11 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	// 保存销售账单
 	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
 		return nil, errors.WithMessage(err, "设置锁单失败")
+	}
+
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		return &resp.PrinterData{}, nil
 	}
 
 	return printerData, nil
@@ -6932,9 +6941,15 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 	printerData, err := printer.NewPrinterRepo(ctx, req.PrintLang).PrintingInvoice(
 		saleBill,
 		saleOrder.Uuid,
+		utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		return &resp.PrinterData{}, nil
 	}
 
 	return printerData, nil
@@ -6973,7 +6988,7 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	}
 
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(constant.OrderUnlock); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUnlock); err != nil {
 		return errors.WithMessage(err)
 	}
 
@@ -7066,7 +7081,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	if err != nil {
 		return errors.WithMessage(err, "查询销售账单失败")
 	}
-	if err := saleBill.ValidateOrderStatus(constant.OrderH5Confirm, saleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderH5Confirm, saleOrderUuid); err != nil {
 		return errors.WithMessage(err)
 	}
 

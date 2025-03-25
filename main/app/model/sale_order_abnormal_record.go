@@ -7,7 +7,6 @@ type SaleOrderAbnormalRecord struct {
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售账单ID" json:"sale_bill_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	DutyNo        string `gorm:"column:duty_no;type:varchar(64);not null;default:'';comment:当班编号" json:"duty_no"`
-	Source        string `gorm:"column:source;type:varchar(150);not null;default:'';comment:来源 order-订单 recharge-充值" json:"source"`
 	Action        string `gorm:"column:action;type:varchar(150);not null;default:'';comment:行为" json:"action"`
 	SubAction     string `gorm:"column:sub_action;type:varchar(150);not null;default:'';comment:自定义子行为" json:"sub_action"`
 	Sign          string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:操作签名" json:"sign"`

@@ -546,7 +546,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_record` (
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
-    `source` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '来源 order-订单 recharge-充值',
     `action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '行为',
     `sub_action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '自定义子行为',
     `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作签名',
@@ -1109,6 +1108,22 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_operation_log` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员充值订单操作日志表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_abnormal_record` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
+    `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '行为',
+    `sub_action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '自定义子行为',
+    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作签名',
+    `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
+    `cashier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收银员ID',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
