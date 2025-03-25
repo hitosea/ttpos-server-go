@@ -128,15 +128,16 @@ type orderSrv struct {
 	mustPlanSrv      IMustPlanSrv
 	paymentMethodSrv IPaymentMethodSrv
 	memberSrv        IMemberSrv
+	cashBoxSrv       ICashBoxSrv
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
 	return &orderSrv{
 		bus:              event.NewSystemBus(),
 		dbm:              dbm,
@@ -146,6 +147,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		mustPlanSrv:      mustPlanSrv,
 		paymentMethodSrv: paymentMethodSrv,
 		memberSrv:        memberSrv,
+		cashBoxSrv:       cashBoxSrv,
 	}
 }
 
@@ -5192,11 +5194,13 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				}
 			}
 		}
-
 	}
 
 	// 记录会员余额
 	saleOrder.SetMemberBalance()
+
+	// 现金支付
+	cashAmount := saleOrder.GetCashAmount()
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
@@ -5245,9 +5249,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 
-		// 更新余额支付的付款单
+		// 更新余额支付的付款单. 记录会员余额支付时主账户和赠送账户扣款金额
 		if balancePaymentOrder != nil {
 			if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*balancePaymentOrder); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		if cashAmount > 0 {
+			// 存现金，更新钱箱
+			ctx.SetDB(db)
+			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
+				Amount:    cashAmount,
+				Scene:     constant.CashBoxLogScenePay,
+				OrderUuid: saleOrder.Uuid,
+			}); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

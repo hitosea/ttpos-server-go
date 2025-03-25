@@ -506,10 +506,9 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			// 存在现金支付，更新钱箱
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 				if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-					CashBoxLogType: constant.CashBoxLogTypeIn,
-					Amount:         utils.DecimalSub(sumPaymentAmount, sumPaymentAmountExcludeCash),
-					Scene:          constant.CashBoxLogSceneRecharge,
-					OrderUuid:      order.Uuid,
+					Amount:    utils.DecimalSub(sumPaymentAmount, sumPaymentAmountExcludeCash),
+					Scene:     constant.CashBoxLogSceneRecharge,
+					OrderUuid: order.Uuid,
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -1123,10 +1122,9 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 
 		if refundCashAmount > 0 {
 			if err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-				CashBoxLogType: constant.CashBoxLogTypeOut,
-				Amount:         refundCashAmount,
-				Scene:          constant.CashBoxLogSceneRefund,
-				OrderUuid:      returnOrder.Uuid,
+				Amount:    -refundCashAmount,
+				Scene:     constant.CashBoxLogSceneRefund,
+				OrderUuid: returnOrder.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -1407,10 +1405,9 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		// 退还现金
 		if refundCashMoney > 0 {
 			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-				CashBoxLogType: constant.CashBoxLogTypeOut,
-				Amount:         refundCashMoney,
-				Scene:          constant.CashBoxLogSceneRefund,
-				OrderUuid:      returnOrder.Uuid,
+				Amount:    -refundCashMoney,
+				Scene:     constant.CashBoxLogSceneRefund,
+				OrderUuid: returnOrder.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}

@@ -306,6 +306,17 @@ func (model *SaleOrder) GetMemberBalanceAmount() float64 {
 	return memberBalanceAmount.InexactFloat64()
 }
 
+// 获取该销售订单使用现金支付的金额
+func (model *SaleOrder) GetCashAmount() float64 {
+	cashAmount := decimal.NewFromFloat(0)
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			cashAmount = cashAmount.Add(decimal.NewFromFloat(paymentOrder.Amount))
+		}
+	}
+	return cashAmount.InexactFloat64()
+}
+
 func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	buffetList []*BuffetPackage,
 	buffetUuids []uint64,

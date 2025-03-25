@@ -98,6 +98,9 @@ func (s *staffShiftSrv) generateNumber() string {
 func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error) {
 	staff := ctx.GetStaff()
 	db := s.dbm.GetDB(staff.CompanyUuid)
+	// 查询钱箱
+	cashBox := repository.NewCashBoxRepo(db).Get()
+
 	// 查询交班记录
 	shiftLogResp := repository.NewShiftLogRepo(db)
 	log, err := shiftLogResp.GetShiftLog(
@@ -123,7 +126,7 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		PreviousShiftCash: log.PreviousShiftCash,
 		WithdrawCash:      log.WithdrawCash,
 		DepositCash:       log.DepositCash,
-		CurrentCashTotal:  log.CurrentCashTotal,
+		CurrentCashTotal:  cashBox.GetBalance(), // 当前钱箱现金总计（钱箱余额）。 未交班时从钱箱表中获取数据，交班后将当前钱箱现金总计（钱箱余额）记录到交班表中
 		RefundAmount:      totalRefundAmount,
 		PaymentMethodIncome: resp.PaymentMethodIncomeList{
 			List: paymentMethodIncomeList,
@@ -209,9 +212,8 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 			err := s.cashBoxSrv.UpdateBalance(
 				ctx,
 				UpdateCashBalanceParam{
-					CashBoxLogType: constant.CashBoxLogTypeOut,
-					Amount:         withdrawCash.InexactFloat64(),
-					Scene:          constant.CashBoxLogSceneShift,
+					Amount: -withdrawCash.InexactFloat64(),
+					Scene:  constant.CashBoxLogSceneShift,
 				},
 			)
 			if err != nil {
@@ -377,8 +379,7 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 		}
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			CashBoxLogType: constant.CashBoxLogTypeOut,
-			Amount:         req.WithdrawCash,
+			Amount:         -req.WithdrawCash,
 			CashWithdrawal: req.WithdrawCash,
 			Scene:          constant.CashBoxLogSceneOut,
 		})
@@ -431,10 +432,9 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 		}
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			CashBoxLogType: constant.CashBoxLogTypeIn,
-			Amount:         req.DepositCash,
-			CashDeposit:    req.DepositCash,
-			Scene:          constant.CashBoxLogSceneIn,
+			Amount:      req.DepositCash,
+			CashDeposit: req.DepositCash,
+			Scene:       constant.CashBoxLogSceneIn,
 		})
 		if err != nil {
 			return errors.New("存钱失败")
