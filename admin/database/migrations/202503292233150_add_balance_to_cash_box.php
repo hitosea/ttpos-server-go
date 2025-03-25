@@ -58,7 +58,7 @@ class AddBalanceToCashBox extends Migrator
                 'signed' => true,
             ]);
         }
-        if (!$table->hasColumn('type')) {
+        if ($table->hasColumn('type')) {
             $table->removeColumn('type');
         }   
         $table->update();
