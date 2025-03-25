@@ -540,7 +540,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台账单操作记录';
 
 -- 销售账单异常日志表
-CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_log` (
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_record` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',

@@ -31,7 +31,7 @@ class CreateOrderAbnormalLogTable extends Migrator
 
         if ($this->hasTable('sale_bill_operation_record')) {
             // 改表名为 sale_order_operation_record
-            $table = $this->table('sale_bill_operation_record', ['engine' => 'InnoDB', 'collation' => 'utf8mb4_unicode_ci', 'comment' => '桌台账单操作记录']);
+            $table = $this->table('sale_bill_operation_record', ['engine' => 'InnoDB', 'collation' => 'utf8mb4_unicode_ci', 'comment' => '订单操作记录']);
             $table->rename('sale_order_operation_record');
             $table->save();
         }
