@@ -251,26 +251,19 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 	if desk.SaleBill == nil {
 		return res, nil
 	}
-	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
+	// 获取账单信息，合计未送厨商品数量
 	if shopCart == nil {
-		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
+		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid, repository.WithUnorderedH5Product())
 		if err != nil {
 			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
 		}
 	}
 	// 未送厨商品信息
-	unsentKitchen, err := s.orderSrv.GetUnOrderedH5ProductList(ctx, desk.SaleBillUuid, shopCart)
+	unsentKitchen, err := s.orderSrv.GetUnOrderedH5ProductList(ctx, desk.SaleBillUuid, shopCart, repository.WithUnorderedH5Product())
 	if err != nil {
 		return res, errors.WithMessage(errors.New("订单不存在"), "获取未送厨商品信息失败")
 	}
 	res.UnsentKitchen = *unsentKitchen
-
-	// 已送厨商品信息
-	sentKitchen, err := s.orderSrv.GetOrderedH5ProductList(ctx, desk.SaleBill.Uuid, shopCart)
-	if err != nil {
-		return res, errors.WithMessage(errors.New("订单不存在"), "获取已送厨商品信息失败")
-	}
-	res.SentKitchen = *sentKitchen
 
 	// 自助餐信息
 	if shopCart.Buffet != nil {
@@ -280,40 +273,6 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 	if shopCart.MustPlans != nil {
 		res.MustPlans = *shopCart.MustPlans
 	}
-
-	// 获取耳机分类
-
-	//productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
-	//for _, saleOrder := range shopCart.SaleOrderList {
-	//	for _, product := range saleOrder.ProductList {
-	//		// 合计已送厨商品列表
-	//		if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) {
-	//			var sentKitchenNum, finishedNum uint
-	//			if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
-	//				sentKitchenNum = existsProduct.SentKitchenNum + product.Num
-	//				finishedNum = existsProduct.FinishedNum + product.FinishedNum
-	//			} else {
-	//				sentKitchenNum = product.Num
-	//				finishedNum = product.FinishedNum
-	//			}
-	//			productPackageUuidMap[product.ProductPackageUuid] = resp.SentKitchenProduct{
-	//				ProductPackageUuid: product.ProductPackageUuid,
-	//				SentKitchenNum:     sentKitchenNum,
-	//				FinishedNum:        finishedNum,
-	//			}
-	//		}
-	//	}
-	//}
-
-	//// 转换成切片
-	//sentKitchenProducts := make([]resp.SentKitchenProduct, 0, len(productPackageUuidMap))
-	//for _, product := range productPackageUuidMap {
-	//	sentKitchenProducts = append(sentKitchenProducts, product)
-	//}
-	//
-	//res.SentKitchenProducts = resp.SentKitchenProductList{
-	//	List: sentKitchenProducts,
-	//}
 	return res, nil
 }
 
