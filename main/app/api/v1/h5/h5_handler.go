@@ -217,7 +217,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
-	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params)
+	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -266,7 +266,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 	}
 	params.SetIsH5Product() // 设置为H5商品
 	// 添加商品。 若没有点餐账单则新建一个
-	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -383,7 +383,7 @@ func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
 	params.SaleBillUuid = saleBillUuid
 	ctx.Log().Debug("扫码点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	shopCart, err := h.orderSrv.OrderCartProductNum(ctx, params)
+	shopCart, err := h.orderSrv.OrderCartProductNum(ctx, params, repository.WithUnorderedH5Product())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

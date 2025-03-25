@@ -5,7 +5,7 @@ use think\facade\Log;
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddValueToPrinterType extends Migrator
+class InitPrinterType extends Migrator
 {
     /**
      * Change Method.

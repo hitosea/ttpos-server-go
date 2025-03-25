@@ -1,21 +1,21 @@
 package repository
 
 import (
-	"time"
+	"encoding/json"
+	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 // IOrderAbnormalRecordRepo 订单异常记录
 type IOrderAbnormalRecordRepo interface {
-	GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleOrderAbnormalRecord, int64, error)
-	GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderAbnormalRecord, error)
 	GetRecordInfo(saleBillUuid uint64) (model.SaleOrderAbnormalRecord, error)
-	UpdateRecord(saleBillUuid uint64, record model.SaleOrderAbnormalRecord) error
-	CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) (uint64, error)
-	DeleteRecord(saleBillUuid uint64) error
+	CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) error
 }
 
 type OrderAbnormalRecordRepoImpl struct {
@@ -31,57 +31,132 @@ func NewOrderAbnormalRecordRepoImpl(db *gorm.DB) *OrderAbnormalRecordRepoImpl {
 	return &OrderAbnormalRecordRepoImpl{db: db}
 }
 
-func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) (uint64, error) {
+func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) error {
+	record := model.SaleOrderAbnormalRecord{
+		Source:        Source,
+		SaleBillUuid:  obj.SaleBillUuid,
+		SaleOrderUuid: obj.SaleOrderUuid,
+		CashierUuid:   obj.OperatorUuid,
+		DutyNo:        dutyNo,
+		Action:        obj.Action,
+		SubAction:     "",
+		Remark:        obj.Remark,
+	}
 
-	var record model.SaleOrderAbnormalRecord
-	record.SetNil()
-	record.Source = Source
-	record.SaleBillUuid = obj.SaleBillUuid
-	record.SaleOrderUuid = obj.SaleOrderUuid
-	record.CashierUuid = obj.OperatorUuid
-	record.DutyNo = dutyNo
-	record.Action = obj.Action
-	// record.SubAction = obj.SubAction
-	record.Remark = obj.Remark
+	var data map[string]interface{}
+	if obj.Data != "" {
+		if err := json.Unmarshal([]byte(obj.Data), &data); err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog", err)
+			logger.Logger.Info("CreateSaleOrderAbnormalLog", zap.String("error", err.Error()))
+			return errors.WithMessage(err)
+		}
+	}
 
-	// constant.OrderProductFree
-	// fmt.Println("CreateSaleOrderAbnormalLog", utils.ToJsonString(obj))
-
-	// if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&obj).Error; err != nil {
-	// 	return 0, errors.WithMessage(err)
-	// }
+	//
+	switch obj.Action {
+	case constant.OrderRefundProduct:
+		// 退菜 对一个商品反复操作，记录为1次
+		record.Sign = data["sign"].(string)
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, obj.Action, record.Sign).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderRefundProduct", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderCancelRefundProduct:
+		// 取消退菜 重置所有所选赠菜操作
+		record.Sign = data["sign"].(string)
+		if err := r.db.Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, constant.OrderRefundProduct, record.Sign).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog-OrderCancelRefundProduct", err)
+			return errors.WithMessage(err)
+		}
+	case constant.OrderProductFree:
+		// 赠菜 对一个商品反复操作，记录为1次
+		record.Sign = fmt.Sprintf("%.0f", data["order_product_id"])
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, obj.Action, record.Sign).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderProductFree", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderCancelProductFree:
+		// 取消赠菜 重置所有所选赠菜操作
+		record.Sign = fmt.Sprintf("%.0f", data["order_product_id"])
+		if err := r.db.Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, constant.OrderProductFree, record.Sign).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog-OrderCancelProductFree", err)
+			return errors.WithMessage(err)
+		}
+	case constant.OrderChangePrice:
+		// 单品改价 对一个商品反复操作，记录为1次
+		record.Sign = fmt.Sprintf("%.0f", data["order_product_id"])
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, obj.Action, record.Sign).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderChangePrice", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderDiscount:
+		// 优惠折扣 拆单优惠折扣在主单中重复只算一次，记录分开记，查询时再去重
+		if data["discount_type"] != nil {
+			record.SubAction = fmt.Sprintf("%.0f", data["discount_type"])
+		}
+		// 查询该订单是否已经有优惠折扣
+		if record.SubAction == "1" || record.SubAction == "2" {
+			if err := r.db.Where("sale_order_uuid = ? and action = ? and sub_action in (?)", obj.SaleOrderUuid, obj.Action, []int{1, 2}).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderDiscount", err)
+				return errors.WithMessage(err)
+			}
+		} else if record.SubAction == "3" {
+			if err := r.db.Where("sale_order_uuid = ? and action = ? and sub_action in (?)", obj.SaleOrderUuid, obj.Action, []int{1, 3}).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderDiscount", err)
+				return errors.WithMessage(err)
+			}
+		}
+		record.Sign = fmt.Sprintf("%d-%s-%s", obj.SaleOrderUuid, obj.Action, record.SubAction)
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ? and sign = ?", obj.SaleOrderUuid, obj.Action, record.Sign).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderDiscount", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderCancelDiscount:
+		// 撤销优惠折扣 重置所有优惠折扣操作
+		if err := r.db.Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, constant.OrderDiscount).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog-OrderCancelDiscount", err)
+			return errors.WithMessage(err)
+		}
+	case constant.OrderCheckoutDiscount:
+		// 结账手动抹零 重置所有优惠折扣操作
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, record.Action).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderDiscount", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderFreeSale:
+		// 优惠折扣 拆单优惠折扣在主单中重复只算一次，记录分开记，查询时再去重
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, obj.Action).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderFreeSale", err)
+				return errors.WithMessage(err)
+			}
+		}
+	case constant.OrderReverseSettle:
+		// 反结账 重置该订单免单操作
+		if err := r.db.Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, constant.OrderFreeSale).Delete(&model.SaleOrderAbnormalRecord{}).Error; err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog-OrderReverseSettle", err)
+			return errors.WithMessage(err)
+		}
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, constant.OrderReverseSettle).First(&record); info.Error != nil {
+			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+				fmt.Println("CreateSaleOrderAbnormalLog-OrderReverseSettle", err)
+				return errors.WithMessage(err)
+			}
+		}
+	}
 
 	// 返回
-	return obj.Uuid, nil
-}
-
-// GetRecordList 获取订单异常记录列表
-func (r *OrderAbnormalRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleOrderAbnormalRecord, int64, error) {
-	var orderAbnormalRecords []model.SaleOrderAbnormalRecord
-	var total int64
-
-	query := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("delete_time = ?", 0)
-
-	for _, opt := range opts {
-		query = opt(query)
-	}
-
-	// 获取总数
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, errors.WithMessage(err)
-	}
-
-	// 获取分页数据
-	err := query.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orderAbnormalRecords).Error
-	return orderAbnormalRecords, total, errors.WithMessage(err)
-}
-
-// GetRecordLists 获取订单异常记录列表
-func (r *OrderAbnormalRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderAbnormalRecord, error) {
-	var orderAbnormalRecords []model.SaleOrderAbnormalRecord
-	err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Preload("Operator").
-		Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderAbnormalRecords).Error
-	return orderAbnormalRecords, errors.WithMessage(err)
+	return nil
 }
 
 // GetRecordInfo 获取订单异常记录信息
@@ -91,17 +166,4 @@ func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.
 		return model.SaleOrderAbnormalRecord{}, errors.WithMessage(err)
 	}
 	return orderAbnormalRecord, nil
-}
-
-// UpdateRecord 更新订单异常记录
-func (r *OrderAbnormalRecordRepoImpl) UpdateRecord(saleOrderUuid uint64, record model.SaleOrderAbnormalRecord) error {
-	if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("uuid = ?", saleOrderUuid).Updates(record).Error; err != nil {
-		return errors.WithMessage(err)
-	}
-	return nil
-}
-
-// DeleteRecord 软删除订单异常记录
-func (r *OrderAbnormalRecordRepoImpl) DeleteRecord(saleOrderUuid uint64) error {
-	return r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("uuid = ?", saleOrderUuid).Update("delete_time", uint(time.Now().Unix())).Error
 }

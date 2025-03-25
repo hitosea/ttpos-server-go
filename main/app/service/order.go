@@ -71,14 +71,14 @@ type IOrderSrv interface {
 	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                                  // 调整自助餐
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                               // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                        // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error)                                                                          // 修改订单商品备注
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 修改订单商品备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                                                // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                                // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                         // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, req req.OrderCartProductAddReq) (*resp.ShopCart, error)                                                                 // 向购物车添加商品
+	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 向购物车添加商品
 	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                           // 获取销售账单uuid和销售订单uuid
-	OrderCartProductAdd(ctx context.Context, req req.ProductAddReq) (*resp.ShopCart, error)                                                                                 // 修改购物车商品数量
-	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq) (*resp.ShopCart, error)                                                                        // 修改购物车商品数量
+	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                 // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                            // 修改购物车商品数量
 	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                             // 送厨购物车商品
 	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                                     // 退菜购物车商品
 	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                           // 退菜购物车商品
@@ -2923,7 +2923,7 @@ func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, err
 }
 
 // OrderProductRemark  修改订单商品备注
-func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -2945,7 +2945,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
+	if err := billInfo.ValidateOrderStatus(constant.OrderProductRemark, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -2960,7 +2960,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -3178,7 +3178,7 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 }
 
 // 点餐页面，往购物车添加商品。
-func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq) (*resp.ShopCart, error) {
+func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if request.SaleBillUuid == 0 {
 		// 判断是否有待支付、未挂单的订单
@@ -3214,7 +3214,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			},
 		},
 		IsH5Product: request.IsH5Product(),
-	})
+	}, opts...)
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
 		return nil, errors.WithMessage(err)
@@ -3433,7 +3433,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 }
 
 // OrderCartProductAdd 向购物车添加商品
-func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductAddReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
@@ -3448,7 +3448,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3458,7 +3458,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	}
 
 	// 获取新的购物车商品数据
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -3467,7 +3467,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 }
 
 // OrderCartProductNum 修改购物车商品数量
-func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
@@ -3488,7 +3488,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateProductNum, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3568,7 +3568,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}
 
 	// 获取新的桌台数据
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -3993,6 +3993,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			Remark:          saleOrderProduct.Remark,
 			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),
 			CustomReason:    saleOrderProduct.CancelReason,
+			Sign:            saleOrderProduct.Sign,
 		})
 	}()
 	// 获取新的购物车信息
@@ -4079,6 +4080,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 			Num:            saleOrderProduct.Num,
 			ParentId:       saleOrder.SaleBillUuid,
 			OrderName:      saleOrder.Uuid,
+			Sign:           saleOrderProduct.Sign,
 		})
 	}()
 

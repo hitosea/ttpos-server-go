@@ -37,7 +37,7 @@ func (r *OrderOperationRecordRepoImpl) CreateSaleOrderOperationRecord(obj model.
 		return 0, errors.WithMessage(err)
 	}
 	// 添加异常日志
-	NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog("obj.DutyNo", "", obj)
+	go NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog("order", "", obj)
 	// 返回
 	return obj.Uuid, nil
 }

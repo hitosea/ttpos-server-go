@@ -19,6 +19,7 @@ type CancelReturnSaleOrderProductPayload struct {
 	Num            uint               `json:"num"`              // 退菜数量
 	ParentId       uint64             `json:"parent_id"`        // 父订单ID
 	OrderName      uint64             `json:"order_name"`       // 订单名称
+	Sign           string             `json:"sign"`             // 签名
 }
 
 func (payload *CancelReturnSaleOrderProductPayload) ToJsonString() string {
