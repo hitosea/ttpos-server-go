@@ -41,6 +41,10 @@ class Category extends Controller
                     }
                 }
             }
+            $item['is_button'] = 0;
+            if ($item['category_key'] == 'all') {
+                $item['is_button'] = 1;
+            }
         }
         return $this->renderSuccess('', compact('list'));
     }
