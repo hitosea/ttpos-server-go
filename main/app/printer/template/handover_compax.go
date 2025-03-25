@@ -92,7 +92,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		totalPayPrice := float64(0)
 		for key, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.AppendText(t.base.PrintText(income.Name, "", t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
+				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
 				if key != len(businessData.PaymentMethodIncomes)-1 {
 					printer.LineFeed(1)
 				}
@@ -349,7 +349,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		var totalPayPrice float64 = 0
 		for key, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.AppendText(t.base.PrintText(income.Name, income.OrderNum, t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
+				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
 				if key != len(businessData.PaymentMethodIncomes)-1 {
 					printer.LineFeed(1)
 				}

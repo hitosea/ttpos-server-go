@@ -274,7 +274,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		var totalPayPrice float64 = 0
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.AppendText(t.base.PrintText(income.Name, income.OrderNum, t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
+				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
 				printer.LineFeed()
 				totalPayPrice += income.Amount
 			}
