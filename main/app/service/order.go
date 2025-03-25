@@ -1150,7 +1150,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
-		// 拒绝所有待接单 - todo 待对应的服务层实现
+		// 拒绝所有待接单
 		err := qrOrderRepo.Reject(billInfo.DeskUuid)
 		if err != nil {
 			tx.Rollback()
