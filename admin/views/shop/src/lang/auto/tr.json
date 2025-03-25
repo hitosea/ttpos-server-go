@@ -1564,5 +1564,7 @@
     "总销售额：": "Toplam satışlar:",
     "（以上计算都不包含会员充值金额）": "(Yukarıdaki hesaplamalara üye yükleme tutarları dahil değildir)",
     "店内就餐": "Restoranda yemek",
-    "是否取消此订单?": "Bu siparişi iptal etmek istiyor musunuz?"
+    "是否取消此订单?": "Bu siparişi iptal etmek istiyor musunuz?",
+    "打包带走": "Paket olarak götür",
+    "注：需为正确的支付方式，用于显示给用户查看": "Not: Kullanıcıya görüntülenmesi için doğru ödeme yöntemi olmalıdır"
 }
