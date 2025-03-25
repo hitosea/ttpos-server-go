@@ -16,7 +16,7 @@ import (
 // IOrderAbnormalRecordRepo 订单异常记录
 type IOrderAbnormalRecordRepo interface {
 	GetRecordInfo(cashierUuid uint64, dutyNo string) (*business_data_resp.AbnormalData, error)
-	CreateSaleOrderAbnormalLog(Source string, obj model.SaleOrderOperationRecord) error
+	CreateSaleOrderAbnormalLog(obj model.SaleOrderOperationRecord) error
 }
 
 type OrderAbnormalRecordRepoImpl struct {
@@ -32,7 +32,8 @@ func NewOrderAbnormalRecordRepoImpl(db *gorm.DB) *OrderAbnormalRecordRepoImpl {
 	return &OrderAbnormalRecordRepoImpl{db: db}
 }
 
-func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source string, obj model.SaleOrderOperationRecord) error {
+// CreateSaleOrderAbnormalLog 创建订单异常记录
+func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(obj model.SaleOrderOperationRecord) error {
 	//
 	bill, err := NewSaleBillRepo(r.db).GetSaleBillByUuid(obj.SaleBillUuid)
 	if err != nil {
@@ -40,7 +41,6 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source string, 
 	}
 	//
 	record := model.SaleOrderAbnormalRecord{
-		Source:        Source,
 		SaleBillUuid:  obj.SaleBillUuid,
 		SaleOrderUuid: obj.SaleOrderUuid,
 		CashierUuid:   obj.OperatorUuid,
@@ -175,63 +175,54 @@ func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64, dutyNo s
 	var orderAbnormalRecord business_data_resp.AbnormalData
 	// 退菜次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次，如果有取消退菜，则要减去取消退菜次数）
 	refundProductTimes := fmt.Sprintf(
-		`COUNT( CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS refund_product_times`,
+		`COUNT( CASE WHEN action = '%s' THEN 1 END) AS refund_product_times`,
 		constant.OrderRefundProduct,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 赠菜次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次）
 	productFreeTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS product_free_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS product_free_times`,
 		constant.OrderProductFree,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 退款次数（操作了几次，数量就是几，不是按照订单来）
 	refundTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS refund_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS refund_times`,
 		constant.OrderRefund,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 转菜次数
 	productMoveTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS product_move_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS product_move_times`,
 		constant.OrderProductMove,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 单品改价次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次）
 	changePriceTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS change_price_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS change_price_times`,
 		constant.OrderChangePrice,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 整单改价次数
 	changeOrderPriceTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '1' THEN 1 END) AS change_order_price_times`,
+		`COUNT(CASE WHEN action = '%s' and sub_action = '1' THEN 1 END) AS change_order_price_times`,
 		constant.OrderDiscount,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 整单折扣次数
 	discountOrderTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '2' THEN 1 END) AS discount_order_times`,
+		`COUNT(CASE WHEN action = '%s' and sub_action = '2' THEN 1 END) AS discount_order_times`,
 		constant.OrderDiscount,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
-	// 整单抹零次数
+	// 整单抹零次数 + 整单抹零和结账抹零
 	roundOrderTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '3' THEN 1 END) AS round_order_times`,
+		`COUNT(CASE WHEN (action = '%s' and sub_action = '3') or (action = '%s') THEN 1 END) AS round_order_times`,
 		constant.OrderDiscount,
-		constant.OrderAbnormalRecordTypeOrder,
+		constant.OrderCheckoutDiscount,
 	)
 	// 免单次数（操作了几次，数量就是几，按照订单来）
 	freeOrderTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS free_order_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS free_order_times`,
 		constant.OrderFreeSale,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 反结账次数（操作了几次，数量就是几，不是按照订单来）
 	reverseSettleTimes := fmt.Sprintf(
-		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS reverse_settle_times`,
+		`COUNT(CASE WHEN action = '%s' THEN 1 END) AS reverse_settle_times`,
 		constant.OrderReverseSettle,
-		constant.OrderAbnormalRecordTypeOrder,
 	)
 	// 查询
 	err := r.db.Model(&model.SaleOrderAbnormalRecord{}).
@@ -253,6 +244,17 @@ func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64, dutyNo s
 	if err != nil {
 		return &business_data_resp.AbnormalData{}, errors.WithMessage(err)
 	}
+
+	// 获取会员充值异常记录
+	abnormalData, err := NewMemberRechargeAbnormalRecordRepo(r.db).GetRecordInfo(cashierUuid, dutyNo)
+	if err != nil {
+		return &business_data_resp.AbnormalData{}, errors.WithMessage(err)
+	}
+
+	// 加上会员充值异常记录
+	orderAbnormalRecord.RefundTimes = orderAbnormalRecord.RefundTimes + abnormalData.RefundTimes
+	orderAbnormalRecord.ReverseSettleTimes = orderAbnormalRecord.ReverseSettleTimes + abnormalData.ReverseSettleTimes
+
 	// 返回
 	return &orderAbnormalRecord, nil
 }
