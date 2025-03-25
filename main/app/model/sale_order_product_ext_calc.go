@@ -7,9 +7,10 @@ import (
 )
 
 type CalcOption struct {
-	IsLatestPrice bool // 是否获取最新价格
-	CookingStatus int  // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
-	H5OrderStatus int  // 0-包括已下单和未下单 1-已接单的 2-未接单的
+	IsLatestPrice   bool             // 是否获取最新价格
+	SaleBillSetting *SaleBillSetting // 新的销售账单设置
+	CookingStatus   int              // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
+	H5OrderStatus   int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
 }
 
 const (
@@ -27,6 +28,13 @@ const (
 func WithLastestPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.IsLatestPrice = true
+	}
+}
+
+// WithSaleBillSetting 使用新的销售账单设置
+func WithSaleBillSetting(setting *SaleBillSetting) func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.SaleBillSetting = setting
 	}
 }
 

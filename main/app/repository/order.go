@@ -17,6 +17,7 @@ import (
 type IOrderRepo interface {
 	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                                    // 创建销售单
 	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                               // 创建销售账单设置
+	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                                 // 更新销售账单设置
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                           // 获取销售单
 	GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, error)                                                                  // 获取待支付且未挂单的点餐订单
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                                 // 创建订单
@@ -87,6 +88,24 @@ func (r *orderRepo) CreateSaleBillSetting(model model.SaleBillSetting) (model.Sa
 	}
 
 	return model, nil
+}
+
+// 更新销售账单设置
+func (r *orderRepo) UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error) {
+	err := r.db.Model(&model.SaleBillSetting{}).Where("uuid = ?", obj.Uuid).Updates(map[string]interface{}{
+		"service_fee_type":   obj.ServiceFeeType,
+		"service_fee_value":  obj.ServiceFeeValue,
+		"tax_fee_type":       obj.TaxFeeType,
+		"discount_type":      obj.DiscountType,
+		"zero_rule":          obj.ZeroRule,
+		"zero_checkout_rule": obj.ZeroCheckoutRule,
+		"is_stat_gift":       obj.IsStatGift,
+		"is_stat_free":       obj.IsStatFree,
+	}).Error
+	if err != nil {
+		return obj, errors.WithMessage(err)
+	}
+	return obj, nil
 }
 
 // GetSaleBill 获取销售单

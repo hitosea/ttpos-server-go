@@ -52,8 +52,8 @@ const (
 const (
 	// 税费类型
 	TaxFeeTypeNone  = 0 // 不收取税费
-	TaxFeeTypeTax   = 1 // 商品已含税
-	TaxFeeTypeNoTax = 2 // 商品未含税
+	TaxFeeTypeNoTax = 1 // 商品未含税
+	TaxFeeTypeTax   = 2 // 商品已含税
 )
 
 const (

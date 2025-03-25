@@ -72,7 +72,7 @@ type IOrderSrv interface {
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                               // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                        // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error)                                                // 创建销售账单设置
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64) (*model.SaleBillSetting, error)                                                            // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                                // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                         // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 向购物车添加商品
@@ -239,13 +239,13 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, dbId, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
 
 		// 创建销售订单
-		saleOrder, errCreateSaleOrder := createSaleOrder(tx, &saleBillSetting, saleBill.Uuid, orderNo)
+		saleOrder, errCreateSaleOrder := createSaleOrder(tx, saleBillSetting, saleBill.Uuid, orderNo)
 		if errCreateSaleOrder != nil {
 			return errCreateSaleOrder
 		}
@@ -321,7 +321,7 @@ func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBi
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) newSaleBillSetting(ctx context.Context, saleBillUuid uint64) (*model.SaleBillSetting, error) {
+func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) (*model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
 	if err != nil {
@@ -415,97 +415,17 @@ func (s *orderSrv) newSaleBillSetting(ctx context.Context, saleBillUuid uint64) 
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, dbId uint64, saleBillUuid uint64) (model.SaleBillSetting, error) {
-	// 获取服务费设置
-	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
+func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64) (*model.SaleBillSetting, error) {
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBillUuid)
 	if err != nil {
-		return model.SaleBillSetting{}, errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
-	// 获取税率设置
-	taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+
+	newSaleBillSetting, err := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting)
 	if err != nil {
-		return model.SaleBillSetting{}, errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
-	// 获取门店业务设置
-	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-	if err != nil {
-		return model.SaleBillSetting{}, errors.WithMessage(err)
-	}
-
-	var serviceFeeType uint
-	var serviceFeeValue float64
-	var taxFeeType uint
-	var discountType uint
-	var zero uint
-	var zeroCheckout uint
-	var isStatGift uint = constant.SaleBillSettingIsStatGiftYes
-	var isStatFree uint = constant.SaleBillSettingIsStatFreeYes
-
-	// 销售账单服务费
-	if serviceFeeSetting.IsOpen == "1" {
-		if serviceFeeSetting.ChargeType == "1" {
-			serviceFeeType = constant.SaleBillSettingServiceFeeTypeFixed
-		}
-		if serviceFeeSetting.ChargeType == "2" {
-			if serviceFeeSetting.IsOpenTax == "0" {
-				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercent
-			}
-			if serviceFeeSetting.IsOpenTax == "1" {
-				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
-			}
-		}
-		serviceFeeValue, err = utils.ParseFloat(serviceFeeSetting.ServiceCharge)
-		if err != nil {
-			return model.SaleBillSetting{}, errors.WithMessage(err)
-		}
-	}
-
-	// 销售账单税率
-	if taxRateSetting.IsOpen == "1" {
-		if taxRateSetting.CalcType == "1" {
-			taxFeeType = constant.SaleBillSettingTaxFeeTypePercentTax
-		}
-		if taxRateSetting.CalcType == "2" {
-			taxFeeType = constant.SaleBillSettingTaxFeeTypePercent
-		}
-	}
-
-	// 销售账单优惠折扣
-	if businessSetting.DiscountMethod == "20" {
-		discountType = constant.SaleBillSettingDiscountTypeOff
-	}
-
-	// 销售账单优惠折扣自动抹零方式
-	zeroingMethod, _ := convertor.ToInt(businessSetting.ZeroingMethod)
-	zero = uint(zeroingMethod)
-
-	// 销售账单结账自动抹零方式
-	checkoutZeroingMethod, _ := convertor.ToInt(businessSetting.CheckoutZeroingMethod)
-	zeroCheckout = uint(checkoutZeroingMethod)
-
-	// 销售账单赠菜计算方式
-	if businessSetting.GiftMethod == "20" {
-		isStatGift = constant.SaleBillSettingIsStatGiftNone
-	}
-
-	// 销售账单免单计算方式
-	if businessSetting.FreeMethod == "20" {
-		isStatFree = constant.SaleBillSettingIsStatFreeNone
-	}
-
-	saleBillSetting, err := repository.NewOrderRepo(db).CreateSaleBillSetting(model.SaleBillSetting{
-		SaleBillUuid:     saleBillUuid,
-		ServiceFeeType:   serviceFeeType,
-		ServiceFeeValue:  serviceFeeValue,
-		TaxFeeType:       taxFeeType,
-		DiscountType:     discountType,
-		ZeroRule:         zero,
-		ZeroCheckoutRule: zeroCheckout,
-		IsStatGift:       isStatGift,
-		IsStatFree:       isStatFree,
-	})
-
-	return saleBillSetting, errors.WithMessage(err)
+	return &newSaleBillSetting, nil
 }
 
 // CreateDeskOrder 创建桌台订单
@@ -539,7 +459,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo, ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
 
 	// 构建销售账单设置
-	saleBillSetting, err := s.newSaleBillSetting(ctx, saleBill.Uuid)
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
@@ -3763,6 +3683,143 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 	return nil
 }
 
+// 检查账单快照信息是否改变
+func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, *model.SaleBillSetting, error) {
+	res := &resp.OrderCheckServiceRes{
+		Code: constant.CodeOrderCheckProductPriceChanged,
+		OrderCheckRes: resp.OrderCheckRes{
+			Products: &resp.CartProductList{
+				List: make([]resp.Product, 0),
+			},
+		},
+	}
+
+	oldSetting := saleBill.SaleBillSetting
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err)
+	}
+	// 检查税费类型是否改变：商品含税、商品未含税
+	if oldSetting.TaxFeeType != newSetting.TaxFeeType {
+		oldTaxFeeType := parseTaxFeeType(oldSetting.TaxFeeType)
+		newTaxFeeType := parseTaxFeeType(newSetting.TaxFeeType)
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   oldTaxFeeType + " -> " + newTaxFeeType,
+				TH:   oldTaxFeeType + " -> " + newTaxFeeType,
+				EN:   oldTaxFeeType + " -> " + newTaxFeeType,
+				ZHTW: oldTaxFeeType + " -> " + newTaxFeeType,
+				JA:   oldTaxFeeType + " -> " + newTaxFeeType,
+				KO:   oldTaxFeeType + " -> " + newTaxFeeType,
+				MY:   oldTaxFeeType + " -> " + newTaxFeeType,
+				TR:   oldTaxFeeType + " -> " + newTaxFeeType,
+			},
+		})
+		return res, newSetting, nil
+	}
+	// 检查服务费类型是否改变
+	if oldSetting.ServiceFeeType != newSetting.ServiceFeeType {
+		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		newServiceFeeType := parseServiceFeeType(newSetting.ServiceFeeType)
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   oldServiceFeeType + " -> " + newServiceFeeType,
+				TH:   oldServiceFeeType + " -> " + newServiceFeeType,
+				EN:   oldServiceFeeType + " -> " + newServiceFeeType,
+				ZHTW: oldServiceFeeType + " -> " + newServiceFeeType,
+				JA:   oldServiceFeeType + " -> " + newServiceFeeType,
+				KO:   oldServiceFeeType + " -> " + newServiceFeeType,
+				MY:   oldServiceFeeType + " -> " + newServiceFeeType,
+				TR:   oldServiceFeeType + " -> " + newServiceFeeType,
+			},
+		})
+		return res, newSetting, nil
+	}
+	// 检查固定服务费是否改变
+	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
+		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				EN:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				ZHTW: oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				JA:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+			},
+		})
+		return res, newSetting, nil
+	}
+	// 检查"按比例-不收取税费"比例是否改变
+	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypePercent && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
+		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				EN:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				ZHTW: oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				JA:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+			},
+		})
+		return res, newSetting, nil
+	}
+	// 检查"按比例-收取税费"比例是否改变
+	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
+		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TH:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				EN:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				ZHTW: oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				JA:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+			},
+		})
+		return res, newSetting, nil
+	}
+
+	return nil, nil, nil
+}
+
+func parseServiceFeeType(serviceFeeType uint) string {
+	switch serviceFeeType {
+	case constant.SaleBillSettingServiceFeeTypeNone:
+		return "不收取服务费"
+	case constant.SaleBillSettingServiceFeeTypeFixed:
+		return "固定服务费"
+	case constant.SaleBillSettingServiceFeeTypePercent:
+		return "按比例不收取税费"
+	case constant.SaleBillSettingServiceFeeTypePercentTax:
+		return "按比例收取税费"
+	default:
+		return "未知"
+	}
+}
+
+func parseTaxFeeType(taxFeeType uint) string {
+	switch taxFeeType {
+	case constant.TaxFeeTypeTax:
+		return "商品已含税"
+	case constant.TaxFeeTypeNoTax:
+		return "商品未含税"
+	default:
+		return "关闭消费税"
+	}
+}
 func (s *orderSrv) GetProductDecreaseStockList(ctx context.Context, unCookingSaleOrderProducts []*model.SaleOrderProduct) ([]*model.Product, error) {
 	cookingDeductSaleOrderProducts, err := s.getOrderProductForDecreaseStock(ctx, unCookingSaleOrderProducts)
 	if err != nil {
@@ -5782,6 +5839,10 @@ func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T
 }
 
 func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
+	option := &model.CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
 	// 计算订单商品、订单、账单
 	saleBill.CalcAll(options...)
 	// 设置收银员信息
@@ -5827,6 +5888,13 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 			// 保存自助餐加钟商品
 			for _, buffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
 				if err := repository.NewSaleOrderBuffetDelayProductRepo(db).UpdateOrCreateSaleOrderBuffetDelayProductRecord(*buffetDelayProduct); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+			// 更新账单设置
+			if option.SaleBillSetting != nil {
+				option.SaleBillSetting.Uuid = saleBill.SaleBillSetting.Uuid
+				if _, err := repository.NewOrderRepo(db).UpdateSaleBillSetting(*option.SaleBillSetting); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
@@ -6427,6 +6495,29 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 			}
 			saleBill := shopCartInfo.SaleBill
 			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+		}
+		return res, nil
+	}
+
+	// 检查含税未含税是否改变、服务费类型是否改变、服务费是否改变、服务费比例是否改变
+	res, newSetting, err := s.checkSaleBillSettingChanged(ctx, saleBill)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res != nil {
+		{
+			// 如果账单快照设置变化，更新销售订单的金额。都是后台更新后而未立即更新账单设置引起的
+			// 账单快照设置变化包括：
+			// 1. 含税未含税是否改变
+			// 2. 服务费类型是否改变
+			// 3. 固定服务费是否改变
+			// 4. 服务费比例是否改变
+			shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			saleBill := shopCartInfo.SaleBill
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice(), model.WithSaleBillSetting(newSetting))
 		}
 		return res, nil
 	}

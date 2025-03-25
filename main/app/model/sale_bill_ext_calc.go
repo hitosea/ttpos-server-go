@@ -116,7 +116,14 @@ func (model *SaleBill) calcFreeAmount() float64 {
 
 // 重新计算销售账单的金额
 func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
 	setting := model.SaleBillSetting
+	if option.SaleBillSetting != nil {
+		setting = option.SaleBillSetting
+	}
 	for i, _ := range model.SaleOrders {
 		saleOrder := model.SaleOrders[i]
 		for j, _ := range saleOrder.SaleOrderProducts {
