@@ -50,7 +50,7 @@ func checkoutSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderSettle,
 				Remark:        "结账",
@@ -59,9 +59,9 @@ func checkoutSaleOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeCheckoutZeroSaleOrderEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutZeroSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:结账 %+v", payload), zap.Uint64("record", uuid))

@@ -29,7 +29,7 @@ func changeDeskEventHandler() {
 		event.NewSystemBus().SubscribeChangeDeskEvent(func(payload event.ChangeDeskPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderChangeTable,
 				Remark:        "转台",
@@ -38,9 +38,9 @@ func changeDeskEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeChangeDeskEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeChangeDeskEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:转台 %+v", payload), zap.Uint64("record", uuid))

@@ -29,7 +29,7 @@ func discountZeroSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeDiscountZeroSaleOrderEvent(func(payload event.DiscountZeroSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderDiscount,
 				Remark:        "优惠折扣",
@@ -38,9 +38,9 @@ func discountZeroSaleOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeDiscountZeroSaleOrderEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeDiscountZeroSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:优惠折扣-抹零 %+v", payload), zap.Uint64("record", uuid))

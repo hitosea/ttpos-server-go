@@ -29,7 +29,7 @@ func freeSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderSettle,
 				Remark:        "结账",
@@ -38,9 +38,9 @@ func freeSaleOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:免单 %+v", payload), zap.Uint64("record", uuid))

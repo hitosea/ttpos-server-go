@@ -1,7 +1,7 @@
 package model
 
-// SaleBillOperationRecord 桌台账单操作记录 `ttpos_sale_bill_operation_record`
-type SaleBillOperationRecord struct {
+// SaleOrderAbnormalRecord 订单异常记录 `ttpos_sale_order_abnormal_record`
+type SaleOrderAbnormalRecord struct {
 	BaseModel
 	// 基本信息
 	Data   string `gorm:"column:data;comment:操作来源 cashier-收银 assistant-助手 shop-商家后台" json:"data"`
@@ -16,6 +16,6 @@ type SaleBillOperationRecord struct {
 	Operator Staff `gorm:"foreignKey:OperatorUuid;references:uuid"`
 }
 
-func (model *SaleBillOperationRecord) SetNil() {
+func (model *SaleOrderAbnormalRecord) SetNil() {
 
 }

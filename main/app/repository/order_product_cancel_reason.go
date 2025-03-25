@@ -34,7 +34,7 @@ func (o *orderProductCancelReasonRepo) CreateBatch(boms []*model.SaleOrderProduc
 }
 
 // CreateRecord 创建订单操作记录
-func (r *orderProductCancelReasonRepo) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error) {
+func (r *orderProductCancelReasonRepo) CreateRecord(saleBillUuid uint64, Action string, record model.SaleOrderOperationRecord, data interface{}) (uint64, error) {
 	record.Action = Action
 	record.SaleBillUuid = saleBillUuid
 
@@ -52,7 +52,7 @@ func (r *orderProductCancelReasonRepo) CreateRecord(saleBillUuid uint64, Action 
 	}
 
 	// // 添加异常日志
-	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
+	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleOrderOperationRecord{
 	// 	Source:        source,
 	// 	Remark:        "改价",
 	// 	SaleOrderUuid: req.SaleOrderUuid,

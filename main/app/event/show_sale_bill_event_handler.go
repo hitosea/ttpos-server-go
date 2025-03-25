@@ -29,7 +29,7 @@ func showSaleBillEventHandler() {
 		event.NewSystemBus().SubscribeShowSaleBillEvent(func(payload event.ShowSaleBillPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:       payload.Source,
 				Action:       constant.OrderPickOrder,
 				Remark:       "取单",
@@ -37,9 +37,9 @@ func showSaleBillEventHandler() {
 				OperatorUuid: payload.GetOperatorUuid(),
 			}
 			record.Data = ""
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeShowSaleBillEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeShowSaleBillEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:取单 %+v", payload), zap.Uint64("record", uuid))

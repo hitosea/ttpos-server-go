@@ -29,7 +29,7 @@ func changeMealNumSaleBillEventHandler() {
 		event.NewSystemBus().SubscribeChangeMealNumSaleBillEvent(func(payload event.ChangeMealNumSaleBillPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:       payload.Source,
 				Action:       constant.OrderUpdateMealNum,
 				Remark:       "修改桌台就餐人数",
@@ -37,9 +37,9 @@ func changeMealNumSaleBillEventHandler() {
 				OperatorUuid: payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeChangeMealNumSaleBillEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeChangeMealNumSaleBillEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:修改桌台就餐人数 %+v", payload), zap.Uint64("record", uuid))

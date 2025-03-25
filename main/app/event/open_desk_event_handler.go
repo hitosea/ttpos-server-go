@@ -2,7 +2,6 @@ package event
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -12,6 +11,8 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 var once_open_desk_event_handler sync.Once
@@ -28,7 +29,7 @@ func openDeskEventHandler() {
 		event.NewSystemBus().SubscribeOpenDeskEvent(func(payload event.OpenDeskPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderOpenTable,
 				Remark:        "开台",
@@ -37,9 +38,9 @@ func openDeskEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeOpenDeskEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeOpenDeskEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:开台 %+v", payload), zap.Uint64("record", uuid))

@@ -522,7 +522,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台信息表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_operation_record` (
+-- 销售账单操作记录表
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台账单记录ID',
     `source` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作来源 cashier-收银 assistant-助手 shop-商家后台',
@@ -537,6 +538,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_operation_record` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台账单操作记录';
+
+-- 销售账单异常日志表
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `source` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '来源 order-订单 recharge-充值',
+    `action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '行为',
+    `sub_action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '自定义子行为',
+    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作签名',
+    `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
+    `cashier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收银员ID',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/json"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -11,12 +12,12 @@ import (
 
 // IOrderOperationRecordRepo 订单操作记录
 type IOrderOperationRecordRepo interface {
-	GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleBillOperationRecord, int64, error)
-	GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error)
-	GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error)
-	UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error
-	CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error)
-	CreateSaleBillOperationRecord(model model.SaleBillOperationRecord) (uint64, error)
+	GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleOrderOperationRecord, int64, error)
+	GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderOperationRecord, error)
+	GetRecordInfo(saleBillUuid uint64) (model.SaleOrderOperationRecord, error)
+	UpdateRecord(saleBillUuid uint64, record model.SaleOrderOperationRecord) error
+	CreateRecord(saleBillUuid uint64, Action string, record model.SaleOrderOperationRecord, data interface{}) (uint64, error)
+	CreateSaleOrderOperationRecord(model model.SaleOrderOperationRecord) (uint64, error)
 	DeleteRecord(saleBillUuid uint64) error
 }
 
@@ -33,20 +34,20 @@ func NewOrderOperationRecordRepoImpl(db *gorm.DB) *OrderOperationRecordRepoImpl 
 	return &OrderOperationRecordRepoImpl{db: db}
 }
 
-func (r *OrderOperationRecordRepoImpl) CreateSaleBillOperationRecord(obj model.SaleBillOperationRecord) (uint64, error) {
+func (r *OrderOperationRecordRepoImpl) CreateSaleOrderOperationRecord(obj model.SaleOrderOperationRecord) (uint64, error) {
 	obj.SetNil()
-	if err := r.db.Model(&model.SaleBillOperationRecord{}).Create(&obj).Error; err != nil {
+	if err := r.db.Model(&model.SaleOrderOperationRecord{}).Create(&obj).Error; err != nil {
 		return 0, errors.WithMessage(err)
 	}
 	return obj.Uuid, nil
 }
 
 // GetRecordList 获取订单操作记录列表
-func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleBillOperationRecord, int64, error) {
-	var orderOperationRecords []model.SaleBillOperationRecord
+func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleOrderOperationRecord, int64, error) {
+	var orderOperationRecords []model.SaleOrderOperationRecord
 	var total int64
 
-	query := r.db.Model(&model.SaleBillOperationRecord{}).Where("delete_time = ?", 0)
+	query := r.db.Model(&model.SaleOrderOperationRecord{}).Where("delete_time = ?", 0)
 
 	for _, opt := range opts {
 		query = opt(query)
@@ -63,32 +64,32 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts 
 }
 
 // GetRecordLists 获取订单操作记录列表
-func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleBillOperationRecord, error) {
-	var orderOperationRecords []model.SaleBillOperationRecord
-	err := r.db.Model(&model.SaleBillOperationRecord{}).Preload("Operator").
+func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderOperationRecord, error) {
+	var orderOperationRecords []model.SaleOrderOperationRecord
+	err := r.db.Model(&model.SaleOrderOperationRecord{}).Preload("Operator").
 		Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Find(&orderOperationRecords).Error
 	return orderOperationRecords, errors.WithMessage(err)
 }
 
 // GetRecordInfo 获取订单操作记录信息
-func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.SaleBillOperationRecord, error) {
-	var orderOperationRecord model.SaleBillOperationRecord
-	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).First(&orderOperationRecord).Error; err != nil {
-		return model.SaleBillOperationRecord{}, errors.WithMessage(err)
+func (r *OrderOperationRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.SaleOrderOperationRecord, error) {
+	var orderOperationRecord model.SaleOrderOperationRecord
+	if err := r.db.Model(&model.SaleOrderOperationRecord{}).Where("uuid = ?", saleBillUuid).First(&orderOperationRecord).Error; err != nil {
+		return model.SaleOrderOperationRecord{}, errors.WithMessage(err)
 	}
 	return orderOperationRecord, nil
 }
 
 // UpdateRecord 更新订单操作记录
-func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record model.SaleBillOperationRecord) error {
-	if err := r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).Updates(record).Error; err != nil {
+func (r *OrderOperationRecordRepoImpl) UpdateRecord(saleBillUuid uint64, record model.SaleOrderOperationRecord) error {
+	if err := r.db.Model(&model.SaleOrderOperationRecord{}).Where("uuid = ?", saleBillUuid).Updates(record).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
 }
 
 // CreateRecord 创建订单操作记录
-func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleBillOperationRecord, data interface{}) (uint64, error) {
+func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action string, record model.SaleOrderOperationRecord, data interface{}) (uint64, error) {
 	record.Action = Action
 	record.SaleBillUuid = saleBillUuid
 
@@ -105,20 +106,20 @@ func (r *OrderOperationRecordRepoImpl) CreateRecord(saleBillUuid uint64, Action 
 		return 0, errors.WithMessage(err)
 	}
 
-	// // 添加异常日志
-	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
-	// 	Source:        source,
-	// 	Remark:        "改价",
-	// 	SaleOrderUuid: req.SaleOrderUuid,
-	// 	OperatorUuid:  staffUuid,
-	// }, map[string]interface{}{
-	// 	"remark": "",
-	// })
+	// 添加异常日志
+	NewOrderAbnormalRecordRepo(r.db).CreateRecord(saleBillUuid, constant.OrderChangePrice, model.SaleBillAbnormalRecord{
+		Action:        Action,
+		Remark:        "改价",
+		SaleOrderUuid: record.SaleOrderUuid,
+		OperatorUuid:  record.OperatorUuid,
+	}, map[string]interface{}{
+		"remark": "",
+	})
 
 	return record.Uuid, nil
 }
 
 // DeleteRecord 软删除订单操作记录
 func (r *OrderOperationRecordRepoImpl) DeleteRecord(saleBillUuid uint64) error {
-	return r.db.Model(&model.SaleBillOperationRecord{}).Where("uuid = ?", saleBillUuid).Update("delete_time", uint(time.Now().Unix())).Error
+	return r.db.Model(&model.SaleOrderOperationRecord{}).Where("uuid = ?", saleBillUuid).Update("delete_time", uint(time.Now().Unix())).Error
 }
