@@ -1726,6 +1726,27 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 					}
 				}
 			}
+			// 退积分
+			{
+				points := saleOrder.GiftPoints
+				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				// 更新会员积分
+				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+					"frozen_point":                   member.FrozenPoint - points,                            // 扣减积分
+					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.Amount, // 扣减累计消费金额
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 创建积分变动记录
+				memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
+				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+
 			// 发布“会员余额变动”事件
 			go func() {
 				time.Sleep(time.Microsecond * 200)

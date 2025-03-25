@@ -276,6 +276,17 @@ func (model *SaleOrder) NewRefundMemberPointLog(points float64) *MemberPointLog 
 	return memberPointLog
 }
 
+func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPointLog {
+	memberPointLog := &MemberPointLog{
+		MemberUuid:  model.ConsumerUuid,
+		Scene:       constant.MemberPointLogSceneReverse,
+		Value:       points,
+		Describe:    fmt.Sprintf("订单反结账：%s", model.OrderNo),
+		RelatedUuid: model.Uuid,
+	}
+	return memberPointLog
+}
+
 // 创建退货单
 func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
 	returnOrderUuid, _ := utils.GetID()
