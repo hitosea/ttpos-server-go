@@ -21,6 +21,7 @@ type ISaleOrderProductRepo interface {
 	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
 	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
 	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error // 批量删除销售订单商品。delete_time赋值为当前时间
+	Update(data map[string]interface{}, opts ...DBOption) error        // 更新订单商品
 }
 
 type saleOrderProductRepo struct {
@@ -203,4 +204,17 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductList(models []*model.SaleOr
 	}
 	now := time.Now().Unix()
 	return r.db.Model(&model.SaleOrderProduct{}).Where("uuid in (?)", uuids).Update("delete_time", now).Error
+}
+
+// Update 更新
+func (r *saleOrderProductRepo) Update(data map[string]interface{}, opts ...DBOption) error {
+	db := r.db.Model(&model.SaleOrderProduct{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Updates(data).Error
+
+	return errors.WithMessage(err)
 }

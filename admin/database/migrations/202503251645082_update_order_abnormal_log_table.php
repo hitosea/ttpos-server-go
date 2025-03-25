@@ -28,11 +28,9 @@ class UpdateOrderAbnormalLogTable extends Migrator
      */
     public function change()
     {
-
         if ($this->hasTable('sale_order_abnormal_log')) {
-            // 改表名为 sale_order_operation_record
             $table = $this->table('sale_order_abnormal_log', ['engine' => 'InnoDB', 'collation' => 'utf8mb4_unicode_ci', 'comment' => '订单异常日志表']);
-            $table->rename('sale_order_operation_record');
+            $table->rename('sale_order_abnormal_record');
             $table->save();
         }
     }

@@ -759,7 +759,7 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			deskSaleOrder := deskSaleBill.GetFirstSaleOrder()
 
 			// 更新销售订单商品
-			if err := repository.NewOrderProductRepo(tx).Update(
+			if err := repository.NewSaleOrderProductRepo(tx).Update(
 				map[string]interface{}{
 					"desk_uuid":       saleBill.DeskUuid,
 					"sale_bill_uuid":  saleBill.Uuid,
