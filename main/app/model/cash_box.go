@@ -27,5 +27,5 @@ type CashBoxLog struct {
 	Processed             int     `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理钱箱余额变动，修改钱箱的余额并清0冻结的余额;NOT NULL" json:"processed"`
 	RelatedUuid           uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:关联的充值订单、销售订单ID,场景为1、6时必填;NOT NULL" json:"related_uuid"`
 	ReturnOrderUuid       uint64  `gorm:"column:return_order_uuid;type:bigint(20) unsigned;default:0;comment:退货单ID,场景为2时必填;NOT NULL" json:"return_order_uuid"`
-	RefundOrderAmountUuid uint64  `gorm:"column:refund_order_amount_uuid;type:bigint(20) unsigned;default:0;comment:退款单金额ID,场景为3时必填;NOT NULL" json:"refund_order_amount_uuid"`
+	RefundOrderAmountUuid uint64  `gorm:"column:refund_order_amount_uuid;type:bigint(20) unsigned;default:0;comment:退款单金额ID,场景为2时必填;NOT NULL" json:"refund_order_amount_uuid"`
 }

@@ -339,6 +339,19 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 				RelatedUuid: returnOrderAmountUuid,
 			}
 		}
+
+		// 如果退款金额为现金，则更新钱箱
+		if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			returnOrderAmount.CashBoxLog = &CashBoxLog{
+				Scene:                 constant.CashBoxLogSceneRefund,
+				Amount:                returnOrderAmount.Amount,
+				Remark:                fmt.Sprintf("订单退款：%s", model.OrderNo),
+				RelatedUuid:           model.Uuid,            // 关联销售订单
+				ReturnOrderUuid:       returnOrderUuid,       // 关联退货单
+				RefundOrderAmountUuid: returnOrderAmountUuid, // 关联退货单退款金额
+			}
+		}
+
 		returnOrderAmounts = append(returnOrderAmounts, returnOrderAmount)
 		returnAmount = returnAmount.Sub(amount)
 		// 如果退款金额为0，则退出

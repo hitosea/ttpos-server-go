@@ -1368,6 +1368,18 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					event2.HandleMemberBalance(s.dbm.GetDB(ctx.GetDbId())) // 不要使用tx或者ctx.GetDB, 执行完会context canceled
 				}()
 			}
+			// 如果退款金额为现金，则更新钱箱
+			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				// 存现金，更新钱箱
+				ctx.SetDB(db)
+				if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
+					Amount:    -returnOrderAmount.Amount,
+					Scene:     constant.CashBoxLogSceneRefund,
+					OrderUuid: returnOrderAmount.Uuid,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
 		}
 		// 创建退货单商品
 		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderProduct(returnOrder.ReturnOrderProducts); err != nil {
