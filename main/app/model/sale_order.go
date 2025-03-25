@@ -256,10 +256,21 @@ func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
 
 func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {
 	memberPointLog := &MemberPointLog{
-		MemberUuid:  model.Member.Uuid,
+		MemberUuid:  model.ConsumerUuid,
 		Scene:       constant.MemberPointLogSceneConsume,
 		Value:       model.GiftPoints,
 		Describe:    fmt.Sprintf("订单赠送：%s", model.OrderNo),
+		RelatedUuid: model.Uuid,
+	}
+	return memberPointLog
+}
+
+func (model *SaleOrder) NewRefundMemberPointLog(points float64) *MemberPointLog {
+	memberPointLog := &MemberPointLog{
+		MemberUuid:  model.ConsumerUuid,
+		Scene:       constant.MemberPointLogSceneRefund,
+		Value:       points,
+		Describe:    fmt.Sprintf("退款扣除：%s", model.OrderNo),
 		RelatedUuid: model.Uuid,
 	}
 	return memberPointLog
@@ -292,11 +303,11 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
-	refundAmount := returnAmount.Round(2).InexactFloat64()
+	refundAmount := returnAmount.Truncate(2).InexactFloat64()
 
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		// 整单退款，退款金额=订单最终应收金额-已退款金额
-		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Truncate(2).InexactFloat64()
 	}
 
 	// 获取销售订单的每个付款单的可退款金额

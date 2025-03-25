@@ -1388,6 +1388,31 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, returnOrder.RefundAmount); err != nil {
 			return errors.WithMessage(err)
 		}
+		// 退积分
+		{
+			refundAmount := returnOrder.RefundAmount // 退款金额
+			// 积分赠送比例
+			integralGiveRate := saleOrder.GiftPointsRate
+			// 退积分=退款金额*积分赠送比例
+			points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
+			member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			// 更新会员积分
+			if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+				"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
+				"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 创建积分变动记录
+			memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+			if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
