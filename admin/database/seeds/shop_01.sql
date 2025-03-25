@@ -326,7 +326,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_invoice_info` (
 
 -- 销售订单高峰时间表
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_peak_time` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
   `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一ID',
   `date` int(11) DEFAULT 0 COMMENT '日期（天）',
   `hour` int(11) DEFAULT 0 COMMENT '小时',

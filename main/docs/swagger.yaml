@@ -1855,6 +1855,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.CashierStaff'
         description: 收银机员工
+      client_version:
+        description: 客户端版本
+        type: string
       cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
@@ -2580,6 +2583,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.H5'
         description: 扫码H5设置
+      is_open_h5_order:
+        description: 是否开启扫码点餐接单 0不开启, 1开启
+        type: integer
       kitchen:
         allOf:
         - $ref: '#/definitions/setting.Kitchen'
@@ -2905,6 +2911,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Business'
         description: 门店业务设置
+      client_version:
+        description: 客户端版本
+        type: string
       cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'
@@ -4651,6 +4660,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Business'
         description: 门店业务设置
+      client_version:
+        description: 客户端版本
+        type: string
       cloud:
         allOf:
         - $ref: '#/definitions/setting.CloudBasic'

@@ -23,8 +23,8 @@ type AbnormalData struct {
 	RefundProductTimes    int `json:"refund_product_times"`     // 退菜次数
 	RefundTimes           int `json:"refund_times"`             // 退款次数
 	ReverseSettleTimes    int `json:"reverse_settle_times"`     // 反结账次数
-	ProductFreeTimes      int `json:"product_free_times"`       // 赠菜次数
 	FreeOrderTimes        int `json:"free_order_times"`         // 免单次数
+	ProductFreeTimes      int `json:"product_free_times"`       // 赠菜次数
 	ProductMoveTimes      int `json:"product_move_times"`       // 转菜次数
 	ChangePriceTimes      int `json:"change_price_times"`       // 单品改价次数
 	ChangeOrderPriceTimes int `json:"change_order_price_times"` // 整单改价次数

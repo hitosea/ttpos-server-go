@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
 
@@ -73,7 +74,7 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 		printerLogRepo.WherePrinterTime(),
 		printerLogRepo.WhereLimit(5),
 		func(db *gorm.DB) *gorm.DB {
-			if config.Server.Mode != constant.ServerModeDebug {
+			if viper.GetString("CHECK_PRINT") != "false" {
 				db.Where("print_method = ?", 2)
 				db.Where("first_execution = ?", 0)
 				db.Where("type = ?", constant.No)

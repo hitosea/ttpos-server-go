@@ -276,6 +276,10 @@ class Setting extends BaseModel
                 }
             }
         }
+
+        // 处理打印语言
+        $userData['printer']['values']['language'] = $userData['printer']['values']['language'] ?? [];
+
         // v1.0.8 语言数据兼容处理
         $result = ArrayHelp::arrayMergeMultiple($defaultData, $userData);
         foreach ($result as $key => $value) {

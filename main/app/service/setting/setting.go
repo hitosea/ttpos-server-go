@@ -536,6 +536,8 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingCashier)
+	isSetIsShowScanSoldOut := strings.Contains(st.Values, "is_show_scan_sold_out")
+	isSetIsShowAssistantSoldOut := strings.Contains(st.Values, "is_show_assistant_sold_out")
 	err = json.Unmarshal([]byte(st.Values), &cashier)
 	if err != nil {
 		ctx.Log().Error("解析各端-收银机设置失败", zap.Error(err))
@@ -556,6 +558,12 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	defaultCashier.Language = nil
 
 	err = copier.CopyWithOption(&defaultCashier, cashier, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+	if isSetIsShowScanSoldOut {
+		defaultCashier.IsShowScanSoldOut = cashier.IsShowScanSoldOut // h5端是否显示售罄
+	}
+	if isSetIsShowAssistantSoldOut {
+		defaultCashier.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut // 助手端是否显示售罄
+	}
 	if err != nil {
 		ctx.Log().Error("合并各端-收银机设置失败", zap.Error(err))
 		return cashier, errors.New("合并各端-收银机设置失败")
