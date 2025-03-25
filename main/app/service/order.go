@@ -1613,6 +1613,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			return errors.WithMessage(errors.New("桌台非空闲"))
 		}
 		desk.SetOpenDesk(saleBill.Uuid)
+		saleBill.DeskUuid = desk.Uuid
+		saleBill.SerialNo = desk.DeskNo
 	}
 
 	// 如果销售账单是点餐订单，则如果存在未挂单的点餐订单，根据参数决定是否挂单
