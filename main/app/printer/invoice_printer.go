@@ -20,6 +20,7 @@ import (
 func (p *PrinterRepoImpl) PrintingInvoice(
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
+	firstExecution int,
 ) (*resp.PrinterData, error) {
 	deviceSn := p.ctx.GetDeviceSn()
 
@@ -77,7 +78,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		DataType:        constant.PrinterTemplateInvoice,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  1,
+		FirstExecution:  firstExecution,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))

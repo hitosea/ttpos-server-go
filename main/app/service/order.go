@@ -6764,6 +6764,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 		printType = constant.PrinterTemplateBilling
 		firstExecution = 0
 	}
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		firstExecution = 0
+	}
 
 	// 打印
 	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
@@ -6780,6 +6784,11 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	// 保存销售账单
 	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
 		return nil, errors.WithMessage(err, "设置锁单失败")
+	}
+
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		return &resp.PrinterData{}, nil
 	}
 
 	return printerData, nil
@@ -6841,9 +6850,15 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 	printerData, err := printer.NewPrinterRepo(ctx, req.PrintLang).PrintingInvoice(
 		saleBill,
 		saleOrder.Uuid,
+		utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 如果是点餐助手，不能直接打印
+	if ctx.GetSource() == constant.SourceAssistant {
+		return &resp.PrinterData{}, nil
 	}
 
 	return printerData, nil
