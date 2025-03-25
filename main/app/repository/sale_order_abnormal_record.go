@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/logger"
@@ -14,8 +15,8 @@ import (
 
 // IOrderAbnormalRecordRepo 订单异常记录
 type IOrderAbnormalRecordRepo interface {
-	GetRecordInfo(saleBillUuid uint64) (model.SaleOrderAbnormalRecord, error)
-	CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) error
+	GetRecordInfo(cashierUuid uint64, dutyNo string) (*business_data_resp.AbnormalData, error)
+	CreateSaleOrderAbnormalLog(Source string, obj model.SaleOrderOperationRecord) error
 }
 
 type OrderAbnormalRecordRepoImpl struct {
@@ -31,18 +32,24 @@ func NewOrderAbnormalRecordRepoImpl(db *gorm.DB) *OrderAbnormalRecordRepoImpl {
 	return &OrderAbnormalRecordRepoImpl{db: db}
 }
 
-func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo string, obj model.SaleOrderOperationRecord) error {
+func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source string, obj model.SaleOrderOperationRecord) error {
+	//
+	bill, err := NewSaleBillRepo(r.db).GetSaleBillByUuid(obj.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	//
 	record := model.SaleOrderAbnormalRecord{
 		Source:        Source,
 		SaleBillUuid:  obj.SaleBillUuid,
 		SaleOrderUuid: obj.SaleOrderUuid,
 		CashierUuid:   obj.OperatorUuid,
-		DutyNo:        dutyNo,
+		DutyNo:        bill.DutyNo,
 		Action:        obj.Action,
 		SubAction:     "",
 		Remark:        obj.Remark,
 	}
-
+	//
 	var data map[string]interface{}
 	if obj.Data != "" {
 		if err := json.Unmarshal([]byte(obj.Data), &data); err != nil {
@@ -51,7 +58,6 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo 
 			return errors.WithMessage(err)
 		}
 	}
-
 	//
 	switch obj.Action {
 	case constant.OrderRefundProduct:
@@ -153,17 +159,100 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo 
 				return errors.WithMessage(err)
 			}
 		}
+	case constant.OrderRefund, constant.OrderProductMove:
+		// 退款，转菜
+		if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
+			fmt.Println("CreateSaleOrderAbnormalLog-OrderReverseSettle", err)
+			return errors.WithMessage(err)
+		}
 	}
-
 	// 返回
 	return nil
 }
 
 // GetRecordInfo 获取订单异常记录信息
-func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(saleBillUuid uint64) (model.SaleOrderAbnormalRecord, error) {
-	var orderAbnormalRecord model.SaleOrderAbnormalRecord
-	if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("uuid = ?", saleBillUuid).First(&orderAbnormalRecord).Error; err != nil {
-		return model.SaleOrderAbnormalRecord{}, errors.WithMessage(err)
+func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64, dutyNo string) (*business_data_resp.AbnormalData, error) {
+	var orderAbnormalRecord business_data_resp.AbnormalData
+	// 退菜次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次，如果有取消退菜，则要减去取消退菜次数）
+	refundProductTimes := fmt.Sprintf(
+		`COUNT( CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS refund_product_times`,
+		constant.OrderRefundProduct,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 赠菜次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次）
+	productFreeTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS product_free_times`,
+		constant.OrderProductFree,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 退款次数（操作了几次，数量就是几，不是按照订单来）
+	refundTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS refund_times`,
+		constant.OrderRefund,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 转菜次数
+	productMoveTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS product_move_times`,
+		constant.OrderProductMove,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 单品改价次数（操作了几次，数量就是几，按照订单来，对一个商品反复操作，记录为1次）
+	changePriceTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS change_price_times`,
+		constant.OrderChangePrice,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 整单改价次数
+	changeOrderPriceTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '1' THEN 1 END) AS change_order_price_times`,
+		constant.OrderDiscount,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 整单折扣次数
+	discountOrderTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '2' THEN 1 END) AS discount_order_times`,
+		constant.OrderDiscount,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 整单抹零次数
+	roundOrderTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' and sub_action = '3' THEN 1 END) AS round_order_times`,
+		constant.OrderDiscount,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 免单次数（操作了几次，数量就是几，按照订单来）
+	freeOrderTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS free_order_times`,
+		constant.OrderFreeSale,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 反结账次数（操作了几次，数量就是几，不是按照订单来）
+	reverseSettleTimes := fmt.Sprintf(
+		`COUNT(CASE WHEN action = '%s' and source = '%s' THEN 1 END) AS reverse_settle_times`,
+		constant.OrderReverseSettle,
+		constant.OrderAbnormalRecordTypeOrder,
+	)
+	// 查询
+	err := r.db.Model(&model.SaleOrderAbnormalRecord{}).
+		Select(
+			refundProductTimes,
+			productFreeTimes,
+			refundTimes,
+			productMoveTimes,
+			changePriceTimes,
+			changeOrderPriceTimes,
+			discountOrderTimes,
+			roundOrderTimes,
+			freeOrderTimes,
+			reverseSettleTimes,
+		).
+		Where("cashier_uuid = ?", cashierUuid).
+		Where("duty_no = ?", dutyNo).
+		First(&orderAbnormalRecord).Error
+	if err != nil {
+		return &business_data_resp.AbnormalData{}, errors.WithMessage(err)
 	}
-	return orderAbnormalRecord, nil
+	// 返回
+	return &orderAbnormalRecord, nil
 }

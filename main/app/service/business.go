@@ -92,7 +92,16 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 					Code:     42,
 				},
 			},
-			AbnormalData: business_data_resp.AbnormalData{},
+			AbnormalData: func() business_data_resp.AbnormalData {
+				AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
+					ctx.GetStaffUuid(),
+					ctx.GetStaff().DutyNo,
+				)
+				if err != nil {
+					return business_data_resp.AbnormalData{}
+				}
+				return *AbnormalData
+			}(),
 			MemberData: business_data_resp.MemberData{
 				RechargeAmount: 120,
 				GiftMoney:      120,
@@ -277,7 +286,16 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 				Code:     42,
 			},
 		},
-		AbnormalData: business_data_resp.AbnormalData{},
+		AbnormalData: func() business_data_resp.AbnormalData {
+			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
+				ctx.GetStaffUuid(),
+				ctx.GetStaff().DutyNo,
+			)
+			if err != nil {
+				return business_data_resp.AbnormalData{}
+			}
+			return *AbnormalData
+		}(),
 		MemberData: business_data_resp.MemberData{
 			RechargeAmount: 120,
 			GiftMoney:      120,

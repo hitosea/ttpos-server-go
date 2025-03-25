@@ -513,7 +513,16 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 				Code:     42,
 			},
 		},
-		AbnormalData: business_data_resp.AbnormalData{},
+		AbnormalData: func() business_data_resp.AbnormalData {
+			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
+				ctx.GetStaffUuid(),
+				ctx.GetStaff().DutyNo,
+			)
+			if err != nil {
+				return business_data_resp.AbnormalData{}
+			}
+			return *AbnormalData
+		}(),
 		MemberData: business_data_resp.MemberData{
 			RechargeAmount: 120,
 			GiftMoney:      120,

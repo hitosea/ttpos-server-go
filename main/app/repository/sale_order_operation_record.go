@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -37,7 +38,7 @@ func (r *OrderOperationRecordRepoImpl) CreateSaleOrderOperationRecord(obj model.
 		return 0, errors.WithMessage(err)
 	}
 	// 添加异常日志
-	go NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog("order", "", obj)
+	go NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog(constant.OrderAbnormalRecordTypeOrder, obj)
 	// 返回
 	return obj.Uuid, nil
 }
