@@ -750,7 +750,7 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-送厨批次-改价时间-赠菜时间-退菜原因-h5订单uuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -778,7 +778,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案-送厨批次-改价时间-赠菜时间-退菜时间
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
 

@@ -89,9 +89,9 @@ type SaleBill struct {
 
 // 判断销售账单是否可反结账。
 // 1. 账单已完成
-// 2. 未交班。 todo
+// 2. 未交班。
 // 3. 未退款 todo 在调用反结账接口时也检查
-func (model *SaleBill) IsCellReverseSettle() bool {
+func (model *SaleBill) IsCellReverseSettle(staffUuid uint64, cashierLoginTime int64) bool {
 	// 账单未完成，不能反结账
 	if model.Status != constant.SaleBillStatusComplete {
 		return false
@@ -100,7 +100,13 @@ func (model *SaleBill) IsCellReverseSettle() bool {
 	if model.GetTotalRefundAmount() > 0 {
 		return false
 	}
-	return true
+
+	order := model.SaleOrders[0]
+	// 完成 && 等于当前用户 && 在班次时间内
+	if order.Status == constant.SaleBillStatusComplete && staffUuid == model.CashierUuid && order.FinishTime > cashierLoginTime {
+		return true
+	}
+	return false
 }
 
 func (model *SaleBill) IsLockStatus() bool {

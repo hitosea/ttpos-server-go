@@ -674,7 +674,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 		billListsExtra := resp.BillListsExtra{
 			IsCellRefund:        false,
 			IsCellCancel:        bill.Status == constant.SaleBillStatusPending,
-			IsCellReverseSettle: bill.IsCellReverseSettle(),
+			IsCellReverseSettle: bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime),
 			IsCellPrint:         !isSplit && bill.Status != constant.SaleBillStatusPending,
 			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
 			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,
@@ -710,9 +710,10 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					orderExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
-					orderExtra.IsCellReverseSettle = true
-				}
+				orderExtra.IsCellReverseSettle = bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime)
+				// if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
+				// 	orderExtra.IsCellReverseSettle = true
+				// }
 				//
 				paymentAmount := order.GetActualPaymentAmount()
 				paymentAmounts += paymentAmount
@@ -760,9 +761,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					billListsExtra.IsCellRefund = true
 				}
 				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
-					billListsExtra.IsCellReverseSettle = true
-				}
+				billListsExtra.IsCellReverseSettle = bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime)
 			}
 		}
 		//
@@ -974,7 +973,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	orderExtra := resp.BillListsExtra{
 		IsCellRefund:        false,
 		IsCellCancel:        isCellCancel,
-		IsCellReverseSettle: saleBill.IsCellReverseSettle(),
+		IsCellReverseSettle: saleBill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime),
 		IsCellPrint:         true,
 		IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
 		IsCellInvoice:       false,
