@@ -414,11 +414,12 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			TimeZone: companySetting.Timezone,
 			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		Currency:  currencySetting,
-		Business:  businessSetting,
-		Assistant: assistantSettingResp,
-		Printer:   printerSetting,
-		Kitchen:   kitchenSettingResp,
+		Currency:      currencySetting,
+		Business:      businessSetting,
+		Assistant:     assistantSettingResp,
+		Printer:       printerSetting,
+		Kitchen:       kitchenSettingResp,
+		ServerVersion: utils.GetVersion("version.json"),
 	}, nil
 }
 
@@ -460,9 +461,10 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	}
 
 	return resp.TabletBase{
-		RealName:   ctx.GetStaff().RealName,
-		Buffet:     buffetSetting,
-		CloudBasic: cloudBasicSetting,
+		RealName:      ctx.GetStaff().RealName,
+		ServerVersion: utils.GetVersion("version.json"),
+		Buffet:        buffetSetting,
+		CloudBasic:    cloudBasicSetting,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
@@ -515,9 +517,10 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 			TimeZone: companySetting.Timezone,
 			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 		},
-		Currency: currencySetting,
-		Business: businessSetting,
-		Kitchen:  kitchenSettingResp,
+		Currency:      currencySetting,
+		Business:      businessSetting,
+		Kitchen:       kitchenSettingResp,
+		ServerVersion: utils.GetVersion("version.json"),
 	}, nil
 }
 
