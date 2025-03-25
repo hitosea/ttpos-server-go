@@ -352,6 +352,16 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	return newH5OrderProducts
 }
 
+// 获取未接单的h5订单商品的商品金额之和
+func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*SaleOrderProduct) float64 {
+	totalPrice := decimal.NewFromFloat(0)
+	for _, h5OrderProduct := range h5OrderProducts {
+		fmt.Println("22222 h5OrderProduct.Price", h5OrderProduct.Price)
+		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
+	}
+	return totalPrice.Truncate(2).InexactFloat64()
+}
+
 // 获取超过限购的商品
 func (model *SaleBill) GetSaleOrderProductOverLimit() []*SaleOrderProduct {
 	products := make([]*SaleOrderProduct, 0)

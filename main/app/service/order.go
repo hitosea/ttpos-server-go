@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	apperrors "ttpos-server-go/app/errors"
 	event2 "ttpos-server-go/app/event"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
@@ -109,6 +110,7 @@ type IOrderSrv interface {
 	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)   // 获取扫码h5购物车未下单商品列表
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) // 获取扫码h5购物车已下单商品列表
 	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                    // 下单扫码h5订单
+	AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error)                                                            // 接单扫码h5订单
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 
@@ -6943,7 +6945,104 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	}); err != nil {
 		return errors.WithMessage(err, "下单扫码h5订单失败")
 	}
+
+	go func() {
+		// 判断
+		acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
+		if err != nil {
+			ctx.Log().Error("获取接单设置失败", zap.Error(err))
+			return
+		}
+		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
+		fmt.Println("acceptOrderSetting", utils.ToJsonString(acceptOrderSetting))
+		fmt.Println("totalPrice", totalPrice)
+		if acceptOrderSetting.CanAutoOrder(totalPrice) {
+			// 自动接单
+			s.AcceptH5Order(ctx, h5Order.Uuid, true)
+		}
+	}()
+
 	return nil
+}
+
+func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	// 获取h5订单
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
+	}
+	// 非待处理状态不可操作
+	if h5Order.Status != constant.H5OrderStatusOrder {
+		return nil, errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
+	}
+
+	// 接单,保证h5订单的商品快照信息
+	h5Order.Accept(ctx.GetStaffUuid(), ctx.GetLanguage())
+	// 将已下单的h5订单商品变为已接单单的h5订单商品
+	h5Order.ChangeToAccepted()
+	// 送厨已经接单的商品。送厨指定的商品列表
+
+	{
+		ignoreMust := true // 接单，送厨忽略必点方案
+		// 获取销售账单信息
+		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleOrder.SaleBillUuid)
+		if errSaleBill != nil {
+			return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
+		}
+		ctx.Log().Debug("获取销售账单信息")
+
+		// 获取本次接单的商品列表
+		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
+
+		// 送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err, "ActionCooking")
+		}
+		if checkServiceRes != nil {
+			return checkServiceRes, nil
+		}
+	}
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新h5订单
+		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
+			return errors.WithMessage(err, "更新h5订单失败")
+		}
+		// 更新h5订单商品列表
+		for _, h5OrderProduct := range h5Order.H5OrderProducts {
+			// 更新h5订单商品
+			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+				return errors.WithMessage(err, "更新h5订单商品失败")
+			}
+		}
+		// 更新销售订单商品.将该h5订单的商品变为已接单
+		// for _, saleOrderProduct := range h5Order.SaleOrderProducts {
+		// 	if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+		// 		return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
+		// 	}
+		// }
+
+		// 发布“接单”操作事件
+		go func() {
+			s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: h5Order.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				IsAutoOrder: isAutoOrder,
+				H5OrderUuid: h5Order.Uuid,
+			})
+		}()
+
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err, "接单失败")
+	}
+	return nil, nil
 }
 
 // GetUnsentKitchen 未送厨商品列表

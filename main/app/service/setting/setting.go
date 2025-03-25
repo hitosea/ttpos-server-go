@@ -66,6 +66,7 @@ type ISrv interface {
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
+	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -970,6 +971,19 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 		},
 	}, nil
 
+}
+
+// GetAcceptOrderSetting 获取接单设置
+func (s *Srv) GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error) {
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &resp.AcceptOrderSetting{
+		IsAutoOrder:    cashierSetting.IsAutoOrder,
+		AutoOrderLimit: cashierSetting.AutoOrderLimit,
+		IsAutoVoice:    cashierSetting.IsAutoVoice,
+	}, nil
 }
 
 // UpdateSetting 更新设置

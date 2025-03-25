@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"strconv"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
 )
@@ -152,6 +153,12 @@ type AcceptOrderSetting struct {
 	IsAutoOrder    string `json:"is_auto_order"`    // 是否自动接单：0-否；1-是
 	AutoOrderLimit string `json:"auto_order_limit"` // 自动接单金额上限，0.01-100000000
 	IsAutoVoice    string `json:"is_auto_voice"`    // 是否开启自动接单语音播报 0-否；1-是
+}
+
+// CanAutoOrder 是否可以自动接单
+func (s *AcceptOrderSetting) CanAutoOrder(amount float64) bool {
+	amountFloat, _ := strconv.ParseFloat(s.AutoOrderLimit, 64)
+	return s.IsAutoOrder == "1" && amount <= amountFloat
 }
 
 type SystemSetting struct {

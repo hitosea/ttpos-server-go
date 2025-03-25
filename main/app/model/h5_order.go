@@ -81,7 +81,7 @@ func (model *H5Order) CalcProductTotalPrice() float64 {
 	for _, h5OrderProduct := range model.H5OrderProducts {
 		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
 	}
-	return totalPrice.InexactFloat64()
+	return totalPrice.Truncate(2).InexactFloat64()
 }
 
 // 删除销售订单商品

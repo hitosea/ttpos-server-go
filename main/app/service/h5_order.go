@@ -20,10 +20,10 @@ import (
 
 // IH5OrderSrv 定义接单服务接口
 type IH5OrderSrv interface {
-	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (*resp.H5OrderList, error) // 获取h5订单列表
-	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)              // 获取h5订单详情
-	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                         // 拒单
-	AcceptH5Order(ctx context.Context, orderUuid uint64) (*resp.OrderCheckServiceRes, error)             // 接单
+	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (*resp.H5OrderList, error)       // 获取h5订单列表
+	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)                    // 获取h5订单详情
+	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                               // 拒单
+	AcceptH5Order(ctx context.Context, orderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) // 接单
 }
 
 type h5OrderSrv struct {
@@ -79,7 +79,8 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 		if order.Status == constant.H5OrderStatusOrder { // 如果订单状态是1（待处理），读取关联的销售订单商品
 			for _, product := range order.SaleOrderProducts {
 				num = num + product.Num
-				price = price + product.Price
+				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+				price = price + totalPrice
 			}
 			// 再加上已经接单的商品价格。同一个销售账单，已接单的，h5订单商品
 			if order.SaleBillUuid > 0 {
@@ -89,14 +90,16 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 					return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
 				}
 				for _, product := range products {
-					amount = amount.Add(decimal.NewFromFloat(product.Price))
+					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+					amount = amount.Add(decimal.NewFromFloat(totalPrice))
 				}
 				price += amount.InexactFloat64()
 			}
 		} else if slices.Contains([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected}, order.Status) { // 如果订单状态是2（已接单），3（已拒单），读取关联的扫码订单商品
 			for _, product := range order.H5OrderProducts {
 				num = num + product.Num
-				price = price + product.Price
+				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+				price = price + totalPrice
 			}
 		}
 		var regionUuid uint64
@@ -156,14 +159,14 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 		}
 		for _, product := range h5Order.SaleOrderProducts {
 			if !product.IsAcceptOrderBool() {
+				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
 				newProducts = append(newProducts, resp.ProductItem{
 					LocaleName: product.MultiLanguageName.GetNames(),
 					Num:        product.Num,
-					TotalPrice: product.Price,
+					TotalPrice: totalPrice,
 				})
+				price = price + totalPrice
 			}
-
-			price = price + product.Price
 		}
 		// 获取同一个销售账单，已接单的，h5订单商品
 		if saleBillUuid > 0 {
@@ -173,23 +176,25 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 			}
 			for _, product := range products {
 				if product.IsAccepted() {
+					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
 						LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        product.Num,
-						TotalPrice: product.Price,
+						TotalPrice: totalPrice,
 					})
-					price = price + product.Price
+					price = price + totalPrice
 				}
 			}
 		}
 	} else { // 已接单、拒单
 		for _, product := range h5Order.H5OrderProducts {
+			totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
 			newProducts = append(newProducts, resp.ProductItem{
 				LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 				Num:        product.Num,
-				TotalPrice: product.Price,
+				TotalPrice: totalPrice,
 			})
-			price = price + product.Price
+			price = price + totalPrice
 		}
 	}
 
@@ -279,82 +284,6 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) erro
 	return nil
 }
 
-func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) (*resp.OrderCheckServiceRes, error) {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	h5OrderRepo := repository.NewH5OrderRepo(db)
-	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil {
-		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
-	}
-	// 非待处理状态不可操作
-	if h5Order.Status != constant.H5OrderStatusOrder {
-		return nil, errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
-	}
-
-	// 接单,保证h5订单的商品快照信息
-	h5Order.Accept(ctx.GetStaffUuid(), ctx.GetLanguage())
-	// 将已下单的h5订单商品变为已接单单的h5订单商品
-	h5Order.ChangeToAccepted()
-	// 送厨已经接单的商品。送厨指定的商品列表
-
-	{
-		ignoreMust := true // 接单，送厨忽略必点方案
-		// 获取销售账单信息
-		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleOrder.SaleBillUuid)
-		if errSaleBill != nil {
-			return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
-		}
-		ctx.Log().Debug("获取销售账单信息")
-
-		// 获取本次接单的商品列表
-		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
-
-		// 送厨
-		checkServiceRes, err := s.orderSrv.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts)
-		if err != nil {
-			return nil, errors.WithMessage(err, "ActionCooking")
-		}
-		if checkServiceRes != nil {
-			return checkServiceRes, nil
-		}
-	}
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		// 更新h5订单
-		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
-			return errors.WithMessage(err, "更新h5订单失败")
-		}
-		// 更新h5订单商品列表
-		for _, h5OrderProduct := range h5Order.H5OrderProducts {
-			// 更新h5订单商品
-			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
-				return errors.WithMessage(err, "更新h5订单商品失败")
-			}
-		}
-		// 更新销售订单商品.将该h5订单的商品变为已接单
-		// for _, saleOrderProduct := range h5Order.SaleOrderProducts {
-		// 	if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
-		// 		return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
-		// 	}
-		// }
-
-		// 发布“接单”操作事件
-		go func() {
-			s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
-				BasePayload: event.BasePayload{
-					CompanyUuid:  ctx.GetCompanyUuid(),
-					Source:       ctx.GetSource(),
-					SaleBillUuid: h5Order.SaleBillUuid,
-					OperatorUuid: int64(ctx.GetStaffUuid()),
-				},
-				IsAutoOrder: false,
-				H5OrderUuid: h5Order.Uuid,
-			})
-		}()
-
-		return nil
-	}); err != nil {
-		return nil, errors.WithMessage(err, "接单失败")
-	}
-	return nil, nil
+func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
+	return s.orderSrv.AcceptH5Order(ctx, h5OrderUuid, isAutoOrder)
 }
