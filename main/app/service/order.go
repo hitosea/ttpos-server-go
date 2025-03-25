@@ -1389,7 +1389,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			return errors.WithMessage(err)
 		}
 		// 退积分
-		{
+		if saleOrder.ConsumerUuid > 0 {
 			refundAmount := returnOrder.RefundAmount // 退款金额
 			// 积分赠送比例
 			integralGiveRate := saleOrder.GiftPointsRate
