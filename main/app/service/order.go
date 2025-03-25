@@ -3718,6 +3718,51 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	return nil, nil
 }
 
+// 检查自助餐顾客类型价格是否变动
+func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, saleBill *model.SaleBill) *resp.OrderCheckServiceRes {
+	res := &resp.OrderCheckServiceRes{
+		Code: constant.CodeOrderCheckProductPriceChanged,
+		OrderCheckRes: resp.OrderCheckRes{
+			Products: &resp.CartProductList{
+				List: make([]resp.Product, 0),
+			},
+		},
+	}
+	// 检查自助餐顾客类型价格是否变动
+	for _, saleOrder := range saleBill.SaleOrders {
+		if saleOrder.IsDelete() {
+			continue
+		}
+		for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
+			if buffetCustomer.IsDelete() {
+				continue
+			}
+			if buffetCustomer.IsBuffetCustomerTypePriceChanged() {
+				// 自助餐顾客类型价格变动
+				customer := resp.Product{
+					Uuid:       buffetCustomer.Uuid,
+					LocaleName: buffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+					LocaleAttributeName: dto.LocaleResponse{
+						ZH:   buffetCustomer.Name,
+						TH:   buffetCustomer.Name,
+						EN:   buffetCustomer.Name,
+						ZHTW: buffetCustomer.Name,
+						JA:   buffetCustomer.Name,
+						KO:   buffetCustomer.Name,
+						MY:   buffetCustomer.Name,
+						TR:   buffetCustomer.Name,
+					},
+					Num:       buffetCustomer.Num,
+					SalePrice: buffetCustomer.SalePrice,
+				}
+				res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, customer)
+				return res
+			}
+		}
+	}
+	return nil
+}
+
 func (s *orderSrv) GetProductDecreaseStockList(ctx context.Context, unCookingSaleOrderProducts []*model.SaleOrderProduct) ([]*model.Product, error) {
 	cookingDeductSaleOrderProducts, err := s.getOrderProductForDecreaseStock(ctx, unCookingSaleOrderProducts)
 	if err != nil {
@@ -6367,6 +6412,23 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	}
 	if checkServiceRes != nil {
 		return checkServiceRes, nil
+	}
+
+	// 检查自助餐顾客类型价格是否变动
+	res := s.checkBuffetCustomerTypePriceChanged(ctx, saleBill)
+	if res != nil {
+		{
+			// 如果价格变化，更新销售订单顾客的价格。都是后台更新价格而未立即更新已选购商品的价格引起的
+			// 价格变化包括：
+			// 1. 自助餐顾客类型价格变化
+			shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			saleBill := shopCartInfo.SaleBill
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+		}
+		return res, nil
 	}
 
 	// 检查是否有未送厨的商品

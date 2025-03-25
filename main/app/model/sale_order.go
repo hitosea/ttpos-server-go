@@ -473,8 +473,9 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 	return saleOrder
 }
 
-func NewSaleOrderBuffetCustomerType(saleOrderUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
+		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
 		BuffetCustomerTypePriceUuid: buffetCustomerTypePriceUuid,

@@ -135,7 +135,7 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 			if buffetCustomer.IsDelete() {
 				continue
 			}
-			_ = buffetCustomer.CalcSaleOrderBuffetCustomerType(*setting)
+			_ = buffetCustomer.CalcSaleOrderBuffetCustomerType(*setting, options...)
 		}
 		saleOrder.CalcSaleOrder(*setting)
 	}

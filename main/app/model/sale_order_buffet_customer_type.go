@@ -62,11 +62,6 @@ func (model *SaleOrderBuffetCustomerType) GetCanReturnPrice() float64 {
 	return decimal.NewFromFloat(model.Price).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
 }
 
-// CalcPrice 计算顾客最终单价。顾客最终单价=自助餐顾客类型原价*自定义折扣率
-func (model *SaleOrderBuffetCustomerType) CalcPrice() float64 {
-	model.Price = decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(model.CustomDiscountRate)).Round(2).InexactFloat64()
-	return model.Price
-}
 func (model *SaleOrderBuffetCustomerType) GetSign() string {
 	return fmt.Sprintf("%d-%d", model.BuffetPackageUuid, model.BuffetCustomerTypePriceUuid)
 }

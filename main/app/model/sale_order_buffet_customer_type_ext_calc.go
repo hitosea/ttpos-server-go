@@ -16,9 +16,13 @@ type SaleOrderBuffetCustomerCalc struct {
 }
 
 // 计算销售订单自助餐顾客类型
-func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderBuffetCustomerCalc {
+func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(serviceFeeRate float64, taxFeeType int, serviceFeeType int, isLatestPrice bool) SaleOrderBuffetCustomerCalc {
 	calc := SaleOrderBuffetCustomerCalc{}
-	calc.Price = model.calcPrice()
+	if isLatestPrice {
+		calc.Price = model.calcLatestPrice() // 使用最新的价格
+	} else {
+		calc.Price = model.calcPrice() // 使用下单时的价格
+	}
 	model.Price = calc.Price
 	calc.CustomDiscountFee = model.calcCustomDiscountFee()
 	model.CustomDiscountFee = calc.CustomDiscountFee
@@ -37,6 +41,20 @@ func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(servic
 func (model *SaleOrderBuffetCustomerType) calcPrice() float64 {
 	// 最终单价=原始单价*自定义折扣率
 	return decimal.NewFromFloat(model.SalePrice).Mul(
+		decimal.NewFromFloat(model.CustomDiscountRate)).InexactFloat64()
+}
+
+// 计算最新的最终单价。最终单价=原始单价*自定义折扣率
+func (model *SaleOrderBuffetCustomerType) calcLatestPrice() float64 {
+	model.SalePrice = model.BuffetCustomerTypePrice.Price // 后台设置的最新价格, 并赋值给model.SalePrice
+	// 最终单价=原始单价*自定义折扣率
+	return model.calcPrice()
+}
+
+func (model *SaleOrderBuffetCustomerType) GetLatestPrice() float64 {
+	salePrice := model.BuffetCustomerTypePrice.Price // 后台设置的最新价格
+	// 最终单价=原始单价*自定义折扣率
+	return decimal.NewFromFloat(salePrice).Mul(
 		decimal.NewFromFloat(model.CustomDiscountRate)).InexactFloat64()
 }
 
@@ -157,12 +175,23 @@ func (model *SaleOrderBuffetCustomerType) calcTotalPrice(serviceFeeRate float64,
 	return totalPrice.InexactFloat64()
 }
 
-func (model *SaleOrderBuffetCustomerType) CalcSaleOrderBuffetCustomerType(setting SaleBillSetting) SaleOrderBuffetCustomerCalc {
+func (model *SaleOrderBuffetCustomerType) CalcSaleOrderBuffetCustomerType(setting SaleBillSetting, options ...func(option *CalcOption)) SaleOrderBuffetCustomerCalc {
 	defer model.SetUpdate() // 标记该记录要更新
 	serviceFeeRate := setting.GetServiceFeeRate()
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	return model.calcSaleOrderBuffetCustomerType(serviceFeeRate, taxFeeType, serviceFeeType)
+
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+	return model.calcSaleOrderBuffetCustomerType(serviceFeeRate, taxFeeType, serviceFeeType, option.IsLatestPrice)
+}
+
+// 自助餐顾客类型价格是否变动
+func (model *SaleOrderBuffetCustomerType) IsBuffetCustomerTypePriceChanged() bool {
+	// 最新价格不等于下单时的价格，则返回true。
+	return model.GetLatestPrice() != model.calcPrice()
 }
 
 // 获取价格变动前的信息

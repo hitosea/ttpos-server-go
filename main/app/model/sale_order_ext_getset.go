@@ -325,6 +325,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 ) ([]*SaleOrderBuffetCustomerType, []uint64, uint, int, uint, uint) {
 	buffetUuidMap := make(map[uint64]map[uint64]*struct {
 		BaseModel
+		Name               string
 		BuffetPackageUuid  uint64
 		CustomerTypeUuid   uint64
 		Price              float64
@@ -341,6 +342,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			if buffetUuidMap[buffet.Uuid] == nil {
 				buffetUuidMap[buffet.Uuid] = make(map[uint64]*struct {
 					BaseModel
+					Name               string
 					BuffetPackageUuid  uint64
 					CustomerTypeUuid   uint64
 					Price              float64
@@ -350,12 +352,14 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			// 使用匿名结构体
 			priceStruct := &struct {
 				BaseModel
+				Name               string
 				BuffetPackageUuid  uint64
 				CustomerTypeUuid   uint64
 				Price              float64
 				BuffetCustomerType struct{}
 			}{
 				BaseModel:         customerTypePrice.BaseModel,
+				Name:              customerTypePrice.BuffetCustomerType.Name,
 				BuffetPackageUuid: customerTypePrice.BuffetPackageUuid,
 				CustomerTypeUuid:  customerTypePrice.CustomerTypeUuid,
 				Price:             customerTypePrice.Price,
@@ -389,7 +393,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			// 使用匿名结构体的字段
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
-			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
 			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
 			if !newBuffetUuidMap2[buffetUuid] {
