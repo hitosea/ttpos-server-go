@@ -6858,11 +6858,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	}
 
 	// 判断是否已支付
-	printType := constant.PrinterTemplatePreBilling
 	firstExecution := 1
+	printType := constant.PrinterTemplatePreBilling
 	if saleOrder.IsPaid() {
 		printType = constant.PrinterTemplateBilling
-		firstExecution = 0
 	}
 	// 如果是点餐助手，不能直接打印
 	if ctx.GetSource() == constant.SourceAssistant {
