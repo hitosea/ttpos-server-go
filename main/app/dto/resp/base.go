@@ -48,12 +48,14 @@ type AssistantBase struct {
 	Assistant      setting.AssistantResp `json:"assistant"`       // 点餐助手设置
 	Printer        setting.Printer       `json:"printer"`         // 打印机设置
 	Kitchen        setting.KitchenResp   `json:"kitchen"`         // 厨显设置
+	ClientVersion  string                `json:"client_version"`  // 客户端版本
 	ServerVersion  string                `json:"server_version"`  // 服务端版本
 }
 
 type TabletBase struct {
 	RealName      string              `json:"real_name"`      // 员工姓名
 	ServerVersion string              `json:"system_version"` // 服务端版本
+	ClientVersion string              `json:"client_version"` // 客户端版本
 	Buffet        setting.Buffet      `json:"buffet"`         // 自助餐设置
 	CloudBasic    setting.CloudBasic  `json:"cloud"`          // 云端基础信
 	Company       Company             `json:"company"`        // 商家信息
@@ -81,6 +83,7 @@ type KitchenBase struct {
 	Business      setting.Business    `json:"business"`       // 门店业务设置
 	Kitchen       setting.KitchenResp `json:"kitchen"`        // 厨显端设置
 	ServerVersion string              `json:"system_version"` // 服务端版本
+	ClientVersion string              `json:"client_version"` // 客户端版本
 }
 
 type ProductPrinter struct {

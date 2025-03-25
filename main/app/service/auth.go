@@ -392,6 +392,10 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		return assistantBase, errors.WithMessage(err)
 	}
 	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
@@ -419,6 +423,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Assistant:     assistantSettingResp,
 		Printer:       printerSetting,
 		Kitchen:       kitchenSettingResp,
+		ClientVersion: clientVersion,
 		ServerVersion: utils.GetVersion("version.json"),
 	}, nil
 }
@@ -459,10 +464,14 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
 	}
-
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
 	return resp.TabletBase{
 		RealName:      ctx.GetStaff().RealName,
 		ServerVersion: utils.GetVersion("version.json"),
+		ClientVersion: clientVersion,
 		Buffet:        buffetSetting,
 		CloudBasic:    cloudBasicSetting,
 		Company: resp.Company{
@@ -507,6 +516,11 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	if err != nil {
 		return kitchenBase, errors.WithMessage(err)
 	}
+
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
 	return resp.KitchenBase{
 		RealName:   ctx.GetStaff().RealName,
 		Buffet:     buffetSetting,
@@ -521,6 +535,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Business:      businessSetting,
 		Kitchen:       kitchenSettingResp,
 		ServerVersion: utils.GetVersion("version.json"),
+		ClientVersion: clientVersion,
 	}, nil
 }
 

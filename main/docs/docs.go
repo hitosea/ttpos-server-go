@@ -17209,6 +17209,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
                 "cloud": {
                     "description": "云端基础信息",
                     "allOf": [
@@ -18328,6 +18332,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_open_h5_order": {
+                    "description": "是否开启扫码点餐接单 0不开启, 1开启",
+                    "type": "integer"
+                },
                 "kitchen": {
                     "description": "厨显设置",
                     "allOf": [
@@ -18851,6 +18859,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Business"
                         }
                     ]
+                },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
                 },
                 "cloud": {
                     "description": "云端基础信息",
@@ -21438,6 +21450,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Business"
                         }
                     ]
+                },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
                 },
                 "cloud": {
                     "description": "云端基础信",

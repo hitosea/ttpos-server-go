@@ -88,7 +88,8 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 	}
 	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	return &resp.H5BaseInfo{
-		Desk: deskInfo,
+		IsOpenH5Order: companySetting.IsOpenH5Order,
+		Desk:          deskInfo,
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
