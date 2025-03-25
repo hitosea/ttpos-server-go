@@ -29,7 +29,7 @@ func hideSaleBillEventHandler() {
 		event.NewSystemBus().SubscribeHideSaleBillEvent(func(payload event.HideSaleBillPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-			record := model.SaleBillOperationRecord{
+			record := model.SaleOrderOperationRecord{
 				Source:       payload.Source,
 				Action:       constant.OrderStayOrder,
 				Remark:       "挂单",
@@ -37,9 +37,9 @@ func hideSaleBillEventHandler() {
 				OperatorUuid: payload.GetOperatorUuid(),
 			}
 			record.Data = ""
-			uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeHideSaleBillEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeHideSaleBillEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:挂单 %+v", payload), zap.Uint64("record", uuid))

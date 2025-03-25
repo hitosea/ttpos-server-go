@@ -25,7 +25,7 @@ func addSaleBillRecordEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(msg.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			// 添加操作日志
-			orderRecordRepo.CreateRecord(msg.SaleBillUuid, constant.OrderChangePrice, model.SaleBillOperationRecord{
+			orderRecordRepo.CreateRecord(msg.SaleBillUuid, constant.OrderChangePrice, model.SaleOrderOperationRecord{
 				Source:        msg.Source,
 				Remark:        "改价",
 				SaleBillUuid:  msg.SaleBillUuid,

@@ -2700,7 +2700,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	}
 
 	// todo 添加操作日志
-	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleBillOperationRecord{
+	// orderRecordRepo.CreateRecord(req.SaleBillUuid, constant.OrderUpdateMealNum, model.SaleOrderOperationRecord{
 	// 	    Source:        ctx.GetSource(),
 	// 	    Remark:        "修改桌台就餐人数",
 	// 	    SaleBillUuid:  req.SaleBillUuid,

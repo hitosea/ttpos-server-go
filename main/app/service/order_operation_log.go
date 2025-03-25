@@ -7,7 +7,7 @@ import (
 	"ttpos-server-go/i18n"
 )
 
-func (s *orderSrv) getActionDescription(log model.SaleBillOperationRecord, language string) string {
+func (s *orderSrv) getActionDescription(log model.SaleOrderOperationRecord, language string) string {
 
 	// 开桌
 	type OpenDeskPayload struct {
@@ -186,7 +186,7 @@ func (s *orderSrv) getActionDescription(log model.SaleBillOperationRecord, langu
 	return ""
 }
 
-func (s *orderSrv) getActionText(log model.SaleBillOperationRecord, language string) string {
+func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language string) string {
 
 	actionTextMap := map[string]string{
 		constant.OrderOpenTable:           i18n.Translate(language, "开台"),

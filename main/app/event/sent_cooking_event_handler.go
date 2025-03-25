@@ -36,7 +36,7 @@ func sentCookingEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			// 创建操作记录
 			go func() {
-				createSaleBillOperationRecord(db, payload)
+				createSaleOrderOperationRecord(db, payload)
 			}()
 			// 创建送厨单打印记录
 			go func() {
@@ -57,10 +57,10 @@ func sentCookingEventHandler() {
 	})
 }
 
-// createSaleBillOperationRecord 创建销售账单操作记录
-func createSaleBillOperationRecord(db *gorm.DB, payload event.SentCookingPayload) {
+// createSaleOrderOperationRecord 创建销售账单操作记录
+func createSaleOrderOperationRecord(db *gorm.DB, payload event.SentCookingPayload) {
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-	record := model.SaleBillOperationRecord{
+	record := model.SaleOrderOperationRecord{
 		Source:        payload.Source,
 		Action:        constant.OrderSendKitchen,
 		Remark:        "送厨",
@@ -69,9 +69,9 @@ func createSaleBillOperationRecord(db *gorm.DB, payload event.SentCookingPayload
 		OperatorUuid:  payload.GetOperatorUuid(),
 	}
 	record.Data = payload.ToJsonString()
-	uuid, err := orderRecordRepo.CreateSaleBillOperationRecord(record)
+	uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 	if err != nil {
-		logger.Logger.Error("SubscribeSentCookingEvent process, CreateSaleBillOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+		logger.Logger.Error("SubscribeSentCookingEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 		return
 	}
 	logger.Logger.Info(fmt.Sprintf("操作记录:送厨 %+v", payload), zap.Uint64("record", uuid))
